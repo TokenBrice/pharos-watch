@@ -339,7 +339,7 @@ Most module-level mutable state was eliminated in the parameter-passing refactor
 | --- | --- | --- | --- |
 | `shared/lib/cloudflare-access-jwt.ts` | `jwksCache` | Cloudflare Access signing-key cache | 1-hour TTL; auth still re-fetches when cold or expired |
 | `worker/src/lib/rate-limit.ts` | `IsolateLocalState` limiter/prune state | Public API limiter emergency counters and pending prune coordination | Resets on isolate recycle/deploy; D1 remains source of truth |
-| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-second key cache TTL; usage updates are best-effort and D1 remains source of truth |
+| `worker/src/lib/api-key-core.ts` | API-key cache, last-used throttle, per-key prune state | Short-lived key lookup cache and write-throttling for API-key metadata | 5-minute fresh / 15-minute stale key cache TTL; usage updates are best-effort and D1 remains source of truth |
 | `functions/lib/request-attribution.ts` | Pages attribution prune bucket/promise | Avoids duplicate attribution-prune work inside one Pages Functions isolate | Resets on isolate recycle/deploy; D1 remains source of truth |
 
 **Constraints:**

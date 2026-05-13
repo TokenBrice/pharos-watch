@@ -113,7 +113,7 @@ Route-specific manual `_meta` injectors can be stricter. `GET /api/chains` uses 
 | --------------------------- | ------------- | --------------------------------------------------------- |
 | `GET /api/stablecoins`      | 600           | `createCacheHandler`                                      |
 | `GET /api/chains`           | 1800          | `worker/src/api/chains.ts`                                |
-| `GET /api/bluechip-ratings` | 43200         | Custom cache reader in `worker/src/api/cache-handlers.ts` |
+| `GET /api/bluechip-ratings` | 43200         | `createCacheHandler`                                      |
 | `GET /api/usds-status`      | 86400         | `createCacheHandler`                                      |
 | `GET /api/yield-rankings`   | 3600          | Manual injection after live safety hydration              |
 
@@ -216,7 +216,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 500    | Internal Server Error | Unhandled exception (caught by `withErrorHandler`)                                                                                                                                                                                                                                                                                             |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, a protected public API request cannot be authenticated from D1 or the recent verified-key cache, the feedback limiter/storage dependency fails, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
-| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`)                                                                                                                                                                                   |
+| 504    | Gateway Timeout       | Pages `/_site-data/*` or `/api/admin/*` proxy timed out waiting for its Worker upstream (10 s default; 20 s for ops `/api/status` and `/api/status-history`; 45 s for ops `/api/audit-depeg-history`)                                                                                                                                          |
 
 **Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet or when the stored cache payload is malformed and rejected at read time. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`). When `MAINTENANCE_MODE` is set to `"true"`, all non-`OPTIONS` requests immediately return `503` with `{ "error": "maintenance", "message": "..." }` — used during DB migrations. `OPTIONS` CORS preflights are handled before the maintenance gate.
 
@@ -1237,7 +1237,7 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 
 ### `GET /api/supply-history`
 
-Per-coin circulating supply and price history, snapshotted once daily at 08:00 UTC.
+Per-coin circulating supply and price history. The `snapshot-supply` cron writes one snapshot per UTC day; it runs on the quarter-hourly trigger once the previous day's snapshot is at least 20 hours old, with an 08:00 UTC daily trigger as a safety-net fallback.
 
 **Cache:** slow — `public, s-maxage=3600, max-age=300`
 
@@ -1279,7 +1279,7 @@ Freshness headers are emitted from the latest completed `snapshot-supply` run wh
 
 Latest AI-generated market summary, produced daily at 08:05 UTC via the Claude API.
 
-**Cache:** standard. When a digest exists, the response includes `X-Data-Age` and `Warning` freshness headers (max 2 h). The bootstrap `{ "digest": null }` response carries only `Cache-Control`.
+**Cache:** standard. When a digest exists, the response includes `X-Data-Age` and `Warning` freshness headers keyed to a 24 h endpoint budget. The bootstrap `{ "digest": null }` response carries only `Cache-Control`.
 
 **Response**
 
@@ -1710,7 +1710,7 @@ This endpoint powers two separate public `/status/` views: the hero `Status runw
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/public-status-history`, which proxies onto the internal website lane instead of calling the external API host directly.
 
-**Public-impact filtering (2026-04-13):** The endpoint filters the admin state-machine transitions down to incidents opened by at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `fx_source_*`, `fx_cached_fallback`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Admin-only data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) are excluded, and `info`-severity causes cannot open a public incident. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when those recovery rows only carry info-level causes. This ensures the public `/status/` hero (driven by `/api/health`) and the uptime bar / transition timeline (driven by this endpoint) always agree. The unfiltered admin view is still available via the admin `/api/status` endpoint.
+**Public-impact filtering (2026-04-13):** The endpoint filters the admin state-machine transitions down to incidents opened by at least one public-facing impact code (`cache_ratio_*`, `cache_freshness_query_failed`, `cache_warning`, `fx_source_*`, `fx_cached_fallback`, `mint_burn_public_*`, `mint_burn_health_query_failed`, `open_circuit_groups`, `circuit_query_failed`, `cron_error_runs`, `multiple_unhealthy_crons`, `unhealthy_crons_present`, `db_unhealthy`). Admin-only data-quality causes (`missing_prices_*`, `blacklist_gaps_*`, `reserve_sync_*`, `onchain_*`, `watch_*`) are excluded, and `info`-severity causes cannot open a public incident. Once a public-impact incident is retained, the endpoint also retains the recovery path needed to return that incident to `healthy`, even when those recovery rows only carry info-level causes. This ensures the public `/status/` hero (driven by `/api/health`) and the uptime bar / transition timeline (driven by this endpoint) always agree. The unfiltered admin view is still available via the admin `/api/status` endpoint.
 
 ---
 
@@ -2708,7 +2708,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 
 ### `POST /api/api-key-requests/verify`
 
-Public self-serve verification endpoint used by the email link. Links carry the token only in the URL fragment as `/api/#verify=...`, which is not sent to the server in the page request, logged by intermediaries, or leaked via Referer. The browser strips the fragment before posting and exchanges the token here. Query-string `?verify=...` is not accepted. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
+Public self-serve verification endpoint used by the email link. Links carry the token only in the URL fragment as raw `/api/#akv_...`, which is not sent to the server in the page request, logged by intermediaries, or leaked via Referer. The browser strips the fragment before posting and exchanges the token here. Query-string and legacy fragment-parameter verification forms are not accepted. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
 
 **Authentication:** exempt
 
@@ -2807,7 +2807,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Authentication:** exempt from `X-API-Key`; requires `X-Telegram-Bot-Api-Secret-Token` for processing. Missing or invalid webhook secrets are acknowledged with `200 ok` and ignored to prevent Telegram retry storms. Not the standard `X-Admin-Key`.
+**Authentication:** exempt from `X-API-Key`; requires `X-Telegram-Bot-Api-Secret-Token` for processing. Missing or invalid webhook secrets are acknowledged with `200 ok` and ignored to prevent Telegram retry storms. The webhook never uses the operator Cloudflare Access lane.
 
 **Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 
@@ -2827,9 +2827,16 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/unsubscribe all` — Remove all per-coin subscriptions, disable every current alert flag including launch, and clear the global depeg worsening step
 - `/set <ticker> <setting> <value>` — Tune per-coin thresholds and modes
 - `/set all <setting> <value>` — Toggle global all-stablecoin alert types
-- `/mute <start>-<end>` — Enable UTC quiet hours
+- `/settings` — Open the inline-keyboard settings menu
+- `/mute <start>-<end>` — Enable quiet hours (in the subscriber's configured timezone, defaulting to UTC)
 - `/unmutehours` — Disable quiet hours
+- `/timezone [<IANA zone>]` — Show or set the subscriber's timezone for quiet hours; without an argument it offers a quick-pick keyboard
 - `/status <ticker>` — Read-only per-coin status summary
+- `/brief` (alias: `/market`) — Market brief built from current cached datasets
+- `/top <view>` — Top movers/leaders for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety`
+- `/why <ticker>` — Explain the current Safety Score for a coin
+- `/coverage <ticker>` — Per-coin coverage diagnostics for the subscriber surface
+- `/unsnooze` — Clear an active alert snooze without waiting for it to expire
 - `/cancel` — Cancel a pending disambiguation flow
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference

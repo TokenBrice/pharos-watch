@@ -85,19 +85,21 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 2. `StaleDataBanner` driven by the shared query freshness presets
 3. `HeroCard`
 4. `ExploitNoticeBanner`
-5. `LongformScrollspyNav`
-6. `ReportCardDetail` + `SafetyScoreHistorySection`
-7. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
-8. `KeyInfoCard`
-9. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
-10. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
-11. `McapChart`
-12. `DistributionSection`
-13. `DexLiquidityCard`
-14. `FlowsSection`
-15. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
-16. `DepegHistory` (suppressed for NAV tokens)
-17. `FeedbackModal`
+5. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
+6. `LongformScrollspyNav`
+7. `ReportCardDetail` + `SafetyScoreHistorySection`
+8. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
+9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail)
+10. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
+11. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
+12. `McapChart`
+13. `PegDeviationChart` (wrapped in `<section id="peg-deviation">`) only when the coin is USD-pegged and not a NAV token; not surfaced in the scrollspy rail
+14. `DistributionSection`
+15. `DexLiquidityCard`
+16. `FlowsSection`
+17. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
+18. `DepegHistory` (suppressed for NAV tokens)
+19. `FeedbackModal`
 
 The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
 
@@ -246,6 +248,7 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/components/stablecoin-detail/safety-score-history-section.tsx` | Grade timeline section                              |
 | `src/components/stablecoin-detail/explore-next-section.tsx`         | Post-detail navigation hub                          |
 | `src/components/mcap-chart.tsx`                                     | Supply / market-cap chart (dynamic import)          |
+| `src/components/peg-deviation-chart.tsx`                            | USD peg deviation chart (dynamic import; USD non-NAV only) |
 | `src/components/depeg-history.tsx`                                  | Depeg event timeline (dynamic import)               |
 | `src/components/key-info-card.tsx`                                  | Key info / metadata card (dynamic import)           |
 | `src/components/yield-detail-section.tsx`                           | Yield detail section (dynamic import)               |

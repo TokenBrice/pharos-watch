@@ -244,7 +244,7 @@ Each row also carries:
 
 ## Database Schema
 
-Migration: `worker/migrations/0000_baseline.sql` in the current post-squash tree, plus `0094_redemption_backstop_runs.sql` for completed-run snapshot manifests. Historical introduction lives in the pre-squash lineage recorded in `worker/migrations/MANIFEST.md`.
+Migration: `worker/migrations/0000_baseline.sql` in the current post-squash tree, plus `0094_redemption_backstop_runs.sql` for completed-run snapshot manifests and `0120_redemption_backstop_run_rows.sql` for the manifest-scoped current row store. Historical introduction lives in the pre-squash lineage recorded in `worker/migrations/MANIFEST.md`.
 
 ### `redemption_backstop`
 

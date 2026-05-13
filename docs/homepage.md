@@ -59,7 +59,7 @@ Core query inputs:
 
 Derived helpers:
 
-- `buildHomepageViewModel(...)` in `src/components/homepage-client-view-model.ts` (calls `derivePegRates(...)` for non-USD peg display context)
+- `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegRates`, `pegScores`, and `filteredRowCount`; the optional builder derives `reportCardMap` and `dewsRiskLevel`)
 - `buildAltPegSnapshot(...)` in `src/lib/alt-peg-market.ts` for the Research Surfaces `HomepageAltPegsTeaser`
 - `useHomepageFilters()` for URL-backed table filters
 

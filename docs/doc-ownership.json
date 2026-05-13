@@ -68,6 +68,42 @@
       "sources": ["scripts/**", ".github/workflows/**", "package.json", "worker/package.json"],
       "docs": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md", "docs/digest-pipeline.md"],
       "notes": ["Keep script inventory and CI descriptions aligned with behavior changes."]
+    },
+    {
+      "name": "telegram-bot",
+      "sources": [
+        "worker/src/api/telegram-webhook*.ts",
+        "worker/src/api/webhook-commands/**",
+        "worker/src/cron/dispatch-telegram-*.ts",
+        "worker/src/cron/telegram-alert-*.ts",
+        "src/app/pharoswatchbot/**"
+      ],
+      "docs": [
+        "docs/telegram-alerts.md",
+        "docs/runbooks/telegram-no-delivery.md",
+        "docs/runbooks/telegram-rate-limit-storm.md",
+        "docs/incident-response/telegram-secret-rotation.md",
+        "docs/incident-response/telegram-token-rotation.md"
+      ],
+      "notes": ["Webhook auth, dispatcher rate-limit handling, secret/token rotation, and the public PharosWatchBot landing share semantics across alerts, runbooks, and incident-response playbooks."]
+    },
+    {
+      "name": "security-surface",
+      "sources": [
+        "src/app/layout.tsx",
+        "src/app/api/**",
+        "functions/_site-data/**",
+        "functions/admin/**",
+        "functions/admin-api/**",
+        "functions/lib/*-env.ts",
+        "shared/lib/runtime-origins.ts"
+      ],
+      "docs": [
+        "docs/security-governance.md",
+        "docs/incident-response/safe-browsing-flag.md",
+        "docs/operator-origin-access.md"
+      ],
+      "notes": ["Inline script signatures, token-in-URL discipline, host gating, and origin allowlists govern Safe Browsing classifier risk and operator-origin access; update playbooks when touching these surfaces."]
     }
   ]
 }

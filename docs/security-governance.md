@@ -10,7 +10,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 
 **Why:** A token in a URL query is sent in `Referer` headers, logged by CDNs, indexed by crawlers, and shown to anyone with the URL bar. URL fragments are not sent to servers, but anything that *reads* a fragment-token via inline script is structurally indistinguishable from a credential-harvesting phishing kit (see next rule).
 
-**Apply:** API key email verification uses `https://pharos.watch/api/#verify=…` exclusively. The worker emits this format from `buildVerificationUrl` in `worker/src/api/api-key-requests/request.ts`. The frontend consumes it via a React effect on the `/api/` route only — never via a root-layout inline script.
+**Apply:** API key email verification uses raw fragment tokens like `https://pharos.watch/api/#akv_…` exclusively. The worker emits this format from `buildVerificationUrl` in `worker/src/api/api-key-requests/request.ts`. The frontend consumes it via a React effect on the `/api/` route only — never via a root-layout inline script. Do not reintroduce `#verify=...` or `?verify=...` parser shapes; the raw token fragment avoids a URL-parameter signature in the route bundle.
 
 ### Inline-script discipline in root layouts
 
@@ -24,9 +24,10 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 
 | Check | When it runs | Catches |
 |---|---|---|
-| `check:phishing-signatures` | `validate:prebuild` after `npm run build` | inline scripts in built HTML matching `history.replaceState` near credentials, `URLSearchParams(location.hash)`, token-shaped window globals, or the full `try{location.hash…replaceState}` shape |
+| `check:phishing-signatures` | Pages validate after `npm run build` | inline scripts in built HTML matching `history.replaceState` near credentials, `URLSearchParams(location.hash)`, token-shaped window globals, or the full `try{location.hash…replaceState}` shape |
+| `check:classifier-sensitive-copy` | Pages validate after `npm run build` | wallet-drainer, token-claim, and browser-warning copy on classifier-sensitive public pages (`/api/`, `/funding/`, `/pharoswatchbot/`) |
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
-| `check:safe-browsing` | manual / future cron | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
+| `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 
 ## Monitoring
 
@@ -40,35 +41,21 @@ Verified property: `pharos.watch` (Domain property). Owner: `me@tokenbrice.com`.
 
 ### Safe Browsing direct lookup
 
-`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. Free tier covers our query volume. Designed to run from CI on a schedule — gives a verdict in seconds rather than waiting for a Search Console email.
+`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. The `Safe Browsing Monitor` GitHub workflow runs it daily at 07:17 UTC and also supports manual dispatch. A workflow failure is treated as an incident trigger and should be triaged through `docs/incident-response/safe-browsing-flag.md`.
 
 To get a key: https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com
 
-## CSP roadmap
+## CSP posture
 
-Current production CSP:
+Production HTML CSP is nonce-backed by `functions/_middleware.ts`:
 
 ```
-script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://static.cloudflareinsights.com
+script-src 'self' 'nonce-<per-request-value>' https://www.googletagmanager.com https://static.cloudflareinsights.com
 ```
 
-The `'unsafe-inline'` directive is what *permits* phishing-kit-shaped inline scripts to run at all. Removing it forces every inline script to be either nonce-authorized or hash-authorized, which:
-- prevents an entire class of accidental phishing-pattern shipments
-- gives classifiers a strong positive signal (this site cannot execute arbitrary inline JS)
+The Pages middleware generates a random nonce per HTML request, rewrites inline `<script>` tags to carry that nonce, and overwrites the response CSP. The broad static fallback in `public/_headers` also omits script `unsafe-inline`, so a middleware miss fails closed instead of permitting arbitrary inline JavaScript. HTML responses get `Cloudflare-CDN-Cache-Control: no-store` / `CDN-Cache-Control: no-store` because a nonce-bearing response must not be shared from the CDN cache.
 
-**Why it's not done yet:** Next.js static export emits inline `<script>` blocks with per-page hydration state. Hash-based CSP would require recomputing the allowlist on every build for every page (HTTP header bloat). Nonce-based CSP requires per-request nonce injection via a Cloudflare Pages Function, which is moderate work.
-
-**Phased plan:**
-
-1. **Audit** all inline `<script>` blocks emitted by Next.js for current routes. Confirm: gtag-init, theme bootstrap (next-themes), and Next.js hydration push (`__next_s`).
-2. **Implement** a Cloudflare Pages Function (`functions/_middleware.ts`) that:
-   - generates a random nonce per request
-   - rewrites the CSP header to `script-src 'self' 'nonce-<value>' ...` (drops `'unsafe-inline'`)
-   - rewrites inline `<script>` tags in the HTML response to carry `nonce="<value>"`
-3. **Verify** in staging that hydration still works, gtag fires, themes apply, no console violations.
-4. **Ship** with monitoring on Cloudflare Workers Analytics for CSP `report-to` violations.
-
-Estimated effort: 1 engineer-day including the manual verification pass. Track under a separate issue when prioritized.
+Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 
 ## Positive trust signals (already shipped)
 

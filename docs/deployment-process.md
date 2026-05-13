@@ -66,6 +66,8 @@ Default policy:
 3. If Pages-impacting files changed, additionally run:
    - `npm run build`
    - `npm run seo:check`
+   - `npm run check:phishing-signatures`
+   - `npm run check:classifier-sensitive-copy`
 4. Always run the shared validate post-build checks:
    - `npm run test:noncritical`
    - `npm run coverage:critical`
@@ -123,9 +125,9 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 2. `validate`
    - runs only when `deploy_required=true`
    - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks (including verified-doc link and env-contract validation), `npm run test:noncritical`, and `npm run coverage:critical`
-   - includes `npm run build` + `npm run seo:check` only when `pages_changed=true`
+   - includes `npm run build`, `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy` only when `pages_changed=true` (pull-request validation only; the push/manual production deploy path runs Pages build/SEO/classifier guardrails inside `pages-release`, not the validate gate)
    - includes `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
-   - after `npm run validate:prebuild`, runs independent Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups in parallel through `scripts/run-validate-postbuild.mjs`; `npm run build` still precedes `npm run seo:check`, and `VALIDATE_POSTBUILD_SERIAL=1` restores the old serial shape for debugging
+   - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, `coverage-critical`, `typecheck-worker`, and `typecheck-worker-scripts` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all of them; `npm run build` still precedes `npm run seo:check` and the built-artifact classifier guardrails inside `pages-build`. The local merge gate provides the equivalent fan-out through `scripts/run-validate-postbuild.mjs`, with `VALIDATE_POSTBUILD_SERIAL=1` to fall back to serial execution
    - installs Node 24.x, matching the repo engine baseline; there is no separate LTS proof lane because Node 24 is the primary contract
    - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and worker typecheck coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR
 3. `no-deploy-required`
@@ -145,7 +147,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - runs only when `detect-changes` reports `pages_changed=true`
    - waits for `upload-worker-version` only when Worker promotion was also required for the push, then uses the uploaded Worker's preview URL for digest sync and local `/_site-data/*` proxying so CI rehearses the static export against the candidate API while validation and Worker promotion continue on their own runners
    - executes the Pages build/local-smoke/publish path in one job:
-     - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the CI-provided `STATIC_EXPORT_SITE_API_BASE` worker target and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
+     - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, sending `DIGEST_API_KEY` from GitHub repository secrets and forwarding `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy`, serves the same local artifact with `npm run serve:static-export`, proxies direct `/api/*` calls to the selected public API base, proxies `/_site-data/*` to the CI-provided `STATIC_EXPORT_SITE_API_BASE` worker target and injects `SITE_API_SHARED_SECRET` for that hop, and verifies the expected GA snippet in the homepage shell or root static RSC payload when `SMOKE_UI_EXPECT_GA_ID` is configured
      - the local static-export server treats exact `/api` and `/api/` as the public API access page, serves checked-in/static route payload artifacts below `/api/` when present, and proxies endpoint-like `/api/*` requests including JSON `POST` bodies to the selected public API base
    - uses `SMOKE_UI_BROWSER_CHANNEL=chrome` and `SMOKE_UI_OVERFLOW_WORKERS=6` for the local smoke so the full local overflow route set remains covered without downloading a Playwright-managed browser in the release job
    - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish

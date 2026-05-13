@@ -77,7 +77,7 @@ Token identity now resolves from the shared stablecoin loader in `shared/lib/sta
 
 ### Representative Stablecoins
 
-Current scope: **140 contract configs** across **139 stablecoin IDs** (7 critical + 133 extended).
+Current scope: **141 contract configs** across **140 stablecoin IDs** (7 critical + 134 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 
@@ -168,7 +168,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | syrupUSDT | syrupusdt-maple | 6 | Extended | Transfer |
 | AID | aid-gaib | 18 | Extended | Transfer |
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
-| reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
+| reUSD | reusd-re-protocol | 18 | Risky | Deposited + InstantRedemptionRouted (2 configs, Ethereum) |
 
 Public `/api/mint-burn-flows` and the daily digest collector now use the same **report-card-cache driven** FTQ classification. Coins with report-card score `>= 65` are treated as `safe`, scores `< 50` are treated as `risky`, and the middle band is ignored for FTQ. When `report_card_cache` is missing, stale, or malformed, FTQ classification is treated as unavailable instead of silently falling back to a hardcoded safe-haven list.
 
@@ -196,7 +196,7 @@ Events are also classified by `flow_type` (`standard`, `bridge_transfer`, or `at
 | `Issue(uint256)` | `0xcb8241ad...` | `first-data-uint256` |
 | `Redeem(uint256)` | `0x702d5967...` | `first-data-uint256` |
 
-**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 18-decimal amount), and burns from `InstantRedemptionProcessed(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
+**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 18-decimal amount), and burns from `InstantRedemptionRouted(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
 
 **Custom counterparty encoding.** For events whose relevant address is not in a standard topic slot, `MintBurnEventDef` now exposes an optional `counterpartyEncoding` override:
 

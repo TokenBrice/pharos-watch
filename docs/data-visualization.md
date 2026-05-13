@@ -54,7 +54,7 @@ Examples:
 - `src/app/stability-index/view-model.ts` — `buildPsiComponentData`, `buildPsiBeamDimmers`, `buildPsiHistoryStats`, `buildPsiContributorRows`
 - `src/app/chains/harbor-map.ts` — `buildChainHarborEntries` with sort, cap-at-8, cargo manifest extraction
 - `src/app/chains/nautical-scene-math.ts` — `hullWidth`, `cargoCapacityForHull`, `depthLayers`, `wakeLength`, `aggregateSkyBand`, `nextHarborSweepId`
-- `src/components/dews-summary-model.ts` — `computePositions`, `computeBandCounts`, `resolveRadarClick`, `getAggregateFreshnessTimestamp`
+- `src/components/dews-summary-model.ts` — `computeBandCounts`, `resolveRadarClick`, `getAggregateFreshnessTimestamp`, plus internal `computePositions`
 - `src/lib/alt-peg-hero.ts` — `buildPegDiversityHero`; sizing floors/ceilings in `src/lib/alt-peg-sizing.ts` (`SIZE_FLOOR`, `FIAT_MAP_SIZE_CEIL`, `SKY_COHORT_SIZE_CEIL`); overlap resolution in `src/lib/alt-peg-packing.ts` (`resolvePackedCoinOverlaps`)
 
 These files are the **first thing you write and the first thing you test.** They encode the visualization’s invariants and make the presentational layer trivial to change.

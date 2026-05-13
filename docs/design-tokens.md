@@ -18,7 +18,7 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 
 Raw values with no semantic meaning. Do not reference directly in components unless a documented local visualization intentionally needs a primitive ramp before a semantic token exists.
 
-- **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent; scale stops run 50–900 in OKLch (neutral and red extend to 950; neutral has additional 850/925/975 stops)
+- **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent; scale stops run 50–900 in OKLch (red extends to 950; neutral runs 50–975 with additional 850/925/975 stops)
 - **Spacing** — 4px-based scale from `--p-space-0` to `--p-space-20`, with `--p-space-0-5` (2px) and `--p-space-1-5` (6px) half steps for tight UI alignment
 - **Typography** — Font sizes (`--p-text-xs` to `--p-text-5xl`), line heights, tracking
 - **Radius** — `--p-radius-none` to `--p-radius-full`
@@ -41,7 +41,7 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 | Score Tiers         | `--score-green`, `--score-blue`, `--score-amber`, `--score-red`                                         | Liquidity/durability                    |
 | Interactive         | `--interactive-hover`, `--interactive-active`, `--interactive-focus`, `--control-pill-*`               | UI states and dense control pills       |
 | Chart               | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary`, `--chart-stage-*`                   | Chart-specific theming and chart stages |
-| Motion              | `--motion-duration-fast`, `--motion-duration-base`, `--motion-ease-standard`                            | Shared transition timing                |
+| Motion              | `--motion-duration-fast`, `--motion-duration-base`, `--motion-duration-slow`, `--motion-duration-entrance`, `--motion-ease-standard`, `--motion-ease-spring`, `--motion-ease-decelerate`, `--theme-transition-duration` | Shared transition timing and theme swap |
 
 #### Light-Mode Contrast Baseline (March 2026)
 
@@ -71,7 +71,7 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 
 - **Card** — `--card-bg`, `--card-border`, `--card-shadow`, `--card-shadow-hover`, `--card-shell-bg`, `--card-shell-highlight`, `--panel-header-bg`
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
-- **Sidebar** — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`
+- **Sidebar** — `--sidebar-bg`, `--sidebar-border`, `--sidebar-item-hover`, `--sidebar-width-expanded`, `--sidebar-width-collapsed`
 
 ## Bridge Layer (`src/app/globals.css`)
 

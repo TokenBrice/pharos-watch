@@ -397,7 +397,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `crvusd`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `curated-validated`        | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 61               |
 | `dola-inverse`             | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 31               |
+| `erc4626-single-asset`     | `onchain-evm`                                    | `single-asset`                                        | 32               |
 | `ethena`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `evm-branch-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 8                |
 | `falcon`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -412,7 +412,7 @@ This table reflects the adapter keys currently configured in `shared/data/stable
 | `liquity-v2-branches`      | `onchain-evm`                                    | `collateral-mix`                                      | 5                |
 | `lista`                    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
 | `m0`                       | `http-json`                                      | `protocol-reserve`                                    | 10               |
-| `mento`                    | `http-json`                                      | `collateral-mix`                                      | 5                |
+| `mento`                    | `http-json`                                      | `collateral-mix`                                      | 13               |
 | `nest-vault-positions`     | `http-json`                                      | `collateral-mix`                                      | 5                |
 | `openeden-usdo`            | `http-json`                                      | `collateral-mix`                                      | 1                |
 | `origin-vault-balances`    | `onchain-evm`                                    | `collateral-mix`                                      | 1                |

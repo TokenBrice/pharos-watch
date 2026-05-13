@@ -427,7 +427,7 @@ If the route is weak, unknown, or impossible to review cleanly, skip it rather t
 
 ### 5e. Mint/burn flows
 
-If there is a meaningful issuance contract on a tracked chain, usually Ethereum, evaluate adding a config to `worker/src/lib/mint-burn-contracts.ts`. The spec shape is declared in `mint-burn-contracts-types.ts` as `MintBurnContractConfigSpec`.
+If there is a meaningful issuance contract on a tracked chain, usually Ethereum, evaluate adding a config to `worker/src/lib/mint-burn-contracts-data.ts` (the resolved consumer aggregate lives in `worker/src/lib/mint-burn-contracts.ts`). The spec shape is declared in `worker/src/lib/mint-burn-contracts-types.ts` as `MintBurnContractConfigSpec`.
 
 Two authoring paths:
 

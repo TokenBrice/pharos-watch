@@ -121,7 +121,7 @@ Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top
 
 Behavioral contract: [Homepage](./homepage.md)
 
-- Tablet + desktop masthead strip: `pharos-card-shell hidden md:flex ... px-5 py-5`
+- Masthead strip: `pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5` — stacked on mobile, side-by-side from `md` upward
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup
@@ -456,7 +456,7 @@ From production rendered charts:
 
 - Tick text: `font-size: 12`, `font-family: var(--font-mono, monospace)`, `fill: var(--color-muted-foreground)`
 - X axis keeps extra breathing room through `tickMargin={10}`
-- Y axis defaults to `width={64}` and `tickMargin={8}` for cleaner number alignment
+- The shared `MonoYAxis` primitive defaults to `width={56}` and `tickMargin={8}` for cleaner number alignment
 - Grid lines: `stroke="var(--color-border)"`, `strokeDasharray="2 6"`, verticals off by default
 
 ### Area Chart Styling (Observed)

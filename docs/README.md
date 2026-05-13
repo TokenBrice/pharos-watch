@@ -31,6 +31,8 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
 - [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
+- [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
+- [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
 - [trackers/reserve-coverage.md](./trackers/reserve-coverage.md) - deferred live-reserve coverage candidates and blocked follow-ups
 
 ## Runbooks
@@ -39,6 +41,14 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/db-connectivity.md](./runbooks/db-connectivity.md) - D1/connectivity outage triage and recovery checks
 - [runbooks/mint-burn-integrity.md](./runbooks/mint-burn-integrity.md) - mint/burn divergence, stale coverage, and repair actions
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
+- [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
+- [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+
+## Incident Response
+
+- [incident-response/safe-browsing-flag.md](./incident-response/safe-browsing-flag.md) - Google Safe Browsing / browser "Dangerous site" warning recovery
+- [incident-response/telegram-secret-rotation.md](./incident-response/telegram-secret-rotation.md) - rotating `TELEGRAM_WEBHOOK_SECRET` with the dual-secret pattern
+- [incident-response/telegram-token-rotation.md](./incident-response/telegram-token-rotation.md) - rotating `TELEGRAM_BOT_TOKEN` via BotFather with the dual-token pattern
 
 ## Route And Page Contracts
 
@@ -70,6 +80,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex redirect wrapper for `/freezewatch/`                                                  |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
 | `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |
@@ -169,6 +180,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [design-context.md](./design-context.md) - user, brand, and product-direction baseline
 - [design-language.md](./design-language.md) - live UI patterns, typography, spacing, cards, and responsive rules
 - [design-tokens.md](./design-tokens.md) - token layers and CSS variable architecture
+- [data-visualization.md](./data-visualization.md) - metaphor-led visualization surfaces (Fiat World Atlas, PSI Lighthouse, DEWS Radar, Nautical Harbor Chart)
 
 ## Version Histories
 

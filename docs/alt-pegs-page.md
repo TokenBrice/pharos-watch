@@ -56,7 +56,7 @@ This route stays frontend-only and uses existing public data sources:
 | `useStablecoins()`                      | live alt-peg snapshot, current peg distribution, coin/peg counts |
 | `useNonUsdShare()`                      | non-USD share history and 1y trend context                       |
 | `useStablecoinCharts()`                 | historical cohort-growth chart                                   |
-| `PEG_TAXONOMY_PAGES` / `peg-landing.ts` | stable peg labels, hrefs, and the static link hub                |
+| `PEG_TAXONOMY_PAGES` / `peg-taxonomy.ts` | stable peg labels, hrefs, and the static link hub                |
 | `ACTIVE_META_BY_ID`                     | joining live API rows to tracked peg metadata                    |
 
 Important contract:
