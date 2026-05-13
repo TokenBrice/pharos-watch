@@ -29,7 +29,7 @@ The access page exists to let external integrators request an email-verified def
 3. how the public, internal site, and ops/admin lanes differ
 4. the public/reference endpoint contract already maintained in `docs/api-reference.md`
 
-The `/api/` form posts to `POST /api/api-key-requests` and verifies email links through `POST /api/api-key-requests/verify`. Verification links use `/api/#verify=...` fragments, with legacy `/api/?verify=...` still accepted during transition. Successful verification reveals the plaintext API token once, removes any verification token from the browser URL before calling the API, and warns on navigation until the token is copied or acknowledged. It does not persist tokens in local storage. Verification links expire after 30 minutes.
+The `/api/` form posts to `POST /api/api-key-requests` and verifies email links through `POST /api/api-key-requests/verify`. Verification links use `/api/#verify=...` URL fragments only — the token never appears in the query string, so it is not sent to the server in the page request, logged by intermediaries, or leaked via Referer. Successful verification reveals the plaintext API token once, removes the fragment from the browser URL before calling the API, and warns on navigation until the token is copied or acknowledged. It does not persist tokens in local storage. Verification links expire after 30 minutes.
 
 The default self-serve key policy is:
 

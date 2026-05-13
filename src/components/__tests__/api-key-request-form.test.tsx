@@ -115,7 +115,7 @@ describe("ApiKeyRequestForm", () => {
     expect(screen.queryByText("Copy this token now.")).toBeNull();
   });
 
-  it("keeps legacy query verification working and scrubs the token before posting", async () => {
+  it("verifies via hash token and scrubs the fragment before posting", async () => {
     const suffix = randomUUID().slice(0, 8);
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {
       status: 201,
@@ -123,14 +123,27 @@ describe("ApiKeyRequestForm", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    window.history.replaceState(null, "", `/api/?verify=legacy-${suffix}&utm_source=email`);
+    window.history.replaceState(null, "", `/api/?utm_source=email#verify=hash-${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(window.location.href).toContain("utm_source=email");
     expect(window.location.href).not.toContain("verify=");
     const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`legacy-${suffix}`);
+    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`hash-${suffix}`);
+  });
+
+  it("ignores a query-string verify parameter without posting", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email`);
+    render(<ApiKeyRequestForm />);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(window.location.search).toContain(`verify=qs-${suffix}`);
   });
 
   it("uses a pre-sanitized verification token without putting it back into the URL", async () => {

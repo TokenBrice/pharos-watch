@@ -97,62 +97,33 @@ export async function verifyApiKeyRequestToken(token: string): Promise<ApiKeySel
 
 function parseHashVerificationToken(hash: string): string | null {
   const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash) return null;
-
-  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
-    return new URLSearchParams(rawHash).get("verify")?.trim()
-      ?? new URLSearchParams(rawHash).get("token")?.trim()
-      ?? null;
-  }
-
-  const queryStart = rawHash.indexOf("?");
-  if (queryStart >= 0) {
-    return new URLSearchParams(rawHash.slice(queryStart + 1)).get("verify")?.trim() ?? null;
-  }
-
-  return null;
+  if (!rawHash.startsWith("verify=")) return null;
+  return new URLSearchParams(rawHash).get("verify")?.trim() ?? null;
 }
 
 function scrubHashVerificationToken(hash: string): string {
   const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash) return "";
-
-  if (rawHash.startsWith("verify=") || rawHash.startsWith("token=")) {
-    const params = new URLSearchParams(rawHash);
-    params.delete("verify");
-    params.delete("token");
-    const next = params.toString();
-    return next ? `#${next}` : "";
-  }
-
-  const queryStart = rawHash.indexOf("?");
-  if (queryStart < 0) return hash;
-
-  const path = rawHash.slice(0, queryStart);
-  const params = new URLSearchParams(rawHash.slice(queryStart + 1));
+  if (!rawHash.startsWith("verify=")) return hash;
+  const params = new URLSearchParams(rawHash);
   params.delete("verify");
   const next = params.toString();
-  return `#${path}${next ? `?${next}` : ""}`;
+  return next ? `#${next}` : "";
 }
 
 export function readVerificationTokenFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  const url = new URL(window.location.href);
-  return url.searchParams.get("verify")?.trim() || parseHashVerificationToken(url.hash);
+  return parseHashVerificationToken(window.location.hash);
 }
 
 export function stripVerificationTokenFromUrl(): void {
   if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  const hasLegacyQueryToken = url.searchParams.has("verify");
-  const nextHash = scrubHashVerificationToken(url.hash);
-  const hashChanged = nextHash !== url.hash;
-  if (!hasLegacyQueryToken && !hashChanged) return;
-
-  url.searchParams.delete("verify");
-  const search = url.searchParams.toString();
-  const nextUrl = `${url.pathname}${search ? `?${search}` : ""}${nextHash}`;
-  window.history.replaceState(null, "", nextUrl);
+  const nextHash = scrubHashVerificationToken(window.location.hash);
+  if (nextHash === window.location.hash) return;
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}${nextHash}`,
+  );
 }
 
 export function takePreSanitizedVerificationToken(): string | null {

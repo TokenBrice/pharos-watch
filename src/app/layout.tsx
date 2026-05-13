@@ -85,45 +85,17 @@ export default function RootLayout({
         <Script id="api-key-verify-url-sanitizer" strategy="beforeInteractive">
           {`(function(){
             try {
-              var url = new URL(window.location.href);
-              var token = url.searchParams.get('verify');
-              function tokenFromHash(hash) {
-                var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : hash;
-                if (!raw) return null;
-                if (raw.indexOf('verify=') === 0 || raw.indexOf('token=') === 0) {
-                  var params = new URLSearchParams(raw);
-                  return params.get('verify') || params.get('token');
-                }
-                var queryStart = raw.indexOf('?');
-                return queryStart >= 0 ? new URLSearchParams(raw.slice(queryStart + 1)).get('verify') : null;
-              }
-              function scrubHash(hash) {
-                var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : hash;
-                if (!raw) return '';
-                if (raw.indexOf('verify=') === 0 || raw.indexOf('token=') === 0) {
-                  var params = new URLSearchParams(raw);
-                  params.delete('verify');
-                  params.delete('token');
-                  var next = params.toString();
-                  return next ? '#' + next : '';
-                }
-                var queryStart = raw.indexOf('?');
-                if (queryStart < 0) return hash || '';
-                var path = raw.slice(0, queryStart);
-                var params = new URLSearchParams(raw.slice(queryStart + 1));
-                params.delete('verify');
-                var next = params.toString();
-                return '#' + path + (next ? '?' + next : '');
-              }
-              token = token || tokenFromHash(url.hash);
-              var nextHash = scrubHash(url.hash);
-              var changed = url.searchParams.has('verify') || nextHash !== url.hash;
+              var hash = window.location.hash;
+              var raw = hash && hash.charAt(0) === '#' ? hash.slice(1) : '';
+              window.__PHAROS_SANITIZED_PATH__ = window.location.pathname + window.location.search;
+              if (raw.indexOf('verify=') !== 0) return;
+              var params = new URLSearchParams(raw);
+              var token = params.get('verify');
               if (token) window.__PHAROS_API_KEY_VERIFY_TOKEN__ = String(token).trim();
-              if (url.searchParams.has('verify')) url.searchParams.delete('verify');
-              var search = url.searchParams.toString();
-              var sanitizedPath = url.pathname + (search ? '?' + search : '');
-              window.__PHAROS_SANITIZED_PATH__ = sanitizedPath;
-              if (changed) window.history.replaceState(null, '', sanitizedPath + nextHash);
+              params.delete('verify');
+              var next = params.toString();
+              var nextHash = next ? '#' + next : '';
+              window.history.replaceState(null, '', window.__PHAROS_SANITIZED_PATH__ + nextHash);
             } catch (_) {
               window.__PHAROS_SANITIZED_PATH__ = window.location.pathname + window.location.search;
             }

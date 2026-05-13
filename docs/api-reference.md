@@ -2708,7 +2708,7 @@ Public self-serve API key request endpoint used by `https://pharos.watch/api/`. 
 
 ### `POST /api/api-key-requests/verify`
 
-Public self-serve verification endpoint used by the email link. New links put the token in the URL fragment as `/api/#verify=...`, which is not sent to the server in the page request. The browser also accepts legacy `/api/?verify=...` links during transition, removes the token from the URL before posting, and then exchanges it here. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
+Public self-serve verification endpoint used by the email link. Links carry the token only in the URL fragment as `/api/#verify=...`, which is not sent to the server in the page request, logged by intermediaries, or leaked via Referer. The browser strips the fragment before posting and exchanges the token here. Query-string `?verify=...` is not accepted. A successful response creates the key, marks the request issued, and returns the plaintext API token exactly once.
 
 **Authentication:** exempt
 
