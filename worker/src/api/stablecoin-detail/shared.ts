@@ -264,7 +264,7 @@ function getLatestDetailTokenDate(tokens: ReadonlyArray<Record<string, unknown>>
   return latestDate;
 }
 
-export function isDetailHistoryFresh(
+function isDetailHistoryFresh(
   tokens: ReadonlyArray<Record<string, unknown>>,
   nowSec = Math.floor(Date.now() / 1000),
 ): boolean {

@@ -461,7 +461,7 @@ async function loadCurrentSnapshotAge(db: D1Database, day: string): Promise<numb
   }
 }
 
-export async function upsertTelegramLifecycleSnapshot(
+async function upsertTelegramLifecycleSnapshot(
   db: D1Database,
   snapshot: TelegramCurrentLifecycleSnapshot,
 ): Promise<void> {

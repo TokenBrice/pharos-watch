@@ -2,7 +2,7 @@ import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/typ
 import { decodeCachedJson } from "./cache-json";
 import { getCache, setCache } from "./db-cache";
 
-export const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
+const REPORT_CARDS_SNAPSHOT_CACHE_KEY = "report-cards:snapshot";
 
 export type ReportCardsSnapshotCacheFailureReason =
   | "missing-cache"

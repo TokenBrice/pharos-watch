@@ -82,6 +82,7 @@ const EXPORT_ALLOWLIST = new Set([
   "src/lib/compare-pages.ts::STATIC_COMPARE_PAIRS",
   // Consumed by scripts/check-cron-connection-budget.ts (out-of-scan-scope).
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
+  "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET_ENTRIES",
   "src/lib/contagion-layout.ts::MAX_RADIUS",
   "src/lib/contagion-layout.ts::CORE_PAIR_X_JITTER",
   "src/lib/contagion-layout.ts::CORE_PAIR_Y_OFFSET",

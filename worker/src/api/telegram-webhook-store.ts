@@ -14,8 +14,8 @@ export function unixNow(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
-export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
+const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
+const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
 
 export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight";
 
