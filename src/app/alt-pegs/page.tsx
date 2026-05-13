@@ -1,7 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { StaticAltPegLinkHub } from "./static-link-hub";
 
 const description =
   "Non-USD stablecoin market structure across euro, gold, CPI-linked, and other alternative peg cohorts tracked by Pharos.";
@@ -30,5 +29,4 @@ export default createClientFeaturePage({
       "See where stablecoin growth is broadening beyond the dollar.",
     ],
   },
-  beforeClient: <StaticAltPegLinkHub />,
 });

@@ -22,9 +22,8 @@ This route is intentionally not a generic filtered stablecoin table and not a pa
 - **Server shell:** `src/app/alt-pegs/page.tsx`
 - **Client implementation:** `src/app/alt-pegs/client.tsx`
 - **Route-local history chart:** `src/app/alt-pegs/alt-peg-cohort-history-chart.tsx`
-- **Server-rendered crawlability surface:** `src/app/alt-pegs/static-link-hub.tsx`
 - **Shared frontend model:** `src/lib/alt-peg-market.ts`
-- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/static-link-hub.test.tsx`, `src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx`, `src/components/__tests__/non-usd-share-chart.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
+- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/cohort-directory.test.tsx`, `src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx`, `src/components/__tests__/non-usd-share-chart.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
 
 The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` with:
 
@@ -32,7 +31,6 @@ The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` wi
 - `path="/alt-pegs/"`
 - title `Non-USD Market Structure`
 - one lead paragraph introducing the non-USD market-structure surface
-- a hidden static link hub rendered before the client content so representative drill-down links are included in the static HTML without changing the visible module order
 
 Metadata is authored in `src/app/alt-pegs/page.tsx` with canonical `/alt-pegs/` through `buildPageMetadata(...)`.
 
@@ -56,7 +54,7 @@ This route stays frontend-only and uses existing public data sources:
 | `useStablecoins()`                      | live alt-peg snapshot, current peg distribution, coin/peg counts |
 | `useNonUsdShare()`                      | non-USD share history and 1y trend context                       |
 | `useStablecoinCharts()`                 | historical cohort-growth chart                                   |
-| `PEG_TAXONOMY_PAGES` / `peg-taxonomy.ts` | stable peg labels, hrefs, and the static link hub                |
+| `PEG_TAXONOMY_PAGES` / `peg-taxonomy.ts` | stable peg labels, hrefs, and cohort links                      |
 | `ACTIVE_META_BY_ID`                     | joining live API rows to tracked peg metadata                    |
 
 Important contract:
@@ -70,21 +68,19 @@ Important contract:
 
 ## Section Order
 
-The route renders `StaticAltPegLinkHub` before `AltPegsClient`, but that hub is hidden crawlability output around `AltPegCohortDirectory`; it is not the first visible module.
-
 `AltPegsClient` then renders, in order:
 
 1. `StaleDataBanner`
 2. `AltPegSnapshotHero` for the current non-USD segment
 3. `FiatWorldAtlas`
-4. `NonUsdShareChart`
-5. `AltPegCohortHistoryChart`
-6. `AltPegCohortDirectory`
+4. `AltPegCohortDirectory`
+5. `NonUsdShareChart`
+6. `AltPegCohortHistoryChart`
 7. `AltPegDistributionCard`
 
-At every breakpoint, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`; Antarctica is omitted before projection fitting so the populated atlas uses the vertical space instead of preserving an unused South Pole band. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Narrow screens keep the same atlas in a responsive viewport that fits the card first, with smaller mobile labels and scaled visual markers to avoid horizontal panning as the default interaction. The downstream cohort directory still provides the stacked `MobileRegionList` below the historical charts. The atlas card header exposes an Expand atlas affordance that opens a viewport-sized inspection overlay built on Radix Dialog; when `document.fullscreenEnabled` is true the overlay also requests browser fullscreen as a progressive enhancement. The overlay reuses the same `PegDiversityHeroLive` composition with a `--fullscreen` CSS variant and does not alter the crawlable hidden link hub, route query-state, or section order.
+At every breakpoint, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry, colored per country via `PEG_COUNTRY_MAP` in `src/lib/alt-peg-geography.ts`; Antarctica is omitted before projection fitting so the populated atlas uses the vertical space instead of preserving an unused South Pole band. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Narrow screens keep the same atlas in a responsive viewport that fits the card first, with smaller mobile labels and scaled visual markers to avoid horizontal panning as the default interaction. The downstream cohort directory appears immediately after the current-structure snapshot and atlas so the detailed region list follows the visual map before the historical chart modules. The atlas card header exposes an Expand atlas affordance that opens a viewport-sized inspection overlay built on Radix Dialog; when `document.fullscreenEnabled` is true the overlay also requests browser fullscreen as a progressive enhancement. The overlay reuses the same `PegDiversityHeroLive` composition with a `--fullscreen` CSS variant and does not alter route query-state or section order.
 
-The route intentionally shows the live snapshot first, then the visible atlas, then historical trend cards before the client-side directory and current distribution module so the analysis reads from current segment context into geography, market share history, and the cohort roster.
+The route intentionally shows the live snapshot first, then the visible atlas, then the client-side cohort directory before historical trend cards and the current distribution module so the analysis reads from current segment context into geography, the cohort roster, and then market-share history.
 
 Current Release 1 behavior:
 
@@ -101,8 +97,7 @@ Current Release 1 behavior:
 - `src/lib/nav-config.ts` includes `/alt-pegs` in the primary nav block immediately after `/yield`, labeled `Non-USD Stables`.
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
-- `StaticAltPegLinkHub` is part of the static route output before the client analytics, so `out/alt-pegs/index.html` contains crawlable links into representative non-USD peg cohorts. It is rendered inside a hidden container and does not expose the visible atlas.
-- The visible atlas lives in `AltPegsClient` as `FiatWorldAtlas`: Gold, Silver, and CPI/Index reference markers sit on the same geography-driven visual surface used by the live route, while the downstream cohort directory still provides crawlable cohort details and the stacked `MobileRegionList` on narrower viewports.
+- The visible atlas lives in `AltPegsClient` as `FiatWorldAtlas`: Gold, Silver, and CPI/Index reference markers sit on the same geography-driven visual surface used by the live route, while the downstream cohort directory provides the visible cohort details and the stacked `MobileRegionList` on narrower viewports.
 
 ---
 

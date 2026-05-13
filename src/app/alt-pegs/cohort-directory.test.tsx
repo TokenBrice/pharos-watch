@@ -1,11 +1,8 @@
 // @vitest-environment jsdom
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
-import { StaticAltPegLinkHub } from "@/app/alt-pegs/static-link-hub";
 import { AltPegCohortDirectory } from "@/app/alt-pegs/fiat-world-atlas/cohort-directory";
 import { buildAltPegLinkHubGroups, type AltPegLinkHubItem } from "@/lib/alt-peg-market";
 
@@ -16,32 +13,6 @@ const COMMODITY_INDEX_LINK_HUB_ITEMS: AltPegLinkHubItem[] = LINK_HUB_GROUPS
   .flatMap((g) => g.items);
 
 afterEach(cleanup);
-
-function withQueryClient(children: ReactNode): ReactNode {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
-
-describe("StaticAltPegLinkHub", () => {
-  it("renders the crawlable cohort directory markup", () => {
-    const html = renderToStaticMarkup(withQueryClient(<StaticAltPegLinkHub />));
-    expect(html.match(/href="\/stablecoins\/eur\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/gold\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/silver\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html.match(/href="\/stablecoins\/cpi\/?"/g)?.length).toBeGreaterThanOrEqual(1);
-    expect(html).not.toContain("/stablecoins/usd");
-    expect(html).toContain("References beyond geography");
-  });
-
-  it("keeps the static crawlable directory visible with separate anchor ids", () => {
-    const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const directory = container.querySelector("#static-alt-peg-cohort-list");
-    expect(directory).not.toBeNull();
-    expect(directory?.closest("[hidden]")).toBeNull();
-    expect(container.querySelector("#static-alt-peg-region-europe")).not.toBeNull();
-    expect(container.querySelector("#alt-peg-region-europe")).toBeNull();
-  });
-});
 
 describe("AltPegCohortDirectory", () => {
   it("renders crawlable peg links for fiat, commodity, and index cohorts", () => {

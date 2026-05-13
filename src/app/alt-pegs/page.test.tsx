@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -23,19 +22,12 @@ vi.mock("@/components/section-error-boundary", () => ({
   SectionErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-function withQueryClient(children: ReactNode): ReactNode {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
-
 describe("AltPegsPage", () => {
-  it("renders the hidden crawlable directory before the client analytics", () => {
-    const { container } = render(withQueryClient(<AltPegsPage />));
+  it("renders the client analytics without a duplicate server cohort directory", () => {
+    const { container } = render(<AltPegsPage />);
 
     expect(screen.getByTestId("alt-pegs-client")).toBeTruthy();
-    expect(container.querySelector('a[href="/stablecoins/eur"], a[href="/stablecoins/eur/"]')).not.toBeNull();
-
-    const text = container.textContent ?? "";
-    expect(text.indexOf("References beyond geography")).toBeLessThan(text.indexOf("alt-pegs-client"));
+    expect(container.querySelector('a[href="/stablecoins/eur"], a[href="/stablecoins/eur/"]')).toBeNull();
+    expect(container.textContent).not.toContain("References beyond geography");
   });
 });
