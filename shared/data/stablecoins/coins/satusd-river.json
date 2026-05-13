@@ -69,6 +69,11 @@
       "chain": "bsquared",
       "address": "0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
       "decimals": 18
+    },
+    {
+      "chain": "hemi",
+      "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

@@ -83,6 +83,11 @@
       "chain": "solana",
       "address": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
       "decimals": 9
+    },
+    {
+      "chain": "stellar",
+      "address": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+      "decimals": 7
     }
   ],
   "blacklistabilityReview": {

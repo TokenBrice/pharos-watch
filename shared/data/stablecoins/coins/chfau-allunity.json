@@ -85,5 +85,12 @@
       "label": "CHF bank deposits (CRR institutions)",
       "risk": "very-low"
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Active coverage pending",
+      "message": "CHFAU is deployed on Ethereum but the issuer site reports zero circulating supply and CoinGecko does not yet publish usable live price data. AllUnity describes CHFAU as 'LIVE SOON' relative to its July 2025 announcement."
+    }
+  ]
 }

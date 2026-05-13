@@ -40,6 +40,11 @@
       "chain": "mezo",
       "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

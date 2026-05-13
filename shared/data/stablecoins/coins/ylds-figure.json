@@ -83,7 +83,7 @@
     "semantics": "single-asset",
     "breakerScope": "ylds-figure",
     "display": {
-      "url": "https://www.figure.com/yield-dollar",
+      "url": "https://www.ylds.com/",
       "label": "Figure Markets"
     },
     "inputs": {

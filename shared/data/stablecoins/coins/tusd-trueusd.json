@@ -103,7 +103,7 @@
         "por-supply-chain-omitted"
       ]
     },
-    "breakerScope": "tusd-archblock",
+    "breakerScope": "tusd-trueusd",
     "display": {
       "url": "https://data.chain.link/feeds/ethereum/mainnet/tusd-por",
       "label": "Chainlink PoR"

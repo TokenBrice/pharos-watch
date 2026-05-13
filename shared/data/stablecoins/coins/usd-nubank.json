@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Pre-launch: backing not disclosed. Nubank vice-chair Roberto Campos Neto announced a USD-pegged stablecoin pilot at Meridian 2025, framed inside a broader plan to tokenize deposits and issue credit against tokenized assets. Whether Nubank issues its own dollar token or routes through an existing stablecoin (USDC/PYUSD/other) is undecided.",
+  "pegMechanism": "Pre-launch: not disclosed. Reported product surface is credit-card-rail stablecoin payments within Nubank's existing 100M+ LATAM customer app. Ticker, chain, reserve disclosure model, mint/redeem rails, and KYC perimeter are all undecided per Campos Neto's framing.",
   "detailProvider": "defillama",
   "links": [
     {

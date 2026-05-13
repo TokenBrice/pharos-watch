@@ -17,9 +17,6 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "infrastructures": [
-    "m0"
-  ],
   "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
   "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
   "llamaId": "309",

@@ -31,7 +31,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.superstate.com/ustb"
+      "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
     }
   ],
   "jurisdiction": {
@@ -48,6 +48,11 @@
     {
       "chain": "plume",
       "address": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
       "decimals": 6
     }
   ],

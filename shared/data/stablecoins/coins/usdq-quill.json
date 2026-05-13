@@ -14,7 +14,6 @@
   "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
   "llamaId": "228",
   "detailProvider": "defillama",
-  "geckoId": "quill-usdq",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,

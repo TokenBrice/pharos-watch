@@ -44,9 +44,19 @@
       "chain": "ethereum",
       "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x99ac4484e8a1dbd6a185380b3a811913ac884d87",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x2218a117083f5b482b0bb821d27056ba9c04b1d3",
+      "decimals": 18
     }
   ],
-  "deploymentModel": "single-chain",
+  "deploymentModel": "third-party-bridge",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-top",
   "governanceQuality": "wrapper",

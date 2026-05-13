@@ -1,7 +1,7 @@
 {
   "id": "ceur-celo",
-  "name": "Celo Euro",
-  "symbol": "CEUR",
+  "name": "Mento Euro",
+  "symbol": "EURm",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",

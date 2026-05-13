@@ -72,6 +72,11 @@
       "decimals": 18
     },
     {
+      "chain": "avalanche",
+      "address": "0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+      "decimals": 4
+    },
+    {
       "chain": "solana",
       "address": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
       "decimals": 4
@@ -84,6 +89,7 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
+  "deploymentModel": "native-multichain",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {

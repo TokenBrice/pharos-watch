@@ -14,7 +14,7 @@
       "navToken": false
     },
     "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
-    "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; issuer (Old Vector LLC) distributes 50% of reserve interest to holders as additional A7A5",
+    "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
     "geckoId": "a7a5",
     "links": [
       {
@@ -363,13 +363,8 @@
     "reserves": [
       {
         "name": "Euro deposits at Swissquote Bank SA",
-        "pct": 85,
+        "pct": 100,
         "risk": "very-low"
-      },
-      {
-        "name": "Euro deposits at FlowBank SA (bankruptcy recovery)",
-        "pct": 15,
-        "risk": "high"
       }
     ],
     "liveReservesConfig": {
@@ -391,9 +386,9 @@
     },
     "notices": [
       {
-        "type": "danger",
+        "type": "warning",
         "title": "Winding down",
-        "message": "FlowBank SA (reserve partner) declared bankruptcy in June 2024. A portion of AEUR collateral is locked in bankruptcy proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025."
+        "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has since restructured collateral so that 100% of circulating AEUR is now backed at Swissquote Bank SA; bankruptcy proceedings no longer affect coverage. The issuer is winding down stablecoin operations to comply with MiCAR (which requires EU licensing for EUR issuers) and will not resume new AEUR issuance; AEUR was delisted from Binance EEA in March 2025. Redemptions continue (minimum 250,000 AEUR threshold for direct primary-market redemption)."
       }
     ]
   },
@@ -1152,8 +1147,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
-    "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit AUDm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard)",
+    "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing AUDm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the AUDm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg",
     "geckoId": "celo-australian-dollar",
     "proofOfReserves": {
       "type": "real-time",
@@ -1909,7 +1904,7 @@
       }
     },
     "yieldConfig": {
-      "yieldSource": "Mu Digital AUD yield fund",
+      "yieldSource": "Mu Digital Asian Dollar credit fund",
       "yieldType": "nav-appreciation"
     }
   },
@@ -2846,6 +2841,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Pre-launch: Itau is evaluating a BRL- or USD-denominated stablecoin pending Brazil's Consulta Publica 111 framework. The bank already participates in the DREX wholesale CBDC pilot and would source distribution rails and custody from its existing regulated infrastructure, but no reserve composition has been publicly committed.",
+    "pegMechanism": "Pre-launch: peg maintenance is not yet defined; launch is contingent on the final shape of BCB Consulta Publica 111, including self-custody rules and bank-issuer permissions. Itau is expected to use direct bank-issuer mint/redeem rails consistent with its existing custodial and FX infrastructure.",
     "links": [
       {
         "label": "Website",
@@ -3398,6 +3395,11 @@
         "decimals": 18
       },
       {
+        "chain": "avalanche",
+        "address": "0x491a4eb4f1fc3bff8e1d2fc856a6a46663ad556f",
+        "decimals": 4
+      },
+      {
         "chain": "solana",
         "address": "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD",
         "decimals": 4
@@ -3410,6 +3412,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -4572,6 +4575,11 @@
         "decimals": 6
       },
       {
+        "chain": "monad",
+        "address": "0x834df4c1d8f51be24322e39e4766697be015512f",
+        "decimals": 6
+      },
+      {
         "chain": "stellar",
         "address": "CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
         "decimals": 7
@@ -4625,8 +4633,8 @@
     "id": "ceur-celo",
     "llamaId": "52",
     "detailProvider": "defillama",
-    "name": "Celo Euro",
-    "symbol": "CEUR",
+    "name": "Mento Euro",
+    "symbol": "EURm",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "EUR",
@@ -4965,7 +4973,14 @@
         "label": "CHF bank deposits (CRR institutions)",
         "risk": "very-low"
       }
-    }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Active coverage pending",
+        "message": "CHFAU is deployed on Ethereum but the issuer site reports zero circulating supply and CoinGecko does not yet publish usable live price data. AllUnity describes CHFAU as 'LIVE SOON' relative to its July 2025 announcement."
+      }
+    ]
   },
   {
     "id": "chfm-mento",
@@ -5693,6 +5708,11 @@
         "chain": "ethereum",
         "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
         "decimals": 18
+      },
+      {
+        "chain": "megaeth",
+        "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -5724,9 +5744,10 @@
         "coinId": "buidl-blackrock"
       },
       {
-        "name": "BENJI (Franklin Templeton fund)",
+        "name": "WTGXX (WisdomTree Government Money Market)",
         "pct": 10,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "wtgxx-wisdomtree"
       },
       {
         "name": "pyUSD (PayPal)",
@@ -5797,8 +5818,8 @@
     "id": "cusd-celo",
     "llamaId": "24",
     "detailProvider": "defillama",
-    "name": "Celo Dollar",
-    "symbol": "cUSD",
+    "name": "Mento Dollar",
+    "symbol": "USDm",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -5808,7 +5829,7 @@
       "navToken": false
     },
     "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
-    "pegMechanism": "Mento AMM: users mint cUSD by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
+    "pegMechanism": "Mento AMM: users mint USDm (formerly cUSD) by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
     "proofOfReserves": {
@@ -7529,6 +7550,21 @@
         "chain": "polygon",
         "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "9pCWprxbZMW2rYSMhPTeoyLMV2sN2WJqshdT7DQVt6hS",
+        "decimals": 6
+      },
+      {
+        "chain": "stellar",
+        "address": "EURAU-CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
+        "decimals": 7
+      },
+      {
+        "chain": "tempo",
+        "address": "0x20c0000000000000000000009a4a4b17e0dc6651",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -8237,6 +8273,21 @@
         "chain": "ethereum",
         "address": "0x8df723295214ea6f21026eeeb4382d475f146f9f",
         "decimals": 6
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "decimals": 6
+      },
+      {
+        "chain": "xrpl",
+        "address": "EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "decimals": 6
+      },
+      {
+        "chain": "algorand",
+        "address": "2768422954",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -8776,6 +8827,26 @@
       {
         "chain": "polygon",
         "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
+        "decimals": 7
+      },
+      {
+        "chain": "starknet",
+        "address": "0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2",
         "decimals": 5
       }
     ],
@@ -9794,8 +9865,8 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "USDC and USDT supplied to Aave as long-side collateral in a delta-neutral strategy; native assets borrowed against stablecoin deposits and staked to generate carry, with equal short exposure hedging directional risk",
-    "pegMechanism": "Delta-neutral portfolio construction balancing long stablecoin lending positions with offsetting short perpetual/futures exposure; mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; circuit breaker contracts enforce position caps and rebalancing bands",
+    "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
+    "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
     "geckoId": "flying-tulip-usd",
     "proofOfReserves": {
       "type": "self-reported",
@@ -14540,6 +14611,21 @@
         "chain": "base",
         "address": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2",
+        "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+        "decimals": 18
+      },
+      {
+        "chain": "codex",
+        "address": "0xe898e1cffa565aae8bacc364aa7d65a6a2d20f16",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": true,
@@ -15312,6 +15398,11 @@
         "chain": "mezo",
         "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -15536,7 +15627,7 @@
       "pegCurrency": "MXN",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
     "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
@@ -17475,7 +17566,7 @@
       {
         "type": "warning",
         "title": "Sustained soft depeg",
-        "message": "NXUSD is trading near $0.982; the peg has been below 0.99 for an extended period. Treat collateral classification as advisory rather than live redemption assurance."
+        "message": "NXUSD has shown a sustained soft-depeg pattern, with extended periods between $0.95 and $1.01 on CoinGecko/DefiLlama feeds. Treat collateral classification as advisory rather than live redemption assurance."
       }
     ]
   },
@@ -17643,7 +17734,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.ousd.com/"
+        "url": "https://www.originprotocol.com/ousd"
       },
       {
         "label": "Twitter",
@@ -18053,7 +18144,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features"
+        "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
       },
       {
         "label": "Twitter",
@@ -20134,6 +20225,11 @@
         "chain": "bsquared",
         "address": "0x8dd8b12d55c73c08294664a5915475ed1c8b1f6f",
         "decimals": 18
+      },
+      {
+        "chain": "hemi",
+        "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -20242,6 +20338,16 @@
       {
         "chain": "plasma",
         "address": "0xa29420057f3e3b9512d4786df135da1674bd74d4",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0xa744Fe3688291aC3A4a7eC917678783aD9946a1E",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x14063733875204b35D20D5Fc52C7B5569aD00335",
         "decimals": 18
       }
     ],
@@ -20385,6 +20491,11 @@
         "chain": "solana",
         "address": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
         "decimals": 9
+      },
+      {
+        "chain": "stellar",
+        "address": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -20744,6 +20855,16 @@
         "chain": "ethereum",
         "address": "0x83f20f44975d03b1b09e64809b757c47f942beea",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x99ac4484e8a1dbd6a185380b3a811913ac884d87",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x2218a117083f5b482b0bb821d27056ba9c04b1d3",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -20753,7 +20874,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "single-chain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-top",
     "governanceQuality": "wrapper",
@@ -21964,7 +22085,7 @@
       "navToken": true
     },
     "pegReferenceId": "usds-sky",
-    "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where idle liquidity earns the Sky Savings Rate and borrowed liquidity funds SKY-backed positions; holders absorb staked-SKY loan shortfall and governance slashing risk",
+    "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
     "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
     "links": [
       {
@@ -24241,7 +24362,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "attestation-mix",
-      "breakerScope": "tusd-archblock",
+      "breakerScope": "tusd-trueusd",
       "display": {
         "url": "https://data.chain.link/feeds/ethereum/mainnet/tusd-por",
         "label": "Chainlink PoR"
@@ -24406,12 +24527,18 @@
         "decimals": 6
       }
     ],
+    "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
-      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-      "evidence": "Inferred review retained: USAT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-      "reviewer": "Codex inferred-status backfill",
-      "reviewedAt": "2026-05-12"
+      "sources": [
+        {
+          "label": "USAT contract source",
+          "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68#code"
+        }
+      ],
+      "evidence": "USAT proxies to an implementation that imports WithBlockedList.sol (Tether-family blocked-list/freeze surface) and is upgradeable via a TransparentUpgradeableProxy admin.",
+      "reviewer": "Accuratis swarm review",
+      "reviewedAt": "2026-05-13"
     },
     "custodyModel": "institutional-regulated",
     "reserves": [
@@ -24601,6 +24728,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Pre-launch: backing not disclosed. Nubank vice-chair Roberto Campos Neto announced a USD-pegged stablecoin pilot at Meridian 2025, framed inside a broader plan to tokenize deposits and issue credit against tokenized assets. Whether Nubank issues its own dollar token or routes through an existing stablecoin (USDC/PYUSD/other) is undecided.",
+    "pegMechanism": "Pre-launch: not disclosed. Reported product surface is credit-card-rail stablecoin payments within Nubank's existing 100M+ LATAM customer app. Ticker, chain, reserve disclosure model, mint/redeem rails, and KYC perimeter are all undecided per Campos Neto's framing.",
     "links": [
       {
         "label": "Website",
@@ -24721,9 +24850,6 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
-    "infrastructures": [
-      "m0"
-    ],
     "reserves": [
       {
         "name": "Hashnote USYC (tokenized T-bills/reverse repos)",
@@ -25528,9 +25654,6 @@
     },
     "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
-    "infrastructures": [
-      "m0"
-    ],
     "reserves": [
       {
         "name": "PYUSD (PayPal USD)",
@@ -29050,7 +29173,6 @@
     },
     "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
-    "geckoId": "quill-usdq",
     "links": [
       {
         "label": "Website",
@@ -30149,7 +30271,7 @@
       "navToken": false
     },
     "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
-    "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; whitelisted KYC/KYB participants mint/redeem 1:1 with USDC via API; most users acquire USDu on secondary markets",
+    "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; mainnet mint/redeem against USDC is permissionless on Solana and BSC, with the DAO retaining optional KYC/KYB gating powers",
     "geckoId": "usdu",
     "cmcSlug": "unitas-protocol",
     "proofOfReserves": {
@@ -31751,7 +31873,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.superstate.com/ustb"
+        "url": "https://docs.superstate.com/investors/tokenized-funds/ustb"
       }
     ],
     "jurisdiction": {
@@ -31768,6 +31890,11 @@
       {
         "chain": "plume",
         "address": "0xe4fa682f94610ccd170680cc3b045d77d9e528a8",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "CCz3SGVziFeLYk2xfEstkiqJfYkjaSWb2GCABYsVcjo2",
         "decimals": 6
       }
     ],
@@ -31873,6 +32000,26 @@
       {
         "chain": "polygon",
         "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
         "decimals": 5
       }
     ],
@@ -32520,13 +32667,13 @@
     "geckoId": "vaneck-treasury-fund",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+      "url": "https://securitize.io/primary-market/vaneck-vbill",
       "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
     },
     "links": [
       {
         "label": "Website",
-        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+        "url": "https://securitize.io/primary-market/vaneck-vbill"
       },
       {
         "label": "Twitter",
@@ -32570,7 +32717,7 @@
       "sources": [
         {
           "label": "Securitize VBILL page",
-          "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+          "url": "https://securitize.io/primary-market/vaneck-vbill"
         }
       ],
       "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
@@ -32599,8 +32746,8 @@
       "semantics": "single-asset",
       "breakerScope": "vbill-vaneck",
       "display": {
-        "url": "https://data.chain.link/feeds/ethereum/mainnet/vbill-nav",
-        "label": "Chainlink VBILL NAV"
+        "url": "https://securitize.io/primary-market/vaneck-vbill",
+        "label": "Securitize VBILL"
       },
       "adapter": "chainlink-nav",
       "inputs": {
@@ -33160,7 +33307,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://vnx.li/vnx-gold/"
+        "url": "https://vnx.li/gold/"
       },
       {
         "label": "X",
@@ -33975,7 +34122,7 @@
       },
       {
         "label": "Dashboard",
-        "url": "https://dashboard.m0.org/extensions/wm"
+        "url": "https://dashboard.m0.org/"
       }
     ],
     "jurisdiction": {
@@ -34513,7 +34660,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
@@ -34563,6 +34710,7 @@
       "reviewedAt": "2026-05-12"
     },
     "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -35043,14 +35191,6 @@
       {
         "label": "Website",
         "url": "https://www.metallicus.com/metal-dollar"
-      },
-      {
-        "label": "Mint",
-        "url": "https://metaldollar.com/mint"
-      },
-      {
-        "label": "Treasury",
-        "url": "https://metaldollar.com/treasury-cryptos"
       },
       {
         "label": "Docs",
@@ -35819,7 +35959,7 @@
       "semantics": "single-asset",
       "breakerScope": "ylds-figure",
       "display": {
-        "url": "https://www.figure.com/yield-dollar",
+        "url": "https://www.ylds.com/",
         "label": "Figure Markets"
       },
       "adapter": "curated-validated",
@@ -36099,7 +36239,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
       }
     ],
     "contracts": [
@@ -36145,7 +36285,7 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
         },
         {
           "label": "Website",
@@ -36174,7 +36314,7 @@
       "semantics": "single-asset",
       "breakerScope": "yusd-yieldfi",
       "display": {
-        "url": "https://docs.yield.fi/technical-docs/ytokens/yusd",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
         "label": "YieldFi yUSD"
       },
       "adapter": "erc4626-single-asset",

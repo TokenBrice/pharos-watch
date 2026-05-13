@@ -56,6 +56,21 @@
       "chain": "base",
       "address": "0x370923d39f139c64813f173a1bf0b4f9ba36a24f",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x44C3950a6Ed303c863A6568EA18c1A01e504FFd2",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6",
+      "decimals": 18
+    },
+    {
+      "chain": "codex",
+      "address": "0xe898e1cffa565aae8bacc364aa7d65a6a2d20f16",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,

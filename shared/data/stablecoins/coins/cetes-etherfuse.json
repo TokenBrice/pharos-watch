@@ -57,6 +57,11 @@
       "decimals": 6
     },
     {
+      "chain": "monad",
+      "address": "0x834df4c1d8f51be24322e39e4766697be015512f",
+      "decimals": 6
+    },
+    {
       "chain": "stellar",
       "address": "CETES-GCRYUGD5NVARGXT56XEZI5CIFCQETYHAPQQTHO2O3IQZTHDH4LATMYWC",
       "decimals": 7

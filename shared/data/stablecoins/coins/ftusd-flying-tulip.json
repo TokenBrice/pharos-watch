@@ -10,8 +10,8 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and USDT supplied to Aave as long-side collateral in a delta-neutral strategy; native assets borrowed against stablecoin deposits and staked to generate carry, with equal short exposure hedging directional risk",
-  "pegMechanism": "Delta-neutral portfolio construction balancing long stablecoin lending positions with offsetting short perpetual/futures exposure; mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; circuit breaker contracts enforce position caps and rebalancing bands",
+  "collateral": "USDC and USDT supplied to Aave as long-side collateral; native assets borrowed against the stablecoin deposits and staked to generate carry, with yield routed to sftUSD stakers while unstaked ftUSD proceeds feed the protocol treasury",
+  "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
   "detailProvider": "coingecko",
   "geckoId": "flying-tulip-usd",
   "proofOfReserves": {

@@ -22,7 +22,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+      "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
     }
   ],
   "contracts": [
@@ -68,7 +68,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.yield.fi/technical-docs/ytokens/yusd"
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
       },
       {
         "label": "Website",
@@ -102,7 +102,7 @@
     "semantics": "single-asset",
     "breakerScope": "yusd-yieldfi",
     "display": {
-      "url": "https://docs.yield.fi/technical-docs/ytokens/yusd",
+      "url": "https://docs.yield.fi/legal-documents/token-terms/yusd",
       "label": "YieldFi yUSD"
     },
     "inputs": {

@@ -93,7 +93,7 @@
     }
   },
   "yieldConfig": {
-    "yieldSource": "Mu Digital AUD yield fund",
+    "yieldSource": "Mu Digital Asian Dollar credit fund",
     "yieldType": "nav-appreciation"
   }
 }

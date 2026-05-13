@@ -54,20 +54,15 @@
   "reserves": [
     {
       "name": "Euro deposits at Swissquote Bank SA",
-      "pct": 85,
+      "pct": 100,
       "risk": "very-low"
-    },
-    {
-      "name": "Euro deposits at FlowBank SA (bankruptcy recovery)",
-      "pct": 15,
-      "risk": "high"
     }
   ],
   "notices": [
     {
-      "type": "danger",
+      "type": "warning",
       "title": "Winding down",
-      "message": "FlowBank SA (reserve partner) declared bankruptcy in June 2024. A portion of AEUR collateral is locked in bankruptcy proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025."
+      "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has since restructured collateral so that 100% of circulating AEUR is now backed at Swissquote Bank SA; bankruptcy proceedings no longer affect coverage. The issuer is winding down stablecoin operations to comply with MiCAR (which requires EU licensing for EUR issuers) and will not resume new AEUR issuance; AEUR was delisted from Binance EEA in March 2025. Redemptions continue (minimum 250,000 AEUR threshold for direct primary-market redemption)."
     }
   ],
   "liveReservesConfig": {

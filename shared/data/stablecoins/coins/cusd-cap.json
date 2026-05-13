@@ -103,6 +103,11 @@
       "chain": "ethereum",
       "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+      "decimals": 18
     }
   ],
   "governanceQuality": "wrapper",
@@ -127,9 +132,10 @@
       "coinId": "buidl-blackrock"
     },
     {
-      "name": "BENJI (Franklin Templeton fund)",
+      "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 10,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "wtgxx-wisdomtree"
     },
     {
       "name": "pyUSD (PayPal)",

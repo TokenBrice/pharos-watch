@@ -16,13 +16,13 @@
   "geckoId": "vaneck-treasury-fund",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund",
+    "url": "https://securitize.io/primary-market/vaneck-vbill",
     "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
   },
   "links": [
     {
       "label": "Website",
-      "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+      "url": "https://securitize.io/primary-market/vaneck-vbill"
     },
     {
       "label": "Twitter",
@@ -66,7 +66,7 @@
     "sources": [
       {
         "label": "Securitize VBILL page",
-        "url": "https://www.securitize.io/primary-market/vaneck-treasury-fund"
+        "url": "https://securitize.io/primary-market/vaneck-vbill"
       }
     ],
     "evidence": "Securitize operates VBILL with permissioned token transfers restricted to KYC-onboarded institutional holders and retains transfer-agent freeze and burn authority on behalf of Van Eck Associates.",
@@ -96,8 +96,8 @@
     "semantics": "single-asset",
     "breakerScope": "vbill-vaneck",
     "display": {
-      "url": "https://data.chain.link/feeds/ethereum/mainnet/vbill-nav",
-      "label": "Chainlink VBILL NAV"
+      "url": "https://securitize.io/primary-market/vaneck-vbill",
+      "label": "Securitize VBILL"
     },
     "inputs": {
       "primary": {

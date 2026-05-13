@@ -53,6 +53,26 @@
       "chain": "polygon",
       "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
       "decimals": 5
+    },
+    {
+      "chain": "base",
+      "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+      "decimals": 5
+    },
+    {
+      "chain": "etherlink",
+      "address": "0xe4880249745eac5f1ed9d8f7df844792d560e750",
+      "decimals": 5
+    },
+    {
+      "chain": "stellar",
+      "address": "USTBL-CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO",
+      "decimals": 5
+    },
+    {
+      "chain": "starknet",
+      "address": "0x020ff2f6021ada9edbceaf31b96f9f67b746662a6e6b2bc9d30c0d3e290a71f6",
+      "decimals": 5
     }
   ],
   "canBeBlacklisted": true,
