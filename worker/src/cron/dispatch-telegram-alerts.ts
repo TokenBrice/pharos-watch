@@ -50,6 +50,11 @@ import {
   type AlertsByChatEntry,
   type SubscriberRow,
 } from "./dispatch-telegram-routing";
+import {
+  loadFanoutSubscriptionInputs,
+  pendingCapacityFields,
+  type PresetSubscriberLoadResult,
+} from "./dispatch-telegram-alerts-fanout";
 import { deliverTelegramSubscriberQueue } from "./dispatch-telegram-delivery";
 import {
   finalizeTelegramAlertJobManifests,
@@ -470,11 +475,6 @@ function mergeSubscriberMaps(
   return base;
 }
 
-type PresetSubscriberLoadResult =
-  | { kind: "ok"; rows: Map<string, SubscriberRow[]> }
-  | { kind: "query-failed"; error: unknown }
-  | { kind: "resolution-failed" };
-
 async function loadPresetSubscriberRowsBatch(
   db: D1Database,
   stablecoinIds: string[],
@@ -616,14 +616,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       const result = emptyResult(true, chatsWithActiveSnooze);
       result.pendingCapacityBefore = pendingCapacityBefore;
       result.pendingCapacityAfter = pendingCapacityBefore;
-      result.pendingTotal = pendingCapacityBefore.active;
-      result.pendingDue = pendingCapacityBefore.due;
-      result.pendingDeferredCount = pendingCapacityBefore.deferred;
-      result.pendingExpiredCount = pendingCapacityBefore.expired;
-      result.pendingNearTtlCount = pendingCapacityBefore.nearTtl;
-      result.oldestPendingAgeSec = pendingCapacityBefore.oldestPendingAgeSec;
-      result.oldestDuePendingAgeSec = pendingCapacityBefore.oldestDuePendingAgeSec;
-      result.estimatedDrainTimeSec = pendingCapacityBefore.estimatedDrainTimeSec;
+      Object.assign(result, pendingCapacityFields(pendingCapacityBefore));
       result.safetyAlertSourceState = safetySourceAssessment.state;
       result.safetyAlertSourceAgeSeconds = safetySourceAssessment.ageSeconds;
       result.safetyAlertSourceGeneration = safetySourceAssessment.generation;
@@ -770,7 +763,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     }
 
     const fanoutQueryStartedAtMs = Date.now();
-    const [
+    const {
       directDewsSubs,
       directDepegSubs,
       directSafetySubs,
@@ -783,20 +776,16 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       globalSafetySubs,
       globalLaunchSubs,
       perCoinSnoozeMap,
-    ] = await Promise.all([
-      loadSubscriberRowsBatch(db, dewsIds, "dews"),
-      loadSubscriberRowsBatch(db, depegIds, "depeg"),
-      loadSubscriberRowsBatch(db, safetyIds, "safety"),
-      loadSubscriberRowsBatch(db, launchIds, "launch"),
-      loadPresetSubscriberRowsBatch(db, dewsIds, "dews"),
-      loadPresetSubscriberRowsBatch(db, depegIds, "depeg"),
-      loadPresetSubscriberRowsBatch(db, safetyIds, "safety"),
-      loadGlobalSubscriberRows(db, "dews"),
-      loadGlobalSubscriberRows(db, "depeg"),
-      loadGlobalSubscriberRows(db, "safety"),
-      loadGlobalSubscriberRows(db, "launch"),
-      loadPerCoinSnoozeMap(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]),
-    ]);
+    } = await loadFanoutSubscriptionInputs(
+      db,
+      { dewsIds, depegIds, safetyIds, launchIds },
+      {
+        loadSubscriberRowsBatch,
+        loadPresetSubscriberRowsBatch,
+        loadGlobalSubscriberRows,
+        loadPerCoinSnoozeMap,
+      },
+    );
     const fanoutQueryMs = Math.max(0, Date.now() - fanoutQueryStartedAtMs);
     const fanoutBuildStartedAtMs = Date.now();
 
@@ -978,15 +967,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       pendingRetryAfterSec: drainResult.retryAfterSec,
       pendingEnqueued,
       pendingExpired: expiredCount,
-      pendingTotal: pendingCapacityAfter.active,
-      pendingDue: pendingCapacityAfter.due,
-      pendingDeferredCount: pendingCapacityAfter.deferred,
-      pendingExpiredCount: pendingCapacityAfter.expired,
-      pendingNearTtlCount: pendingCapacityAfter.nearTtl,
-      oldestPendingAgeSec: pendingCapacityAfter.oldestPendingAgeSec,
-      oldestDuePendingAgeSec: pendingCapacityAfter.oldestDuePendingAgeSec,
-      estimatedDrainTimeSec: pendingCapacityAfter.estimatedDrainTimeSec,
-      pendingDrainBudgetPerRun: pendingCapacityAfter.drainBudgetPerRun,
+      ...pendingCapacityFields(pendingCapacityAfter),
       pendingCapacityBefore,
       pendingCapacityAfter,
       freshAttempted,

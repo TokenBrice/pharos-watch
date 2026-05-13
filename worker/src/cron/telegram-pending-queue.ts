@@ -129,6 +129,24 @@ export interface PendingCapacitySnapshot {
   dispatchIntervalSec: number;
 }
 
+interface PendingRetryUpdate {
+  id: number;
+  retryAfterSec: number | null;
+  errorClass: TelegramSendErrorClass | null;
+  notBeforeAt: number | null;
+}
+
+interface PendingDeferUpdate {
+  id: number;
+  notBeforeAt: number;
+}
+
+interface PendingDeliveryDiagnostic {
+  chatId: string;
+  ok: boolean;
+  errorClass?: string | null;
+}
+
 const DEFAULT_RETRY_DELAY_SEC = PENDING_BACKOFF_SCHEDULE_SEC[0];
 
 // Two-strike rule for 403 (block) handling — see BLOCK_STRIKE_WINDOW_SEC in
@@ -519,6 +537,101 @@ function createPendingClaimOwner(): string {
   return `pending-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+async function selectPendingClaimCandidateIds(
+  db: D1Database,
+  nowSec: number,
+  limit: number,
+  maxPriority: number | null,
+): Promise<number[]> {
+  const candidateRows = await db
+    .prepare(
+      `SELECT p.id, p.chat_id, p.message_html
+         FROM telegram_pending_alerts p
+        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
+          AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
+          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
+          AND (
+            p.processing_owner IS NULL
+            OR p.processing_expires_at IS NULL
+            OR p.processing_expires_at <= ?
+          )
+        ORDER BY COALESCE(p.priority, ?) ASC,
+                 COALESCE(p.not_before_at, p.created_at) ASC,
+                 p.created_at ASC
+        LIMIT ?`,
+    )
+    .bind(
+      PENDING_TTL_SEC,
+      nowSec,
+      nowSec,
+      maxPriority,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      maxPriority,
+      nowSec,
+      TELEGRAM_PENDING_PRIORITY.legacy,
+      limit,
+    )
+    .all<{ id: number }>();
+
+  return (candidateRows.results ?? [])
+    .map((row) => Number(row.id))
+    .filter((id) => Number.isFinite(id));
+}
+
+async function claimPendingRowsByIds(
+  db: D1Database,
+  ids: readonly number[],
+  owner: string,
+  nowSec: number,
+  claimExpiresAt: number,
+): Promise<void> {
+  for (const idChunk of chunkArray(ids, PENDING_DELETE_CHUNK_SIZE)) {
+    const inClause = buildInClause(idChunk);
+    await db
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET processing_owner = ?,
+                processing_started_at = ?,
+                processing_expires_at = ?,
+                updated_at = ?
+          WHERE id IN (${inClause.sql})
+            AND (
+              processing_owner IS NULL
+              OR processing_expires_at IS NULL
+              OR processing_expires_at <= ?
+            )`,
+      )
+      .bind(owner, nowSec, claimExpiresAt, nowSec, ...inClause.binds, nowSec)
+      .run();
+  }
+}
+
+async function loadClaimedPendingRows(
+  db: D1Database,
+  owner: string,
+  limit: number,
+): Promise<PendingAlertRow[]> {
+  const rows = await db
+    .prepare(
+      `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at,
+              p.expires_at, p.attempts, p.not_before_at, p.priority, p.source_type,
+              p.alert_type, p.dedupe_key, p.chunk_index, p.last_error_class,
+              u.alert_snooze_until_ts, u.quiet_hours_enabled,
+              u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
+         FROM telegram_pending_alerts p
+         LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
+        WHERE p.processing_owner = ?
+        ORDER BY COALESCE(p.priority, ?) ASC,
+                 COALESCE(p.not_before_at, p.created_at) ASC,
+                 p.created_at ASC
+        LIMIT ?`,
+    )
+    .bind(owner, TELEGRAM_PENDING_PRIORITY.legacy, limit)
+    .all<PendingAlertRow>();
+
+  return rows.results ?? [];
+}
+
 async function deletePendingAlertsByIds(db: D1Database, ids: readonly number[]): Promise<number> {
   if (ids.length === 0) return 0;
   let deleted = 0;
@@ -615,6 +728,92 @@ async function deadLetterTerminalPendingRows(
   }
 }
 
+async function recordPendingDrainTelemetry(
+  db: D1Database,
+  deliveryDiagnostics: PendingDeliveryDiagnostic[],
+  targetStatusUpdates: TelegramAlertTargetStatusUpdate[],
+): Promise<void> {
+  await recordTelegramDeliveryOutcomes(db, deliveryDiagnostics);
+  await recordTelegramAlertTargetStatuses(db, targetStatusUpdates);
+}
+
+async function deleteSentPendingAlerts(
+  db: D1Database,
+  sentIdsToDelete: readonly number[],
+): Promise<void> {
+  if (sentIdsToDelete.length === 0) return;
+  try {
+    await deletePendingAlertsByIds(db, sentIdsToDelete);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      level: "warn",
+      message: `Failed to delete sent pending alerts: ${message}`,
+      action: "delete-sent-pending",
+      module: "telegram-pending-queue",
+      rowCount: sentIdsToDelete.length,
+    });
+  }
+}
+
+async function deadLetterAndDeleteTerminalPendingGroups(
+  db: D1Database,
+  groups: Array<{ rows: DeadLetterPendingRow[]; reason: PendingDeadLetterReason }>,
+  nowSec: number,
+): Promise<void> {
+  for (const group of groups) {
+    if (group.rows.length === 0) continue;
+    const deadLettered = await deadLetterTerminalPendingRows(db, group.rows, nowSec, group.reason);
+    if (!deadLettered) continue;
+    await deletePendingAlertsByIds(db, group.rows.map((row) => row.id));
+  }
+}
+
+async function persistPendingDeferrals(
+  db: D1Database,
+  deferUpdates: readonly PendingDeferUpdate[],
+  nowSec: number,
+): Promise<void> {
+  if (deferUpdates.length === 0) return;
+  await batchExecute(db, deferUpdates.map((update) =>
+    db
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET not_before_at = ?,
+                updated_at = ?,
+                processing_owner = NULL,
+                processing_started_at = NULL,
+                processing_expires_at = NULL
+          WHERE id = ?`,
+      )
+      .bind(update.notBeforeAt, nowSec, update.id),
+  ));
+}
+
+async function persistPendingRetries(
+  db: D1Database,
+  retryUpdates: readonly PendingRetryUpdate[],
+  nowSec: number,
+): Promise<void> {
+  if (retryUpdates.length === 0) return;
+  await batchExecute(db, retryUpdates.map((update) => {
+    return db
+      .prepare(
+        `UPDATE telegram_pending_alerts
+            SET attempts = attempts + 1,
+                not_before_at = ?,
+                last_error_class = ?,
+                retry_after_sec = ?,
+                updated_at = ?,
+                processing_owner = NULL,
+                processing_started_at = NULL,
+                processing_expires_at = NULL
+          WHERE id = ?`,
+      )
+      .bind(update.notBeforeAt, update.errorClass, update.retryAfterSec, nowSec, update.id);
+  }));
+}
+
 export async function clearPendingAlertsForAdmin(
   db: D1Database,
   filter: { chatId: string } | { olderThanCutoffSec: number },
@@ -688,80 +887,11 @@ async function claimDuePendingRows(
   maxPriority: number | null,
 ): Promise<PendingAlertRow[]> {
   const claimExpiresAt = nowSec + PENDING_CLAIM_TTL_SEC;
-  const candidateRows = await db
-    .prepare(
-      `SELECT p.id, p.chat_id, p.message_html
-         FROM telegram_pending_alerts p
-        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
-          AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
-          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
-          AND (
-            p.processing_owner IS NULL
-            OR p.processing_expires_at IS NULL
-            OR p.processing_expires_at <= ?
-          )
-        ORDER BY COALESCE(p.priority, ?) ASC,
-                 COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC
-        LIMIT ?`,
-    )
-    .bind(
-      PENDING_TTL_SEC,
-      nowSec,
-      nowSec,
-      maxPriority,
-      TELEGRAM_PENDING_PRIORITY.legacy,
-      maxPriority,
-      nowSec,
-      TELEGRAM_PENDING_PRIORITY.legacy,
-      limit,
-    )
-    .all<{ id: number }>();
-
-  const ids = (candidateRows.results ?? [])
-    .map((row) => Number(row.id))
-    .filter((id) => Number.isFinite(id));
+  const ids = await selectPendingClaimCandidateIds(db, nowSec, limit, maxPriority);
   if (ids.length === 0) return [];
 
-  for (const idChunk of chunkArray(ids, PENDING_DELETE_CHUNK_SIZE)) {
-    const inClause = buildInClause(idChunk);
-    await db
-      .prepare(
-        `UPDATE telegram_pending_alerts
-            SET processing_owner = ?,
-                processing_started_at = ?,
-                processing_expires_at = ?,
-                updated_at = ?
-          WHERE id IN (${inClause.sql})
-            AND (
-              processing_owner IS NULL
-              OR processing_expires_at IS NULL
-              OR processing_expires_at <= ?
-            )`,
-      )
-      .bind(owner, nowSec, claimExpiresAt, nowSec, ...inClause.binds, nowSec)
-      .run();
-  }
-
-  const rows = await db
-    .prepare(
-      `SELECT p.id, p.chat_id, p.message_html, p.disable_notification, p.created_at,
-              p.expires_at, p.attempts, p.not_before_at, p.priority, p.source_type,
-              p.alert_type, p.dedupe_key, p.chunk_index, p.last_error_class,
-              u.alert_snooze_until_ts, u.quiet_hours_enabled,
-              u.quiet_hours_start_utc, u.quiet_hours_end_utc, u.timezone
-         FROM telegram_pending_alerts p
-         LEFT JOIN telegram_subscribers u ON u.chat_id = p.chat_id
-        WHERE p.processing_owner = ?
-        ORDER BY COALESCE(p.priority, ?) ASC,
-                 COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC
-        LIMIT ?`,
-    )
-    .bind(owner, TELEGRAM_PENDING_PRIORITY.legacy, limit)
-    .all<PendingAlertRow>();
-
-  return rows.results ?? [];
+  await claimPendingRowsByIds(db, ids, owner, nowSec, claimExpiresAt);
+  return loadClaimedPendingRows(db, owner, limit);
 }
 
 export async function drainPendingQueue(
@@ -804,13 +934,13 @@ export async function drainPendingQueue(
   const permanentRowsToDelete: DeadLetterPendingRow[] = [];
   const maxAttemptRowsToDelete: DeadLetterPendingRow[] = [];
   const completedIds = new Set<number>();
-  const retryUpdates: Array<{ id: number; retryAfterSec: number | null; errorClass: TelegramSendErrorClass | null; notBeforeAt: number | null }> = [];
-  const deferUpdates: Array<{ id: number; notBeforeAt: number }> = [];
+  const retryUpdates: PendingRetryUpdate[] = [];
+  const deferUpdates: PendingDeferUpdate[] = [];
   let rateLimited = false;
   let globalRateLimited = false;
   let rateLimitRetryAfterSec: number | null = null;
   let rateLimitNotBeforeAt: number | null = null;
-  const deliveryDiagnostics: Array<{ chatId: string; ok: boolean; errorClass?: string | null }> = [];
+  const deliveryDiagnostics: PendingDeliveryDiagnostic[] = [];
   const targetStatusUpdates: TelegramAlertTargetStatusUpdate[] = [];
   const pendingById = new Map(pending.map((row) => [row.id, row] as const));
 
@@ -946,70 +1076,17 @@ export async function drainPendingQueue(
     }
   }
 
-  await recordTelegramDeliveryOutcomes(db, deliveryDiagnostics);
-  await recordTelegramAlertTargetStatuses(db, targetStatusUpdates);
-
-  if (sentIdsToDelete.length > 0) {
-    try {
-      await deletePendingAlertsByIds(db, sentIdsToDelete);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logTelegramEvent({
-        level: "warn",
-        message: `Failed to delete sent pending alerts: ${message}`,
-        action: "delete-sent-pending",
-        module: "telegram-pending-queue",
-        rowCount: sentIdsToDelete.length,
-      });
-    }
-  }
+  await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
 
   const terminalDeleteGroups: Array<{ rows: DeadLetterPendingRow[]; reason: PendingDeadLetterReason }> = [
     { rows: blockedRowsToDelete, reason: "blocked_disabled" },
     { rows: permanentRowsToDelete, reason: "permanent_failure" },
     { rows: maxAttemptRowsToDelete, reason: "max_attempts" },
   ];
-  for (const group of terminalDeleteGroups) {
-    if (group.rows.length === 0) continue;
-    const deadLettered = await deadLetterTerminalPendingRows(db, group.rows, nowSec, group.reason);
-    if (!deadLettered) continue;
-    await deletePendingAlertsByIds(db, group.rows.map((row) => row.id));
-  }
-
-  if (deferUpdates.length > 0) {
-    await batchExecute(db, deferUpdates.map((update) =>
-      db
-        .prepare(
-          `UPDATE telegram_pending_alerts
-              SET not_before_at = ?,
-                  updated_at = ?,
-                  processing_owner = NULL,
-                  processing_started_at = NULL,
-                  processing_expires_at = NULL
-            WHERE id = ?`,
-        )
-        .bind(update.notBeforeAt, nowSec, update.id),
-    ));
-  }
-
-  if (retryUpdates.length > 0) {
-    await batchExecute(db, retryUpdates.map((update) => {
-      return db
-        .prepare(
-          `UPDATE telegram_pending_alerts
-              SET attempts = attempts + 1,
-                  not_before_at = ?,
-                  last_error_class = ?,
-                  retry_after_sec = ?,
-                  updated_at = ?,
-                  processing_owner = NULL,
-                  processing_started_at = NULL,
-                  processing_expires_at = NULL
-            WHERE id = ?`,
-        )
-        .bind(update.notBeforeAt, update.errorClass, update.retryAfterSec, nowSec, update.id);
-    }));
-  }
+  await deleteSentPendingAlerts(db, sentIdsToDelete);
+  await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec);
+  await persistPendingDeferrals(db, deferUpdates, nowSec);
+  await persistPendingRetries(db, retryUpdates, nowSec);
 
   const unfinishedClaimedIds = pending
     .map((row) => row.id)

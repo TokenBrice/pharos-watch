@@ -30,6 +30,19 @@ interface ProcessedUpdateRow {
   received_at: number;
 }
 
+interface PendingDisambiguationPersistenceInput {
+  chatId: string;
+  actionType: string;
+  actionPayload: object;
+  alertTypes: readonly string[];
+  resolvedIds: readonly string[];
+  ambiguousTicker: string;
+  candidates: readonly unknown[];
+  remainingTickers: readonly string[];
+  initiatorUserId: string | null;
+  expiresAt?: number;
+}
+
 function d1ChangeCount(result: D1Result<unknown>): number {
   const changes = Number(result.meta?.changes ?? 0);
   return Number.isFinite(changes) ? changes : 0;
@@ -372,6 +385,23 @@ export async function persistPendingDisambiguation(
     initiatorUserId: string | null;
   },
 ): Promise<void> {
+  await persistPendingDisambiguationRow(db, {
+    chatId: input.chatId,
+    actionType: input.actionType,
+    actionPayload: input.actionPayload,
+    alertTypes: Array.from(input.alertTypes ?? []),
+    resolvedIds: dedupeCoins(input.resolvedCoins).map((coin) => coin.id),
+    ambiguousTicker: input.ambiguousTicker,
+    candidates: input.candidates,
+    remainingTickers: input.remainingTickers,
+    initiatorUserId: input.initiatorUserId,
+  });
+}
+
+export async function persistPendingDisambiguationRow(
+  db: D1Database,
+  input: PendingDisambiguationPersistenceInput,
+): Promise<void> {
   await db
     .prepare(`
       INSERT INTO telegram_pending_disambiguation (
@@ -402,12 +432,12 @@ export async function persistPendingDisambiguation(
       input.chatId,
       input.actionType,
       JSON.stringify(input.actionPayload),
-      JSON.stringify(Array.from(input.alertTypes ?? [])),
-      JSON.stringify(dedupeCoins(input.resolvedCoins).map((coin) => coin.id)),
+      JSON.stringify(input.alertTypes),
+      JSON.stringify(input.resolvedIds),
       input.ambiguousTicker,
       JSON.stringify(input.candidates),
       JSON.stringify(input.remainingTickers),
-      unixNow() + DISAMBIGUATION_TTL_SEC,
+      input.expiresAt ?? unixNow() + DISAMBIGUATION_TTL_SEC,
       input.initiatorUserId,
     )
     .run();
@@ -427,45 +457,17 @@ export async function persistPendingConfirmBulk(
     initiatorUserId: string | null;
   },
 ): Promise<void> {
-  await db
-    .prepare(`
-      INSERT INTO telegram_pending_disambiguation (
-        chat_id,
-        action_type,
-        action_payload,
-        alert_types,
-        resolved_ids,
-        ambiguous_ticker,
-        candidates,
-        remaining_tickers,
-        expires_at,
-        initiator_user_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET
-        action_type = excluded.action_type,
-        action_payload = excluded.action_payload,
-        alert_types = excluded.alert_types,
-        resolved_ids = excluded.resolved_ids,
-        ambiguous_ticker = excluded.ambiguous_ticker,
-        candidates = excluded.candidates,
-        remaining_tickers = excluded.remaining_tickers,
-        expires_at = excluded.expires_at,
-        initiator_user_id = excluded.initiator_user_id
-    `)
-    .bind(
-      input.chatId,
-      "confirm-bulk",
-      JSON.stringify(input.payload),
-      JSON.stringify([]),
-      JSON.stringify([]),
-      "",
-      JSON.stringify([]),
-      JSON.stringify([]),
-      unixNow() + DISAMBIGUATION_TTL_SEC,
-      input.initiatorUserId,
-    )
-    .run();
+  await persistPendingDisambiguationRow(db, {
+    chatId: input.chatId,
+    actionType: "confirm-bulk",
+    actionPayload: input.payload,
+    alertTypes: [],
+    resolvedIds: [],
+    ambiguousTicker: "",
+    candidates: [],
+    remainingTickers: [],
+    initiatorUserId: input.initiatorUserId,
+  });
 }
 
 export async function loadSubscriberByChat(

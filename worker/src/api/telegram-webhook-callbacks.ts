@@ -71,7 +71,7 @@ export { SNOOZE_SECONDS };
 // dispatcher so that an unknown action can never reach a D1 read/write.
 // `setup` is handled separately above. `confirm`/`cancel` are used by the
 // P0-C1 bulk-confirmation gate (action data `confirm:bulk` / `cancel:bulk`).
-const KNOWN_ACTIONS = new Set([
+const CALLBACK_ACTIONS = [
   "snooze",
   "coinsnooze",
   "status",
@@ -86,7 +86,16 @@ const KNOWN_ACTIONS = new Set([
   "unsub",
   "settings",
   "tz",
-]);
+] as const;
+
+type CallbackAction = (typeof CALLBACK_ACTIONS)[number];
+type ParsedCallbackData<TAction extends string = string> = {
+  action: TAction;
+  arg: string | undefined;
+  parts: string[];
+};
+
+const KNOWN_ACTIONS = new Set<string>(CALLBACK_ACTIONS);
 
 type SnoozeArg = keyof typeof SNOOZE_SECONDS;
 
@@ -98,8 +107,9 @@ function isKnownStablecoinId(id: string | undefined): id is string {
   return typeof id === "string" && TRACKED_META_BY_ID.has(id);
 }
 
-function parseCallbackData(data: string): string[] {
-  return data.split(":");
+function parseCallbackData(data: string): ParsedCallbackData {
+  const parts = data.split(":");
+  return { action: parts[0] ?? "", arg: parts[1], parts };
 }
 
 function hasExactParts(parts: readonly string[], expected: number): boolean {
@@ -112,6 +122,15 @@ function callbackActorUserId(cb: TelegramCallbackQuery): string | null {
 
 function callbackChatType(cb: TelegramCallbackQuery): string {
   return cb.message?.chat?.type ?? "private";
+}
+
+function callbackUsername(cb: TelegramCallbackQuery): string | null {
+  const chatType = callbackChatType(cb);
+  return chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+}
+
+function isKnownCallbackAction(action: string): action is CallbackAction {
+  return KNOWN_ACTIONS.has(action);
 }
 
 async function requireAdminForMutatingCallback(
@@ -158,363 +177,479 @@ export async function handleCallbackQuery(
     return;
   }
 
-  const data = cb.data ?? "";
-  const parts = parseCallbackData(data);
-  const [action, arg] = parts;
+  const parsed = parseCallbackData(cb.data ?? "");
 
-  if (action === "setup") {
-    const subAction = arg ?? "";
-    const subArg = parts[2] ?? "";
-    const validSetupCallback =
-      (subAction === "branch" && hasExactParts(parts, 3) && (subArg === "recommended" || subArg === "custom" || subArg === "skip")) ||
-      (subAction === "type-toggle" && hasExactParts(parts, 3)) ||
-      (subAction === "target" && hasExactParts(parts, 3)) ||
-      ((subAction === "next" || subAction === "confirm" || subAction === "cancel") && parts.length === 2);
-    if (!validSetupCallback) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
-    const chatType = callbackChatType(cb);
-    const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
-    const actorUserId = callbackActorUserId(cb);
-    const stateRow = await db
-      .prepare(
-        "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-      )
-      .bind(chatId)
-      .first<{
-        action_type: string | null;
-        action_payload: string | null;
-        expires_at: number;
-        initiator_user_id: string | null;
-      }>();
-    const isActiveSetup =
-      stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
-    const state = isActiveSetup
-      ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
-      : null;
-
-    const context = { db, botToken, chatId, actorUserId, username };
-    let result: { text: string };
-    if (subAction === "branch") {
-      result = await handleSetupBranch(context, subArg, state);
-    } else if (subAction === "type-toggle") {
-      result = await handleSetupTypeToggle(context, subArg, state);
-    } else if (subAction === "next") {
-      result = await handleSetupNext(context, state);
-    } else if (subAction === "target") {
-      result = await handleSetupTarget(context, subArg, state);
-    } else if (subAction === "confirm") {
-      result = await handleSetupConfirm(context, state);
-    } else if (subAction === "cancel") {
-      result = await handleSetupCancel(context, state);
-    } else {
-      result = { text: "Action not recognized." };
-    }
-
-    await answerCallbackQuery(cb.id, botToken, { text: result.text });
+  if (parsed.action === "setup") {
+    await handleSetupCallback(db, botToken, cb, chatId, parsed);
     return;
   }
 
-  if (action === "settings") {
-    const subAction = arg ?? "";
-    const subArg = parts.slice(2).join(":");
-    const validSettingsCallback =
-      (subAction === "home" && parts.length === 2) ||
-      ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
-      (subAction === "sc" && parts.length === 2) ||
-      (subAction === "c" && parts.length === 5);
-    if (!validSettingsCallback) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    const mutatingSettingsCallback =
-      subAction === "gt" ||
-      subAction === "q" ||
-      subAction === "sc" ||
-      subAction === "c";
-    if (
-      mutatingSettingsCallback &&
-      !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
-    ) {
-      return;
-    }
-    await handleSettingsCallback(db, botToken, cb, subAction, subArg);
+  if (parsed.action === "settings") {
+    await handleSettingsInlineCallback(db, botToken, cb, chatId, parsed);
     return;
   }
 
   // Reject unknown actions before any handler can touch D1. Per-action arg
   // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs below.
-  if (!KNOWN_ACTIONS.has(action)) {
+  const action = parsed.action;
+  if (!isKnownCallbackAction(action)) {
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
 
-  if (action === "snooze") {
-    if (!hasExactParts(parts, 2) || !isSnoozeArg(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
-    const now = unixNow();
-    const until = now + SNOOZE_SECONDS[arg];
-    const chatType = callbackChatType(cb);
-    const username = chatType === "group" || chatType === "supergroup" ? null : cb.from?.username ?? null;
+  const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
 
-    // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
-    // A concurrent Promise.all would leave the ack in-flight if the write
-    // rejects, and the Workers runtime can cancel the pending fetch once the
-    // handler throws, producing silent snooze failures from the user's POV.
-    try {
-      await db
-        .prepare(
-          `INSERT INTO telegram_subscribers (
-             chat_id, username,
-             alert_dews, alert_depeg, alert_safety, alert_launch,
-             global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-             quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-             alert_snooze_until_ts,
-             created_at, last_active_at
-           )
-           VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
-           ON CONFLICT(chat_id) DO UPDATE SET
-             username = COALESCE(excluded.username, telegram_subscribers.username),
-             alert_snooze_until_ts = excluded.alert_snooze_until_ts,
-             last_active_at = excluded.last_active_at`,
-        )
-        .bind(chatId, username, until, now, now)
-        .run();
-    } catch (err) {
-      logTelegramEvent({
-        message: "snooze write failed",
-        chatId,
-        userId: cb.from?.id ?? null,
-        action: "snooze",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save snooze. Please try again.",
-      });
+  switch (knownParsed.action) {
+    case "snooze":
+      await handleChatSnoozeCallback(db, botToken, cb, chatId, knownParsed);
       return;
-    }
+    case "coinsnooze":
+      await handleCoinSnoozeCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "status":
+      await handleStatusCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "why":
+      await handleWhyCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "coverage":
+      await handleCoverageCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "quicksub":
+      await handleQuickSubCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "depegstep":
+      await handleDepegStepCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "safetydown":
+      await handleSafetyDownCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "confirm":
+    case "cancel":
+      await handleBulkActionCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "manage":
+      await handleManageActionCallback(db, botToken, cb, knownParsed);
+      return;
+    case "unsub":
+      await handleUnsubscribeActionCallback(db, botToken, cb, knownParsed);
+      return;
+    case "tz":
+      await handleTimezoneCallback(db, botToken, cb, chatId, knownParsed);
+      return;
+    case "settings":
+      // Settings are handled before the allowlist check, but keep the switch
+      // exhaustive for CallbackAction.
+      return;
+  }
+}
+
+async function handleSetupCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg: subAction = "", parts } = parsed;
+  const subArg = parts[2] ?? "";
+  const validSetupCallback =
+    (subAction === "branch" && hasExactParts(parts, 3) && (subArg === "recommended" || subArg === "custom" || subArg === "skip")) ||
+    (subAction === "type-toggle" && hasExactParts(parts, 3)) ||
+    (subAction === "target" && hasExactParts(parts, 3)) ||
+    ((subAction === "next" || subAction === "confirm" || subAction === "cancel") && parts.length === 2);
+  if (!validSetupCallback) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+    return;
+  }
+
+  const stateRow = await db
+    .prepare(
+      "SELECT action_type, action_payload, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+    )
+    .bind(chatId)
+    .first<{
+      action_type: string | null;
+      action_payload: string | null;
+      expires_at: number;
+      initiator_user_id: string | null;
+    }>();
+  const isActiveSetup =
+    stateRow?.action_type === SETUP_PENDING_ACTION_TYPE && unixNow() < stateRow.expires_at;
+  const state = isActiveSetup
+    ? parseSetupState(stateRow?.action_payload ?? null, stateRow?.initiator_user_id ?? null)
+    : null;
+  const context = {
+    db,
+    botToken,
+    chatId,
+    actorUserId: callbackActorUserId(cb),
+    username: callbackUsername(cb),
+  };
+
+  let result: { text: string };
+  if (subAction === "branch") {
+    result = await handleSetupBranch(context, subArg, state);
+  } else if (subAction === "type-toggle") {
+    result = await handleSetupTypeToggle(context, subArg, state);
+  } else if (subAction === "next") {
+    result = await handleSetupNext(context, state);
+  } else if (subAction === "target") {
+    result = await handleSetupTarget(context, subArg, state);
+  } else if (subAction === "confirm") {
+    result = await handleSetupConfirm(context, state);
+  } else if (subAction === "cancel") {
+    result = await handleSetupCancel(context, state);
+  } else {
+    result = { text: "Action not recognized." };
+  }
+
+  await answerCallbackQuery(cb.id, botToken, { text: result.text });
+}
+
+async function handleSettingsInlineCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg: subAction = "", parts } = parsed;
+  const subArg = parts.slice(2).join(":");
+  const validSettingsCallback =
+    (subAction === "home" && parts.length === 2) ||
+    ((subAction === "gt" || subAction === "q" || subAction === "o") && parts.length === 3) ||
+    (subAction === "sc" && parts.length === 2) ||
+    (subAction === "c" && parts.length === 5);
+  if (!validSettingsCallback) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const mutatingSettingsCallback =
+    subAction === "gt" ||
+    subAction === "q" ||
+    subAction === "sc" ||
+    subAction === "c";
+  if (
+    mutatingSettingsCallback &&
+    !(await requireAdminForMutatingCallback(db, botToken, cb, chatId))
+  ) {
+    return;
+  }
+  await handleSettingsCallback(db, botToken, cb, subAction, subArg);
+}
+
+async function handleChatSnoozeCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isSnoozeArg(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+    return;
+  }
+  const now = unixNow();
+  const until = now + SNOOZE_SECONDS[arg];
+
+  // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
+  // A concurrent Promise.all would leave the ack in-flight if the write
+  // rejects, and the Workers runtime can cancel the pending fetch once the
+  // handler throws, producing silent snooze failures from the user's POV.
+  try {
+    await db
+      .prepare(
+        `INSERT INTO telegram_subscribers (
+           chat_id, username,
+           alert_dews, alert_depeg, alert_safety, alert_launch,
+           global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+           quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+           alert_snooze_until_ts,
+           created_at, last_active_at
+         )
+         VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
+         ON CONFLICT(chat_id) DO UPDATE SET
+           username = COALESCE(excluded.username, telegram_subscribers.username),
+           alert_snooze_until_ts = excluded.alert_snooze_until_ts,
+           last_active_at = excluded.last_active_at`,
+      )
+      .bind(chatId, callbackUsername(cb), until, now, now)
+      .run();
+  } catch (err) {
+    logTelegramEvent({
+      message: "snooze write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "snooze",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Could not save snooze. Please try again.",
+    });
+    return;
+  }
+  await recordTelegramUsageEvent(db, {
+    eventType: "snooze_change",
+    actionDetail: "chat",
+    outcome: "set",
+  });
+  await answerCallbackQuery(cb.id, botToken, {
+    text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+  });
+}
+
+async function handleCoinSnoozeCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  const durationToken = parts[2];
+  if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isSnoozeArg(durationToken)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+    return;
+  }
+  const now = unixNow();
+  const until = now + SNOOZE_SECONDS[durationToken];
+  try {
+    // Upsert: if the chat has no per-coin subscription row yet (e.g. they
+    // are a global subscriber), create one with all alert flags = 0 so the
+    // snooze takes effect without enabling per-coin alerts. The dispatcher
+    // only honors `alert_snooze_until_ts` on existing subscription rows,
+    // and the per-coin snooze map (P1-U10) uses the row to filter out
+    // global fan-out for this (chat, stablecoin) pair.
+    await db
+      .prepare(
+        `INSERT INTO telegram_subscriptions (
+           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+           alert_snooze_until_ts
+         )
+         VALUES (?, ?, 0, 0, 0, 0, ?)
+         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+           alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
+      )
+      .bind(chatId, arg, until)
+      .run();
+    await db
+      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+      .bind(now, chatId)
+      .run();
+  } catch (err) {
+    logTelegramEvent({
+      message: "coinsnooze write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "coinsnooze",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Could not save snooze. Please try again.",
+    });
+    return;
+  }
+  const meta = TRACKED_META_BY_ID.get(arg);
+  await recordTelegramUsageEvent(db, {
+    eventType: "snooze_change",
+    actionDetail: "coin",
+    outcome: "set",
+  });
+  await answerCallbackQuery(cb.id, botToken, {
+    text: `Snoozed ${meta?.symbol ?? arg} for ${durationToken}.`,
+  });
+}
+
+async function handleStatusCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const meta = TRACKED_META_BY_ID.get(arg);
+  const status = await loadStatusForCoin(db, arg);
+  await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
+    replyMarkup: buildStatusDiscoveryKeyboard(arg),
+    actionDetail: "callback_status",
+  });
+  await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+}
+
+async function handleWhyCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const message = await buildWhyMessage(db, arg);
+  await sendAuditedTelegramReply(db, chatId, message, botToken, {
+    actionDetail: "callback_why",
+  });
+  await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
+}
+
+async function handleCoverageCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const meta = TRACKED_META_BY_ID.get(arg);
+  const status = await loadStatusForCoin(db, arg);
+  await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
+    actionDetail: "callback_coverage",
+  });
+  await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
+}
+
+async function handleQuickSubCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const chatType = callbackChatType(cb);
+  const isGroup = chatType === "group" || chatType === "supergroup";
+  // Group chats route through the same admin gate as the slash commands so
+  // a single member cannot rewrite the chat's subscription state.
+  if (
+    isGroup &&
+    !(await requireAdminForMutatingCallback(
+      db,
+      botToken,
+      cb,
+      chatId,
+      "Only group admins can subscribe.",
+    ))
+  ) {
+    return;
+  }
+  const meta = TRACKED_META_BY_ID.get(arg);
+  try {
+    await upsertSubscriberAndSubscriptions(
+      db,
+      chatId,
+      isGroup ? null : cb.from?.username ?? null,
+      new Set(["dews", "depeg"]),
+      [arg],
+    );
     await recordTelegramUsageEvent(db, {
-      eventType: "snooze_change",
-      actionDetail: "chat",
-      outcome: "set",
+      eventType: "subscribe",
+      actionDetail: "quicksub",
+      outcome: "success",
     });
+  } catch (err) {
+    console.error("[telegram-webhook] quicksub write failed:", err);
     await answerCallbackQuery(cb.id, botToken, {
-      text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+      text: "Could not save subscription. Please try again.",
     });
     return;
   }
+  await answerCallbackQuery(cb.id, botToken, {
+    text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
+  });
+}
 
-  if (action === "coinsnooze") {
-    const durationToken = parts[2];
-    if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isSnoozeArg(durationToken)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
+async function handleDepegStepCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  const step = Number(parts[2]);
+  if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isDepegStepValue(step)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
+    return;
+  }
+  try {
     const now = unixNow();
-    const until = now + SNOOZE_SECONDS[durationToken];
-    try {
-      // Upsert: if the chat has no per-coin subscription row yet (e.g. they
-      // are a global subscriber), create one with all alert flags = 0 so the
-      // snooze takes effect without enabling per-coin alerts. The dispatcher
-      // only honors `alert_snooze_until_ts` on existing subscription rows,
-      // and the per-coin snooze map (P1-U10) uses the row to filter out
-      // global fan-out for this (chat, stablecoin) pair.
-      await db
-        .prepare(
-          `INSERT INTO telegram_subscriptions (
-             chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-             alert_snooze_until_ts
-           )
-           VALUES (?, ?, 0, 0, 0, 0, ?)
-           ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-             alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
-        )
-        .bind(chatId, arg, until)
-        .run();
-      await db
-        .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-        .bind(now, chatId)
-        .run();
-    } catch (err) {
-      logTelegramEvent({
-        message: "coinsnooze write failed",
-        chatId,
-        userId: cb.from?.id ?? null,
-        action: "coinsnooze",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save snooze. Please try again.",
-      });
-      return;
-    }
-    const meta = TRACKED_META_BY_ID.get(arg);
-    await recordTelegramUsageEvent(db, {
-      eventType: "snooze_change",
-      actionDetail: "coin",
-      outcome: "set",
+    await db
+      .prepare(
+        `INSERT INTO telegram_subscriptions (
+           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, depeg_worsening_bps_step
+         )
+         VALUES (?, ?, 0, 1, 0, 0, ?)
+         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+           alert_depeg = 1,
+           depeg_worsening_bps_step = excluded.depeg_worsening_bps_step`,
+      )
+      .bind(chatId, arg, step)
+      .run();
+    await db
+      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+      .bind(now, chatId)
+      .run();
+    await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
+  } catch (err) {
+    logTelegramEvent({
+      message: "depegstep callback write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "depegstep",
+      err: err instanceof Error ? err.message : String(err),
     });
     await answerCallbackQuery(cb.id, botToken, {
-      text: `Snoozed ${meta?.symbol ?? arg} for ${durationToken}.`,
+      text: "Could not save setting. Please try again.",
     });
+  }
+}
+
+async function handleSafetyDownCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  const { arg, parts } = parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
-
-  if (action === "status") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    const meta = TRACKED_META_BY_ID.get(arg);
-    const status = await loadStatusForCoin(db, arg);
-    await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
-      replyMarkup: buildStatusDiscoveryKeyboard(arg),
-      actionDetail: "callback_status",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
     return;
   }
-
-  if (action === "why") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    const message = await buildWhyMessage(db, arg);
-    await sendAuditedTelegramReply(db, chatId, message, botToken, {
-      actionDetail: "callback_why",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
-    return;
-  }
-
-  if (action === "coverage") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    const meta = TRACKED_META_BY_ID.get(arg);
-    const status = await loadStatusForCoin(db, arg);
-    await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
-      actionDetail: "callback_coverage",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
-    return;
-  }
-
-  if (action === "quicksub") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    const chatType = callbackChatType(cb);
-    const isGroup = chatType === "group" || chatType === "supergroup";
-    // Group chats route through the same admin gate as the slash commands so
-    // a single member cannot rewrite the chat's subscription state.
-    if (
-      isGroup &&
-      !(await requireAdminForMutatingCallback(
-        db,
-        botToken,
-        cb,
-        chatId,
-        "Only group admins can subscribe.",
-      ))
-    ) {
-      return;
-    }
-    const username = isGroup ? null : cb.from?.username ?? null;
-    const meta = TRACKED_META_BY_ID.get(arg);
-    try {
-      await upsertSubscriberAndSubscriptions(
-        db,
-        chatId,
-        username,
-        new Set(["dews", "depeg"]),
-        [arg],
-      );
-      await recordTelegramUsageEvent(db, {
-        eventType: "subscribe",
-        actionDetail: "quicksub",
-        outcome: "success",
-      });
-    } catch (err) {
-      console.error("[telegram-webhook] quicksub write failed:", err);
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save subscription. Please try again.",
-      });
-      return;
-    }
-    await answerCallbackQuery(cb.id, botToken, {
-      text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
-    });
-    return;
-  }
-
-  if (action === "depegstep") {
-    const step = Number(parts[2]);
-    if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isDepegStepValue(step)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
-    try {
-      const now = unixNow();
-      await db
-        .prepare(
-          `INSERT INTO telegram_subscriptions (
-             chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, depeg_worsening_bps_step
-           )
-           VALUES (?, ?, 0, 1, 0, 0, ?)
-           ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-             alert_depeg = 1,
-             depeg_worsening_bps_step = excluded.depeg_worsening_bps_step`,
-        )
-        .bind(chatId, arg, step)
-        .run();
-      await db
-        .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-        .bind(now, chatId)
-        .run();
-      await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
-    } catch (err) {
-      logTelegramEvent({
-        message: "depegstep callback write failed",
-        chatId,
-        userId: cb.from?.id ?? null,
-        action: "depegstep",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save setting. Please try again.",
-      });
-    }
-    return;
-  }
-
-  if (action === "safetydown") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
-    try {
+  try {
     const now = unixNow();
     await db
       .prepare(
@@ -533,100 +668,117 @@ export async function handleCallbackQuery(
       .bind(now, chatId)
       .run();
     await answerCallbackQuery(cb.id, botToken, { text: "Safety alerts set to downgrades only." });
-    } catch (err) {
-      logTelegramEvent({
-        message: "safetydown callback write failed",
-        chatId,
-        userId: cb.from?.id ?? null,
-        action: "safetydown",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save setting. Please try again.",
-      });
-    }
+  } catch (err) {
+    logTelegramEvent({
+      message: "safetydown callback write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "safetydown",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Could not save setting. Please try again.",
+    });
+  }
+}
+
+async function handleBulkActionCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  if (
+    (parsed.action !== "confirm" && parsed.action !== "cancel") ||
+    !hasExactParts(parsed.parts, 2) ||
+    parsed.arg !== "bulk"
+  ) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
-
-  if (action === "confirm" || action === "cancel") {
-    if (!hasExactParts(parts, 2) || arg !== "bulk") {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-      return;
-    }
-    await handleBulkConfirmCallback(db, botToken, cb, action);
+  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
     return;
   }
+  await handleBulkConfirmCallback(db, botToken, cb, parsed.action);
+}
 
-  if (action === "manage") {
-    if (!hasExactParts(parts, 3) || arg !== "page") {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    await handleManagePage(db, botToken, cb);
+async function handleManageActionCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  if (!hasExactParts(parsed.parts, 3) || parsed.arg !== "page") {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
+  await handleManagePage(db, botToken, cb);
+}
 
-  if (action === "unsub") {
-    if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-      return;
-    }
-    await handleManageUnsub(db, botToken, cb, arg);
+async function handleUnsubscribeActionCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  if (!hasExactParts(parsed.parts, 2) || !isKnownStablecoinId(parsed.arg)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
+  await handleManageUnsub(db, botToken, cb, parsed.arg);
+}
 
-  if (action === "tz") {
-    // Zone strings never legitimately contain `:` (IANA names use `/`), but use
-    // a slice instead of split to stay forgiving if Telegram ever introduces
-    // multi-segment callback payloads.
-    const zone = parts[1] ?? "";
-    if (!hasExactParts(parts, 2) || !isValidIanaTimezone(zone)) {
-      await answerCallbackQuery(cb.id, botToken, { text: "Unknown timezone." });
-      return;
-    }
-    const chatType = callbackChatType(cb);
-    const isGroup = chatType === "group" || chatType === "supergroup";
-    if (
-      isGroup &&
-      !(await requireAdminForMutatingCallback(
-        db,
-        botToken,
-        cb,
-        chatId,
-        "Only group admins can change timezone.",
-      ))
-    ) {
-      return;
-    }
-    const username = isGroup ? null : cb.from?.username ?? null;
-    try {
-      await setSubscriberTimezone(db, chatId, username, zone);
-      await recordTelegramUsageEvent(db, {
-        eventType: "timezone_change",
-        actionDetail: "quick_pick",
-        outcome: "set",
-      });
-    } catch (err) {
-      logTelegramEvent({
-        message: "timezone write failed",
-        chatId,
-        userId: cb.from?.id ?? null,
-        action: "tz",
-        err: err instanceof Error ? err.message : String(err),
-      });
-      await answerCallbackQuery(cb.id, botToken, {
-        text: "Could not save timezone. Please try again.",
-      });
-      return;
-    }
-    await answerCallbackQuery(cb.id, botToken, { text: `Timezone set to ${zone}.` });
+async function handleTimezoneCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData,
+): Promise<void> {
+  // Zone strings never legitimately contain `:` (IANA names use `/`), but use
+  // a slice instead of split to stay forgiving if Telegram ever introduces
+  // multi-segment callback payloads.
+  const zone = parsed.parts[1] ?? "";
+  if (!hasExactParts(parsed.parts, 2) || !isValidIanaTimezone(zone)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Unknown timezone." });
     return;
   }
-
-  await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+  const chatType = callbackChatType(cb);
+  const isGroup = chatType === "group" || chatType === "supergroup";
+  if (
+    isGroup &&
+    !(await requireAdminForMutatingCallback(
+      db,
+      botToken,
+      cb,
+      chatId,
+      "Only group admins can change timezone.",
+    ))
+  ) {
+    return;
+  }
+  try {
+    await setSubscriberTimezone(db, chatId, isGroup ? null : cb.from?.username ?? null, zone);
+    await recordTelegramUsageEvent(db, {
+      eventType: "timezone_change",
+      actionDetail: "quick_pick",
+      outcome: "set",
+    });
+  } catch (err) {
+    logTelegramEvent({
+      message: "timezone write failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "tz",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Could not save timezone. Please try again.",
+    });
+    return;
+  }
+  await answerCallbackQuery(cb.id, botToken, { text: `Timezone set to ${zone}.` });
 }
 
 async function loadChatSubscriptions(db: D1Database, chatId: string): Promise<SubscriptionRow[]> {

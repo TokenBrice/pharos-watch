@@ -23,7 +23,6 @@ import {
   buildSubscriptionSummaryMessage,
 } from "./telegram-webhook-messages";
 import {
-  DISAMBIGUATION_TTL_SEC,
   SETUP_PENDING_ACTION_TYPE,
   WIZARD_INTRO_MESSAGE,
   START_MESSAGE,
@@ -32,7 +31,7 @@ import {
 } from "./telegram-webhook-shared";
 import {
   loadSubscriptionsByIds,
-  unixNow,
+  persistPendingDisambiguationRow,
   upsertPresetSubscriptions,
   upsertSubscriberAndSubscriptions,
   upsertGlobalAlertTypes,
@@ -159,45 +158,17 @@ async function persistSetupState(
     alertTypes: state.alertTypes,
     target: state.target,
   };
-  await db
-    .prepare(
-      `INSERT INTO telegram_pending_disambiguation (
-         chat_id,
-         action_type,
-         action_payload,
-         alert_types,
-         resolved_ids,
-         ambiguous_ticker,
-         candidates,
-         remaining_tickers,
-         expires_at,
-         initiator_user_id
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         action_type = excluded.action_type,
-         action_payload = excluded.action_payload,
-         alert_types = excluded.alert_types,
-         resolved_ids = excluded.resolved_ids,
-         ambiguous_ticker = excluded.ambiguous_ticker,
-         candidates = excluded.candidates,
-         remaining_tickers = excluded.remaining_tickers,
-         expires_at = excluded.expires_at,
-         initiator_user_id = excluded.initiator_user_id`,
-    )
-    .bind(
-      chatId,
-      SETUP_PENDING_ACTION_TYPE,
-      JSON.stringify(payload),
-      JSON.stringify([]),
-      JSON.stringify([]),
-      "",
-      JSON.stringify([]),
-      JSON.stringify([]),
-      unixNow() + DISAMBIGUATION_TTL_SEC,
-      state.initiatorUserId,
-    )
-    .run();
+  await persistPendingDisambiguationRow(db, {
+    chatId,
+    actionType: SETUP_PENDING_ACTION_TYPE,
+    actionPayload: payload,
+    alertTypes: [],
+    resolvedIds: [],
+    ambiguousTicker: "",
+    candidates: [],
+    remainingTickers: [],
+    initiatorUserId: state.initiatorUserId,
+  });
 }
 
 async function clearSetupState(db: D1Database, chatId: string): Promise<void> {
