@@ -37,10 +37,19 @@ import { fetchAuthoritativeHistoricalPriceSeries } from "../src/lib/authoritativ
 import { fetchWithRetry } from "../src/lib/fetch-retry";
 import { normalizeSupportedPegCurrency } from "../src/lib/native-peg-quotes";
 import { buildPriceReasonablenessOptions } from "../src/lib/price-validation";
+import {
+  describeDestructiveOperationMode,
+  parseDestructiveOperationMode,
+} from "./lib/destructive-operation-guard";
 
 const DB_NAME = "stablecoin-db";
 const SQL_BATCH_SIZE = 200;
-const DRY_RUN = process.argv.includes("--dry-run");
+const SCRIPT_NAME = "repair-non-usd-fiat-depeg-history";
+const OPERATION_MODE = parseDestructiveOperationMode({
+  argv: process.argv.slice(2),
+  scriptName: SCRIPT_NAME,
+});
+const DRY_RUN = OPERATION_MODE.dryRun;
 const USE_EXISTING_WINDOW = process.argv.includes("--existing-window");
 const TARGET_IDS = parseListArg("--stablecoin");
 const TARGET_PEGS = parseListArg("--peg");
@@ -140,7 +149,7 @@ function sqlNumber(value: number | null): string {
 
 function d1Query(sql: string): string {
   return execSync(
-    `npx wrangler d1 execute ${DB_NAME} --remote --command ${JSON.stringify(sql)} --json`,
+    `npx wrangler d1 execute ${DB_NAME} ${OPERATION_MODE.targetFlag} --command ${JSON.stringify(sql)} --json`,
     {
       cwd: WORKER_ROOT,
       encoding: "utf-8",
@@ -161,7 +170,7 @@ function d1ExecFile(statements: string[]): void {
   try {
     writeFileSync(tmpFile, statements.join("\n")); // eslint-disable-line security/detect-non-literal-fs-filename
     execSync(
-      `npx wrangler d1 execute ${DB_NAME} --remote --file ${JSON.stringify(tmpFile)} --json`,
+      `npx wrangler d1 execute ${DB_NAME} ${OPERATION_MODE.targetFlag} --file ${JSON.stringify(tmpFile)} --json`,
       {
         cwd: WORKER_ROOT,
         encoding: "utf-8",
@@ -561,7 +570,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`Mode: ${DRY_RUN ? "DRY RUN" : "LIVE"}`);
+  console.log(`Mode: ${describeDestructiveOperationMode(OPERATION_MODE)}`);
   console.log(`Targets: ${replayTargets.length} replay assets, ${purgeTargets.length} purge-only assets`);
 
   const stablecoinsPayload = await fetchStablecoinsPayload();
@@ -826,11 +835,13 @@ async function main(): Promise<void> {
 
   console.log(`\nTotals: remove=${totalRemoved} add=${totalAdded} preserved=${totalPreserved}`);
 
-  if (!DRY_RUN && affectedStartDay != null && affectedEndDay != null) {
+  if (!DRY_RUN && OPERATION_MODE.remote && affectedStartDay != null && affectedEndDay != null) {
     console.log("\nRecomputing PSI history...");
     const psiRanges = collectYearRanges(affectedStartDay, affectedEndDay);
     const psiDaysBackfilled = await recomputePsiRanges(psiRanges);
     console.log(`PSI days backfilled: ${psiDaysBackfilled}`);
+  } else if (!DRY_RUN && !OPERATION_MODE.remote) {
+    console.log("Local D1 mutation complete. Remote PSI recomputation skipped for local target.");
   } else if (DRY_RUN) {
     console.log("Dry run complete. No database mutations applied.");
   }

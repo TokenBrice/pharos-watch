@@ -13,7 +13,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "node scripts/dev-api-proxy.mjs & next dev",
+    "dev": "node scripts/dev.mjs",
     "dev:next": "next dev",
     "dev:proxy": "node scripts/dev-api-proxy.mjs",
     "prebuild": "node scripts/run-generated-artifacts.mjs",

@@ -23,6 +23,11 @@ const UPSTREAM_ORIGIN =
   process.env.DEV_PROXY_UPSTREAM || "https://site-api.pharos.watch";
 const PORT = parseInt(process.env.DEV_PROXY_PORT || "3001", 10);
 
+if (!Number.isFinite(PORT) || PORT <= 0) {
+  console.error(`[dev-proxy] Invalid DEV_PROXY_PORT: ${process.env.DEV_PROXY_PORT}`);
+  process.exit(1);
+}
+
 const FORWARDED_HEADERS = [
   "cache-control",
   "content-type",

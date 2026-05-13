@@ -22,7 +22,10 @@ async function devRewrites() {
   // the local dev proxy (scripts/dev-api-proxy.mjs) which injects the secret
   // header — mimicking the production Pages Functions site-data proxy.
   // Without the secret, fall back to the direct (unauthenticated) rewrite.
-  const proxyPort = process.env.SITE_API_SHARED_SECRET?.trim() ? 3001 : 0;
+  const configuredProxyPort = Number.parseInt(process.env.DEV_PROXY_PORT ?? "3001", 10);
+  const proxyPort = process.env.SITE_API_SHARED_SECRET?.trim() && Number.isFinite(configuredProxyPort)
+    ? configuredProxyPort
+    : 0;
   return [
     {
       source: "/api/:path+",

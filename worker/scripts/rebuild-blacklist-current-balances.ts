@@ -15,6 +15,10 @@ import {
 } from "../src/cron/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
+import {
+  describeDestructiveOperationMode,
+  parseDestructiveOperationMode,
+} from "./lib/destructive-operation-guard";
 
 type ExecuteWranglerOptions = {
   remote: boolean;
@@ -88,10 +92,14 @@ function parseArgs(argv: string[]): ScriptOptions {
     args.set(key, next);
     index++;
   }
+  const operationMode = parseDestructiveOperationMode({
+    argv,
+    scriptName: "rebuild-blacklist-current-balances",
+  });
 
   return {
-    remote: args.get("local") !== true,
-    dryRun: args.get("dry-run") === true,
+    remote: operationMode.remote,
+    dryRun: operationMode.dryRun,
     concurrency: Number(args.get("concurrency") ?? 20),
     requestsPerSecond: Number(args.get("requests-per-second") ?? 8),
     chainId: String(args.get("chain") ?? "tron").toLowerCase(),
@@ -239,6 +247,13 @@ async function fetchTronCurrentBalanceRowsInBatches(
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  console.log(
+    `Mode: ${describeDestructiveOperationMode({
+      dryRun: options.dryRun,
+      remote: options.remote,
+      targetFlag: options.remote ? "--remote" : "--local",
+    })}`,
+  );
   const matchingConfigs = getBlacklistConfigsForSymbolAndChain(
     options.stablecoin as Parameters<typeof getBlacklistConfigsForSymbolAndChain>[0],
     options.chainId,

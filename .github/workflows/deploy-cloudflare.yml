@@ -348,6 +348,37 @@ jobs:
           cat /tmp/validate-gate-gh.err 2>/dev/null || true
           echo "Timed out waiting for validate / validate to finish."
           exit 1
+      - name: Wait for worker promotion gate
+        if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 180); do
+            result="$(
+              gh run view "$GITHUB_RUN_ID" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json jobs \
+                --jq '.jobs[] | select(.name == "deploy-worker") | (.conclusion // .status)' \
+                2>/tmp/worker-gate-gh.err \
+                | tail -n 1
+            )"
+
+            case "$result" in
+              success)
+                exit 0
+                ;;
+              failure|cancelled|timed_out|action_required)
+                echo "deploy-worker result was ${result}; stopping production Pages deployment."
+                exit 1
+                ;;
+            esac
+
+            sleep 5
+          done
+
+          cat /tmp/worker-gate-gh.err 2>/dev/null || true
+          echo "Timed out waiting for deploy-worker to finish."
+          exit 1
       - name: Deploy Pages with retry
         run: |
           for attempt in 1 2 3; do
