@@ -40,6 +40,9 @@ npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
+npm run check:phishing-signatures # Scan built `out/` HTML for inline-script patterns that match credential-harvesting phishing kits
+npm run check:classifier-sensitive-copy # Scan built `out/` HTML for wallet-drainer/phishing/browser-warning copy on classifier-sensitive routes
+npm run check:safe-browsing # Query Google Safe Browsing v4 for monitored URL flags (daily workflow + manual)
 npm run check:supply-helper-usage # Enforce `getCirculatingRaw()` usage for DefiLlama list-endpoint supply values
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
@@ -66,7 +69,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` also verifies that 
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-audit.yml`, and `.github/workflows/secret-scan.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -82,7 +85,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - runs all three `npm run test:noncritical -- --shard=N/3` shards and requires every shard before the aggregate `validate` job succeeds
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
    - runs `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
-   - runs `npm run build` + `npm run seo:check` in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
+   - runs `npm run build` + `npm run seo:check` + Safe Browsing classifier guardrails (`check:phishing-signatures`, `check:classifier-sensitive-copy`) in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
    - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow performs the Pages build, SEO, local artifact smoke, publish, and live smokes in the production `pages-release` job so it avoids a second runner setup and artifact transfer
 3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
@@ -109,7 +112,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - production deploy job in `.github/workflows/deploy-cloudflare.yml`
    - runs only when `pages_changed=true`
    - starts after `upload-worker-version` when Worker promotion is also required, so digest sync and local `/_site-data/*` smoke can use the uploaded preview URL
-   - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`
+   - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy`
    - serves the just-built `out/` export locally, proxies direct `/api/*` and `/_site-data/*` calls to the selected API base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
    - local artifact `smoke-ui` keeps the full overflow route set and uses `SMOKE_UI_OVERFLOW_WORKERS=6` in production deploys to keep that coverage while reducing wall time
    - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production
@@ -166,7 +169,15 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
 - scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build and SEO gate before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/manual lanes for dependency auditing and history-aware secret scanning.
+13. `Safe Browsing Monitor`:
+
+- defined in `.github/workflows/safe-browsing-monitor.yml`
+- runs on a daily schedule (`17 7 * * *`) and on manual dispatch
+- queries Google Safe Browsing v4 `threatMatches:find` for `pharos.watch` and key public URLs via `npm run check:safe-browsing`
+- requires the `GOOGLE_SAFE_BROWSING_API_KEY` repository secret
+- fails the run on any flagged URL; complements the deploy-gating `check:phishing-signatures` static scan
+
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, SEO gate, and Safe Browsing classifier guardrails before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/daily/manual lanes for dependency auditing, history-aware secret scanning, and Safe Browsing verdict monitoring.
 
 Current GitHub repository secrets required by the deploy path:
 
@@ -175,6 +186,10 @@ Current GitHub repository secrets required by the deploy path:
 - `DIGEST_API_KEY` for Pages digest sync against protected public API routes
 - `SITE_API_SHARED_SECRET` for local artifact smoke through `/_site-data/*`
 - `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` for `smoke-ops`
+
+Current GitHub repository secrets required by scheduled monitors:
+
+- `GOOGLE_SAFE_BROWSING_API_KEY` for `Safe Browsing Monitor`
 
 Current GitHub repository variables used by the deploy path:
 
@@ -204,7 +219,7 @@ The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/c
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It now prefers the `sqlite3` CLI when present and falls back to Node's built-in `node:sqlite`, which removes the old Node-25-first happy path while still catching schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, destructive table/column drop-or-rename patterns are rejected, and `ALTER TABLE ... ADD COLUMN ... NOT NULL` without a `DEFAULT` is rejected because the still-live worker may still insert rows before promotion. The deploy workflow also reruns this check on the release runner immediately before remote `wrangler d1 migrations apply`.
 
-`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. The default changed-file range is `origin/main...HEAD`; the repo pre-push hook overrides that for pushes to `main` with Git's exact `remote_sha...local_sha` update range, matching the deploy workflow's `github.event.before...github.sha` classifier input. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it runs the shared prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, then `npm run test:noncritical` and critical coverage. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import-boundary/cycle checks, migrations, cron checks, documentation checks, generated-artifact checks, env contracts, frozen invariants, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, stablecoin data validation, and supply-helper usage. The critical coverage lane owns the critical test files, so the merge gate keeps the full deploy test surface without rerunning those files in the bare Vitest lane. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` when Pages-impacting files changed, and adds both `npm run typecheck:worker` and `npm run typecheck:worker-scripts` when worker-impacting files changed. After `validate:prebuild`, independent build/non-critical-test/critical-coverage/typecheck groups run in parallel by default; a failing parallel group aborts siblings and reports the failing command explicitly. Set `MERGE_GATE_SERIAL=1` for the older serial execution shape. Set `MERGE_GATE_HEAD_REF=<ref>` with `MERGE_GATE_BASE_REF=<ref>` for explicit range checks, or `MERGE_GATE_FULL_DEPLOY=1` when there is no usable base ref. It still skips deploy-time smoke suites.
+`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. The default changed-file range is `origin/main...HEAD`; the repo pre-push hook overrides that for pushes to `main` with Git's exact `remote_sha...local_sha` update range, matching the deploy workflow's `github.event.before...github.sha` classifier input. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it runs the shared prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, then `npm run test:noncritical` and critical coverage. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import-boundary/cycle checks, migrations, cron checks, documentation checks, generated-artifact checks, env contracts, frozen invariants, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, stablecoin data validation, and supply-helper usage. The critical coverage lane owns the critical test files, so the merge gate keeps the full deploy test surface without rerunning those files in the bare Vitest lane. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` + `npm run check:phishing-signatures` + `npm run check:classifier-sensitive-copy` when Pages-impacting files changed, and adds both `npm run typecheck:worker` and `npm run typecheck:worker-scripts` when worker-impacting files changed. After `validate:prebuild`, independent build/non-critical-test/critical-coverage/typecheck groups run in parallel by default; a failing parallel group aborts siblings and reports the failing command explicitly. Set `MERGE_GATE_SERIAL=1` for the older serial execution shape. Set `MERGE_GATE_HEAD_REF=<ref>` with `MERGE_GATE_BASE_REF=<ref>` for explicit range checks, or `MERGE_GATE_FULL_DEPLOY=1` when there is no usable base ref. It still skips deploy-time smoke suites.
 
 `npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards the maintained shell/facade files in `scripts/lib/hotspot-ratchet-baseline.json`, including `worker/src/cron/compute-dews.ts`, and also generates current repo-wide hotspot candidates from the top file-line, max-function-line, and branch-count outliers. Every generated candidate must either be enrolled in the baseline or explicitly waived in `scripts/lib/hotspot-ratchet-waivers.json`, so newly emerged hotspots cannot drift past the guardrail unseen. The ratchet still fails fast on stale target paths and unexpected baseline entries, and it now also fails on stale waiver entries. Each baseline entry declares a `disposition`, `targetBudget`, and implementation note so the ratchet doubles as a decomposition backlog rather than a blind ceiling list. Refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`, and update the matching waiver/backlog metadata at the same time.
 
@@ -246,7 +261,7 @@ export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
     execArgv: nodeExecArgv,
-    exclude: [...configDefaults.exclude, ...worktreeExcludes, ".claude/**", ".next/**", "out/**", "coverage/**"],
+    exclude: [...configDefaults.exclude, ...worktreeExcludes, ".claude/**", ".next/**", "out/**", "coverage/**", "tests/visual/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -352,6 +367,7 @@ Factory functions that return complete DB rows with sensible defaults. Pass `ove
 | Factory                        | Returns                                                                     |
 | ------------------------------ | --------------------------------------------------------------------------- |
 | `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating) |
+| `makeReportCardsDb()`          | Pre-wired `MockD1Database` for report-card style tests (`cache`, `dex_liquidity`, `depeg_events`, `supply_history`, …) |
 | `makeBlacklistRow()`           | blacklist_events row                                                        |
 | `makeDepegRow()`               | depeg_events row                                                            |
 | `makeSupplyRow()`              | supply_history row                                                          |
@@ -542,8 +558,8 @@ Selected files have explicit threshold overrides in `scripts/check-critical-cove
 
 - `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`cache-passthrough`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus shared strict-path registry tests and router mapping tests.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, always adds the common postbuild `test:noncritical` and `coverage:critical` phase for deploy-impacting diffs, adds `build` + `seo:check` for Pages-impacting changes, and adds Worker runtime plus Worker operational-script typechecks for worker-impacting changes. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`.
-- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path mirrored from `shared/lib/api-endpoints/` and guarded by `src/lib/__tests__/api-endpoints.test.ts` (currently including `stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `redemption-backstops`, `stress-signals`, and `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
+- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, always adds the common postbuild `test:noncritical` and `coverage:critical` phase for deploy-impacting diffs, adds `build` + `seo:check` + `check:phishing-signatures` + `check:classifier-sensitive-copy` for Pages-impacting changes, and adds Worker runtime plus Worker operational-script typechecks for worker-impacting changes. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_SERIAL=1`.
+- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path mirrored from `shared/lib/api-endpoints/` and guarded by `src/lib/__tests__/api-endpoints.test.ts` (currently including `stablecoins`, `peg-summary`, `dex-liquidity`, `stability-index`, `report-cards`, `redemption-backstops`, `blacklist`, `blacklist-summary`, `mint-burn-flows`, and `stress-signals`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ops` performs private post-deploy checks against the operator surfaces through Cloudflare Access. For direct `ops-api.pharos.watch` requests, service-token mode sends `CF-Access-Client-Id` / `CF-Access-Client-Secret` and the worker verifies the injected Access JWT there. The independent direct ops API probes start together with the ops UI shell fetch to avoid serializing unrelated network waits. For the same-origin Pages proxy path, the script first attempts to bootstrap an Access session on `ops.pharos.watch`; when a `CF_Authorization` cookie is returned, it starts a best-effort smoke of `https://ops.pharos.watch/api/admin/status` while the direct status check is still in flight. The proxy assertion retries up to two transient `502`/`504` gateway responses to absorb post-deploy warmup on the operator status path, but all other non-auth failures still fail immediately. If the UI host exposes only the interactive Access redirect, if the service-token UI flow renders the shell without yielding a browser session cookie, or if the proxied request remains `401 Unauthorized` after that cookie replay, the script keeps the shell/direct-API assertions and skips the same-origin proxy assertion. `SMOKE_OPS_SCOPE=canary` keeps the UI shell/access, direct `/api/status`, and same-origin `/api/admin/status` checks but skips the slower status-history/admin-list/audit/blacklist dry-run probes used by the default full scope.
 - `npm run test:smoke-transport` performs concurrent manual-redirect `HEAD` checks against `http://api.pharos.watch/...` and `http://site-api.pharos.watch/...`, requiring `308` plus an exact `Location` match that preserves host, path, and query while upgrading only to `https`.
 - `npm run test:smoke-ui` performs a fast browser smoke check in either local or live mode using the workspace Playwright package directly. Local runs use the Playwright-managed browser by default; GitHub Actions uses the system Chrome channel unless `SMOKE_UI_BROWSER_CHANNEL` or `SMOKE_UI_BROWSER_EXECUTABLE_PATH` overrides it. Homepage/GA checks run once; overflow checks use the same route source and assertions as before but are chunked across browser contexts (`SMOKE_UI_OVERFLOW_WORKERS`, default `2` local and `1` live, capped at `6`). Local mode keeps the full tracked mobile overflow route sweep against the built artifact, while live mode keeps the homepage/GA checks and a narrow mobile canary route set against the real host unless `--skip-overflow` is set. Both modes fail on homepage outage/empty states (`Failed to load data` or `Failed to load this dataset`, `stablecoins:404`, `Data not yet available` or `Waiting for first sync`, `Connection issue` or `Unable to reach the Pharos data API right now.`, `No stablecoin data available`).
@@ -640,7 +656,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.codex-autorunner/`, `worker/.wrangler/`, `.worktrees/`, and `worktrees/` (auto-generated build artifacts plus worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.claude/`, `.codex-autorunner/`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
 
 ### Zod Runtime Validation
 
@@ -648,7 +664,6 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQ
 
 - `StablecoinListResponseSchema`
 - `SupplyHistoryResponseSchema`
-- `StablecoinDetailHistoryResponseSchema`
 - `HealthResponseSchema`
 - `BluechipRatingsMapSchema`
 - `BlacklistResponseSchema`
@@ -668,6 +683,9 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQ
 - `YieldHistoryResponseSchema`
 - `YieldRankingsResponseSchema`
 - `StablecoinReservesResponseSchema`
+- `StablecoinChartResponseSchema`
+- `UsdsStatusResponseSchema`
+- `ChainsResponseSchema`
 
 Use `rg "schema:" src/hooks src/lib` for the live callsite set before adding or auditing endpoint validation.
 

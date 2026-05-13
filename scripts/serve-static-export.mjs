@@ -29,6 +29,44 @@ const EXCLUDED_PROXY_RESPONSE_HEADERS = new Set([
   "transfer-encoding",
 ]);
 
+const CSP_NONCE_BYTES = 16;
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function createCspNonce() {
+  const bytes = new Uint8Array(CSP_NONCE_BYTES);
+  crypto.getRandomValues(bytes);
+  return bytesToBase64(bytes);
+}
+
+function buildContentSecurityPolicy(nonce) {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://static.cloudflareinsights.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' https://coin-images.coingecko.com https://*.google-analytics.com https://pbs.twimg.com https://abs.twimg.com data:",
+    "connect-src 'self' https://api.pharos.watch https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+function addNonceToInlineScripts(html, nonce) {
+  return html.replace(
+    /<script(?![^>]*\bsrc=)(?![^>]*\bnonce=)([^>]*)>/gi,
+    `<script nonce="${nonce}"$1>`,
+  );
+}
+
 export function resolveStaticFilePath(rootDir, requestPathname) {
   const decodedPath = decodeURIComponent(requestPathname);
   const relativePath = decodedPath.replace(/^\/+/, "");
@@ -126,14 +164,28 @@ async function readStaticExportFile(rootDir, requestPathname) {
 }
 
 function sendStaticExportFile(res, method, { file, filePath }) {
+  const contentType = buildContentType(filePath);
+  const headers = {
+    "Content-Type": contentType,
+  };
+  let body = file;
+
+  if (contentType.startsWith("text/html")) {
+    const nonce = createCspNonce();
+    body = Buffer.from(addNonceToInlineScripts(file.toString("utf8"), nonce), "utf8");
+    headers["Content-Security-Policy"] = buildContentSecurityPolicy(nonce);
+    headers["Cloudflare-CDN-Cache-Control"] = "no-store";
+    headers["CDN-Cache-Control"] = "no-store";
+  }
+
   res.writeHead(200, {
-    "Content-Length": String(file.byteLength),
-    "Content-Type": buildContentType(filePath),
+    ...headers,
+    "Content-Length": String(body.byteLength),
   });
   if (method === "HEAD") {
     res.end();
   } else {
-    res.end(file);
+    res.end(body);
   }
 }
 

@@ -91,7 +91,12 @@ describe("buildCommandPlan", () => {
     ).toEqual([
       [["npm run validate:prebuild"]],
       [
-        ["npm run build", "npm run seo:check", "npm run check:phishing-signatures"],
+        [
+          "npm run build",
+          "npm run seo:check",
+          "npm run check:phishing-signatures",
+          "npm run check:classifier-sensitive-copy",
+        ],
         ["npm run test:noncritical"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],

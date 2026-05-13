@@ -1,3 +1,9 @@
+import {
+  addNonceToInlineScripts,
+  buildContentSecurityPolicy,
+  createCspNonce,
+} from "../shared/lib/site-csp";
+
 interface MiddlewareEnv {
   ASSETS?: { fetch: typeof fetch };
 }
@@ -16,7 +22,9 @@ const MARKDOWN_ROUTE_PREFIXES = [
   "/docs/",
 ] as const;
 
-const PASSTHROUGH_PREFIXES = ["/api/", "/_site-data/", "/admin/", "/_next/"] as const;
+const PASSTHROUGH_PREFIXES = ["/_site-data/", "/_next/"] as const;
+
+export { buildContentSecurityPolicy };
 
 function parseQ(params: string[]): number {
   const qParam = params.find((param) => /^q\s*=/i.test(param));
@@ -90,6 +98,17 @@ function addNegotiationCacheHeaders(headers: Headers): void {
   headers.set("CDN-Cache-Control", "no-store");
 }
 
+function addCspHeaders(headers: Headers, nonce: string): void {
+  headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+  headers.set("Cloudflare-CDN-Cache-Control", "no-store");
+  headers.set("CDN-Cache-Control", "no-store");
+  headers.delete("Content-Length");
+}
+
+function isHtmlResponse(response: Response): boolean {
+  return response.headers.get("Content-Type")?.toLowerCase().includes("text/html") ?? false;
+}
+
 function cloneForMethod(response: Response, method: string, headers: Headers): Response {
   return new Response(method === "HEAD" ? null : response.body, {
     status: response.status,
@@ -102,6 +121,24 @@ function withNegotiationHeaders(response: Response, method: string): Response {
   const headers = new Headers(response.headers);
   addNegotiationCacheHeaders(headers);
   return cloneForMethod(response, method, headers);
+}
+
+async function withHtmlCsp(response: Response, method: string): Promise<Response> {
+  if (!isHtmlResponse(response)) return response;
+
+  const nonce = createCspNonce();
+  const headers = new Headers(response.headers);
+  addCspHeaders(headers, nonce);
+
+  if (method === "HEAD") {
+    return cloneForMethod(response, method, headers);
+  }
+
+  return new Response(addNonceToInlineScripts(await response.text(), nonce), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
@@ -129,7 +166,8 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   }
 
   const fallback = await ctx.next();
-  return matchesMarkdownRoute(url.pathname)
+  const negotiated = matchesMarkdownRoute(url.pathname)
     ? withNegotiationHeaders(fallback, ctx.request.method)
     : fallback;
+  return withHtmlCsp(negotiated, ctx.request.method);
 };

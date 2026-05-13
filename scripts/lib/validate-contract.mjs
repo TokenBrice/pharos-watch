@@ -42,6 +42,7 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
   "npm run seo:check",
   "npm run check:phishing-signatures",
+  "npm run check:classifier-sensitive-copy",
 ];
 
 export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [

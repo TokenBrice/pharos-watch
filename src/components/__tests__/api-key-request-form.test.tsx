@@ -78,7 +78,7 @@ describe("ApiKeyRequestForm", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    window.history.replaceState(null, "", `/api/#verify=verify-${suffix}`);
+    window.history.replaceState(null, "", `/api/#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => {
@@ -87,8 +87,8 @@ describe("ApiKeyRequestForm", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`verify-${suffix}`);
-    expect(window.location.href).not.toContain("verify=");
+    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`akv_${suffix}`);
+    expect(window.location.href).not.toContain(`akv_${suffix}`);
     expect(screen.getByText("Copy this token now.")).toBeTruthy();
     expect(screen.getByText(token)).toBeTruthy();
     expect(screen.getByText("Issued Key Policy")).toBeTruthy();
@@ -103,7 +103,7 @@ describe("ApiKeyRequestForm", () => {
       headers: { "Content-Type": "application/json" },
     })));
 
-    window.history.replaceState(null, "", `/api/#verify=verify-${suffix}`);
+    window.history.replaceState(null, "", `/api/#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => {
@@ -122,14 +122,14 @@ describe("ApiKeyRequestForm", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
 
-    window.history.replaceState(null, "", `/api/?utm_source=email#verify=hash-${suffix}`);
+    window.history.replaceState(null, "", `/api/?utm_source=email#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     expect(window.location.href).toContain("utm_source=email");
-    expect(window.location.href).not.toContain("verify=");
+    expect(window.location.href).not.toContain(`akv_${suffix}`);
     const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`hash-${suffix}`);
+    expect(JSON.parse(String((init as RequestInit).body)).token).toBe(`akv_${suffix}`);
   });
 
   it("ignores a query-string verify parameter without posting", async () => {
@@ -186,7 +186,7 @@ describe("ApiKeyRequestForm", () => {
       value: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) },
     });
 
-    window.history.replaceState(null, "", `/api/#verify=verify-${suffix}`);
+    window.history.replaceState(null, "", `/api/#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
 
     await waitFor(() => {

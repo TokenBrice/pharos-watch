@@ -10,6 +10,8 @@ import type {
 } from "@shared/types";
 import { buildApiUrl } from "@/lib/api";
 
+const VERIFICATION_TOKEN_PREFIX = "akv_";
+
 interface ApiErrorPayload {
   error?: string;
   message?: string;
@@ -90,17 +92,16 @@ export async function verifyApiKeyRequestToken(token: string): Promise<ApiKeySel
 
 function parseHashVerificationToken(hash: string): string | null {
   const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash.startsWith("verify=")) return null;
-  return new URLSearchParams(rawHash).get("verify")?.trim() ?? null;
+  if (!rawHash.startsWith(VERIFICATION_TOKEN_PREFIX)) return null;
+  try {
+    return decodeURIComponent(rawHash).trim();
+  } catch {
+    return null;
+  }
 }
 
 function scrubHashVerificationToken(hash: string): string {
-  const rawHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  if (!rawHash.startsWith("verify=")) return hash;
-  const params = new URLSearchParams(rawHash);
-  params.delete("verify");
-  const next = params.toString();
-  return next ? `#${next}` : "";
+  return parseHashVerificationToken(hash) ? "" : hash;
 }
 
 export function readVerificationTokenFromUrl(): string | null {

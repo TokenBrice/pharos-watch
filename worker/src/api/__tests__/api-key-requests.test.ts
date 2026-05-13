@@ -207,7 +207,7 @@ function postRequest(path: string, body: unknown, headers: Record<string, string
 
 function extractVerificationToken(sentBody: unknown): string {
   const text = (sentBody as { text: string }).text;
-  const match = text.match(/https:\/\/pharos\.watch\/api\/#verify=([A-Za-z0-9_-]+)/);
+  const match = text.match(/https:\/\/pharos\.watch\/api\/#(akv_[A-Za-z0-9_-]+)/);
   if (!match?.[1]) throw new Error(`verification URL missing from email body: ${text}`);
   return match[1];
 }
@@ -258,7 +258,7 @@ describe("api key self-serve request handlers", () => {
     expect(sqlite.prepare("SELECT status FROM api_key_self_serve_email_claims").get()).toEqual({
       status: "pending_verification",
     });
-    expect((sentEmails[0] as { text: string }).text).toContain("https://pharos.watch/api/#verify=akv_");
+    expect((sentEmails[0] as { text: string }).text).toContain("https://pharos.watch/api/#akv_");
   });
 
   it("accepts concise human-readable use cases", async () => {
@@ -464,7 +464,7 @@ describe("api key self-serve request handlers", () => {
 
   it("redacts sensitive provider error details before logging", () => {
     expect(redactProviderBody(
-      "builder@example.com https://pharos.watch/api/#verify=akv_secret ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF",
+      "builder@example.com https://pharos.watch/api/#akv_secret ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF",
     )).toBe("[redacted-email] [redacted-url] [redacted-api-key]");
   });
 

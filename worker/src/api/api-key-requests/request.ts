@@ -174,6 +174,6 @@ export function createVerificationToken(): string {
 
 export function buildVerificationUrl(publicBaseUrl: string, token: string): string {
   const url = new URL(publicBaseUrl.endsWith("/") ? publicBaseUrl : `${publicBaseUrl}/`);
-  url.hash = `verify=${encodeURIComponent(token)}`;
+  url.hash = encodeURIComponent(token);
   return url.toString();
 }

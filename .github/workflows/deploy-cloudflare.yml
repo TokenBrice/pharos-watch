@@ -258,6 +258,7 @@ jobs:
       - run: npm run build
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
+      - run: npm run check:classifier-sensitive-copy
       - id: capture-pages
         name: Capture current production Pages deployment id (best effort)
         continue-on-error: true

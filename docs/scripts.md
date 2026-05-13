@@ -88,7 +88,7 @@ The SQL safety checker now scans both `worker/src/**` and `worker/scripts/**`, a
 
 ## CI-Critical Scripts
 
-These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, and `.github/workflows/rebuild-pages.yml`) directly, or indirectly through `npm run build`:
+These are wired into the GitHub Actions CI workflows (`.github/workflows/validate-ci.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, and `.github/workflows/safe-browsing-monitor.yml`) directly, or indirectly through `npm run build`:
 
 - `sync-digests.ts` in the `build-pages` Pages-prepare job before the build artifact is created
 - `generate-sitemap-dates.ts` via the `prebuild` hook that runs automatically before `npm run build`
@@ -106,6 +106,9 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check:openapi` via `validate:prebuild` to fail if `public/openapi.json` drifts from `scripts/generate-openapi-spec.ts`
 - `check:llms-txt` via `validate:prebuild` to fail if `public/llms.txt` drifts from `scripts/generate-llms-txt.ts`
 - `check-seo-static.mjs` via `npm run seo:check`
+- `check-phishing-signatures.mjs` via `npm run check:phishing-signatures` after Pages builds
+- `check-classifier-sensitive-copy.mjs` via `npm run check:classifier-sensitive-copy` after Pages builds
+- `check-safe-browsing.mjs` via the daily/manual `Safe Browsing Monitor` workflow
 - `classify-deploy-changes.mjs` via the `detect-changes` jobs in `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pull-request-checks.yml`
 - `pharos-change-contract.mjs` via `.github/workflows/pharos-change-contract.yml` for same-repo PR comments and `.codex/config.toml` for local Codex hooks
 - `upsert-github-pr-comment.mjs` via `.github/workflows/pharos-change-contract.yml` to keep the PR comment sticky instead of creating duplicates
