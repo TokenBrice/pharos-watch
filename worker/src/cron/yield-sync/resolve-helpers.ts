@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { resolveChainId } from "@shared/lib/chains";
+import type { YieldType } from "@shared/types/core";
 import {
   MIN_LENDING_POOL_APY,
   MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY,
@@ -257,6 +258,81 @@ function appendResolvedAutoDiscoveredYield(
     },
   });
   autoDiscoveredIds.add(meta.id);
+}
+
+function getResolvedEntryKey(entry: ResolvedYieldEntry): string | null {
+  return entry.yield ? `${entry.id}:${entry.yield.sourceKey}` : null;
+}
+
+function getEffectiveYieldSource(entry: ResolvedYieldEntry, fallbackSource: string | undefined): string | undefined {
+  const source = entry.yield?.yieldSource ?? fallbackSource;
+  if (!source) return undefined;
+  return source;
+}
+
+function getEffectiveYieldType(entry: ResolvedYieldEntry, fallbackType: YieldType | undefined): YieldType | undefined {
+  return entry.yield?.yieldType ?? fallbackType;
+}
+
+function hasParentSourcePool(resolved: ResolvedYieldEntry[], parentId: string, sourcePool: string | null): boolean {
+  if (!sourcePool) return false;
+  return resolved.some((entry) => entry.id === parentId && entry.yield?.sourcePool === sourcePool);
+}
+
+export function appendLinkedVariantParentYieldSources(resolved: ResolvedYieldEntry[]): number {
+  const existingKeys = new Set(
+    resolved
+      .map(getResolvedEntryKey)
+      .filter((key): key is string => key != null),
+  );
+  const existingSourcePools = new Set(
+    resolved
+      .flatMap((entry) => entry.yield?.sourcePool ? [`${entry.id}:${entry.yield.sourcePool}`] : []),
+  );
+  const additions: ResolvedYieldEntry[] = [];
+
+  for (const entry of resolved) {
+    if (!entry.yield) continue;
+
+    const childMeta = getActiveStablecoinMeta(entry.id);
+    if (!childMeta?.variantOf) continue;
+
+    const parentMeta = getActiveStablecoinMeta(childMeta.variantOf);
+    if (!parentMeta) continue;
+
+    const effectiveYieldType = getEffectiveYieldType(entry, childMeta.yieldConfig?.yieldType);
+    if (effectiveYieldType === "lending-opportunity") continue;
+
+    const sourcePoolKey = entry.yield.sourcePool ? `${parentMeta.id}:${entry.yield.sourcePool}` : null;
+    if (
+      sourcePoolKey
+      && (existingSourcePools.has(sourcePoolKey) || hasParentSourcePool(additions, parentMeta.id, entry.yield.sourcePool))
+    ) {
+      continue;
+    }
+
+    const sourceKey = `linked-variant:${childMeta.id}:${entry.yield.sourceKey}`;
+    const entryKey = `${parentMeta.id}:${sourceKey}`;
+    if (existingKeys.has(entryKey)) continue;
+
+    additions.push({
+      id: parentMeta.id,
+      symbol: parentMeta.symbol,
+      yield: {
+        ...entry.yield,
+        sourceKey,
+        yieldSource: getEffectiveYieldSource(entry, childMeta.yieldConfig?.yieldSource),
+        yieldType: effectiveYieldType,
+      },
+    });
+    existingKeys.add(entryKey);
+    if (sourcePoolKey) {
+      existingSourcePools.add(sourcePoolKey);
+    }
+  }
+
+  resolved.push(...additions);
+  return additions.length;
 }
 
 export function appendPoolFamilyYieldSources(params: {

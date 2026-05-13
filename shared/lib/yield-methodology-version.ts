@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "8.0",
+  currentVersion: "8.1",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "8.1",
+    title: "Linked Variant Parent Source Projection",
+    date: "2026-05-13",
+    effectiveAt: 1778704800,
+    summary:
+      "Tracked yield-bearing variants now project eligible wrapper yield sources onto their active parent stablecoin as linked alternative sources, while retaining the variant's own first-class yield row.",
+    impact: [
+      "Resolved sources for active tracked variants such as `ybold-yearn` and `sbold-k3-capital` can now publish linked parent candidates under `bold-liquity` with `linked-variant:<variantId>:<sourceKey>` source keys",
+      "Variant assets still own their native runtime rows and history; parent projection is a linked source route for comparison and coverage, not a reversion to parent-owned wrapper metadata",
+      "Third-party `lending-opportunity` rows are not projected from variants to parents, and duplicate parent source pools are skipped so the parent does not receive repeated observations for the same venue",
+      "`felix-cdp` and `sovryn-dex` are now in the curated lending allowlist, with deterministic pool pins for `feusd-felix`, `dllr-sovryn`, `doc-money-on-chain`, and `tgbp-tokenised` so current source-backed opportunities can pass normal APY, TVL, and safety gates",
+      "Coverage can increase only where a parent has a live source-backed tracked variant; the publisher does not create no-source or synthetic APY rows to inflate coverage counts",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "8.0",
     title: "PYS v8 Source-Risk Penalty Rollout",

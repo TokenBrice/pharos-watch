@@ -2269,8 +2269,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.0",
-    "currentVersion": "8.0",
+    "version": "8.1",
+    "currentVersion": "8.1",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2317,7 +2317,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `sourceRisk.investabilityFlags` | ranking/history/source rows | `string[] \| undefined`                                                                                                             | Optional investability caveats |
 | `rankChangeAttribution`       | ranking rows            | `object \| null \| undefined`                                                                                                           | Optional previous-rank/PYS delta attribution with primary driver and contribution hints |
 
-Current `v8.0` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Current `v8.1` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
@@ -2375,7 +2375,7 @@ When present, `YieldRanking.provenance` includes:
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Generation-aware rows are returned only after their publication generation is marked `published`; legacy rows remain readable through the existing cutoff fallback. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
 
-For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`.
+For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2412,8 +2412,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.0",
-    "currentVersion": "8.0",
+    "version": "8.1",
+    "currentVersion": "8.1",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2458,7 +2458,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `exchangeRate`   | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable                             |
 | `sourceTvlUsd`   | `number \| null` | TVL of the yield source pool at snapshot time (USD)                                                    |
 | `warningSignals` | `string[]`       | Active warning-signal flags at that snapshot                                                           |
-| `sourceKey`      | `string \| null` | Stable source identifier for this history row (for example a DL pool UUID or `onchain:<stablecoinId>`) |
+| `sourceKey`      | `string \| null` | Stable source identifier for this history row (for example a DL pool UUID, `onchain:<stablecoinId>`, or `linked-variant:<variantId>:<sourceKey>`) |
 | `yieldSource`    | `string \| null` | Human-readable source label at that snapshot                                                           |
 | `yieldSourceUrl` | `string \| null` | Official URL for that source when Pharos has a curated or metadata-derived link                        |
 | `yieldType`      | `string \| null` | Yield type classification at that snapshot                                                             |

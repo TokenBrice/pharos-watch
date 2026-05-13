@@ -1,6 +1,6 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.0` (2026-03-01 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.1` (2026-03-01 -> 2026-05-13).
 
 ---
 
@@ -9,6 +9,16 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - No methodology version change: the sparse typed `yieldRiskConfig` registry starts with reviewed candidate venues only and assigns no non-unknown tiers
 - Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy venue families have a controlled rationale/evidence home for future reviewed tiers, but current `unknown` tiers remain neutral
 - Any future non-unknown venue tier must be wired into the existing venue-tier penalty path and ship with reviewed evidence, calibration, and the matching methodology/version update
+
+---
+
+## v8.1 - Linked Variant Parent Source Projection (May 13, 2026)
+
+- Active tracked yield variants now project eligible native/wrapper yield sources onto their active parent stablecoin with `linked-variant:<variantId>:<sourceKey>` source keys
+- Variant assets keep their own first-class rows and source history; parent projection is a linked route for comparison and coverage context, not a return to parent-owned wrapper metadata
+- Third-party `lending-opportunity` rows are not projected from variants to parents, and parent rows skip duplicate source pools that are already present
+- `felix-cdp` and `sovryn-dex` enter the curated lending allowlist, with deterministic pool pins for `feusd-felix`, `dllr-sovryn`, `doc-money-on-chain`, and `tgbp-tokenised`
+- Coverage can only increase when a parent has a live source-backed tracked variant; the publisher does not create no-source or synthetic APY rows to inflate coverage counts
 
 ---
 

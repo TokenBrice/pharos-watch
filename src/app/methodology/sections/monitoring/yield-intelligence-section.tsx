@@ -29,7 +29,10 @@ export function YieldIntelligenceMethodologySection() {
                 multiple valid yield paths exist, address-first identity is used before symbol fallback, curated
                 exact-pool overrides can cover named non-stablecoin venues, confidence-weighted arbitration selects
                 the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
-                ecosystems do not surface as recommended base-asset routes. Published lending-opportunity rows now also
+                ecosystems do not surface as recommended base-asset routes. Eligible tracked wrapper variants can also
+                surface their native/wrapper sources as linked parent routes, so parent assets such as BOLD can show
+                yBOLD and sBOLD context without removing the variants&apos; own rows. The curated auto-discovery lane also
+                pins current Felix, Sovryn, and Loopscale exact venues when they pass the normal source-quality gates. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
                 supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
                 with missing source-risk evidence treated as neutral. Curve Savings crvUSD now follows the active on-chain
@@ -167,7 +170,9 @@ export function YieldIntelligenceMethodologySection() {
                     before falling back to APY and TVL tie-breakers, and
                     Resolv / USR-linked lending-opportunity venues are excluded from publication entirely. Published
                     lending-opportunity rows also need observable venue TVL and must clear the higher of the absolute
-                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply, and explicit lending overrides only
+                    TVL floor or 0.1% of the tracked stablecoin&apos;s current supply. Linked tracked-variant rows can
+                    become parent alternatives when they represent native/wrapper yield, while third-party
+                    lending-opportunity rows stay on the asset that owns the venue, and explicit lending overrides only
                     publish for active assets.
                   </p>
                   <p>

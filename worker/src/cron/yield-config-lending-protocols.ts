@@ -43,6 +43,8 @@ const LENDING_PROTOCOLS = {
   "overnight-finance": { label: "Overnight" },
   "smardex-usdn": { label: "SmarDex USDN" },
   "vesper": { label: "Vesper" },
+  "felix-cdp": { label: "Felix" },
+  "sovryn-dex": { label: "Sovryn" },
   // Tier A — 2026-03-25 audit (>$50M TVL)
   "wildcat-protocol": { label: "Wildcat" },
   "tectonic": { label: "Tectonic" },
@@ -91,6 +93,10 @@ export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
   "usdx-hex-trust": "e7ac1a5f-f141-4c00-9a5d-2e2c505a800c",
   "usdo-openeden": "f083596e-032d-4d6b-a7a8-1836d3f99bcd",
   "usdm-moneta": "ce3021c9-af52-46b0-a61a-3e92acdfd79b",
+  "feusd-felix": "2bae7cf8-d278-4b27-9959-7f5f92c6f14b",
+  "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
+  "doc-money-on-chain": "17b8f0d7-38e1-4080-9d2c-da1f5706e199",
+  "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
 };
 
 /**

@@ -149,6 +149,17 @@ describe("yield config registry", () => {
     }
   });
 
+  it("pins current exact lending venues for newer coverage candidates", () => {
+    expect(LENDING_PROTOCOL_ALLOWLIST.has("felix-cdp")).toBe(true);
+    expect(LENDING_PROTOCOL_ALLOWLIST.has("sovryn-dex")).toBe(true);
+    expect(AUTO_LENDING_POOL_MAP).toMatchObject({
+      "feusd-felix": "2bae7cf8-d278-4b27-9959-7f5f92c6f14b",
+      "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
+      "doc-money-on-chain": "17b8f0d7-38e1-4080-9d2c-da1f5706e199",
+      "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
+    });
+  });
+
   it("pins sBOLD's Liquity alt source to the explicit K3 wrapper label", () => {
     expect(EXPLICIT_YIELD_SOURCE_POOL_MAP["sbold-k3-capital"]).toContainEqual(
       expect.objectContaining({

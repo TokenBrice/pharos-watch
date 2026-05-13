@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.0`
+- **Current methodology version:** `v8.1`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -18,6 +18,8 @@ Yield v8 activates nested source-risk penalties for PYS and same-confidence sour
 
 Rankings provenance now carries source-native freshness for derived sources:
 
+- active tracked yield variants now project eligible native/wrapper sources onto their active parent stablecoin as linked alternative candidates, so routes such as `yBOLD` and `sBOLD` can appear under `BOLD` without removing the variants' own rows or creating no-source coverage
+- curated auto-discovery now includes Felix and Sovryn exact lending venues plus a Loopscale tGBP exact pool pin when those rows pass the normal APY, TVL, and Safety Score gates
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
 - dTRINITY dUSD now publishes sdUSD yield from a curated TVL-weighted DeFiLlama pool group across the Ethereum and Fraxtal dStake vaults, with a new source key so Ethereum-only history is not treated as equivalent
@@ -45,7 +47,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch status is declared in the asset's per-coin file under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`, and skipped by explicit lending override publication until the per-coin entry moves into the active lifecycle. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers must own their own runtime pool/on-chain readers; if the wrapper is tracked as its own coin, do not leave the base asset marked `yieldBearing` purely because the wrapper exists.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch status is declared in the asset's per-coin file under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`, and skipped by explicit lending override publication until the per-coin entry moves into the active lifecycle. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers own their own runtime pool/on-chain readers and history. When a tracked wrapper has a live native/wrapper yield source, the publisher may also expose that source on the active parent stablecoin with a `linked-variant:<variantId>:<sourceKey>` key for comparison and coverage context; this does not mark the parent `yieldBearing` purely because the wrapper exists, and third-party `lending-opportunity` rows are not projected from variants to parents.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -283,7 +285,7 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 | Tier 1 | aave-v3, compound-v2, compound-v3, dolomite, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, morpho-blue, pendle, curve-llamalend, exactly, flux-finance, gains-network, lazy-summer-protocol, moonwell-lending, silo-v2 |
 | Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx, benqi-lending |
-| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper |
+| Tier 4 | radiant-v2, fraxlend-v2, clearpool, centrifuge, sturdy-v2, goldfinch, truefi, lagoon, liqwid, lista-lending, loopscale, more-markets, navi-lending, overnight-finance, smardex-usdn, vesper, felix-cdp, sovryn-dex |
 | Tier A (2026-03-25, >$50M TVL) | wildcat-protocol, tectonic, upshift, venus-flux, avantis, cap, resupply, zerobase-cedefi |
 | Tier B (2026-03-25, $10M–$50M TVL) | convex-finance, yo-protocol, clearpool-lending, 3jane-lending, hyperlend-pooled, zest-v2, liquity-v2, echelon-market, termmax, beefy, gearbox |
 
@@ -489,7 +491,7 @@ CREATE TABLE yield_data (
 
 **Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
 
-**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Eligible tracked wrapper variants also project linked native/wrapper sources to the active parent with `linked-variant:<variantId>:<sourceKey>` source keys, while third-party lending opportunities stay attached only to the asset that owns the lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
 
 Generation-aware publisher fields added by migration `0125_yield_publication_generations.sql` are nullable so old rows and rollback payloads remain readable:
 
@@ -557,7 +559,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 4. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries, unless the deterministic lane is in a cooldown window after consecutive masked all-fail runs; protocol-specific hourly on-chain readers such as scrvUSD's current-rate source run during per-coin resolution and fall back to curated rows if unavailable
 5. Read the cached benchmark registry from D1, with USD as the default benchmark and EUR / CHF available when fetched successfully
 6. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; this helper now reuses the same peg-analytics path as `/api/report-cards` so live peg deviation inputs stay aligned across Safety Score and Yield Intelligence. Treat the helper's explicit degraded result as degraded input, and also classify coverage below the minimum ratio as degraded even when the helper itself succeeded
-7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins
+7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins and linked parent rows for eligible tracked yield variants
 8. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks, chunking stablecoin ID lists so each D1 statement stays under the 100-bind limit
 9. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
 10. Run confidence-weighted arbitration to select `is_best` per coin and flag source changes vs. the prior best source
@@ -713,8 +715,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.0",
-    "currentVersion": "8.0",
+    "version": "8.1",
+    "currentVersion": "8.1",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
