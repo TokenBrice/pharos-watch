@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
@@ -14,40 +15,39 @@ interface GoogleAnalyticsProps {
 }
 
 export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
-  const initialized = useRef(false);
+  const pathname = usePathname();
+  const bootstrapped = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (bootstrapped.current) return;
+    bootstrapped.current = true;
 
     window.dataLayer = window.dataLayer ?? [];
-    window.gtag = (...args: unknown[]) => {
+    window.gtag = function gtag(...args: unknown[]) {
       window.dataLayer?.push(args);
     };
-
-    const pagePath = window.location.pathname + window.location.search;
     window.gtag("js", new Date());
-    const sendPageView = () => {
-      window.gtag?.("config", measurementId, { send_page_view: false });
-      window.gtag?.("event", "page_view", {
-        page_path: pagePath,
-        page_location: window.location.origin + pagePath,
-        page_title: document.title,
-      });
-    };
+    window.gtag("config", measurementId, { send_page_view: false });
 
-    const existingScript = document.getElementById("pharos-google-analytics");
-    if (existingScript) {
-      sendPageView();
-    } else {
+    if (!document.getElementById("pharos-google-analytics")) {
       const script = document.createElement("script");
       script.id = "pharos-google-analytics";
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${measurementId}`;
-      script.addEventListener("load", sendPageView, { once: true });
       document.head.appendChild(script);
     }
   }, [measurementId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !pathname) return;
+    const search = window.location.search ?? "";
+    const pagePath = pathname + search;
+    window.gtag?.("event", "page_view", {
+      page_path: pagePath,
+      page_location: window.location.origin + pagePath,
+      page_title: document.title,
+    });
+  }, [pathname]);
 
   return null;
 }
