@@ -11,16 +11,10 @@ import {
   repairPublishedYieldGenerationFromCache,
   stageYieldPublicationGeneration,
   validateYieldRankingsPayloadForPublish,
-  writeYieldRankingsCache,
 } from "./publication";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import type { CronResult } from "../../lib/cron-logger";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
-
-function getPublicationFailureReason(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message ? `cache-write-failed:${message.slice(0, 120)}` : "cache-write-failed";
-}
 
 function getD1FailureReason(prefix: string, error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -145,22 +139,52 @@ export async function publishYieldCoordinatorResults(params: {
     startSec: params.startSec,
     status: "published",
   });
-  const cacheWrite = await writeYieldRankingsCache(params.db, publishedRankingsPayload, params.startSec).catch((error: unknown) => {
-    const reason = getPublicationFailureReason(error);
-    console.warn("[sync-yield-data] Failed to publish yield-rankings cache after preflight:", error);
-    return {
-      ok: false,
-      validationFailures: 0,
-      reason,
-    };
-  });
-  if (!cacheWrite.ok) {
-    params.degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
+  let publicationWrite: Awaited<ReturnType<typeof persistEvaluatedYieldSources>>;
+  try {
+    publicationWrite = await persistEvaluatedYieldSources(params.db, {
+      evaluatedSources: params.evaluatedSources,
+      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
+      startSec: params.startSec,
+      medianApy: params.medianApy,
+      dlPoolsMeta: params.dlPoolsMeta,
+      generationId,
+      rankingsPayload: publishedRankingsPayload,
+    });
+  } catch (error) {
+    const reason = getD1FailureReason("yield-publication-transaction-failed", error);
+    params.degradationReasons.push(reason);
     await finalizeYieldPublicationGeneration(params.db, {
       generationId,
       state: "failed",
       timestamp: params.startSec,
-      reason: cacheWrite.reason ?? "schema-validation-failed",
+      reason,
+    }).catch((finalizeError: unknown) => {
+      console.warn("[sync-yield-data] Failed to mark yield generation failed after publication transaction failure:", finalizeError);
+    });
+    return {
+      ok: false,
+      result: {
+        status: "degraded",
+        itemCount: params.resolvedCount,
+        metadata: JSON.stringify({
+          reason: "yield-publication-transaction-failed",
+          publishFailure: reason,
+          validationFailures: 0,
+          rowsRejected: params.rowsRejected,
+          divergenceFlags: params.divergenceFlags,
+          sourceSwitches: params.sourceSwitches,
+        }),
+      },
+    };
+  }
+  if (!publicationWrite.ok) {
+    const reason = publicationWrite.reason ?? "schema-validation-failed";
+    params.degradationReasons.push(reason);
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "failed",
+      timestamp: params.startSec,
+      reason,
     });
     await pruneYieldTables(params.db, params.startSec, {
       allowDestructiveCleanup: false,
@@ -169,52 +193,21 @@ export async function publishYieldCoordinatorResults(params: {
       ok: true,
       updatedCount,
       degradationReasons: params.degradationReasons,
-      validationFailures: cacheWrite.validationFailures,
+      validationFailures: publicationWrite.validationFailures,
       cacheWriteSkipped: true,
-      casSkipped: "cacheWrite" in cacheWrite && cacheWrite.cacheWrite?.skippedBecauseNewer === true,
+      casSkipped: publicationWrite.cacheWrite?.skippedBecauseNewer === true,
     };
   }
 
-  let d1PublishSucceeded = false;
+  updatedCount = publicationWrite.updatedCount;
   try {
-    ({ updatedCount } = await persistEvaluatedYieldSources(params.db, {
-      evaluatedSources: params.evaluatedSources,
-      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
-      startSec: params.startSec,
-      medianApy: params.medianApy,
-      dlPoolsMeta: params.dlPoolsMeta,
-      generationId,
-      publicationState: "published",
-    }));
-    d1PublishSucceeded = true;
+    await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
   } catch (error) {
-    const reason = getD1FailureReason("d1-published-write-failed", error);
+    const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
     params.degradationReasons.push(reason);
-    await finalizeYieldPublicationGeneration(params.db, {
-      generationId,
-      state: "failed",
-      timestamp: params.startSec,
-      reason,
-    }).catch((finalizeError: unknown) => {
-      console.warn("[sync-yield-data] Failed to mark published-cache yield generation failed:", finalizeError);
+    await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
+      console.warn("[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
     });
-  }
-
-  if (d1PublishSucceeded) {
-    try {
-      await finalizeYieldPublicationGeneration(params.db, {
-        generationId,
-        state: "published",
-        timestamp: params.startSec,
-      });
-      await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
-    } catch (error) {
-      const reason = getD1FailureReason("published-generation-finalization-failed", error);
-      params.degradationReasons.push(reason);
-      await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
-        console.warn("[sync-yield-data] Failed to repair published yield generation after cache write:", repairError);
-      });
-    }
   }
 
   await pruneYieldTables(params.db, params.startSec, {
@@ -225,8 +218,8 @@ export async function publishYieldCoordinatorResults(params: {
     ok: true,
     updatedCount,
     degradationReasons: params.degradationReasons,
-    validationFailures: cacheWrite.validationFailures,
-    cacheWriteSkipped: !cacheWrite.ok,
-    casSkipped: "cacheWrite" in cacheWrite && cacheWrite.cacheWrite?.skippedBecauseNewer === true,
+    validationFailures: publicationWrite.validationFailures,
+    cacheWriteSkipped: false,
+    casSkipped: publicationWrite.cacheWrite.skippedBecauseNewer,
   };
 }

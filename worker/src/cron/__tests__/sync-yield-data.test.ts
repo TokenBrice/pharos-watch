@@ -281,6 +281,56 @@ function makeDb() {
   ]);
 }
 
+function makeCacheWriteFailureDb(error: Error) {
+  return mockD1([
+    { match: "INSERT INTO cache (key, value, updated_at)", rows: [], throwError: error },
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+  ]);
+}
+
+type MockHistoryDb = {
+  getHistory: () => Array<{ sql: string; binds: unknown[] }>;
+};
+
+type YieldDataTestRow = {
+  stablecoin_id: string;
+  source_key: string;
+  current_apy: number;
+  apy_reward: number | null;
+  apy_7d: number;
+  apy_30d: number;
+  yield_source: string;
+  yield_type: string;
+  data_source: string;
+  exchange_rate_prev: number | null;
+  is_best: number;
+};
+
+function getPublishedYieldRows(db: MockHistoryDb): YieldDataTestRow[] {
+  const entry = db.getHistory().find((item) => item.sql.includes("INSERT OR REPLACE INTO yield_data"));
+  return entry ? JSON.parse(String(entry.binds[0] ?? "[]")) as YieldDataTestRow[] : [];
+}
+
+function findPublishedYieldRow(
+  db: MockHistoryDb,
+  stablecoinId: string,
+  predicate: (row: YieldDataTestRow) => boolean,
+): YieldDataTestRow | undefined {
+  return getPublishedYieldRows(db).find((row) => row.stablecoin_id === stablecoinId && predicate(row));
+}
+
+function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
+  const entry = db.getHistory().find(
+    (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
+  );
+  return entry ? JSON.parse(String(entry.binds[1])) : undefined;
+}
+
 function makeYieldOrphanDb(orphanIds: string[]) {
   return mockD1([
     { match: "SELECT DISTINCT stablecoin_id FROM yield_data", rows: orphanIds.map((stablecoin_id) => ({ stablecoin_id })) },
@@ -402,14 +452,8 @@ describe("syncYieldData", () => {
 
     // Should have updated 1 yield-bearing coin
     expect(result.itemCount).toBe(1);
-    // batchExecute should have been called for upserts
-    expect(batchExecute).toHaveBeenCalled();
-    expect(setCacheIfNewer).toHaveBeenCalledWith(
-      db,
-      "yield-rankings",
-      expect.any(String),
-      Math.floor(Date.now() / 1000),
-    );
+    expect(getPublishedYieldRows(db)).toHaveLength(1);
+    expect(getYieldRankingsCachePayload(db)).toBeDefined();
     expect(writeFreshnessSentinel).toHaveBeenCalledWith(
       db,
       "yield-data",
@@ -448,9 +492,7 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    const cachePayload = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings")?.[2];
-    expect(cachePayload).toBeDefined();
-    const parsed = JSON.parse(String(cachePayload)) as {
+    const parsed = getYieldRankingsCachePayload(db) as {
       rankings: Array<{ warningSignals: string[] }>;
     };
     expect(parsed.rankings[0]?.warningSignals).toContain("yield-spike");
@@ -765,9 +807,10 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-    const supplementalRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    const supplementalRow = findPublishedYieldRow(
+      db,
+      "100",
+      (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
     );
     expect(supplementalRow).toBeDefined();
   });
@@ -829,9 +872,10 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-    const supplementalRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    const supplementalRow = findPublishedYieldRow(
+      db,
+      "100",
+      (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
     );
     expect(supplementalRow).toBeDefined();
   });
@@ -934,12 +978,12 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(2);
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceCoverage?: { supplementalFallbackMode?: string | null } };
     expect(metadata.sourceCoverage?.supplementalFallbackMode).toBe("partial-family-cache-aggregate-merge");
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-    expect(writeStatements.some(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    const rows = getPublishedYieldRows(db);
+    expect(rows.some((row) =>
+      row.stablecoin_id === "100" && row.source_key === "protocol-api:morpho-vault:ethereum:0xvault",
     )).toBe(true);
-    expect(writeStatements.some(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:beefy:ethereum:beefy-sdai",
+    expect(rows.some((row) =>
+      row.stablecoin_id === "100" && row.source_key === "protocol-api:beefy:ethereum:beefy-sdai",
     )).toBe(true);
   });
 
@@ -1012,20 +1056,19 @@ describe("syncYieldData", () => {
       const result = await syncYieldData(db);
 
       expect(result.itemCount).toBe(2);
-      const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-      const nativeRow = writeStatements.find(
-        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "pool-sdai-native",
-      );
-      const supplementalRow = writeStatements.find(
-        (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xsdai",
+      const nativeRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "pool-sdai-native");
+      const supplementalRow = findPublishedYieldRow(
+        db,
+        "100",
+        (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xsdai",
       );
 
-      expect(nativeRow?.boundValues?.[8]).toBe("DSR");
-      expect(nativeRow?.boundValues?.[12]).toBe("defillama");
-      expect(nativeRow?.boundValues?.[25]).toBe(1);
-      expect(supplementalRow?.boundValues?.[8]).toBe("Morpho: sDAI Prime");
-      expect(supplementalRow?.boundValues?.[12]).toBe("protocol-api");
-      expect(supplementalRow?.boundValues?.[25]).toBe(0);
+      expect(nativeRow?.yield_source).toBe("DSR");
+      expect(nativeRow?.data_source).toBe("defillama");
+      expect(nativeRow?.is_best).toBe(1);
+      expect(supplementalRow?.yield_source).toBe("Morpho: sDAI Prime");
+      expect(supplementalRow?.data_source).toBe("protocol-api");
+      expect(supplementalRow?.is_best).toBe(0);
     } finally {
       delete poolMap["100"];
     }
@@ -1094,12 +1137,15 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-    const blockedRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xresolv",
+    const blockedRow = findPublishedYieldRow(
+      db,
+      "usdc-circle",
+      (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xresolv",
     );
-    const allowedRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xusdc-prime",
+    const allowedRow = findPublishedYieldRow(
+      db,
+      "usdc-circle",
+      (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xusdc-prime",
     );
 
     expect(blockedRow).toBeUndefined();
@@ -1150,10 +1196,10 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements =
-      (vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined) ?? [];
-    const droppedRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "aave-v3-onchain:ethereum:0xusdc",
+    const droppedRow = findPublishedYieldRow(
+      db,
+      "usdc-circle",
+      (row) => row.source_key === "aave-v3-onchain:ethereum:0xusdc",
     );
 
     expect(droppedRow).toBeUndefined();
@@ -1219,10 +1265,10 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements =
-      (vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined) ?? [];
-    const droppedRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "usdc-circle" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xusdc-small",
+    const droppedRow = findPublishedYieldRow(
+      db,
+      "usdc-circle",
+      (row) => row.source_key === "protocol-api:morpho-vault:ethereum:0xusdc-small",
     );
 
     expect(droppedRow).toBeUndefined();
@@ -1514,16 +1560,13 @@ describe("syncYieldData", () => {
 
     try {
       const result = await syncYieldData(db);
-      const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-      const xautRow = writeStatements.find(
-        (stmt) => stmt.boundValues?.[0] === "xaut-tether" && stmt.boundValues?.[1] === "pool-xaut-yo",
-      );
+      const xautRow = findPublishedYieldRow(db, "xaut-tether", (row) => row.source_key === "pool-xaut-yo");
 
       expect(result.itemCount).toBe(1);
-      expect(xautRow?.boundValues?.[8]).toBe("Yo Protocol");
-      expect(xautRow?.boundValues?.[9]).toBe("lending-opportunity");
-      expect(xautRow?.boundValues?.[12]).toBe("defillama");
-      expect(xautRow?.boundValues?.[25]).toBe(1);
+      expect(xautRow?.yield_source).toBe("Yo Protocol");
+      expect(xautRow?.yield_type).toBe("lending-opportunity");
+      expect(xautRow?.data_source).toBe("defillama");
+      expect(xautRow?.is_best).toBe(1);
     } finally {
       delete explicitPoolMap["xaut-tether"];
       TRACKED_META_BY_ID.delete("xaut-tether");
@@ -1683,27 +1726,23 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(2);
     expect(maxActiveRpcCalls).toBe(1);
 
-    const [stmts] = vi.mocked(batchExecute).mock.calls[0] ?? [];
-    expect(stmts).toBe(db);
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
-
-    const bprotocolRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "onchain:lusd-liquity",
+    const bprotocolRow = findPublishedYieldRow(
+      db,
+      "lusd-liquity",
+      (row) => row.source_key === "onchain:lusd-liquity",
     );
-    expect(bprotocolRow?.boundValues?.[8]).toBe("B.Protocol Stability Pool (LQTY only)");
-    expect(bprotocolRow?.boundValues?.[9]).toBe("lending-vault");
-    expect(bprotocolRow?.boundValues?.[12]).toBe("onchain");
-    expect(Number(bprotocolRow?.boundValues?.[3])).toBeGreaterThan(1);
-    expect(Number(bprotocolRow?.boundValues?.[5])).toBeGreaterThan(1);
-    expect(bprotocolRow?.boundValues?.[25]).toBe(1);
+    expect(bprotocolRow?.yield_source).toBe("B.Protocol Stability Pool (LQTY only)");
+    expect(bprotocolRow?.yield_type).toBe("lending-vault");
+    expect(bprotocolRow?.data_source).toBe("onchain");
+    expect(Number(bprotocolRow?.current_apy)).toBeGreaterThan(1);
+    expect(Number(bprotocolRow?.apy_reward)).toBeGreaterThan(1);
+    expect(bprotocolRow?.is_best).toBe(1);
 
-    const aaveRow = writeStatements.find(
-      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "pool-lusd-aave",
-    );
-    expect(aaveRow?.boundValues?.[8]).toBe("Aave V3");
-    expect(aaveRow?.boundValues?.[9]).toBe("lending-opportunity");
-    expect(aaveRow?.boundValues?.[12]).toBe("defillama-auto");
-    expect(aaveRow?.boundValues?.[25]).toBe(0);
+    const aaveRow = findPublishedYieldRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave");
+    expect(aaveRow?.yield_source).toBe("Aave V3");
+    expect(aaveRow?.yield_type).toBe("lending-opportunity");
+    expect(aaveRow?.data_source).toBe("defillama-auto");
+    expect(aaveRow?.is_best).toBe(0);
   });
 
   it("handles DL yields API failure gracefully — no cached pools, API down", async () => {
@@ -1846,13 +1885,7 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    expect(batchExecute).toHaveBeenCalled();
-    expect(setCacheIfNewer).toHaveBeenCalledWith(
-      db,
-      "yield-rankings",
-      expect.any(String),
-      nowSec,
-    );
+    expect(getYieldRankingsCachePayload(db)).toBeDefined();
   });
 
   it("returns early when tracked yield coverage regresses below the guard threshold", async () => {
@@ -1941,26 +1974,13 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe("yield-rankings-preflight-failed");
     expect(metadata.publishFailure).toBe("schema-validation-failed");
     expect(metadata.validationFailures).toBe(1);
-    expect(vi.mocked(batchExecute).mock.calls.some((call) => {
-      const statements = call[1] as unknown as Array<{ sql: string; boundValues?: unknown[] }>;
-      return statements.some((stmt) =>
-        stmt.sql.includes("UPDATE yield_data SET publication_state = ?") && stmt.boundValues?.[0] === "failed",
-      );
-    })).toBe(true);
-    const cacheCalls = vi.mocked(setCacheIfNewer).mock.calls;
-    const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
-    expect(wroteYieldRankings).toBe(false);
+    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
   });
 
   it("preserves published D1 rows when yield-rankings cache persistence fails before data replacement", async () => {
-    const db = makeDb();
+    const db = makeCacheWriteFailureDb(new Error("cache unavailable"));
     mockHealthyRiskFreeRateCache();
 
-    vi.spyOn(publicationModule, "writeYieldRankingsCache").mockResolvedValue({
-      ok: false,
-      validationFailures: 2,
-      reason: "schema-validation-failed",
-    });
     mockFetch([
       {
         match: "yields.llama.fi",
@@ -1988,22 +2008,12 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
-    expect(result.itemCount).toBe(0);
-    expect(batchExecute).toHaveBeenCalled();
-    const d1PublicationWrites = vi.mocked(batchExecute).mock.calls.flatMap(
-      (call) => call[1] as unknown as Array<{ sql: string }>,
-    );
-    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
-    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
-    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      fallbackMode: string | null;
-      validationFailures: number | null;
-      cacheWriteSkipped: boolean;
+      reason: string | null;
+      publishFailure: string | null;
     };
-    expect(metadata.fallbackMode ?? "").toContain("schema-validation-failed");
-    expect(metadata.validationFailures).toBe(2);
-    expect(metadata.cacheWriteSkipped).toBe(true);
+    expect(metadata.reason).toBe("yield-publication-transaction-failed");
+    expect(metadata.publishFailure ?? "").toContain("cache unavailable");
     expect(writeFreshnessSentinel).not.toHaveBeenCalled();
   });
 
@@ -2063,21 +2073,16 @@ describe("syncYieldData", () => {
     // Two source rows: DL (0% APY) + price-derived (4.0% from mock)
     expect(result.itemCount).toBe(2);
 
-    // Check that batchExecute was called with a price-derived source
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const priceDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
-    );
+    const priceDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "price-derived");
     expect(priceDerivedRow).toBeDefined();
     // price-derived APY should be > 0 (computeApyFromPrice mock returns 4.0)
-    expect(Number(priceDerivedRow?.boundValues?.[3])).toBeGreaterThan(0);
+    expect(Number(priceDerivedRow?.current_apy)).toBeGreaterThan(0);
     // data_source should be "price-derived"
-    expect(priceDerivedRow?.boundValues?.[12]).toBe("price-derived");
+    expect(priceDerivedRow?.data_source).toBe("price-derived");
     // price-derived should be is_best (higher APY than DL's 0%)
-    expect(priceDerivedRow?.boundValues?.[25]).toBe(1);
+    expect(priceDerivedRow?.is_best).toBe(1);
 
-    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
-    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+    const rankingsPayload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{
         id: string;
         provenance?: {
@@ -2131,12 +2136,9 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const priceDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
-    );
+    const priceDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "price-derived");
     expect(priceDerivedRow).toBeDefined();
-    expect(Number(priceDerivedRow?.boundValues?.[3])).toBeGreaterThan(0);
+    expect(Number(priceDerivedRow?.current_apy)).toBeGreaterThan(0);
   });
 
   it("computes trailing APY from source-specific history instead of mixed coin-level history", async () => {
@@ -2227,13 +2229,10 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const priceDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "price-derived",
-    );
+    const priceDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "price-derived");
 
     // Source-specific history should average [2, 4] => 3.0 instead of mixing in the DL row's 9% sample.
-    expect(Number(priceDerivedRow?.boundValues?.[7])).toBeCloseTo(3, 3);
+    expect(Number(priceDerivedRow?.apy_30d)).toBeCloseTo(3, 3);
   });
 
   it("does not carry forward legacy history when the current source family changed", async () => {
@@ -2276,13 +2275,10 @@ describe("syncYieldData", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const rateDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
-    );
+    const rateDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "rate-derived");
 
     // The current row should stand on its own source-specific history rather than averaging with legacy price-derived rows.
-    expect(Number(rateDerivedRow?.boundValues?.[7])).toBeCloseTo(3.75, 3);
+    expect(Number(rateDerivedRow?.apy_30d)).toBeCloseTo(3.75, 3);
 
     configs.length = 0;
   });
@@ -2316,18 +2312,14 @@ describe("syncYieldData", () => {
     // Should have at least one row written for rate-derived
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
 
-    // Check that batchExecute was called with a rate-derived source
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const rateDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
-    );
+    const rateDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "rate-derived");
     expect(rateDerivedRow).toBeDefined();
     // APY should be 4.0 - 0.25 = 3.75
-    expect(Number(rateDerivedRow?.boundValues?.[3])).toBeCloseTo(3.75, 2);
+    expect(Number(rateDerivedRow?.current_apy)).toBeCloseTo(3.75, 2);
     // data_source should be "rate-derived"
-    expect(rateDerivedRow?.boundValues?.[12]).toBe("rate-derived");
+    expect(rateDerivedRow?.data_source).toBe("rate-derived");
     // rate-derived should be is_best (only source)
-    expect(rateDerivedRow?.boundValues?.[25]).toBe(1);
+    expect(rateDerivedRow?.is_best).toBe(1);
 
     // Clean up
     configs.length = 0;
@@ -2359,14 +2351,11 @@ describe("syncYieldData", () => {
 
     expect(result.itemCount).toBeGreaterThanOrEqual(1);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const rateDerivedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "rate-derived",
-    );
+    const rateDerivedRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "rate-derived");
     expect(rateDerivedRow).toBeDefined();
     // APY should be 4.25 - 0.50 = 3.75
-    expect(Number(rateDerivedRow?.boundValues?.[3])).toBeCloseTo(3.75, 2);
-    expect(rateDerivedRow?.boundValues?.[12]).toBe("rate-derived");
+    expect(Number(rateDerivedRow?.current_apy)).toBeCloseTo(3.75, 2);
+    expect(rateDerivedRow?.data_source).toBe("rate-derived");
 
     configs.length = 0;
   });
@@ -2462,15 +2451,11 @@ describe("syncYieldData", () => {
     ]);
     await syncYieldData(db, undefined, testChainRpcs);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const onChainRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[12] === "onchain",
-    );
+    const onChainRow = findPublishedYieldRow(db, "100", (row) => row.data_source === "onchain");
     expect(onChainRow).toBeDefined();
-    expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+    expect(Number(onChainRow?.current_apy)).toBeGreaterThan(0);
 
-    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
-    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+    const rankingsPayload = getYieldRankingsCachePayload(db) as {
       rankings: Array<{
         id: string;
         provenance?: {
@@ -2989,14 +2974,11 @@ describe("syncYieldData", () => {
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const onChainRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "onchain:100",
-    );
+    const onChainRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "onchain:100");
     expect(onChainRow).toBeDefined();
-    expect(Number(onChainRow?.boundValues?.[6])).toBeCloseTo(5, 6);
-    expect(Number(onChainRow?.boundValues?.[7])).toBeCloseTo(7, 6);
-    expect(onChainRow?.boundValues?.[23]).toBe(1.0);
+    expect(Number(onChainRow?.apy_7d)).toBeCloseTo(5, 6);
+    expect(Number(onChainRow?.apy_30d)).toBeCloseTo(7, 6);
+    expect(onChainRow?.exchange_rate_prev).toBe(1.0);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
     expect(metadata.sourceSwitches).toBe(0);
@@ -3099,12 +3081,13 @@ describe("syncYieldData", () => {
     ]);
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const onChainRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "lusd-liquity" && stmt.boundValues?.[1] === "onchain:lusd-liquity",
+    const onChainRow = findPublishedYieldRow(
+      db,
+      "lusd-liquity",
+      (row) => row.source_key === "onchain:lusd-liquity",
     );
     expect(onChainRow).toBeDefined();
-    expect(onChainRow?.boundValues?.[25]).toBe(1);
+    expect(onChainRow?.is_best).toBe(1);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as { sourceSwitches?: number };
     expect(metadata.sourceSwitches).toBe(0);
@@ -3233,16 +3216,15 @@ describe("syncYieldData", () => {
     ]);
     await syncYieldData(db, undefined, testChainRpcs);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const onChainRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "onchain:100",
-    );
-    const curatedRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "pool-sdai-native" && stmt.boundValues?.[12] === "defillama",
+    const onChainRow = findPublishedYieldRow(db, "100", (row) => row.source_key === "onchain:100");
+    const curatedRow = findPublishedYieldRow(
+      db,
+      "100",
+      (row) => row.source_key === "pool-sdai-native" && row.data_source === "defillama",
     );
     expect(onChainRow).toBeDefined();
     expect(curatedRow).toBeDefined();
-    expect(Number(onChainRow?.boundValues?.[3])).toBeGreaterThan(0);
+    expect(Number(onChainRow?.current_apy)).toBeGreaterThan(0);
 
     delete poolMap["100"];
     onChainConfigs.length = 0;
@@ -3292,12 +3274,9 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.itemCount).toBe(1);
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const autoRow = writeStatements?.find(
-      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[12] === "defillama-auto",
-    );
-    expect(autoRow?.boundValues?.[8]).toBe("Aave V3");
-    expect(autoRow?.boundValues?.[9]).toBe("lending-opportunity");
+    const autoRow = findPublishedYieldRow(db, "100", (row) => row.data_source === "defillama-auto");
+    expect(autoRow?.yield_source).toBe("Aave V3");
+    expect(autoRow?.yield_type).toBe("lending-opportunity");
   });
 
   it("passes a supply-relative TVL floor into dynamic lending discovery", async () => {
@@ -3396,9 +3375,7 @@ describe("syncYieldData", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.fallbackMode).toContain("risk-free-rate:fred-api-error-retained");
 
-    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
-    expect(rankingsCacheCall).toBeDefined();
-    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+    const rankingsPayload = getYieldRankingsCachePayload(db) as {
       provenance: { benchmark: { fallbackMode: string | null; isFallback: boolean } };
     };
     expect(rankingsPayload.provenance.benchmark.fallbackMode).toBe("fred-api-error-retained");
@@ -3471,9 +3448,8 @@ describe("syncYieldData", () => {
     expect(metadata.cacheWriteSkipped).toBe(false);
     expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
 
-    const cacheCalls = vi.mocked(setCacheIfNewer).mock.calls;
-    expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(true);
-    expect(cacheCalls.some((call) => call[1] === "report_card_cache")).toBe(false);
+    expect(getYieldRankingsCachePayload(db)).toBeDefined();
+    expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });
 
   it("skips destructive yield row cleanup on degraded runs", async () => {

@@ -7,8 +7,15 @@
  * with controlled inputs.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+
+let latestMockDb: MockD1Database | null = null;
+
+function mockD1(...args: Parameters<typeof createMockD1>): MockD1Database {
+  latestMockDb = createMockD1(...args);
+  return latestMockDb;
+}
 
 // --- Module-level mocks ---
 
@@ -316,12 +323,79 @@ function setupDefaultMocks() {
   );
 }
 
+function parseBulkRows<T>(sqlPattern: string): T[] {
+  const entry = latestMockDb?.getHistory().find((item) => item.sql.includes(sqlPattern));
+  return entry ? JSON.parse(String(entry.binds[0] ?? "[]")) as T[] : [];
+}
+
 function getWriteStatements() {
+  const yieldDataRows = parseBulkRows<Record<string, unknown>>("INSERT OR REPLACE INTO yield_data").map((row) => ({
+    boundValues: [
+      row.stablecoin_id,
+      row.source_key,
+      row.symbol,
+      row.current_apy,
+      row.apy_base,
+      row.apy_reward,
+      row.apy_7d,
+      row.apy_30d,
+      row.yield_source,
+      row.yield_type,
+      row.source_pool,
+      row.source_tvl_usd,
+      row.data_source,
+      row.safety_score,
+      row.safety_grade,
+      row.pharos_yield_score,
+      row.yield_to_risk,
+      row.excess_yield,
+      row.yield_stability,
+      row.apy_variance_30d,
+      row.apy_min_30d,
+      row.apy_max_30d,
+      row.exchange_rate,
+      row.exchange_rate_prev,
+      row.warning_signals,
+      row.is_best,
+      row.updated_at,
+      row.publication_generation_id,
+      row.publication_state,
+    ],
+  }));
+  const historyRows = parseBulkRows<Record<string, unknown>>("INSERT OR IGNORE INTO yield_history").map((row) => ({
+    boundValues: [
+      row.stablecoin_id,
+      row.source_key,
+      row.recorded_at,
+      row.is_best,
+      row.apy,
+      row.apy_base,
+      row.apy_reward,
+      row.exchange_rate,
+      row.source_tvl_usd,
+      row.data_source,
+      row.warning_signals,
+      row.yield_source,
+      row.yield_type,
+      row.publication_generation_id,
+      row.publication_state,
+    ],
+  }));
+  if (yieldDataRows.length > 0 || historyRows.length > 0) {
+    return [...yieldDataRows, ...historyRows];
+  }
   return (
     (vi.mocked(batchExecute).mock.calls[0]?.[1] as
       | Array<{ boundValues?: unknown[] }>
       | undefined) ?? []
   );
+}
+
+function getYieldRankingsCachePayload(): unknown {
+  const entry = latestMockDb?.getHistory().find(
+    (item) => item.sql.includes("INSERT INTO cache (key, value, updated_at)") && item.binds[0] === "yield-rankings",
+  );
+  return entry ? JSON.parse(String(entry.binds[1])) : undefined;
 }
 
 function findYieldDataRow(
@@ -392,11 +466,10 @@ describe("yield source selection (confidence-weighted arbitration)", () => {
     // data_source should be "defillama" (index 12)
     expect(bestRow?.boundValues?.[12]).toBe("defillama");
 
-    const rankingsCacheCall = vi.mocked(setCacheIfNewer).mock.calls.find((call) => call[1] === "yield-rankings");
-    expect(rankingsCacheCall).toBeDefined();
-    const rankingsPayload = JSON.parse(String(rankingsCacheCall?.[2])) as {
+    const rankingsPayload = getYieldRankingsCachePayload() as {
       rankings: Array<{ id: string; sourceRisk?: { venueProtocol?: string | null; venueChain?: string | null } | null }>;
     };
+    expect(rankingsPayload).toBeDefined();
     expect(rankingsPayload.rankings.find((row) => row.id === "sdai-maker")?.sourceRisk).toMatchObject({
       venueProtocol: "maker",
       venueChain: "Ethereum",
@@ -1112,8 +1185,8 @@ describe("price-derived and auto-discovery yield paths", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const priceDerivedRow = writeStatements?.find(
+    const writeStatements = getWriteStatements();
+    const priceDerivedRow = writeStatements.find(
       (stmt) => stmt.boundValues?.[0] === "sdai-maker" && stmt.boundValues?.[12] === "price-derived",
     );
     expect(priceDerivedRow).toBeDefined();
@@ -1156,8 +1229,8 @@ describe("price-derived and auto-discovery yield paths", () => {
 
     await syncYieldData(db);
 
-    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }> | undefined;
-    const autoRow = writeStatements?.find(
+    const writeStatements = getWriteStatements();
+    const autoRow = writeStatements.find(
       (stmt) => stmt.boundValues?.[0] === "u-united-stables",
     );
     expect(autoRow).toBeDefined();

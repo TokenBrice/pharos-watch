@@ -395,6 +395,10 @@ describe("validateYieldRankingsPayloadForPublish", () => {
 });
 
 describe("publishYieldCoordinatorResults", () => {
+  function parseJsonBind<T>(entry: { binds: unknown[] } | undefined, index = 0): T {
+    return JSON.parse(String(entry?.binds[index] ?? "[]")) as T;
+  }
+
   function makePublicationDb(
     cacheWriteChanges: number,
     options?: { cacheWriteError?: Error; finalizeError?: Error },
@@ -474,59 +478,56 @@ describe("publishYieldCoordinatorResults", () => {
       casSkipped: true,
     });
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
+    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
+    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    const decisionInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    expect(yieldDataInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
+    expect(yieldHistoryInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
+    expect(decisionInsert?.sql).toContain("(SELECT updated_at FROM cache WHERE key = 'yield-rankings') = ?");
+    const rows = parseJsonBind<Array<{ publication_state: string }>>(yieldDataInsert);
+    expect(rows[0]?.publication_state).toBe("published");
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed"),
     ).toBe(true);
   });
 
-  it("does not replace published D1 rows when the rankings cache write throws before D1 publication", async () => {
+  it("returns degraded when the atomic publication transaction throws", async () => {
     const db = makePublicationDb(1, { cacheWriteError: new Error("D1 queue overloaded") });
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
 
-    expect(result).toMatchObject({
-      ok: true,
-      cacheWriteSkipped: true,
-      casSkipped: false,
-      validationFailures: 0,
-    });
-    if (result.ok) {
-      expect(result.degradationReasons).toContain("cache-write-failed:D1 queue overloaded");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const metadata = JSON.parse(result.result.metadata ?? "{}") as { reason?: string; publishFailure?: string };
+      expect(metadata.reason).toBe("yield-publication-transaction-failed");
+      expect(metadata.publishFailure ?? "").toContain("D1 queue overloaded");
     }
 
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed"),
     ).toBe(true);
   });
 
-  it("reports degraded when published cache succeeds but D1 finalization fails", async () => {
+  it("returns degraded when atomic publication finalization fails", async () => {
     const db = makePublicationDb(1, { finalizeError: new Error("database locked") });
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
 
-    expect(result).toMatchObject({
-      ok: true,
-      cacheWriteSkipped: false,
-      casSkipped: false,
-    });
-    if (result.ok) {
-      expect(result.degradationReasons.some((reason) =>
-        reason.startsWith("published-generation-finalization-failed:database locked"),
-      )).toBe(true);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const metadata = JSON.parse(result.result.metadata ?? "{}") as { reason?: string; publishFailure?: string };
+      expect(metadata.reason).toBe("yield-publication-transaction-failed");
+      expect(metadata.publishFailure ?? "").toContain("database locked");
     }
     const history = db.getHistory();
-    expect(
-      history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data") && entry.binds.includes("published")),
-    ).toBe(true);
+    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
+    const rows = parseJsonBind<Array<{ publication_state: string }>>(yieldDataInsert);
+    expect(rows[0]?.publication_state).toBe("published");
   });
 
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
@@ -568,7 +569,8 @@ describe("publishYieldCoordinatorResults", () => {
 
     expect(result).toMatchObject({ ok: true });
     const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
-    const alternativesJson = String(decisionInsert?.binds[11]);
+    const decisionRows = parseJsonBind<Array<{ alternatives_json: string }>>(decisionInsert);
+    const alternativesJson = decisionRows[0]?.alternatives_json ?? "";
     expect(new TextEncoder().encode(alternativesJson).length).toBeLessThanOrEqual(4096);
     const alternatives = JSON.parse(alternativesJson) as Array<{ reason?: string; anomalies?: string[] }>;
     expect(alternatives.some((alternative) => alternative.reason === "rejected: divergent lower-confidence source")).toBe(true);
@@ -589,8 +591,16 @@ describe("publishYieldCoordinatorResults", () => {
     const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
     const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
     const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
-    expect(yieldDataInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "published"]);
-    expect(yieldHistoryInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "published"]);
+    const yieldRows = parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldDataInsert);
+    const historyRows = parseJsonBind<Array<{ publication_generation_id: string; publication_state: string }>>(yieldHistoryInsert);
+    expect(yieldRows[0]).toMatchObject({
+      publication_generation_id: "yield-1774526400",
+      publication_state: "published",
+    });
+    expect(historyRows[0]).toMatchObject({
+      publication_generation_id: "yield-1774526400",
+      publication_state: "published",
+    });
     expect(cacheWrite?.binds[0]).toBe("yield-rankings");
     expect(history.findIndex((entry) => entry === cacheWrite)).toBeLessThan(
       history.findIndex((entry) => entry === yieldDataInsert),
@@ -609,9 +619,7 @@ describe("publishYieldCoordinatorResults", () => {
       ],
     });
     expect(history.some((entry) => entry.sql.includes("SET state = 'published'"))).toBe(true);
-    expect(
-      history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "published"),
-    ).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?"))).toBe(false);
   });
 });
 

@@ -493,7 +493,7 @@ publication_generation_id TEXT,
 publication_state         TEXT  -- "staged" | "published" | "failed"
 ```
 
-Rows are written as `staged` with a `publication_generation_id`, then flipped to `published` only after the `yield-rankings` cache write succeeds. If preflight validation or cache publication fails, the generation is marked `failed`; those rows are retained for debugging but are not eligible for generation-aware public history reads or future evaluation-history inputs.
+Rows are replaced in the same D1 batch as the `yield-rankings` cache publication. The batch first performs a cache compare-and-swap, then guards the current/history row replacement, decision evidence write, and generation publish on `yield-rankings.updated_at = startSec`. Successful runs write rows with a `publication_generation_id` and `publication_state = 'published'`. If preflight validation, cache publication, or an older-run cache CAS fails, the generation is marked `failed` without replacing the previous published D1 snapshot.
 
 ### `yield_history` — Historical Data Points
 
@@ -557,9 +557,9 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 9. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
 10. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source
 11. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
-12. Stage a publication generation, preflight the rankings payload, then batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best`, `publication_generation_id`, and `publication_state = 'staged'`
-13. Write the cache payload with `publication.status = "published"` and row-level `publishedRank`; on success, mark the generation and rows `published`, and on failure mark them `failed` for operator debugging
-14. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
+12. Stage a publication generation and preflight the rankings payload
+13. Publish the `yield-rankings` cache payload with `publication.status = "published"` plus row-level `publishedRank`, upsert `yield_data` (all sources), insert `yield_history` points, insert selected-source decision evidence, and mark the generation `published` in one guarded D1 batch; if cache publication fails or CAS skips because a newer cache exists, mark only the generation `failed` and leave the previous published D1 rows in place
+14. Purge stale rows for refreshed coins only on non-degraded successful publication so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
 15. Prune `yield_history` older than 365 days
 16. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration using source-cadence freshness windows (three hourly publish cycles for hourly families; 6 hours for supplemental protocol-API and optional Aave/Compound rows; 36 hours for `price-derived` rows), and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
 
