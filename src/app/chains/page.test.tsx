@@ -19,6 +19,7 @@ describe("ChainsPage", () => {
     expect(html).toContain("What is the Chain Health Score?");
     expect(html).toContain("Which chains have the most stablecoin supply?");
 
-    expect(html.indexOf("Chain Profile Directory")).toBeLessThan(html.indexOf("chains client"));
+    expect(html.indexOf("chains client")).toBeLessThan(html.indexOf("Chains FAQ"));
+    expect(html.indexOf("Chains FAQ")).toBeLessThan(html.indexOf("Chain Profile Directory"));
   });
 });

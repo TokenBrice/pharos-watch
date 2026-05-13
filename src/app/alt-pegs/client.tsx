@@ -340,6 +340,11 @@ export function AltPegsClient() {
         commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
       />
 
+      <AltPegCohortDirectory
+        fiatItems={FIAT_LINK_HUB_ITEMS}
+        commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
+      />
+
       <SectionErrorBoundary name="non-usd-share">
         <section id="alt-peg-history-share" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -398,11 +403,6 @@ export function AltPegsClient() {
           }}
         />
       </SectionErrorBoundary>
-
-      <AltPegCohortDirectory
-        fiatItems={FIAT_LINK_HUB_ITEMS}
-        commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
-      />
 
       <AltPegDistributionCard rows={snapshot.distributionRows} altMarketCap={snapshot.altMarketCap} />
     </div>

@@ -90,9 +90,9 @@ export default function ChainsPage() {
         />
       }
     >
-      <ChainDirectory entries={chainEntries} />
       <ChainsLeaderboardClient />
       <FaqSection items={CHAINS_FAQ_ITEMS} title="Chains FAQ" />
+      <ChainDirectory entries={chainEntries} />
     </FeaturePageShell>
   );
 }

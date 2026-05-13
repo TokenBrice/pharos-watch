@@ -191,17 +191,23 @@ describe("AltPegsClient", () => {
     expect(cohortChartIndex).toBeLessThan(tableIndex);
   });
 
-  it("places cohort drill-down details below the cohort market-cap chart", () => {
+  it("places cohort drill-down details after the current structure and atlas", () => {
     const { container } = render(<AltPegsClient />);
 
     const pageText = container.textContent ?? "";
+    const currentStructureIndex = pageText.indexOf("Current Structure");
+    const atlasIndex = pageText.indexOf("Peg Diversity Atlas");
     const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
     const directoryIndex = pageText.indexOf("Drill Into Each Alt-Peg Cohort");
     const tableIndex = pageText.indexOf("Which Non-USD Pegs Matter Now");
+    expect(currentStructureIndex).toBeGreaterThanOrEqual(0);
+    expect(atlasIndex).toBeGreaterThanOrEqual(0);
     expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
     expect(directoryIndex).toBeGreaterThanOrEqual(0);
     expect(tableIndex).toBeGreaterThanOrEqual(0);
-    expect(cohortChartIndex).toBeLessThan(directoryIndex);
+    expect(currentStructureIndex).toBeLessThan(atlasIndex);
+    expect(atlasIndex).toBeLessThan(directoryIndex);
+    expect(directoryIndex).toBeLessThan(cohortChartIndex);
     expect(directoryIndex).toBeLessThan(tableIndex);
   });
 
