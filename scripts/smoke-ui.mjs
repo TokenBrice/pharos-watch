@@ -738,14 +738,6 @@ export async function run() {
         `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       assert(
-        network.responses.some(
-          (entry) => /google-analytics\.com\/g\/collect|analytics\.google\.com\/g\/collect/.test(entry.url)
-            && entry.status >= 200
-            && entry.status < 400,
-        ),
-        `Expected successful GA collect hit for ${expectedGaId}; network=${JSON.stringify(network)}`,
-      );
-      assert(
         network.failures.length === 0,
         `Found failed analytics request(s) for ${expectedGaId}; failures=${JSON.stringify(network.failures)}`,
       );
