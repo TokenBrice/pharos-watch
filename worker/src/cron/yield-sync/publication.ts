@@ -537,6 +537,7 @@ export async function persistEvaluatedYieldSources(
     medianApy: number;
     dlPoolsMeta: YieldSourceInputMeta;
     generationId: string;
+    publicationState?: "staged" | "published";
   },
 ): Promise<{
   updatedCount: number;
@@ -546,6 +547,7 @@ export async function persistEvaluatedYieldSources(
   const historyStmts: D1PreparedStatement[] = [];
   const decisionStmts: D1PreparedStatement[] = [];
   const rankingProvenanceByKey = new Map<string, Record<string, unknown>>();
+  const publicationState = input.publicationState ?? "staged";
   let updatedCount = 0;
 
   for (const source of input.evaluatedSources) {
@@ -596,7 +598,7 @@ export async function persistEvaluatedYieldSources(
           isBest,
           input.startSec,
           input.generationId,
-          "staged",
+          publicationState,
         ),
     );
 
@@ -623,7 +625,7 @@ export async function persistEvaluatedYieldSources(
           source.yieldSource,
           source.yieldType,
           input.generationId,
-          "staged",
+          publicationState,
         ),
     );
 

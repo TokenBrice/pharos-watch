@@ -140,42 +140,6 @@ export async function publishYieldCoordinatorResults(params: {
   }
 
   let updatedCount = 0;
-  try {
-    ({ updatedCount } = await persistEvaluatedYieldSources(params.db, {
-      evaluatedSources: params.evaluatedSources,
-      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
-      startSec: params.startSec,
-      medianApy: params.medianApy,
-      dlPoolsMeta: params.dlPoolsMeta,
-      generationId,
-    }));
-  } catch (error) {
-    const reason = getD1FailureReason("d1-staging-write-failed", error);
-    params.degradationReasons.push(reason);
-    await finalizeYieldPublicationGeneration(params.db, {
-      generationId,
-      state: "failed",
-      timestamp: params.startSec,
-      reason,
-    }).catch((finalizeError: unknown) => {
-      console.warn("[sync-yield-data] Failed to mark staged yield generation failed:", finalizeError);
-    });
-    return {
-      ok: false,
-      result: {
-        status: "degraded",
-        itemCount: params.resolvedCount,
-        metadata: JSON.stringify({
-          reason: "yield-d1-staging-failed",
-          publishFailure: reason,
-          validationFailures: 0,
-          rowsRejected: params.rowsRejected,
-          divergenceFlags: params.divergenceFlags,
-          sourceSwitches: params.sourceSwitches,
-        }),
-      },
-    };
-  }
   const publishedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
     generationId,
     startSec: params.startSec,
@@ -183,7 +147,7 @@ export async function publishYieldCoordinatorResults(params: {
   });
   const cacheWrite = await writeYieldRankingsCache(params.db, publishedRankingsPayload, params.startSec).catch((error: unknown) => {
     const reason = getPublicationFailureReason(error);
-    console.warn("[sync-yield-data] Failed to publish yield-rankings cache after D1 staging:", error);
+    console.warn("[sync-yield-data] Failed to publish yield-rankings cache after preflight:", error);
     return {
       ok: false,
       validationFailures: 0,
@@ -198,7 +162,45 @@ export async function publishYieldCoordinatorResults(params: {
       timestamp: params.startSec,
       reason: cacheWrite.reason ?? "schema-validation-failed",
     });
-  } else {
+    await pruneYieldTables(params.db, params.startSec, {
+      allowDestructiveCleanup: false,
+    });
+    return {
+      ok: true,
+      updatedCount,
+      degradationReasons: params.degradationReasons,
+      validationFailures: cacheWrite.validationFailures,
+      cacheWriteSkipped: true,
+      casSkipped: "cacheWrite" in cacheWrite && cacheWrite.cacheWrite?.skippedBecauseNewer === true,
+    };
+  }
+
+  let d1PublishSucceeded = false;
+  try {
+    ({ updatedCount } = await persistEvaluatedYieldSources(params.db, {
+      evaluatedSources: params.evaluatedSources,
+      bestSourceKeyByCoin: params.bestSourceKeyByCoin,
+      startSec: params.startSec,
+      medianApy: params.medianApy,
+      dlPoolsMeta: params.dlPoolsMeta,
+      generationId,
+      publicationState: "published",
+    }));
+    d1PublishSucceeded = true;
+  } catch (error) {
+    const reason = getD1FailureReason("d1-published-write-failed", error);
+    params.degradationReasons.push(reason);
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "failed",
+      timestamp: params.startSec,
+      reason,
+    }).catch((finalizeError: unknown) => {
+      console.warn("[sync-yield-data] Failed to mark published-cache yield generation failed:", finalizeError);
+    });
+  }
+
+  if (d1PublishSucceeded) {
     try {
       await finalizeYieldPublicationGeneration(params.db, {
         generationId,

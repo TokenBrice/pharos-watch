@@ -227,13 +227,14 @@ describe("computePYS", () => {
     expect(scaled).toBeGreaterThan(base);
   });
 
-  it("matches the published methodology example for benchmark-aware PYS", () => {
+  it("matches the published methodology example for benchmark-aware source-risk PYS", () => {
     expect(computePYS({
       apy30d: 8.4,
       benchmarkRate: 4.25,
       safetyScore: 72,
+      sourceRiskPenalty: 1.2,
       apyVarianceScore: 0.18,
       scalingFactor: 8,
-    })).toBe(32);
+    })).toBe(27);
   });
 });

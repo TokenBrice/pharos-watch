@@ -1952,7 +1952,7 @@ describe("syncYieldData", () => {
     expect(wroteYieldRankings).toBe(false);
   });
 
-  it("marks the run degraded when yield-rankings cache persistence fails after data is written", async () => {
+  it("preserves published D1 rows when yield-rankings cache persistence fails before data replacement", async () => {
     const db = makeDb();
     mockHealthyRiskFreeRateCache();
 
@@ -1988,7 +1988,14 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db);
 
     expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
     expect(batchExecute).toHaveBeenCalled();
+    const d1PublicationWrites = vi.mocked(batchExecute).mock.calls.flatMap(
+      (call) => call[1] as unknown as Array<{ sql: string }>,
+    );
+    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
+    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
+    expect(d1PublicationWrites.some((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       fallbackMode: string | null;
       validationFailures: number | null;

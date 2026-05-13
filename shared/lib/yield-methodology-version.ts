@@ -18,6 +18,7 @@ const yieldMethodology = createMethodologyVersion({
       "DeFiLlama rows without row-level observation timestamps inherit the DeFiLlama input metadata age, keeping provenance freshness and source-age scoring penalties aligned",
       "PYS now computes source-risk-adjusted row utility before applying the existing safety curve, volatility multiplier, benchmark spread weight, and scaling factor",
       "Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution, then falls back to APY and TVL tie-breakers",
+      "The hourly publisher now writes the `yield-rankings` cache through CAS before replacing current `yield_data` rows, so failed cache writes or older-run CAS skips preserve the previous published D1 snapshot for downstream readers",
       "External lending opportunities remain no-op inputs for base stablecoin Safety Scores; report-card yield-risk helpers normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version consumes them",
       "Legacy `v7.48` payloads without `sourceRisk`, rank, attribution, or publication fields remain schema-valid, and missing source-risk fields continue to behave neutrally",
     ],

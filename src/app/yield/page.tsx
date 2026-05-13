@@ -79,7 +79,7 @@ export default createClientFeaturePage({
     },
     leadParagraphs: [
       "Yield ranked against safety and real-world benchmarks — not just raw APY.",
-      "The Pharos Yield Score (PYS) balances 30-day APY against safety grades, benchmark spread, and sustainability. A 15% APY on a D-grade stablecoin scores lower than 5% on an A-grade. Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine or just risk compensation.",
+      "The Pharos Yield Score (PYS) balances 30-day APY against source risk, safety grades, benchmark spread, and sustainability. A 15% APY on a D-grade stablecoin or thin source evidence scores lower than 5% on an A-grade. Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine or just risk compensation.",
     ],
   },
   beforeClient: YIELD_STATIC_SECTION,

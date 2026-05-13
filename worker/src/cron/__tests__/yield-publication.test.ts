@@ -463,7 +463,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
   });
 
-  it("marks staged rows failed when the rankings cache CAS skips because a newer cache exists", async () => {
+  it("does not replace published D1 rows when the rankings cache CAS skips because a newer cache exists", async () => {
     const db = makePublicationDb(0);
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
@@ -474,14 +474,16 @@ describe("publishYieldCoordinatorResults", () => {
       casSkipped: true,
     });
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed"),
     ).toBe(true);
   });
 
-  it("marks staged rows failed when the rankings cache write throws after D1 staging", async () => {
+  it("does not replace published D1 rows when the rankings cache write throws before D1 publication", async () => {
     const db = makePublicationDb(1, { cacheWriteError: new Error("D1 queue overloaded") });
 
     const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
@@ -497,7 +499,9 @@ describe("publishYieldCoordinatorResults", () => {
     }
 
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"))).toBe(false);
     expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed"),
@@ -519,6 +523,10 @@ describe("publishYieldCoordinatorResults", () => {
         reason.startsWith("published-generation-finalization-failed:database locked"),
       )).toBe(true);
     }
+    const history = db.getHistory();
+    expect(
+      history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data") && entry.binds.includes("published")),
+    ).toBe(true);
   });
 
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
@@ -581,9 +589,12 @@ describe("publishYieldCoordinatorResults", () => {
     const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
     const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
     const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
-    expect(yieldDataInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "staged"]);
-    expect(yieldHistoryInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "staged"]);
+    expect(yieldDataInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "published"]);
+    expect(yieldHistoryInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "published"]);
     expect(cacheWrite?.binds[0]).toBe("yield-rankings");
+    expect(history.findIndex((entry) => entry === cacheWrite)).toBeLessThan(
+      history.findIndex((entry) => entry === yieldDataInsert),
+    );
     expect(JSON.parse(String(cacheWrite?.binds[1]))).toMatchObject({
       publication: {
         generationId: "yield-1774526400",
