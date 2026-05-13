@@ -32,7 +32,11 @@ export async function runFallbackPriceEnrichmentPhase(
     validationReferences: input.validationReferences,
     logLabel: "Pre-rejected fallback price",
   });
-  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(input.assets, input.signal);
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
+    input.assets,
+    input.signal,
+    input.validationReferences,
+  );
   applyProtocolPriceOverrides({
     assets: input.assets,
     overrides: authoritativeOverrides,

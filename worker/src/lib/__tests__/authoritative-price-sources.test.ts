@@ -243,6 +243,12 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const overrides = await fetchAuthoritativeLivePriceOverrides([
       {
+        id: "m-m0",
+        name: "M by M0",
+        symbol: "M",
+        circulating: { peggedUSD: 299_000_000 },
+      },
+      {
         id: "usdk-kast",
         name: "KAST Dollar",
         symbol: "USDK",
@@ -273,6 +279,16 @@ describe("authoritative-price-sources", () => {
       },
     ]);
 
+    expect(overrides.get("m-m0")).toMatchObject({
+      price: 0.99981234,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: nowSec - 60,
+      metadata: {
+        inheritedFrom: "wm-m0",
+        parentReplaySafe: true,
+      },
+    });
     expect(overrides.get("usdk-kast")).toMatchObject({
       price: 0.99981234,
       source: "protocol-redeem",
@@ -321,6 +337,12 @@ describe("authoritative-price-sources", () => {
         circulating: { peggedUSD: 6_000_000 },
       },
       {
+        id: "weusd-picwe",
+        name: "WEUSD",
+        symbol: "WEUSD",
+        circulating: { peggedUSD: 500_000 },
+      },
+      {
         id: "ausd-agora",
         name: "Agora AUSD",
         symbol: "AUSD",
@@ -361,6 +383,164 @@ describe("authoritative-price-sources", () => {
         inheritedFrom: "usdc-circle",
         parentReplaySafe: true,
       },
+    });
+    expect(overrides.get("weusd-picwe")).toMatchObject({
+      price: 0.9899802,
+      source: "protocol-redeem",
+      confidence: "high",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        parentReplaySafe: true,
+      },
+    });
+  });
+
+  it("returns protocol-par live overrides for direct-redeem fiat assets", async () => {
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "sofid-sofi",
+          name: "SoFiUSD",
+          symbol: "SOFID",
+          circulating: { peggedUSD: 100_000_000 },
+        },
+        {
+          id: "usbd-bima",
+          name: "Bima USBD",
+          symbol: "USBD",
+          circulating: { peggedUSD: 7_500_000 },
+        },
+        {
+          id: "usdq-quill",
+          name: "Quill USD",
+          symbol: "USDQ",
+          circulating: { peggedUSD: 130_000 },
+        },
+        {
+          id: "chfau-allunity",
+          name: "AllUnity CHF",
+          symbol: "CHFAU",
+          circulating: { peggedCHF: 6_300_000 },
+        },
+      ],
+      undefined,
+      {
+        rates: { peggedCHF: 1.27 },
+        type: "fresh",
+        updatedAt: 1_778_000_000,
+        updatedAtByPeg: { peggedCHF: 1_778_000_000 },
+        typeByPeg: { peggedCHF: "fresh" },
+      },
+    );
+
+    expect(overrides.get("sofid-sofi")).toMatchObject({
+      price: 1,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(overrides.get("usbd-bima")).toMatchObject({
+      price: 1,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(overrides.get("usdq-quill")).toMatchObject({
+      price: 1,
+      source: "protocol-redeem",
+      confidence: "high",
+    });
+    expect(overrides.get("chfau-allunity")).toMatchObject({
+      price: 1.27,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: 1_778_000_000,
+      observedAtMode: "upstream",
+    });
+  });
+
+  it("skips CHF protocol-par overrides when the FX reference is missing or stale", async () => {
+    const stale = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "chfau-allunity",
+          name: "AllUnity CHF",
+          symbol: "CHFAU",
+          circulating: { peggedCHF: 6_300_000 },
+        },
+      ],
+      undefined,
+      {
+        rates: { peggedCHF: 1.27 },
+        type: "stale",
+        updatedAt: 1_778_000_000,
+        updatedAtByPeg: { peggedCHF: 1_778_000_000 },
+        typeByPeg: { peggedCHF: "stale" },
+      },
+    );
+    const missing = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "chfau-allunity",
+        name: "AllUnity CHF",
+        symbol: "CHFAU",
+        circulating: { peggedCHF: 6_300_000 },
+      },
+    ]);
+
+    expect(stale.has("chfau-allunity")).toBe(false);
+    expect(missing.has("chfau-allunity")).toBe(false);
+  });
+
+  it("labels static CHF protocol-par overrides as local fetches", async () => {
+    const overrides = await fetchAuthoritativeLivePriceOverrides(
+      [
+        {
+          id: "chfau-allunity",
+          name: "AllUnity CHF",
+          symbol: "CHFAU",
+          circulating: { peggedCHF: 6_300_000 },
+        },
+      ],
+      undefined,
+      {
+        rates: { peggedCHF: 1.25 },
+        type: "static",
+        updatedAt: null,
+        typeByPeg: { peggedCHF: "static" },
+      },
+    );
+
+    expect(overrides.get("chfau-allunity")).toMatchObject({
+      price: 1.25,
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: null,
+      observedAtMode: "local_fetch",
+    });
+  });
+
+  it("does not claim authoritative historical protocol-par coverage for CHF parity", async () => {
+    const result = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "chfau-allunity",
+        name: "AllUnity CHF",
+        symbol: "CHFAU",
+        flags: {
+          pegCurrency: "CHF",
+          backing: "rwa-backed",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_778_000_000],
+      },
+    );
+
+    expect(result).toEqual({
+      matched: false,
+      source: null,
+      prices: null,
     });
   });
 
@@ -540,8 +720,26 @@ describe("authoritative-price-sources", () => {
         candidateTimestamps: [1_776_000_000, 1_776_003_600],
       },
     );
+    const mResult = await fetchAuthoritativeHistoricalPriceSeries(
+      {
+        id: "m-m0",
+        name: "M by M0",
+        symbol: "M",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      },
+      {
+        candidateTimestamps: [1_776_000_000, 1_776_003_600],
+      },
+    );
 
-    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(3);
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenCalledTimes(4);
     expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -578,6 +776,26 @@ describe("authoritative-price-sources", () => {
         coingeckoApiKey: null,
       },
     );
+    expect(fetchMarketBackfillPriceSeriesMock).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        id: "wm-m0",
+        geckoId: "wrappedm-by-m0",
+      }),
+      "wrappedm-by-m0",
+      {
+        granularity: "hourly",
+        coingeckoApiKey: null,
+      },
+    );
+    expect(mResult).toEqual({
+      matched: true,
+      source: "protocol-redeem",
+      prices: [
+        { timestamp: 1_776_000_000, price: 0.99971 },
+        { timestamp: 1_776_003_600, price: 1.00006 },
+      ],
+    });
     expect(usdkResult).toEqual({
       matched: true,
       source: "protocol-redeem",

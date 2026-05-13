@@ -365,7 +365,11 @@ export async function runSharedPriceCompletion(
   abortStagePrefix: string,
 ): Promise<SharedPriceCompletionResult | CronResult> {
   const authoritativeOverrides =
-    input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(input.assets, input.signal);
+    input.authoritativeOverrides ?? await fetchAuthoritativeLivePriceOverrides(
+      input.assets,
+      input.signal,
+      input.validationReferences,
+    );
   const authoritativeOverrideCount = applyProtocolPriceOverrides({
     assets: input.assets,
     overrides: authoritativeOverrides,

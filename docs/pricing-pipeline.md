@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.01`
+- **Current methodology version:** `v6.02`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -215,9 +215,15 @@ After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` c
 | `usdai-usd-ai`           | inherits tracked `pyusd-paypal` pricing as a redeemable PYUSD wrapper           |
 | `iusd-initia`            | inherits tracked `ausd-agora` pricing as an AUSD-backed Initia wrapper          |
 | `usdcx-movement`         | inherits tracked `usdc-circle` pricing as a Circle xReserve-backed USDC wrapper |
+| `m-m0`                   | inherits tracked `wm-m0` pricing as the underlying M0 unit                      |
 | `usdk-kast`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
 | `xo-exodus`              | inherits tracked `wm-m0` pricing as a Solana M0 extension unit                  |
 | `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
+| `weusd-picwe`            | inherits tracked `usdc-circle` pricing with PicWe's documented 1% redemption-fee haircut |
+| `sofid-sofi`             | direct USD redemption-par reference for observable on-chain supply              |
+| `usbd-bima`              | direct USD redemption-par reference for observable DefiLlama supply             |
+| `usdq-quill`             | direct USD redemption-par reference for observable DefiLlama supply             |
+| `chfau-allunity`         | direct CHF redemption-par reference using fresh/static CHF/USD FX               |
 | `susdt-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
 | `susdc-spark`            | ERC-4626 `convertToAssets(1 share)` × tracked `usdc-circle` price               |
 | `steakusdt-steakhouse`   | ERC-4626 `convertToAssets(1 share)` × tracked `usdt-tether` price               |
@@ -256,15 +262,24 @@ Current tracked-base inheritance paths are:
 - `usdai-usd-ai -> pyusd-paypal`
 - `iusd-initia -> ausd-agora`
 - `usdcx-movement -> usdc-circle`
+- `m-m0 -> wm-m0`
 - `usdk-kast -> wm-m0`
 - `xo-exodus -> wm-m0`
 - `usdnr-nerona -> wm-m0`
+- `weusd-picwe -> usdc-circle` with a 1% redemption-fee haircut
 
 This prevents thin secondary-market child-token prints, or missing child-market coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
+Scoped redemption-par references cover active assets with observable runtime supply and a source-reviewed primary redemption route, but no dependable current market quote. USD routes publish nominal USD parity through `protocol-redeem`; fee and capacity risk remains modeled in the redemption-backstop methodology rather than being hidden inside the token price. Non-USD routes must have a fresh or static FX reference for the peg currency before live publishing, and fall back to normal market/native-peg history until historical FX replay exists. The current scoped set is:
+
+- `sofid-sofi` at USD parity
+- `usbd-bima` at USD parity
+- `usdq-quill` at USD parity
+- `chfau-allunity` at CHF parity converted through the live CHF/USD reference
+
 These authoritative overrides are pre-applied before fallback enrichment and then applied again after the GeckoTerminal single-source probe. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source probes, while the final pass preserves the existing rule that a later market cross-check cannot overwrite a validated redemption price.
 
-The same registry also supports historical replay for backfills so admin rebuilds do not silently downgrade back to weaker market sources.
+The same registry also supports historical replay for backfills where a provider can replay the same source safely, so admin rebuilds do not silently downgrade back to weaker market sources.
 
 `crvusd-curve` no longer lives in the authoritative-override registry. Its Curve `PriceAggregator.price()` quote is now injected into primary consensus as the `curve-oracle` source alongside the other live pricing voices.
 

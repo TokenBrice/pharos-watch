@@ -215,7 +215,11 @@ export async function runStablecoinsPricingStage(
     validationReferences: options.validationReferences,
     logLabel: "Pre-rejected bad price",
   });
-  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(options.assets, options.signal);
+  const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
+    options.assets,
+    options.signal,
+    options.validationReferences,
+  );
   applyProtocolPriceOverrides({
     assets: options.assets,
     overrides: authoritativeOverrides,

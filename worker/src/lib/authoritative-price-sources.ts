@@ -10,6 +10,7 @@ import { getArchiveFallbackRpcUrls } from "./public-rpc-registry";
 import { rethrowIfAborted } from "./abort";
 import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
 import { isReplaySafePriceSource } from "./pricing-source-policy";
+import type { PriceValidationReferences } from "./price-validation";
 
 const ETHEREUM_CHAIN = "ethereum";
 
@@ -18,6 +19,7 @@ const CAP_CUSD_ID = "cusd-cap";
 const IUSD_INFINIFI_ID = "iusd-infinifi";
 const USDAI_USD_AI_ID = "usdai-usd-ai";
 const PYUSD_PAYPAL_ID = "pyusd-paypal";
+const M_M0_ID = "m-m0";
 const USDK_KAST_ID = "usdk-kast";
 const XO_EXODUS_ID = "xo-exodus";
 const USDNR_NERONA_ID = "usdnr-nerona";
@@ -30,6 +32,11 @@ const AVUSD_AVANT_ID = "avusd-avant";
 const GHO_AAVE_ID = "gho-aave";
 const USN_NOON_ID = "usn-noon";
 const YZUSD_YUZU_ID = "yzusd-yuzu";
+const CHFAU_ALLUNITY_ID = "chfau-allunity";
+const SOFID_SOFI_ID = "sofid-sofi";
+const WEUSD_PICWE_ID = "weusd-picwe";
+const USBD_BIMA_ID = "usbd-bima";
+const USDQ_QUILL_ID = "usdq-quill";
 const CAP_GET_BURN_AMOUNT_SELECTOR = "0xb7c4a6bf"; // getBurnAmount(address,uint256)
 const IUSD_RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
 const IUSD_INFINIFI_REDEEM_CONTROLLER = "0xCb1747E89a43DEdcF4A2b831a0D94859EFeC7601";
@@ -44,14 +51,40 @@ const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
 const CAP_SAMPLE_NOTIONAL_MAX_USD = 1_000_000;
 const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
 const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
-const INHERITED_TRACKED_PRICE_PARENTS = {
-  [USDAI_USD_AI_ID]: PYUSD_PAYPAL_ID,
-  "iusd-initia": AUSD_AGORA_ID,
-  "usdcx-movement": USDC_CIRCLE_ID,
-  [USDK_KAST_ID]: WM_M0_ID,
-  [XO_EXODUS_ID]: WM_M0_ID,
-  [USDNR_NERONA_ID]: WM_M0_ID,
-} as const satisfies Record<string, string>;
+const BASIS_POINTS_DENOMINATOR = 10_000;
+
+interface InheritedTrackedPriceConfig {
+  parentId: string;
+  multiplier?: number;
+}
+
+const INHERITED_TRACKED_PRICE_CONFIGS = {
+  [USDAI_USD_AI_ID]: { parentId: PYUSD_PAYPAL_ID },
+  "iusd-initia": { parentId: AUSD_AGORA_ID },
+  "usdcx-movement": { parentId: USDC_CIRCLE_ID },
+  [M_M0_ID]: { parentId: WM_M0_ID },
+  [USDK_KAST_ID]: { parentId: WM_M0_ID },
+  [XO_EXODUS_ID]: { parentId: WM_M0_ID },
+  [USDNR_NERONA_ID]: { parentId: WM_M0_ID },
+  [WEUSD_PICWE_ID]: { parentId: USDC_CIRCLE_ID, multiplier: 0.99 },
+} as const satisfies Record<string, InheritedTrackedPriceConfig>;
+
+interface ProtocolParConfig {
+  id: string;
+  pegType: "peggedUSD" | "peggedCHF";
+  feeBps?: number;
+}
+
+const PROTOCOL_PAR_PRICE_CONFIGS: readonly ProtocolParConfig[] = [
+  { id: SOFID_SOFI_ID, pegType: "peggedUSD" },
+  { id: USBD_BIMA_ID, pegType: "peggedUSD" },
+  { id: USDQ_QUILL_ID, pegType: "peggedUSD" },
+  { id: CHFAU_ALLUNITY_ID, pegType: "peggedCHF" },
+];
+
+const PROTOCOL_PAR_PRICE_CONFIGS_BY_ID = new Map<string, ProtocolParConfig>(
+  PROTOCOL_PAR_PRICE_CONFIGS.map((entry) => [entry.id, entry]),
+);
 
 interface Erc4626NavVaultConfig {
   id: string;
@@ -269,11 +302,13 @@ export interface HistoricalPriceResolution {
 
 interface LivePriceContext {
   assetsById: Map<string, PeggedAsset>;
+  validationReferences?: PriceValidationReferences;
 }
 
 interface PriceSourceProvider {
   source: string;
   matches(stablecoinId: string): boolean;
+  matchesHistoricalPrices?(stablecoinId: string): boolean;
   fetchLivePrice?(
     asset: PeggedAsset,
     context: LivePriceContext,
@@ -340,8 +375,10 @@ function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): 
   return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
 }
 
-function getInheritedTrackedPriceParentId(stablecoinId: string): string | null {
-  return INHERITED_TRACKED_PRICE_PARENTS[stablecoinId as keyof typeof INHERITED_TRACKED_PRICE_PARENTS] ?? null;
+function getInheritedTrackedPriceConfig(stablecoinId: string): InheritedTrackedPriceConfig | null {
+  return INHERITED_TRACKED_PRICE_CONFIGS[
+    stablecoinId as keyof typeof INHERITED_TRACKED_PRICE_CONFIGS
+  ] ?? null;
 }
 
 function isExplicitAuthoritativeParent(asset: PeggedAsset): boolean {
@@ -608,51 +645,59 @@ const iusdInfinifiProvider: PriceSourceProvider = {
 };
 
 async function replayInheritedTrackedPriceSeries(
-  parentId: string,
+  config: InheritedTrackedPriceConfig,
   context: HistoricalPriceContext,
 ): Promise<HistoricalPricePoint[] | null> {
-  const parentMeta = TRACKED_META_BY_ID.get(parentId);
+  const parentMeta = TRACKED_META_BY_ID.get(config.parentId);
   if (!parentMeta?.geckoId) return null;
 
   const series = await fetchMarketBackfillPriceSeries(parentMeta, parentMeta.geckoId, {
     granularity: "hourly",
     coingeckoApiKey: context.coingeckoApiKey ?? null,
   });
-  return series.prices;
+  if (!series.prices) return null;
+
+  const multiplier = config.multiplier ?? 1;
+  return multiplier === 1
+    ? series.prices
+    : series.prices.map((point) => ({ ...point, price: point.price * multiplier }));
 }
 
 const inheritedTrackedPriceProvider: PriceSourceProvider = {
   source: PROTOCOL_REDEEM_SOURCE,
   matches(stablecoinId: string): boolean {
-    return getInheritedTrackedPriceParentId(stablecoinId) != null;
+    return getInheritedTrackedPriceConfig(stablecoinId) != null;
   },
   async fetchLivePrice(
     asset: PeggedAsset,
     context: LivePriceContext,
   ): Promise<CurrentPriceOverride | null> {
-    const parentId = getInheritedTrackedPriceParentId(asset.id);
-    if (!parentId) return null;
+    const config = getInheritedTrackedPriceConfig(asset.id);
+    if (!config) return null;
 
-    const parentAsset = context.assetsById.get(parentId);
+    const parentAsset = context.assetsById.get(config.parentId);
     if (!parentAsset) return null;
 
     const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
     if (!trustedParent) {
       console.warn(
-        `[authoritative-price-sources] ${asset.id}: skipped inherited ${parentId} price because parent provenance is not trusted`,
+        `[authoritative-price-sources] ${asset.id}: skipped inherited ${config.parentId} price because parent provenance is not trusted`,
       );
       return null;
     }
 
     const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
+    const price = trustedParent.price * (config.multiplier ?? 1);
+    if (!Number.isFinite(price) || price <= 0) return null;
+
     return {
-      price: trustedParent.price,
+      price,
       source: PROTOCOL_REDEEM_SOURCE,
       confidence: "high",
       observedAt: trustedParent.observedAt,
       observedAtMode: trustedParent.observedAtMode,
       metadata: {
-        inheritedFrom: parentId,
+        inheritedFrom: config.parentId,
         parentSource: parentAsset.priceSource ?? null,
         parentConfidence: parentAsset.priceConfidence ?? null,
         parentObservedAt,
@@ -665,10 +710,84 @@ const inheritedTrackedPriceProvider: PriceSourceProvider = {
     meta: StablecoinMeta,
     context: HistoricalPriceContext,
   ): Promise<HistoricalPricePoint[] | null> {
-    const parentId = getInheritedTrackedPriceParentId(meta.id);
-    if (!parentId) return null;
+    const config = getInheritedTrackedPriceConfig(meta.id);
+    if (!config) return null;
 
-    return replayInheritedTrackedPriceSeries(parentId, context);
+    return replayInheritedTrackedPriceSeries(config, context);
+  },
+};
+
+function getReferenceType(
+  references: PriceValidationReferences | undefined,
+  pegType: string,
+): PriceValidationReferences["type"] {
+  return references?.typeByPeg?.[pegType] ?? references?.type ?? "none";
+}
+
+function getProtocolParPrice(
+  config: ProtocolParConfig,
+  references: PriceValidationReferences | undefined,
+): { price: number; observedAt: number | null; observedAtMode: PriceObservedAtMode } | null {
+  const multiplier = 1 - ((config.feeBps ?? 0) / BASIS_POINTS_DENOMINATOR);
+  if (!Number.isFinite(multiplier) || multiplier <= 0 || multiplier > 1) return null;
+
+  if (config.pegType === "peggedUSD") {
+    return {
+      price: multiplier,
+      observedAt: null,
+      observedAtMode: "local_fetch",
+    };
+  }
+
+  const referenceType = getReferenceType(references, config.pegType);
+  if (referenceType !== "fresh" && referenceType !== "static") return null;
+
+  const rate = references?.rates[config.pegType];
+  if (typeof rate !== "number" || !Number.isFinite(rate) || rate <= 0) return null;
+
+  return {
+    price: rate * multiplier,
+    observedAt: references?.updatedAtByPeg?.[config.pegType] ?? references?.updatedAt ?? null,
+    observedAtMode: referenceType === "fresh" ? "upstream" : "local_fetch",
+  };
+}
+
+const protocolParProvider: PriceSourceProvider = {
+  source: PROTOCOL_REDEEM_SOURCE,
+  matches(stablecoinId: string): boolean {
+    return PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.has(stablecoinId);
+  },
+  matchesHistoricalPrices(stablecoinId: string): boolean {
+    return PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(stablecoinId)?.pegType === "peggedUSD";
+  },
+  async fetchLivePrice(
+    asset: PeggedAsset,
+    context: LivePriceContext,
+  ): Promise<CurrentPriceOverride | null> {
+    const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(asset.id);
+    if (!config) return null;
+
+    const resolved = getProtocolParPrice(config, context.validationReferences);
+    if (!resolved) return null;
+
+    return {
+      price: resolved.price,
+      source: PROTOCOL_REDEEM_SOURCE,
+      confidence: "high",
+      observedAt: resolved.observedAt,
+      observedAtMode: resolved.observedAtMode,
+    };
+  },
+  async fetchHistoricalPrices(
+    meta: StablecoinMeta,
+    context: HistoricalPriceContext,
+  ): Promise<HistoricalPricePoint[] | null> {
+    const config = PROTOCOL_PAR_PRICE_CONFIGS_BY_ID.get(meta.id);
+    if (!config || config.pegType !== "peggedUSD") return null;
+
+    const multiplier = 1 - ((config.feeBps ?? 0) / BASIS_POINTS_DENOMINATOR);
+    const timestamps = normalizeHistoricalTimestamps(context.candidateTimestamps);
+    return timestamps.map((timestamp) => ({ timestamp, price: multiplier }));
   },
 };
 
@@ -915,6 +1034,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   capCusdProvider,
   iusdInfinifiProvider,
   inheritedTrackedPriceProvider,
+  protocolParProvider,
   erc4626NavProvider,
   previewRedeemProvider,
   idleCdoTrancheProvider,
@@ -923,10 +1043,12 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
 export async function fetchAuthoritativeLivePriceOverrides(
   assets: PeggedAsset[],
   signal?: AbortSignal,
+  validationReferences?: PriceValidationReferences,
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
   const liveContext: LivePriceContext = {
     assetsById: new Map(assets.map((asset) => [asset.id, asset])),
+    validationReferences,
   };
 
   for (const asset of assets) {
@@ -951,7 +1073,9 @@ export async function fetchAuthoritativeHistoricalPriceSeries(
   meta: StablecoinMeta,
   context: HistoricalPriceContext,
 ): Promise<HistoricalPriceResolution> {
-  const provider = AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) => candidate.matches(meta.id));
+  const provider = AUTHORITATIVE_PRICE_PROVIDERS.find((candidate) =>
+    candidate.matches(meta.id) && (candidate.matchesHistoricalPrices?.(meta.id) ?? true)
+  );
   if (!provider?.fetchHistoricalPrices) {
     return { matched: false, source: null, prices: null };
   }

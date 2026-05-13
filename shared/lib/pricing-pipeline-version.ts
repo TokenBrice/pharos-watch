@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "6.01",
+  currentVersion: "6.02",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "6.02",
+      title: "Derivative and redemption-par gap closure",
+      date: "2026-05-13",
+      effectiveAt: 1778684601,
+      summary:
+        "Active assets with observable supply but missing market prices can now resolve through guarded parent inheritance, fee-adjusted redemption inheritance, or scoped redemption-par references.",
+      impact: [
+        "`m-m0` inherits the tracked `wm-m0` live price through the same trusted-parent gate used by downstream M0 extension units",
+        "`weusd-picwe` inherits tracked `usdc-circle` pricing with the documented 1% redemption-fee haircut, so market cap reflects the bounded USDC exit rather than a missing secondary-market quote",
+        "`sofid-sofi`, `usbd-bima`, and `usdq-quill` can publish nominal `protocol-redeem` USD parity when active supply is observable and the redemption path is already source-reviewed in the backstop registry",
+        "`chfau-allunity` can publish `protocol-redeem` CHF parity only when the current CHF/USD FX reference is fresh or static; stale or absent FX data fails closed",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.01",
       title: "Composite-parent NAV inheritance freshness",
