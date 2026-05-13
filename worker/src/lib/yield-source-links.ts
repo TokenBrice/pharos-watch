@@ -82,6 +82,15 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   TermMax: "https://app.termmax.io/",
   Gearbox: "https://app.gearbox.fi/",
   Kong: "https://kong.yearn.fi/",
+  // Tier C — 2026-05-13 audit additions
+  AutoFinance: "https://www.auto.finance",
+  Neverland: "https://neverland.money",
+  Metrom: "https://www.metrom.xyz",
+  "Mystic Finance": "https://www.mysticfinance.xyz/",
+  Bitway: "https://bitway.com/",
+  Frankencoin: "https://frankencoin.com",
+  // Explicit-pool labels (parenthetical asset suffix is stripped by the label fallback chain)
+  "Hydration Omnipool": "https://hydration.net/",
 };
 
 function pickMetaYieldUrl(stablecoinId: string): string | null {
