@@ -831,6 +831,7 @@ describe("findBestLendingPool with chain scope", () => {
       chainFilter: new Set(["Ethereum"]),
     });
     expect(result).toBeTruthy();
+    expect(result?.chain).toBe("Ethereum");
   });
 
   it("matches any chain when chainFilter is omitted (backwards compat)", () => {

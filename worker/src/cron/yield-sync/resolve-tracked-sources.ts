@@ -41,6 +41,38 @@ function getBenchmarkSourceObservedAt(meta: ParsedYieldBenchmarkMeta, fallbackOb
   return meta.lastMarketFetchedAt ?? meta.fetchedAt ?? fallbackObservedAt;
 }
 
+export async function loadTier1PrevRateRows(
+  db: D1Database,
+  tier1CandidateIds: string[],
+  sevenDaysAgoSec: number,
+): Promise<Map<string, { exchangeRate: number | null; recordedAt: number }>> {
+  const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
+  if (tier1CandidateIds.length === 0) return tier1PrevRateRows;
+
+  const placeholders = tier1CandidateIds.map(() => "?").join(", ");
+  const rows = await db
+    .prepare(
+      `SELECT stablecoin_id, exchange_rate, recorded_at
+       FROM yield_history
+       WHERE stablecoin_id IN (${placeholders})
+         AND recorded_at <= ?
+         AND exchange_rate IS NOT NULL
+         AND (publication_generation_id IS NULL OR publication_state = 'published')
+       ORDER BY stablecoin_id ASC, recorded_at DESC`,
+    )
+    .bind(...tier1CandidateIds, sevenDaysAgoSec)
+    .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
+  for (const row of rows.results ?? []) {
+    if (!tier1PrevRateRows.has(row.stablecoin_id)) {
+      tier1PrevRateRows.set(row.stablecoin_id, {
+        exchangeRate: row.exchange_rate,
+        recordedAt: row.recorded_at,
+      });
+    }
+  }
+  return tier1PrevRateRows;
+}
+
 export async function resolveTrackedYieldSources(params: {
   db: D1Database;
   startSec: number;
@@ -59,31 +91,7 @@ export async function resolveTrackedYieldSources(params: {
   const tier1CandidateIds = ACTIVE_YIELD_BEARING_STABLECOINS
     .map((meta) => meta.id)
     .filter((id) => ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) && params.onChainRates.has(id));
-  const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
-
-  if (tier1CandidateIds.length > 0) {
-    const placeholders = tier1CandidateIds.map(() => "?").join(", ");
-    const rows = await params.db
-      .prepare(
-        `SELECT stablecoin_id, exchange_rate, recorded_at
-         FROM yield_history
-         WHERE stablecoin_id IN (${placeholders})
-           AND recorded_at <= ?
-           AND exchange_rate IS NOT NULL
-           AND (publication_generation_id IS NULL OR publication_state = 'published')
-         ORDER BY stablecoin_id ASC, recorded_at DESC`,
-      )
-      .bind(...tier1CandidateIds, params.sevenDaysAgoSec)
-      .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
-    for (const row of rows.results ?? []) {
-      if (!tier1PrevRateRows.has(row.stablecoin_id)) {
-        tier1PrevRateRows.set(row.stablecoin_id, {
-          exchangeRate: row.exchange_rate,
-          recordedAt: row.recorded_at,
-        });
-      }
-    }
-  }
+  const tier1PrevRateRows = await loadTier1PrevRateRows(params.db, tier1CandidateIds, params.sevenDaysAgoSec);
 
   for (const meta of ACTIVE_YIELD_BEARING_STABLECOINS) {
     if (params.signal?.aborted) {

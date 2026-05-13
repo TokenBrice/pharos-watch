@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 // --- Module-level mocks ---
 
@@ -275,6 +276,7 @@ import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
 import { appendOptionalYieldCandidate, type YieldCandidateAppendStatus } from "../yield-sync/resolve-helpers";
+import { loadTier1PrevRateRows } from "../yield-sync/resolve-tracked-sources";
 import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
 
@@ -1260,6 +1262,38 @@ describe("on-chain rate bootstrapping seed", () => {
 });
 
 describe("tracked optional source anchors", () => {
+  it("ignores unpublished deterministic on-chain anchor rows when selecting prior rates", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_history (
+          stablecoin_id TEXT NOT NULL,
+          exchange_rate REAL,
+          recorded_at INTEGER NOT NULL,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+      `);
+      const insertHistory = sqlite.prepare(
+        `INSERT INTO yield_history (
+          stablecoin_id, exchange_rate, recorded_at, publication_generation_id, publication_state
+        ) VALUES (?, ?, ?, ?, ?)`,
+      );
+      const sevenDaysAgoSec = 1_747_000_000;
+      insertHistory.run("usde-ethena", 1.09, sevenDaysAgoSec - 1, "gen-failed", "failed");
+      insertHistory.run("usde-ethena", 1.08, sevenDaysAgoSec - 2, "gen-staged", "staged");
+      insertHistory.run("usde-ethena", 1.07, sevenDaysAgoSec - 3, "gen-published", "published");
+      insertHistory.run("usde-ethena", 1.06, sevenDaysAgoSec - 4, null, null);
+
+      const rows = await loadTier1PrevRateRows(createSqliteD1(sqlite), ["usde-ethena"], sevenDaysAgoSec);
+
+      expect(rows.get("usde-ethena")?.exchangeRate).toBe(1.07);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("filters Ondo oracle anchors to legacy or published yield history rows", async () => {
     const nowSec = 1_747_000_000;
     const db = mockD1([{ match: "FROM yield_history", rows: [], first: null }], { requireMatch: true });
@@ -1271,6 +1305,40 @@ describe("tracked optional source anchors", () => {
     expect(anchorQueries.every((entry) =>
       entry.sql.includes("publication_generation_id IS NULL OR publication_state = 'published'")
     )).toBe(true);
+  });
+
+  it("ignores unpublished Ondo oracle anchor rows when selecting prior exchange rates", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_history (
+          stablecoin_id TEXT NOT NULL,
+          source_key TEXT NOT NULL,
+          exchange_rate REAL,
+          recorded_at INTEGER NOT NULL,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+      `);
+      const insertHistory = sqlite.prepare(
+        `INSERT INTO yield_history (
+          stablecoin_id, source_key, exchange_rate, recorded_at,
+          publication_generation_id, publication_state
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      const nowSec = 1_747_000_000;
+      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.09, nowSec - 8 * 86_400, "gen-failed", "failed");
+      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.08, nowSec - 9 * 86_400, "gen-staged", "staged");
+      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.07, nowSec - 10 * 86_400, "gen-published", "published");
+      insertHistory.run("usdy-ondo-finance", "protocol-api:ondo-usdy-oracle", 1.06, nowSec - 11 * 86_400, null, null);
+
+      const row = await loadOndoOracleAnchorRow(createSqliteD1(sqlite), nowSec);
+
+      expect(row?.exchange_rate).toBe(1.07);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 
@@ -1380,6 +1448,7 @@ describe("appendOptionalYieldCandidate", () => {
       resolved,
       entry: makeEntry({
         stablecoinId: "usde-ethena",
+        chain: "base",
         yield: {
           currentApy: 3.2,
           apyBase: 3.2,
@@ -1403,6 +1472,7 @@ describe("appendOptionalYieldCandidate", () => {
 
     expect(status).toBe("appended" as YieldCandidateAppendStatus);
     expect(resolved).toHaveLength(1);
+    expect(resolved[0]?.yield?.chain).toBe("base");
   });
 
   it("returns duplicate when an identical source key already exists", () => {

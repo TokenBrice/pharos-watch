@@ -181,6 +181,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             benchmarkLabel={view.ranking.benchmarkLabel}
             benchmarkSpread={view.pysBreakdown.benchmarkSpread}
             effectiveYield={view.pysBreakdown.effectiveYield}
+            sourceRiskPenalty={view.pysBreakdown.sourceRiskPenalty}
             yieldEfficiency={view.pysBreakdown.yieldEfficiency}
             safetyGrade={view.ranking.safetyGrade}
             safetyScore={view.ranking.safetyScore}

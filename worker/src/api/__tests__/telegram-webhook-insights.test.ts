@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { buildTopMessage } from "../telegram-webhook-insights";
 
 describe("buildTopMessage", () => {
@@ -71,6 +72,46 @@ describe("buildTopMessage", () => {
     expect(message).toContain("USDC");
     const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+  });
+
+  it("excludes staged and failed /top yield rows behaviorally", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_data (
+          stablecoin_id TEXT NOT NULL,
+          symbol TEXT NOT NULL,
+          is_best INTEGER NOT NULL,
+          current_apy REAL NOT NULL,
+          apy_30d REAL NOT NULL,
+          yield_source TEXT NOT NULL,
+          pharos_yield_score REAL,
+          source_tvl_usd REAL,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+      `);
+      const insertYield = sqlite.prepare(
+        `INSERT INTO yield_data (
+          stablecoin_id, symbol, is_best, current_apy, apy_30d, yield_source,
+          pharos_yield_score, source_tvl_usd, publication_generation_id, publication_state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insertYield.run("usdt-tether", "USDT", 1, 9, 9, "Failed source", 99, 100_000_000, "gen-failed", "failed");
+      insertYield.run("usde-ethena", "USDe", 1, 8, 8, "Staged source", 88, 90_000_000, "gen-staged", "staged");
+      insertYield.run("usdc-circle", "USDC", 1, 4.4, 4.2, "Published source", 31, 12_000_000, "gen-published", "published");
+      insertYield.run("dai-makerdao", "DAI", 1, 3.1, 3, "Legacy source", 22, 8_000_000, null, null);
+
+      const message = await buildTopMessage(createSqliteD1(sqlite), "yield");
+
+      expect(message).toContain("USDC");
+      expect(message).toContain("DAI");
+      expect(message).not.toContain("USDT");
+      expect(message).not.toContain("USDe");
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("suggests the closest /top view for one-character typos", async () => {

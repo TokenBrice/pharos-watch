@@ -7,6 +7,7 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 ## v8.0 - PYS Source-Risk Penalty Rollout (May 13, 2026)
 
 - PYS now consumes nested `sourceRisk.sourceRiskPenalty`, populated from measured reward share, source depth, source age, selected-source switches, bootstrap observation count, and sourced venue tier where available
+- DeFiLlama rows without a row-level observation timestamp inherit the DeFiLlama input metadata age for both provenance and source-age scoring penalties
 - Missing, invalid, or unknown source-risk evidence remains neutral (`1`); penalties below 1 clamp to 1 and penalties above `PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) clamp to 2.5
 - The formula now computes `rowUtility = effectiveYield / sourceRiskPenalty`, then applies the existing safety curve, volatility multiplier, benchmark-spread weight, and scaling factor
 - Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution; APY and TVL remain fallback tie-breakers

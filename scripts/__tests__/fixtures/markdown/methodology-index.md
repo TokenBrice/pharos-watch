@@ -66,7 +66,7 @@ Coverage is intentionally explicit. Unsupported chains, deferred configs, null-p
 
 Yield Intelligence resolves stablecoin yield from direct on-chain reads, curated pools, protocol APIs, price-derived NAV movement, and rate-derived sources. The pipeline prefers precise sources and only uses fallback tiers when identity and exposure remain unambiguous.
 
-Pharos computes effective yield by comparing APY against the relevant cash or peg benchmark, then combines yield efficiency with sustainability to produce a Pharos Yield Score (PYS). High APY is not automatically good: unstable rates, weak safety scores, low TVL, or ambiguous exposure reduce the recommendation quality.
+Pharos computes effective yield by comparing APY against the relevant cash or peg benchmark, then combines source-risk-adjusted yield efficiency with sustainability to produce a Pharos Yield Score (PYS). High APY is not automatically good: unstable rates, weak safety scores, low TVL, source-risk penalties, or ambiguous exposure reduce the recommendation quality.
 
 Warnings explain why a venue is risky, missing, stale, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income.
 

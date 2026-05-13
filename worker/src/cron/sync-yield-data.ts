@@ -181,6 +181,7 @@ export async function syncYieldData(
     prevBestSourceKeyByCoin,
     sourceSwitchCount30dByCoin,
     stablecoinSupplyById,
+    dlPoolsMeta,
   });
 
   const {

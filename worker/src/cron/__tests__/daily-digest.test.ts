@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "../../api/__tests__/helpers/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../api/__tests__/helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 vi.mock("@shared/lib/stablecoins", () => {
   const stablecoins = [
@@ -1435,7 +1436,7 @@ describe("classifyRegime", () => {
 // Collector unit tests
 // ---------------------------------------------------------------------------
 
-function makeCollectorCtx(db: ReturnType<typeof mockD1>): CollectorContext {
+function makeCollectorCtx(db: D1Database): CollectorContext {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
   const yesterdayTs = todayTs - 86_400;
@@ -1763,6 +1764,41 @@ describe("collectYieldAnomalies", () => {
     expect(result![0].warnings).toEqual(["spike", "divergence"]);
     const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+  });
+
+  it("excludes staged and failed yield anomalies behaviorally", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_data (
+          stablecoin_id TEXT NOT NULL,
+          symbol TEXT NOT NULL,
+          is_best INTEGER NOT NULL,
+          current_apy REAL NOT NULL,
+          apy_7d REAL NOT NULL,
+          apy_30d REAL NOT NULL,
+          warning_signals TEXT,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+      `);
+      const insertYield = sqlite.prepare(
+        `INSERT INTO yield_data (
+          stablecoin_id, symbol, is_best, current_apy, apy_7d, apy_30d,
+          warning_signals, publication_generation_id, publication_state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insertYield.run("usdt-tether", "USDT", 1, 12, 5, 4, JSON.stringify(["spike"]), "gen-failed", "failed");
+      insertYield.run("dai-makerdao", "DAI", 1, 11, 4, 3, JSON.stringify(["spike"]), "gen-staged", "staged");
+      insertYield.run("usdc-circle", "USDC", 1, 5.1, 4.9, 4.5, JSON.stringify(["tvl-outflow"]), "gen-published", "published");
+
+      const result = await collectYieldAnomalies(makeCollectorCtx(createSqliteD1(sqlite)));
+
+      expect(result?.map((row) => row.symbol)).toEqual(["USDC"]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("returns undefined when no rows have warnings", async () => {

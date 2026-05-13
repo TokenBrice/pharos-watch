@@ -31,7 +31,7 @@ describe("buildWeightedYieldPoolGroupSource", () => {
       },
       [
         makePool({ pool: "ethereum-pool", tvlUsd: 282_700, apy: 1.66 }),
-        makePool({ pool: "fraxtal-pool", tvlUsd: 135_700, apy: 14.49 }),
+        makePool({ pool: "fraxtal-pool", chain: "Fraxtal", tvlUsd: 135_700, apy: 14.49 }),
       ],
     );
 
@@ -42,6 +42,8 @@ describe("buildWeightedYieldPoolGroupSource", () => {
       dataSource: "defillama",
       yieldSource: "Test weighted source",
       yieldType: "lending-vault",
+      project: "dtrinity-dusd",
+      chain: "Ethereum, Fraxtal",
     });
     expect(source?.currentApy).toBeCloseTo(5.821164, 6);
     expect(source?.apyBase).toBeCloseTo(5.821164, 6);

@@ -121,6 +121,34 @@ describe("evaluateYieldSources", () => {
     expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
   });
 
+  it("uses DeFiLlama input metadata age when the source row lacks its own observed timestamp", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      dlPoolsMeta: {
+        mode: "dex-cache",
+        updatedAt: startSec - 8 * 60 * 60,
+        ageSeconds: 8 * 60 * 60,
+        poolCount: 1,
+        fallbackMode: null,
+      },
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:stale",
+            sourceObservedAt: undefined,
+          }),
+        },
+      ],
+    }));
+
+    const stale = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:stale");
+    expect(stale?.sourceObservedAt).toBe(startSec - 8 * 60 * 60);
+    expect(stale?.sourceRiskPenalty).toBeGreaterThan(1);
+  });
+
   it("penalizes reward-heavy rows when reward APY exceeds current APY", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [

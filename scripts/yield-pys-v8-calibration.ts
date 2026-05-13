@@ -133,8 +133,9 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "",
     "```text",
     "sourceRiskPenalty = clamp(row.sourceRisk?.sourceRiskPenalty ?? legacy row.sourceRiskPenalty ?? derivedNeutralPenalty, 1, 2.5)",
-    "rowUtility = current effectiveYield / sourceRiskPenalty",
-    "pysV8 = clamp(round(rowUtility * sustainabilityMultiplier * scalingFactor), 0, 100)",
+    "sourceAdjustedUtility = current effectiveYield / sourceRiskPenalty",
+    "yieldEfficiency = sourceAdjustedUtility / adjustedRiskPenalty",
+    "pysV8 = clamp(round(yieldEfficiency * sustainabilityMultiplier * scalingFactor), 0, 100)",
     "```",
     "",
     "Unknown source-risk inputs are neutral. The before column recomputes the v7 baseline without source-risk penalties; the after column applies the v8 candidate penalty.",
@@ -285,8 +286,9 @@ function computeCandidateV8Score(input: {
     benchmarkRate: input.benchmarkRate,
   });
   if (effectiveYield <= 0) return 0;
-  const rowUtility = effectiveYield / input.sourceRiskPenalty / adjustedRiskPenalty;
-  return Math.min(100, Math.round(rowUtility * sustainabilityMultiplier * input.scalingFactor));
+  const sourceAdjustedUtility = effectiveYield / input.sourceRiskPenalty;
+  const yieldEfficiency = sourceAdjustedUtility / adjustedRiskPenalty;
+  return Math.min(100, Math.round(yieldEfficiency * sustainabilityMultiplier * input.scalingFactor));
 }
 
 function resolveApyVarianceScore(row: RankingWithRisk): number {

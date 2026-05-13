@@ -417,6 +417,46 @@ describe("syncYieldData", () => {
     );
   });
 
+  it("continues when published-generation repair fails before history load", async () => {
+    const db = makeDb();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(publicationModule, "repairPublishedYieldGenerationFromCache").mockRejectedValueOnce(
+      new Error("repair failed"),
+    );
+
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(1);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[sync-yield-data] Failed to repair published yield generation before history load:",
+      expect.any(Error),
+    );
+  });
+
   it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
@@ -1513,6 +1553,8 @@ describe("syncYieldData", () => {
       ]),
     } as never);
 
+    let activeRpcCalls = 0;
+    let maxActiveRpcCalls = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | Request, init?: RequestInit) => {
@@ -1550,27 +1592,34 @@ describe("syncYieldData", () => {
         }
 
         if (url.includes("rpc.example/eth")) {
-          const body = JSON.parse(String(init?.body)) as {
-            params?: Array<{ data?: string } | string>;
-          };
-          const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
+          activeRpcCalls += 1;
+          maxActiveRpcCalls = Math.max(maxActiveRpcCalls, activeRpcCalls);
+          await Promise.resolve();
+          try {
+            const body = JSON.parse(String(init?.body)) as {
+              params?: Array<{ data?: string } | string>;
+            };
+            const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
 
-          if (callData === "0x9bf2f1ac") {
-            return new Response(
-              JSON.stringify({
-                result: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
-              }),
-              { status: 200, headers: { "Content-Type": "application/json" } },
-            );
-          }
+            if (callData === "0x9bf2f1ac") {
+              return new Response(
+                JSON.stringify({
+                  result: "0x0000000000000000000000000000000000000000000a88622849a78584de759b",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } },
+              );
+            }
 
-          if (callData === "0xb140384b") {
-            return new Response(
-              JSON.stringify({
-                result: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
-              }),
-              { status: 200, headers: { "Content-Type": "application/json" } },
-            );
+            if (callData === "0xb140384b") {
+              return new Response(
+                JSON.stringify({
+                  result: "0x0000000000000000000000000000000000000000001998cb5c5ea77bc8dc9000",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          } finally {
+            activeRpcCalls -= 1;
           }
         }
 
@@ -1593,6 +1642,7 @@ describe("syncYieldData", () => {
     const result = await syncYieldData(db, undefined, testChainRpcs);
 
     expect(result.itemCount).toBe(2);
+    expect(maxActiveRpcCalls).toBe(1);
 
     const [stmts] = vi.mocked(batchExecute).mock.calls[0] ?? [];
     expect(stmts).toBe(db);

@@ -1,5 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
+import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
@@ -59,6 +60,7 @@ export interface EvaluateYieldSourcesInput {
   prevBestSourceKeyByCoin: Map<string, string>;
   sourceSwitchCount30dByCoin?: Map<string, number>;
   stablecoinSupplyById?: Map<string, number>;
+  dlPoolsMeta?: YieldSourceInputMeta;
 }
 
 export interface EvaluateYieldSourcesResult {
@@ -90,6 +92,42 @@ function computeSourceAgeSeconds(startSec: number, sourceObservedAt: number | nu
     return null;
   }
   return Math.max(0, Math.trunc(startSec - sourceObservedAt));
+}
+
+function isDefiLlamaDataSource(dataSource: string): boolean {
+  return dataSource === "defillama" || dataSource === "defillama-auto";
+}
+
+function resolveSourceObservedAt(
+  source: ResolvedYield,
+  dlPoolsMeta: YieldSourceInputMeta | undefined,
+): number | null {
+  if (typeof source.sourceObservedAt === "number" && Number.isFinite(source.sourceObservedAt)) {
+    return source.sourceObservedAt;
+  }
+  if (isDefiLlamaDataSource(source.dataSource)) {
+    return typeof dlPoolsMeta?.updatedAt === "number" && Number.isFinite(dlPoolsMeta.updatedAt)
+      ? dlPoolsMeta.updatedAt
+      : null;
+  }
+  return null;
+}
+
+function resolveSourceAgeSeconds(
+  startSec: number,
+  source: ResolvedYield,
+  sourceObservedAt: number | null,
+  dlPoolsMeta: YieldSourceInputMeta | undefined,
+): number | null {
+  if (
+    isDefiLlamaDataSource(source.dataSource) &&
+    typeof dlPoolsMeta?.ageSeconds === "number" &&
+    Number.isFinite(dlPoolsMeta.ageSeconds) &&
+    dlPoolsMeta.ageSeconds >= 0
+  ) {
+    return Math.trunc(dlPoolsMeta.ageSeconds);
+  }
+  return computeSourceAgeSeconds(startSec, sourceObservedAt);
 }
 
 export function evaluateYieldSources(input: EvaluateYieldSourcesInput): EvaluateYieldSourcesResult {
@@ -185,7 +223,8 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
       const observationCount30d = historySelection.usedLegacyHistory ? null : samples.length;
       const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
-      const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, y.sourceObservedAt);
+      const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
+      const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
       const sourceRiskPenaltyInput =
         y.sourceRisk?.sourceRiskPenalty ??
         derivePysSourceRiskPenalty({
@@ -239,7 +278,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         sourceRiskAdjustedUtility: pysComponents.rowUtility,
         dataSource: y.dataSource,
         exchangeRate: y.exchangeRate,
-        sourceObservedAt: y.sourceObservedAt ?? null,
+        sourceObservedAt,
         comparisonAnchorObservedAt: y.comparisonAnchorObservedAt ?? null,
         apy7d,
         apy30d,

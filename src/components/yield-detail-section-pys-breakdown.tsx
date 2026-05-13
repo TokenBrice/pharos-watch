@@ -14,6 +14,7 @@ export interface YieldDetailSectionPysBreakdownProps {
   benchmarkLabel?: string | null;
   benchmarkSpread: number | null;
   effectiveYield: number;
+  sourceRiskPenalty: number;
   yieldEfficiency: number;
   safetyGrade: string | null;
   safetyScore: number | null;
@@ -28,6 +29,7 @@ export function YieldDetailSectionPysBreakdown({
   benchmarkLabel,
   benchmarkSpread,
   effectiveYield,
+  sourceRiskPenalty,
   yieldEfficiency,
   safetyGrade,
   safetyScore,
@@ -67,6 +69,10 @@ export function YieldDetailSectionPysBreakdown({
           <div>
             <span className="text-muted-foreground">Yield Efficiency: </span>
             <span className="font-mono">{yieldEfficiency.toFixed(1)}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Source Risk Penalty: </span>
+            <span className="font-mono">{sourceRiskPenalty.toFixed(2)}x</span>
           </div>
           <div>
             <span className="text-muted-foreground">Adjusted Risk Penalty: </span>

@@ -67,6 +67,7 @@ export interface YieldDetailSectionReadyModel {
     benchmarkAdjustment: number;
     benchmarkSpread: number | null;
     effectiveYield: number;
+    sourceRiskPenalty: number;
     yieldEfficiency: number;
     sustainabilityMult: number;
   };
@@ -179,6 +180,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     ranking.safetyScore,
     ranking.yieldStability,
     ranking.benchmarkRate,
+    ranking.sourceRisk?.sourceRiskPenalty ?? null,
   );
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";

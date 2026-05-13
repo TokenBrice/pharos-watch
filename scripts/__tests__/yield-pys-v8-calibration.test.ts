@@ -102,10 +102,33 @@ describe("yield-pys-v8-calibration", () => {
     expect(markdown).toContain("## Largest Rank Movers");
     expect(markdown).toContain("## Null-Rate Coverage");
     expect(markdown).toContain("## Non-USD Cohort Checks");
+    expect(markdown).toContain("yieldEfficiency = sourceAdjustedUtility / adjustedRiskPenalty");
     expect(markdown).toContain("| EUR | 1 |");
     for (const fixture of GOLDEN_FIXTURES) {
       expect(markdown).toContain(`| ${fixture} |`);
     }
+  });
+
+  it("renders null-rate coverage from nested sourceRisk fields", () => {
+    const markdown = buildCalibrationReport([
+      row({
+        id: "nested-risk",
+        symbol: "NEST",
+        sourceRisk: {
+          sourceRiskPenalty: 1.5,
+          rewardShare: 0.25,
+          sourceDepthRatio: 0.1,
+          sourceAgeSeconds: 60,
+          sourceSwitchCount30d: 0,
+          observationCount30d: 5,
+          venueRiskTier: "medium",
+        },
+      }),
+    ], "2026-05-13T00:00:00.000Z");
+
+    expect(markdown).toContain("| sourceRiskPenalty | 1 | 0 | 0.0% |");
+    expect(markdown).toContain("| rewardShare | 1 | 0 | 0.0% |");
+    expect(markdown).toContain("| venueRiskTier | 1 | 0 | 0.0% |");
   });
 
   it("prefers nested sourceRisk fields while preserving legacy flat calibration artifacts", () => {

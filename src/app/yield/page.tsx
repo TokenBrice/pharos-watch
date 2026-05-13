@@ -24,7 +24,7 @@ const FAQ_ITEMS = [
   {
     question: "What is the Pharos Yield Score (PYS)?",
     answer:
-      "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0-100 that balances yield magnitude against safety, benchmark context, and consistency. It starts from 30-day average APY, adds 25% of the row's benchmark spread, divides that effective yield by a safety-derived risk penalty raised to a fixed exponent, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins incur a much lower adjusted penalty, so moderate but durable yield can compete with riskier double-digit offers.",
+      "The Pharos Yield Score (PYS) is a risk-adjusted yield metric scored 0-100 that balances yield magnitude against safety, benchmark context, source risk, and consistency. It starts from 30-day average APY, adds 25% of the row's benchmark spread, divides that effective yield by source-risk and safety-derived penalties, then applies a sustainability multiplier based on APY volatility over the same period. Higher-safety stablecoins and cleaner yield sources incur lower adjusted penalties, so moderate but durable yield can compete with riskier double-digit offers.",
   },
   {
     question: "How are stablecoin yields sourced?",

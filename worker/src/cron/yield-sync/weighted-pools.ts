@@ -36,6 +36,20 @@ function commonPoolValue(
   return values.size === 1 ? [...values][0] : undefined;
 }
 
+function joinedPoolValues(
+  pools: DlPool[],
+  readValue: (pool: DlPool) => string | null | undefined,
+): string | undefined {
+  const values = [
+    ...new Set(
+      pools
+        .map((pool) => readValue(pool))
+        .filter((value): value is string => typeof value === "string" && value.length > 0),
+    ),
+  ];
+  return values.length > 0 ? values.join(", ") : undefined;
+}
+
 export function buildWeightedYieldPoolGroupSource(
   config: WeightedYieldPoolGroupConfig,
   dlPools: DlPool[],
@@ -64,6 +78,6 @@ export function buildWeightedYieldPoolGroupSource(
     yieldSource: config.yieldSource,
     yieldType: config.yieldType,
     project: commonPoolValue(pools, (pool) => pool.project),
-    chain: commonPoolValue(pools, (pool) => pool.chain),
+    chain: joinedPoolValues(pools, (pool) => pool.chain),
   };
 }

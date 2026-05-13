@@ -8,8 +8,9 @@ Scope: production-snapshot baseline calibration for the methodology v8 PYS sourc
 
 ```text
 sourceRiskPenalty = clamp(row.sourceRisk?.sourceRiskPenalty ?? legacy row.sourceRiskPenalty ?? derivedNeutralPenalty, 1, 2.5)
-rowUtility = current effectiveYield / sourceRiskPenalty
-pysV8 = clamp(round(rowUtility * sustainabilityMultiplier * scalingFactor), 0, 100)
+sourceAdjustedUtility = current effectiveYield / sourceRiskPenalty
+yieldEfficiency = sourceAdjustedUtility / adjustedRiskPenalty
+pysV8 = clamp(round(yieldEfficiency * sustainabilityMultiplier * scalingFactor), 0, 100)
 ```
 
 Unknown source-risk inputs are neutral. The before column recomputes the v7 baseline without source-risk penalties; the after column applies the v8 candidate penalty.

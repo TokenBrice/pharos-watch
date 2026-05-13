@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 
 describe("loadStatusForCoin", () => {
@@ -79,5 +80,72 @@ describe("loadStatusForCoin", () => {
 
     const yieldSql = history.find((s) => s.includes("FROM yield_data"));
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
+  });
+
+  it("returns yield status from published or legacy rows only", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE stress_signals (
+          stablecoin_id TEXT NOT NULL,
+          band TEXT NOT NULL,
+          score REAL NOT NULL,
+          computed_at INTEGER NOT NULL
+        );
+        CREATE TABLE safety_grade_history (
+          stablecoin_id TEXT NOT NULL,
+          grade TEXT NOT NULL,
+          score REAL,
+          recorded_at INTEGER NOT NULL
+        );
+        CREATE TABLE depeg_events (
+          stablecoin_id TEXT NOT NULL,
+          direction TEXT NOT NULL,
+          peak_deviation_bps REAL NOT NULL,
+          peg_reference REAL NOT NULL,
+          started_at INTEGER NOT NULL,
+          ended_at INTEGER
+        );
+        CREATE TABLE price_cache (
+          asset_id TEXT PRIMARY KEY,
+          price REAL NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE dex_liquidity (
+          stablecoin_id TEXT PRIMARY KEY,
+          liquidity_score REAL,
+          total_tvl_usd REAL NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE yield_data (
+          stablecoin_id TEXT NOT NULL,
+          is_best INTEGER NOT NULL,
+          current_apy REAL NOT NULL,
+          apy_30d REAL NOT NULL,
+          yield_source TEXT NOT NULL,
+          pharos_yield_score REAL,
+          updated_at INTEGER NOT NULL,
+          publication_generation_id TEXT,
+          publication_state TEXT
+        );
+      `);
+      const insertYield = sqlite.prepare(
+        `INSERT INTO yield_data (
+          stablecoin_id, is_best, current_apy, apy_30d, yield_source,
+          pharos_yield_score, updated_at, publication_generation_id, publication_state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insertYield.run("usdc-circle", 1, 9, 9, "Failed source", 90, 3, "gen-failed", "failed");
+      insertYield.run("usdc-circle", 1, 8, 8, "Staged source", 80, 2, "gen-staged", "staged");
+      insertYield.run("usdc-circle", 1, 4.4, 4.2, "Published source", 31, 1, "gen-published", "published");
+
+      const status = await loadStatusForCoin(createSqliteD1(sqlite), "usdc-circle");
+
+      expect(status.yield?.source).toBe("Published source");
+      expect(status.yield?.pharosYieldScore).toBe(31);
+    } finally {
+      sqlite.close();
+    }
   });
 });

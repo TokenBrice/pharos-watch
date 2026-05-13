@@ -176,6 +176,26 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
+  it("renders source-risk penalty in the PYS breakdown", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          sourceRisk: {
+            sourceRiskPenalty: 2,
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Source Risk Penalty:")).toBeTruthy();
+    expect(screen.getByText("2.00x")).toBeTruthy();
+  });
+
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([

@@ -15,6 +15,7 @@ const yieldMethodology = createMethodologyVersion({
       "PYS now applies nested source-risk penalties derived from measured yield-source evidence, while missing or unknown source-risk evidence remains neutral for scoring and rollback compatibility.",
     impact: [
       "`sourceRisk.sourceRiskPenalty` is populated from measured reward share, source depth, source age, source-switch count, bootstrap history, and sourced venue tier where available; missing or invalid evidence stays neutral (`1`) and penalties clamp to the `1..2.5` range",
+      "DeFiLlama rows without row-level observation timestamps inherit the DeFiLlama input metadata age, keeping provenance freshness and source-age scoring penalties aligned",
       "PYS now computes source-risk-adjusted row utility before applying the existing safety curve, volatility multiplier, benchmark spread weight, and scaling factor",
       "Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution, then falls back to APY and TVL tie-breakers",
       "External lending opportunities remain no-op inputs for base stablecoin Safety Scores; report-card yield-risk helpers normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version consumes them",
