@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.1`
+- **Current methodology version:** `v8.11`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -207,7 +207,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
 
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD and yvUSDC (Yearn), and AA_FalconXUSDC (MEV Capital/Morpho) now own their own native pool sources.
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths. Added 2026-05-13: gtUSDC (Gauntlet/Morpho), spUSDC and spUSDT (Spark Savings), sGHO (Aave SM), yBOLD, and yvUSDC (Yearn) now own their own native pool sources. AA_FalconXUSDC remains NAV/price-derived until a usable single-exposure nonzero APY source is available.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -272,7 +272,7 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | BENJI | 20 | Franklin Templeton FOBXX gov MMF, 0.20% mgmt fee |
 | WTGXX | 25 | WisdomTree Government MMF Digital Fund, 0.25% mgmt fee |
 | USTBL | 10 | Spiko US T-Bills MMF (UCITS), 0.10% TER |
-| EUTBL | 15 | Spiko EU T-Bills MMF (UCITS), 0.10% TER, EUR-denominated (€STR benchmark) |
+| EUTBL | 15 | Spiko EU T-Bills MMF (UCITS), modeled net of 0.15%, EUR-denominated (€STR benchmark) |
 
 Note: USTB and thBILL were previously rate-derived but have been promoted to Tier 1 `ON_CHAIN_RATE_CONFIGS` (ERC-4626 `convertToAssets`).
 
@@ -307,6 +307,8 @@ For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), 
 **Eligibility evaluated dynamically:** If a coin's safety score drops below 50, it stops receiving auto-discovered yield data. If it rises back to 50 or above, it starts automatically.
 
 **Explicit deterministic edge cases:** `AUTO_LENDING_POOL_MAP` can also pin a small number of exact-symbol, single-asset lending markets for coins that would otherwise be blocked by ambiguous matching or by the generic safety gate. These rows still pass the same pool-shape and source-quality checks; the bypass is coin-specific and documented rather than global.
+
+Current May 2026 deterministic pins include `reusd-resupply`, `xusd-babelfish`, and `usda-anzens`. `xusd-babelfish` has a coin-specific safety bypass because the tracked asset is Rootstock-only and Sovryn is the canonical Bitcoin-side venue; the pool still has to pass the normal DeFiLlama shape, APY, and TVL checks.
 
 **Commodity-specific exact venues:** `EXPLICIT_YIELD_SOURCE_POOL_MAP` is a separate lane for curated non-stablecoin assets such as `xaut-tether`. Unlike `AUTO_LENDING_POOL_MAP`, these rows are not broadening the generic stablecoin discovery universe; they only publish the exact named pool after matching the expected venue metadata.
 
@@ -720,8 +722,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.1",
-    "currentVersion": "8.1",
+    "version": "8.11",
+    "currentVersion": "8.11",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

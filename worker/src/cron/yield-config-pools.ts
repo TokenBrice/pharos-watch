@@ -97,6 +97,4 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
   // yvUSDC - yearn-finance USDC vault, Ethereum, $29M TVL, ~3.43% APY
   "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
-  // AA_FalconXUSDC - morpho-blue MEV Capital curated tranche, Ethereum, $76M TVL, 0% APY (pending DL backfill)
-  "aa-falconx-mev-capital": "8e563fbd-db3f-4cbb-823d-446d051f420b",
 };

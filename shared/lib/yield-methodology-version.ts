@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "8.1",
+  currentVersion: "8.11",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "8.11",
+    title: "Yield Coverage Expansion and Rate-Derived Fund Sources",
+    date: "2026-05-13",
+    effectiveAt: 1778709900,
+    summary:
+      "Yield coverage now includes the May 2026 curated wrapper, tokenized-treasury, Tier C lending, and commodity exact-pool expansion while keeping invalid multi-exposure DeFiLlama rows out of the native pool lane.",
+    impact: [
+      "`gtusdc-gauntlet`, `susdc-spark`, `susdt-spark`, `sgho-aave`, `ybold-yearn`, and `yvusdc-yearn` now own curated single-exposure DeFiLlama native pool mappings",
+      "`aa-falconx-mev-capital` remains covered by its NAV/price-derived fallback path until a usable single-exposure nonzero APY source is available; the current DeFiLlama tranche row is not pinned because it is multi-exposure and reports zero APY",
+      "`benji-franklin-templeton`, `wtgxx-wisdomtree`, `ustbl-spiko`, and `eutbl-spiko` now resolve through the rate-derived benchmark lane, with EUTBL using the EUR benchmark override",
+      "The curated lending allowlist now includes AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin, with exact deterministic lending pins for `reusd-resupply`, `xusd-babelfish`, and `usda-anzens`",
+      "Exact-pool commodity coverage now includes XAUT on Lista Lending and PAXG on Hydration, and the source-link registry covers the new Tier C and Hydration labels",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "8.1",
     title: "Linked Variant Parent Source Projection",

@@ -1,6 +1,6 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.1` (2026-03-01 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.11` (2026-03-01 -> 2026-05-13).
 
 ---
 
@@ -9,6 +9,16 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - No methodology version change: the sparse typed `yieldRiskConfig` registry starts with reviewed candidate venues only and assigns no non-unknown tiers
 - Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy venue families have a controlled rationale/evidence home for future reviewed tiers, but current `unknown` tiers remain neutral
 - Any future non-unknown venue tier must be wired into the existing venue-tier penalty path and ship with reviewed evidence, calibration, and the matching methodology/version update
+
+---
+
+## v8.11 - Yield Coverage Expansion and Rate-Derived Fund Sources (May 13, 2026)
+
+- `gtusdc-gauntlet`, `susdc-spark`, `susdt-spark`, `sgho-aave`, `ybold-yearn`, and `yvusdc-yearn` now own curated single-exposure DeFiLlama native pool mappings
+- `aa-falconx-mev-capital` remains on its NAV/price-derived fallback path until a usable single-exposure nonzero APY source is available; the current DeFiLlama tranche row is multi-exposure and reports zero APY, so it is intentionally not pinned through `YIELD_POOL_MAP`
+- BENJI, WTGXX, USTBL, and EUTBL now resolve through the rate-derived benchmark lane, with EUTBL using the EUR benchmark override
+- AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin were added to the curated lending allowlist, with deterministic pins for `reusd-resupply`, `xusd-babelfish`, and `usda-anzens`
+- Exact-pool commodity coverage now includes XAUT on Lista Lending and PAXG on Hydration, and source-link coverage was added for the new Tier C and Hydration labels
 
 ---
 

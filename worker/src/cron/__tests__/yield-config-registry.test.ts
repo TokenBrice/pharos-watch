@@ -152,12 +152,50 @@ describe("yield config registry", () => {
   it("pins current exact lending venues for newer coverage candidates", () => {
     expect(LENDING_PROTOCOL_ALLOWLIST.has("felix-cdp")).toBe(true);
     expect(LENDING_PROTOCOL_ALLOWLIST.has("sovryn-dex")).toBe(true);
+    for (const protocol of [
+      "autofinance",
+      "neverland",
+      "metrom",
+      "mystic-finance-lending",
+      "bitway",
+      "frankencoin",
+    ]) {
+      expect(LENDING_PROTOCOL_ALLOWLIST.has(protocol), protocol).toBe(true);
+      expect(LENDING_PROTOCOL_LABELS[protocol], protocol).toBeTruthy();
+    }
     expect(AUTO_LENDING_POOL_MAP).toMatchObject({
       "feusd-felix": "2bae7cf8-d278-4b27-9959-7f5f92c6f14b",
       "dllr-sovryn": "436e4129-667b-44d6-8322-ea59ce9b587c",
       "doc-money-on-chain": "17b8f0d7-38e1-4080-9d2c-da1f5706e199",
       "tgbp-tokenised": "61a6a976-f70f-4f38-b4a4-a5d3fda6832c",
+      "reusd-resupply": "a1b05c10-6d01-4b64-9247-4e86ca82a291",
+      "xusd-babelfish": "59901fb6-d071-4923-822a-af871670a7fb",
+      "usda-anzens": "fa66f3f5-24ba-4929-8549-9b811b68ef48",
     });
+  });
+
+  it("pins May 2026 native wrapper and rate-derived coverage without using invalid DL pools", () => {
+    expect(YIELD_POOL_MAP).toMatchObject({
+      "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
+      "susdc-spark": "c5c74dd1-995c-4445-9d84-3e710bad7d52",
+      "susdt-spark": "a5d67f7e-5b51-4a9d-969d-caf051a7f5a4",
+      "sgho-aave": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
+      "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
+      "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
+    });
+
+    // DefiLlama currently exposes AA_FalconXUSDC as a multi-exposure, zero-APY
+    // tranche row, so it must not be pinned through the single-exposure DL pool lane.
+    expect(YIELD_POOL_MAP["aa-falconx-mev-capital"]).toBeUndefined();
+
+    for (const stablecoinId of [
+      "benji-franklin-templeton",
+      "wtgxx-wisdomtree",
+      "ustbl-spiko",
+      "eutbl-spiko",
+    ]) {
+      expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
+    }
   });
 
   it("pins sBOLD's Liquity alt source to the explicit K3 wrapper label", () => {
