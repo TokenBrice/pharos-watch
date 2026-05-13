@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
+  "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
   "detailProvider": "defillama",
   "links": [
     {

@@ -15,6 +15,7 @@
   "llamaId": "277",
   "detailProvider": "defillama",
   "geckoId": "smardex-usdn",
+  "cmcSlug": "smardex-usdn",
   "links": [
     {
       "label": "Website",

@@ -15,7 +15,7 @@
     "navToken": false
   },
   "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
-  "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral and market liquidity; public disclosures do not expose a permissionless holder redemption rail",
+  "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
@@ -80,7 +80,7 @@
     {
       "type": "warning",
       "title": "Aggregate reserve disclosure",
-      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop. The live feed validates Solana token supply only; reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
+      "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API. The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
     }
   ]
 }

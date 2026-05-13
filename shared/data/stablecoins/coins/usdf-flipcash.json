@@ -11,6 +11,7 @@
     "navToken": false
   },
   "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
+  "pegMechanism": "Coinbase Custom Stablecoin model: Coinbase handles issuance, redemption, custody, security, and compliance; USDF is designed to maintain a stable U.S. dollar value and relies on Coinbase-managed reserve backing and redemption mechanics",
   "detailProvider": "defillama",
   "links": [
     {

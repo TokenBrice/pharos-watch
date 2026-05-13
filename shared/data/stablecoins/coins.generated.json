@@ -787,6 +787,7 @@
       "navToken": false
     },
     "collateral": "1:1 Indian Rupee reserves collateralized by cash, fixed deposits, and Indian government securities; two-tier framework complementing RBI's digital rupee CBDC",
+    "pegMechanism": "Proposed issuer-managed INR peg: ARC is expected to trade 1:1 with the Indian rupee and be minted only after issuers acquire eligible cash or cash-equivalent reserves such as cash balances, fixed deposits, or government securities; business-account issuance and whitelisted transfers are intended to keep the token inside India's regulated payments perimeter",
     "links": [
       {
         "label": "Website",
@@ -2032,6 +2033,7 @@
       "navToken": false
     },
     "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
+    "pegMechanism": "Liquity V2-style Base fork: BD is minted against LP token collateral and each BaseD stablecoin is designed to be redeemable for $1 of system collateral, with collateral redemption and borrower/liquidation incentives supporting the dollar peg",
     "links": [
       {
         "label": "Website",
@@ -2783,6 +2785,7 @@
       "navToken": false
     },
     "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
+    "pegMechanism": "Issuer-managed Brazilian-real settlement token for B3's tokenization platform; B3 materials describe it as value-linked to fiat currency and as the real-denominated settlement instrument for tokenized-asset trading",
     "links": [
       {
         "label": "Website",
@@ -7358,6 +7361,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet",
+    "pegMechanism": "Pre-launch MiCA-oriented euro stablecoin design: Qivalis describes a regulated 1:1-backed euro token with safeguarded reserves and reliable on-demand access once official issuance begins",
     "links": [
       {
         "label": "Website",
@@ -9215,6 +9220,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure",
+    "pegMechanism": "Issuer-managed 1:1 dollar redemption model; Fiserv describes FIUSD as a fully reserved USD-backed stablecoin that is always redeemable at $1 USD",
     "links": [
       {
         "label": "Website",
@@ -17486,6 +17493,7 @@
       "navToken": false
     },
     "collateral": "1:1 Korean Won fiat reserves; dual-track regulated and open issuance paths on the Maroo L1 blockchain",
+    "pegMechanism": "KRW-native Maroo model: OKRW is designed as a Korean Won stablecoin pegged 1:1 to KRW and used as the network's native fee token; Maroo's dual-track transaction model routes regulated activity through pre-approval and compliance checks while open-path activity remains permissionless",
     "links": [
       {
         "label": "Website",
@@ -25762,6 +25770,7 @@
       "navToken": false
     },
     "collateral": "1:1 USD reserves held in cash and BlackRock money market funds; managed by Bridge (Stripe subsidiary) under conditional OCC national trust bank charter",
+    "pegMechanism": "Bridge-issued reserve stablecoin: USDB is always backed 1:1 by cash and short-duration BlackRock money market funds, with Bridge APIs supporting fiat and stablecoin conversions including free USDB/USDC conversion",
     "links": [
       {
         "label": "Website",
@@ -26889,6 +26898,7 @@
       "navToken": false
     },
     "collateral": "1:1 collateralized by USDC via Coinbase's Custom Stablecoins platform; reserves managed by Coinbase infrastructure",
+    "pegMechanism": "Coinbase Custom Stablecoin model: Coinbase handles issuance, redemption, custody, security, and compliance; USDF is designed to maintain a stable U.S. dollar value and relies on Coinbase-managed reserve backing and redemption mechanics",
     "links": [
       {
         "label": "Website",
@@ -28096,6 +28106,7 @@
     "collateral": "Synthetic dollar backed by the SMARDEX USDN vault, initially using wstETH as the underlying asset and protocol long-side mechanics to target delta-neutral exposure",
     "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
     "geckoId": "smardex-usdn",
+    "cmcSlug": "smardex-usdn",
     "links": [
       {
         "label": "Website",
@@ -28793,6 +28804,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
+    "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
     "geckoId": "usdpt-western-union",
     "links": [
       {
@@ -30334,7 +30347,7 @@
       "navToken": false
     },
     "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
-    "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral and market liquidity; public disclosures do not expose a permissionless holder redemption rail",
+    "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",
     "geckoId": "solomon-usdv",
     "pythFeedId": "0x32f9acbe011c749c3f402d6aa0e091513672279ef06e1fd1d392dc4466491f80",
     "proofOfReserves": {
@@ -30401,7 +30414,7 @@
       {
         "type": "warning",
         "title": "Aggregate reserve disclosure",
-        "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API or a modeled primary redemption backstop. The live feed validates Solana token supply only; reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
+        "message": "USDv has on-chain supply validation, but public attestations are aggregate and do not expose a live composition API. The modeled redemption backstop is limited to approved/whitelisted participants and a documented 0.5% instant reserve buffer; the live feed validates Solana token supply only, while reserve composition is Ceffu-custodied off-exchange and is not on-chain verifiable."
       }
     ]
   },

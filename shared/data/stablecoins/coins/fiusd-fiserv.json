@@ -10,6 +10,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure",
+  "pegMechanism": "Issuer-managed 1:1 dollar redemption model; Fiserv describes FIUSD as a fully reserved USD-backed stablecoin that is always redeemable at $1 USD",
   "detailProvider": "defillama",
   "links": [
     {
