@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import {
+  maybePruneTelegramProcessedUpdates,
   pruneTelegramProcessedUpdates,
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
@@ -57,5 +58,49 @@ describe("pruneTelegramProcessedUpdates", () => {
 
     expect(pruned).toBe(7);
     expect(db.getHistory()[0]?.binds).toEqual([1_699_999_940]);
+  });
+
+  it("runs through the guarded production pruning path when the interval elapses", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM telegram_processed_updates WHERE received_at < ?",
+        rows: [],
+        runMeta: { changes: 3 },
+      },
+    ]);
+
+    const pruned = await maybePruneTelegramProcessedUpdates(db, {
+      nowSec: 1_700_000_000,
+      retentionSec: 60,
+      intervalSec: 30,
+    });
+
+    expect(pruned).toBe(3);
+    expect(db.getHistory()[0]?.binds).toEqual([1_700_000_000, 1_699_999_970]);
+    expect(db.getHistory()[1]?.binds).toEqual([1_699_999_940]);
+  });
+
+  it("skips production pruning while the cache guard is fresh", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const pruned = await maybePruneTelegramProcessedUpdates(db, {
+      nowSec: 1_700_000_000,
+      retentionSec: 60,
+      intervalSec: 30,
+    });
+
+    expect(pruned).toBeNull();
+    expect(db.getHistory()).toHaveLength(1);
   });
 });

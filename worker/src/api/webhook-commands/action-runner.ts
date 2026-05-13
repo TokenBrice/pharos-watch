@@ -3,14 +3,9 @@
  * /unsubscribe, /set, and the disambiguation reply path. Moved out of
  * telegram-webhook.ts during the P1-M1 dispatch split — behavior is unchanged.
  */
-import { escapeHtml, sendToChat } from "../../lib/telegram";
-import { logTelegramEvent } from "../../lib/telegram-log";
+import { escapeHtml } from "../../lib/telegram";
+import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
-  recordTelegramReplyOutcome,
-  recordTelegramUsageEvent,
-} from "../../lib/telegram-usage-analytics";
-import {
-  splitMessage,
   type ResolvedCoin,
   type TickerResolutionScope,
 } from "../../lib/telegram-alerts";
@@ -44,6 +39,7 @@ import {
   type UnsubscribeActionPayload,
 } from "../telegram-webhook-shared";
 import { dedupeCoins } from "../telegram-webhook-parsing";
+import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
 
 export interface TelegramActionContext {
   db: D1Database;
@@ -362,35 +358,5 @@ async function replyToChat(
   botToken: string,
   options: { replyMarkup?: unknown } = {},
 ): Promise<void> {
-  const chunks = splitMessage(message);
-  for (let i = 0; i < chunks.length; i += 1) {
-    const chunk = chunks[i];
-    const isLastChunk = i === chunks.length - 1;
-    const result = await sendToChat(chatId, chunk, botToken, {
-      disableWebPagePreview: true,
-      ...(isLastChunk && options.replyMarkup != null ? { replyMarkup: options.replyMarkup } : {}),
-    });
-    await recordTelegramReplyOutcome(db, {
-      chatId,
-      ok: result.ok,
-      errorClass: result.errorClass,
-    });
-    if (!result.ok) {
-      await recordTelegramUsageEvent(db, {
-        eventType: "reply_failure",
-        actionDetail: "reply",
-        outcome: "failed",
-        failureClass: result.errorClass ?? "unknown",
-      });
-      logTelegramEvent({
-        level: "warn",
-        message: "reply send failed",
-        chatId,
-        action: "reply",
-        errorClass: result.errorClass ?? "unknown",
-        statusCode: result.statusCode,
-      });
-      if (result.errorClass === "rate_limit") return;
-    }
-  }
+  await sendAuditedTelegramReply(db, chatId, message, botToken, options);
 }

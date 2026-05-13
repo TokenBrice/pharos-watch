@@ -20,7 +20,7 @@
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { answerCallbackQuery, editMessage, sendToChat } from "../lib/telegram";
+import { answerCallbackQuery, editMessage } from "../lib/telegram";
 import {
   clearPendingDisambiguation,
   removePresetSubscriptions,
@@ -62,6 +62,7 @@ import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { requireGroupAdminForCallback } from "./telegram-webhook-auth";
+import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
 export { SNOOZE_SECONDS };
@@ -378,9 +379,9 @@ export async function handleCallbackQuery(
     }
     const meta = TRACKED_META_BY_ID.get(arg);
     const status = await loadStatusForCoin(db, arg);
-    await sendToChat(chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
       replyMarkup: buildStatusDiscoveryKeyboard(arg),
+      actionDetail: "callback_status",
     });
     await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
     return;
@@ -392,7 +393,9 @@ export async function handleCallbackQuery(
       return;
     }
     const message = await buildWhyMessage(db, arg);
-    await sendToChat(chatId, message, botToken, { disableWebPagePreview: true });
+    await sendAuditedTelegramReply(db, chatId, message, botToken, {
+      actionDetail: "callback_why",
+    });
     await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
     return;
   }
@@ -404,8 +407,8 @@ export async function handleCallbackQuery(
     }
     const meta = TRACKED_META_BY_ID.get(arg);
     const status = await loadStatusForCoin(db, arg);
-    await sendToChat(chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
+      actionDetail: "callback_coverage",
     });
     await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
     return;
@@ -667,9 +670,9 @@ async function renderManagePage(
     }
   }
   {
-    await sendToChat(chatId, text, botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, text, botToken, {
       replyMarkup,
+      actionDetail: "callback_manage",
     });
   }
   await answerCallbackQuery(cb.id, botToken, { text: ackText });
@@ -770,9 +773,9 @@ async function handleManageUnsub(
     }
   }
   {
-    await sendToChat(chatId, text, botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, text, botToken, {
       replyMarkup,
+      actionDetail: "callback_manage",
     });
   }
   await answerCallbackQuery(cb.id, botToken, { text: ackText });
@@ -848,7 +851,9 @@ async function handleBulkConfirmCallback(
 
   if (action === "cancel") {
     await clearPendingDisambiguation(db, chatId);
-    await sendToChat(chatId, "Cancelled.", botToken, { disableWebPagePreview: true });
+    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
+      actionDetail: "callback_bulk",
+    });
     await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
     return;
   }
@@ -870,7 +875,9 @@ async function handleBulkConfirmCallback(
     return;
   }
   await clearPendingDisambiguation(db, chatId);
-  await sendToChat(chatId, "Confirmed.", botToken, { disableWebPagePreview: true });
+  await sendAuditedTelegramReply(db, chatId, "Confirmed.", botToken, {
+    actionDetail: "callback_bulk",
+  });
   await answerCallbackQuery(cb.id, botToken, { text: "Applied." });
 }
 

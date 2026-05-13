@@ -124,10 +124,6 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     loadTelegramChatHealthDiagnostics(db, chatId),
   ]);
 
-  const lastSuccessfulDelivery =
-    deliveryDiagnostics?.lastSuccessfulDeliveryAt
-    ?? deliveryDiagnostics?.lastSuccessfulReplyAt
-    ?? null;
   const recentFailure =
     deliveryDiagnostics?.recentFailureClass
     ?? recentPendingFailure
@@ -143,7 +139,8 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
 
   const lines = [
     "Bot Health",
-    `Last successful delivery: ${formatAge(lastSuccessfulDelivery, nowSec)}`,
+    `Last successful alert delivery: ${formatAge(deliveryDiagnostics?.lastSuccessfulDeliveryAt ?? null, nowSec)}`,
+    `Last successful command reply: ${formatAge(deliveryDiagnostics?.lastSuccessfulReplyAt ?? null, nowSec)}`,
     `Queued alerts for this chat: ${pendingAlerts}`,
     `Recent failure class: ${recentFailure}`,
     `Quiet hours: ${formatQuietHoursStatus(

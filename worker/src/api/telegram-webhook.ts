@@ -1,12 +1,10 @@
-import { escapeHtml, sendToChat } from "../lib/telegram";
+import { escapeHtml } from "../lib/telegram";
 import {
   formatAdministratorMentions,
   getCachedChatAdministrators,
-  getCachedChatMember,
 } from "../lib/telegram-chat-member";
 import {
   formatDisambiguation,
-  splitMessage,
   parseDisambiguationReply,
   type ResolvedCoin,
 } from "../lib/telegram-alerts";
@@ -28,6 +26,7 @@ import {
   clearPendingDisambiguation,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
+  maybePruneTelegramProcessedUpdates,
   unixNow,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
@@ -35,11 +34,11 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import { handleCallbackQuery } from "./telegram-webhook-callbacks";
 import { COMMAND_HANDLERS, type WebhookCommandContext } from "./webhook-commands";
 import { makeActionRunner } from "./webhook-commands/action-runner";
-import { isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
+import { isGroupAdminActor, isGroupChatType, validateTelegramWebhookSecret } from "./telegram-webhook-auth";
 import {
-  recordTelegramReplyOutcome,
   recordTelegramUsageEvent,
 } from "../lib/telegram-usage-analytics";
+import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 
 /**
  * Group admin gating mode for group-wide mutating commands in
@@ -95,19 +94,23 @@ const PENDING_PASSTHROUGH_COMMANDS = new Set([
   "/why",
   "/coverage",
   "/start",
+  "/health",
 ]);
 
 const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
 const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/brief": 30,
-  "/market": 30,
   "/top": 20,
   "/why": 20,
   "/coverage": 20,
 };
 
 const GROUP_ADMIN_DIAGNOSTIC_COOLDOWN_SEC = 20;
+
+const CANONICAL_COMMAND_KEYS: Record<string, string> = {
+  "/market": "/brief",
+};
 
 export const handleTelegramWebhook = withErrorHandler(
   "telegram-webhook",
@@ -149,7 +152,40 @@ export const handleTelegramWebhook = withErrorHandler(
         chatId: resolveUpdateChatId(update),
       });
       if (claim.status !== "claimed") {
+        if (claim.status === "in_flight") {
+          logTelegramEvent({
+            level: "warn",
+            message: "duplicate update still in flight",
+            action: "processed-update-dedupe",
+            updateId: claimedUpdateId,
+            retryAfterSec: claim.retryAfterSec ?? null,
+          });
+          return new Response("retry", {
+            status: 503,
+            headers: {
+              "Retry-After": String(Math.max(1, Math.ceil(claim.retryAfterSec ?? 1))),
+            },
+          });
+        }
         return ok();
+      }
+      try {
+        const pruned = await maybePruneTelegramProcessedUpdates(db, { nowSec });
+        if (pruned != null) {
+          logTelegramEvent({
+            level: "info",
+            message: "pruned processed webhook updates",
+            action: "processed-update-prune",
+            pruned,
+          });
+        }
+      } catch (err) {
+        logTelegramEvent({
+          level: "warn",
+          message: "processed webhook update prune failed",
+          action: "processed-update-prune",
+          err: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
@@ -423,14 +459,15 @@ async function enforceCommandCooldown(
   args: string,
   reply: (message: string) => Promise<void>,
 ): Promise<boolean> {
-  const cooldownSec = resolveCommandCooldownSec(command, args);
+  const commandKey = canonicalCommandKey(command);
+  const cooldownSec = resolveCommandCooldownSec(commandKey, args);
   if (cooldownSec == null) return true;
 
   let cooldown;
   try {
     cooldown = await acquireTelegramCommandCooldown(db, {
       chatId,
-      commandKey: command,
+      commandKey,
       nowSec: unixNow(),
       cooldownSec,
     });
@@ -448,8 +485,12 @@ async function enforceCommandCooldown(
   }
 
   if (cooldown.allowed) return true;
-  await reply(formatCommandCooldownMessage(command, cooldown.retryAfterSec));
+  await reply(formatCommandCooldownMessage(commandKey, cooldown.retryAfterSec));
   return false;
+}
+
+function canonicalCommandKey(command: string): string {
+  return CANONICAL_COMMAND_KEYS[command] ?? command;
 }
 
 function resolveCommandCooldownSec(command: string, args: string): number | null {
@@ -496,8 +537,7 @@ async function maybeGateNonAdminGroupActor(
   reply: (message: string) => Promise<void>,
 ): Promise<boolean> {
   if (actorUserId != null) {
-    const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
-    if (member && (member.status === "creator" || member.status === "administrator")) {
+    if (await isGroupAdminActor(db, botToken, chatId, actorUserId)) {
       return true;
     }
   }
@@ -607,7 +647,7 @@ async function handleDisambiguationReply(
       "Use /cancel to abandon this selection.",
       formatDisambiguation(pending.ambiguousTicker, pending.candidates),
     ].join("\n\n");
-    await replyToChat(db, chatId, escapeHtml(reminder), botToken);
+    await sendAuditedTelegramReply(db, chatId, escapeHtml(reminder), botToken);
     return;
   }
 
@@ -671,34 +711,5 @@ async function replyToChat(
   botToken: string,
   options: { replyMarkup?: unknown } = {},
 ): Promise<void> {
-  const chunks = splitMessage(message);
-  let ok = true;
-  let errorClass: string | null = null;
-  for (let i = 0; i < chunks.length; i += 1) {
-    const chunk = chunks[i];
-    // Only attach the reply markup to the last chunk so a multi-part message
-    // does not produce multiple inline keyboards.
-    const isLastChunk = i === chunks.length - 1;
-    const result = await sendToChat(chatId, chunk, botToken, {
-      disableWebPagePreview: true,
-      ...(isLastChunk && options.replyMarkup != null ? { replyMarkup: options.replyMarkup } : {}),
-    });
-    if (!result.ok) {
-      ok = false;
-      errorClass = result.errorClass ?? "unknown";
-      logTelegramEvent({
-        level: "warn",
-        message: "reply send failed",
-        chatId,
-        action: "reply",
-        errorClass: result.errorClass ?? "unknown",
-        statusCode: result.statusCode,
-      });
-      if (result.errorClass === "rate_limit") {
-        await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });
-        return;
-      }
-    }
-  }
-  await recordTelegramReplyOutcome(db, { chatId, ok, errorClass });
+  await sendAuditedTelegramReply(db, chatId, message, botToken, options);
 }

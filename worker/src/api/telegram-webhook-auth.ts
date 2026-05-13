@@ -1,7 +1,7 @@
 import { answerCallbackQuery } from "../lib/telegram";
-import { getCachedChatMember } from "../lib/telegram-chat-member";
 import { timingSafeCompare } from "../lib/auth";
 import { logTelegramInvalidSecretAttempt } from "../lib/telegram-log";
+import { drainResponseBody } from "../lib/response-body";
 
 export function isGroupChatType(chatType: string | null | undefined): boolean {
   return chatType === "group" || chatType === "supergroup";
@@ -41,14 +41,43 @@ export async function validateTelegramWebhookSecret(
 }
 
 export async function isGroupAdminActor(
-  db: D1Database,
+  _db: D1Database,
   botToken: string,
   chatId: string,
   actorUserId: string | null,
 ): Promise<boolean> {
   if (!actorUserId) return false;
-  const member = await getCachedChatMember(db, botToken, chatId, actorUserId);
+  const member = await getFreshChatMemberForAuthorization(botToken, chatId, actorUserId);
+  if (!member) return false;
   return member?.status === "creator" || member?.status === "administrator";
+}
+
+async function getFreshChatMemberForAuthorization(
+  botToken: string,
+  chatId: string,
+  actorUserId: string,
+): Promise<{ status?: string } | null> {
+  let response: Response;
+  try {
+    response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, user_id: Number(actorUserId) }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    return null;
+  }
+  if (!response.ok) {
+    await drainResponseBody(response);
+    return null;
+  }
+  try {
+    const body = (await response.json()) as { ok?: boolean; result?: { status?: string } };
+    return body.ok && body.result ? body.result : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function requireGroupAdminForCallback(

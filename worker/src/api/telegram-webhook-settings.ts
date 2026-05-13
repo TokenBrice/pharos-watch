@@ -14,7 +14,7 @@
  * content rejected by Telegram), the handler sends a fresh message instead.
  */
 
-import { answerCallbackQuery, editMessage, sendToChat } from "../lib/telegram";
+import { answerCallbackQuery, editMessage } from "../lib/telegram";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { resolveTicker } from "../lib/telegram-alerts";
 import {
@@ -41,6 +41,7 @@ import {
   isGlobalAlertType,
   isKnownStablecoinId,
 } from "./telegram-webhook-settings-shared";
+import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 
 // Re-export for tests so existing imports keep working.
 export {
@@ -77,14 +78,14 @@ export async function handleSettingsCommand(
   }
   const resolution = resolveTicker(trimmed, "tracked");
   if (resolution.status === "not_found") {
-    await sendToChat(chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, buildNotFoundMessage(trimmed, resolution.suggestion), botToken, {
+      actionDetail: "settings",
     });
     return;
   }
   if (resolution.status === "ambiguous") {
-    await sendToChat(chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken, {
-      disableWebPagePreview: true,
+    await sendAuditedTelegramReply(db, chatId, buildStatusAmbiguousMessage(trimmed, resolution.matches), botToken, {
+      actionDetail: "settings",
     });
     return;
   }
@@ -216,7 +217,7 @@ async function renderHome(
   target: RenderTarget,
 ): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
-  await deliver(chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber), botToken, target);
+  await deliver(db, chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber), botToken, target);
 }
 
 async function renderCoin(
@@ -228,10 +229,11 @@ async function renderCoin(
 ): Promise<void> {
   const rows = await loadSubscriptionsByIds(db, chatId, [coinId]);
   const row = rows[0] ?? null;
-  await deliver(chatId, buildCoinMessage(coinId, row), buildCoinKeyboard(coinId, row), botToken, target);
+  await deliver(db, chatId, buildCoinMessage(coinId, row), buildCoinKeyboard(coinId, row), botToken, target);
 }
 
 async function deliver(
+  db: D1Database,
   chatId: string,
   message: string,
   replyMarkup: unknown,
@@ -247,8 +249,8 @@ async function deliver(
     // Edit failed (e.g. message too old / unchanged content). Fall back to a
     // fresh send so the user still sees the new state.
   }
-  await sendToChat(chatId, message, botToken, {
-    disableWebPagePreview: true,
+  await sendAuditedTelegramReply(db, chatId, message, botToken, {
     replyMarkup,
+    actionDetail: "settings",
   });
 }

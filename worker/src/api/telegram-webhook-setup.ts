@@ -8,7 +8,7 @@
  * Callback namespace: `setup:*` (see telegram-webhook-callbacks.ts).
  */
 
-import { escapeHtml, sendToChat } from "../lib/telegram";
+import { escapeHtml } from "../lib/telegram";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import {
   listTelegramPresets,
@@ -37,6 +37,7 @@ import {
   upsertSubscriberAndSubscriptions,
   upsertGlobalAlertTypes,
 } from "./telegram-webhook-store";
+import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 
 const ALERT_TYPE_ORDER = ["dews", "depeg", "safety", "launch"] as const;
 
@@ -263,8 +264,8 @@ export async function sendWizardIntro(
     target: null,
     initiatorUserId,
   });
-  await sendToChat(chatId, WIZARD_INTRO_MESSAGE, botToken, {
-    disableWebPagePreview: true,
+  await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
+    actionDetail: "setup",
     replyMarkup: buildBranchKeyboard(),
   });
 }
@@ -311,17 +312,15 @@ export async function handleSetupBranch(
       alertTypes: [...RECOMMENDED_ALERT_TYPES],
     };
     await persistSetupState(context.db, context.chatId, nextState);
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       "Pick alert types, then tap Next.\n\n" +
         "<b>Alert types</b>\n" +
         "- DEWS — stress score reaches an alert band\n" +
         "- Depeg — coin trades off peg\n" +
         "- Safety — Safety grade changes\n" +
         "- Launch — pre-launch coin goes live on Pharos",
-      context.botToken,
       {
-        disableWebPagePreview: true,
         replyMarkup: buildTypeToggleKeyboard(new Set(nextState.alertTypes)),
       },
     );
@@ -335,7 +334,7 @@ export async function handleSetupBranch(
       actionDetail: "skip",
       outcome: "selected",
     });
-    await sendToChat(context.chatId, START_MESSAGE, context.botToken, { disableWebPagePreview: true });
+    await sendSetupReply(context, START_MESSAGE);
     return { text: "OK." };
   }
   return { text: "Action not recognized." };
@@ -360,8 +359,7 @@ async function openRecommendedConfirm(
 
   const head = `You'll get DEWS and Depeg alerts for these ${preview.count} coins:`;
   const body = preview.symbolPreview;
-  await sendToChat(context.chatId, escapeHtml(`${head}\n${body}`), context.botToken, {
-    disableWebPagePreview: true,
+  await sendSetupReply(context, escapeHtml(`${head}\n${body}`), {
     replyMarkup: buildConfirmKeyboard(),
   });
   return { text: "Review and confirm." };
@@ -403,10 +401,9 @@ export async function handleSetupTypeToggle(
   const nextAlertTypes = ALERT_TYPE_ORDER.filter((type) => selected.has(type));
   const nextState: SetupWizardState = { ...state, alertTypes: nextAlertTypes };
   await persistSetupState(context.db, context.chatId, nextState);
-  await sendToChat(
-    context.chatId,
+  await sendSetupReply(
+    context,
     `Selected: ${alertTypesSummary(nextAlertTypes)}`,
-    context.botToken,
     { replyMarkup: buildTypeToggleKeyboard(selected) },
   );
   return { text: ALERT_TYPE_LABELS[arg] };
@@ -427,10 +424,9 @@ export async function handleSetupNext(
   }
   const nextState: SetupWizardState = { ...state, step: "custom-target" };
   await persistSetupState(context.db, context.chatId, nextState);
-  await sendToChat(
-    context.chatId,
+  await sendSetupReply(
+    context,
     `Selected alerts: ${alertTypesSummary(state.alertTypes)}\nPick a target watchlist:`,
-    context.botToken,
     { replyMarkup: buildTargetKeyboard() },
   );
   return { text: "Pick a target." };
@@ -451,10 +447,9 @@ export async function handleSetupTarget(
   if (arg === "type") {
     const nextState: SetupWizardState = { ...state, step: "awaiting-ticker" };
     await persistSetupState(context.db, context.chatId, nextState);
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
-      context.botToken,
       { replyMarkup: buildForceReplyKeyboard() },
     );
     return { text: "Type a ticker." };
@@ -491,8 +486,7 @@ async function advanceToCustomConfirm(
 
   const nextState: SetupWizardState = { ...state, step: "confirm-custom", target };
   await persistSetupState(context.db, context.chatId, nextState);
-  await sendToChat(context.chatId, escapeHtml(summary), context.botToken, {
-    disableWebPagePreview: true,
+  await sendSetupReply(context, escapeHtml(summary), {
     replyMarkup: buildConfirmKeyboard(),
   });
   return { text: "Review and confirm." };
@@ -508,20 +502,18 @@ export async function handleSetupTickerInput(
   }
   const resolution = resolveTicker(text.trim());
   if (resolution.status === "not_found") {
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       buildNotFoundMessage(text.trim(), resolution.suggestion),
-      context.botToken,
-      { disableWebPagePreview: true, replyMarkup: buildForceReplyKeyboard() },
+      { replyMarkup: buildForceReplyKeyboard() },
     );
     return;
   }
   if (resolution.status === "ambiguous") {
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       buildStatusAmbiguousMessage(text.trim(), resolution.matches),
-      context.botToken,
-      { disableWebPagePreview: true, replyMarkup: buildForceReplyKeyboard() },
+      { replyMarkup: buildForceReplyKeyboard() },
     );
     return;
   }
@@ -563,11 +555,9 @@ export async function handleSetupConfirm(
       actionDetail: "setup",
       outcome: "opt_in",
     });
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       escapeHtml(`Subscribed: ${alertTypesSummary(state.alertTypes)} on all tracked coins.`),
-      context.botToken,
-      { disableWebPagePreview: true },
     );
     return { text: "Subscribed." };
   }
@@ -575,9 +565,7 @@ export async function handleSetupConfirm(
   if (state.target.kind === "preset") {
     const result = await resolveTelegramPresetTargets(context.db, [state.target.presetId as TelegramPresetId]);
     if (result.kind !== "ok") {
-      await sendToChat(context.chatId, buildPresetUnavailableMessage(), context.botToken, {
-        disableWebPagePreview: true,
-      });
+      await sendSetupReply(context, buildPresetUnavailableMessage());
       return { text: "Preset data unavailable." };
     }
     const coins = result.presets.flatMap((preset) => preset.coins);
@@ -609,11 +597,9 @@ export async function handleSetupConfirm(
     });
     const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, coinIds);
     const intro = `Subscribed via ${presetLabelById(state.target.presetId)} (${coins.length} coins). Use /list anytime.`;
-    await sendToChat(
-      context.chatId,
+    await sendSetupReply(
+      context,
       buildSubscriptionSummaryMessage(intro, subscriptions),
-      context.botToken,
-      { disableWebPagePreview: true },
     );
     return { text: "Subscribed." };
   }
@@ -634,11 +620,9 @@ export async function handleSetupConfirm(
     outcome: "success",
   });
   const subscriptions = await loadSubscriptionsByIds(context.db, context.chatId, [state.target.coinId]);
-  await sendToChat(
-    context.chatId,
+  await sendSetupReply(
+    context,
     buildSubscriptionSummaryMessage(`Subscribed for ${state.target.symbol}.`, subscriptions),
-    context.botToken,
-    { disableWebPagePreview: true },
   );
   return { text: "Subscribed." };
 }
@@ -651,6 +635,17 @@ export async function handleSetupCancel(
     return { text: "Only the user who started this setup can cancel." };
   }
   await clearSetupState(context.db, context.chatId);
-  await sendToChat(context.chatId, "Setup cancelled. Send /start to begin again.", context.botToken);
+  await sendSetupReply(context, "Setup cancelled. Send /start to begin again.");
   return { text: "Cancelled." };
+}
+
+async function sendSetupReply(
+  context: CallbackContext,
+  message: string,
+  options: { replyMarkup?: unknown } = {},
+): Promise<void> {
+  await sendAuditedTelegramReply(context.db, context.chatId, message, context.botToken, {
+    ...options,
+    actionDetail: "setup",
+  });
 }
