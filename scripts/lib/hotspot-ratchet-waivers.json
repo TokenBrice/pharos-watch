@@ -79,6 +79,10 @@
     "disposition": "queued-p4",
     "notes": "Webhook state storage now covers processed-update claims, setup/disambiguation rows, callback payloads, and cooldown bookkeeping. Keep waived for the growth rollout; split processed-update idempotency and command cooldown storage into focused modules in a follow-up Telegram cleanup."
   },
+  "worker/src/cron/dews/source-state.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEWS source-state orchestration remains coupled with legacy compatibility and migration-aware fallback paths. Keep this file waived until the next tranche extracts source hydration and legacy bridge responsibilities into narrower helper modules."
+  },
   "worker/src/cron/telegram-pending-queue.ts": {
     "disposition": "queued-p4",
     "notes": "Pending delivery queue owns drain selection, TTL/dead-letter handling, rate-limit backoff, two-strike blocked handling, and priority enqueue semantics. Keep waived until the durable sender promotion; then split subscriber lifecycle, enqueue/dedupe, and drain execution helpers."
