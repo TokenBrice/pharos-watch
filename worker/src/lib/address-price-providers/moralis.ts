@@ -17,7 +17,8 @@ import {
   parsePositiveNumber,
 } from "./shared";
 
-const MORALIS_ADDRESS_MAX_REQUESTS = 10;
+const MORALIS_ADDRESS_BATCH_SIZE = 100;
+const MORALIS_ADDRESS_MAX_REQUESTS = 3;
 
 export async function runMoralisAddressProvider(
   targets: AddressPriceTarget[],
@@ -35,7 +36,7 @@ export async function runMoralisAddressProvider(
   let attemptedRequests = 0;
 
   for (const [providerChainId, chainTargets] of groupTargetsByProviderChain(targets)) {
-    for (const batch of chunk(chainTargets, 30)) {
+    for (const batch of chunk(chainTargets, MORALIS_ADDRESS_BATCH_SIZE)) {
       if (attemptedRequests >= MORALIS_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
       attemptedRequests += 1;
       const url = `https://deep-index.moralis.io/api/v2.2/erc20/prices?chain=${encodeURIComponent(providerChainId)}`;
@@ -119,7 +120,7 @@ export async function runMoralisAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, MORALIS_ADDRESS_MAX_REQUESTS * 30),
+    attemptedTargets: Math.min(targets.length, MORALIS_ADDRESS_MAX_REQUESTS * MORALIS_ADDRESS_BATCH_SIZE),
     matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,
