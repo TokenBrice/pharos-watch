@@ -1327,6 +1327,18 @@ function buildToolDenyOutput(reason, hookEventName = "PreToolUse") {
   };
 }
 
+function buildPermissionRequestDenyOutput(reason) {
+  return {
+    hookSpecificOutput: {
+      hookEventName: "PermissionRequest",
+      decision: {
+        behavior: "deny",
+        message: reason,
+      },
+    },
+  };
+}
+
 export function buildPreToolUseHookOutput(hookInput = {}) {
   const violation = findPreToolUseViolation(hookInput);
   if (!violation) {
@@ -1342,7 +1354,7 @@ export function buildPermissionRequestHookOutput(hookInput = {}) {
     return { continue: true };
   }
 
-  return buildToolDenyOutput(violation.reason, "PermissionRequest");
+  return buildPermissionRequestDenyOutput(violation.reason);
 }
 
 function formatPostToolReminder(contract) {

@@ -245,6 +245,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `SessionStart` injects compact Pharos routing context. If files are already changed, it includes matched task families, docs to read, likely docs to update, checks to consider, and core rules.
 - `Stop` emits Codex continuation JSON once per turn when changed files match a medium- or high-risk task family. Low-risk-only changes (doc-only edits) skip the continuation, and `PostToolUse`/`PostToolBatch` reminders apply the same risk gate. The continuation asks the agent to run relevant checks/docs updates or state why they were unnecessary or unavailable; `stop_hook_active=true` is respected to avoid loops.
 - Codex hook entries in `.codex/config.toml` use the documented nested command-handler shape with the current `features.hooks` flag. `PreToolUse`, `PermissionRequest`, and `PostToolUse` use catch-all matchers because Codex native command/apply-patch tool names differ from Claude's `Bash` / `Edit` names. The shared script still only blocks deterministic unsafe operations.
+- Codex stores per-hook trust under user/session `hooks.state`, not in project config. A new or modified project hook requires a one-time `/hooks` review in the Codex TUI before it runs.
 - The PR workflow uses `pull_request` and only comments for same-repo PRs, so it does not run untrusted fork code with a write token.
 - This script is advisory. It should steer agents toward the right Pharos docs/checks, not replace `npm run test:merge-gate`, CI, or human review.
 

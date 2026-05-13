@@ -290,14 +290,15 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toMatchObject({
-      decision: "block",
+    expect(output).toEqual({
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
-        permissionDecision: "deny",
+        decision: {
+          behavior: "deny",
+          message: expect.stringContaining("Production deploy permission is denied"),
+        },
       },
     });
-    expect(output.reason).toContain("Production deploy permission is denied");
   });
 
   it("denies remote D1 mutation permission requests", () => {
@@ -307,14 +308,15 @@ describe("hard-block hook outputs", () => {
       },
     });
 
-    expect(output).toMatchObject({
-      decision: "block",
+    expect(output).toEqual({
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
-        permissionDecision: "deny",
+        decision: {
+          behavior: "deny",
+          message: expect.stringContaining("Remote D1 mutation permission is denied"),
+        },
       },
     });
-    expect(output.reason).toContain("Remote D1 mutation permission is denied");
   });
 });
 
@@ -324,6 +326,7 @@ describe("repo Codex hook config", () => {
 
     expect(config).toContain("hooks = true");
     expect(config).not.toContain("codex_hooks");
+    expect(config).not.toContain("trusted_hash");
     expect(config).toContain("[[hooks.SessionStart]]");
     expect(config).toContain("--hook=session-start");
     expect(config).toContain("[[hooks.UserPromptSubmit]]");
