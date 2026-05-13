@@ -174,7 +174,7 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "PYS",
-    meaning: "Pharos Yield Score. Adjusts raw yield for the safety of the asset producing that yield.",
+    meaning: "Pharos Yield Score. Adjusts raw yield for source risk, asset safety, benchmark context, and yield consistency.",
   },
   {
     term: "PSI",

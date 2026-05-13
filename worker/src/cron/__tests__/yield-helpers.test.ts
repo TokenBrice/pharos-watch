@@ -117,15 +117,16 @@ describe("computePYS", () => {
     expect(result).toBeLessThanOrEqual(100);
   });
 
-  it("matches the benchmark-aware worked example", () => {
+  it("matches the benchmark-aware source-risk worked example", () => {
     const result = computePYS({
       apy30d: 8.4,
       benchmarkRate: 4.25,
       safetyScore: 72,
+      sourceRiskPenalty: 1.2,
       apyVarianceScore: 0.18,
       scalingFactor: 8,
     });
-    expect(result).toBe(32);
+    expect(result).toBe(27);
   });
 });
 
