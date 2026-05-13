@@ -2,9 +2,13 @@ import { toYieldBenchmarkRegistry, type ParsedYieldBenchmarkRegistry } from "./b
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
 import {
+  attachYieldPublicationMetadata,
+  buildYieldPublicationGenerationId,
   buildYieldRankingsPayloadFromEvaluatedSources,
+  finalizeYieldPublicationGeneration,
   persistEvaluatedYieldSources,
   pruneYieldTables,
+  stageYieldPublicationGeneration,
   validateYieldRankingsPayloadForPublish,
   writeYieldRankingsCache,
 } from "./publication";
@@ -81,9 +85,32 @@ export async function publishYieldCoordinatorResults(params: {
       casSkipped: boolean;
     }
 > {
-  const previewPublishability = await validateYieldRankingsPayloadForPublish(params.db, params.previewRankingsPayload);
+  const generationId = buildYieldPublicationGenerationId(params.startSec);
+  const stagedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
+    generationId,
+    startSec: params.startSec,
+    status: "staged",
+  });
+  await stageYieldPublicationGeneration(params.db, {
+    generationId,
+    startSec: params.startSec,
+    rankingCount: params.previewRankingsPayload.rankings.length,
+    sourceRowCount: params.evaluatedSources.length,
+    bestRowCount: params.bestSourceKeyByCoin.size,
+    rowsRejected: params.rowsRejected,
+    divergenceFlags: params.divergenceFlags,
+    sourceSwitches: params.sourceSwitches,
+  });
+
+  const previewPublishability = await validateYieldRankingsPayloadForPublish(params.db, stagedRankingsPayload);
   if (!previewPublishability.ok) {
     params.degradationReasons.push(previewPublishability.reason ?? "schema-validation-failed");
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "failed",
+      timestamp: params.startSec,
+      reason: previewPublishability.reason ?? "schema-validation-failed",
+    });
     return {
       ok: false,
       result: {
@@ -107,11 +134,28 @@ export async function publishYieldCoordinatorResults(params: {
     startSec: params.startSec,
     medianApy: params.medianApy,
     dlPoolsMeta: params.dlPoolsMeta,
+    generationId,
   });
-  const cacheWrite = await writeYieldRankingsCache(params.db, params.previewRankingsPayload, params.startSec);
+  const publishedRankingsPayload = attachYieldPublicationMetadata(params.previewRankingsPayload, {
+    generationId,
+    startSec: params.startSec,
+    status: "published",
+  });
+  const cacheWrite = await writeYieldRankingsCache(params.db, publishedRankingsPayload, params.startSec);
   if (!cacheWrite.ok) {
     params.degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "failed",
+      timestamp: params.startSec,
+      reason: cacheWrite.reason ?? "schema-validation-failed",
+    });
   } else {
+    await finalizeYieldPublicationGeneration(params.db, {
+      generationId,
+      state: "published",
+      timestamp: params.startSec,
+    });
     await writeFreshnessSentinel(params.db, "yield-data", params.startSec);
   }
 

@@ -18,6 +18,8 @@ import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
 import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { isRecord } from "@shared/lib/type-guards";
+import type { YieldPublicationMetadata } from "@shared/types/yield";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -37,9 +39,43 @@ interface YieldHistoryRow {
   yield_type: string | null;
   data_source: string | null;
   is_best: number | null;
+  publication_generation_id?: string | null;
 }
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
+
+function parseYieldPublicationMetadata(
+  cached: { value: string; updatedAt: number } | null,
+): YieldPublicationMetadata | null {
+  if (!cached) return null;
+  try {
+    const payload = JSON.parse(cached.value) as unknown;
+    if (!isRecord(payload) || !isRecord(payload.publication)) return null;
+    const publication = payload.publication;
+    const generationId = typeof publication.generationId === "string" ? publication.generationId : null;
+    const status = publication.status === "published" ? "published" : null;
+    if (!generationId || !status) return null;
+    const updatedAt = typeof publication.updatedAt === "number" && Number.isFinite(publication.updatedAt)
+      ? publication.updatedAt
+      : cached.updatedAt;
+    const cutoffAt = typeof publication.cutoffAt === "number" && Number.isFinite(publication.cutoffAt)
+      ? publication.cutoffAt
+      : updatedAt;
+    const schemaVersion =
+      typeof publication.schemaVersion === "number" && Number.isFinite(publication.schemaVersion)
+        ? Math.floor(publication.schemaVersion)
+        : 1;
+    return {
+      generationId,
+      updatedAt,
+      cutoffAt,
+      schemaVersion,
+      status,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function normalizeHistorySourceKey(
   stablecoinId: string,
@@ -90,13 +126,14 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
   }
 
   const rankingsCache = await getCache(db, "yield-rankings");
+  const publication = parseYieldPublicationMetadata(rankingsCache);
   const publishedCutoffResult = parseYieldRankingsPublishedCutoff(rankingsCache);
   const publishedCutoffLookup = publishedCutoffResult.status === "ok"
     ? { timestamp: publishedCutoffResult.updatedAt, status: "ok" as const }
     : await getLatestSuccessfulCronTimestampResult(db, "sync-yield-data");
   const fallbackPublishedCutoff = rankingsCache?.updatedAt ?? 0;
   const publishedCutoff = publishedCutoffResult.status === "ok"
-    ? publishedCutoffResult.updatedAt
+    ? (publication?.cutoffAt ?? publishedCutoffResult.updatedAt)
     : publishedCutoffLookup.timestamp ?? fallbackPublishedCutoff;
   const freshnessWarning = publishedCutoffLookup.status === "lookup_failed"
     ? "Yield history freshness lookup failed; falling back to cache metadata."
@@ -117,14 +154,20 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     });
   }
 
+  const publicationFilter = publication?.generationId
+    ? "AND (publication_generation_id IS NULL OR publication_state = 'published')"
+    : "";
+
   const sql = mode === "source"
-    ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best
+    ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
+       ${publicationFilter}
        ORDER BY recorded_at ASC`
-    : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best
+    : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
+       ${publicationFilter}
        ORDER BY recorded_at ASC`;
 
   const result = mode === "source"
@@ -163,6 +206,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
         yieldType: row.yield_type,
         dataSource: row.data_source,
         isBest: row.is_best === 1,
+        publicationGenerationId: row.publication_generation_id ?? null,
         sourceSwitch,
       };
     });
@@ -177,6 +221,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     current,
     history,
     ...(freshnessWarning ? { warning: freshnessWarning } : {}),
+    ...(publication ? { publication } : {}),
     methodology: buildMethodologyEnvelope({
       version: YIELD_METHODOLOGY_VERSION,
       versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,

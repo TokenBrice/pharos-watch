@@ -274,6 +274,7 @@ const BASE_STATUS: StatusResponse = {
     worstCacheRatio: 1.2,
   },
   liquidityHealth: null,
+  yieldHealth: null,
   priceSourceHealth: null,
   coingeckoPriceDiff: null,
   d1Usage: null,

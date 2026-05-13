@@ -132,5 +132,13 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
   degradedAuthoritativeCoverageRatio: 0.5,
 } as const;
 
+// --- Yield health summary ---
+export const STATUS_YIELD_HEALTH_THRESHOLDS = {
+  safetyCoverageRatio: 0.75,
+  supplementalMaxAgeSec: 6 * 3600,
+  benchmarkMaxAgeSec: 48 * 3600,
+  coverageAuditMaxAgeSec: 45 * 24 * 3600,
+} as const;
+
 // --- Discovery scan ---
 export const DISCOVERY_MIN_MCAP = 5_000_000;

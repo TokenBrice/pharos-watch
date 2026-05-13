@@ -12,15 +12,13 @@ import { YieldSourceLink } from "@/components/yield-source-link";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
-import type { YieldRanking } from "@shared/types";
 import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 interface YieldLeaderboardTableRowProps {
-  row: YieldRanking;
-  index: number;
-  pageStartIndex: number;
+  row: YieldViewModelRow;
   logos: Record<string, string>;
   riskFreeRate: number;
   medianApy: number;
@@ -33,8 +31,6 @@ interface YieldLeaderboardTableRowProps {
 
 function YieldLeaderboardTableRowBase({
   row,
-  index,
-  pageStartIndex,
   logos,
   riskFreeRate,
   medianApy,
@@ -81,16 +77,41 @@ function YieldLeaderboardTableRowBase({
         onHover={() => onPrefetch(row.id)}
         className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
       >
-        <TableCell className="text-right text-xs font-mono tabular-nums text-muted-foreground">
-          {pageStartIndex + index + 1}
+        <TableCell className="text-right text-xs font-mono tabular-nums text-muted-foreground" title={row.rankLabel}>
+          <span>{row.viewRank}</span>
+          <span className="sr-only">{row.rankLabel}</span>
         </TableCell>
         <TableCell>
-          <div className="flex items-center gap-2">
-            <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
-            <span className="font-medium">{row.symbol}</span>
-            <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground xl:inline">
-              {row.name}
-            </span>
+          <div className="min-w-[104px]">
+            <div className="flex items-center gap-2">
+              <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
+              <span className="font-medium">{row.symbol}</span>
+              <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground xl:inline">
+                {row.name}
+              </span>
+            </div>
+            <div className="mt-1 grid max-w-[148px] grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground sm:hidden">
+              <span className="truncate">
+                Safety{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {grade && grade !== "NR" ? grade : safetyScore !== null ? Math.round(safetyScore) : "—"}
+                </span>
+              </span>
+              <span className="truncate">
+                TVL{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—"}
+                </span>
+              </span>
+              <span className="col-span-2 truncate">
+                {row.provenance?.confidenceTier ?? "source"} · {row.yieldSource}
+              </span>
+              <span className="col-span-2 truncate">
+                {warningSignalCount > 0
+                  ? `${warningSignalCount} warning${warningSignalCount === 1 ? "" : "s"}`
+                  : "No warnings"}
+              </span>
+            </div>
           </div>
         </TableCell>
         <TableCell className="text-right font-mono tabular-nums">{formatPercent(row.apy30d)}</TableCell>

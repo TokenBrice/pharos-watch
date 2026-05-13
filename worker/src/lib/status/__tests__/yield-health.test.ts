@@ -1,0 +1,162 @@
+import { describe, expect, it } from "vitest";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { loadYieldHealthSummary } from "../yield-health";
+import type { CronStatus } from "@shared/types/status";
+
+const NOW = 1_777_000_000;
+
+function cron(status = "ok", ageSec = 120): CronStatus {
+  return {
+    expectedIntervalSec: CRON_INTERVALS["sync-yield-data"],
+    healthy: true,
+    recentRuns: [],
+    lastRun: {
+      startedAt: NOW - ageSec,
+      durationMs: 1000,
+      status,
+    },
+  };
+}
+
+function makeDb(rows: Record<string, unknown>[]) {
+  return mockD1([{ match: "yield-rankings", rows }], { requireMatch: true });
+}
+
+describe("loadYieldHealthSummary", () => {
+  it("summarizes rankings, safety coverage, supplemental, benchmark, and audit cache state", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 600,
+          value: JSON.stringify({
+            updatedAt: NOW - 600,
+            rankings: [{ id: "usdc-circle" }, { id: "usdt-tether" }],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 0.84,
+                coveredCount: 84,
+                trackedCount: 100,
+                reason: null,
+              },
+              benchmark: {
+                fetchedAt: NOW - 3600,
+                ageSeconds: 3600,
+                source: "tbill-cache",
+                isFallback: false,
+                fallbackMode: null,
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary).toMatchObject({
+      status: "healthy",
+      statusImpact: "admin-watch",
+      rankingCount: 2,
+      rankingUpdatedAt: NOW - 600,
+      rankingAgeSec: 600,
+      rankingStatus: "healthy",
+      safetyCoverage: {
+        coveredCount: 84,
+        trackedCount: 100,
+        coverageRatio: 0.84,
+        status: "healthy",
+      },
+      supplemental: {
+        ageSec: 3600,
+        status: "healthy",
+      },
+      benchmark: {
+        ageSec: 3600,
+        source: "tbill-cache",
+        isFallback: false,
+        status: "healthy",
+      },
+      coverageAudit: {
+        ageSec: 86400,
+        status: "healthy",
+      },
+      latestCronStatus: "ok",
+      latestCronStartedAt: NOW - 120,
+    });
+  });
+
+  it("keeps sparse non-ranking signals as admin watch and marks missing rankings public critical", async () => {
+    const summary = await loadYieldHealthSummary(makeDb([]), NOW, { "sync-yield-data": cron("error") });
+
+    expect(summary.status).toBe("stale");
+    expect(summary.statusImpact).toBe("public-critical");
+    expect(summary.rankingStatus).toBe("stale");
+    expect(summary.rankingCount).toBeNull();
+    expect(summary.safetyCoverage.status).toBe("unknown");
+    expect(summary.supplemental.status).toBe("unknown");
+    expect(summary.benchmark.status).toBe("unknown");
+    expect(summary.coverageAudit.status).toBe("unknown");
+    expect(summary.latestCronStatus).toBe("error");
+  });
+
+  it("classifies low safety coverage and retained benchmark fallback as degraded admin-watch", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            rankings: [{ id: "usdc-circle" }],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 0.5,
+                coveredCount: 1,
+                trackedCount: 2,
+                reason: "low-row-safety-coverage",
+              },
+              benchmark: {
+                fetchedAt: NOW - 3 * 3600,
+                ageSeconds: 3 * 3600,
+                source: "risk_free_rates",
+                isFallback: true,
+                fallbackMode: "retained-last-good",
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 10 * 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 60 * 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron("degraded") },
+    );
+
+    expect(summary.status).toBe("degraded");
+    expect(summary.statusImpact).toBe("admin-watch");
+    expect(summary.rankingStatus).toBe("healthy");
+    expect(summary.safetyCoverage.status).toBe("degraded");
+    expect(summary.benchmark.status).toBe("degraded");
+    expect(summary.supplemental.status).toBe("degraded");
+    expect(summary.coverageAudit.status).toBe("degraded");
+  });
+});

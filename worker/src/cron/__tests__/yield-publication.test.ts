@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
@@ -12,6 +14,9 @@ import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
+import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
+
+const MIGRATIONS_DIR = path.resolve(__dirname, "../../../migrations");
 
 const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 
@@ -342,5 +347,161 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       "defillama:alt-a",
       "defillama:alt-b",
     ]);
+  });
+});
+
+describe("publishYieldCoordinatorResults", () => {
+  function makePublicationDb(cacheWriteChanges: number) {
+    return mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
+      { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
+      { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
+      { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
+      { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        rows: [],
+        runMeta: { changes: cacheWriteChanges },
+      },
+      { match: "UPDATE yield_publication_generations", rows: [] },
+      { match: "UPDATE yield_data SET publication_state", rows: [] },
+      { match: "UPDATE yield_history SET publication_state", rows: [] },
+      { match: "DELETE FROM yield_history", rows: [] },
+    ]);
+  }
+
+  function makePublishParams(overrides: {
+    db: D1Database;
+    previewRankingsPayload?: ReturnType<typeof buildPayloadWithObservedAt>;
+  }) {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const source = makeEvaluatedSource();
+    return {
+      db: overrides.db,
+      previewRankingsPayload: overrides.previewRankingsPayload ?? buildPayloadWithObservedAt(startSec),
+      evaluatedSources: [source],
+      bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+      startSec,
+      medianApy: 4.5,
+      dlPoolsMeta: makeYieldSourceMeta(),
+      degradationReasons: [],
+      resolvedCount: 1,
+      rowsRejected: 0,
+      divergenceFlags: 0,
+      sourceSwitches: 0,
+    };
+  }
+
+  it("stages then fails a generation when cache payload validation fails before row publication", async () => {
+    const db = makePublicationDb(1);
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000));
+    payload.rankings = [
+      payload.rankings[0]!,
+      {
+        ...payload.rankings[0]!,
+        yieldSource: "Duplicate Source",
+      },
+    ];
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db, previewRankingsPayload: payload }));
+
+    expect(result.ok).toBe(false);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_publication_generations"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(false);
+  });
+
+  it("marks staged rows failed when the rankings cache CAS skips because a newer cache exists", async () => {
+    const db = makePublicationDb(0);
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+
+    expect(result).toMatchObject({
+      ok: true,
+      cacheWriteSkipped: true,
+      casSkipped: true,
+    });
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
+    expect(
+      history.some((entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed"),
+    ).toBe(true);
+  });
+
+  it("publishes generation metadata to cache and current/history rows on a successful generation", async () => {
+    const db = makePublicationDb(1);
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+
+    expect(result).toMatchObject({
+      ok: true,
+      cacheWriteSkipped: false,
+      casSkipped: false,
+    });
+    const history = db.getHistory();
+    const yieldDataInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"));
+    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
+    expect(yieldDataInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "staged"]);
+    expect(yieldHistoryInsert?.binds.slice(-2)).toEqual(["yield-1774526400", "staged"]);
+    expect(cacheWrite?.binds[0]).toBe("yield-rankings");
+    expect(JSON.parse(String(cacheWrite?.binds[1]))).toMatchObject({
+      publication: {
+        generationId: "yield-1774526400",
+        status: "published",
+        cutoffAt: 1774526400,
+      },
+      rankings: [
+        {
+          publicationGenerationId: "yield-1774526400",
+          publishedRank: 1,
+        },
+      ],
+    });
+    expect(history.some((entry) => entry.sql.includes("SET state = 'published'"))).toBe(true);
+    expect(
+      history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "published"),
+    ).toBe(true);
+  });
+});
+
+describe("yield publication migration compatibility", () => {
+  it("keeps old-worker yield_data and yield_history inserts valid after the additive migration", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, "0000_baseline.sql"), "utf8"));
+      sqlite.exec(readFileSync(path.join(MIGRATIONS_DIR, "0125_yield_publication_generations.sql"), "utf8"));
+
+      sqlite
+        .prepare(
+          `INSERT INTO yield_data (
+            stablecoin_id, source_key, symbol, current_apy, apy_7d, apy_30d,
+            yield_source, yield_type, data_source, is_best, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run("usdt-tether", "legacy-best", "USDT", 4.2, 4.1, 4, "Legacy", "staking", "defillama", 1, 1_774_526_400);
+      sqlite
+        .prepare(
+          `INSERT INTO yield_history (
+            stablecoin_id, source_key, recorded_at, is_best, apy, data_source
+          ) VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run("usdt-tether", "legacy-best", 1_774_526_400, 1, 4.2, "defillama");
+
+      const current = sqlite
+        .prepare("SELECT publication_generation_id, publication_state FROM yield_data WHERE stablecoin_id = ?")
+        .get("usdt-tether") as { publication_generation_id: string | null; publication_state: string | null };
+      const history = sqlite
+        .prepare("SELECT publication_generation_id, publication_state FROM yield_history WHERE stablecoin_id = ?")
+        .get("usdt-tether") as { publication_generation_id: string | null; publication_state: string | null };
+
+      expect(current).toEqual({ publication_generation_id: null, publication_state: null });
+      expect(history).toEqual({ publication_generation_id: null, publication_state: null });
+    } finally {
+      sqlite.close();
+    }
   });
 });

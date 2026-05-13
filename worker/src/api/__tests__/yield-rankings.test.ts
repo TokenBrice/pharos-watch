@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 
 const buildReportCardsSnapshotMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -27,6 +28,148 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 }));
 
 import { handleYieldRankings } from "../cache-handlers";
+
+const V748_RANKINGS_UPDATED_AT = 1_778_679_602;
+
+const v748RankingsPayload = {
+  rankings: [
+    {
+      id: "usdc-circle",
+      symbol: "USDC",
+      name: "USD Coin",
+      currentApy: 4.72,
+      apy7d: 4.69,
+      apy30d: 4.61,
+      apyBase: 4.61,
+      apyReward: null,
+      yieldSource: "Aave V3 USDC",
+      yieldSourceUrl: "https://aave.com/",
+      yieldType: "lending-opportunity",
+      dataSource: "protocol-api",
+      sourceTvlUsd: 268_000_000,
+      pharosYieldScore: 11,
+      safetyScore: 40,
+      safetyGrade: "NR",
+      yieldToRisk: 0.0756,
+      excessYield: 0.48,
+      benchmarkKey: "USD",
+      benchmarkLabel: "USD 3M T-Bill",
+      benchmarkCurrency: "USD",
+      benchmarkRate: 4.13,
+      benchmarkRecordDate: "2026-05-12",
+      benchmarkIsFallback: false,
+      benchmarkFallbackMode: null,
+      benchmarkSelectionMode: "native",
+      benchmarkIsProxy: false,
+      yieldStability: 0.94,
+      apyVariance30d: 0.06,
+      apyMin30d: 4.4,
+      apyMax30d: 4.9,
+      warningSignals: [],
+      altSources: [
+        {
+          sourceKey: "defillama:auto:compound-v3:usdc",
+          yieldSource: "Compound V3 USDC",
+          yieldSourceUrl: "https://compound.finance/",
+          yieldType: "lending-opportunity",
+          currentApy: 4.21,
+          apy30d: 4.1,
+          sourceTvlUsd: 191_000_000,
+          dataSource: "defillama-auto",
+        },
+      ],
+      provenance: {
+        sourceKey: "protocol-api:aave-v3:usdc",
+        sourceObservedAt: V748_RANKINGS_UPDATED_AT,
+        sourceAgeSeconds: 0,
+        comparisonAnchorObservedAt: null,
+        comparisonAnchorAgeSeconds: null,
+        confidenceTier: "curated",
+        selectionMethod: "confidence-weighted",
+        selectionReason: "curated source selected by confidence-weighted arbitration",
+        sourceSwitch: false,
+        previousBestSourceKey: "protocol-api:aave-v3:usdc",
+        usedLegacyHistory: false,
+        usedDefaultSafety: true,
+        safetyProvenance: "cached-publish",
+        benchmarkKey: "USD",
+        benchmarkLabel: "USD 3M T-Bill",
+        benchmarkCurrency: "USD",
+        benchmarkRate: 4.13,
+        benchmarkRecordDate: "2026-05-12",
+        benchmarkIsFallback: false,
+        benchmarkFallbackMode: null,
+        benchmarkSelectionMode: "native",
+        benchmarkIsProxy: false,
+        anomalies: [],
+      },
+    },
+  ],
+  riskFreeRate: 4.13,
+  benchmarks: {
+    USD: {
+      key: "USD",
+      label: "USD 3M T-Bill",
+      currency: "USD",
+      rate: 4.13,
+      recordDate: "2026-05-12",
+      fetchedAt: V748_RANKINGS_UPDATED_AT,
+      ageSeconds: 0,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      fallbackMode: null,
+      isProxy: false,
+    },
+  },
+  scalingFactor: 8,
+  medianApy: 3.55,
+  updatedAt: V748_RANKINGS_UPDATED_AT,
+  provenance: {
+    selectionMethod: "confidence-weighted",
+    benchmark: {
+      key: "USD",
+      label: "USD 3M T-Bill",
+      currency: "USD",
+      rate: 4.13,
+      recordDate: "2026-05-12",
+      fetchedAt: V748_RANKINGS_UPDATED_AT,
+      ageSeconds: 0,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      fallbackMode: null,
+      isProxy: false,
+    },
+    benchmarks: {
+      USD: {
+        key: "USD",
+        label: "USD 3M T-Bill",
+        currency: "USD",
+        rate: 4.13,
+        recordDate: "2026-05-12",
+        fetchedAt: V748_RANKINGS_UPDATED_AT,
+        ageSeconds: 0,
+        source: "fred-dgs3mo",
+        isFallback: false,
+        fallbackMode: null,
+        isProxy: false,
+      },
+    },
+    dlPools: {
+      mode: "dex-cache",
+      updatedAt: V748_RANKINGS_UPDATED_AT - 240,
+      ageSeconds: 240,
+      poolCount: 842,
+      fallbackMode: null,
+    },
+    safetySnapshot: {
+      kind: "degraded",
+      coverageRatio: 0.8464,
+      coveredCount: 109,
+      trackedCount: 129,
+      reason: null,
+    },
+  },
+} satisfies YieldRankingsResponse;
 
 function makeCacheDb(value: unknown, updatedAt: number) {
   const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
@@ -256,6 +399,74 @@ describe("handleYieldRankings", () => {
     });
     expect(res.headers.get("Warning")).toContain("199");
     expect(body._meta.ageSeconds).toBe(30);
+  });
+
+  it("parses a production-shaped v7.48 old rankings payload through the schema and handler", async () => {
+    expect(YieldRankingsResponseSchema.parse(v748RankingsPayload).rankings[0]?.publishedRank).toBeUndefined();
+
+    const db = makeCacheDb(v748RankingsPayload, V748_RANKINGS_UPDATED_AT);
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse & { _meta: { ageSeconds: number } };
+
+    expect(res.status).toBe(200);
+    expect(body.rankings).toHaveLength(1);
+    expect(body.rankings[0]?.publishedRank).toBeUndefined();
+    expect(body.rankings[0]?.sourceRisk).toBeUndefined();
+    expect(body.publication).toBeUndefined();
+  });
+
+  it("accepts nullable optional publication, source-risk, rank, and attribution scaffolding", () => {
+    const parsed = YieldRankingsResponseSchema.parse({
+      ...v748RankingsPayload,
+      publication: {
+        generationId: null,
+        updatedAt: null,
+        cutoffAt: null,
+        schemaVersion: null,
+        status: null,
+      },
+      rankings: v748RankingsPayload.rankings.map((row) => ({
+        ...row,
+        publicationGenerationId: null,
+        publishedRank: null,
+        liveRank: 1,
+        sourceRisk: {
+          sourceRiskPenalty: null,
+          sourceDepthRatio: null,
+          rewardShare: null,
+          sourceAgeSeconds: null,
+          deploymentPlace: null,
+          venueProtocol: null,
+          venueChain: null,
+          venueRiskTier: "unknown",
+          investabilityFlags: [],
+        },
+        rankChangeAttribution: {
+          previousRank: null,
+          rankDelta: null,
+          previousPys: null,
+          pysDelta: null,
+          primaryDriver: null,
+          driverContributions: {
+            apy: null,
+            sourceRisk: null,
+          },
+        },
+        altSources: row.altSources.map((alt) => ({
+          ...alt,
+          sourceRisk: {
+            sourceRiskPenalty: null,
+            venueRiskTier: null,
+          },
+        })),
+      })),
+    });
+
+    expect(parsed.publication?.generationId).toBeNull();
+    expect(parsed.rankings[0]?.liveRank).toBe(1);
+    expect(parsed.rankings[0]?.sourceRisk?.venueRiskTier).toBe("unknown");
+    expect(parsed.rankings[0]?.rankChangeAttribution?.driverContributions?.sourceRisk).toBeNull();
+    expect(parsed.rankings[0]?.altSources[0]?.sourceRisk?.sourceRiskPenalty).toBeNull();
   });
 
   it("returns 503 when cache is empty", async () => {

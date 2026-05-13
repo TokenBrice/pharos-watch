@@ -7,6 +7,20 @@ import type { ReportCardGrade } from "./report-cards";
 export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
+export type YieldPublicationStatus = "staged" | "published" | "failed";
+export type YieldVenueRiskTier = "low" | "medium" | "high" | "unknown";
+const YIELD_RANK_CHANGE_DRIVER_VALUES = [
+  "apy",
+  "benchmark",
+  "stablecoin-safety",
+  "source-risk",
+  "source-switch",
+  "freshness",
+  "volatility",
+  "tvl-depth",
+] as const;
+export type YieldRankChangeDriver =
+  (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
 
 export interface YieldResponseWarning {
   code: string;
@@ -23,6 +37,44 @@ export interface AltYieldSource {
   apy30d: number;
   sourceTvlUsd: number | null;
   dataSource: string;
+  sourceRisk?: YieldSourceRisk | null;
+}
+
+export interface YieldPublicationMetadata {
+  generationId?: string | null;
+  updatedAt?: number | null;
+  cutoffAt?: number | null;
+  schemaVersion?: number | null;
+  status?: YieldPublicationStatus | null;
+}
+
+export interface YieldSourceRisk {
+  sourceRiskPenalty?: number | null;
+  sourceDepthRatio?: number | null;
+  rewardShare?: number | null;
+  sourceAgeSeconds?: number | null;
+  deploymentPlace?: string | null;
+  venueProtocol?: string | null;
+  venueChain?: string | null;
+  venueRiskTier?: YieldVenueRiskTier | null;
+  investabilityFlags?: string[];
+}
+
+export interface YieldRankChangeAttribution {
+  previousRank?: number | null;
+  rankDelta?: number | null;
+  previousPys?: number | null;
+  pysDelta?: number | null;
+  primaryDriver?: YieldRankChangeDriver | null;
+  driverContributions?: {
+    apy?: number | null;
+    benchmark?: number | null;
+    stablecoinSafety?: number | null;
+    sourceRisk?: number | null;
+    freshness?: number | null;
+    volatility?: number | null;
+    tvlDepth?: number | null;
+  } | null;
 }
 
 export interface YieldBenchmarkMeta {
@@ -110,6 +162,8 @@ export interface YieldHistoryPoint {
   dataSource?: string | null;
   isBest?: boolean;
   sourceSwitch?: boolean;
+  publicationGenerationId?: string | null;
+  sourceRisk?: YieldSourceRisk | null;
 }
 
 const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
@@ -127,6 +181,48 @@ const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
   dataSource: z.string().nullable().optional(),
   isBest: z.boolean().optional(),
   sourceSwitch: z.boolean().optional(),
+  publicationGenerationId: z.string().nullable().optional(),
+  sourceRisk: z.lazy(() => YieldSourceRiskSchema).nullable().optional(),
+});
+
+const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.object({
+  generationId: z.string().nullable().optional(),
+  updatedAt: z.number().nullable().optional(),
+  cutoffAt: z.number().nullable().optional(),
+  schemaVersion: z.number().int().positive().nullable().optional(),
+  status: z.enum(["staged", "published", "failed"]).nullable().optional(),
+});
+
+const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
+  sourceRiskPenalty: z.number().min(1).nullable().optional(),
+  sourceDepthRatio: z.number().min(0).nullable().optional(),
+  rewardShare: z.number().min(0).max(1).nullable().optional(),
+  sourceAgeSeconds: z.number().int().min(0).nullable().optional(),
+  deploymentPlace: z.string().nullable().optional(),
+  venueProtocol: z.string().nullable().optional(),
+  venueChain: z.string().nullable().optional(),
+  venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),
+  investabilityFlags: z.array(z.string()).optional(),
+});
+
+const YieldRankChangeAttributionSchema: z.ZodType<YieldRankChangeAttribution> = z.object({
+  previousRank: z.number().int().positive().nullable().optional(),
+  rankDelta: z.number().int().nullable().optional(),
+  previousPys: z.number().nullable().optional(),
+  pysDelta: z.number().nullable().optional(),
+  primaryDriver: z.enum(YIELD_RANK_CHANGE_DRIVER_VALUES).nullable().optional(),
+  driverContributions: z
+    .object({
+      apy: z.number().nullable().optional(),
+      benchmark: z.number().nullable().optional(),
+      stablecoinSafety: z.number().nullable().optional(),
+      sourceRisk: z.number().nullable().optional(),
+      freshness: z.number().nullable().optional(),
+      volatility: z.number().nullable().optional(),
+      tvlDepth: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const AltYieldSourceSchema = z.object({
@@ -138,6 +234,7 @@ const AltYieldSourceSchema = z.object({
   apy30d: z.number(),
   sourceTvlUsd: z.number().nullable(),
   dataSource: z.string(),
+  sourceRisk: YieldSourceRiskSchema.nullable().optional(),
 });
 
 const YieldBenchmarkMetaSchema = z.object({
@@ -245,6 +342,11 @@ export interface YieldRanking {
   warningSignals: string[];
   altSources: AltYieldSource[];
   provenance?: YieldRankingProvenance | null;
+  publicationGenerationId?: string | null;
+  publishedRank?: number | null;
+  liveRank?: number | null;
+  sourceRisk?: YieldSourceRisk | null;
+  rankChangeAttribution?: YieldRankChangeAttribution | null;
 }
 
 const YieldRankingSchema = z.object({
@@ -282,6 +384,11 @@ const YieldRankingSchema = z.object({
   warningSignals: z.array(z.string()),
   altSources: z.array(AltYieldSourceSchema).optional().default([]),
   provenance: YieldRankingProvenanceSchema.nullable().optional(),
+  publicationGenerationId: z.string().nullable().optional(),
+  publishedRank: z.number().int().positive().nullable().optional(),
+  liveRank: z.number().int().positive().nullable().optional(),
+  sourceRisk: YieldSourceRiskSchema.nullable().optional(),
+  rankChangeAttribution: YieldRankChangeAttributionSchema.nullable().optional(),
 });
 
 export interface YieldRankingsResponse {
@@ -293,6 +400,7 @@ export interface YieldRankingsResponse {
   updatedAt: number;
   provenance?: YieldRankingsProvenance | null;
   warnings?: YieldResponseWarning[];
+  publication?: YieldPublicationMetadata | null;
 }
 
 export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
@@ -312,6 +420,7 @@ export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.o
       }),
     )
     .optional(),
+  publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
 
 export interface YieldHistoryResponse {
@@ -319,6 +428,7 @@ export interface YieldHistoryResponse {
   history: YieldHistoryPoint[];
   warning?: string;
   methodology: MethodologyEnvelope;
+  publication?: YieldPublicationMetadata | null;
 }
 
 export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.object({
@@ -326,4 +436,5 @@ export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.obj
   history: z.array(YieldHistoryPointSchema),
   warning: z.string().optional(),
   methodology: MethodologyEnvelopeSchema,
+  publication: YieldPublicationMetadataSchema.nullable().optional(),
 });

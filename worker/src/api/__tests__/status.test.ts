@@ -217,6 +217,7 @@ describe("handleStatus", () => {
       coingeckoPriceDiff: Record<string, unknown> | null;
       d1Usage: Record<string, unknown> | null;
       liquidityHealth: Record<string, unknown> | null;
+      yieldHealth: Record<string, unknown> | null;
       discoveryCandidates: Array<Record<string, unknown>> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
       reserveComposition: Record<string, unknown>;
@@ -236,6 +237,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("coingeckoPriceDiff");
     expect(body).toHaveProperty("d1Usage");
     expect(body).toHaveProperty("liquidityHealth");
+    expect(body).toHaveProperty("yieldHealth");
     expect(body).toHaveProperty("discoveryCandidates");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(body).toHaveProperty("reserveComposition");

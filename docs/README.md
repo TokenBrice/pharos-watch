@@ -43,6 +43,12 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
 - [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
 - [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+- [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage
+- [runbooks/yield-deterministic-cooldown.md](./runbooks/yield-deterministic-cooldown.md) - deterministic on-chain all-fail and cooldown triage
+- [runbooks/yield-health.md](./runbooks/yield-health.md) - admin yield health summary thresholds and remediation
+- [runbooks/yield-history-cleanup-writer-pause.md](./runbooks/yield-history-cleanup-writer-pause.md) - yield-history cleanup writer-pause guard and restore workflow
+- [runbooks/yield-rankings-stale-or-missing.md](./runbooks/yield-rankings-stale-or-missing.md) - stale, malformed, or missing yield rankings cache triage
+- [runbooks/yield-supplemental-snapshot.md](./runbooks/yield-supplemental-snapshot.md) - empty, malformed, or stale supplemental yield snapshot triage
 
 ## Incident Response
 

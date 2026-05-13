@@ -6,7 +6,7 @@ Operational reference for the split status surfaces: public `/status/` read-only
 
 ## Scope
 
-The operator dashboard combines eight signals:
+The operator dashboard combines nine signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
@@ -14,8 +14,9 @@ The operator dashboard combines eight signals:
 4. Status state machine (`/api/status` -> `state`, `timeline`, `causes`, `summary`)
 5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
 6. Live reserve sync health (`/api/status` -> `reserveComposition`)
-7. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
-8. Site-vs-external demand attribution (`useRequestSourceStats` -> `GET /api/request-source-stats`)
+7. Yield health (`/api/status` -> `yieldHealth`)
+8. Live endpoint probing (`useEndpointProbes`) + filtered history (`useStatusHistory`)
+9. Site-vs-external demand attribution (`useRequestSourceStats` -> `GET /api/request-source-stats`)
 
 The repo now ships two related surfaces:
 
@@ -320,6 +321,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
 - Multiple critical crons simultaneously unhealthy (`summary.availabilityImpactingUnhealthyCrons >= 2`) also escalate to `stale`.
 - Cache-age stale (`worstCacheRatio > STATUS_CACHE_RATIO_THRESHOLDS.stale`) and the `publicAvailabilityFloor` (circuit outages, mint/burn sync stale) paths remain unchanged.
 - `reserveComposition`: live reserve sync coverage summary (`configuredCoins`, `freshCoins`, `staleCoins`, `missingCoins`, `degradedCoins`, `errorCoins`, `corruptCoins`, `independentFreshEligible`, `independentFreshUnverified`, `staticValidatedFresh`, `weakProbeFresh`, `persistentlyStaleIndependentCoins`, `writeTimeoutUncertain`, `deferredCoins`, `runBudgetTruncated`, `deferredAt`, `nextCursorStablecoinId`, `lastSuccessAt`, `oldestFreshAgeSec`, `status`, `freshCoverageRatio`, `authoritativeFreshCoverageRatio`). Any persistent stale independent feed keeps the reserve composition status at least `degraded` even if aggregate fresh coverage remains high.
+- `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, live-safety hydration coverage, supplemental cache age, benchmark age/fallback mode, coverage-audit age, latest cron status, a field-level status, status-impact class, and the yield runbook link.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from CoinGecko spot
 - `d1Usage`: admin-only live D1 database telemetry (`databaseSizeBytes`, `numTables`, `readReplicationMode`, `readQueries24h`, `writeQueries24h`, `rowsRead24h`, `rowsWritten24h`) sourced from Cloudflare's D1 control-plane and analytics APIs when the dedicated worker bindings are configured
 - `reserveDrift`: optional array of coins where the independent live-derived collateral quality score diverges from curated by more than 15 points (`coinId`, `liveCollateralScore`, `curatedCollateralScore`, `delta`), sorted by delta descending. Omitted when no drift exceeds the threshold.
@@ -372,6 +374,19 @@ Behavior:
 - `persistentlyStaleIndependentCoins` lists independent feeds older than the persistent-stale threshold and keeps the reserve sync card/action cause degraded until the source recovers
 - `writeTimeoutUncertain` counts coins whose latest attempt hit the D1 write-timeout / finalize-rejection path, meaning ops should treat the authoritative state as ambiguous until the next clean run
 - `runBudgetTruncated`, `deferredCoins`, `deferredAt`, and `nextCursorStablecoinId` expose whether the latest live-reserve run stopped at its internal budget and where the next run will resume
+
+### Yield health summary
+
+`yieldHealth` is exposed on the admin `/api/status` payload and rendered by `YieldHealthCard` in the Pipeline lane. It does not read live upstreams and does not change yield scoring, source arbitration, methodology, or `/yield/` route behavior.
+
+| Field | Source | Threshold | Failure mode | Status impact | Runbook |
+| --- | --- | --- | --- | --- | --- |
+| `rankingCount`, `rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus` | `cache["yield-rankings"]` payload + row `updated_at` | hourly producer; `>8x` degraded, `>12x` stale | missing/malformed rankings become `stale` | public-critical when stale/missing because public yield reads depend on it | `docs/runbooks/yield-health.md` |
+| `safetyCoverage` | `yield-rankings.provenance.safetySnapshot` | degraded below `0.75` coverage | missing provenance is `unknown` | admin-watch only; sparse safety hydration does not change public status by itself | `docs/runbooks/yield-health.md` |
+| `supplemental` | `cache["yield:supplemental-sources:v1"].updated_at` | degraded above 6h | missing cache is `unknown`; stale supplemental coverage only reduces optional source breadth | admin-watch unless a future PR explicitly promotes a source family to critical | `docs/runbooks/yield-health.md` |
+| `benchmark` | `yield-rankings.provenance.benchmark` | degraded above 48h or whenever fallback mode is active | missing provenance is `unknown`; retained fallback is degraded, stale retained fallback is stale | admin-watch; benchmark fallback is already visible in yield provenance and cron status | `docs/runbooks/yield-health.md` |
+| `coverageAudit` | `cache["yield-coverage-audit"].updated_at` | degraded above 45d | missing cache is `unknown` | admin-watch; monthly audit gaps do not affect public yield availability | `docs/runbooks/yield-health.md` |
+| `latestCronStatus`, `latestCronStartedAt` | `crons["sync-yield-data"].lastRun` | existing cron health rules | absent cron metadata is `null` | inherited from cron cards; no separate escalation | `docs/runbooks/yield-health.md` |
 
 ### Telegram bot metrics
 
@@ -597,13 +612,14 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `src/components/status/telegram-bot-stats.tsx`       | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                                                                                          |
 | `src/components/status/discovery-candidates.tsx`     | Discovery candidates card — untracked stablecoin list with dismiss actions                                                                                                                                                                                                             |
 | `src/components/status/price-source-health.tsx`      | Price source health card — confidence distribution, source breakdown, divergences                                                                                                                                                                                                      |
+| `src/components/status/yield-health.tsx`             | Yield health card — rankings count/freshness, safety hydration coverage, supplemental cache age, benchmark fallback/age, coverage-audit age, and runbook link                                                                                                                          |
 | `src/components/status/mint-burn-reconciliation.tsx` | Mint/burn reconciliation card — 24h canonical-chain flow vs chain-supply delta diagnostics                                                                                                                                                                                             |
 | `src/hooks/use-status.ts`                            | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) through the ops-host same-origin proxy                                                                                                                                                               |
 | `src/hooks/api-hooks.ts`                             | Shared read hooks consumed by the dashboard model (`useHealth`, `usePegSummary`, `useDexLiquidity`, `useReportCards`, `useYieldRankings`)                                                                                                                                              |
 | `src/hooks/use-endpoint-probes.ts`                   | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`); admin probes switch to same-origin proxy mode on the ops host                                                                                                                                     |
 | `src/hooks/use-status-history.ts`                    | Shared polling policy for `/api/status-history` + dashboard time-window filters through the ops-host same-origin proxy                                                                                                                                                                 |
 | `functions/api/admin/[[path]].ts`                    | Pages Functions admin proxy: ops-host gating, upstream method/path allowlisting, and service-token forwarding to `ops-api.pharos.watch`                                                                                                                                                |
-| `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, reconciliation, discovery mcap) — imported by both worker and frontend                                                                        |
+| `shared/lib/status-thresholds.ts`                    | Single source of truth for all status thresholds (cache ratios, missing prices, blacklist gaps, on-chain supply, price confidence bands, yield health, reconciliation, discovery mcap) — imported by both worker and frontend                                                          |
 | `shared/lib/cron-jobs.ts`                            | Shared cron expressions, display grouping, trigger isolation metadata, and per-job intervals used by both frontend and worker                                                                                                                                                          |
 | `shared/lib/api-endpoints/`                        | Shared endpoint contract metadata: paths, probe groups, method/cache flags, status-page actions                                                                                                                                                                                        |
 | `worker/src/routes/registry.ts`                      | Single worker-side static route definition list keyed by shared endpoint metadata                                                                                                                                                                                                      |
@@ -612,6 +628,7 @@ This is an operator integrity signal, not a public user-facing score. Large gaps
 | `worker/src/api/status-history.ts`                   | Machine-readable status timeline/history endpoint                                                                                                                                                                                                                                      |
 | `worker/src/api/health.ts`                           | Public health endpoint for cache/circuit observability                                                                                                                                                                                                                                 |
 | `worker/src/lib/status-reliability.ts`               | Stable facade exporting the status reliability layer used by API/cron callers                                                                                                                                                                                                           |
+| `worker/src/lib/status/yield-health.ts`              | Yield health summary loader; reads existing yield cache rows and cron metadata only                                                                                                                                                                                                     |
 | `worker/src/lib/status-state-store.ts`               | Hysteresis state persistence, snapshots, and transition history                                                                                                                                                                                                                         |
 | `worker/src/lib/status-probe-store.ts`               | Probe-run persistence and latest-probe loading                                                                                                                                                                                                                                          |
 | `worker/src/lib/status-discrepancy-store.ts`         | Divergence/probe-failure streak persistence and alert timestamps                                                                                                                                                                                                                        |

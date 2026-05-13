@@ -153,6 +153,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
       transitionsLast24h: 0,
     },
     liquidityHealth: null,
+    yieldHealth: null,
     priceSourceHealth: null,
     priceProviderDiagnostics: null,
     gtProbe: null,

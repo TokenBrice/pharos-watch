@@ -10,17 +10,14 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
-import type { YieldRanking } from "@shared/types";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
-import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
-import { getYieldTypeLabel, matchesYieldSearch } from "@/components/yield-leaderboard-utils";
+import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
-  { id: "rank", label: "#", className: "w-[50px] text-right" },
+  { id: "rank", label: "View #", className: "w-[58px] text-right" },
   { id: "coin", label: "Coin", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "text-right", title: "30-day average annual percentage yield" },
   { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
@@ -52,43 +49,19 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
 const COLUMN_COUNT = YIELD_COLUMNS.length;
 
 interface YieldLeaderboardProps {
-  rankings: YieldRanking[];
+  rows: YieldViewModelRow[];
   logos: Record<string, string>;
   riskFreeRate: number;
   medianApy: number;
+  emptyMessage?: string;
 }
 
-export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: YieldLeaderboardProps) {
-  const [activeLabels, setActiveLabels] = useState<Set<string>>(
-    () => new Set(Object.values(YIELD_TYPE_LABELS)),
-  );
-  const [hideWarnings, setHideWarnings] = useState(false);
+export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMessage }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
   const sheetRanking = useMemo(
-    () => (sheetRankingId ? rankings.find((r) => r.id === sheetRankingId) ?? null : null),
-    [rankings, sheetRankingId],
-  );
-
-  const typeFiltered = useMemo(
-    () => rankings.filter((ranking) => activeLabels.has(getYieldTypeLabel(ranking.yieldType))),
-    [rankings, activeLabels],
-  );
-  const warningFiltered = useMemo(
-    () => (hideWarnings
-      ? typeFiltered.filter((ranking) => ranking.warningSignals.length === 0)
-      : typeFiltered),
-    [hideWarnings, typeFiltered],
-  );
-
-  const normalizedSearchQuery = searchQuery.trim();
-  const searchFiltered = useMemo(
-    () => (normalizedSearchQuery
-      ? warningFiltered.filter((ranking) => matchesYieldSearch(ranking, normalizedSearchQuery))
-      : warningFiltered),
-    [normalizedSearchQuery, warningFiltered],
+    () => (sheetRankingId ? rows.find((r) => r.id === sheetRankingId) ?? null : null),
+    [rows, sheetRankingId],
   );
 
   const {
@@ -100,13 +73,12 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     effectivePage,
     totalPages,
     paginatedRows: paginated,
-    pageStartIndex,
     rangeStart,
     rangeEnd,
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<YieldRanking, YieldTableSortKey>(searchFiltered, {
+  } = useSortedPaginatedTable<YieldViewModelRow, YieldTableSortKey>(rows, {
     defaultKey: "pys",
     defaultDirection: "desc",
     compareRows: compareYieldRows,
@@ -118,25 +90,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
     () => (expandedId !== null && paginated.some((row) => row.id === expandedId) ? expandedId : null),
     [expandedId, paginated],
   );
-  const handleToggleLabel = useCallback((label: string) => {
-    setActiveLabels((previous) => {
-      const next = new Set(previous);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
-  }, []);
-  const handleSelectRanking = useCallback((rankingId: string) => {
-    setSearchQuery("");
-    setSearchOpen(false);
-    setExpandedId(rankingId);
-    requestAnimationFrame(() => {
-      document.getElementById(`yield-row-${rankingId}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    });
-  }, []);
   const handleToggleExpanded = useCallback((stablecoinId: string) => {
     setExpandedId((current) => (current === stablecoinId ? null : stablecoinId));
   }, []);
@@ -153,20 +106,6 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
           toggleSort,
           getAriaSortValue,
         }}
-        topSlot={
-          <YieldLeaderboardControls
-            rankings={typeFiltered}
-            activeLabels={activeLabels}
-            hideWarnings={hideWarnings}
-            searchOpen={searchOpen}
-            searchQuery={searchQuery}
-            onToggleLabel={handleToggleLabel}
-            onHideWarningsChange={setHideWarnings}
-            onSearchQueryChange={setSearchQuery}
-            onSearchOpenChange={setSearchOpen}
-            onSelectRanking={handleSelectRanking}
-          />
-        }
         pagination={sorted.length > 0 ? {
           page: effectivePage,
           totalPages,
@@ -178,12 +117,10 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
           noun: "coins",
         } : undefined}
       >
-        {paginated.map((row, index) => (
+        {paginated.map((row) => (
           <YieldLeaderboardTableRow
             key={row.id}
             row={row}
-            index={index}
-            pageStartIndex={pageStartIndex}
             logos={logos}
             riskFreeRate={riskFreeRate}
             medianApy={medianApy}
@@ -197,7 +134,7 @@ export function YieldLeaderboard({ rankings, logos, riskFreeRate, medianApy }: Y
         {sorted.length === 0 && (
           <TableRow>
             <TableCell colSpan={COLUMN_COUNT} className="text-center text-muted-foreground py-12">
-              No yield data available.
+              {emptyMessage ?? "No yield data available."}
             </TableCell>
           </TableRow>
         )}

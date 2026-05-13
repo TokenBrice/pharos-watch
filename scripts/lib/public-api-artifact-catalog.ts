@@ -548,7 +548,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
     summary: "Yield rankings",
-    description: "Yield-bearing stablecoin rankings with safety and benchmark-aware context.",
+    description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
     tags: ["Yield"],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
@@ -558,7 +558,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "yield-history",
     path: API_PATHS.yieldHistoryBase(),
     summary: "Yield history",
-    description: "Historical yield observations for a stablecoin.",
+    description: "Historical yield observations for a stablecoin, with optional publication/source-risk metadata fields.",
     tags: ["Yield", "History"],
     parameters: [
       YIELD_HISTORY_STABLECOIN_QUERY_PARAM,
@@ -574,7 +574,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     postman: {
       folder: "Historical data",
       order: 2,
-      description: "Historical yield observations for a required stablecoin. `days` accepts 1-365; `mode` accepts `best` or `source`.",
+      description: "Historical yield observations for a required stablecoin, with optional publication/source-risk metadata fields. `days` accepts 1-365; `mode` accepts `best` or `source`.",
       query: { stablecoin: "{{stablecoinId}}", days: "{{days}}", mode: "best" },
     },
   },

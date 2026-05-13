@@ -2273,6 +2273,30 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `medianApy`     | `number`         | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                                                     |
 | `updatedAt`     | `number`         | Unix seconds when the rankings were last computed                                                                                                         |
 | `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
+| `publication`   | `object \| null` | Optional publication metadata for generation-aware payloads; omitted on legacy payloads                                                                     |
+
+Preparatory optional fields added for the v8 schema scaffold are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Clients must not infer source-risk semantics when source-risk values are missing or `null`.
+
+| Field                         | Surface                 | Type                                                                                                                                    | Population status |
+| ----------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `publication.generationId`    | rankings/history root   | `string \| null \| undefined`                                                                                                           | Publisher generation identifier, e.g. `yield-1774526400`; omitted on legacy payloads |
+| `publication.updatedAt`       | rankings/history root   | `number \| null \| undefined`                                                                                                           | Unix seconds when the generation was computed |
+| `publication.cutoffAt`        | rankings/history root   | `number \| null \| undefined`                                                                                                           | Latest history timestamp approved for public reads |
+| `publication.schemaVersion`   | rankings/history root   | `number \| null \| undefined`                                                                                                           | Payload-generation schema version |
+| `publication.status`          | rankings/history root   | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                              | Public payloads should expose `published`; staged/failed states are retained in D1 for operations |
+| `publicationGenerationId`     | ranking/history rows    | `string \| null \| undefined`                                                                                                           | Row-to-generation join identifier; `null` on legacy rows |
+| `publishedRank`               | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Stable rank from the published cache order before live Safety Score hydration |
+| `liveRank`                    | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Reserved for post-hydration rank |
+| `sourceRisk.sourceRiskPenalty` | ranking/history/source rows | `number >= 1 \| null \| undefined`                                                                                                  | Reserved; unknown remains neutral |
+| `sourceRisk.sourceDepthRatio` | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                  | Reserved |
+| `sourceRisk.rewardShare`      | ranking/history/source rows | `0..1 number \| null \| undefined`                                                                                                  | Reserved |
+| `sourceRisk.sourceAgeSeconds` | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                         | Reserved |
+| `sourceRisk.deploymentPlace`  | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved; no public enum semantics yet |
+| `sourceRisk.venueProtocol`    | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved |
+| `sourceRisk.venueChain`       | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved |
+| `sourceRisk.venueRiskTier`    | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                     | Reserved; unknown remains neutral |
+| `sourceRisk.investabilityFlags` | ranking/history/source rows | `string[] \| undefined`                                                                                                             | Reserved |
+| `rankChangeAttribution`       | ranking rows            | `object \| null \| undefined`                                                                                                           | Reserved for future rank-change explanations |
 
 **`YieldRanking`**
 
@@ -2312,6 +2336,11 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `warningSignals`         | `string[]`                                                     | Active warning-signal flags for the selected best source                                                                                            |
 | `altSources`             | `AltYieldSource[]`                                             | Additional non-selected source rows for the same coin                                                                                               |
 | `provenance`             | `object \| null`                                               | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing   |
+| `publicationGenerationId`| `string \| null \| undefined`                                  | Publication-generation identifier, or `null`/omitted for legacy rows                                                                                |
+| `publishedRank`          | `number \| null \| undefined`                                  | Stable publication-order rank from the cached generation                                                                                            |
+| `liveRank`               | `number \| null \| undefined`                                  | Reserved optional post-hydration rank                                                                                                               |
+| `sourceRisk`             | `object \| null \| undefined`                                  | Reserved optional source-risk scaffold; missing or unknown values have no score semantics in v7.48                                                  |
+| `rankChangeAttribution`  | `object \| null \| undefined`                                  | Reserved optional rank-change attribution scaffold                                                                                                  |
 
 When present, `YieldRanking.provenance` includes:
 
@@ -2323,7 +2352,7 @@ When present, `YieldRanking.provenance` includes:
 
 ### `GET /api/yield-history`
 
-Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
+Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Generation-aware rows are returned only after their publication generation is marked `published`; legacy rows remain readable through the existing cutoff fallback. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
 
 For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`.
 
@@ -2354,9 +2383,16 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "yieldSource": "Ethena staking (sUSDe)"
   },
   "history": [YieldHistoryPoint, "..."],
+  "publication": {
+    "generationId": "yield-1772000000",
+    "updatedAt": 1772000000,
+    "cutoffAt": 1772000000,
+    "schemaVersion": 1,
+    "status": "published"
+  },
   "methodology": {
-    "version": "7.47",
-    "currentVersion": "7.47",
+    "version": "7.48",
+    "currentVersion": "7.48",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2368,6 +2404,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `history`     | `YieldHistoryPoint[]`     | History rows sorted by `date` ASC                                                |
 | `methodology` | `object`                  | Yield methodology envelope for the response                                      |
 | `warning`     | `string \| undefined`     | Present when freshness lookup fails and the handler falls back to cache metadata |
+| `publication` | `object \| null`          | Optional published-generation metadata; omitted for legacy rankings payloads              |
 
 **`YieldHistoryPoint`**
 
@@ -2386,7 +2423,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "yieldType": "nav-appreciation",
   "dataSource": "rate-derived",
   "isBest": true,
-  "sourceSwitch": false
+  "sourceSwitch": false,
+  "publicationGenerationId": "yield-1771500000"
 }
 ```
 
@@ -2406,6 +2444,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `dataSource`     | `string \| null` | Underlying data-source family                                                                          |
 | `isBest`         | `boolean`        | Whether this row was the selected best source at that timestamp                                        |
 | `sourceSwitch`   | `boolean`        | True when the historically selected best source changed at this row                                    |
+| `publicationGenerationId` | `string \| null \| undefined` | Published generation identifier for generation-aware rows; `null`/omitted on legacy rows                  |
+| `sourceRisk`     | `object \| null \| undefined` | Reserved optional source-risk scaffold; missing or unknown values have no score semantics in v7.48     |
 
 ---
 
@@ -2914,7 +2954,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
 - Browser: `https://ops.pharos.watch/admin/` -> same-origin `/api/admin/status`
 - CLI: `CF-Access-Client-Id: <id>` and `CF-Access-Client-Secret: <secret>` against `https://ops-api.pharos.watch/api/status`
 
-**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
+**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`). The JSON below is illustrative rather than exhaustive; the canonical field list lives in `shared/types/status.ts` and currently includes diagnostics such as `summary.transitionsLast24h`, `priceProviderDiagnostics`, `gtProbe`, `cacheBlobSizes`, `yieldHealth`, `reserveDrift`, `classificationWarnings`, and `reserveComposition.persistentlyStaleIndependentCoins`.
 
 ```text
 {
@@ -3174,6 +3214,47 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "currentCoverageClasses": { "primary": 80, "mixed": 20, "fallback": 20, "legacy": 0, "unobserved": 36 },
     "previousCoverageClasses": { "primary": 82, "mixed": 18, "fallback": 25, "legacy": 0, "unobserved": 31 }
   },
+  "yieldHealth": {
+    "status": "healthy",
+    "statusImpact": "admin-watch",
+    "runbookUrl": "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md",
+    "rankingCount": 129,
+    "rankingUpdatedAt": 1771856320,
+    "rankingAgeSec": 133,
+    "rankingMaxAgeSec": 3600,
+    "rankingStatus": "healthy",
+    "safetyCoverage": {
+      "coveredCount": 109,
+      "trackedCount": 129,
+      "coverageRatio": 0.845,
+      "threshold": 0.75,
+      "status": "healthy",
+      "reason": null
+    },
+    "supplemental": {
+      "updatedAt": 1771849200,
+      "ageSec": 7253,
+      "maxAgeSec": 21600,
+      "status": "healthy"
+    },
+    "benchmark": {
+      "fetchedAt": 1771849000,
+      "ageSec": 7453,
+      "maxAgeSec": 172800,
+      "source": "risk_free_rates",
+      "isFallback": false,
+      "fallbackMode": null,
+      "status": "healthy"
+    },
+    "coverageAudit": {
+      "updatedAt": 1769810400,
+      "ageSec": 2046053,
+      "maxAgeSec": 3888000,
+      "status": "healthy"
+    },
+    "latestCronStatus": "ok",
+    "latestCronStartedAt": 1771856300
+  },
   "discoveryCandidates": [
     {
       "id": 12,
@@ -3265,6 +3346,8 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 `d1Usage` is an admin-only live D1 telemetry block. It uses Cloudflare's D1 database info endpoint plus a trailing-24h `d1AnalyticsAdaptiveGroups` GraphQL query to surface current storage size, table count, replication mode, and recent query/row volume. The field is `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker; loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
+
+`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. Safety coverage is admin-watch unless it falls below `0.75`, supplemental cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 

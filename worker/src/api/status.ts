@@ -98,6 +98,7 @@ export function handleStatus(
         summary: raw.summary,
         reserveComposition: raw.reserveComposition,
         liquidityHealth: supplements.liquidityHealth,
+        yieldHealth: supplements.yieldHealth,
         priceSourceHealth: supplements.priceSourceHealth,
         priceProviderDiagnostics: supplements.priceProviderDiagnostics,
         gtProbe: supplements.gtProbe,

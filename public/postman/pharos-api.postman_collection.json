@@ -565,7 +565,7 @@
                 "yield-rankings"
               ]
             },
-            "description": "Yield-bearing stablecoin rankings with safety and benchmark-aware context."
+            "description": "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields."
           },
           "response": []
         },
@@ -760,7 +760,7 @@
                 }
               ]
             },
-            "description": "Historical yield observations for a required stablecoin. `days` accepts 1-365; `mode` accepts `best` or `source`."
+            "description": "Historical yield observations for a required stablecoin, with optional publication/source-risk metadata fields. `days` accepts 1-365; `mode` accepts `best` or `source`."
           },
           "response": []
         },

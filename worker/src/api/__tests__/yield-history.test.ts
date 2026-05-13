@@ -3,7 +3,53 @@ import { mockD1 } from "./helpers/mock-d1";
 import { makeYieldHistoryRow } from "./helpers/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
-import { YieldHistoryResponseSchema } from "@shared/types/yield";
+import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
+
+const v748HistoryPayload = {
+  current: {
+    date: 1_778_679_602,
+    apy: 4.72,
+    apyBase: 4.72,
+    apyReward: null,
+    exchangeRate: null,
+    sourceTvlUsd: 268_000_000,
+    warningSignals: [],
+    sourceKey: "protocol-api:aave-v3:usdc",
+    yieldSource: "Aave V3 USDC",
+    yieldSourceUrl: "https://aave.com/",
+    yieldType: "lending-opportunity",
+    dataSource: "protocol-api",
+    isBest: true,
+    sourceSwitch: false,
+  },
+  history: [
+    {
+      date: 1_778_679_602,
+      apy: 4.72,
+      apyBase: 4.72,
+      apyReward: null,
+      exchangeRate: null,
+      sourceTvlUsd: 268_000_000,
+      warningSignals: [],
+      sourceKey: "protocol-api:aave-v3:usdc",
+      yieldSource: "Aave V3 USDC",
+      yieldSourceUrl: "https://aave.com/",
+      yieldType: "lending-opportunity",
+      dataSource: "protocol-api",
+      isBest: true,
+      sourceSwitch: false,
+    },
+  ],
+  methodology: {
+    version: "7.48",
+    versionLabel: "v7.48",
+    currentVersion: "7.48",
+    currentVersionLabel: "v7.48",
+    changelogPath: "/methodology/yield-changelog/",
+    asOf: 1_778_679_602,
+    isCurrent: true,
+  },
+} satisfies YieldHistoryResponse;
 
 describe("handleYieldHistory", () => {
   afterEach(() => {
@@ -35,6 +81,59 @@ describe("handleYieldHistory", () => {
     expect(body.history[0]).toHaveProperty("isBest");
     expect(body.history[0]).toHaveProperty("sourceSwitch");
     expect(body.methodology).toHaveProperty("version");
+  });
+
+  it("parses a production-shaped v7.48 old history payload through the schema and handler", async () => {
+    expect(YieldHistoryResponseSchema.parse(v748HistoryPayload).publication).toBeUndefined();
+    expect(YieldHistoryResponseSchema.parse(v748HistoryPayload).history[0]?.sourceRisk).toBeUndefined();
+
+    const db = mockD1([{ match: "yield_history", rows: [row] }]);
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
+    expect((body as YieldHistoryResponse).publication).toBeUndefined();
+  });
+
+  it("accepts nullable optional publication and source-risk scaffolding on history payloads", () => {
+    const parsed = YieldHistoryResponseSchema.parse({
+      ...v748HistoryPayload,
+      publication: {
+        generationId: null,
+        updatedAt: null,
+        cutoffAt: null,
+        schemaVersion: null,
+        status: null,
+      },
+      current: {
+        ...v748HistoryPayload.current,
+        publicationGenerationId: null,
+        sourceRisk: {
+          sourceRiskPenalty: null,
+          sourceDepthRatio: null,
+          rewardShare: null,
+          sourceAgeSeconds: null,
+          deploymentPlace: null,
+          venueProtocol: null,
+          venueChain: null,
+          venueRiskTier: null,
+        },
+      },
+      history: v748HistoryPayload.history.map((point) => ({
+        ...point,
+        publicationGenerationId: null,
+        sourceRisk: {
+          sourceRiskPenalty: null,
+          venueRiskTier: "unknown",
+          investabilityFlags: [],
+        },
+      })),
+    });
+
+    expect(parsed.publication?.status).toBeNull();
+    expect(parsed.current?.publicationGenerationId).toBeNull();
+    expect(parsed.history[0]?.sourceRisk?.venueRiskTier).toBe("unknown");
   });
 
   it("returns 200 with empty history when no data", async () => {
@@ -298,6 +397,85 @@ describe("handleYieldHistory", () => {
 
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
     expect(historyQuery?.binds[2]).toBe(latestSuccessfulCronAt);
+  });
+
+  it("uses published generation metadata to cap history and expose row generation IDs", async () => {
+    const publishedAt = 1_774_526_400;
+    const generatedRow = {
+      ...makeYieldHistoryRow({ recorded_at: publishedAt }),
+      publication_generation_id: "yield-1774526400",
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [
+          {
+            key: "yield-rankings",
+            value: JSON.stringify({
+              updatedAt: publishedAt,
+              publication: {
+                generationId: "yield-1774526400",
+                updatedAt: publishedAt,
+                cutoffAt: publishedAt,
+                schemaVersion: 1,
+                status: "published",
+              },
+              rankings: [],
+            }),
+            updated_at: publishedAt,
+          },
+        ],
+      },
+      { match: "yield_history", rows: [generatedRow] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      publication?: { generationId?: string; status?: string };
+      history: Array<{ publicationGenerationId?: string | null }>;
+    };
+    expect(body.publication).toMatchObject({
+      generationId: "yield-1774526400",
+      status: "published",
+    });
+    expect(body.history[0]?.publicationGenerationId).toBe("yield-1774526400");
+
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    expect(historyQuery?.sql).toContain("publication_state = 'published'");
+    expect(historyQuery?.binds[2]).toBe(publishedAt);
+  });
+
+  it("keeps legacy history behavior when the rankings cache has no generation metadata", async () => {
+    const publishedAt = 1_774_526_400;
+    const legacyRow = makeYieldHistoryRow({ recorded_at: publishedAt });
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [
+          {
+            key: "yield-rankings",
+            value: JSON.stringify({ updatedAt: publishedAt, rankings: [] }),
+            updated_at: publishedAt,
+          },
+        ],
+      },
+      { match: "yield_history", rows: [legacyRow] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { publication?: unknown; history: unknown[] };
+    expect(body.publication).toBeUndefined();
+    expect(body.history).toHaveLength(1);
+
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    expect(historyQuery?.sql).not.toContain("publication_state = 'published'");
+    expect(historyQuery?.binds[2]).toBe(publishedAt);
   });
 
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {

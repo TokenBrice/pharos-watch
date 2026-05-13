@@ -1,4 +1,4 @@
-import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldPublicationMetadata, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../../lib/db";
@@ -9,6 +9,7 @@ import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { detectWarningSignals, getRankingStaleThresholdMs } from "../yield-helpers";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
+import { compareCandidates } from "./evaluation-arbitration";
 import { buildYieldSourceProvenance } from "./provenance";
 
 function countYieldRankings(
@@ -61,6 +62,8 @@ function hasDuplicateRankingIds(rankings: Array<{ id: string }>): boolean {
 function evaluatedSourceToRanking(
   source: EvaluatedYieldSource,
   provenance: Record<string, unknown> | null,
+  publicationGenerationId?: string | null,
+  publishedRank?: number,
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
   return {
@@ -101,6 +104,8 @@ function evaluatedSourceToRanking(
     apyMax30d: source.apyMax30d,
     warningSignals: [...source.warnings],
     altSources: [] as AltYieldSource[],
+    ...(publicationGenerationId ? { publicationGenerationId } : {}),
+    ...(publishedRank ? { publishedRank } : {}),
     provenance: provenance
       ? {
           ...provenance,
@@ -122,6 +127,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     safetySnapshot: YieldSafetySnapshotMeta;
     medianApy: number;
     startSec: number;
+    publication?: YieldPublicationMetadata | null;
   },
 ) {
   const bestRows = input.evaluatedSources
@@ -158,10 +164,11 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     altSourcesByCoin.set(source.id, alts);
   }
 
-  const rankings = bestRows.map((source) => {
+  const publicationGenerationId = input.publication?.generationId ?? null;
+  const rankings = bestRows.map((source, index) => {
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
-    const ranking = evaluatedSourceToRanking(source, provenance);
+    const ranking = evaluatedSourceToRanking(source, provenance, publicationGenerationId, index + 1);
     ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
 
     const sourceObservedAt =
@@ -186,6 +193,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     scalingFactor: PYS_SCALING_FACTOR,
     medianApy: input.medianApy,
     updatedAt: input.startSec,
+    ...(input.publication ? { publication: input.publication } : {}),
     provenance: {
       selectionMethod: "confidence-weighted" as const,
       benchmark: input.riskFreeRateMeta,
@@ -194,6 +202,172 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       safetySnapshot: input.safetySnapshot,
     },
   };
+}
+
+export function buildYieldPublicationGenerationId(startSec: number): string {
+  return `yield-${startSec}`;
+}
+
+function buildYieldPublicationMetadata(params: {
+  generationId: string;
+  startSec: number;
+  status: YieldPublicationMetadata["status"];
+}): YieldPublicationMetadata {
+  return {
+    generationId: params.generationId,
+    updatedAt: params.startSec,
+    cutoffAt: params.startSec,
+    schemaVersion: 1,
+    status: params.status,
+  };
+}
+
+export function attachYieldPublicationMetadata<
+  T extends {
+    rankings?: Array<Record<string, unknown>>;
+  },
+>(
+  payload: T,
+  params: {
+    generationId: string;
+    startSec: number;
+    status: YieldPublicationMetadata["status"];
+  },
+): T & { publication: YieldPublicationMetadata } {
+  return {
+    ...payload,
+    publication: buildYieldPublicationMetadata(params),
+    rankings: Array.isArray(payload.rankings)
+      ? payload.rankings.map((ranking, index) => ({
+          ...ranking,
+          publicationGenerationId: params.generationId,
+          publishedRank: index + 1,
+        }))
+      : payload.rankings,
+  };
+}
+
+function buildYieldSourceDecisionEvidence(params: {
+  source: EvaluatedYieldSource;
+  evaluatedSources: EvaluatedYieldSource[];
+  bestSourceKeyByCoin: Map<string, string>;
+  startSec: number;
+  dlPoolsMeta: YieldSourceInputMeta;
+}): {
+  selectedReason: string;
+  sourceSwitch: boolean;
+  previousBestSourceKey: string | null;
+  rejectedCount: number;
+  alternativesJson: string;
+} {
+  const candidates = params.evaluatedSources
+    .filter((candidate) => candidate.id === params.source.id)
+    .sort(compareCandidates);
+  const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
+  const provenance = buildYieldSourceProvenance({
+    source: params.source,
+    isBest: params.bestSourceKeyByCoin.get(params.source.id) === params.source.sourceKey,
+    evaluatedSources: params.evaluatedSources,
+    startSec: params.startSec,
+    dlPoolsMeta: params.dlPoolsMeta,
+  });
+  const alternatives = candidates
+    .filter((candidate) => candidate.sourceKey !== params.source.sourceKey)
+    .slice(0, 4)
+    .map((candidate) => ({
+      sourceKey: candidate.sourceKey,
+      confidenceTier: candidate.confidenceTier,
+      dataSource: candidate.dataSource,
+      apy30d: candidate.apy30d,
+      pharosYieldScore: candidate.pharosYieldScore,
+      sourceTvlUsd: candidate.sourceTvlUsd,
+      rejected: candidate.rejected,
+      anomalies: candidate.anomalies.slice(0, 6),
+    }));
+
+  return {
+    selectedReason: typeof provenance.selectionReason === "string" ? provenance.selectionReason : "Selected source",
+    sourceSwitch: provenance.sourceSwitch === true,
+    previousBestSourceKey: typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null,
+    rejectedCount,
+    alternativesJson: JSON.stringify(alternatives),
+  };
+}
+
+export async function stageYieldPublicationGeneration(
+  db: D1Database,
+  params: {
+    generationId: string;
+    startSec: number;
+    rankingCount: number;
+    sourceRowCount: number;
+    bestRowCount: number;
+    rowsRejected: number;
+    divergenceFlags: number;
+    sourceSwitches: number;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT OR REPLACE INTO yield_publication_generations (
+        generation_id, started_at, state, cache_key, ranking_updated_at, ranking_count,
+        source_row_count, best_row_count, decision_count, metadata_json, created_at
+      ) VALUES (?, ?, 'staged', 'yield-rankings', ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(
+      params.generationId,
+      params.startSec,
+      params.startSec,
+      params.rankingCount,
+      params.sourceRowCount,
+      params.bestRowCount,
+      params.bestRowCount,
+      JSON.stringify({
+        rowsRejected: params.rowsRejected,
+        divergenceFlags: params.divergenceFlags,
+        sourceSwitches: params.sourceSwitches,
+      }),
+      params.startSec,
+    )
+    .run();
+}
+
+export async function finalizeYieldPublicationGeneration(
+  db: D1Database,
+  params: {
+    generationId: string;
+    state: "published" | "failed";
+    timestamp: number;
+    reason?: string;
+  },
+): Promise<void> {
+  const rowState = params.state;
+  const generationStmt =
+    params.state === "published"
+      ? db
+          .prepare(
+            `UPDATE yield_publication_generations
+             SET state = 'published', published_at = ?, failed_at = NULL, failure_reason = NULL
+             WHERE generation_id = ?`,
+          )
+          .bind(params.timestamp, params.generationId)
+      : db
+          .prepare(
+            `UPDATE yield_publication_generations
+             SET state = 'failed', failed_at = ?, failure_reason = ?
+             WHERE generation_id = ?`,
+          )
+          .bind(params.timestamp, params.reason ?? "publication-failed", params.generationId);
+
+  await batchExecute(db, [
+    generationStmt,
+    db
+      .prepare("UPDATE yield_data SET publication_state = ? WHERE publication_generation_id = ?")
+      .bind(rowState, params.generationId),
+    db
+      .prepare("UPDATE yield_history SET publication_state = ? WHERE publication_generation_id = ?")
+      .bind(rowState, params.generationId),
+  ]);
 }
 
 export async function validateYieldRankingsPayloadForPublish(
@@ -250,6 +424,7 @@ export async function persistEvaluatedYieldSources(
     startSec: number;
     medianApy: number;
     dlPoolsMeta: YieldSourceInputMeta;
+    generationId: string;
   },
 ): Promise<{
   updatedCount: number;
@@ -257,6 +432,7 @@ export async function persistEvaluatedYieldSources(
 }> {
   const yieldDataStmts: D1PreparedStatement[] = [];
   const historyStmts: D1PreparedStatement[] = [];
+  const decisionStmts: D1PreparedStatement[] = [];
   const rankingProvenanceByKey = new Map<string, Record<string, unknown>>();
   let updatedCount = 0;
 
@@ -283,8 +459,9 @@ export async function persistEvaluatedYieldSources(
             stablecoin_id, source_key, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
             yield_source, yield_type, source_pool, source_tvl_usd, data_source,
             safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
-            apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, is_best, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, is_best,
+            updated_at, publication_generation_id, publication_state
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           source.id,
@@ -314,6 +491,8 @@ export async function persistEvaluatedYieldSources(
           warningSignalsJson,
           isBest,
           input.startSec,
+          input.generationId,
+          "staged",
         ),
     );
 
@@ -322,8 +501,8 @@ export async function persistEvaluatedYieldSources(
         .prepare(
           `INSERT OR IGNORE INTO yield_history (
             stablecoin_id, source_key, recorded_at, is_best, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
-            data_source, warning_signals, yield_source, yield_type
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            data_source, warning_signals, yield_source, yield_type, publication_generation_id, publication_state
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           source.id,
@@ -339,6 +518,8 @@ export async function persistEvaluatedYieldSources(
           warningSignalsJson,
           source.yieldSource,
           source.yieldType,
+          input.generationId,
+          "staged",
         ),
     );
 
@@ -353,10 +534,45 @@ export async function persistEvaluatedYieldSources(
       }),
     );
 
+    if (isBest === 1) {
+      const decisionEvidence = buildYieldSourceDecisionEvidence({
+        source,
+        evaluatedSources: input.evaluatedSources,
+        bestSourceKeyByCoin: input.bestSourceKeyByCoin,
+        startSec: input.startSec,
+        dlPoolsMeta: input.dlPoolsMeta,
+      });
+      decisionStmts.push(
+        db
+          .prepare(
+            `INSERT OR REPLACE INTO yield_source_decisions (
+              generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
+              selected_data_source, selected_apy_30d, selected_score, selected_reason,
+              previous_best_source_key, source_switch, rejected_count, alternatives_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            input.generationId,
+            source.id,
+            source.sourceKey,
+            source.confidenceTier,
+            source.dataSource,
+            source.apy30d,
+            source.pharosYieldScore,
+            decisionEvidence.selectedReason,
+            decisionEvidence.previousBestSourceKey,
+            decisionEvidence.sourceSwitch ? 1 : 0,
+            decisionEvidence.rejectedCount,
+            decisionEvidence.alternativesJson,
+            input.startSec,
+          ),
+      );
+    }
+
     updatedCount++;
   }
 
-  const writeStmts = [...yieldDataStmts, ...historyStmts];
+  const writeStmts = [...yieldDataStmts, ...historyStmts, ...decisionStmts];
   if (writeStmts.length > 0) {
     await batchExecute(db, writeStmts);
   }

@@ -10,6 +10,7 @@ import { MetadataIntegrityCard } from "@/components/status/metadata-integrity-ca
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { YieldHealthCard } from "@/components/status/yield-health";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
           />
           <SummaryBadge label="Missing Prices" value={String(data.dataQuality.missingPrices)} />
           <SummaryBadge label="CG Drift" value={String(data.coingeckoPriceDiff?.mismatchedCount ?? 0)} />
+          <SummaryBadge label="Yield" value={data.yieldHealth?.status ?? "—"} />
           <SummaryBadge label="Stale On-chain" value={String(data.dataQuality.staleOnchainSupply)} />
           <SummaryBadge label="Reserve Drift" value={String(data.reserveDrift?.length ?? 0)} />
           <SummaryBadge label="Class Warnings" value={String(data.classificationWarnings?.length ?? 0)} />
@@ -73,6 +75,11 @@ export function PipelineSection({ data, handleRefresh }: PipelineSectionProps) {
           error={data.sectionErrors.liquidityHealth}
         />
       </div>
+
+      <YieldHealthCard
+        health={data.yieldHealth}
+        error={data.sectionErrors.yieldHealth}
+      />
 
       <CoinGeckoPriceDiffCard
         summary={data.coingeckoPriceDiff}

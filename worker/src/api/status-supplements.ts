@@ -15,6 +15,7 @@ import type {
   StatusResponse,
   StatusSectionError,
   StatusSectionErrors,
+  YieldHealthSummary,
 } from "@shared/types/status";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
@@ -35,6 +36,7 @@ import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stable
 import { getCacheBlobSizes, getD1UsageSummary } from "../lib/status/d1-usage";
 import { getMintBurnReconciliation } from "../lib/status/derived-data";
 import { loadSourceDepthDistribution } from "../lib/status/price-source-depth";
+import { loadYieldHealthSummary } from "../lib/status/yield-health";
 
 function sectionError(code: string, message?: string): StatusSectionError {
   const safeMessage = message ?? (
@@ -61,6 +63,7 @@ function sectionError(code: string, message?: string): StatusSectionError {
 
 export interface StatusSupplements {
   liquidityHealth: LiquidityHealth | null;
+  yieldHealth: YieldHealthSummary | null;
   priceSourceHealth: PriceSourceHealth | null;
   priceProviderDiagnostics: Array<Record<string, unknown>> | null;
   gtProbe: Record<string, unknown> | null;
@@ -247,6 +250,17 @@ export async function loadStatusSupplements(
     );
   }
 
+  let yieldHealth: YieldHealthSummary | null = null;
+  try {
+    yieldHealth = await loadYieldHealthSummary(db, now, crons);
+  } catch (err) {
+    console.warn("[status] Yield health summary failed:", err);
+    sectionErrors.yieldHealth = sectionError(
+      "yield_health_summary_failed",
+      "Yield health summary unavailable.",
+    );
+  }
+
   let priceSourceHealth: PriceSourceHealth | null = null;
   let priceProviderDiagnostics: Array<Record<string, unknown>> | null = null;
   let gtProbe: Record<string, unknown> | null = null;
@@ -376,6 +390,7 @@ export async function loadStatusSupplements(
 
   return {
     liquidityHealth,
+    yieldHealth,
     priceSourceHealth,
     priceProviderDiagnostics,
     gtProbe,

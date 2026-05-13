@@ -583,6 +583,50 @@ export interface LiquidityHealth {
   previousCoverageClasses: Record<LiquidityCoverageClass, number>;
 }
 
+export type YieldHealthFieldStatus = "healthy" | "degraded" | "stale" | "unknown";
+
+export interface YieldHealthSummary {
+  status: Exclude<YieldHealthFieldStatus, "unknown">;
+  statusImpact: "public-critical" | "admin-watch";
+  runbookUrl: string;
+  rankingCount: number | null;
+  rankingUpdatedAt: number | null;
+  rankingAgeSec: number | null;
+  rankingMaxAgeSec: number;
+  rankingStatus: YieldHealthFieldStatus;
+  safetyCoverage: {
+    coveredCount: number | null;
+    trackedCount: number | null;
+    coverageRatio: number | null;
+    threshold: number;
+    status: YieldHealthFieldStatus;
+    reason: string | null;
+  };
+  supplemental: {
+    updatedAt: number | null;
+    ageSec: number | null;
+    maxAgeSec: number;
+    status: YieldHealthFieldStatus;
+  };
+  benchmark: {
+    fetchedAt: number | null;
+    ageSec: number | null;
+    maxAgeSec: number;
+    source: string | null;
+    isFallback: boolean | null;
+    fallbackMode: string | null;
+    status: YieldHealthFieldStatus;
+  };
+  coverageAudit: {
+    updatedAt: number | null;
+    ageSec: number | null;
+    maxAgeSec: number;
+    status: YieldHealthFieldStatus;
+  };
+  latestCronStatus: string | null;
+  latestCronStartedAt: number | null;
+}
+
 export interface MintBurnReconciliationRow {
   stablecoinId: string;
   symbol: string;
@@ -660,6 +704,7 @@ export type StatusSectionKey =
   | "reserveComposition"
   | "d1Usage"
   | "liquidityHealth"
+  | "yieldHealth"
   | "priceSourceHealth"
   | "coingeckoPriceDiff"
   | "discoveryCandidates"
@@ -719,6 +764,7 @@ export interface StatusResponse {
     transitionsLast24h: number;
   };
   liquidityHealth: LiquidityHealth | null;
+  yieldHealth: YieldHealthSummary | null;
   priceSourceHealth: PriceSourceHealth | null;
   /**
    * Most recent per-provider attempt diagnostics (Binance, Jupiter, …) as persisted

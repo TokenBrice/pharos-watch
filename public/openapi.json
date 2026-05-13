@@ -1139,7 +1139,7 @@
           "Yield"
         ],
         "summary": "Yield rankings",
-        "description": "Yield-bearing stablecoin rankings with safety and benchmark-aware context.",
+        "description": "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
         "operationId": "yieldRankings",
         "parameters": [],
         "responses": {
@@ -1175,7 +1175,7 @@
           "History"
         ],
         "summary": "Yield history",
-        "description": "Historical yield observations for a stablecoin.",
+        "description": "Historical yield observations for a stablecoin, with optional publication/source-risk metadata fields.",
         "operationId": "yieldHistory",
         "parameters": [
           {

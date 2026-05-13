@@ -21,6 +21,8 @@ export const CRITICAL_TEST_FILES = [
   "shared/lib/__tests__/report-card-blacklist-authority.test.ts",
   "shared/lib/__tests__/blacklist-active-records.test.ts",
   "worker/src/api/__tests__/dex-liquidity.test.ts",
+  "worker/src/api/__tests__/yield-rankings.test.ts",
+  "worker/src/api/__tests__/yield-history.test.ts",
   "worker/src/api/__tests__/stress-signals.test.ts",
   "worker/src/api/__tests__/mint-burn-flows.test.ts",
   "worker/src/api/__tests__/stablecoin-detail.test.ts",

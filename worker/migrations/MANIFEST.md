@@ -68,6 +68,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0122     | `0122_telegram_processed_updates.sql`                    | Add retry-safe Telegram webhook update claims for idempotent command processing                                                                 |
 | 0123     | `0123_telegram_usage_analytics.sql`                      | Add privacy-preserving Telegram usage aggregates, watcher lifecycle snapshots, and chat delivery diagnostics                                    |
 | 0124     | `0124_telegram_delivery_claims_and_retention.sql`        | Add Telegram pending-delivery claim metadata and retention/reconciliation indexes                                                               |
+| 0125     | `0125_yield_publication_generations.sql`                 | Add yield publication generation state, row generation markers, and compact selected-source decision evidence                                   |
 
 ## Retired Individual Migrations
 
