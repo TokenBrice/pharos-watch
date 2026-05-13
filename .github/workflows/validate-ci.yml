@@ -59,6 +59,7 @@ jobs:
           tooling-cache: "true"
       - run: npm run build
       - run: npm run seo:check
+      - run: npm run check:phishing-signatures
 
   test-noncritical:
     name: Noncritical Vitest (${{ matrix.shard }}/3)
