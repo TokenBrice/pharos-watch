@@ -1208,16 +1208,35 @@ export function formatContractMarkdown(contract) {
 export function buildSessionStartContext(contract) {
   if (contract.changedFiles.length === 0) {
     return [
-      "Pharos agent context:",
-      "- No current changed files were detected.",
-      "- Before editing, classify the task using docs/agent-task-router.md and read only the relevant docs.",
-      "- Re-run `node scripts/pharos-change-contract.mjs` after meaningful file changes to refresh docs/check obligations.",
-      "",
-      "Always preserve these Pharos rules:",
-      formatBullets(CORE_RULES, { limit: CORE_RULES.length }),
+      "Pharos agent context: no current changed files.",
+      "Before editing, classify the task using docs/agent-task-router.md and read only the relevant docs.",
     ].join("\n");
   }
-  return `${formatContract(contract)}\n\nUse this as a routing aid; still inspect the touched implementation before editing.`;
+
+  const deploy = contract.deploy.deployImpact
+    ? ` — deploy: pages=${contract.deploy.pagesImpact ? "yes" : "no"}, worker=${contract.deploy.workerImpact ? "yes" : "no"}`
+    : "";
+
+  const sections = [
+    `Pharos change contract${deploy}`,
+    "",
+    "Matched task families:",
+    formatFamilies(contract.families),
+  ];
+
+  if (contract.docsToRead.length > 0) {
+    sections.push("", "Read first:", formatBullets(contract.docsToRead, { limit: 4 }));
+  }
+
+  if (contract.checks.length > 0) {
+    sections.push("", "Checks before finalizing:", formatBullets(contract.checks, { limit: 4 }));
+  }
+
+  if (contract.warnings.length > 0) {
+    sections.push("", "Warnings:", formatBullets(contract.warnings, { limit: 4 }));
+  }
+
+  return sections.join("\n");
 }
 
 export function buildStopContinuationReason(contract) {
