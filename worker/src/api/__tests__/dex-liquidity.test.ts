@@ -49,7 +49,7 @@ describe("handleDexLiquidity", () => {
     const body = (await res.json()) as Record<string, Record<string, unknown>>;
     expect(body["usdt-tether"]?.protocolTvl).toEqual({});
     expect(warn).toHaveBeenCalledWith(
-      "[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json):",
+      expect.stringContaining("[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json); count=1:"),
       expect.any(String),
     );
     warn.mockRestore();

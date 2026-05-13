@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -419,7 +420,7 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
     expect(body.rankings[0]?.sourceRisk).toBeUndefined();
     expect(body.publication).toBeUndefined();
-    expect(body.methodology?.version).toBe("8.1");
+    expect(body.methodology?.version).toBe(YIELD_METHODOLOGY_VERSION);
   });
 
   it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
@@ -491,7 +492,7 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
 
     expect(res.status).toBe(200);
-    expect(body.methodology?.version).toBe("8.1");
+    expect(body.methodology?.version).toBe(YIELD_METHODOLOGY_VERSION);
     expect(body.publication).toMatchObject({
       generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
       status: "published",

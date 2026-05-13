@@ -1,4 +1,4 @@
-import { syncDexDiscovery } from "../../cron/dex-discovery";
+import { syncDexDiscovery } from "../../cron/dex-discovery/orchestrator";
 import type { ScheduledRuntimeContext } from "./context";
 
 export async function runTwoHourlyDexDiscoverySlot(runtime: ScheduledRuntimeContext): Promise<void> {

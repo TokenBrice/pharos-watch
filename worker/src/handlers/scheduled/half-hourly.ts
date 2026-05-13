@@ -8,7 +8,7 @@
  * starve downstream DB-only availability jobs.
  * Connection budget: 4/6 peak (dex-liquidity subgraph phase; direct APIs run afterward)
  */
-import { syncDexLiquidity } from "../../cron/dex-liquidity";
+import { syncDexLiquidity } from "../../cron/dex-liquidity/orchestrator";
 import type { ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
 

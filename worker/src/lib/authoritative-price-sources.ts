@@ -449,6 +449,63 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
   };
 }
 
+interface TrustedOverrideParent {
+  parentId: string;
+  parentAsset: PeggedAsset;
+  trustedParent: {
+    price: number;
+    observedAt: number;
+    observedAtMode: PriceObservedAtMode | null;
+    replaySafe: boolean;
+  };
+}
+
+function resolveTrustedOverrideParent(
+  context: LivePriceContext,
+  parentId: string,
+  untrustedParentMessage: () => string,
+): TrustedOverrideParent | null {
+  const parentAsset = context.assetsById.get(parentId);
+  if (!parentAsset) return null;
+
+  const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
+  if (!trustedParent) {
+    console.warn(untrustedParentMessage());
+    return null;
+  }
+
+  return {
+    parentId,
+    parentAsset,
+    trustedParent,
+  };
+}
+
+function buildParentDerivedLiveOverride(
+  parent: TrustedOverrideParent,
+  parentPriceMultiplier: number,
+): CurrentPriceOverride | null {
+  const price = parent.trustedParent.price * parentPriceMultiplier;
+  if (!Number.isFinite(price) || price <= 0) return null;
+
+  const parentObservedAt = parent.parentAsset.priceObservedAt ?? parent.parentAsset.priceUpdatedAt ?? null;
+  return {
+    price,
+    source: PROTOCOL_REDEEM_SOURCE,
+    confidence: "high",
+    observedAt: parent.trustedParent.observedAt,
+    observedAtMode: parent.trustedParent.observedAtMode,
+    metadata: {
+      inheritedFrom: parent.parentId,
+      parentSource: parent.parentAsset.priceSource ?? null,
+      parentConfidence: parent.parentAsset.priceConfidence ?? null,
+      parentObservedAt,
+      parentObservedAtMode: parent.parentAsset.priceObservedAtMode ?? null,
+      parentReplaySafe: parent.trustedParent.replaySafe,
+    },
+  };
+}
+
 function findNearestSupply(snapshots: HistoricalSupplySnapshot[] | undefined, timestamp: number): number | null {
   if (!snapshots || snapshots.length === 0) return null;
   const nearest = binarySearchNearest(snapshots, timestamp, (s) => s.ts);
@@ -675,36 +732,15 @@ const inheritedTrackedPriceProvider: PriceSourceProvider = {
     const config = getInheritedTrackedPriceConfig(asset.id);
     if (!config) return null;
 
-    const parentAsset = context.assetsById.get(config.parentId);
-    if (!parentAsset) return null;
-
-    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
-    if (!trustedParent) {
-      console.warn(
+    const parent = resolveTrustedOverrideParent(
+      context,
+      config.parentId,
+      () =>
         `[authoritative-price-sources] ${asset.id}: skipped inherited ${config.parentId} price because parent provenance is not trusted`,
-      );
-      return null;
-    }
+    );
+    if (!parent) return null;
 
-    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
-    const price = trustedParent.price * (config.multiplier ?? 1);
-    if (!Number.isFinite(price) || price <= 0) return null;
-
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-      observedAt: trustedParent.observedAt,
-      observedAtMode: trustedParent.observedAtMode,
-      metadata: {
-        inheritedFrom: config.parentId,
-        parentSource: parentAsset.priceSource ?? null,
-        parentConfidence: parentAsset.priceConfidence ?? null,
-        parentObservedAt,
-        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
-        parentReplaySafe: trustedParent.replaySafe,
-      },
-    };
+    return buildParentDerivedLiveOverride(parent, config.multiplier ?? 1);
   },
   async fetchHistoricalPrices(
     meta: StablecoinMeta,
@@ -835,39 +871,18 @@ const erc4626NavProvider: PriceSourceProvider = {
     const config = ERC4626_NAV_VAULTS_BY_ID.get(asset.id);
     if (!config) return null;
 
-    const parentAsset = context.assetsById.get(config.parentId);
-    if (!parentAsset) return null;
-
-    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
-    if (!trustedParent) {
-      console.warn(
+    const parent = resolveTrustedOverrideParent(
+      context,
+      config.parentId,
+      () =>
         `[authoritative-price-sources] ${asset.id}: skipped ERC-4626 NAV price because parent ${config.parentId} provenance is not trusted`,
-      );
-      return null;
-    }
+    );
+    if (!parent) return null;
 
     const assetsPerShare = await fetchErc4626AssetsPerShare(config, "latest", signal);
     if (assetsPerShare == null) return null;
 
-    const price = assetsPerShare * trustedParent.price;
-    if (!Number.isFinite(price) || price <= 0) return null;
-
-    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-      observedAt: trustedParent.observedAt,
-      observedAtMode: trustedParent.observedAtMode,
-      metadata: {
-        inheritedFrom: config.parentId,
-        parentSource: parentAsset.priceSource ?? null,
-        parentConfidence: parentAsset.priceConfidence ?? null,
-        parentObservedAt,
-        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
-        parentReplaySafe: trustedParent.replaySafe,
-      },
-    };
+    return buildParentDerivedLiveOverride(parent, assetsPerShare);
   },
 };
 
@@ -915,39 +930,18 @@ const previewRedeemProvider: PriceSourceProvider = {
     const config = PREVIEW_REDEEM_VAULTS_BY_ID.get(asset.id);
     if (!config) return null;
 
-    const parentAsset = context.assetsById.get(config.parentId);
-    if (!parentAsset) return null;
-
-    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
-    if (!trustedParent) {
-      console.warn(
+    const parent = resolveTrustedOverrideParent(
+      context,
+      config.parentId,
+      () =>
         `[authoritative-price-sources] ${asset.id}: skipped previewRedeem price because parent ${config.parentId} provenance is not trusted`,
-      );
-      return null;
-    }
+    );
+    if (!parent) return null;
 
     const assetsPerShare = await fetchPreviewRedeemAssetsPerShare(config, "latest", signal);
     if (assetsPerShare == null) return null;
 
-    const price = assetsPerShare * trustedParent.price;
-    if (!Number.isFinite(price) || price <= 0) return null;
-
-    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-      observedAt: trustedParent.observedAt,
-      observedAtMode: trustedParent.observedAtMode,
-      metadata: {
-        inheritedFrom: config.parentId,
-        parentSource: parentAsset.priceSource ?? null,
-        parentConfidence: parentAsset.priceConfidence ?? null,
-        parentObservedAt,
-        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
-        parentReplaySafe: trustedParent.replaySafe,
-      },
-    };
+    return buildParentDerivedLiveOverride(parent, assetsPerShare);
   },
 };
 
@@ -994,39 +988,18 @@ const idleCdoTrancheProvider: PriceSourceProvider = {
     const config = IDLE_CDO_TRANCHES_BY_ID.get(asset.id);
     if (!config) return null;
 
-    const parentAsset = context.assetsById.get(config.parentId);
-    if (!parentAsset) return null;
-
-    const trustedParent = resolveTrustedInheritedParent(parentAsset, Math.floor(Date.now() / 1000));
-    if (!trustedParent) {
-      console.warn(
+    const parent = resolveTrustedOverrideParent(
+      context,
+      config.parentId,
+      () =>
         `[authoritative-price-sources] ${asset.id}: skipped Idle CDO virtualPrice because parent ${config.parentId} provenance is not trusted`,
-      );
-      return null;
-    }
+    );
+    if (!parent) return null;
 
     const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal);
     if (assetsPerShare == null) return null;
 
-    const price = assetsPerShare * trustedParent.price;
-    if (!Number.isFinite(price) || price <= 0) return null;
-
-    const parentObservedAt = parentAsset.priceObservedAt ?? parentAsset.priceUpdatedAt ?? null;
-    return {
-      price,
-      source: PROTOCOL_REDEEM_SOURCE,
-      confidence: "high",
-      observedAt: trustedParent.observedAt,
-      observedAtMode: trustedParent.observedAtMode,
-      metadata: {
-        inheritedFrom: config.parentId,
-        parentSource: parentAsset.priceSource ?? null,
-        parentConfidence: parentAsset.priceConfidence ?? null,
-        parentObservedAt,
-        parentObservedAtMode: parentAsset.priceObservedAtMode ?? null,
-        parentReplaySafe: trustedParent.replaySafe,
-      },
-    };
+    return buildParentDerivedLiveOverride(parent, assetsPerShare);
   },
 };
 

@@ -1,1 +1,0 @@
-export { syncDexDiscovery } from "./orchestrator";

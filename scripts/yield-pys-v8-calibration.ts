@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../shared/lib/yield-scoring";
+import { clamp } from "../shared/lib/math";
 import { YieldRankingsResponseSchema, type YieldRanking } from "../shared/types/yield";
 
 const DEFAULT_OUTPUT = "agents/yield-pys-v8-calibration-template.md";
@@ -449,10 +450,6 @@ function sortByBeforeRank(a: ScoredRow, b: ScoredRow): number {
 
 function sortByAfterRank(a: ScoredRow, b: ScoredRow): number {
   return a.afterRank - b.afterRank;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function formatNumber(value: number): string {

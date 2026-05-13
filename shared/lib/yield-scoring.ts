@@ -6,6 +6,8 @@
  * Frontend: uses computePysComponents() for breakdown tooltip display.
  */
 
+import { clamp } from "./math";
+
 /** Risk penalty floor — prevents division by near-zero. */
 export const PYS_RISK_PENALTY_FLOOR = 0.5;
 
@@ -49,10 +51,6 @@ export interface PysSourceRiskPenaltyInput {
 export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
   if (yieldStability == null) return 0;
   return Math.max(0, Math.min(1, 1 - yieldStability));
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function finiteOrNull(value: number | null | undefined): number | null {

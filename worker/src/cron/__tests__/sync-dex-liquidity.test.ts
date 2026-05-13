@@ -103,7 +103,7 @@ vi.mock("../../lib/cex-orderbooks", () => ({
   })),
 }));
 
-import { syncDexLiquidity } from "../dex-liquidity";
+import { syncDexLiquidity } from "../dex-liquidity/orchestrator";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { fetchAerodromeData, fetchDataSources, fetchUniV3Data } from "../dex-liquidity/fetch-primary";

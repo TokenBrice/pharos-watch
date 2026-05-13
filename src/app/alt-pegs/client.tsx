@@ -14,7 +14,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
 import { AltPegCohortDirectory } from "./fiat-world-atlas/cohort-directory";
-import { FiatWorldAtlas } from "./fiat-world-atlas";
+import { FiatWorldAtlas } from "./fiat-world-atlas/world-atlas";
 import {
   buildAltPegLinkHubGroups,
   buildAltPegSnapshot,

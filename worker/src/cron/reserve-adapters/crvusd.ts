@@ -72,6 +72,27 @@ interface LlammaMarketExposure {
   bandCount: number;
 }
 
+type CrvUsdCollateralSource = "direct" | "yieldBasis";
+
+interface CrvUsdCollateralBucketInput {
+  source: CrvUsdCollateralSource;
+  symbol?: string;
+  usd: number;
+  unknownWarning: (symbol: string) => string;
+}
+
+interface CrvUsdCollateralBucketSummary {
+  slices: ReserveSlice[];
+  warnings: LiveReserveWarning[];
+  bucketCount: number;
+  directActiveMarkets: number;
+  yieldBasisActiveMarkets: number;
+  directCollateralUsd: number;
+  yieldBasisCollateralUsd: number;
+  yieldBasisCollateralPct: number;
+  unknownExposurePct: number;
+}
+
 const ETHEREUM_CHAIN = "ethereum";
 const ETHEREUM_RPC_URLS = [getPublicRpcUrl(ETHEREUM_CHAIN), getSecondaryFallbackRpcUrl(ETHEREUM_CHAIN)].filter(
   (url): url is string => typeof url === "string" && url.length > 0,
@@ -124,6 +145,78 @@ function classifySymbol(symbol: string): { name: string; risk: ReserveSlice["ris
 
 function normalizeAddress(address: string): string {
   return address.toLowerCase();
+}
+
+function summarizeCrvUsdCollateralBuckets(
+  entries: readonly CrvUsdCollateralBucketInput[],
+): CrvUsdCollateralBucketSummary | null {
+  const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
+  const warnings: LiveReserveWarning[] = [];
+  let unknownUsd = 0;
+  let directActiveMarkets = 0;
+  let yieldBasisActiveMarkets = 0;
+  let directCollateralUsd = 0;
+  let yieldBasisCollateralUsd = 0;
+
+  for (const entry of entries) {
+    const { symbol, usd } = entry;
+    if (!symbol || !Number.isFinite(usd) || usd <= 0) continue;
+
+    if (entry.source === "direct") {
+      directActiveMarkets++;
+      directCollateralUsd += usd;
+    } else {
+      yieldBasisActiveMarkets++;
+      yieldBasisCollateralUsd += usd;
+    }
+
+    const bucket = classifySymbol(symbol);
+    if (!bucket) {
+      warnings.push(reserveDegradedWarning("unknown-market", entry.unknownWarning(symbol)));
+      unknownUsd += usd;
+      continue;
+    }
+
+    const existing = buckets.get(bucket.name);
+    if (existing) {
+      existing.usd += usd;
+      existing.risk = worseRisk(existing.risk, bucket.risk);
+    } else {
+      buckets.set(bucket.name, { usd, risk: bucket.risk });
+    }
+  }
+
+  const total = Array.from(buckets.values()).reduce((acc, bucket) => acc + bucket.usd, 0);
+  const totalWithUnknown = total + unknownUsd;
+  if (totalWithUnknown <= 0) return null;
+
+  if (unknownUsd > 0) {
+    buckets.set("Other / unmapped collateral markets", {
+      usd: unknownUsd,
+      risk: "high",
+    });
+  }
+
+  const slices = normalizeSlices(
+    Array.from(buckets.entries()).map(([name, bucket]) => ({
+      name,
+      pct: (bucket.usd / totalWithUnknown) * 100,
+      risk: bucket.risk,
+    })),
+    1,
+  );
+
+  return {
+    slices,
+    warnings,
+    bucketCount: buckets.size,
+    directActiveMarkets,
+    yieldBasisActiveMarkets,
+    directCollateralUsd,
+    yieldBasisCollateralUsd,
+    yieldBasisCollateralPct: (yieldBasisCollateralUsd / totalWithUnknown) * 100,
+    unknownExposurePct: (unknownUsd / totalWithUnknown) * 100,
+  };
 }
 
 async function readEthereumContract(
@@ -433,96 +526,37 @@ export function adaptCrvUsd(
   yieldBasisMarkets: YieldBasisMarketExposure[] = [],
 ): AdapterResult {
   const markets = payload.chains?.ethereum?.data ?? [];
-  const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
-  const warnings: LiveReserveWarning[] = [];
-  let unknownUsd = 0;
-  let directActiveMarkets = 0;
-  let yieldBasisActiveMarkets = 0;
-  let directCollateralUsd = 0;
-  let yieldBasisCollateralUsd = 0;
-
-  for (const market of markets) {
-    const symbol = market.collateral_token?.symbol;
-    const usd = market.collateral_amount_usd ?? 0;
-    if (!symbol || !Number.isFinite(usd) || usd <= 0) continue;
-    directActiveMarkets++;
-    directCollateralUsd += usd;
-
-    const bucket = classifySymbol(symbol);
-    if (!bucket) {
-      warnings.push(reserveDegradedWarning("unknown-market", `Unmapped crvUSD collateral market: ${symbol}`));
-      unknownUsd += usd;
-      continue;
-    }
-
-    const existing = buckets.get(bucket.name);
-    if (existing) {
-      existing.usd += usd;
-      existing.risk = worseRisk(existing.risk, bucket.risk);
-    } else {
-      buckets.set(bucket.name, { usd, risk: bucket.risk });
-    }
-  }
-
-  for (const market of yieldBasisMarkets) {
-    const usd = market.usd;
-    if (!Number.isFinite(usd) || usd <= 0) continue;
-    yieldBasisActiveMarkets++;
-    yieldBasisCollateralUsd += usd;
-
-    const bucket = classifySymbol(market.symbol);
-    if (!bucket) {
-      warnings.push(
-        reserveDegradedWarning("unknown-market", `Unmapped crvUSD Yield Basis collateral market: ${market.symbol}`),
-      );
-      unknownUsd += usd;
-      continue;
-    }
-
-    const existing = buckets.get(bucket.name);
-    if (existing) {
-      existing.usd += usd;
-      existing.risk = worseRisk(existing.risk, bucket.risk);
-    } else {
-      buckets.set(bucket.name, { usd, risk: bucket.risk });
-    }
-  }
-
-  const total = Array.from(buckets.values()).reduce((acc, bucket) => acc + bucket.usd, 0);
-  const totalWithUnknown = total + unknownUsd;
-  if (totalWithUnknown <= 0) return { slices: [], warnings };
-
-  if (unknownUsd > 0) {
-    buckets.set("Other / unmapped collateral markets", {
-      usd: unknownUsd,
-      risk: "high",
-    });
-  }
-
-  const slices = normalizeSlices(
-    Array.from(buckets.entries()).map(([name, bucket]) => ({
-      name,
-      pct: (bucket.usd / totalWithUnknown) * 100,
-      risk: bucket.risk,
+  const summary = summarizeCrvUsdCollateralBuckets([
+    ...markets.map((market) => ({
+      source: "direct" as const,
+      symbol: market.collateral_token?.symbol,
+      usd: market.collateral_amount_usd ?? 0,
+      unknownWarning: (symbol: string) => `Unmapped crvUSD collateral market: ${symbol}`,
     })),
-    1,
-  );
+    ...yieldBasisMarkets.map((market) => ({
+      source: "yieldBasis" as const,
+      symbol: market.symbol,
+      usd: market.usd,
+      unknownWarning: (symbol: string) => `Unmapped crvUSD Yield Basis collateral market: ${symbol}`,
+    })),
+  ]);
+  if (!summary) return { slices: [], warnings: [] };
 
   return {
-    slices,
-    warnings,
+    slices: summary.slices,
+    warnings: summary.warnings,
     metadata: {
       marketCount: markets.length + yieldBasisMarkets.length,
       directMarketCount: markets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
-      activeMarketCount: directActiveMarkets + yieldBasisActiveMarkets,
-      directActiveMarketCount: directActiveMarkets,
-      yieldBasisActiveMarketCount: yieldBasisActiveMarkets,
-      bucketCount: buckets.size,
-      directCollateralUsd,
-      yieldBasisCollateralUsd,
-      yieldBasisCollateralPct: totalWithUnknown > 0 ? (yieldBasisCollateralUsd / totalWithUnknown) * 100 : 0,
-      unknownExposurePct: totalWithUnknown > 0 ? (unknownUsd / totalWithUnknown) * 100 : 0,
+      activeMarketCount: summary.directActiveMarkets + summary.yieldBasisActiveMarkets,
+      directActiveMarketCount: summary.directActiveMarkets,
+      yieldBasisActiveMarketCount: summary.yieldBasisActiveMarkets,
+      bucketCount: summary.bucketCount,
+      directCollateralUsd: summary.directCollateralUsd,
+      yieldBasisCollateralUsd: summary.yieldBasisCollateralUsd,
+      yieldBasisCollateralPct: summary.yieldBasisCollateralPct,
+      unknownExposurePct: summary.unknownExposurePct,
       ...unverifiedFreshnessMetadata(
         "curve-market-api + yield-basis-onchain",
         "Curve market payload does not expose a trustworthy source timestamp even though the Yield Basis leg is current-state on-chain",
@@ -535,99 +569,44 @@ export function adaptCrvUsdOnchain(
   llammaMarkets: readonly LlammaMarketExposure[],
   yieldBasisMarkets: readonly YieldBasisMarketExposure[] = [],
 ): AdapterResult {
-  const buckets = new Map<string, { usd: number; risk: ReserveSlice["risk"] }>();
-  const warnings: LiveReserveWarning[] = [];
-  let unknownUsd = 0;
-  let directActiveMarkets = 0;
-  let yieldBasisActiveMarkets = 0;
-  let directCollateralUsd = 0;
-  let yieldBasisCollateralUsd = 0;
   let softLiquidatedCrvUsdUsd = 0;
   let bandReadCount = 0;
 
   for (const market of llammaMarkets) {
-    const usd = market.collateralUsd;
     softLiquidatedCrvUsdUsd += market.softLiquidatedCrvUsdUsd;
     bandReadCount += market.bandCount;
-    if (!Number.isFinite(usd) || usd <= 0) continue;
-    directActiveMarkets++;
-    directCollateralUsd += usd;
-
-    const bucket = classifySymbol(market.symbol);
-    if (!bucket) {
-      warnings.push(reserveDegradedWarning("unknown-market", `Unmapped crvUSD LLAMMA collateral market: ${market.symbol}`));
-      unknownUsd += usd;
-      continue;
-    }
-
-    const existing = buckets.get(bucket.name);
-    if (existing) {
-      existing.usd += usd;
-      existing.risk = worseRisk(existing.risk, bucket.risk);
-    } else {
-      buckets.set(bucket.name, { usd, risk: bucket.risk });
-    }
   }
-
-  for (const market of yieldBasisMarkets) {
-    const usd = market.usd;
-    if (!Number.isFinite(usd) || usd <= 0) continue;
-    yieldBasisActiveMarkets++;
-    yieldBasisCollateralUsd += usd;
-
-    const bucket = classifySymbol(market.symbol);
-    if (!bucket) {
-      warnings.push(
-        reserveDegradedWarning("unknown-market", `Unmapped crvUSD Yield Basis collateral market: ${market.symbol}`),
-      );
-      unknownUsd += usd;
-      continue;
-    }
-
-    const existing = buckets.get(bucket.name);
-    if (existing) {
-      existing.usd += usd;
-      existing.risk = worseRisk(existing.risk, bucket.risk);
-    } else {
-      buckets.set(bucket.name, { usd, risk: bucket.risk });
-    }
-  }
-
-  const total = Array.from(buckets.values()).reduce((acc, bucket) => acc + bucket.usd, 0);
-  const totalWithUnknown = total + unknownUsd;
-  if (totalWithUnknown <= 0) return { slices: [], warnings };
-
-  if (unknownUsd > 0) {
-    buckets.set("Other / unmapped collateral markets", {
-      usd: unknownUsd,
-      risk: "high",
-    });
-  }
-
-  const slices = normalizeSlices(
-    Array.from(buckets.entries()).map(([name, bucket]) => ({
-      name,
-      pct: (bucket.usd / totalWithUnknown) * 100,
-      risk: bucket.risk,
+  const summary = summarizeCrvUsdCollateralBuckets([
+    ...llammaMarkets.map((market) => ({
+      source: "direct" as const,
+      symbol: market.symbol,
+      usd: market.collateralUsd,
+      unknownWarning: (symbol: string) => `Unmapped crvUSD LLAMMA collateral market: ${symbol}`,
     })),
-    1,
-  );
+    ...yieldBasisMarkets.map((market) => ({
+      source: "yieldBasis" as const,
+      symbol: market.symbol,
+      usd: market.usd,
+      unknownWarning: (symbol: string) => `Unmapped crvUSD Yield Basis collateral market: ${symbol}`,
+    })),
+  ]);
+  if (!summary) return { slices: [], warnings: [] };
 
   return {
-    slices,
-    warnings,
+    slices: summary.slices,
+    warnings: summary.warnings,
     metadata: {
       marketCount: llammaMarkets.length + yieldBasisMarkets.length,
       directMarketCount: llammaMarkets.length,
       yieldBasisMarketCount: yieldBasisMarkets.length,
-      activeMarketCount: directActiveMarkets + yieldBasisActiveMarkets,
-      directActiveMarketCount: directActiveMarkets,
-      yieldBasisActiveMarketCount: yieldBasisActiveMarkets,
-      bucketCount: buckets.size,
-      directCollateralUsd,
-      yieldBasisCollateralUsd,
-      yieldBasisCollateralPct: totalWithUnknown > 0 ? (yieldBasisCollateralUsd / totalWithUnknown) * 100 : 0,
-      unknownExposurePct: totalWithUnknown > 0 ? (unknownUsd / totalWithUnknown) * 100 : 0,
+      activeMarketCount: summary.directActiveMarkets + summary.yieldBasisActiveMarkets,
+      directActiveMarketCount: summary.directActiveMarkets,
+      yieldBasisActiveMarketCount: summary.yieldBasisActiveMarkets,
+      bucketCount: summary.bucketCount,
+      directCollateralUsd: summary.directCollateralUsd,
+      yieldBasisCollateralUsd: summary.yieldBasisCollateralUsd,
+      yieldBasisCollateralPct: summary.yieldBasisCollateralPct,
+      unknownExposurePct: summary.unknownExposurePct,
       softLiquidatedCrvUsdUsd,
       bandReadCount,
       ...notApplicableFreshnessMetadata({
