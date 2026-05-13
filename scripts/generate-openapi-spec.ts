@@ -271,7 +271,8 @@ function render() {
             sourceRisk: nullableRef("YieldSourceRisk"),
             rankChangeAttribution: {
               type: ["object", "null"],
-              description: "Reserved optional rank-change attribution scaffold.",
+              description:
+                "Optional rank-change attribution with previous rank/PYS, delta, primary driver, and driver contribution hints.",
               additionalProperties: true,
             },
           },
