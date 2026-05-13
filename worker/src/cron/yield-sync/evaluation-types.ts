@@ -1,5 +1,7 @@
 import type { YieldType } from "@shared/types/core";
 import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
+import type { PysSourceRiskPenaltyReason } from "@shared/lib/yield-scoring";
+import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
@@ -15,6 +17,11 @@ export interface EvaluatedYieldSource {
   apyReward: number | null;
   sourcePool: string | null;
   sourceTvlUsd: number | null;
+  sourceRisk: YieldSourceRisk | null;
+  sourceRiskPenalty: number;
+  sourceRiskPenaltyReason: PysSourceRiskPenaltyReason;
+  sourceRiskPenaltyProvided: boolean;
+  sourceRiskAdjustedUtility: number;
   dataSource: string;
   exchangeRate: number | null;
   sourceObservedAt: number | null;
@@ -43,6 +50,9 @@ export interface EvaluatedYieldSource {
   pharosYieldScore: number;
   prevExchangeRate: number | null;
   prevTvlUsd: number | null;
+  sourceDepthRatio: number | null;
+  observationCount30d: number | null;
+  sourceSwitchCount30d: number | null;
   anomalies: string[];
   warnings: string[];
   confidenceTier: ConfidenceTier;

@@ -6,13 +6,15 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.48`
+- **Current methodology version:** `v8.0`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
 The `/yield` route-level Yield Sources board is presentation-only: it derives selected and alternate source rows from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
+
+Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, selected-source switches, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
 
 Rankings provenance now carries source-native freshness for derived sources:
 
@@ -307,17 +309,19 @@ The monthly coverage audit now treats both `AUTO_LENDING_POOL_MAP` and `EXPLICIT
 
 ## Pharos Yield Score (PYS)
 
-Risk-adjusted ranking (0–100) that balances yield magnitude against safety and consistency.
+Risk-adjusted ranking (0–100) that balances yield magnitude against source risk, stablecoin safety, and consistency.
 
 **Formula (`computePYS()` in `shared/lib/yield-scoring.ts`):**
 
 ```
 benchmarkSpread     = apy30d - benchmarkRate
 effectiveYield      = max(0, apy30d + benchmarkSpread * 0.25)
+sourceRiskPenalty   = clamp(sourceRisk.sourceRiskPenalty ?? 1, 1, 2.5)
+rowUtility          = effectiveYield / sourceRiskPenalty
 riskPenalty         = max(0.5, (101 - safetyScore) / 20)
-yieldEfficiency     = effectiveYield / (riskPenalty ^ 1.75)
+yieldEfficiency     = rowUtility / (riskPenalty ^ 1.75)
 sustainabilityMult  = max(0.3, 1.0 - apyVarianceScore)
-PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scalingFactor))
+PYS                 = clamp(round(yieldEfficiency * sustainabilityMult * scalingFactor), 0, 100)
 ```
 
 **Components:**
@@ -327,6 +331,8 @@ PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scal
 | `benchmarkRate` | depends on row | Row-level benchmark selected from the benchmark registry |
 | `benchmarkSpread` | unbounded | `apy30d - benchmarkRate`; positive means the row clears its local benchmark |
 | `effectiveYield` | `>= 0` | Raw APY plus 25% of benchmark spread, floored at zero before the safety divisor |
+| `sourceRisk.sourceRiskPenalty` | `1–2.5` after resolution | Nested source-risk multiplier derived from measured source evidence. Missing/invalid values are neutral (`1`); values below 1 clamp to 1 and above 2.5 clamp to 2.5 |
+| `rowUtility` | `>= 0` | `effectiveYield / sourceRiskPenalty`, used before the safety curve |
 | `safetyScore` | 0–100 | Report card overall score. `DEFAULT_SAFETY_SCORE` (40) for unrated coins |
 | `riskPenalty` | 0.5–5.05 | Raw safety penalty before the power curve is applied |
 | `riskPenalty^1.75` | ~0.30–17.01 | Effective divisor used by PYS after the steeper safety curve is applied |
@@ -335,7 +341,21 @@ PYS                 = min(100, round(yieldEfficiency * sustainabilityMult * scal
 
 Returns 0 when `apy30d <= 0` or the benchmark-aware `effectiveYield` is non-positive.
 
-Frontend components display PYS breakdown via `computePysBreakdown()` in `src/lib/yield-constants.ts`, which delegates to the shared scorer and mirrors the intermediate values (`benchmarkSpread`, `benchmarkAdjustment`, `effectiveYield`, `riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). The final PYS value is always served by the API.
+The shared scorer exposes the intermediate values (`benchmarkSpread`, `benchmarkAdjustment`, `effectiveYield`, `sourceRiskPenalty`, `rowUtility`, `riskPenalty`, `adjustedRiskPenalty`, `yieldEfficiency`, `sustainabilityMult`). Frontend breakdown components should pass the nested `sourceRisk.sourceRiskPenalty` when they surface v8 source-risk details; the final PYS value is always served by the API.
+
+### Source-Risk Scaffold and Neutral Policy
+
+Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in shared API schemas. Only the nested source-risk penalty is currently consumed by PYS and source arbitration, and missing evidence remains neutral:
+
+- `sourceRisk` may be omitted, `null`, or partially populated on ranking, history, and alt-source rows.
+- Public API source-risk fields are nested under `sourceRisk.*` (`sourceRisk.sourceRiskPenalty`, `sourceRisk.rewardShare`, and so on). Do not document or consume flattened public fields such as top-level `sourceRiskPenalty`; calibration scripts that ingest saved payloads must normalize from the nested API contract before analysis.
+- `sourceRisk.sourceRiskPenalty` is the active v8 source-risk multiplier. It is derived from reliable `rewardShare`, `sourceDepthRatio`, `sourceAgeSeconds`, `sourceSwitchCount30d`, `observationCount30d`, and sourced `venueRiskTier` inputs where available. Missing, `null`, or invalid evidence is equivalent to a neutral multiplier of `1`; values below 1 clamp to 1 and values above `PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) clamp to 2.5.
+- `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
+- `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
+- External `lending-opportunity` rows do not modify the base stablecoin's Safety Score. They may later inform an opportunity-level yield risk label, DEWS input, or report-card modifier only after the consuming methodology explicitly versions that behavior.
+- DEWS and report-card consumers treat unavailable source-risk fields and legacy rows as no-op inputs. Report-card yield-risk helpers currently normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts.
+
+Rollback compatibility is part of the contract. Production-shaped `v7.48` payloads without `publication`, `publishedRank`, `liveRank`, `sourceRisk`, or `rankChangeAttribution` remain valid. With no nested source-risk penalty, v8 resolves the same neutral penalty (`1`) and keeps the benchmark-aware v7 scoring path equivalent.
 
 ### Supporting Metrics
 
@@ -344,7 +364,8 @@ Frontend components display PYS breakdown via `computePysBreakdown()` in `src/li
 | `yieldStability` | `1 - CV(30d samples)` | 0–1, higher = more consistent. Null if < 2 samples or mean ≈ 0 (`|mean| < 1e-10`) |
 | `yieldToRisk` | `apy30d / (101 - safetyScore)` | Raw yield per unit of risk |
 | `excessYield` | `apy30d - benchmarkRate` | 30-day average APY above the row's selected benchmark |
-| `effectiveYield` | `max(0, apy30d + 0.25 * excessYield)` | Benchmark-aware yield term used by PYS before safety and consistency penalties |
+| `effectiveYield` | `max(0, apy30d + 0.25 * excessYield)` | Benchmark-aware yield term used by PYS before source-risk, safety, and consistency penalties |
+| `rowUtility` | `effectiveYield / sourceRisk.sourceRiskPenalty` after neutral/clamp resolution | Source-risk-adjusted utility term used before the safety penalty |
 | `apy7d` | Timestamp-filtered 7d average | 7-day trailing APY (uses `recorded_at >= now - 7d`, not proportional slicing) |
 | `apy30d` | Simple average of 30d samples | 30-day trailing APY |
 | `variance30d` | Standard deviation of 30d APY samples | APY volatility measure |
@@ -412,6 +433,7 @@ The sync also performs a confidence-aware cross-source arbitration pass before `
 - deterministic sources (`onchain`, `rate-derived`) outrank curated protocol-native and DeFiLlama rows
 - curated DeFiLlama rows outrank discovered lending opportunities and fallback-derived rows
 - non-positive APY rows cannot outrank positive rows
+- within the same confidence tier, arbitration compares source-risk-adjusted row utility (`effectiveYield / sourceRiskPenalty`) after source-risk penalty resolution before falling back to raw current APY
 - materially divergent discovered or fallback rows can be rejected when a higher-confidence canonical source disagrees by more than 35%
 - a `canonical-zero-vs-positive` anomaly is flagged when a high-confidence source reads 0% but a lower-confidence source reports > 1% APY
 
@@ -460,7 +482,16 @@ CREATE TABLE yield_data (
 
 **Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
 
-**Multi-source behavior:** Coins with both a native pool and a savings wrapper get two rows — one with `is_best = 1` (highest current APY), one with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get multiple rows. The confidence-weighted arbitration pass marks the selected row with `is_best = 1`; non-selected rows remain available as alternatives with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+
+Generation-aware publisher fields added by migration `0125_yield_publication_generations.sql` are nullable so old rows and rollback payloads remain readable:
+
+```sql
+publication_generation_id TEXT,
+publication_state         TEXT  -- "staged" | "published" | "failed"
+```
+
+Rows are written as `staged` with a `publication_generation_id`, then flipped to `published` only after the `yield-rankings` cache write succeeds. If preflight validation or cache publication fails, the generation is marked `failed`; those rows are retained for debugging but are not eligible for generation-aware public history reads.
 
 ### `yield_history` — Historical Data Points
 
@@ -479,6 +510,8 @@ CREATE TABLE yield_history (
   warning_signals TEXT,
   yield_source    TEXT,
   yield_type      TEXT,
+  publication_generation_id TEXT,
+  publication_state TEXT,
   PRIMARY KEY (stablecoin_id, source_key, recorded_at)
 );
 ```
@@ -490,6 +523,15 @@ CREATE TABLE yield_history (
 **Legacy migration behavior:** historical pre-migration rows are preserved as `source_key = 'legacy-best'`. Same-source trailing metrics only reuse these rows when the coin currently has a single resolved source **and** the legacy source family matches the current source family. If the current winner changed source family (for example price-derived → rate-derived), the new source starts a clean series instead of inheriting mixed legacy history.
 
 **Estimated volume:** source-aware hourly snapshots. `sync-yield-data` runs once per hour and writes one history row per resolved source, so annual row volume depends on the active source set rather than a fixed one-row-per-coin estimate.
+
+### `yield_publication_generations` and `yield_source_decisions`
+
+Migration `0125_yield_publication_generations.sql` adds a compact generation ledger:
+
+- `yield_publication_generations` records `generation_id`, `started_at`, publication `state`, ranking/source row counts, `published_at` or `failed_at`, and failure/debug metadata.
+- `yield_source_decisions` records the selected source per stablecoin for a generation, selected confidence/data-source details, selected 30d APY and score, previous best source, source-switch flag, rejected-candidate count, and a bounded alternatives JSON payload.
+
+The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema.
 
 ---
 
@@ -513,10 +555,11 @@ CREATE TABLE yield_history (
 9. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
 10. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source
 11. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
-12. Batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best` markers
-13. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
-14. Prune `yield_history` older than 365 days
-15. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration using source-cadence freshness windows (three hourly publish cycles for hourly families; 6 hours for supplemental protocol-API and optional Aave/Compound rows; 36 hours for `price-derived` rows), and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
+12. Stage a publication generation, preflight the rankings payload, then batch upsert `yield_data` (all sources) + insert `yield_history` points for every resolved source with `is_best`, `publication_generation_id`, and `publication_state = 'staged'`
+13. Write the cache payload with `publication.status = "published"` and row-level `publishedRank`; on success, mark the generation and rows `published`, and on failure mark them `failed` for operator debugging
+14. Purge stale rows for refreshed coins so obsolete primary/alt sources are removed together, then scan `yield_data` for orphan coin IDs and delete those in chunked `IN (...)` batches instead of a single large `NOT IN (...)`
+15. Prune `yield_history` older than 365 days
+16. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration using source-cadence freshness windows (three hourly publish cycles for hourly families; 6 hours for supplemental protocol-API and optional Aave/Compound rows; 36 hours for `price-derived` rows), and include top-level + per-row provenance in the cached rankings payload whenever the payload passes schema validation and the new payload has not collapsed severely versus the previous cache. Safety-degraded runs still publish fresh rankings when the payload is valid but skip `report_card_cache`.
 
 **Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio (0.75), the default USD benchmark is on a true fallback path (`isFallback === true`), the `fallbackMode` contains `"retained"` (indicating a benchmark fetch failure with last-known-good retention), the retained last-known-good USD benchmark is older than 48 hours, DeFiLlama pool inputs are unavailable, the direct DeFiLlama fetch payload is invalid or yields zero relevant stablecoin pools, all configured deterministic on-chain sources fail in the same cycle without full alternative coverage, a deterministic cooldown suppresses on-chain reads but coverage gaps reappear, or rankings publication fails schema/severe-shrink guards, `sync-yield-data` returns `status: "degraded"`. Repeated deterministic all-fail runs that are fully masked by non-onchain coverage now arm a cooldown instead of burning the full deterministic path every hour. Stale or missing supplemental cache does not by itself degrade the hourly publisher; it only reduces optional source coverage. Retained benchmark metadata still appears in rankings provenance via `provenance.benchmark.fallbackMode`, including the last market-derived rate/date/source preserved across fallback streaks. Row-level benchmark provenance also exposes the selected benchmark key, label, rate, fallback state, and selection mode. Schema-invalid or severe-shrink runs skip cache overwrite. Safety-degraded runs continue to publish a fresh `yield-rankings` cache when the rankings payload is valid, but they still skip `report_card_cache` writes so the degraded condition remains visible without taking the public API offline.
 

@@ -3,9 +3,26 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.48",
+  currentVersion: "8.0",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "8.0",
+    title: "PYS v8 Source-Risk Penalty Rollout",
+    date: "2026-05-13",
+    effectiveAt: 1778630400,
+    summary:
+      "PYS now applies nested source-risk penalties derived from measured yield-source evidence, while missing or unknown source-risk evidence remains neutral for scoring and rollback compatibility.",
+    impact: [
+      "`sourceRisk.sourceRiskPenalty` is populated from measured reward share, source depth, source age, source-switch count, bootstrap history, and sourced venue tier where available; missing or invalid evidence stays neutral (`1`) and penalties clamp to the `1..2.5` range",
+      "PYS now computes source-risk-adjusted row utility before applying the existing safety curve, volatility multiplier, benchmark spread weight, and scaling factor",
+      "Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution, then falls back to APY and TVL tie-breakers",
+      "External lending opportunities remain no-op inputs for base stablecoin Safety Scores; report-card yield-risk helpers normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version consumes them",
+      "Legacy `v7.48` payloads without `sourceRisk`, rank, attribution, or publication fields remain schema-valid, and missing source-risk fields continue to behave neutrally",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.48",
     title: "dTRINITY sdUSD Multi-Chain Weighted Source",

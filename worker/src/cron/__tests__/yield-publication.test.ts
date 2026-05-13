@@ -73,6 +73,11 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     apyReward: 0,
     sourcePool: null,
     sourceTvlUsd: 1_500_000,
+    sourceRisk: null,
+    sourceRiskPenalty: 1,
+    sourceRiskPenaltyReason: "missing-neutral",
+    sourceRiskPenaltyProvided: false,
+    sourceRiskAdjustedUtility: 28,
     dataSource: "defillama",
     exchangeRate: null,
     sourceObservedAt: null,
@@ -101,6 +106,9 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     pharosYieldScore: 28,
     prevExchangeRate: null,
     prevTvlUsd: 1_700_000,
+    sourceDepthRatio: null,
+    observationCount30d: null,
+    sourceSwitchCount30d: null,
     anomalies: [],
     warnings: [],
     confidenceTier: "curated",
@@ -246,6 +254,41 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
 
     expect(payload.rankings[0]?.warningSignals).not.toContain("data-stale");
   });
+
+  it("populates measured source-risk fields and keeps unsupported fields neutral or null", () => {
+    const observedAt = Math.floor(FIXED_NOW.getTime() / 1000) - 300;
+    const payload = buildPayloadWithObservedAt(observedAt, {
+      currentApy: 5,
+      apyReward: 1,
+      sourceRiskPenalty: 1,
+      sourceDepthRatio: 0.25,
+      observationCount30d: 12,
+      sourceSwitchCount30d: 2,
+    });
+
+    expect(payload.rankings[0]?.sourceRisk).toMatchObject({
+      sourceRiskScore: null,
+      sourceRiskPenalty: 1,
+      sourceDepthRatio: 0.25,
+      rewardShare: 0.2,
+      sourceAgeSeconds: 300,
+      observationCount30d: 12,
+      sourceSwitchCount30d: 2,
+      deploymentPlace: null,
+      venueProtocol: null,
+      venueChain: null,
+      venueRiskTier: "unknown",
+    });
+  });
+
+  it("keeps reward share null when APY cannot be decomposed reliably", () => {
+    const payload = buildPayloadWithObservedAt(Math.floor(FIXED_NOW.getTime() / 1000), {
+      currentApy: 5,
+      apyReward: null,
+    });
+
+    expect(payload.rankings[0]?.sourceRisk?.rewardShare).toBeNull();
+  });
 });
 
 describe("validateYieldRankingsPayloadForPublish", () => {
@@ -347,11 +390,12 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       "defillama:alt-a",
       "defillama:alt-b",
     ]);
+    expect(payload.rankings[0]?.altSources[0]?.sourceRisk?.sourceSwitchCount30d).toBeNull();
   });
 });
 
 describe("publishYieldCoordinatorResults", () => {
-  function makePublicationDb(cacheWriteChanges: number) {
+  function makePublicationDb(cacheWriteChanges: number, options?: { cacheWriteError?: Error }) {
     return mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
       { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
@@ -362,6 +406,7 @@ describe("publishYieldCoordinatorResults", () => {
         match: "INSERT INTO cache (key, value, updated_at)",
         rows: [],
         runMeta: { changes: cacheWriteChanges },
+        throwError: options?.cacheWriteError,
       },
       { match: "UPDATE yield_publication_generations", rows: [] },
       { match: "UPDATE yield_data SET publication_state", rows: [] },
@@ -373,14 +418,17 @@ describe("publishYieldCoordinatorResults", () => {
   function makePublishParams(overrides: {
     db: D1Database;
     previewRankingsPayload?: ReturnType<typeof buildPayloadWithObservedAt>;
+    evaluatedSources?: EvaluatedYieldSource[];
+    bestSourceKeyByCoin?: Map<string, string>;
   }) {
     const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
     const source = makeEvaluatedSource();
+    const evaluatedSources = overrides.evaluatedSources ?? [source];
     return {
       db: overrides.db,
       previewRankingsPayload: overrides.previewRankingsPayload ?? buildPayloadWithObservedAt(startSec),
-      evaluatedSources: [source],
-      bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+      evaluatedSources,
+      bestSourceKeyByCoin: overrides.bestSourceKeyByCoin ?? new Map([[source.id, source.sourceKey]]),
       startSec,
       medianApy: 4.5,
       dlPoolsMeta: makeYieldSourceMeta(),
@@ -428,6 +476,75 @@ describe("publishYieldCoordinatorResults", () => {
     expect(
       history.some((entry) => entry.sql.includes("UPDATE yield_history SET publication_state = ?") && entry.binds[0] === "failed"),
     ).toBe(true);
+  });
+
+  it("marks staged rows failed when the rankings cache write throws after D1 staging", async () => {
+    const db = makePublicationDb(1, { cacheWriteError: new Error("D1 queue overloaded") });
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+
+    expect(result).toMatchObject({
+      ok: true,
+      cacheWriteSkipped: true,
+      casSkipped: false,
+      validationFailures: 0,
+    });
+    if (result.ok) {
+      expect(result.degradationReasons).toContain("cache-write-failed:D1 queue overloaded");
+    }
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_data"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("SET state = 'failed'"))).toBe(true);
+    expect(
+      history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?") && entry.binds[0] === "failed"),
+    ).toBe(true);
+  });
+
+  it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
+    const db = makePublicationDb(1);
+    const best = makeEvaluatedSource({
+      sourceKey: "defillama:best",
+      currentApy: 5,
+      apy30d: 5,
+      pharosYieldScore: 35,
+      confidenceTier: "curated",
+    });
+    const rejected = makeEvaluatedSource({
+      sourceKey: `defillama-auto:${"x".repeat(800)}`,
+      currentApy: 11,
+      apy30d: 10,
+      pharosYieldScore: 60,
+      confidenceTier: "discovered",
+      dataSource: "defillama-auto",
+      rejected: true,
+      anomalies: [
+        "diverges-from-canonical",
+        ...Array.from({ length: 19 }, (_, index) => `diagnostic-${index}-${"y".repeat(120)}`),
+      ],
+    });
+    const retained = makeEvaluatedSource({
+      sourceKey: "price-derived:backup",
+      currentApy: 4,
+      apy30d: 4,
+      pharosYieldScore: 20,
+      confidenceTier: "fallback",
+      dataSource: "price-derived",
+    });
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({
+      db,
+      evaluatedSources: [best, rejected, retained],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+    }));
+
+    expect(result).toMatchObject({ ok: true });
+    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const alternativesJson = String(decisionInsert?.binds[11]);
+    expect(new TextEncoder().encode(alternativesJson).length).toBeLessThanOrEqual(4096);
+    const alternatives = JSON.parse(alternativesJson) as Array<{ reason?: string; anomalies?: string[] }>;
+    expect(alternatives.some((alternative) => alternative.reason === "rejected: divergent lower-confidence source")).toBe(true);
+    expect(alternatives.every((alternative) => (alternative.anomalies?.length ?? 0) <= 6)).toBe(true);
   });
 
   it("publishes generation metadata to cache and current/history rows on a successful generation", async () => {

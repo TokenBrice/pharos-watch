@@ -31,7 +31,10 @@ export function YieldIntelligenceMethodologySection() {
                 the primary row, and published lending suggestions exclude Resolv / USR-linked venues so broken wrapper
                 ecosystems do not surface as recommended base-asset routes. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
-                supply before they can become the live recommendation. PYS is benchmark-aware, and Curve Savings crvUSD now follows the active on-chain profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible as intentional gaps but cannot publish into the live leaderboard before launch.
+                supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
+                with missing source-risk evidence treated as neutral. Curve Savings crvUSD now follows the active on-chain
+                profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible
+                as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
               <p className="text-xs text-muted-foreground">
                 See also:{" "}
@@ -63,20 +66,20 @@ export function YieldIntelligenceMethodologySection() {
                     {
                       label: "Failure behavior",
                       value:
-                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive (safety defaults to 40 / NR if live report-card hydration is missing), while degraded benchmark or safety inputs are surfaced in provenance",
+                        "No resolved source skips coin update; PYS returns 0 when apy30d <= 0 or the benchmark-adjusted effective yield is non-positive (safety defaults to 40 / NR if live report-card hydration is missing; missing source-risk penalty resolves to neutral 1), while degraded benchmark or safety inputs are surfaced in provenance",
                     },
                   ]}
                 />
               </div>
               <WorkedExample summary="Worked example (verified against computePYS)">
-                <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, apyVarianceScore=0.18, scalingFactor=8</p>
+                <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
                 <p className="font-mono">
                   benchmarkSpread=8.4-4.25=4.15; effectiveYield=max(0,8.4+0.25*4.15)=9.44; riskPenalty=max(0.5,(101-72)/20)=1.45;
-                  adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=9.44/1.92=4.92; sustainability=1-0.18=0.82
+                  sourceRiskPenalty=1.2; rowUtility=9.44/1.2=7.87; adjustedPenalty=1.45^1.75=1.92; yieldEfficiency=7.87/1.92=4.10; sustainability=1-0.18=0.82
                 </p>
-                <p className="font-mono">PYS=min(100, round(4.92*0.82*8))=32</p>
+                <p className="font-mono">PYS=clamp(round(4.10*0.82*8),0,100)=27</p>
                 <p>
-                  Result: <span className="text-foreground">PYS 32</span>.
+                  Result: <span className="text-foreground">PYS 27</span>.
                 </p>
               </WorkedExample>
               <MethodologyDetails summary="Technical details: APY source resolution, confidence arbitration, PYS formula, NAV handling, and limits">
@@ -94,7 +97,8 @@ export function YieldIntelligenceMethodologySection() {
                   <MethodologyDiagramArrow direction="right" />
                   {/* Formula components */}
                   <div className="flex flex-col gap-2 flex-1">
-                    <MethodologyDiagramCard className="flex-1" title="Yield Efficiency" subtitle="Effective yield ÷ curved risk penalty" />
+                    <MethodologyDiagramCard className="flex-1" title="Row Utility" subtitle="Effective yield ÷ source risk" />
+                    <MethodologyDiagramCard className="flex-1" title="Yield Efficiency" subtitle="Row utility ÷ curved safety penalty" />
                     <MethodologyDiagramCard className="flex-1" title="Sustainability" subtitle="penalises high variance" />
                   </div>
                   <MethodologyDiagramArrow direction="right" />
@@ -111,8 +115,9 @@ export function YieldIntelligenceMethodologySection() {
                   <MethodologyDiagramArrow />
                   <MethodologyDiagramCard className="w-full" title="Effective Yield" subtitle="APY + 25% benchmark spread" />
                   <MethodologyDiagramArrow />
-                  <div className="grid grid-cols-2 gap-2 w-full">
-                    <MethodologyDiagramCard title="Yield Efficiency" titleClassName="text-xs text-foreground font-medium" subtitle="Effective yield ÷ curved risk penalty" subtitleClassName="text-xs text-muted-foreground" />
+                  <div className="grid grid-cols-3 gap-2 w-full">
+                    <MethodologyDiagramCard title="Row Utility" titleClassName="text-xs text-foreground font-medium" subtitle="yield ÷ source risk" subtitleClassName="text-xs text-muted-foreground" />
+                    <MethodologyDiagramCard title="Efficiency" titleClassName="text-xs text-foreground font-medium" subtitle="utility ÷ safety" subtitleClassName="text-xs text-muted-foreground" />
                     <MethodologyDiagramCard title="Sustainability" titleClassName="text-xs text-foreground font-medium" subtitle="penalises variance" subtitleClassName="text-xs text-muted-foreground" />
                   </div>
                   <MethodologyDiagramArrow />
@@ -157,7 +162,9 @@ export function YieldIntelligenceMethodologySection() {
                     Deterministic and curated paths can all contribute rows, then a confidence-weighted arbitration layer
                     chooses the best row. Divergent discovered or fallback sources can be demoted or rejected when a
                     canonical source disagrees materially. Protocol-native supplemental lending venues such as Aave V3 do
-                    not outrank stronger native wrapper yields purely because they query protocol state directly, and
+                    not outrank stronger native wrapper yields purely because they query protocol state directly. Within a
+                    confidence tier, candidates compare source-risk-adjusted utility after source-risk penalty resolution
+                    before falling back to APY and TVL tie-breakers, and
                     Resolv / USR-linked lending-opportunity venues are excluded from publication entirely. Published
                     lending-opportunity rows also need observable venue TVL and must clear the higher of the absolute
                     TVL floor or 0.1% of the tracked stablecoin&apos;s current supply, and explicit lending overrides only
@@ -192,13 +199,17 @@ export function YieldIntelligenceMethodologySection() {
                     <br />
                     effectiveYield = max(0, apy30d + benchmarkSpread &times; 0.25)
                     <br />
+                    sourceRiskPenalty = deriveOrResolve(sourceRisk, neutral=1, max=2.5)
+                    <br />
+                    rowUtility = effectiveYield / sourceRiskPenalty
+                    <br />
                     riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)
                     <br />
-                    yieldEfficiency = effectiveYield / (riskPenalty ^ 1.75)
+                    yieldEfficiency = rowUtility / (riskPenalty ^ 1.75)
                     <br />
                     sustainability = max(0.3, 1.0 &minus; apyVarianceScore)
                     <br />
-                    PYS = round(min(100, yieldEfficiency &times; sustainability &times; scalingFactor))
+                    PYS = clamp(round(yieldEfficiency &times; sustainability &times; scalingFactor), 0, 100)
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
@@ -207,9 +218,14 @@ export function YieldIntelligenceMethodologySection() {
                       turning PYS into a pure excess-yield ranker
                     </li>
                     <li>
+                      <span className="text-foreground">Source-risk penalty</span> uses nested source-risk evidence from
+                      measured reward share, source depth, freshness, source switching, bootstrap history, and sourced
+                      venue tier where available, then clamps it to 1&ndash;2.5 while treating missing evidence as neutral
+                    </li>
+                    <li>
                       <span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the
-                      coin&apos;s risk profile &mdash; the raw safety penalty is raised to a fixed power so weaker safety
-                      grades need much more effective yield to compete
+                      opportunity and coin risk profile &mdash; source-risk-adjusted row utility is divided by the curved
+                      safety penalty so weaker safety grades need much more effective yield to compete
                     </li>
                     <li>
                       <span className="text-foreground">Sustainability multiplier</span> penalizes volatile yields (high

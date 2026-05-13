@@ -21,9 +21,92 @@ export const PYS_DEFAULT_SAFETY_SCORE = 40;
 /** Weight applied to row-level benchmark spread when forming effective yield. */
 export const PYS_BENCHMARK_SPREAD_WEIGHT = 0.25;
 
+/** Maximum multiplier applied by explicit source-risk penalties. */
+export const PYS_MAX_SOURCE_RISK_PENALTY = 2.5;
+
+export type PysSourceRiskPenaltyReason =
+  | "provided"
+  | "missing-neutral"
+  | "invalid-neutral"
+  | "below-min-clamped"
+  | "above-max-clamped";
+
+export interface PysSourceRiskPenaltyResolution {
+  penalty: number;
+  reason: PysSourceRiskPenaltyReason;
+  provided: boolean;
+}
+
+export interface PysSourceRiskPenaltyInput {
+  rewardShare?: number | null;
+  sourceDepthRatio?: number | null;
+  sourceAgeSeconds?: number | null;
+  sourceSwitchCount30d?: number | null;
+  observationCount30d?: number | null;
+  venueRiskTier?: string | null;
+}
+
 export function yieldStabilityToApyVarianceScore(yieldStability: number | null | undefined): number {
   if (yieldStability == null) return 0;
   return Math.max(0, Math.min(1, 1 - yieldStability));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function finiteOrNull(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export function resolvePysSourceRiskPenalty(
+  sourceRiskPenalty: number | null | undefined,
+): PysSourceRiskPenaltyResolution {
+  if (sourceRiskPenalty == null) {
+    return { penalty: 1, reason: "missing-neutral", provided: false };
+  }
+  if (!Number.isFinite(sourceRiskPenalty)) {
+    return { penalty: 1, reason: "invalid-neutral", provided: false };
+  }
+  if (sourceRiskPenalty < 1) {
+    return { penalty: 1, reason: "below-min-clamped", provided: true };
+  }
+  if (sourceRiskPenalty > PYS_MAX_SOURCE_RISK_PENALTY) {
+    return { penalty: PYS_MAX_SOURCE_RISK_PENALTY, reason: "above-max-clamped", provided: true };
+  }
+  return { penalty: sourceRiskPenalty, reason: "provided", provided: true };
+}
+
+export function derivePysSourceRiskPenalty(input: PysSourceRiskPenaltyInput): number {
+  let penalty = 0;
+  const rewardShare = finiteOrNull(input.rewardShare);
+  const sourceDepthRatio = finiteOrNull(input.sourceDepthRatio);
+  const sourceAgeSeconds = finiteOrNull(input.sourceAgeSeconds);
+  const sourceSwitchCount30d = finiteOrNull(input.sourceSwitchCount30d);
+  const observationCount30d = finiteOrNull(input.observationCount30d);
+
+  if (rewardShare != null && rewardShare > 0.5) {
+    penalty += Math.min(0.5, rewardShare - 0.5);
+  }
+  if (sourceDepthRatio != null && sourceDepthRatio < 0.001) {
+    penalty += 0.35;
+  }
+  if (sourceAgeSeconds != null && sourceAgeSeconds > 6 * 60 * 60) {
+    penalty += 0.25;
+  }
+  if (sourceSwitchCount30d != null && sourceSwitchCount30d > 0) {
+    penalty += Math.min(0.3, sourceSwitchCount30d * 0.1);
+  }
+  if (observationCount30d != null && observationCount30d > 0 && observationCount30d < 7) {
+    penalty += 0.2;
+  }
+  if (input.venueRiskTier === "high") {
+    penalty += 0.35;
+  } else if (input.venueRiskTier === "medium") {
+    penalty += 0.15;
+  }
+
+  return resolvePysSourceRiskPenalty(1 + penalty).penalty;
 }
 
 interface PysComponentInput {
@@ -31,27 +114,33 @@ interface PysComponentInput {
   safetyScore: number | null;
   apyVarianceScore: number;
   benchmarkRate?: number | null;
+  sourceRiskPenalty?: number | null;
 }
 
 export function computePysComponents(input: PysComponentInput) {
-  const effectiveSafety = input.safetyScore ?? PYS_DEFAULT_SAFETY_SCORE;
+  const apy30d = finiteOrNull(input.apy30d) ?? 0;
+  const effectiveSafety = finiteOrNull(input.safetyScore) ?? PYS_DEFAULT_SAFETY_SCORE;
   const riskPenalty = Math.max(PYS_RISK_PENALTY_FLOOR, (101 - effectiveSafety) / 20);
   const adjustedRiskPenalty = Math.pow(riskPenalty, PYS_RISK_PENALTY_EXPONENT);
-  const benchmarkRate =
-    typeof input.benchmarkRate === "number" && Number.isFinite(input.benchmarkRate)
-      ? input.benchmarkRate
-      : null;
-  const benchmarkSpread = benchmarkRate == null ? null : input.apy30d - benchmarkRate;
+  const benchmarkRate = finiteOrNull(input.benchmarkRate);
+  const benchmarkSpread = benchmarkRate == null ? null : apy30d - benchmarkRate;
   const benchmarkAdjustment = benchmarkSpread == null ? 0 : benchmarkSpread * PYS_BENCHMARK_SPREAD_WEIGHT;
-  const effectiveYield = Math.max(0, input.apy30d + benchmarkAdjustment);
-  const yieldEfficiency = effectiveYield / adjustedRiskPenalty;
-  const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - input.apyVarianceScore);
+  const effectiveYield = Math.max(0, apy30d + benchmarkAdjustment);
+  const sourceRiskPenaltyResolution = resolvePysSourceRiskPenalty(input.sourceRiskPenalty);
+  const rowUtility = effectiveYield / sourceRiskPenaltyResolution.penalty;
+  const yieldEfficiency = rowUtility / adjustedRiskPenalty;
+  const apyVarianceScore = clamp(finiteOrNull(input.apyVarianceScore) ?? 0, 0, 1);
+  const sustainabilityMultiplier = Math.max(PYS_SUSTAINABILITY_FLOOR, 1.0 - apyVarianceScore);
   return {
     riskPenalty,
     adjustedRiskPenalty,
+    sourceRiskPenalty: sourceRiskPenaltyResolution.penalty,
+    sourceRiskPenaltyReason: sourceRiskPenaltyResolution.reason,
+    sourceRiskPenaltyProvided: sourceRiskPenaltyResolution.provided,
     benchmarkSpread,
     benchmarkAdjustment,
     effectiveYield,
+    rowUtility,
     yieldEfficiency,
     sustainabilityMultiplier,
   };
@@ -63,16 +152,19 @@ interface PYSInput {
   apyVarianceScore: number;
   scalingFactor: number;
   benchmarkRate?: number | null;
+  sourceRiskPenalty?: number | null;
 }
 
-export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor, benchmarkRate }: PYSInput): number {
-  if (apy30d <= 0) return 0;
+export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor, benchmarkRate, sourceRiskPenalty }: PYSInput): number {
+  if (!Number.isFinite(apy30d) || apy30d <= 0) return 0;
+  if (!Number.isFinite(scalingFactor) || scalingFactor <= 0) return 0;
   const { effectiveYield, yieldEfficiency, sustainabilityMultiplier } = computePysComponents({
     apy30d,
     safetyScore,
     apyVarianceScore,
     benchmarkRate,
+    sourceRiskPenalty,
   });
   if (effectiveYield <= 0) return 0;
-  return Math.min(100, Math.round(yieldEfficiency * sustainabilityMultiplier * scalingFactor));
+  return clamp(Math.round(yieldEfficiency * sustainabilityMultiplier * scalingFactor), 0, 100);
 }

@@ -16,6 +16,11 @@ import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yie
 import type { CronResult } from "../../lib/cron-logger";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 
+function getPublicationFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message ? `cache-write-failed:${message.slice(0, 120)}` : "cache-write-failed";
+}
+
 export function buildPreviewYieldRankingsArtifacts(params: {
   evaluatedSources: EvaluatedYieldSource[];
   bestSourceKeyByCoin: Map<string, string>;
@@ -141,7 +146,15 @@ export async function publishYieldCoordinatorResults(params: {
     startSec: params.startSec,
     status: "published",
   });
-  const cacheWrite = await writeYieldRankingsCache(params.db, publishedRankingsPayload, params.startSec);
+  const cacheWrite = await writeYieldRankingsCache(params.db, publishedRankingsPayload, params.startSec).catch((error: unknown) => {
+    const reason = getPublicationFailureReason(error);
+    console.warn("[sync-yield-data] Failed to publish yield-rankings cache after D1 staging:", error);
+    return {
+      ok: false,
+      validationFailures: 0,
+      reason,
+    };
+  });
   if (!cacheWrite.ok) {
     params.degradationReasons.push(cacheWrite.reason ?? "schema-validation-failed");
     await finalizeYieldPublicationGeneration(params.db, {
@@ -169,6 +182,6 @@ export async function publishYieldCoordinatorResults(params: {
     degradationReasons: params.degradationReasons,
     validationFailures: cacheWrite.validationFailures,
     cacheWriteSkipped: !cacheWrite.ok,
-    casSkipped: cacheWrite.cacheWrite?.skippedBecauseNewer === true,
+    casSkipped: "cacheWrite" in cacheWrite && cacheWrite.cacheWrite?.skippedBecauseNewer === true,
   };
 }

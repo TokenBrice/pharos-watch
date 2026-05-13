@@ -37,7 +37,7 @@ interface SupplementalSourceFamilyContext {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
-interface SupplementalSourceFamilyResult {
+export interface SupplementalSourceFamilyResult {
   key: SupplementalSourceFamilyKey;
   candidates: ResolvedYieldCandidate[];
   sourceFamilyCount: number;
@@ -73,7 +73,7 @@ export interface SupplementalSourceAccounting {
 const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
 export const SUPPLEMENTAL_SOURCE_FAMILY_CONCURRENCY = 1;
 
-const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
+export const SUPPLEMENTAL_SOURCE_FAMILY_KEYS: SupplementalSourceFamilyKey[] = [
   "morpho",
   "pendle",
   "yearnKong",
@@ -408,6 +408,7 @@ export async function loadSupplementalSourceFamilies(
   context: SupplementalSourceFamilyContext,
 ): Promise<{
   candidates: ResolvedYieldCandidate[];
+  familyResults: SupplementalSourceFamilyResult[];
   sourceFamilyCounts: SourceFamilyCountRecord;
   supplementalSourceAccounting: SupplementalSourceAccounting;
   optionalRpcTelemetry: {
@@ -428,6 +429,7 @@ export async function loadSupplementalSourceFamilies(
 
   return {
     candidates: familyResults.flatMap((result) => result.candidates),
+    familyResults,
     sourceFamilyCounts,
     supplementalSourceAccounting: {
       familyExecution: {

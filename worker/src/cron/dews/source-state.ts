@@ -289,7 +289,12 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   let yieldWarningRowsRead = 0;
   try {
     const yieldRows = await options.db
-      .prepare("SELECT stablecoin_id, warning_signals FROM yield_data WHERE warning_signals IS NOT NULL")
+      .prepare(
+        `SELECT stablecoin_id, warning_signals
+         FROM yield_data
+         WHERE warning_signals IS NOT NULL
+           AND (publication_state IS NULL OR publication_state = 'published')`,
+      )
       .all<{ stablecoin_id: string; warning_signals: string }>();
     yieldWarningRowsRead = yieldRows.results.length;
     for (const row of yieldRows.results) {

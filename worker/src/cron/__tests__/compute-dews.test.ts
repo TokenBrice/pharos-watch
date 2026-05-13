@@ -130,6 +130,7 @@ interface MakeDbOptions {
   yieldWarningRows?: Array<{
     stablecoin_id: string;
     warning_signals: string;
+    publication_state?: string | null;
   }>;
   signalIds?: string[];
   historyIds?: string[];
@@ -202,8 +203,14 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         };
       }
       if (sql.includes("FROM yield_data")) {
+        const rows = opts.yieldWarningRows ?? [];
+        if (sql.includes("publication_state")) {
+          return {
+            results: rows.filter((row) => row.publication_state == null || row.publication_state === "published") as T[],
+          };
+        }
         return {
-          results: (opts.yieldWarningRows ?? []) as T[],
+          results: rows as T[],
         };
       }
       if (sql.includes("FROM mint_burn_hourly")) {
@@ -409,6 +416,39 @@ describe("computeAndStoreDEWS", () => {
         source: "yield_data",
         stablecoinId: "usdt-tether",
         context: "yield_data.warning_signals",
+      }),
+    );
+  });
+
+  it("excludes staged and failed yield warnings while retaining published and legacy rows", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      yieldWarningRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: JSON.stringify(["yield-spike"]),
+          publication_state: "published",
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: JSON.stringify(["reward-heavy"]),
+          publication_state: "failed",
+        },
+        {
+          stablecoin_id: "usdt-tether",
+          warning_signals: JSON.stringify(["tvl-outflow"]),
+          publication_state: "staged",
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(sqlSeen.some((sql) => sql.includes("publication_state IS NULL OR publication_state = 'published'"))).toBe(true);
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        yieldWarnings: ["yield-spike"],
       }),
     );
   });

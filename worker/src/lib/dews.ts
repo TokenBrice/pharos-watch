@@ -13,6 +13,10 @@ import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
 } from "@shared/lib/dews-config";
+import type {
+  YieldRankChangeAttribution,
+  YieldSourceRisk,
+} from "@shared/types/yield";
 import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +90,10 @@ export interface DEWSInput {
   flowDataAgeDays: number;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];
+  // Phase 4 yield-risk scaffolding. Nullable/omitted fields are explicit no-ops
+  // until DEWS has sourced structured weights for source-risk and attribution.
+  yieldSourceRisk?: YieldSourceRisk | null;
+  yieldRankChangeAttribution?: YieldRankChangeAttribution | null;
   // Systemic backdrop (optional — latest PSI score from previous cycle)
   psiScore: number | null;
   // Smoothing (optional — previous reading for averaging)
@@ -564,7 +572,19 @@ const YIELD_WARNING_SCORES: Record<string, number> = {
   "reward-heavy": 20,
 };
 
+function computeStructuredYieldSignal(
+  input: Pick<DEWSInput, "yieldSourceRisk" | "yieldRankChangeAttribution">,
+): SignalResult | null {
+  if (input.yieldSourceRisk == null && input.yieldRankChangeAttribution == null) {
+    return null;
+  }
+  return null;
+}
+
 function computeYieldSignal(input: DEWSInput): SignalResult {
+  const structuredSignal = computeStructuredYieldSignal(input);
+  if (structuredSignal) return structuredSignal;
+
   if (input.yieldWarnings.length === 0) {
     return { value: 0, available: false };
   }

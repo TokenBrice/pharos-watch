@@ -1,8 +1,221 @@
 import { describe, expect, it } from "vitest";
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { buildHistoryKey, evaluateYieldSources } from "../yield-sync/evaluation";
+import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
+import type { ResolvedYield } from "../yield-sync/types";
+
+function baseEvaluationInput(overrides: Partial<EvaluateYieldSourcesInput> = {}): EvaluateYieldSourcesInput {
+  const startSec = overrides.startSec ?? 1776729600;
+  return {
+    resolved: [],
+    startSec,
+    sevenDaysAgoSec: startSec - 7 * 86400,
+    safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
+    riskFreeRates: {
+      USD: buildHardcodedUsdBenchmark("test"),
+      EUR: null,
+      CHF: null,
+    },
+    tier1PrevRates: new Map(),
+    sourceHistory: new Map(),
+    onChainCompatibilityHistoryById: new Map(),
+    legacyDeterministicOnChainHistoryById: new Map(),
+    legacyHistoryById: new Map(),
+    prevTvlBySource: new Map(),
+    legacyPrevTvlById: new Map(),
+    prevBestSourceKeyByCoin: new Map(),
+    sourceSwitchCount30dByCoin: new Map(),
+    stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
+    ...overrides,
+  };
+}
+
+function resolvedYield(overrides: Partial<ResolvedYield>): ResolvedYield {
+  return {
+    currentApy: 5,
+    apyBase: 5,
+    apyReward: null,
+    sourcePool: null,
+    sourceTvlUsd: 1_000_000,
+    dataSource: "defillama",
+    exchangeRate: null,
+    sourceKey: "defillama:coin-a:base",
+    sourceObservedAt: 1776729600,
+    comparisonAnchorObservedAt: null,
+    yieldSource: "Fixture source",
+    yieldType: "lending-vault",
+    ...overrides,
+  };
+}
 
 describe("evaluateYieldSources", () => {
+  it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:fragile",
+            currentApy: 10,
+            sourceRisk: { sourceRiskPenalty: 2.5 },
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:clean",
+            currentApy: 8,
+            dataSource: "protocol-api",
+            sourceRisk: null,
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:clean");
+    const fragile = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:fragile");
+    const clean = result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:coin-a:clean");
+    expect(fragile?.sourceRiskPenalty).toBe(2.5);
+    expect(clean?.sourceRiskPenalty).toBe(1.2);
+    expect(clean?.sourceRiskPenaltyReason).toBe("provided");
+    expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
+  });
+
+  it("derives source-risk penalties from measured fields before same-tier arbitration", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:fragile",
+            currentApy: 10,
+            apyReward: 9,
+            sourceTvlUsd: 1_000,
+            dataSource: "protocol-api",
+            sourceObservedAt: startSec - 7 * 60 * 60,
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:clean",
+            currentApy: 8,
+            dataSource: "protocol-api",
+            sourceTvlUsd: 10_000_000,
+          }),
+        },
+      ],
+      stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:clean");
+    const fragile = result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:coin-a:fragile");
+    const clean = result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:coin-a:clean");
+    expect(fragile?.sourceRiskPenalty).toBeGreaterThan(clean?.sourceRiskPenalty ?? 0);
+    expect(clean?.sourceRiskAdjustedUtility).toBeGreaterThan(fragile?.sourceRiskAdjustedUtility ?? 0);
+  });
+
+  it("keeps APY-first ordering for same-tier candidates when source-risk is missing", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:lower",
+            currentApy: 7,
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "protocol-api:coin-a:higher",
+            currentApy: 8,
+            dataSource: "protocol-api",
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:higher");
+  });
+
+  it("derives depth, observation count, and 30d switch count from existing cache and history", () => {
+    const startSec = 1776729600;
+    const result = evaluateYieldSources(baseEvaluationInput({
+      startSec,
+      sevenDaysAgoSec: startSec - 7 * 86400,
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:base",
+            sourceTvlUsd: 2_500_000,
+          }),
+        },
+      ],
+      stablecoinSupplyById: new Map([["coin-a", 10_000_000]]),
+      sourceHistory: new Map([
+        [
+          buildHistoryKey("coin-a", "defillama:coin-a:base"),
+          [
+            {
+              stablecoin_id: "coin-a",
+              source_key: "defillama:coin-a:base",
+              recorded_at: startSec - 3600,
+              is_best: 1,
+              apy: 4.8,
+              source_tvl_usd: 2_400_000,
+              data_source: "defillama",
+              yield_source: "Fixture source",
+              yield_type: "lending-vault",
+            },
+          ],
+        ],
+      ]),
+      sourceSwitchCount30dByCoin: new Map([["coin-a", 2]]),
+    }));
+
+    expect(result.evaluatedSources[0]?.sourceDepthRatio).toBe(0.25);
+    expect(result.evaluatedSources[0]?.observationCount30d).toBe(2);
+    expect(result.evaluatedSources[0]?.sourceSwitchCount30d).toBe(2);
+  });
+
+  it("preserves deterministic precedence over lower-tier rows even when the deterministic row has a penalty", () => {
+    const result = evaluateYieldSources(baseEvaluationInput({
+      resolved: [
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "rate-derived:coin-a",
+            currentApy: 5,
+            dataSource: "rate-derived",
+            sourceRisk: { sourceRiskPenalty: 2.5 },
+          }),
+        },
+        {
+          id: "coin-a",
+          symbol: "A",
+          yield: resolvedYield({
+            sourceKey: "defillama:coin-a:high",
+            currentApy: 20,
+          }),
+        },
+      ],
+    }));
+
+    expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("rate-derived:coin-a");
+  });
+
   it("does not carry old scrvUSD trailing-delta history into the current-rate source", () => {
     const startSec = 1775891171;
     const result = evaluateYieldSources({
@@ -60,6 +273,8 @@ describe("evaluateYieldSources", () => {
       prevTvlBySource: new Map(),
       legacyPrevTvlById: new Map(),
       prevBestSourceKeyByCoin: new Map([["scrvusd-curve", "onchain:scrvusd-curve"]]),
+      sourceSwitchCount30dByCoin: new Map(),
+      stablecoinSupplyById: new Map([["scrvusd-curve", 100_000_000]]),
     });
 
     const [source] = result.evaluatedSources;
@@ -153,6 +368,8 @@ describe("evaluateYieldSources", () => {
       prevTvlBySource: new Map(),
       legacyPrevTvlById: new Map(),
       prevBestSourceKeyByCoin: new Map(),
+      sourceSwitchCount30dByCoin: new Map(),
+      stablecoinSupplyById: new Map([["iusd-infinifi", 100_000_000]]),
     });
 
     const [source] = result.evaluatedSources;

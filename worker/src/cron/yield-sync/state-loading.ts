@@ -13,13 +13,15 @@ import {
   parseDeterministicOnChainHealthState,
   parseYieldSupplementalSourcesCache,
   serializeDeterministicOnChainHealthState,
+  getYieldSupplementalFamilyCacheKey,
+  YIELD_SUPPLEMENTAL_CACHE_KEY,
   type DeterministicOnChainHealthState,
 } from "./cache";
 import { fetchOnChainRates, loadDlStablecoinPools, loadRiskFreeRateRegistry } from "./sources";
+import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "./supplemental-source-families";
 import type { ResolvedYieldCandidate } from "./types";
 
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.75;
-const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 const DETERMINISTIC_ONCHAIN_HEALTH_CACHE_KEY = "yield:onchain-health:v1";
 const YIELD_SUPPLEMENTAL_MAX_AGE_SEC = 12 * 3600;
 const DETERMINISTIC_ONCHAIN_COOLDOWN_THRESHOLD = 2;
@@ -84,6 +86,40 @@ async function loadYieldSupplementalCandidates(
   db: D1Database,
   startSec: number,
 ): Promise<{ candidates: ResolvedYieldCandidate[]; meta: YieldSupplementalCacheMeta }> {
+  const familyCandidates: ResolvedYieldCandidate[] = [];
+  let familyCacheRows = 0;
+  let degradedFamilyCaches = 0;
+  let latestFamilyUpdatedAt: number | null = null;
+
+  for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+    const cachedFamily = await getCache(db, getYieldSupplementalFamilyCacheKey(family));
+    if (!cachedFamily) continue;
+    familyCacheRows += 1;
+    const parsedFamily = parseYieldSupplementalSourcesCache(cachedFamily.value, cachedFamily.updatedAt, startSec);
+    if (!parsedFamily || parsedFamily.ageSeconds > YIELD_SUPPLEMENTAL_MAX_AGE_SEC) {
+      degradedFamilyCaches += 1;
+      continue;
+    }
+    familyCandidates.push(...parsedFamily.candidates);
+    latestFamilyUpdatedAt = Math.max(latestFamilyUpdatedAt ?? 0, parsedFamily.updatedAt);
+  }
+
+  if (familyCandidates.length > 0) {
+    const ageSeconds = latestFamilyUpdatedAt == null ? null : Math.max(0, startSec - latestFamilyUpdatedAt);
+    return {
+      candidates: familyCandidates,
+      meta: {
+        mode: "cache",
+        updatedAt: latestFamilyUpdatedAt,
+        ageSeconds,
+        sourceCount: familyCandidates.length,
+        fallbackMode: degradedFamilyCaches > 0 || familyCacheRows < SUPPLEMENTAL_SOURCE_FAMILY_KEYS.length
+          ? "partial-family-cache"
+          : null,
+      },
+    };
+  }
+
   const cached = await getCache(db, YIELD_SUPPLEMENTAL_CACHE_KEY);
   if (!cached) {
     return {

@@ -69,6 +69,14 @@ ORDER BY selected_score DESC
 LIMIT 25;
 ```
 
+```sql
+SELECT stablecoin_id, length(alternatives_json) AS evidence_bytes, alternatives_json
+FROM yield_source_decisions
+WHERE generation_id = '<generation_id>' AND stablecoin_id = '<stablecoin_id>';
+```
+
+The `alternatives_json` ledger is intentionally compact and bounded to 4 KB per selected row. It keeps at most four alternate sources with short rejected/retained reasons and anomaly samples, so it is debug evidence rather than a full replay log.
+
 ## Common Causes
 
 - `sync-yield-data` is stale, failing, or stuck behind an active lease.

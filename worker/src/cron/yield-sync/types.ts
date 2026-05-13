@@ -1,4 +1,5 @@
 import type { YieldType } from "@shared/types/core";
+import type { YieldSourceRisk } from "@shared/types/yield";
 
 export interface DlPool {
   pool: string;
@@ -30,6 +31,7 @@ export interface ResolvedYield {
   project?: string;
   sourceObservedAt?: number | null;
   comparisonAnchorObservedAt?: number | null;
+  sourceRisk?: YieldSourceRisk | null;
 }
 
 export interface ResolvedYieldCandidate {

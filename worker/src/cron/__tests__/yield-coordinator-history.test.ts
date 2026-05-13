@@ -55,4 +55,20 @@ describe("yield coordinator history", () => {
     expect(result.legacyPrevTvlById.get("coin-a")).toBe(7_000);
     expect(result.prevBestSourceKeyByCoin.get("coin-a")).toBe("source-a");
   });
+
+  it("counts selected-source switches across 30d history rows", () => {
+    const result = buildYieldHistoryEvaluationInputs({
+      historyRows: [
+        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 100 }),
+        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 200 }),
+        row({ stablecoin_id: "coin-a", source_key: "source-b", is_best: 1, recorded_at: 300 }),
+        row({ stablecoin_id: "coin-a", source_key: "source-c", is_best: 0, recorded_at: 400 }),
+        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1, recorded_at: 500 }),
+      ],
+      prevTvlRows: [],
+      prevBestRows: [],
+    });
+
+    expect(result.sourceSwitchCount30dByCoin.get("coin-a")).toBe(2);
+  });
 });

@@ -92,8 +92,108 @@ describe("loadYieldHealthSummary", () => {
         ageSec: 86400,
         status: "healthy",
       },
+      sourceRiskCoverage: {
+        totalRows: 2,
+        bestRows: 2,
+        altRows: 0,
+        rowsWithSourceRisk: 0,
+      },
       latestCronStatus: "ok",
       latestCronStartedAt: NOW - 120,
+    });
+    expect(summary.sourceRiskCoverage.fields.sourceRiskScore.nullRate).toBe(1);
+    expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty.coverageRatio).toBe(0);
+  });
+
+  it("reports source-risk field coverage and null rates across best and alternate rows", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            updatedAt: NOW - 300,
+            rankings: [
+              {
+                id: "usdc-circle",
+                sourceRisk: {
+                  sourceRiskPenalty: 1,
+                  sourceDepthRatio: 0.12,
+                  rewardShare: 0,
+                  sourceAgeSeconds: 120,
+                  observationCount30d: 10,
+                  sourceSwitchCount30d: 1,
+                  venueRiskTier: "unknown",
+                },
+                altSources: [
+                  {
+                    sourceRisk: {
+                      sourceRiskPenalty: 1,
+                      sourceAgeSeconds: 600,
+                      observationCount30d: 2,
+                      venueRiskTier: "high",
+                    },
+                  },
+                ],
+              },
+            ],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 1,
+                coveredCount: 1,
+                trackedCount: 1,
+                reason: null,
+              },
+              benchmark: {
+                fetchedAt: NOW - 3600,
+                ageSeconds: 3600,
+                source: "tbill-cache",
+                isFallback: false,
+                fallbackMode: null,
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.sourceRiskCoverage).toMatchObject({
+      totalRows: 2,
+      bestRows: 1,
+      altRows: 1,
+      rowsWithSourceRisk: 2,
+    });
+    expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty).toMatchObject({
+      eligibleCount: 2,
+      populatedCount: 2,
+      nullRate: 0,
+    });
+    expect(summary.sourceRiskCoverage.fields.sourceRiskScore).toMatchObject({
+      eligibleCount: 2,
+      populatedCount: 0,
+      nullRate: 1,
+    });
+    expect(summary.sourceRiskCoverage.fields.sourceSwitchCount30d).toMatchObject({
+      eligibleCount: 1,
+      populatedCount: 1,
+      nullRate: 0,
+    });
+    expect(summary.sourceRiskCoverage.fields.venueRiskTier).toMatchObject({
+      eligibleCount: 2,
+      populatedCount: 1,
+      nullRate: 0.5,
     });
   });
 
@@ -108,6 +208,7 @@ describe("loadYieldHealthSummary", () => {
     expect(summary.supplemental.status).toBe("unknown");
     expect(summary.benchmark.status).toBe("unknown");
     expect(summary.coverageAudit.status).toBe("unknown");
+    expect(summary.sourceRiskCoverage.totalRows).toBe(0);
     expect(summary.latestCronStatus).toBe("error");
   });
 

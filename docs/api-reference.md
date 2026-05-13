@@ -2229,7 +2229,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. PYS is benchmark-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, and then applies the current Safety Score. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2275,7 +2275,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | `provenance`    | `object \| null` | Snapshot-level provenance for default benchmark freshness, full benchmark registry, DeFiLlama pool input freshness, safety coverage, and selection method |
 | `publication`   | `object \| null` | Optional publication metadata for generation-aware payloads; omitted on legacy payloads                                                                     |
 
-Preparatory optional fields added for the v8 schema scaffold are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Clients must not infer source-risk semantics when source-risk values are missing or `null`.
+Optional v8 fields are nullable and omittable. Publication-generation fields are populated by the generation-aware publisher when available; legacy rows and old payloads may still omit them. Public source-risk values are nested under the `sourceRisk` object; flattened top-level fields such as `sourceRiskPenalty` or `rewardShare` are not part of the public API contract.
 
 | Field                         | Surface                 | Type                                                                                                                                    | Population status |
 | ----------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -2286,17 +2286,22 @@ Preparatory optional fields added for the v8 schema scaffold are nullable and om
 | `publication.status`          | rankings/history root   | `"staged" \| "published" \| "failed" \| null \| undefined`                                                                              | Public payloads should expose `published`; staged/failed states are retained in D1 for operations |
 | `publicationGenerationId`     | ranking/history rows    | `string \| null \| undefined`                                                                                                           | Row-to-generation join identifier; `null` on legacy rows |
 | `publishedRank`               | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Stable rank from the published cache order before live Safety Score hydration |
-| `liveRank`                    | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Reserved for post-hydration rank |
-| `sourceRisk.sourceRiskPenalty` | ranking/history/source rows | `number >= 1 \| null \| undefined`                                                                                                  | Reserved; unknown remains neutral |
-| `sourceRisk.sourceDepthRatio` | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                  | Reserved |
-| `sourceRisk.rewardShare`      | ranking/history/source rows | `0..1 number \| null \| undefined`                                                                                                  | Reserved |
-| `sourceRisk.sourceAgeSeconds` | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                         | Reserved |
-| `sourceRisk.deploymentPlace`  | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved; no public enum semantics yet |
-| `sourceRisk.venueProtocol`    | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved |
-| `sourceRisk.venueChain`       | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Reserved |
-| `sourceRisk.venueRiskTier`    | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                     | Reserved; unknown remains neutral |
-| `sourceRisk.investabilityFlags` | ranking/history/source rows | `string[] \| undefined`                                                                                                             | Reserved |
+| `liveRank`                    | ranking rows            | `integer >= 1 \| null \| undefined`                                                                                                     | Post-hydration rank assigned after live Safety Score recomputation |
+| `sourceRisk.sourceRiskScore` | ranking/history/source rows | `0..100 number \| null \| undefined`                                                                                                  | Optional source-risk score when populated by the source-risk worker |
+| `sourceRisk.sourceRiskPenalty` | ranking/history/source rows | `number >= 1 \| null \| undefined`                                                                                                  | Active PYS v8 source-risk multiplier derived from reliable source evidence. Missing/invalid values are neutral (`1`); runtime clamps values to `1..2.5` |
+| `sourceRisk.sourceDepthRatio` | ranking/history/source rows | `number >= 0 \| null \| undefined`                                                                                                  | Optional venue-depth ratio |
+| `sourceRisk.rewardShare`      | ranking/history/source rows | `0..1 number \| null \| undefined`                                                                                                  | Optional reward APY share |
+| `sourceRisk.sourceAgeSeconds` | ranking/history/source rows | `integer seconds >= 0 \| null \| undefined`                                                                                         | Optional source-observation age |
+| `sourceRisk.observationCount30d` | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                               | Optional 30-day observation count for the source |
+| `sourceRisk.sourceSwitchCount30d` | ranking/history/source rows | `integer >= 0 \| null \| undefined`                                                                                               | Optional 30-day selected-source switch count |
+| `sourceRisk.deploymentPlace`  | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Optional sourced deployment-place label; no public enum guarantee yet |
+| `sourceRisk.venueProtocol`    | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Optional venue protocol label |
+| `sourceRisk.venueChain`       | ranking/history/source rows | `string \| null \| undefined`                                                                                                       | Optional venue chain label |
+| `sourceRisk.venueRiskTier`    | ranking/history/source rows | `"low" \| "medium" \| "high" \| "unknown" \| null \| undefined`                                                                     | Optional sourced venue tier; unknown remains neutral |
+| `sourceRisk.investabilityFlags` | ranking/history/source rows | `string[] \| undefined`                                                                                                             | Optional investability caveats |
 | `rankChangeAttribution`       | ranking rows            | `object \| null \| undefined`                                                                                                           | Reserved for future rank-change explanations |
+
+Current `v8.0` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change DEWS or report-card scoring. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
@@ -2338,8 +2343,8 @@ Preparatory optional fields added for the v8 schema scaffold are nullable and om
 | `provenance`             | `object \| null`                                               | Source-level provenance: confidence tier, selection reason, benchmark state, source-switch metadata, source freshness, and optional anchor timing   |
 | `publicationGenerationId`| `string \| null \| undefined`                                  | Publication-generation identifier, or `null`/omitted for legacy rows                                                                                |
 | `publishedRank`          | `number \| null \| undefined`                                  | Stable publication-order rank from the cached generation                                                                                            |
-| `liveRank`               | `number \| null \| undefined`                                  | Reserved optional post-hydration rank                                                                                                               |
-| `sourceRisk`             | `object \| null \| undefined`                                  | Reserved optional source-risk scaffold; missing or unknown values have no score semantics in v7.48                                                  |
+| `liveRank`               | `number \| null \| undefined`                                  | Post-hydration rank from the response order after live Safety Score recomputation                                                                     |
+| `sourceRisk`             | `object \| null \| undefined`                                  | Optional nested source-risk payload. Runtime rows derive or resolve `sourceRisk.sourceRiskPenalty` before PYS v8 scoring; missing or unknown values remain neutral              |
 | `rankChangeAttribution`  | `object \| null \| undefined`                                  | Reserved optional rank-change attribution scaffold                                                                                                  |
 
 When present, `YieldRanking.provenance` includes:
@@ -2391,8 +2396,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "7.48",
-    "currentVersion": "7.48",
+    "version": "8.0",
+    "currentVersion": "8.0",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2445,7 +2450,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
 | `isBest`         | `boolean`        | Whether this row was the selected best source at that timestamp                                        |
 | `sourceSwitch`   | `boolean`        | True when the historically selected best source changed at this row                                    |
 | `publicationGenerationId` | `string \| null \| undefined` | Published generation identifier for generation-aware rows; `null`/omitted on legacy rows                  |
-| `sourceRisk`     | `object \| null \| undefined` | Reserved optional source-risk scaffold; missing or unknown values have no score semantics in v7.48     |
+| `sourceRisk`     | `object \| null \| undefined` | Optional nested source-risk payload for historical rows; missing or unknown values are neutral          |
 
 ---
 
@@ -3252,6 +3257,28 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
       "maxAgeSec": 3888000,
       "status": "healthy"
     },
+    "sourceRiskCoverage": {
+      "totalRows": 180,
+      "bestRows": 129,
+      "altRows": 51,
+      "rowsWithSourceRisk": 180,
+      "fields": {
+        "sourceRiskPenalty": {
+          "eligibleCount": 180,
+          "populatedCount": 180,
+          "nullCount": 0,
+          "coverageRatio": 1,
+          "nullRate": 0
+        },
+        "sourceRiskScore": {
+          "eligibleCount": 180,
+          "populatedCount": 0,
+          "nullCount": 180,
+          "coverageRatio": 0,
+          "nullRate": 1
+        }
+      }
+    },
     "latestCronStatus": "ok",
     "latestCronStartedAt": 1771856300
   },
@@ -3347,7 +3374,7 @@ When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue,
 
 `liquidityHealth` is derived from the latest `sync-dex-liquidity` cron metadata and summarizes row coverage, value coverage, major-asset coverage, failed sources, and current/previous coverage-class distribution for the operator dashboard.
 
-`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. Safety coverage is admin-watch unless it falls below `0.75`, supplemental cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
+`yieldHealth` is derived only from existing yield cache rows and cron metadata: `yield-rankings`, `yield:supplemental-sources:v1`, `yield-coverage-audit`, and `crons["sync-yield-data"]`. `rankingStatus` follows the hourly `sync-yield-data` cache runway (`>8x` degraded, `>12x` stale); missing or stale rankings are public-critical because `/api/yield-rankings` and `/yield/` depend on them. Safety coverage is admin-watch unless it falls below `0.75`, supplemental cache age is admin-watch above 6h, benchmark age/fallback is admin-watch above 48h or any fallback mode, and coverage-audit age is admin-watch above 45d. `sourceRiskCoverage` reports backend-only coverage/null rates for nested `sourceRisk.*` fields across best and alternate ranking rows; `"unknown"` venue tiers count as null-equivalent coverage gaps. Loader failures return `yieldHealth: null` and `sectionErrors.yieldHealth`.
 
 `discoveryCandidates` exposes the current untracked-coverage backlog from `discovery_candidates`, ordered by market cap for the `/status` operator workflow.
 

@@ -49,10 +49,13 @@ export interface YieldPublicationMetadata {
 }
 
 export interface YieldSourceRisk {
+  sourceRiskScore?: number | null;
   sourceRiskPenalty?: number | null;
   sourceDepthRatio?: number | null;
   rewardShare?: number | null;
   sourceAgeSeconds?: number | null;
+  observationCount30d?: number | null;
+  sourceSwitchCount30d?: number | null;
   deploymentPlace?: string | null;
   venueProtocol?: string | null;
   venueChain?: string | null;
@@ -194,10 +197,13 @@ const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.ob
 });
 
 const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
+  sourceRiskScore: z.number().min(0).max(100).nullable().optional(),
   sourceRiskPenalty: z.number().min(1).nullable().optional(),
   sourceDepthRatio: z.number().min(0).nullable().optional(),
   rewardShare: z.number().min(0).max(1).nullable().optional(),
   sourceAgeSeconds: z.number().int().min(0).nullable().optional(),
+  observationCount30d: z.number().int().min(0).nullable().optional(),
+  sourceSwitchCount30d: z.number().int().min(0).nullable().optional(),
   deploymentPlace: z.string().nullable().optional(),
   venueProtocol: z.string().nullable().optional(),
   venueChain: z.string().nullable().optional(),

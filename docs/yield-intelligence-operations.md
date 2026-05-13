@@ -21,11 +21,12 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Ondo USDY oracle`
   - `B.Protocol LQTY-only`
   - `Curve scrvUSD current-rate`
-- `sync-yield-supplemental` owns the heavier best-effort families. It writes a cached snapshot and does not overwrite the last good snapshot with an empty result.
+- `sync-yield-supplemental` owns the heavier best-effort families. It writes the backward-compatible aggregate cached snapshot plus per-family cache rows (`yield:supplemental-sources:v1:<family>`) and does not overwrite the last good snapshot with an empty result.
 - `sync-yield-data` now also respects the operator pause guard `cache["yield-history-cleanup:writer-pause"]`. When that key is armed for a cleanup window, the hourly publisher returns a degraded no-op result instead of purging or rewriting parent-owned history during the operator mutation.
 - supplemental candidate dedupe now keys on source identity plus asset identity, not bare `sourceKey` alone, so same-chain families such as Aave V3 cannot collapse multiple coins into one cached row.
 - `sync-yield-supplemental` metadata now reports raw candidate count, deduped candidate count, and dropped-row count so silent row loss is visible in cron history.
 - read-time `yield-rankings` freshness warnings are now source-cadence-aware: hourly families trip after three hourly publish cycles, supplemental protocol-API plus optional Aave/Compound rows wait 6 hours so they do not false-positive during their normal 4-hour cache cycle, and `price-derived` rows wait 36 hours because their observations come from daily `supply_history` snapshots.
+- hourly publication writes selected-source decision rows after D1 staging and before cache publication. The decision ledger is bounded to 4 KB per selected row and records compact selected, rejected, and retained-alternative reasons for operator debugging.
 - Protocol API families use an 8 second per-request timeout, no retries, and a 25 second family budget:
   - `Morpho`
   - `Pendle`
@@ -35,6 +36,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Compound V3`
   - `Aave V3`
 - Optional RPC family metadata now records target counts, attempted counts, resolved target counts, emitted row counts, missing target counts, chain-level miss breakdowns, miss reasons, and whether the family budget exhausted before all targets were attempted.
+- The hourly publisher prefers fresh per-family supplemental caches when present, so a malformed or stale family cache suppresses only that family while other fresh families can still publish optional rows. If no family cache is usable, the publisher falls back to the legacy aggregate cache.
 - Aave on-chain reads are batched two assets at a time to stay below the Worker connection ceiling even on the isolated supplemental trigger.
 - the monthly yield coverage audit now counts explicit auto-lending overrides and curated exact-pool overrides as covered DL surfaces, and its high-TVL gap list is scoped to unsupported protocol families so the report stays actionable.
 
@@ -45,4 +47,5 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 - If the deterministic cooldown is active but coverage gaps reappear, the hourly run degrades, clears the cooldown state, and retries the deterministic lane on the next hourly cycle.
 - When an optional source budget is exhausted, the cron logs a warning and continues with the best remaining data instead of timing out the entire run.
 - Chain-looped optional families keep any partial results they already collected before the budget expires.
+- If the `yield-rankings` cache write fails or compare-and-swap skips because a newer cache exists, the already staged generation is marked `failed`, public history remains capped to the last published generation, and the staged rows remain available as D1 debug evidence.
 - The intended failure mode for optional upstream stress is reduced supplemental coverage or an older cached supplemental snapshot, not a missing `yield-rankings` publish.

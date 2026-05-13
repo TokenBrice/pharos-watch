@@ -142,6 +142,7 @@ describe("syncYieldSupplemental", () => {
 
     const cacheCall = vi.mocked(setCacheIfNewer).mock.calls[0];
     expect(cacheCall?.[1]).toBe("yield:supplemental-sources:v1");
+    expect(vi.mocked(setCacheIfNewer).mock.calls.some((call) => call[1] === "yield:supplemental-sources:v1:aaveV3")).toBe(true);
 
     const payload = JSON.parse(String(cacheCall?.[2])) as {
       sourceCount: number;

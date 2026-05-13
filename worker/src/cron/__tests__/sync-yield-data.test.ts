@@ -693,6 +693,70 @@ describe("syncYieldData", () => {
     expect(supplementalRow).toBeDefined();
   });
 
+  it("loads valid supplemental family caches even when another family cache is malformed", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "yield:supplemental-sources:v1:morpho") {
+        return {
+          value: JSON.stringify({
+            version: 1,
+            updatedAt: nowSec,
+            source: "sync-yield-supplemental",
+            sourceCount: 1,
+            data: [
+              {
+                symbol: "sDAI",
+                chain: "ethereum",
+                address: null,
+                yield: {
+                  currentApy: 6.1,
+                  apyBase: 6.1,
+                  apyReward: null,
+                  sourcePool: "vault-sdai-morpho",
+                  sourceTvlUsd: 50_000_000,
+                  dataSource: "protocol-api",
+                  exchangeRate: null,
+                  sourceKey: "protocol-api:morpho-vault:ethereum:0xvault",
+                  yieldSource: "Morpho: sDAI Vault",
+                  yieldType: "lending-vault",
+                  sourceObservedAt: nowSec,
+                  comparisonAnchorObservedAt: null,
+                },
+              },
+            ],
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:supplemental-sources:v1:beefy") {
+        return {
+          value: "{bad json",
+          updatedAt: nowSec,
+        };
+      }
+      if (key === "yield:supplemental-sources:v1") {
+        return {
+          value: "{bad aggregate",
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.itemCount).toBe(1);
+    const writeStatements = vi.mocked(batchExecute).mock.calls[0]?.[1] as Array<{ boundValues?: unknown[] }>;
+    const supplementalRow = writeStatements.find(
+      (stmt) => stmt.boundValues?.[0] === "100" && stmt.boundValues?.[1] === "protocol-api:morpho-vault:ethereum:0xvault",
+    );
+    expect(supplementalRow).toBeDefined();
+  });
+
   it("keeps a higher native wrapper APY ahead of a lower supplemental lending source that clears size gates", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
@@ -1681,7 +1745,12 @@ describe("syncYieldData", () => {
     expect(metadata.reason).toBe("yield-rankings-preflight-failed");
     expect(metadata.publishFailure).toBe("schema-validation-failed");
     expect(metadata.validationFailures).toBe(1);
-    expect(batchExecute).not.toHaveBeenCalled();
+    expect(vi.mocked(batchExecute).mock.calls.some((call) => {
+      const statements = call[1] as unknown as Array<{ sql: string; boundValues?: unknown[] }>;
+      return statements.some((stmt) =>
+        stmt.sql.includes("UPDATE yield_data SET publication_state = ?") && stmt.boundValues?.[0] === "failed",
+      );
+    })).toBe(true);
     const cacheCalls = vi.mocked(setCacheIfNewer).mock.calls;
     const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
     expect(wroteYieldRankings).toBe(false);

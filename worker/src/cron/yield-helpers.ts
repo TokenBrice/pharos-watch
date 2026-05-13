@@ -32,6 +32,8 @@ export {
   PYS_RISK_PENALTY_FLOOR,
   PYS_RISK_PENALTY_EXPONENT,
   PYS_SUSTAINABILITY_FLOOR,
+  PYS_MAX_SOURCE_RISK_PENALTY,
+  resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";

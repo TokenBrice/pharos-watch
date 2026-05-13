@@ -13,6 +13,7 @@ export interface YieldHistoryEvaluationInputs {
   prevTvlBySource: Map<string, number | null>;
   legacyPrevTvlById: Map<string, number | null>;
   prevBestSourceKeyByCoin: Map<string, string>;
+  sourceSwitchCount30dByCoin: Map<string, number>;
 }
 
 function appendHistoryRow(
@@ -37,6 +38,8 @@ export function buildYieldHistoryEvaluationInputs(input: {
   const prevTvlBySource = new Map<string, number | null>();
   const legacyPrevTvlById = new Map<string, number | null>();
   const prevBestSourceKeyByCoin = new Map<string, string>();
+  const bestRowsByCoin = new Map<string, YieldHistorySnapshotRow[]>();
+  const sourceSwitchCount30dByCoin = new Map<string, number>();
 
   for (const row of input.historyRows) {
     const sourceKey = row.source_key ?? "legacy-best";
@@ -53,6 +56,10 @@ export function buildYieldHistoryEvaluationInputs(input: {
 
     if (isLegacyDeterministicOnChainSourceKey(row.stablecoin_id, sourceKey)) {
       appendHistoryRow(legacyDeterministicOnChainHistoryById, row.stablecoin_id, normalizedRow);
+    }
+
+    if (row.is_best === 1) {
+      appendHistoryRow(bestRowsByCoin, row.stablecoin_id, normalizedRow);
     }
   }
 
@@ -79,6 +86,19 @@ export function buildYieldHistoryEvaluationInputs(input: {
     }
   }
 
+  for (const [stablecoinId, rows] of bestRowsByCoin) {
+    let previousSourceKey: string | null = null;
+    let switches = 0;
+    for (const row of [...rows].sort((a, b) => a.recorded_at - b.recorded_at)) {
+      const sourceKey = normalizePreviousBestSourceKey(row);
+      if (previousSourceKey != null && sourceKey !== previousSourceKey) {
+        switches++;
+      }
+      previousSourceKey = sourceKey;
+    }
+    sourceSwitchCount30dByCoin.set(stablecoinId, switches);
+  }
+
   return {
     sourceHistory,
     onChainCompatibilityHistoryById,
@@ -87,5 +107,6 @@ export function buildYieldHistoryEvaluationInputs(input: {
     prevTvlBySource,
     legacyPrevTvlById,
     prevBestSourceKeyByCoin,
+    sourceSwitchCount30dByCoin,
   };
 }

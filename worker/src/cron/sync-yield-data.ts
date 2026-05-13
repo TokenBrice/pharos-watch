@@ -150,6 +150,7 @@ export async function syncYieldData(
     prevTvlBySource,
     legacyPrevTvlById,
     prevBestSourceKeyByCoin,
+    sourceSwitchCount30dByCoin,
   } = buildYieldHistoryEvaluationInputs(historySnapshots);
 
   const {
@@ -174,6 +175,8 @@ export async function syncYieldData(
     prevTvlBySource,
     legacyPrevTvlById,
     prevBestSourceKeyByCoin,
+    sourceSwitchCount30dByCoin,
+    stablecoinSupplyById,
   });
 
   const {

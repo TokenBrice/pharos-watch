@@ -24,7 +24,9 @@ Core yield publication should remain available. Optional protocol-API and option
 ```sql
 SELECT key, updated_at, length(value) AS bytes, substr(value, 1, 1200) AS value_prefix
 FROM cache
-WHERE key = 'yield:supplemental-sources:v1';
+WHERE key = 'yield:supplemental-sources:v1'
+   OR key LIKE 'yield:supplemental-sources:v1:%'
+ORDER BY key;
 ```
 
 ```sql
@@ -45,6 +47,7 @@ ORDER BY rows DESC;
 ## Common Causes
 
 - All supplemental families emitted zero candidates, so the cron refused to overwrite the previous cache.
+- One per-family cache is malformed or stale. The hourly publisher should still load other fresh family caches and report `partial-family-cache` metadata instead of dropping all optional coverage.
 - Optional protocol APIs timed out inside the family budget.
 - Optional RPC families exhausted their family budget or missed many chain targets.
 - The cache payload became malformed or older than the supplemental freshness window.
@@ -66,7 +69,7 @@ ORDER BY rows DESC;
 ## Validation
 
 - `sync-yield-supplemental` has a recent run with `rowsWritten > 0` or a documented `skipped-newer`.
-- `cache['yield:supplemental-sources:v1']` is present, parseable, and has a recent `updated_at`.
+- `cache['yield:supplemental-sources:v1']` and any `yield:supplemental-sources:v1:<family>` rows are present when expected, parseable, and recent. A single malformed family row should not block other fresh family rows.
 - The next `sync-yield-data` metadata shows `supplementalSourceMode: "available"` and a non-zero `supplementalSourceCount`.
 - Public rankings/source board show expected optional family rows or alternatives.
 

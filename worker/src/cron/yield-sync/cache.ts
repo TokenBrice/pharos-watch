@@ -2,11 +2,18 @@ import type { YieldBenchmarkKey, YieldSourceInputMeta } from "@shared/types/yiel
 import { RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
 import { toFiniteNumber } from "../../lib/number-utils";
 import type { DlPool, ResolvedYieldCandidate } from "./types";
+import type { SupplementalSourceFamilyKey } from "./supplemental-source-families";
 import {
   getYieldBenchmarkStaticMeta,
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./benchmarks";
+
+export const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
+
+export function getYieldSupplementalFamilyCacheKey(family: SupplementalSourceFamilyKey): string {
+  return `${YIELD_SUPPLEMENTAL_CACHE_KEY}:${family}`;
+}
 
 interface RiskFreeRateCachePayload {
   key?: YieldBenchmarkKey;

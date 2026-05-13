@@ -39,6 +39,7 @@ export interface Args {
 }
 
 interface RankingWithRisk extends YieldRanking {
+  // Legacy flat fields are accepted for old local calibration artifacts only.
   sourceRiskPenalty?: number | null;
   rewardShare?: number | null;
   sourceDepthRatio?: number | null;
@@ -131,7 +132,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "## Candidate Formula For Analysis",
     "",
     "```text",
-    "sourceRiskPenalty = clamp(existing optional row.sourceRiskPenalty ?? derivedNeutralPenalty, 1, 2.5)",
+    "sourceRiskPenalty = clamp(row.sourceRisk?.sourceRiskPenalty ?? legacy row.sourceRiskPenalty ?? derivedNeutralPenalty, 1, 2.5)",
     "rowUtility = current effectiveYield / sourceRiskPenalty",
     "pysV8 = clamp(round(rowUtility * sustainabilityMultiplier * scalingFactor), 0, 100)",
     "```",
@@ -296,35 +297,68 @@ function resolveApyVarianceScore(row: RankingWithRisk): number {
 }
 
 function resolveSourceRiskPenalty(row: RankingWithRisk): number {
-  if (typeof row.sourceRiskPenalty === "number" && Number.isFinite(row.sourceRiskPenalty)) {
-    return clamp(row.sourceRiskPenalty, 1, MAX_SOURCE_RISK_PENALTY);
+  const sourceRiskPenalty = readRiskNumber(row, "sourceRiskPenalty");
+  if (typeof sourceRiskPenalty === "number" && Number.isFinite(sourceRiskPenalty)) {
+    return clamp(sourceRiskPenalty, 1, MAX_SOURCE_RISK_PENALTY);
   }
   return clamp(1 + derivePenalty(row), 1, MAX_SOURCE_RISK_PENALTY);
 }
 
 function derivePenalty(row: RankingWithRisk): number {
   let penalty = 0;
-  if (typeof row.rewardShare === "number" && row.rewardShare > 0.5) penalty += Math.min(0.5, row.rewardShare - 0.5);
-  if (typeof row.sourceDepthRatio === "number" && row.sourceDepthRatio < 0.001) penalty += 0.35;
-  if (typeof row.sourceAgeSeconds === "number" && row.sourceAgeSeconds > 6 * 60 * 60) penalty += 0.25;
-  if (typeof row.sourceSwitchCount30d === "number" && row.sourceSwitchCount30d > 0) penalty += Math.min(0.3, row.sourceSwitchCount30d * 0.1);
-  if (typeof row.observationCount30d === "number" && row.observationCount30d > 0 && row.observationCount30d < 7) penalty += 0.2;
-  if (row.venueRiskTier === "high") penalty += 0.35;
+  const rewardShare = readRiskNumber(row, "rewardShare");
+  const sourceDepthRatio = readRiskNumber(row, "sourceDepthRatio");
+  const sourceAgeSeconds = readRiskNumber(row, "sourceAgeSeconds");
+  const sourceSwitchCount30d = readRiskNumber(row, "sourceSwitchCount30d");
+  const observationCount30d = readRiskNumber(row, "observationCount30d");
+  const venueRiskTier = readVenueRiskTier(row);
+  if (typeof rewardShare === "number" && rewardShare > 0.5) penalty += Math.min(0.5, rewardShare - 0.5);
+  if (typeof sourceDepthRatio === "number" && sourceDepthRatio < 0.001) penalty += 0.35;
+  if (typeof sourceAgeSeconds === "number" && sourceAgeSeconds > 6 * 60 * 60) penalty += 0.25;
+  if (typeof sourceSwitchCount30d === "number" && sourceSwitchCount30d > 0) penalty += Math.min(0.3, sourceSwitchCount30d * 0.1);
+  if (typeof observationCount30d === "number" && observationCount30d > 0 && observationCount30d < 7) penalty += 0.2;
+  if (venueRiskTier === "high") penalty += 0.35;
   return penalty;
 }
 
 function classifyDriver(row: RankingWithRisk): string {
+  const rewardShare = readRiskNumber(row, "rewardShare");
+  const sourceDepthRatio = readRiskNumber(row, "sourceDepthRatio");
+  const sourceAgeSeconds = readRiskNumber(row, "sourceAgeSeconds");
+  const sourceSwitchCount30d = readRiskNumber(row, "sourceSwitchCount30d");
+  const observationCount30d = readRiskNumber(row, "observationCount30d");
+  const venueRiskTier = readVenueRiskTier(row);
   const candidates = [
-    { label: "reward-heavy", value: typeof row.rewardShare === "number" ? Math.max(0, row.rewardShare - 0.5) : 0 },
-    { label: "low-depth", value: typeof row.sourceDepthRatio === "number" && row.sourceDepthRatio < 0.001 ? 0.35 : 0 },
-    { label: "stale", value: typeof row.sourceAgeSeconds === "number" && row.sourceAgeSeconds > 6 * 60 * 60 ? 0.25 : 0 },
-    { label: "source-switch", value: row.provenance?.sourceSwitch || (row.sourceSwitchCount30d ?? 0) > 0 ? 0.2 : 0 },
-    { label: "bootstrap", value: typeof row.observationCount30d === "number" && row.observationCount30d > 0 && row.observationCount30d < 7 ? 0.2 : 0 },
-    { label: "venue-risk", value: row.venueRiskTier === "high" ? 0.35 : 0 },
+    { label: "reward-heavy", value: typeof rewardShare === "number" ? Math.max(0, rewardShare - 0.5) : 0 },
+    { label: "low-depth", value: typeof sourceDepthRatio === "number" && sourceDepthRatio < 0.001 ? 0.35 : 0 },
+    { label: "stale", value: typeof sourceAgeSeconds === "number" && sourceAgeSeconds > 6 * 60 * 60 ? 0.25 : 0 },
+    { label: "source-switch", value: row.provenance?.sourceSwitch || (sourceSwitchCount30d ?? 0) > 0 ? 0.2 : 0 },
+    { label: "bootstrap", value: typeof observationCount30d === "number" && observationCount30d > 0 && observationCount30d < 7 ? 0.2 : 0 },
+    { label: "venue-risk", value: venueRiskTier === "high" ? 0.35 : 0 },
     { label: "missing-safety", value: row.safetyScore == null ? 0.1 : 0 },
     { label: "negative-zero", value: row.apy30d <= 0 ? 0.1 : 0 },
   ].sort((a, b) => b.value - a.value);
   return candidates[0]?.value ? candidates[0].label : "apy-or-baseline";
+}
+
+function readRiskNumber(
+  row: RankingWithRisk,
+  field:
+    | "sourceRiskPenalty"
+    | "rewardShare"
+    | "sourceDepthRatio"
+    | "sourceAgeSeconds"
+    | "sourceSwitchCount30d"
+    | "observationCount30d",
+): number | null {
+  const nested = row.sourceRisk?.[field];
+  if (typeof nested === "number" && Number.isFinite(nested)) return nested;
+  const flat = row[field];
+  return typeof flat === "number" && Number.isFinite(flat) ? flat : null;
+}
+
+function readVenueRiskTier(row: RankingWithRisk): string | null {
+  return row.sourceRisk?.venueRiskTier ?? row.venueRiskTier ?? null;
 }
 
 function summarizeDistribution(values: number[]) {
@@ -346,7 +380,20 @@ function percentile(values: number[], p: number): number {
 function summarizeNullCoverage(rankings: RankingWithRisk[]): Record<CalibrationField, { present: number; missing: number; nullRate: number }> {
   return Object.fromEntries(
     CALIBRATION_FIELDS.map((field) => {
-      const present = rankings.filter((row) => row[field] != null).length;
+      const present = rankings.filter((row) => {
+        if (field === "venueRiskTier") return readVenueRiskTier(row) != null;
+        if (
+          field === "sourceRiskPenalty" ||
+          field === "rewardShare" ||
+          field === "sourceDepthRatio" ||
+          field === "sourceAgeSeconds" ||
+          field === "sourceSwitchCount30d" ||
+          field === "observationCount30d"
+        ) {
+          return readRiskNumber(row, field) != null;
+        }
+        return row[field] != null;
+      }).length;
       const missing = rankings.length - present;
       return [field, { present, missing, nullRate: rankings.length ? missing / rankings.length : 0 }];
     }),

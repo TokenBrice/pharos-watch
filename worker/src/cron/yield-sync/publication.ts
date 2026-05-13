@@ -9,8 +9,14 @@ import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { detectWarningSignals, getRankingStaleThresholdMs } from "../yield-helpers";
 import { deleteOrphanYieldRows, deleteStaleYieldRows } from "./history";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
-import { compareCandidates } from "./evaluation-arbitration";
+import { compareCandidates, getConfidencePriority } from "./evaluation-arbitration";
 import { buildYieldSourceProvenance } from "./provenance";
+import { buildYieldSourceRisk } from "./source-risk";
+
+const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
+const MAX_SOURCE_DECISION_ANOMALIES = 6;
+const MAX_SOURCE_DECISION_TEXT_LENGTH = 160;
+const MAX_SOURCE_DECISION_ALTERNATIVES_JSON_BYTES = 4_096;
 
 function countYieldRankings(
   rankingsPayload: { rankings?: Array<{ id?: string }> },
@@ -104,6 +110,7 @@ function evaluatedSourceToRanking(
     apyMax30d: source.apyMax30d,
     warningSignals: [...source.warnings],
     altSources: [] as AltYieldSource[],
+    sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     ...(publishedRank ? { publishedRank } : {}),
     provenance: provenance
@@ -140,6 +147,8 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
 
     const alts = altSourcesByCoin.get(source.id) ?? [];
     const existingIdx = alts.findIndex((a) => a.sourceKey === source.sourceKey);
+    const key = buildHistoryKey(source.id, source.sourceKey);
+    const provenance = input.rankingProvenanceByKey.get(key) ?? null;
     const alt: AltYieldSource = {
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
@@ -153,6 +162,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,
+      sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: false }),
     };
     if (existingIdx >= 0) {
       if ((source.currentApy ?? 0) > (alts[existingIdx].currentApy ?? 0)) {
@@ -247,6 +257,80 @@ export function attachYieldPublicationMetadata<
   };
 }
 
+function truncateDecisionText(value: string, maxLength = MAX_SOURCE_DECISION_TEXT_LENGTH): string {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
+}
+
+function getJsonByteLength(value: string): number {
+  return new TextEncoder().encode(value).length;
+}
+
+function buildAlternativeDecisionReason(selected: EvaluatedYieldSource, candidate: EvaluatedYieldSource): string {
+  if (candidate.rejected) {
+    if (candidate.anomalies.includes("source-zero-vs-history")) {
+      return "rejected: zero current APY versus source history";
+    }
+    if (candidate.anomalies.includes("diverges-from-canonical")) {
+      return "rejected: divergent lower-confidence source";
+    }
+    return "rejected by arbitration";
+  }
+
+  const selectedPriority = getConfidencePriority(selected.confidenceTier);
+  const candidatePriority = getConfidencePriority(candidate.confidenceTier);
+  if (candidatePriority < selectedPriority) {
+    return "retained alternative: lower confidence tier";
+  }
+  if (candidate.currentApy < selected.currentApy) {
+    return "retained alternative: lower APY";
+  }
+  if (candidate.pharosYieldScore < selected.pharosYieldScore) {
+    return "retained alternative: lower PYS";
+  }
+  if ((candidate.sourceTvlUsd ?? 0) < (selected.sourceTvlUsd ?? 0)) {
+    return "retained alternative: lower source TVL";
+  }
+  return "retained alternative: ranked behind selected source";
+}
+
+function serializeBoundedDecisionAlternatives(
+  selected: EvaluatedYieldSource,
+  candidates: EvaluatedYieldSource[],
+): string {
+  const alternativeCandidates = candidates.filter((candidate) => candidate.sourceKey !== selected.sourceKey);
+
+  for (
+    let maxAlternatives = Math.min(MAX_SOURCE_DECISION_ALTERNATIVES, alternativeCandidates.length);
+    maxAlternatives >= 0;
+    maxAlternatives--
+  ) {
+    for (let maxAnomalies = MAX_SOURCE_DECISION_ANOMALIES; maxAnomalies >= 0; maxAnomalies--) {
+      const alternatives = alternativeCandidates
+        .slice(0, maxAlternatives)
+        .map((candidate) => ({
+          sourceKey: truncateDecisionText(candidate.sourceKey),
+          confidenceTier: candidate.confidenceTier,
+          dataSource: truncateDecisionText(candidate.dataSource, 80),
+          apy30d: candidate.apy30d,
+          pharosYieldScore: candidate.pharosYieldScore,
+          sourceTvlUsd: candidate.sourceTvlUsd,
+          sourceRiskPenalty: candidate.sourceRiskPenalty,
+          rejected: candidate.rejected,
+          reason: buildAlternativeDecisionReason(selected, candidate),
+          anomalies: candidate.anomalies
+            .slice(0, maxAnomalies)
+            .map((anomaly) => truncateDecisionText(anomaly, 80)),
+        }));
+      const json = JSON.stringify(alternatives);
+      if (getJsonByteLength(json) <= MAX_SOURCE_DECISION_ALTERNATIVES_JSON_BYTES) {
+        return json;
+      }
+    }
+  }
+
+  return "[]";
+}
+
 function buildYieldSourceDecisionEvidence(params: {
   source: EvaluatedYieldSource;
   evaluatedSources: EvaluatedYieldSource[];
@@ -271,26 +355,13 @@ function buildYieldSourceDecisionEvidence(params: {
     startSec: params.startSec,
     dlPoolsMeta: params.dlPoolsMeta,
   });
-  const alternatives = candidates
-    .filter((candidate) => candidate.sourceKey !== params.source.sourceKey)
-    .slice(0, 4)
-    .map((candidate) => ({
-      sourceKey: candidate.sourceKey,
-      confidenceTier: candidate.confidenceTier,
-      dataSource: candidate.dataSource,
-      apy30d: candidate.apy30d,
-      pharosYieldScore: candidate.pharosYieldScore,
-      sourceTvlUsd: candidate.sourceTvlUsd,
-      rejected: candidate.rejected,
-      anomalies: candidate.anomalies.slice(0, 6),
-    }));
 
   return {
     selectedReason: typeof provenance.selectionReason === "string" ? provenance.selectionReason : "Selected source",
     sourceSwitch: provenance.sourceSwitch === true,
     previousBestSourceKey: typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null,
     rejectedCount,
-    alternativesJson: JSON.stringify(alternatives),
+    alternativesJson: serializeBoundedDecisionAlternatives(params.source, candidates),
   };
 }
 

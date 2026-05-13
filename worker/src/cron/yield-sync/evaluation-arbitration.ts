@@ -82,6 +82,11 @@ export function compareCandidates(a: EvaluatedYieldSource, b: EvaluatedYieldSour
   const confidenceDiff = getConfidencePriority(b.confidenceTier) - getConfidencePriority(a.confidenceTier);
   if (confidenceDiff !== 0) return confidenceDiff;
 
+  if (a.sourceRiskPenaltyProvided || b.sourceRiskPenaltyProvided) {
+    const utilityDiff = b.sourceRiskAdjustedUtility - a.sourceRiskAdjustedUtility;
+    if (utilityDiff !== 0) return utilityDiff;
+  }
+
   if (a.currentApy !== b.currentApy) return b.currentApy - a.currentApy;
 
   return (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0);

@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { computePysComponents, derivePysSourceRiskPenalty } from "@shared/lib/yield-scoring";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
 import { computeApyVarianceScore, computePYS, computeYieldStability } from "../yield-helpers";
@@ -56,6 +57,8 @@ export interface EvaluateYieldSourcesInput {
   prevTvlBySource: Map<string, number | null>;
   legacyPrevTvlById: Map<string, number | null>;
   prevBestSourceKeyByCoin: Map<string, string>;
+  sourceSwitchCount30dByCoin?: Map<string, number>;
+  stablecoinSupplyById?: Map<string, number>;
 }
 
 export interface EvaluateYieldSourcesResult {
@@ -66,6 +69,41 @@ export interface EvaluateYieldSourcesResult {
   divergenceFlags: number;
   sourceSwitches: number;
   medianApy: number;
+}
+
+function computeSourceDepthRatio(sourceTvlUsd: number | null, supplyUsd: number | null | undefined): number | null {
+  if (
+    typeof sourceTvlUsd !== "number" ||
+    !Number.isFinite(sourceTvlUsd) ||
+    sourceTvlUsd < 0 ||
+    typeof supplyUsd !== "number" ||
+    !Number.isFinite(supplyUsd) ||
+    supplyUsd <= 0
+  ) {
+    return null;
+  }
+  return sourceTvlUsd / supplyUsd;
+}
+
+function computeRewardShare(apyReward: number | null, currentApy: number): number | null {
+  if (
+    apyReward == null ||
+    !Number.isFinite(apyReward) ||
+    apyReward < 0 ||
+    !Number.isFinite(currentApy) ||
+    currentApy <= 0 ||
+    apyReward > currentApy
+  ) {
+    return null;
+  }
+  return apyReward / currentApy;
+}
+
+function computeSourceAgeSeconds(startSec: number, sourceObservedAt: number | null | undefined): number | null {
+  if (typeof sourceObservedAt !== "number" || !Number.isFinite(sourceObservedAt) || sourceObservedAt < 0) {
+    return null;
+  }
+  return Math.max(0, Math.trunc(startSec - sourceObservedAt));
 }
 
 export function evaluateYieldSources(input: EvaluateYieldSourcesInput): EvaluateYieldSourcesResult {
@@ -146,19 +184,48 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         benchmarks: input.riskFreeRates,
       });
       const excessYield = apy30d - benchmarkSelection.meta.rate;
-
+      const previousBestSourceKey = input.prevBestSourceKeyByCoin.get(stablecoinId) ?? null;
+      const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
+      const candidateSwitchCount30d =
+        previousBestSourceKey != null &&
+        previousBestSourceKey !== "legacy-best" &&
+        previousBestSourceKey !== sourceKey
+          ? priorSwitches30d + 1
+          : priorSwitches30d;
+      const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
+      const prevTvlUsd = historySelection.usedLegacyHistory
+        ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
+        : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
+      const sourceDepthRatio = computeSourceDepthRatio(y.sourceTvlUsd, input.stablecoinSupplyById?.get(stablecoinId));
+      const observationCount30d = historySelection.usedLegacyHistory ? null : samples.length;
+      const rewardShare = computeRewardShare(y.apyReward, y.currentApy);
+      const sourceAgeSeconds = computeSourceAgeSeconds(input.startSec, y.sourceObservedAt);
+      const sourceRiskPenaltyInput =
+        y.sourceRisk?.sourceRiskPenalty ??
+        derivePysSourceRiskPenalty({
+          rewardShare,
+          sourceDepthRatio,
+          sourceAgeSeconds,
+          sourceSwitchCount30d: candidateSwitchCount30d,
+          observationCount30d,
+          venueRiskTier: y.sourceRisk?.venueRiskTier ?? "unknown",
+        });
+      const pysComponents = computePysComponents({
+        apy30d,
+        safetyScore,
+        apyVarianceScore,
+        benchmarkRate: benchmarkSelection.meta.rate,
+        sourceRiskPenalty: sourceRiskPenaltyInput,
+      });
       const pharosYieldScore = computePYS({
         apy30d,
         safetyScore,
         apyVarianceScore,
         scalingFactor: PYS_SCALING_FACTOR,
         benchmarkRate: benchmarkSelection.meta.rate,
+        sourceRiskPenalty: sourceRiskPenaltyInput,
       });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
-      const prevExchangeRate = input.tier1PrevRates.get(stablecoinId) ?? null;
-      const prevTvlUsd = historySelection.usedLegacyHistory
-        ? (input.legacyPrevTvlById.get(stablecoinId) ?? null)
-        : (input.prevTvlBySource.get(buildHistoryKey(stablecoinId, sourceKey)) ?? null);
 
       const anomalies: string[] = [];
       if (historySelection.usedLegacyHistory) anomalies.push("legacy-history-fallback");
@@ -177,6 +244,11 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         apyReward: y.apyReward,
         sourcePool: y.sourcePool,
         sourceTvlUsd: y.sourceTvlUsd,
+        sourceRisk: y.sourceRisk ?? null,
+        sourceRiskPenalty: pysComponents.sourceRiskPenalty,
+        sourceRiskPenaltyReason: pysComponents.sourceRiskPenaltyReason,
+        sourceRiskPenaltyProvided: pysComponents.sourceRiskPenaltyProvided,
+        sourceRiskAdjustedUtility: pysComponents.rowUtility,
         dataSource: y.dataSource,
         exchangeRate: y.exchangeRate,
         sourceObservedAt: y.sourceObservedAt ?? null,
@@ -205,13 +277,16 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
         prevExchangeRate,
         prevTvlUsd,
+        sourceDepthRatio,
+        observationCount30d,
+        sourceSwitchCount30d: null,
         anomalies,
         warnings: [],
         confidenceTier: getConfidenceTier(y.dataSource),
         rejected: false,
         usedLegacyHistory: historySelection.usedLegacyHistory,
         usedDefaultSafety,
-        previousBestSourceKey: input.prevBestSourceKeyByCoin.get(stablecoinId) ?? null,
+        previousBestSourceKey,
       } satisfies EvaluatedYieldSource;
     });
 
@@ -265,6 +340,13 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
     if (!winner) continue;
 
     bestSourceKeyByCoin.set(stablecoinId, winner.sourceKey);
+    const priorSwitches30d = input.sourceSwitchCount30dByCoin?.get(stablecoinId) ?? 0;
+    const sourceSwitchCount30d =
+      winner.previousBestSourceKey != null &&
+      winner.previousBestSourceKey !== "legacy-best" &&
+      winner.previousBestSourceKey !== winner.sourceKey
+        ? priorSwitches30d + 1
+        : priorSwitches30d;
     if (
       winner.previousBestSourceKey != null &&
       winner.previousBestSourceKey !== "legacy-best" &&
@@ -284,6 +366,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         usedLegacyHistory: candidate.usedLegacyHistory,
         usedDefaultSafety: candidate.usedDefaultSafety,
         pharosYieldScore: candidate.pharosYieldScore,
+        sourceSwitchCount30d: candidate.sourceKey === winner.sourceKey ? sourceSwitchCount30d : null,
       })),
     );
   }

@@ -72,8 +72,10 @@ describe("yield-pys-v8-calibration", () => {
         symbol: "RWD",
         apy30d: 14,
         currentApy: 14,
-        rewardShare: 0.9,
-        sourceRiskPenalty: 2.5,
+        sourceRisk: {
+          rewardShare: 0.9,
+          sourceRiskPenalty: 2.5,
+        },
       }),
       row({ id: "zero", symbol: "ZERO", apy30d: 0, currentApy: 0 }),
     ]);
@@ -104,5 +106,31 @@ describe("yield-pys-v8-calibration", () => {
     for (const fixture of GOLDEN_FIXTURES) {
       expect(markdown).toContain(`| ${fixture} |`);
     }
+  });
+
+  it("prefers nested sourceRisk fields while preserving legacy flat calibration artifacts", () => {
+    const [nested, legacy] = scoreRows([
+      row({
+        id: "nested",
+        symbol: "NEST",
+        sourceRisk: {
+          sourceRiskPenalty: 2,
+          rewardShare: 0.9,
+        },
+        sourceRiskPenalty: 1,
+        rewardShare: 0.1,
+      }),
+      row({
+        id: "legacy",
+        symbol: "LEG",
+        sourceRiskPenalty: 2,
+        rewardShare: 0.9,
+      }),
+    ]);
+
+    expect(nested?.sourceRiskPenalty).toBe(2);
+    expect(nested?.driver).toBe("reward-heavy");
+    expect(legacy?.sourceRiskPenalty).toBe(2);
+    expect(legacy?.driver).toBe("reward-heavy");
   });
 });

@@ -104,6 +104,7 @@ function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalin
     apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
     scalingFactor,
     benchmarkRate: row.benchmarkRate ?? null,
+    sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
   });
 }
 
@@ -142,7 +143,11 @@ function hydrateYieldRankingsWithLiveSafety(
       const apyDiff = b.currentApy - a.currentApy;
       if (apyDiff !== 0) return apyDiff;
       return a.name.localeCompare(b.name);
-    });
+    })
+    .map((row, index) => ({
+      ...row,
+      liveRank: index + 1,
+    }));
 
   const coveredCount = rankings.filter((row) => row.provenance?.safetyProvenance === "live-report-card").length;
   const trackedCount = rankings.length;

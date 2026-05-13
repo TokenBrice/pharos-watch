@@ -585,6 +585,35 @@ export interface LiquidityHealth {
 
 export type YieldHealthFieldStatus = "healthy" | "degraded" | "stale" | "unknown";
 
+export type YieldSourceRiskCoverageField =
+  | "sourceRiskScore"
+  | "sourceRiskPenalty"
+  | "sourceDepthRatio"
+  | "rewardShare"
+  | "sourceAgeSeconds"
+  | "observationCount30d"
+  | "sourceSwitchCount30d"
+  | "deploymentPlace"
+  | "venueProtocol"
+  | "venueChain"
+  | "venueRiskTier";
+
+export interface YieldSourceRiskFieldCoverage {
+  eligibleCount: number;
+  populatedCount: number;
+  nullCount: number;
+  coverageRatio: number;
+  nullRate: number;
+}
+
+export interface YieldSourceRiskCoverageSummary {
+  totalRows: number;
+  bestRows: number;
+  altRows: number;
+  rowsWithSourceRisk: number;
+  fields: Record<YieldSourceRiskCoverageField, YieldSourceRiskFieldCoverage>;
+}
+
 export interface YieldHealthSummary {
   status: Exclude<YieldHealthFieldStatus, "unknown">;
   statusImpact: "public-critical" | "admin-watch";
@@ -623,6 +652,7 @@ export interface YieldHealthSummary {
     maxAgeSec: number;
     status: YieldHealthFieldStatus;
   };
+  sourceRiskCoverage: YieldSourceRiskCoverageSummary;
   latestCronStatus: string | null;
   latestCronStartedAt: number | null;
 }

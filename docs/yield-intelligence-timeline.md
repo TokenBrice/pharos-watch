@@ -1,6 +1,18 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.48` (2026-03-01 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.0` (2026-03-01 -> 2026-05-13).
+
+---
+
+## v8.0 - PYS Source-Risk Penalty Rollout (May 13, 2026)
+
+- PYS now consumes nested `sourceRisk.sourceRiskPenalty`, populated from measured reward share, source depth, source age, selected-source switches, bootstrap observation count, and sourced venue tier where available
+- Missing, invalid, or unknown source-risk evidence remains neutral (`1`); penalties below 1 clamp to 1 and penalties above `PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) clamp to 2.5
+- The formula now computes `rowUtility = effectiveYield / sourceRiskPenalty`, then applies the existing safety curve, volatility multiplier, benchmark-spread weight, and scaling factor
+- Same-confidence source arbitration compares source-risk-adjusted utility after penalty resolution; APY and TVL remain fallback tie-breakers
+- Public API source-risk fields remain nested under `sourceRisk.*`; flattened fields such as top-level `sourceRiskPenalty` are internal calibration shorthand, not the public contract
+- Legacy `v7.48` payloads remain valid without `publication`, `sourceRisk`, rank, or attribution fields because missing source-risk inputs resolve to the neutral penalty
+- Report-card yield-risk helpers normalize the source-risk payload but still return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts
 
 ---
 

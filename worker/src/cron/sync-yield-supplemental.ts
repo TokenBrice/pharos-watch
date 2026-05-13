@@ -2,11 +2,17 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
-import { buildYieldSupplementalSourcesCache } from "./yield-sync/cache";
-import { loadSupplementalSourceFamilies } from "./yield-sync/supplemental-source-families";
+import {
+  buildYieldSupplementalSourcesCache,
+  getYieldSupplementalFamilyCacheKey,
+  YIELD_SUPPLEMENTAL_CACHE_KEY,
+} from "./yield-sync/cache";
+import {
+  loadSupplementalSourceFamilies,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "./yield-sync/supplemental-source-families";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
-
-const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 
 function buildSupplementalCandidateDedupKey(candidate: ResolvedYieldCandidate): string | null {
   const sourceKey = candidate.yield?.sourceKey?.trim();
@@ -55,6 +61,7 @@ export async function syncYieldSupplemental(
   const startSec = Math.floor(Date.now() / 1000);
   const {
     candidates,
+    familyResults,
     sourceFamilyCounts,
     supplementalSourceAccounting,
     optionalRpcTelemetry,
@@ -94,6 +101,23 @@ export async function syncYieldSupplemental(
     buildYieldSupplementalSourcesCache(dedupedCandidates, startSec),
     startSec,
   );
+  const familyCacheResults: Record<SupplementalSourceFamilyKey, "published" | "skipped-newer" | "empty"> =
+    Object.fromEntries(SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((key) => [key, "empty"])) as Record<
+      SupplementalSourceFamilyKey,
+      "published" | "skipped-newer" | "empty"
+    >;
+
+  for (const family of familyResults) {
+    const { candidates: dedupedFamilyCandidates } = dedupeCandidates(family.candidates);
+    if (dedupedFamilyCandidates.length === 0) continue;
+    const familyCacheResult = await setCacheIfNewer(
+      db,
+      getYieldSupplementalFamilyCacheKey(family.key),
+      buildYieldSupplementalSourcesCache(dedupedFamilyCandidates, startSec),
+      startSec,
+    );
+    familyCacheResults[family.key] = familyCacheResult.written ? "published" : "skipped-newer";
+  }
 
   return {
     itemCount: cacheResult.written ? dedupedCandidates.length : 0,
@@ -114,6 +138,7 @@ export async function syncYieldSupplemental(
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",
       casSkipped: cacheResult.skippedBecauseNewer,
       cacheKey: YIELD_SUPPLEMENTAL_CACHE_KEY,
+      familyCacheResults,
       syncStartSec: startSec,
     }),
   };

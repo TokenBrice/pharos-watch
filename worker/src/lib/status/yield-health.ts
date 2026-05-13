@@ -1,12 +1,31 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { STATUS_CACHE_RATIO_THRESHOLDS, STATUS_YIELD_HEALTH_THRESHOLDS } from "@shared/lib/status-thresholds";
-import type { CronStatus, YieldHealthFieldStatus, YieldHealthSummary } from "@shared/types/status";
+import type {
+  CronStatus,
+  YieldHealthFieldStatus,
+  YieldHealthSummary,
+  YieldSourceRiskCoverageField,
+  YieldSourceRiskCoverageSummary,
+} from "@shared/types/status";
 
 const YIELD_RUNBOOK_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/yield-health.md";
 const YIELD_RANKINGS_CACHE_KEY = "yield-rankings";
 const YIELD_SUPPLEMENTAL_CACHE_KEY = "yield:supplemental-sources:v1";
 const YIELD_COVERAGE_AUDIT_CACHE_KEY = "yield-coverage-audit";
 const YIELD_RANKING_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
+const SOURCE_RISK_COVERAGE_FIELDS = [
+  "sourceRiskScore",
+  "sourceRiskPenalty",
+  "sourceDepthRatio",
+  "rewardShare",
+  "sourceAgeSeconds",
+  "observationCount30d",
+  "sourceSwitchCount30d",
+  "deploymentPlace",
+  "venueProtocol",
+  "venueChain",
+  "venueRiskTier",
+] satisfies YieldSourceRiskCoverageField[];
 
 interface CacheRow {
   key: string;
@@ -69,6 +88,76 @@ function getBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+function ratio(numerator: number, denominator: number): number {
+  if (denominator <= 0) return 1;
+  return Number((numerator / denominator).toFixed(4));
+}
+
+function sourceRiskValuePopulated(field: YieldSourceRiskCoverageField, value: unknown): boolean {
+  if (field === "venueRiskTier") {
+    return value === "low" || value === "medium" || value === "high";
+  }
+  if (field === "deploymentPlace" || field === "venueProtocol" || field === "venueChain") {
+    return typeof value === "string" && value.length > 0;
+  }
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCoverageSummary {
+  const sourceRows: Array<{ sourceRisk: Record<string, unknown> | null; isBest: boolean }> = [];
+
+  for (const ranking of rankings ?? []) {
+    const row = getObject(ranking);
+    if (!row) continue;
+    sourceRows.push({
+      sourceRisk: getObject(row.sourceRisk),
+      isBest: true,
+    });
+
+    if (Array.isArray(row.altSources)) {
+      for (const alt of row.altSources) {
+        const altRow = getObject(alt);
+        if (!altRow) continue;
+        sourceRows.push({
+          sourceRisk: getObject(altRow.sourceRisk),
+          isBest: false,
+        });
+      }
+    }
+  }
+
+  const fields = Object.fromEntries(
+    SOURCE_RISK_COVERAGE_FIELDS.map((field) => {
+      const eligibleRows =
+        field === "sourceSwitchCount30d"
+          ? sourceRows.filter((row) => row.isBest)
+          : sourceRows;
+      const populatedCount = eligibleRows.filter((row) =>
+        sourceRiskValuePopulated(field, row.sourceRisk?.[field]),
+      ).length;
+      const nullCount = Math.max(0, eligibleRows.length - populatedCount);
+      return [
+        field,
+        {
+          eligibleCount: eligibleRows.length,
+          populatedCount,
+          nullCount,
+          coverageRatio: ratio(populatedCount, eligibleRows.length),
+          nullRate: eligibleRows.length > 0 ? ratio(nullCount, eligibleRows.length) : 0,
+        },
+      ];
+    }),
+  ) as YieldSourceRiskCoverageSummary["fields"];
+
+  return {
+    totalRows: sourceRows.length,
+    bestRows: sourceRows.filter((row) => row.isBest).length,
+    altRows: sourceRows.filter((row) => !row.isBest).length,
+    rowsWithSourceRisk: sourceRows.filter((row) => row.sourceRisk != null).length,
+    fields,
+  };
+}
+
 export async function loadYieldHealthSummary(
   db: D1Database,
   now: number,
@@ -91,6 +180,7 @@ export async function loadYieldHealthSummary(
     ? "stale"
     : freshnessStatus(rankingAgeSec, YIELD_RANKING_MAX_AGE_SEC, { missingIs: "stale" });
   const rankings = Array.isArray(rankingsPayload?.rankings) ? rankingsPayload.rankings : null;
+  const sourceRiskCoverage = buildSourceRiskCoverage(rankings);
 
   const provenance = getObject(rankingsPayload?.provenance);
   const safetySnapshot = getObject(provenance?.safetySnapshot);
@@ -176,6 +266,7 @@ export async function loadYieldHealthSummary(
       maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
       status: coverageAuditStatus,
     },
+    sourceRiskCoverage,
     latestCronStatus: crons["sync-yield-data"]?.lastRun?.status ?? null,
     latestCronStartedAt: crons["sync-yield-data"]?.lastRun?.startedAt ?? null,
   };

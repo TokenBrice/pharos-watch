@@ -343,6 +343,44 @@ describe("computeDEWS", () => {
     expect(result.signals.yield.value).toBe(65);
   });
 
+  it("treats missing structured yield-risk fields as the legacy warning-only path", () => {
+    const result = computeDews(
+      baseInput({
+        yieldWarnings: [],
+        yieldSourceRisk: null,
+        yieldRankChangeAttribution: null,
+      }),
+    );
+
+    expect(result.signals.yield).toEqual({ value: 0, available: false });
+  });
+
+  it("does not score structured yield-risk scaffolding without sourced DEWS weights", () => {
+    const legacy = computeDews(baseInput({ yieldWarnings: [] }));
+    const structured = computeDews(
+      baseInput({
+        yieldWarnings: [],
+        yieldSourceRisk: {
+          sourceRiskPenalty: 1.5,
+          rewardShare: 0.9,
+          sourceAgeSeconds: 10 * 24 * 60 * 60,
+          venueRiskTier: "high",
+          investabilityFlags: ["reward-heavy", "stale-source"],
+        },
+        yieldRankChangeAttribution: {
+          rankDelta: -25,
+          pysDelta: -18,
+          primaryDriver: "source-risk",
+          driverContributions: { sourceRisk: -18 },
+        },
+      }),
+    );
+
+    expect(structured.signals.yield).toEqual(legacy.signals.yield);
+    expect(structured.score).toBe(legacy.score);
+    expect(structured.band).toBe(legacy.band);
+  });
+
   it("amplifies score when PSI indicates market stress", () => {
     const calm = computeDews(
       baseInput({

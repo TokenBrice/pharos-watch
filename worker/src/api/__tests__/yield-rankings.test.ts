@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
+import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 
 const buildReportCardsSnapshotMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -415,6 +416,82 @@ describe("handleYieldRankings", () => {
     expect(body.publication).toBeUndefined();
   });
 
+  it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          sourceRisk: {
+            sourceRiskPenalty: 2,
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+    const row = body.rankings[0];
+
+    expect(row?.safetyScore).toBe(66);
+    expect(row?.sourceRisk?.sourceRiskPenalty).toBe(2);
+    expect(row?.pharosYieldScore).toBe(computePYS({
+      apy30d: payload.rankings[0].apy30d,
+      safetyScore: 66,
+      apyVarianceScore: yieldStabilityToApyVarianceScore(payload.rankings[0].yieldStability),
+      scalingFactor: payload.scalingFactor,
+      benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
+      sourceRiskPenalty: 2,
+    }));
+  });
+
+  it("preserves publishedRank and assigns liveRank after safety hydration reorders rows", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const baseRow = v748RankingsPayload.rankings[0];
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...baseRow,
+          id: "nr-coin",
+          symbol: "NRC",
+          name: "NR Coin",
+          currentApy: 10,
+          apy7d: 10,
+          apy30d: 10,
+          pharosYieldScore: 15,
+          publishedRank: 1,
+        },
+        {
+          ...baseRow,
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          currentApy: 5,
+          apy7d: 5,
+          apy30d: 5,
+          pharosYieldScore: 8,
+          publishedRank: 2,
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(body.rankings.map((row) => row.id)).toEqual(["rated-coin", "nr-coin"]);
+    expect(body.rankings[0]).toMatchObject({ id: "rated-coin", publishedRank: 2, liveRank: 1 });
+    expect(body.rankings[1]).toMatchObject({ id: "nr-coin", publishedRank: 1, liveRank: 2 });
+  });
+
   it("accepts nullable optional publication, source-risk, rank, and attribution scaffolding", () => {
     const parsed = YieldRankingsResponseSchema.parse({
       ...v748RankingsPayload,
@@ -431,10 +508,13 @@ describe("handleYieldRankings", () => {
         publishedRank: null,
         liveRank: 1,
         sourceRisk: {
+          sourceRiskScore: null,
           sourceRiskPenalty: null,
           sourceDepthRatio: null,
           rewardShare: null,
           sourceAgeSeconds: null,
+          observationCount30d: null,
+          sourceSwitchCount30d: null,
           deploymentPlace: null,
           venueProtocol: null,
           venueChain: null,
@@ -455,7 +535,10 @@ describe("handleYieldRankings", () => {
         altSources: row.altSources.map((alt) => ({
           ...alt,
           sourceRisk: {
+            sourceRiskScore: null,
             sourceRiskPenalty: null,
+            observationCount30d: null,
+            sourceSwitchCount30d: null,
             venueRiskTier: null,
           },
         })),
