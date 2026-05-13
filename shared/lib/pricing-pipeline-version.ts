@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "5.99",
+  currentVersion: "6.0",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "6.0",
+      title: "Moralis quota-bounded exact-address augmentation",
+      date: "2026-05-13",
+      effectiveAt: 1778674334,
+      summary:
+        "Moralis exact-address augmentation now uses the documented 100-token batch size and a smaller per-run request cap so the 15-minute sync cadence stays inside the provider's free daily compute-unit envelope.",
+      impact: [
+        "`moralis-address` remains a weight-1 soft primary-consensus candidate and is still optional through `ADDRESS_PRICE_PROVIDERS_ENABLED`",
+        "The Moralis pass is capped at 3 batch requests per sync, down from 10 smaller batches, reducing worst-case daily usage from about 96k CUs/day to about 28.8k CUs/day at the current 15-minute cadence",
+        "CoinGecko-only detail pages now record circuit health from upstream transport success instead of stale or empty per-asset history, so expected history gaps fall back to local supply history without opening the source-wide breaker",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.99",
       title: "Free exact-address price augmentation",

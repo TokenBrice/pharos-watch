@@ -1,6 +1,14 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v5.99` (2026-02-01 -> 2026-05-12).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.0` (2026-02-01 -> 2026-05-13).
+
+---
+
+## v6.0 - Moralis quota-bounded exact-address augmentation (May 13, 2026)
+
+- Moralis exact-address augmentation now uses 100-token batches and is capped at 3 batch requests per 15-minute sync, reducing worst-case daily usage from about 96k CUs/day to about 28.8k CUs/day at the current cadence
+- `moralis-address` remains an optional weight-1 soft primary-consensus candidate controlled by `ADDRESS_PRICE_PROVIDERS_ENABLED`
+- CoinGecko-only detail pages now record circuit health from upstream transport success instead of stale or empty per-asset history, so expected history gaps fall back to local supply history without opening the source-wide `coingecko-detail-platforms` breaker
 
 ---
 
