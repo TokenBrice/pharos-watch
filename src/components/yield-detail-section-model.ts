@@ -5,16 +5,12 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
-import {
-  classifyYieldSourceDepth,
-  getYieldSourceRiskDrivers,
-  type YieldSourceDepthLens,
-  type YieldSourceRiskDriver,
-} from "@/lib/yield-source-risk";
+import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { AltYieldSource, YieldRanking } from "@shared/types";
+import type { YieldRanking } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
 
@@ -58,6 +54,7 @@ export interface YieldDetailSectionReadyModel {
   benchmarkRate: number;
   medianApy: number;
   benchmarkIsFallback: boolean;
+  sourceExplorer: YieldSourceExplorerModel;
   sourceDepthLens: YieldSourceDepthLens;
   sourceRiskDrivers: YieldSourceRiskDriver[];
   externalSourceKeys?: string[];
@@ -111,23 +108,6 @@ export type YieldDetailSectionModel =
   | YieldDetailSectionUnavailableModel
   | YieldDetailSectionErrorModel
   | YieldDetailSectionHiddenModel;
-
-function buildHistorySources(ranking: YieldRanking) {
-  return [
-    ...(ranking.provenance?.sourceKey
-      ? [
-          {
-            sourceKey: ranking.provenance.sourceKey,
-            yieldSource: ranking.yieldSource,
-          },
-        ]
-      : []),
-    ...ranking.altSources.map((source: AltYieldSource) => ({
-      sourceKey: source.sourceKey,
-      yieldSource: source.yieldSource,
-    })),
-  ];
-}
 
 export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSectionModel {
   const { getParam, replaceParams } = useUrlFilters();
@@ -193,16 +173,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
-  const sourceDepthLens = classifyYieldSourceDepth({
-    sourceRisk: ranking.sourceRisk,
-    sourceTvlUsd: ranking.sourceTvlUsd,
-  });
-  const sourceRiskDrivers = getYieldSourceRiskDrivers({
-    sourceRisk: ranking.sourceRisk,
-    sourceChanged: ranking.provenance?.sourceSwitch ?? false,
-  });
+  const sourceExplorer = buildYieldSourceExplorerModel(ranking);
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
-  const historySources = buildHistorySources(ranking);
   const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
 
   return {
@@ -213,10 +185,11 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     benchmarkRate: ranking.benchmarkRate ?? data?.riskFreeRate ?? 0,
     medianApy: data?.medianApy ?? 0,
     benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
-    sourceDepthLens,
-    sourceRiskDrivers,
+    sourceExplorer,
+    sourceDepthLens: sourceExplorer.sourceDepthLens,
+    sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
     externalSourceKeys: selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined,
-    historySources,
+    historySources: sourceExplorer.historySources,
     dataSourceMeta,
     warningSignals: ranking.warningSignals,
     singleWarning,

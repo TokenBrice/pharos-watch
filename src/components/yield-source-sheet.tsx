@@ -8,11 +8,8 @@ import { YieldSourceLink } from "@/components/yield-source-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import {
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
-  classifyYieldSourceDepth,
-  getYieldSourceRiskDrivers,
-} from "@/lib/yield-source-risk";
+import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -45,31 +42,10 @@ function YieldSourceSheetBody({
   const [showAllSheetSources, setShowAllSheetSources] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  const bestSourceKey = ranking.provenance?.sourceKey ?? null;
-  const effectiveSourceKey = selectedSourceKey ?? bestSourceKey ?? "best";
-  const totalSources = 1 + (ranking.altSources?.length ?? 0);
-
-  const allSources = [
-    ...(bestSourceKey
-      ? [{ sourceKey: bestSourceKey, yieldSource: ranking.yieldSource }]
-      : []),
-    ...(ranking.altSources ?? []).map((source) => ({
-      sourceKey: source.sourceKey,
-      yieldSource: source.yieldSource,
-    })),
-  ];
-  const previousBestSourceKey = ranking.provenance?.previousBestSourceKey ?? null;
-  const previousBestSourceLabel = previousBestSourceKey
-    ? allSources.find((source) => source.sourceKey === previousBestSourceKey)?.yieldSource ?? previousBestSourceKey
-    : null;
-  const sourceRiskDrivers = getYieldSourceRiskDrivers({
-    sourceRisk: ranking.sourceRisk,
-    sourceChanged: ranking.provenance?.sourceSwitch ?? false,
-  });
-  const depthLens = classifyYieldSourceDepth({
-    sourceRisk: ranking.sourceRisk,
-    sourceTvlUsd: ranking.sourceTvlUsd,
-  });
+  const sourceExplorer = buildYieldSourceExplorerModel(ranking);
+  const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
+  const totalSources = sourceExplorer.allSources.length;
+  const { selectedSource } = sourceExplorer;
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -100,8 +76,8 @@ function YieldSourceSheetBody({
           </p>
           <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
             <div className="flex items-center gap-2">
-              <YieldSourceLink href={ranking.yieldSourceUrl} className="text-sm font-medium text-foreground">
-                {ranking.yieldSource}
+              <YieldSourceLink href={selectedSource.url} className="text-sm font-medium text-foreground">
+                {selectedSource.displayLabel}
               </YieldSourceLink>
               <Badge
                 variant="outline"
@@ -115,8 +91,8 @@ function YieldSourceSheetBody({
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            {ranking.sourceTvlUsd !== null && (
-              <span>TVL {formatCurrency(ranking.sourceTvlUsd)}</span>
+            {selectedSource.sourceTvlUsd !== null && (
+              <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>
             )}
             {ranking.provenance?.confidenceTier && (
               <span className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]">
@@ -125,11 +101,11 @@ function YieldSourceSheetBody({
             )}
             <span
               className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]"
-              title={YIELD_SOURCE_DEPTH_DEFINITIONS[depthLens].description}
+              title={YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].description}
             >
-              {YIELD_SOURCE_DEPTH_DEFINITIONS[depthLens].label} depth
+              {YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].label} depth
             </span>
-            {ranking.provenance?.sourceSwitch ? (
+            {sourceExplorer.sourceSwitch.changed ? (
               <span
                 className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300"
                 title="The chosen source changed versus the prior published snapshot. This explains source provenance, not stablecoin safety."
@@ -141,9 +117,9 @@ function YieldSourceSheetBody({
           {ranking.provenance?.selectionReason ? (
             <p className="mt-2 text-xs text-muted-foreground">{ranking.provenance.selectionReason}</p>
           ) : null}
-          {previousBestSourceLabel ? (
+          {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              Previous source: <span className="font-mono text-foreground">{previousBestSourceLabel}</span>
+              Previous source: <span className="font-mono text-foreground">{sourceExplorer.sourceSwitch.previousSourceDisplayLabel}</span>
             </p>
           ) : null}
         </div>
@@ -152,9 +128,9 @@ function YieldSourceSheetBody({
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Source-risk drivers
           </p>
-          {sourceRiskDrivers.length > 0 ? (
+          {sourceExplorer.sourceRiskDrivers.length > 0 ? (
             <ul className="mt-2 space-y-2 text-xs">
-              {sourceRiskDrivers.map((driver) => (
+              {sourceExplorer.sourceRiskDrivers.map((driver) => (
                 <li key={driver.key}>
                   <span className="font-medium text-foreground">{driver.label}</span>
                   <span className="block text-muted-foreground">{driver.description}</span>
@@ -168,13 +144,13 @@ function YieldSourceSheetBody({
           )}
         </div>
 
-        {(ranking.altSources?.length ?? 0) > 0 && (
+        {sourceExplorer.retainedAlternates.length > 0 && (
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Retained alternates
             </p>
             <div className="mt-2 space-y-1.5">
-              {[...ranking.altSources]
+              {[...sourceExplorer.retainedAlternates]
                 .sort((a, b) => b.apy30d - a.apy30d)
                 .slice(0, showAllSheetSources ? undefined : 6)
                 .map((source) => {
@@ -193,7 +169,7 @@ function YieldSourceSheetBody({
                       )}
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm text-foreground">{source.yieldSource}</span>
+                        <span className="truncate text-sm text-foreground">{source.displayLabel}</span>
                         <Badge
                           variant="outline"
                           className={cn("shrink-0 text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
@@ -218,13 +194,13 @@ function YieldSourceSheetBody({
                   );
                 })}
             </div>
-            {!showAllSheetSources && ranking.altSources.length > 6 && (
+            {!showAllSheetSources && sourceExplorer.retainedAlternates.length > 6 && (
               <button
                 type="button"
                 onClick={() => setShowAllSheetSources(true)}
                 className="mt-2 w-full rounded-lg border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
               >
-                Show {ranking.altSources.length - 6} more
+                Show {sourceExplorer.retainedAlternates.length - 6} more
               </button>
             )}
           </div>
@@ -234,7 +210,7 @@ function YieldSourceSheetBody({
           <p className="text-xs text-muted-foreground">
             Showing{" "}
             <span className="font-medium text-foreground">
-              {allSources.find((source) => source.sourceKey === effectiveSourceKey)?.yieldSource ?? "Best source"}
+              {sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey)?.displayLabel ?? "Best source"}
             </span>
           </p>
           <YieldHistoryChart
@@ -246,7 +222,7 @@ function YieldSourceSheetBody({
             }
             medianApy={medianApy}
             compact
-            availableSources={allSources}
+            availableSources={sourceExplorer.historySources}
             hideSourceSelector
             externalSourceKey={effectiveSourceKey}
           />

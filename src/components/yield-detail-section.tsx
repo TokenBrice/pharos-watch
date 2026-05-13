@@ -219,7 +219,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Yield Source</p>
           <div className="mt-2 text-sm font-medium text-foreground">
-            <YieldSourceLink href={view.ranking.yieldSourceUrl}>{view.ranking.yieldSource}</YieldSourceLink>
+            <YieldSourceLink href={view.sourceExplorer.sourceIdentity.url}>
+              {view.sourceExplorer.sourceIdentity.displayLabel}
+            </YieldSourceLink>
           </div>
           {view.ranking.provenance?.selectionReason ? (
             <p className="mt-1 text-xs text-muted-foreground">{view.ranking.provenance.selectionReason}</p>
@@ -241,25 +243,25 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL and depth</p>
           <p className="mt-2 font-mono text-sm tabular-nums text-foreground">
-            {view.ranking.sourceTvlUsd !== null ? formatCurrency(view.ranking.sourceTvlUsd) : "—"}
+            {view.sourceExplorer.selectedSource.sourceTvlUsd !== null ? formatCurrency(view.sourceExplorer.selectedSource.sourceTvlUsd) : "—"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].description}>
             {YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].label} depth
           </p>
-          {view.ranking.provenance?.sourceSwitch ? (
+          {view.sourceExplorer.sourceSwitch.changed ? (
             <p className="mt-1 text-xs text-sky-700 dark:text-sky-300">
               Source changed versus the prior published snapshot
-              {view.ranking.provenance.previousBestSourceKey ? ` (${view.ranking.provenance.previousBestSourceKey})` : ""}
+              {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel ? ` (${view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel})` : ""}
             </p>
           ) : null}
         </div>
       </div>
 
-      {view.ranking.altSources.length >= 2 ? (
+      {view.sourceExplorer.retainedAlternates.length >= 2 ? (
         <YieldDetailSectionAltSources
-          altSources={view.ranking.altSources}
+          altSources={view.sourceExplorer.retainedAlternates}
           bestApy={view.ranking.apy30d}
-          bestSourceKey={view.ranking.provenance?.sourceKey ?? null}
+          bestSourceKey={view.sourceExplorer.selectedSource.sourceKey}
           onSelectSource={(sourceKey) => {
             view.toggleSource(sourceKey);
             document.getElementById("yield")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -268,17 +270,17 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           showAll={view.showAllSources}
           onShowAll={() => view.setShowAllSources(true)}
         />
-      ) : view.ranking.altSources.length === 1 ? (
+      ) : view.sourceExplorer.retainedAlternates.length === 1 ? (
         <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Retained alternates</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {view.ranking.altSources.map((source) => (
+            {view.sourceExplorer.retainedAlternates.map((source) => (
               <div
                 key={source.sourceKey}
                 className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2"
               >
-                <YieldSourceLink href={source.yieldSourceUrl} className="max-w-full text-sm text-foreground">
-                  {source.yieldSource}
+                <YieldSourceLink href={source.url} className="max-w-full text-sm text-foreground">
+                  {source.displayLabel}
                 </YieldSourceLink>
                 <span className="font-mono text-sm tabular-nums text-muted-foreground">
                   {formatPercent(source.currentApy)}

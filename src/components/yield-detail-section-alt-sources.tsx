@@ -8,10 +8,10 @@ import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { ALT_SOURCE_INITIAL_COUNT } from "@/components/yield-detail-section-model";
-import type { AltYieldSource } from "@shared/types";
+import type { YieldSourceExplorerSource } from "@/lib/yield-source-explorer-model";
 
 export interface YieldDetailSectionAltSourcesProps {
-  altSources: AltYieldSource[];
+  altSources: YieldSourceExplorerSource[];
   bestApy: number;
   bestSourceKey: string | null;
   onSelectSource: (sourceKey: string) => void;
@@ -95,8 +95,8 @@ export function YieldDetailSectionAltSources({
                 >
                   <td className="py-2 pr-2">
                     <div className="flex items-center gap-1.5">
-                      <YieldSourceLink href={source.yieldSourceUrl} className="text-foreground">
-                        {source.yieldSource}
+                      <YieldSourceLink href={source.url} className="text-foreground">
+                        {source.displayLabel}
                       </YieldSourceLink>
                       {isBest ? (
                         <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
@@ -130,7 +130,7 @@ export function YieldDetailSectionAltSources({
                           ? "bg-primary/10 text-primary hover:bg-primary/20"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground",
                       )}
-                      aria-label={`${isSelected ? "Remove" : "Show"} ${source.yieldSource} on chart`}
+                      aria-label={`${isSelected ? "Remove" : "Show"} ${source.displayLabel} on chart`}
                       title={isSelected ? "Remove from chart" : "Show on chart"}
                     >
                       <BarChart3 className="h-3.5 w-3.5" />
