@@ -81,4 +81,22 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "stcusd-cap": "bf6ca887-e357-49ec-8031-0d1a6141c455",
   // HedgeCore sUSD - HedgeCore routes USDC collateral through Venus on BSC
   "susd-hedgecore": "89eba1e5-1b1b-47b6-958b-38138a04c244",
+  // gtUSDC - morpho-blue Gauntlet USDC vault, Ethereum, $147M TVL, ~3.58% APY
+  "gtusdc-gauntlet": "a306885c-001e-4479-9ae8-459a56527bc1",
+  // spUSDC - spark-savings USDC vault, Ethereum, $946M TVL, ~3.65% APY
+  "susdc-spark": "c5c74dd1-995c-4445-9d84-3e710bad7d52",
+  // spUSDT - spark-savings USDT vault, Ethereum, $1.18B TVL, ~2.50% APY
+  "susdt-spark": "a5d67f7e-5b51-4a9d-969d-caf051a7f5a4",
+  // sGHO - aave-v3 Safety Module staked GHO, Ethereum, $264M TVL, ~5.49% APY
+  //        (variant-map entry on `gho-aave` remains; YIELD_VARIANT_MAP is skipped
+  //         automatically when the wrapper is tracked separately)
+  "sgho-aave": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
+  // yBOLD - yearn-finance Liquity wrapper, Ethereum, $5.5M TVL, ~10.36% APY
+  //         (variant-map entry on `bold-liquity` remains; skipped automatically
+  //          since the wrapper is tracked separately)
+  "ybold-yearn": "4c29f645-12db-461f-a1d7-16900d624271",
+  // yvUSDC - yearn-finance USDC vault, Ethereum, $29M TVL, ~3.43% APY
+  "yvusdc-yearn": "7d89af7a-24c9-4292-aa38-7c71b05fbd6d",
+  // AA_FalconXUSDC - morpho-blue MEV Capital curated tranche, Ethereum, $76M TVL, 0% APY (pending DL backfill)
+  "aa-falconx-mev-capital": "8e563fbd-db3f-4cbb-823d-446d051f420b",
 };
