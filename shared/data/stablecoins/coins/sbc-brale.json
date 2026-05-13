@@ -85,6 +85,11 @@
       "decimals": 9
     },
     {
+      "chain": "ethereum-classic",
+      "address": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+      "decimals": 18
+    },
+    {
       "chain": "stellar",
       "address": "SBC-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
       "decimals": 7

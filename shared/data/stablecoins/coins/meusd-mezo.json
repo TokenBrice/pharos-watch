@@ -1,7 +1,7 @@
 {
   "id": "meusd-mezo",
   "name": "Mezo USD",
-  "symbol": "meUSD",
+  "symbol": "MUSD",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

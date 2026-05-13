@@ -59,6 +59,16 @@
       "chain": "stellar",
       "address": "AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
       "decimals": 7
+    },
+    {
+      "chain": "xdc",
+      "address": "0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+      "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
+      "decimals": 8
     }
   ],
   "blacklistabilityReview": {

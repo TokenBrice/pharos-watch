@@ -1,6 +1,6 @@
 {
   "id": "gtusdc-gauntlet",
-  "name": "Gauntlet USDC Core",
+  "name": "Gauntlet USDC Prime V1",
   "symbol": "gtUSDC",
   "flags": {
     "backing": "crypto-backed",
@@ -61,7 +61,7 @@
     }
   ],
   "yieldConfig": {
-    "yieldSource": "Gauntlet USDC Core MetaMorpho vault",
+    "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
@@ -71,7 +71,7 @@
     "breakerScope": "gtusdc-gauntlet",
     "display": {
       "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d",
-      "label": "Morpho Gauntlet USDC Core"
+      "label": "Morpho Gauntlet USDC Prime V1"
     },
     "inputs": {
       "primary": {

@@ -16,8 +16,8 @@
   },
   "frax-frax": {
     "title": "The Identity Crisis",
-    "text": "Frax abandoned its pioneering fractional-reserve algorithm and went full TradFi: 50% Superstate USTB, 42% BlackRock BUIDL, and the rest in tokenized Treasuries and crypto arbitrage vehicles. The reserve reads like an institutional allocation, yet the C safety grade and 817 depeg events — including a worst-case deviation of 1,220 bps below peg — remind you this is still a coin that has lived through real crises. At $274M circulating with a WATCH-band stress signal scoring 22, FRAX sits in an uncomfortable middle: too decentralized-dependent for institutional comfort, too TradFi-backed for DeFi purists. Eighty-four DEX pools sound impressive until you see the 0.47 HHI concentration and a 46 liquidity score. The 5.64% yield via Vesper lending produces a yield-to-risk ratio of just 0.12 against a C safety grade — you are not being paid enough for the ambiguity.",
-    "updatedAt": "2026-04-13"
+    "text": "Frax abandoned its pioneering fractional-reserve algorithm and went full TradFi: the balance sheet is now anchored by Superstate USTB and WisdomTree WTGXX as the primary tokenized-Treasury slices, with additional exposure through Ethena's USDe / Convex strategy positions and Frax-owned intra-protocol tokens like sFRAX and sfrxUSD. The reserve reads like an institutional allocation, yet the C safety grade and 817 depeg events — including a worst-case deviation of 1,220 bps below peg — remind you this is still a coin that has lived through real crises. At $274M circulating with a WATCH-band stress signal scoring 22, FRAX sits in an uncomfortable middle: too decentralized-dependent for institutional comfort, too TradFi-backed for DeFi purists. Eighty-four DEX pools sound impressive until you see the 0.47 HHI concentration and a 46 liquidity score. The 5.64% yield via Vesper lending produces a yield-to-risk ratio of just 0.12 against a C safety grade — you are not being paid enough for the ambiguity.",
+    "updatedAt": "2026-05-13"
   },
   "tusd-trueusd": {
     "title": "Transparency in Name Only",
@@ -61,8 +61,8 @@
   },
   "susd-synthetix": {
     "title": "Still Underwater",
-    "text": "sUSD remains the only F-rated asset on the Pharos dashboard, trading at $0.74 -- a 26% discount to par that has persisted since SIP-420 gutted the over-collateralization model that held the peg for years. The numbers are staggering: 3,031 depeg events, an 88% worst negative deviation, a 95% worst positive spike, and DEWS Alert at 43 with no redemption backstop and no yield offering. Supply has flatlined at $38.7M across five chains with virtually zero movement week-over-week or month-over-month, suggesting holders have either abandoned hope or are locked into positions they can't profitably exit. The V3 transition and SLP vault basis-trade strategy are supposed to restore the peg by mid-2026, but with 50% of reserves still in very-high-risk SNX and only $647K in effective DEX liquidity, the path back to a dollar requires a level of execution that the protocol's recent track record does not inspire confidence in.",
-    "updatedAt": "2026-04-13"
+    "text": "sUSD remains the only F-rated asset on the Pharos dashboard, trading at roughly $0.6658 -- a 33% discount to par that has persisted since SIP-420 gutted the over-collateralization model that held the peg for years. The numbers are staggering: 3,031 depeg events, an 88% worst negative deviation, a 95% worst positive spike, and DEWS Alert at 43 with no redemption backstop and no yield offering. Supply has flatlined at $38.7M across five chains with virtually zero movement week-over-week or month-over-month, suggesting holders have either abandoned hope or are locked into positions they can't profitably exit. The V3 transition and SLP vault basis-trade strategy are supposed to restore the peg by mid-2026, but with 50% of reserves still in very-high-risk SNX and only $647K in effective DEX liquidity, the path back to a dollar requires a level of execution that the protocol's recent track record does not inspire confidence in.",
+    "updatedAt": "2026-05-13"
   },
   "ousd-origin-protocol": {
     "title": "The Passive Yield Play",
@@ -71,13 +71,13 @@
   },
   "cusd-celo": {
     "title": "Stablecoins All the Way Down",
-    "text": "Celo Dollar's reserve is an exercise in recursive stablecoin nesting: 56% sUSDS, 22% EURC, and smaller slices of USDGLO, USDC, and USDT mean the majority of cUSD's backing is itself backed by other stablecoins, each with its own dependency chain and failure modes. The 1,571 depeg events and a worst drawdown exceeding 11% are hard numbers to look past, though the C+ report card at 64 and DEWS Calm band suggest the Mento AMM's circuit breakers have tightened since the worst of it. Supply has grown roughly 15% month-over-month to about $17M — meaningful traction for a coin whose thesis is phone-number wallets in Nairobi, not DeFi composability on Ethereum. The 12% CELO allocation remains the wildcard in an otherwise stablecoin-heavy reserve: the one asset that can crater in a downturn precisely when the overcollateralization ratio matters most.",
-    "updatedAt": "2026-04-13"
+    "text": "Mento Dollar (USDm, formerly cUSD) is an exercise in recursive stablecoin nesting: 56% sUSDS, 22% EURC, and smaller slices of USDGLO, USDC, and USDT mean the majority of USDm's backing is itself backed by other stablecoins, each with its own dependency chain and failure modes. The 1,571 depeg events and a worst drawdown exceeding 11% are hard numbers to look past, though the C+ report card at 64 and DEWS Calm band suggest the Mento AMM's circuit breakers have tightened since the worst of it. Supply has grown roughly 15% month-over-month to about $17M — meaningful traction for a coin whose thesis is phone-number wallets in Nairobi, not DeFi composability on Ethereum. The 12% CELO allocation remains the wildcard in an otherwise stablecoin-heavy reserve: the one asset that can crater in a downturn precisely when the overcollateralization ratio matters most.",
+    "updatedAt": "2026-05-13"
   },
   "eurc-circle": {
     "title": "MiCA's Compliance Moat",
-    "text": "Circle's EURC is the regulatory standard-bearer for euro stablecoins: ACPR-licensed EMI under MiCA, Deloitte-attested, 99% of reserves in deposits at systemically important European institutions, deployed natively across nine chains including Ethereum, Base, Solana, and Stellar. The B grade at 72 with DEWS Calm at 11 reflects institutional plumbing that works exactly as designed — though the 4 depeg events include one brutal drawdown near 95% below peg, likely a data artifact or thin-market episode that skews an otherwise pristine record. At roughly 414M EUR circulating, EURC is the largest euro stablecoin by a wide margin, yet that figure would barely register as a rounding error on USDC's balance sheet — the structural gap between dollar and euro stablecoin demand remains the defining constraint. Liquidity is well-distributed across 97 pools with an HHI of 0.09, the kind of organic depth that comes from being the default euro pair on every major DEX.",
-    "updatedAt": "2026-04-13"
+    "text": "Circle's EURC is the regulatory standard-bearer for euro stablecoins: ACPR-licensed EMI under MiCA, Deloitte-attested, 99% of reserves in deposits at systemically important European institutions, deployed natively across six chains — Ethereum, Base, Avalanche, Solana, Stellar, and World Chain. The B grade at 72 with DEWS Calm at 11 reflects institutional plumbing that works exactly as designed — though the 4 depeg events include one brutal drawdown near 95% below peg, likely a data artifact or thin-market episode that skews an otherwise pristine record. At roughly 414M EUR circulating, EURC is the largest euro stablecoin by a wide margin, yet that figure would barely register as a rounding error on USDC's balance sheet — the structural gap between dollar and euro stablecoin demand remains the defining constraint. Liquidity is well-distributed across 97 pools with an HHI of 0.09, the kind of organic depth that comes from being the default euro pair on every major DEX.",
+    "updatedAt": "2026-05-13"
   },
   "eurs-stasis": {
     "title": "First Mover, Fading Advantage",
@@ -86,8 +86,8 @@
   },
   "ceur-celo": {
     "title": "The Other Mento Euro",
-    "text": "Celo Euro shares the same Mento reserve as cUSD — 56% sUSDS, 22% EURC, 12% CELO, and smaller positions in various stablecoins and ETH — at approximately 136% overcollateralization, stabilized via the BiPoolManager virtual AMM with oracle-enforced EUR rates. The algorithmic classification and diversified reserve composition mean cEUR inherits both the strengths (on-chain transparency, overcollateralization) and weaknesses (crypto collateral volatility, thin secondary markets) of the Mento system. Deployed on Celo (now an Ethereum L2) with real-time on-chain reserve verification, cEUR exists primarily to serve Celo's vision of region-specific stablecoins for mobile payments rather than DeFi composability. In the euro stablecoin race dominated by Circle's EURC and MiCA-licensed competitors, cEUR's niche is geographic rather than regulatory.",
-    "updatedAt": "2026-03-23"
+    "text": "Mento Euro (EURm, formerly CEUR) shares the same Mento reserve as Mento Dollar — 56% sUSDS, 22% EURC, 12% CELO, and smaller positions in various stablecoins and ETH — at approximately 136% overcollateralization, stabilized via the BiPoolManager virtual AMM with oracle-enforced EUR rates. As a crypto-backed coin, EURm inherits both the strengths (on-chain transparency, overcollateralization) and weaknesses (crypto collateral volatility, thin secondary markets) of the Mento system. Deployed on Celo (now an Ethereum L2) with real-time on-chain reserve verification, EURm exists primarily to serve Celo's vision of region-specific stablecoins for mobile payments rather than DeFi composability. In the euro stablecoin race dominated by Circle's EURC and MiCA-licensed competitors, EURm's niche is geographic rather than regulatory.",
+    "updatedAt": "2026-05-13"
   },
   "fpi-frax": {
     "title": "CPI on a Blockchain",
@@ -161,8 +161,8 @@
   },
   "aeur-anchored-coins": {
     "title": "Death of a Swiss Euro",
-    "text": "AEUR is a stablecoin in hospice care. When FlowBank SA declared bankruptcy in June 2024, it trapped 15% of AEUR's euro reserves in proceedings, leaving Anchored Coins with no path forward -- new issuance ceased, Binance EEA delisted the token in March 2025, and supply has hemorrhaged roughly a third in a single month as holders scramble for the exits. The C- report card grade is generous given the circumstances: 27 depeg events with swings exceeding 1,300 basis points in both directions, fallback-class DEX liquidity with under $28K in pools, and a DEWS Watch band that reflects ongoing structural stress. The 85% of reserves still sitting at Swissquote Bank SA are presumably intact, but with no issuance mechanism to restore the peg and only offchain issuer redemption settling in days, AEUR has become a masterclass in why reserve diversification across custodians is not optional -- it is existential.",
-    "updatedAt": "2026-04-13"
+    "text": "AEUR is a stablecoin in hospice care. Anchored Coins has finished consolidating all remaining euro reserves at Swissquote Bank SA — resolving the FlowBank SA bankruptcy exposure that previously trapped 15% of backing — but the wind-down posture is permanent: no new issuance, Binance EEA delisted the token in March 2025, and MiCAR's EUR-issuer requirements close off any reactivation path. The C- report card grade is generous given the circumstances: 27 depeg events with swings exceeding 1,300 basis points in both directions, fallback-class DEX liquidity with under $28K in pools, and a DEWS Watch band that reflects ongoing structural stress. The reserve is now whole and sitting in one of Switzerland's better-regulated banks, but with no mint path to restore the peg and only offchain issuer redemption settling in days, AEUR's story has shifted from custodial-failure cautionary tale to regulated wind-down: the rails are intact, the product is over.",
+    "updatedAt": "2026-05-13"
   },
   "buck-bucket-protocol": {
     "title": "Sui's CDP Experiment",
@@ -311,8 +311,8 @@
   },
   "frxusd-frax": {
     "title": "Frax's Clean Slate",
-    "text": "Where legacy FRAX carries 817 depeg events and a C grade, frxUSD launched as a do-over: 48% WisdomTree government money market, 37% Superstate USTB, 13% BlackRock BUIDL, and 2% DBS tokenized deposits, earning an A- safety grade with just 3 depeg events to date. The 93-rated atomic redemption backstop through enshrined custodians gives it one of the strongest exit routes in crypto-native stablecoins, and 71 DEX pools with a low 0.11 HHI show genuinely diversified liquidity across 24 chains. At $133M and growing, the sfrxUSD staking wrapper delivers 4.25% APY with a 0.14 yield-to-risk ratio against A- safety — modest but honest. The centralized-dependent governance model means Frax DAO retains the keys to custodian approvals, which is the one thread connecting this otherwise institutional-grade product to its wilder ancestry.",
-    "updatedAt": "2026-04-13"
+    "text": "Where legacy FRAX carries 817 depeg events and a C grade, frxUSD launched as a do-over: roughly 60% Superstate USTB as the largest slice, 42% WisdomTree WTGXX, 11% BlackRock BUIDL, 3% USDC, and a residual 1% USDB exposure, earning an A- safety grade with just 3 depeg events to date. The 93-rated atomic redemption backstop through enshrined custodians gives it one of the strongest exit routes in crypto-native stablecoins, and 71 DEX pools with a low 0.11 HHI show genuinely diversified liquidity across 24 chains. At $133M and growing, the sfrxUSD staking wrapper delivers 4.25% APY with a 0.14 yield-to-risk ratio against A- safety — modest but honest. The centralized-dependent governance model means Frax DAO retains the keys to custodian approvals, which is the one thread connecting this otherwise institutional-grade product to its wilder ancestry.",
+    "updatedAt": "2026-05-13"
   },
   "usyc-hashnote": {
     "title": "Billions Without a Swap Pool",
@@ -391,8 +391,8 @@
   },
   "a7a5-old-vector": {
     "title": "The Sanctioned Dollar's Mirror",
-    "text": "A7A5 is a ruble-pegged stablecoin backed 100% by deposits at Promsvyazbank — a Russian state-owned bank under Western sanctions — which is why Pharos classifies its custody as institutional-sanctioned and its reserve risk as very-high despite the collateral being plain fiat currency. Issued by Old Vector LLC under a Kyrgyz VASP license with quarterly audits from an independent Kyrgyz firm, the regulatory architecture is technically compliant with its home jurisdiction while being functionally untouchable by Western financial infrastructure. The issuer distributes 50% of reserve interest to holders as additional A7A5, making it one of the few stablecoins that pays yield from a sanctioned bank's deposit rates. Whether A7A5 represents financial innovation for an isolated economy or sanctions evasion with a token wrapper depends entirely on whose compliance framework you're applying.",
-    "updatedAt": "2026-03-23"
+    "text": "A7A5 is a ruble-pegged stablecoin backed 100% by deposits at Promsvyazbank — a Russian state-owned bank under Western sanctions — which is why Pharos classifies its custody as institutional-sanctioned and its reserve risk as very-high despite the collateral being plain fiat currency. Issued by Old Vector LLC under a Kyrgyz VASP license with quarterly audits from an independent Kyrgyz firm, the regulatory architecture is technically compliant with its home jurisdiction while being functionally untouchable by Western financial infrastructure. Since 2026-02-09 the issuer has passed through nearly all of the reserve yield to holders as additional A7A5 at the CBR key rate minus one percentage point — a step up from the previous 50% split that makes A7A5 one of the few stablecoins whose holders directly capture a sanctioned bank's deposit rate. Whether A7A5 represents financial innovation for an isolated economy or sanctions evasion with a token wrapper depends entirely on whose compliance framework you're applying.",
+    "updatedAt": "2026-05-13"
   },
   "usd1-world-liberty-financial": {
     "title": "The Presidential Stablecoin",
@@ -466,8 +466,8 @@
   },
   "cusd-cap": {
     "title": "The Stablecoin Basket Case",
-    "text": "Cap's cUSD is a basket wrapper backed by 35% USDC, 25% USDT, 20% BlackRock's BUIDL, 10% Franklin Templeton's BENJI, and 10% PayPal's PYUSD — five institutional-grade stablecoins blended into a single token with a maximum 40% concentration cap per asset. The dynamic-fee vault mechanism adjusts minting and redemption costs in real-time to prevent full utilization, ensuring atomic redemptions remain available, while EigenLayer AVS provides the economic security layer. Redemptions return a proportional basket of all underlying assets rather than a single stablecoin, which socializes any individual reserve depeg across all redeemers — clever risk distribution if everything works, shared contagion if one component fails. Ethereum-only deployment and wrapper-classified governance mean cUSD is less an independent stablecoin and more a diversification instrument for holders who want institutional RWA exposure without choosing sides.",
-    "updatedAt": "2026-03-23"
+    "text": "Cap's cUSD is a basket wrapper backed by 35% USDC, 25% USDT, 20% BlackRock's BUIDL, 10% WisdomTree's WTGXX, and 10% PayPal's PYUSD — five institutional-grade stablecoins blended into a single token with a maximum 40% concentration cap per asset. The dynamic-fee vault mechanism adjusts minting and redemption costs in real-time to prevent full utilization, ensuring atomic redemptions remain available, while EigenLayer AVS provides the economic security layer. Redemptions return a proportional basket of all underlying assets rather than a single stablecoin, which socializes any individual reserve depeg across all redeemers — clever risk distribution if everything works, shared contagion if one component fails. Deployed on Ethereum and MegaETH with wrapper-classified governance, cUSD is less an independent stablecoin and more a diversification instrument for holders who want institutional RWA exposure without choosing sides.",
+    "updatedAt": "2026-05-13"
   },
   "msusd-main-street": {
     "title": "USDC Base, Strategy Token Above",
@@ -521,8 +521,8 @@
   },
   "susdai-usd-ai": {
     "title": "The GPU-Credit Sleeve",
-    "text": "sUSDai is where USD.AI stops behaving like a plain stablecoin and starts looking like a structured credit product wrapped in token form. Holders are opting into yield sourced from GPU-backed infrastructure loans and accepting the trade-off that exits are governed by a queued unstake flow rather than the base token's instant redeem rail. The reserve mix still includes a large PYUSD sleeve, which softens liquidity management, but the defining exposure is the private compute-financing book. That makes sUSDai less a digital cash instrument than a NAV-style income token whose real question is how resilient that GPU-credit pipeline remains through borrower stress, collateral liquidation, and scaling cycles.",
-    "updatedAt": "2026-04-04"
+    "text": "sUSDai is where USD.AI stops behaving like a plain stablecoin and starts looking like a structured credit product wrapped in token form. Holders are opting into yield sourced from GPU-backed infrastructure loans and accepting the trade-off that exits are governed by a queued unstake flow rather than the base token's instant redeem rail. The live proof-of-reserves API now lists 35 hardware-financing deals across H200, B200, B300, RTX PRO, and RTX 5090 chips spanning multiple jurisdictions, with the GPU-loan share of backing materially larger than the 5.6% snapshot in earlier disclosures — the PYUSD sleeve still softens liquidity management, but compute-financing is increasingly the defining exposure. That makes sUSDai less a digital cash instrument than a NAV-style income token whose real question is how resilient that GPU-credit pipeline remains through borrower stress, collateral liquidation, and scaling cycles.",
+    "updatedAt": "2026-05-13"
   },
   "usx-solstice": {
     "title": "The Solana Wrapper",
@@ -621,8 +621,8 @@
   },
   "usat-tether": {
     "title": "Tether Goes Domestic",
-    "text": "Tether's USA-T has nearly doubled from $28M to $50M in two months, backed 80% by T-bills and 20% cash through Anchorage Digital Bank under an OCC federal charter with Cantor Fitzgerald custody -- the cleanest regulatory setup Tether has ever assembled. The B report card at 72 with CALM stress at 5 and zero depeg events reflects a product that hasn't had time to accumulate blemishes, though the Ethereum-only deployment and 20 DEX pools with $8.7M TVL suggest distribution is advancing faster than the old summary's liquidity score of 9 implied. The strategic logic is transparent: USA-T is Tether's answer to USDC on US soil, separating the domestic compliance story from USDT's $140B offshore empire. Whether American institutions will trust a Tether-branded dollar after a decade of skepticism is the billion-dollar question -- the early growth trajectory suggests at least some of them will.",
-    "updatedAt": "2026-04-13"
+    "text": "Tether's USA-T has scaled to roughly $152.7M circulating per DefiLlama, backed 80% by T-bills and 20% cash through Anchorage Digital Bank under an OCC federal charter with Cantor Fitzgerald custody -- the cleanest regulatory setup Tether has ever assembled. The B report card at 72 with CALM stress at 5 and zero depeg events reflects a product that hasn't had time to accumulate blemishes, though the Ethereum-only deployment and 20 DEX pools with $8.7M TVL suggest distribution is advancing faster than the old summary's liquidity score of 9 implied. The strategic logic is transparent: USA-T is Tether's answer to USDC on US soil, separating the domestic compliance story from USDT's $140B offshore empire. Whether American institutions will trust a Tether-branded dollar after a decade of skepticism is the billion-dollar question -- the early growth trajectory suggests at least some of them will.",
+    "updatedAt": "2026-05-13"
   },
   "yzusd-yuzu": {
     "title": "Yield Vault in Stable Clothing",
@@ -996,8 +996,8 @@
   },
   "audm-macropod": {
     "title": "Australia's New On-Chain Dollar",
-    "text": "Macropod AUDM brings an Australian-dollar unit into the active Pharos set with DefiLlama supply, CoinGecko pricing, Ethereum and Solana contracts, and issuer documentation describing segregated AUD reserve accounts at Australian ADIs. The product is straightforward: approved Macropod clients can mint and redeem through the platform, with current reserves split mostly between Westpac and Banking Circle Australia. The main constraints are scale and disclosure cadence. Pharos can monitor the AUD peg immediately and validate live token supply, while a monthly-report adapter would be needed for stronger reserve automation.",
-    "updatedAt": "2026-04-20"
+    "text": "Macropod AUDM brings an Australian-dollar unit into the active Pharos set with DefiLlama supply, CoinGecko pricing, Ethereum, Solana, and Redbelly contracts, and issuer documentation describing segregated AUD reserve accounts at Australian ADIs. The product is straightforward: approved Macropod clients can mint and redeem through the platform, with current reserves split mostly between Westpac and Banking Circle Australia. The main constraints are scale and disclosure cadence. Pharos can monitor the AUD peg immediately and validate live token supply, while a monthly-report adapter would be needed for stronger reserve automation.",
+    "updatedAt": "2026-05-13"
   },
   "audf-forte": {
     "title": "Australia's New Regulated Long Tail",
@@ -1651,8 +1651,8 @@
   },
   "gtusdc-gauntlet": {
     "title": "Gauntlet's conservative USDC MetaMorpho vault",
-    "text": "Gauntlet USDC Core (gtUSDC) is the Ethereum-only conservative counterpart to Gauntlet USDC Prime: a $145M MetaMorpho vault curated by Gauntlet across more restricted USDC lending markets on Morpho Blue. Share price appreciates against USDC as borrower interest accrues. The split between Core and Prime exists for the same reason Pharos tracks Steakhouse USDC and Steakhouse USDT separately — distinct curated portfolios warrant their own risk telemetry.",
-    "updatedAt": "2026-05-12"
+    "text": "Gauntlet USDC Prime V1 (gtUSDC) is the Ethereum-only V1 Morpho Prime vault curated by Gauntlet — a $145M MetaMorpho deployment across vetted USDC lending markets on Morpho Blue, distinct from the separately tracked Prime V2 vault (gtusdcp-gauntlet) at a different contract address. Share price appreciates against USDC as borrower interest accrues. Tracking the V1 and V2 vaults as separate entries exists for the same reason Pharos tracks Steakhouse USDC and Steakhouse USDT separately — distinct curated portfolios warrant their own risk telemetry.",
+    "updatedAt": "2026-05-13"
   },
   "yvusdc-yearn": {
     "title": "Yearn v3's aggregator USDC vault",
@@ -1675,9 +1675,9 @@
     "updatedAt": "2026-05-12"
   },
   "hkdr-rd-technologies": {
-    "title": "Sandbox to Licence, March 2026 if HKMA Holds the Line",
-    "text": "HKDR is the HKD stablecoin from RD Technologies, a Hong Kong fintech founded by former HKMA chief executive Norman Chan. Its subsidiary RD InnoTech was in the first July 2024 cohort admitted to the HKMA stablecoin issuer sandbox — testing digital-asset trading rails and cross-border trade payments — and the firm has been positioning for licensing under the Stablecoins Ordinance that took effect August 1 2025. HKMA chief executive Eddie Yue has signalled a 'very small number' of licences in the first wave targeted for March 2026, with stability and risk control taking precedence over speed. RD InnoTech is consistently named among the credible candidates, but the binary outcome — gazetted licence vs. continued sandbox limbo — is the actual question. Pharos opens this entry pre-launch with a launching-soon phase reflecting both the sandbox-test posture and the expected HKMA gazette window; promote on licence issuance.",
-    "updatedAt": "2026-05-12"
+    "title": "Missed the First Wave, Still in the Race",
+    "text": "HKDR is the HKD stablecoin from RD Technologies, a Hong Kong fintech founded by former HKMA chief executive Norman Chan. Its subsidiary RD InnoTech was in the first July 2024 cohort admitted to the HKMA stablecoin issuer sandbox — testing digital-asset trading rails and cross-border trade payments — and the firm has been positioning for licensing under the Stablecoins Ordinance that took effect August 1 2025. On 2026-04-10 the HKMA gazetted the first batch of stablecoin issuer licences (FRS01 and FRS02) to Anchorpoint and HSBC, with RD InnoTech notably absent from that cohort. RD remains a credible second-wave candidate — a recent Series A2 round and a memorandum of understanding with ZA Bank both point to a serious operational build-out — but the regulatory window has now shifted from binary first-batch outcome to a slower queue. Pharos keeps this entry pre-launch with a launching-soon phase; promote on licence issuance.",
+    "updatedAt": "2026-05-13"
   },
   "brd-volpon": {
     "title": "Selic-Linked Yield, In a Token",

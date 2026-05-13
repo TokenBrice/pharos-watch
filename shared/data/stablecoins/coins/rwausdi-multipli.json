@@ -15,9 +15,9 @@
   "llamaId": "340",
   "detailProvider": "defillama",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://verification.afiprotocol.xyz/multipli",
-    "provider": "AFI"
+    "type": "self-reported",
+    "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
+    "provider": "Multipli"
   },
   "links": [
     {
@@ -33,8 +33,8 @@
       "url": "https://docs.multipli.fi/"
     },
     {
-      "label": "Proof of Reserve",
-      "url": "https://verification.afiprotocol.xyz/multipli"
+      "label": "Peg Module Docs",
+      "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
     }
   ],
   "jurisdiction": {
@@ -101,8 +101,8 @@
     "semantics": "collateral-mix",
     "breakerScope": "rwausdi-multipli",
     "display": {
-      "url": "https://verification.afiprotocol.xyz/multipli",
-      "label": "AFi Verification"
+      "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
+      "label": "Multipli docs"
     },
     "inputs": {
       "primary": {

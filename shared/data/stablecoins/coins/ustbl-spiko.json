@@ -111,8 +111,8 @@
     "semantics": "single-asset",
     "breakerScope": "ustbl-spiko",
     "display": {
-      "url": "https://data.chain.link/feeds/ethereum/mainnet/ustbl-nav",
-      "label": "Chainlink USTBL NAV"
+      "url": "https://www.spiko.io/",
+      "label": "Spiko USTBL"
     },
     "inputs": {
       "primary": {

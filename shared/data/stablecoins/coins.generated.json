@@ -889,6 +889,16 @@
         "chain": "stellar",
         "address": "AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU",
         "decimals": 7
+      },
+      {
+        "chain": "xdc",
+        "address": "0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
+        "decimals": 6
+      },
+      {
+        "chain": "xrpl",
+        "address": "4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
+        "decimals": 8
       }
     ],
     "blacklistabilityReview": {
@@ -1193,7 +1203,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -3146,7 +3156,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -4205,7 +4215,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -5339,7 +5349,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -8885,8 +8895,8 @@
       "semantics": "single-asset",
       "breakerScope": "eutbl-spiko",
       "display": {
-        "url": "https://data.chain.link/feeds/ethereum/mainnet/eutbl-nav",
-        "label": "Chainlink EUTBL NAV"
+        "url": "https://www.spiko.io/",
+        "label": "Spiko EUTBL"
       },
       "adapter": "chainlink-nav",
       "inputs": {
@@ -10717,7 +10727,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -11051,7 +11061,7 @@
   {
     "id": "gtusdc-gauntlet",
     "detailProvider": "coingecko",
-    "name": "Gauntlet USDC Core",
+    "name": "Gauntlet USDC Prime V1",
     "symbol": "gtUSDC",
     "flags": {
       "backing": "crypto-backed",
@@ -11116,7 +11126,7 @@
       "breakerScope": "gtusdc-gauntlet",
       "display": {
         "url": "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d",
-        "label": "Morpho Gauntlet USDC Core"
+        "label": "Morpho Gauntlet USDC Prime V1"
       },
       "adapter": "erc4626-single-asset",
       "inputs": {
@@ -11137,7 +11147,7 @@
       }
     },
     "yieldConfig": {
-      "yieldSource": "Gauntlet USDC Core MetaMorpho vault",
+      "yieldSource": "Gauntlet USDC Prime V1 MetaMorpho vault",
       "yieldType": "lending-vault"
     }
   },
@@ -14142,7 +14152,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -14625,6 +14635,11 @@
       {
         "chain": "codex",
         "address": "0xe898e1cffa565aae8bacc364aa7d65a6a2d20f16",
+        "decimals": 18
+      },
+      {
+        "chain": "morph-l2",
+        "address": "0xe898e1cffa565aae8bacc364aa7d65d6a2d20f16",
         "decimals": 18
       }
     ],
@@ -15361,7 +15376,7 @@
     "llamaId": "303",
     "detailProvider": "defillama",
     "name": "Mezo USD",
-    "symbol": "meUSD",
+    "symbol": "MUSD",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -18368,7 +18383,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",
@@ -19954,9 +19969,9 @@
     "collateral": "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
     "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
     "proofOfReserves": {
-      "type": "independent-audit",
-      "url": "https://verification.afiprotocol.xyz/multipli",
-      "provider": "AFI"
+      "type": "self-reported",
+      "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
+      "provider": "Multipli"
     },
     "links": [
       {
@@ -19972,8 +19987,8 @@
         "url": "https://docs.multipli.fi/"
       },
       {
-        "label": "Proof of Reserve",
-        "url": "https://verification.afiprotocol.xyz/multipli"
+        "label": "Peg Module Docs",
+        "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
       }
     ],
     "jurisdiction": {
@@ -20039,8 +20054,8 @@
       "semantics": "collateral-mix",
       "breakerScope": "rwausdi-multipli",
       "display": {
-        "url": "https://verification.afiprotocol.xyz/multipli",
-        "label": "AFi Verification"
+        "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module",
+        "label": "Multipli docs"
       },
       "adapter": "curated-validated",
       "inputs": {
@@ -20229,6 +20244,11 @@
       {
         "chain": "hemi",
         "address": "0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+        "decimals": 18
+      },
+      {
+        "chain": "bevm",
+        "address": "0x2031c8848775a5efb7cff2a4edbe3f04c50a1478",
         "decimals": 18
       }
     ],
@@ -20491,6 +20511,11 @@
         "chain": "solana",
         "address": "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
         "decimals": 9
+      },
+      {
+        "chain": "ethereum-classic",
+        "address": "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+        "decimals": 18
       },
       {
         "chain": "stellar",
@@ -25349,6 +25374,13 @@
       "regulator": "FinCEN",
       "license": "Money Service Business (MSB)"
     },
+    "contracts": [
+      {
+        "chain": "cardano",
+        "address": "fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae45655534441",
+        "decimals": 6
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -28955,7 +28987,7 @@
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
-    "launchPhaseDetail": "LAUNCHED May 4 on Solana — Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains zero-supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending aggregator data",
+    "launchPhaseDetail": "LAUNCH ANNOUNCED May 4 on Solana — public mint address not yet disclosed by Anchorage Digital Bank / Fireblocks / BusinessWire; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains preview-only with zero supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending verifiable contract address and aggregator runtime data",
     "featuredContent": [
       {
         "type": "tweet",
@@ -30429,28 +30461,33 @@
     "collateralQuality": "exotic",
     "reserves": [
       {
-        "name": "Curve USDC/USDU LP tokens",
-        "pct": 35,
-        "risk": "medium",
-        "coinId": "usdc-circle",
-        "depType": "mechanism"
-      },
-      {
         "name": "TermMax fixed-rate lending vault shares",
-        "pct": 35,
+        "pct": 97,
         "risk": "high"
       },
       {
         "name": "Morpho USDU Core vault shares",
-        "pct": 30,
+        "pct": 2,
         "risk": "medium"
+      },
+      {
+        "name": "Curve USDC/USDU LP tokens",
+        "pct": 1,
+        "risk": "medium",
+        "coinId": "usdc-circle",
+        "depType": "mechanism"
       }
     ],
     "notices": [
       {
         "type": "danger",
         "title": "Undercollateralized by design",
-        "message": "USDU Finance's transparency page shows a ~43% collateralization ratio. The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants."
+        "message": "USDU Finance's transparency page currently shows ~40.69% collateralization ($2.06M backing vs $5.06M circulating supply). The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants."
+      },
+      {
+        "type": "warning",
+        "title": "Conflicting issuer disclosures",
+        "message": "USDU Finance's own surfaces disagree: the transparency page headline reports ~40.69% CR while a separate JSON endpoint reports ~97% CR and the gitbook says 'fully backed'. Pharos surfaces the public-page headline as the conservative reference; treat collateralization figures as advisory until USDU publishes a single canonical methodology."
       }
     ]
   },
@@ -32058,8 +32095,8 @@
       "semantics": "single-asset",
       "breakerScope": "ustbl-spiko",
       "display": {
-        "url": "https://data.chain.link/feeds/ethereum/mainnet/ustbl-nav",
-        "label": "Chainlink USTBL NAV"
+        "url": "https://www.spiko.io/",
+        "label": "Spiko USTBL"
       },
       "adapter": "chainlink-nav",
       "inputs": {
@@ -34617,8 +34654,8 @@
       "semantics": "single-asset",
       "breakerScope": "wtgxx-wisdomtree",
       "display": {
-        "url": "https://data.chain.link/feeds/ethereum/mainnet/wtgxx-nav-24h",
-        "label": "Chainlink WTGXX NAV"
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+        "label": "WisdomTree WTGXX"
       },
       "adapter": "chainlink-nav",
       "inputs": {
@@ -36652,7 +36689,7 @@
         "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
         "pct": 43,
         "risk": "low",
-        "coinId": "susds-sky"
+        "coinId": "usds-sky"
       },
       {
         "name": "CELO",

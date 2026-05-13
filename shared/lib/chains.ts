@@ -83,6 +83,8 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   pulsechain:     { name: "PulseChain",      explorerUrl: "https://scan.pulsechain.com",                  evmChainId: 369,      type: "evm",   logoPath: "/chains/pulsechain.png"     },
   sophon:         { name: "Sophon",          explorerUrl: "https://explorer.sophon.xyz",                  evmChainId: 50104,    type: "evm",   logoPath: "/chains/sophon.png"         },
   stable:         { name: "Stable",          explorerUrl: "https://stablescan.xyz",                       evmChainId: 988,      type: "evm",   logoPath: "/chains/stable.png"         },
+  bevm:              { name: "BEVM",                explorerUrl: "https://scan.bevm.io",                         evmChainId: 11501,    type: "evm",   logoPath: "/chains/bevm.png"              },
+  "ethereum-classic":{ name: "Ethereum Classic",    explorerUrl: "https://etc.blockscout.com",                   evmChainId: 61,       type: "evm",   logoPath: "/chains/ethereum-classic.png"  },
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
   aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png",     darkInvert: true },
   sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png"       },

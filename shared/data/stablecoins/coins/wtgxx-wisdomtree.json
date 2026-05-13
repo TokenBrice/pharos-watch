@@ -116,8 +116,8 @@
     "semantics": "single-asset",
     "breakerScope": "wtgxx-wisdomtree",
     "display": {
-      "url": "https://data.chain.link/feeds/ethereum/mainnet/wtgxx-nav-24h",
-      "label": "Chainlink WTGXX NAV"
+      "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
+      "label": "WisdomTree WTGXX"
     },
     "inputs": {
       "primary": {
