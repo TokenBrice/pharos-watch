@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -12,6 +13,7 @@ import {
 } from "./lib/deploy-impact.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const SESSION_STATE_DIR = resolve(REPO_ROOT, ".cache/pharos-agent-hooks");
 
 const DEFAULT_BASE_DOCS = [
   "docs/agent-task-router.md",
@@ -413,8 +415,253 @@ const RISK_RANK = new Map([
   ["low", 1],
 ]);
 
+const HOOK_EVENT_NAMES = new Map([
+  ["permission-request", "PermissionRequest"],
+  ["post-tool-batch", "PostToolBatch"],
+  ["post-tool-use", "PostToolUse"],
+  ["pre-tool-use", "PreToolUse"],
+  ["session-start", "SessionStart"],
+  ["stop", "Stop"],
+  ["user-prompt-submit", "UserPromptSubmit"],
+]);
+
+const PROMPT_ROUTES = [
+  {
+    familyIds: ["stablecoin-registry"],
+    label: "stablecoin addition or metadata",
+    patterns: [
+      /\b(add|create|onboard|promote|launch|track)\b[\s\S]{0,80}\bstablecoin\b/i,
+      /\b(stablecoin|asset)\b[\s\S]{0,80}\b(contract|gecko|coingecko|reserve|proof of reserves|pre-?launch)\b/i,
+    ],
+  },
+  {
+    familyIds: ["pricing-pipeline"],
+    label: "pricing pipeline or provider",
+    patterns: [
+      /\b(pricing|price|depeg|peg price|market cap|supply)\b[\s\S]{0,80}\b(pipeline|provider|source|fallback|defillama|coingecko|pyth|dia)\b/i,
+      /\b(pricing pipeline|price provider|authoritative price|price consensus)\b/i,
+    ],
+  },
+  {
+    familyIds: ["d1-migration"],
+    label: "D1 schema or migration",
+    patterns: [
+      /\b(d1|database|sqlite|sql|migration|schema)\b/i,
+      /\b(table|index)\b[\s\S]{0,80}\b(database|d1|sql|migration|schema)\b/i,
+      /\b(database|d1|sql|migration|schema)\b[\s\S]{0,80}\b(table|index)\b/i,
+    ],
+  },
+  {
+    familyIds: ["worker-cron"],
+    label: "Worker cron or scheduled pipeline",
+    patterns: [
+      /\b(cron|scheduled|schedule|worker cron|waitUntil|trigger slot|connection pool)\b/i,
+      /\b(sync|backfill|snapshot)\b[\s\S]{0,80}\b(cron|job|worker|pipeline)\b/i,
+    ],
+  },
+  {
+    familyIds: ["methodology-scoring"],
+    label: "methodology or scoring",
+    patterns: [
+      /\b(methodology|score|scoring|pegscore|dews|psi|liquidityscore|stability index|report card|resilience|chain health|mint\/?burn|blacklist|yield intelligence)\b/i,
+    ],
+  },
+  {
+    familyIds: ["frontend-route", "design-ui"],
+    label: "frontend design or UI",
+    patterns: [
+      /\b(design|ui|ux|layout|component|page|route|responsive|style|visual|animation|frontend)\b/i,
+    ],
+  },
+  {
+    familyIds: ["api-endpoint"],
+    label: "API endpoint or route",
+    patterns: [
+      /\b(api|endpoint|route|handler|admin api|public api|response shape|request contract)\b/i,
+    ],
+  },
+];
+
+const MUTATING_SQL_RE = /\b(alter|create|delete|drop|insert|replace|truncate|update)\b/i;
+const UNSAFE_MIGRATION_SQL_RE = /\b(drop\s+table|drop\s+column|alter\s+table[\s\S]{0,160}\bdrop\b|delete\s+from|truncate\b|pragma\s+writable_schema|rename\s+(?:table|column))\b/i;
+
+const PROTECTED_WRITE_RULES = [
+  {
+    label: "environment files",
+    test: (file) => /(^|\/)\.env(?:\.|$)/.test(file) || file === ".dev.vars" || file === "worker/.dev.vars",
+  },
+  {
+    label: "Git internals",
+    test: (file) => file === ".git" || file.startsWith(".git/"),
+  },
+  {
+    label: "build outputs",
+    test: (file) => /^(?:out|\.next|build|coverage|dist)(?:\/|$)/.test(file),
+  },
+  {
+    label: "Worker build outputs",
+    test: (file) => /^(?:worker\/(?:\.next|dist|build|coverage))(?:\/|$)/.test(file),
+  },
+];
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function normalizeLocalPath(value) {
+  const raw = normalizeRepoPath(String(value ?? "").trim());
+  if (!raw) return "";
+
+  const withoutFilePrefix = raw.startsWith("file://") ? raw.slice("file://".length) : raw;
+  const repoRoot = normalizeRepoPath(REPO_ROOT);
+  const normalized = withoutFilePrefix.startsWith(`${repoRoot}/`)
+    ? withoutFilePrefix.slice(repoRoot.length + 1)
+    : withoutFilePrefix;
+
+  return normalized.replace(/^\.\//, "");
+}
+
+function getFamilyById(id) {
+  return PATH_FAMILIES.find((family) => family.id === id) ?? null;
+}
+
+function getFamiliesByIds(ids) {
+  return unique(ids).map(getFamilyById).filter(Boolean).sort(compareFamilyRisk);
+}
+
+function getHookEventName(mode, hookInput = {}) {
+  const raw = hookInput.hook_event_name ?? hookInput.hookEventName ?? hookInput.event ?? "";
+  const normalizedRaw = String(raw).replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+  return HOOK_EVENT_NAMES.get(normalizedRaw) ?? HOOK_EVENT_NAMES.get(mode) ?? "Unknown";
+}
+
+function getSessionId(hookInput = {}) {
+  const raw = hookInput.session_id
+    ?? hookInput.sessionId
+    ?? hookInput.conversation_id
+    ?? hookInput.conversationId
+    ?? process.env.CODEX_SESSION_ID
+    ?? process.env.CLAUDE_SESSION_ID
+    ?? "default";
+  const sanitized = String(raw).replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 160);
+  return sanitized || "default";
+}
+
+function getSessionStatePath(hookInput = {}) {
+  return resolve(SESSION_STATE_DIR, `${getSessionId(hookInput)}.json`);
+}
+
+function hashValue(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function hashJson(value) {
+  return hashValue(JSON.stringify(value));
+}
+
+function readGitDiffForFile(file, execFile) {
+  try {
+    return execFile("git", ["diff", "--binary", "HEAD", "--", file], {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      maxBuffer: 24 * 1024 * 1024,
+    });
+  } catch {
+    return "";
+  }
+}
+
+function readFileFingerprint(file, execFile) {
+  const normalizedFile = normalizeLocalPath(file);
+  if (!normalizedFile) return "empty";
+
+  const diff = readGitDiffForFile(normalizedFile, execFile);
+  if (diff) {
+    return `diff:${hashValue(diff)}`;
+  }
+
+  const absolutePath = resolve(REPO_ROOT, normalizedFile);
+  if (!absolutePath.startsWith(`${REPO_ROOT}/`) && absolutePath !== REPO_ROOT) {
+    return "outside-repo";
+  }
+
+  if (!existsSync(absolutePath)) {
+    return "absent";
+  }
+
+  try {
+    return `file:${hashValue(readFileSync(absolutePath))}`;
+  } catch {
+    return "unreadable";
+  }
+}
+
+export function buildFileFingerprints(files, { execFile = execFileSync } = {}) {
+  return Object.fromEntries(
+    normalizeChangedFiles(files).map((file) => [file, readFileFingerprint(file, execFile)]),
+  );
+}
+
+export function findChangedSinceBaseline(currentFingerprints, baselineFingerprints = {}) {
+  return Object.keys(currentFingerprints)
+    .filter((file) => currentFingerprints[file] !== baselineFingerprints[file])
+    .sort();
+}
+
+function readSessionState(hookInput = {}) {
+  const statePath = getSessionStatePath(hookInput);
+  if (!existsSync(statePath)) return null;
+
+  try {
+    return JSON.parse(readFileSync(statePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionState(hookInput = {}, state) {
+  mkdirSync(SESSION_STATE_DIR, { recursive: true });
+  writeFileSync(getSessionStatePath(hookInput), `${JSON.stringify(state, null, 2)}\n`);
+}
+
+function mergeSessionState(hookInput = {}, patch) {
+  const previous = readSessionState(hookInput) ?? {};
+  const state = {
+    ...previous,
+    ...patch,
+    sessionId: getSessionId(hookInput),
+    updatedAt: new Date().toISOString(),
+  };
+  writeSessionState(hookInput, state);
+  return state;
+}
+
+export function writeSessionBaseline(hookInput = {}, changedFiles = readChangedFiles()) {
+  const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
+  const state = {
+    baselineChangedFiles: normalizedChangedFiles,
+    baselineFingerprints: buildFileFingerprints(normalizedChangedFiles),
+    createdAt: new Date().toISOString(),
+    lastPostToolReminderHash: null,
+    sessionId: getSessionId(hookInput),
+  };
+  writeSessionState(hookInput, state);
+  return state;
+}
+
+export function readChangedFilesSinceSessionStart(hookInput = {}, changedFiles = readChangedFiles()) {
+  const normalizedChangedFiles = normalizeChangedFiles(changedFiles);
+  const state = readSessionState(hookInput);
+  if (!state?.baselineFingerprints) {
+    return normalizedChangedFiles;
+  }
+
+  const filesToCompare = unique([
+    ...normalizedChangedFiles,
+    ...(state.baselineChangedFiles ?? Object.keys(state.baselineFingerprints)),
+  ]);
+  const currentFingerprints = buildFileFingerprints(filesToCompare);
+  return findChangedSinceBaseline(currentFingerprints, state.baselineFingerprints);
 }
 
 function fileMatchesRule(file, rule) {
@@ -475,6 +722,303 @@ export function classifyChangedFiles(files) {
     hardRules,
     warnings,
   };
+}
+
+export function classifyUserPrompt(prompt) {
+  const promptText = String(prompt ?? "");
+  const matchedRoutes = PROMPT_ROUTES
+    .filter((route) => route.patterns.some((pattern) => pattern.test(promptText)))
+    .map((route) => route.label);
+  const matchedFamilies = getFamiliesByIds(
+    PROMPT_ROUTES
+      .filter((route) => route.patterns.some((pattern) => pattern.test(promptText)))
+      .flatMap((route) => route.familyIds),
+  );
+
+  return {
+    checks: unique(matchedFamilies.flatMap((family) => family.checks)),
+    docsLikelyRequired: unique(matchedFamilies.flatMap((family) => family.docsLikelyRequired)),
+    docsToRead: unique([
+      ...DEFAULT_BASE_DOCS,
+      ...matchedFamilies.flatMap((family) => family.docsToRead),
+    ]),
+    families: matchedFamilies.map((family) => ({
+      id: family.id,
+      label: family.label,
+      matchedFiles: [],
+      risk: family.risk,
+    })),
+    hardRules: unique([
+      ...CORE_RULES,
+      ...matchedFamilies.flatMap((family) => family.hardRules),
+    ]),
+    matchedRoutes,
+    promptText,
+  };
+}
+
+function getToolInput(hookInput = {}) {
+  return hookInput.tool_input ?? hookInput.toolInput ?? hookInput.input ?? hookInput.arguments ?? {};
+}
+
+function getCommandFromHookInput(hookInput = {}) {
+  const toolInput = getToolInput(hookInput);
+  return String(toolInput.command ?? hookInput.command ?? "");
+}
+
+function collectArrayPaths(value) {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string") return [item];
+    if (!item || typeof item !== "object") return [];
+    return [
+      item.file_path,
+      item.filePath,
+      item.path,
+      item.filename,
+    ].filter(Boolean);
+  });
+}
+
+function extractPatchPaths(patchText) {
+  return [...String(patchText ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)]
+    .map((match) => match[1]);
+}
+
+function trimShellToken(token) {
+  let trimmed = String(token ?? "").trim();
+  const stripStart = new Set(["\"", "'", "(", "{"]);
+  const stripEnd = new Set(["\"", "'", ")", "}", ";"]);
+
+  while (trimmed && stripStart.has(trimmed[0])) {
+    trimmed = trimmed.slice(1);
+  }
+
+  while (trimmed && stripEnd.has(trimmed.at(-1))) {
+    trimmed = trimmed.slice(0, -1);
+  }
+
+  return trimmed;
+}
+
+function splitShellTokens(command) {
+  return String(command)
+    .split(/\s+/)
+    .map(trimShellToken)
+    .filter(Boolean);
+}
+
+function extractBashWritePaths(command) {
+  const paths = [];
+  const tokens = splitShellTokens(command);
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token === ">" || token === ">>") {
+      paths.push(tokens[i + 1] ?? "");
+    } else if (token.startsWith(">>") && token.length > 2) {
+      paths.push(token.slice(2));
+    } else if (token.startsWith(">") && token.length > 1) {
+      paths.push(token.slice(1));
+    } else if (token.startsWith("tee") && token.length === 3) {
+      let nextIndex = i + 1;
+      while (tokens[nextIndex]?.startsWith("-")) {
+        nextIndex += 1;
+      }
+      paths.push(tokens[nextIndex] ?? "");
+    }
+  }
+  return paths;
+}
+
+function collectToolPaths(hookInput = {}) {
+  const toolInput = getToolInput(hookInput);
+  const command = getCommandFromHookInput(hookInput);
+  return normalizeChangedFiles([
+    toolInput.file_path,
+    toolInput.filePath,
+    toolInput.path,
+    toolInput.filename,
+    ...collectArrayPaths(toolInput.files),
+    ...collectArrayPaths(toolInput.edits),
+    ...extractPatchPaths(toolInput.patch),
+    ...extractPatchPaths(String(toolInput.input ?? "")),
+    ...extractBashWritePaths(command),
+  ].filter(Boolean).map(normalizeLocalPath));
+}
+
+function collectToolText(hookInput = {}) {
+  const toolInput = getToolInput(hookInput);
+  const chunks = [
+    toolInput.content,
+    toolInput.new_string,
+    toolInput.newString,
+    toolInput.patch,
+    toolInput.input,
+    getCommandFromHookInput(hookInput),
+  ];
+  if (Array.isArray(toolInput.edits)) {
+    chunks.push(...toolInput.edits.map((edit) => edit?.new_string ?? edit?.newString ?? ""));
+  }
+  return chunks.filter((chunk) => typeof chunk === "string").join("\n");
+}
+
+function extractAddedPatchText(hookInput = {}) {
+  const toolInput = getToolInput(hookInput);
+  const patchText = String(toolInput.patch ?? toolInput.input ?? "");
+  if (!patchText) return "";
+  return patchText
+    .split(/\r?\n/g)
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .map((line) => line.slice(1))
+    .join("\n");
+}
+
+function findProtectedWrite(paths) {
+  for (const path of paths) {
+    const file = normalizeLocalPath(path);
+    const rule = PROTECTED_WRITE_RULES.find((candidate) => candidate.test(file));
+    if (rule) {
+      return {
+        file,
+        reason: `Direct writes to ${rule.label} are blocked by the Pharos agent hook: ${file}.`,
+      };
+    }
+  }
+  return null;
+}
+
+function commandInvokesGitCleanForceDelete(command) {
+  const tokens = splitShellTokens(command);
+  for (let i = 0; i < tokens.length; i += 1) {
+    if (tokens[i] !== "git") continue;
+    let cursor = i + 1;
+    if (tokens[cursor] === "-C") {
+      cursor += 2;
+    }
+    if (tokens[cursor] !== "clean") continue;
+    const optionText = tokens.slice(cursor + 1, cursor + 6)
+      .filter((token) => token.startsWith("-"))
+      .join("");
+    if (optionText.includes("f") && optionText.includes("d")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function commandInvokesGitResetHard(command) {
+  const tokens = splitShellTokens(command);
+  for (let i = 0; i < tokens.length; i += 1) {
+    if (tokens[i] !== "git") continue;
+    let cursor = i + 1;
+    if (tokens[cursor] === "-C") {
+      cursor += 2;
+    }
+    if (tokens[cursor] !== "reset") continue;
+    if (tokens.slice(cursor + 1, cursor + 8).includes("--hard")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function commandInvokesRemoteD1Mutation(command) {
+  const text = String(command);
+  if (!/\bwrangler\s+d1\b/.test(text)) return false;
+  if (!/\s--remote\b/.test(text)) return false;
+
+  if (/\bd1\s+migrations\s+apply\b/.test(text)) {
+    return true;
+  }
+
+  if (!/\bd1\s+execute\b/.test(text)) {
+    return false;
+  }
+
+  if (/\s--file(?:=|\s+)/.test(text)) {
+    return true;
+  }
+
+  return MUTATING_SQL_RE.test(text);
+}
+
+function commandInvokesRawProductionDeploy(command) {
+  const text = String(command);
+  return /\bwrangler\s+(?:deploy|versions\s+deploy|pages\s+deploy)\b/.test(text)
+    || /\bnpm\s+run\s+deploy\b/.test(text);
+}
+
+function findUnsafeMigrationSql(paths, hookInput = {}) {
+  if (!paths.some((path) => /^worker\/migrations\/.*\.sql$/i.test(path))) {
+    return null;
+  }
+
+  const text = extractAddedPatchText(hookInput) || collectToolText(hookInput);
+  if (!UNSAFE_MIGRATION_SQL_RE.test(text)) {
+    return null;
+  }
+
+  return {
+    reason: "Obvious destructive migration SQL is blocked. D1 cleanup needs a separate coordinated rollout.",
+  };
+}
+
+function findCommandViolation(command) {
+  if (!command) return null;
+
+  if (commandInvokesGitResetHard(command)) {
+    return "Destructive `git reset --hard` is blocked. Preserve existing user/worktree changes.";
+  }
+
+  if (commandInvokesGitCleanForceDelete(command)) {
+    return "Destructive `git clean -fd` style cleanup is blocked. Preserve untracked user/worktree changes.";
+  }
+
+  if (commandInvokesRawProductionDeploy(command)) {
+    return "Raw production deploy commands are blocked. Use the documented Pharos release flow instead.";
+  }
+
+  if (commandInvokesRemoteD1Mutation(command)) {
+    return "Remote D1 mutation commands are blocked by default. Use dry-runs or the coordinated production runbook.";
+  }
+
+  return null;
+}
+
+export function findPreToolUseViolation(hookInput = {}) {
+  const command = getCommandFromHookInput(hookInput);
+  const commandViolation = findCommandViolation(command);
+  if (commandViolation) {
+    return { reason: commandViolation };
+  }
+
+  const paths = collectToolPaths(hookInput);
+  const protectedWrite = findProtectedWrite(paths);
+  if (protectedWrite) {
+    return protectedWrite;
+  }
+
+  const unsafeMigration = findUnsafeMigrationSql(paths, hookInput);
+  if (unsafeMigration) {
+    return unsafeMigration;
+  }
+
+  return null;
+}
+
+export function findPermissionRequestViolation(hookInput = {}) {
+  const command = getCommandFromHookInput(hookInput);
+  if (commandInvokesRawProductionDeploy(command)) {
+    return {
+      reason: "Production deploy permission is denied by the Pharos hook. Use the documented release workflow.",
+    };
+  }
+  if (commandInvokesRemoteD1Mutation(command)) {
+    return {
+      reason: "Remote D1 mutation permission is denied by the Pharos hook. Use a dry-run or coordinated runbook.",
+    };
+  }
+  return null;
 }
 
 function buildWarnings(changedFiles) {
@@ -717,6 +1261,140 @@ export function buildStopHookOutput(contract, hookInput = {}) {
   };
 }
 
+function formatPromptRoutingContext(route) {
+  if (route.families.length === 0) {
+    return "";
+  }
+
+  return [
+    "Pharos prompt routing:",
+    `- Detected: ${route.matchedRoutes.join(", ")}.`,
+    "- Before editing, read the relevant docs and keep the checks in mind.",
+    "",
+    "Task families:",
+    formatBullets(route.families.map((family) => `${family.label} (${family.risk})`), { limit: 6 }),
+    "",
+    "Read first:",
+    formatBullets(route.docsToRead, { limit: 10 }),
+    "",
+    "Checks to consider:",
+    route.checks.length > 0 ? formatBullets(route.checks, { limit: 8 }) : "- None beyond focused validation.",
+    "",
+    "Hard rules:",
+    formatBullets(route.hardRules, { limit: 8 }),
+  ].join("\n");
+}
+
+function getPromptText(hookInput = {}) {
+  return String(
+    hookInput.prompt
+      ?? hookInput.user_prompt
+      ?? hookInput.userPrompt
+      ?? hookInput.message
+      ?? getToolInput(hookInput).prompt
+      ?? "",
+  );
+}
+
+export function buildUserPromptSubmitHookOutput(hookInput = {}) {
+  const route = classifyUserPrompt(getPromptText(hookInput));
+  const additionalContext = formatPromptRoutingContext(route);
+  if (!additionalContext) {
+    return { continue: true };
+  }
+
+  return {
+    hookSpecificOutput: {
+      additionalContext,
+      hookEventName: "UserPromptSubmit",
+    },
+  };
+}
+
+function buildToolDenyOutput(reason, hookEventName = "PreToolUse") {
+  return {
+    decision: "block",
+    hookSpecificOutput: {
+      hookEventName,
+      permissionDecision: "deny",
+      permissionDecisionReason: reason,
+    },
+    reason,
+  };
+}
+
+export function buildPreToolUseHookOutput(hookInput = {}) {
+  const violation = findPreToolUseViolation(hookInput);
+  if (!violation) {
+    return { continue: true };
+  }
+
+  return buildToolDenyOutput(violation.reason, "PreToolUse");
+}
+
+export function buildPermissionRequestHookOutput(hookInput = {}) {
+  const violation = findPermissionRequestViolation(hookInput);
+  if (!violation) {
+    return { continue: true };
+  }
+
+  return buildToolDenyOutput(violation.reason, "PermissionRequest");
+}
+
+function formatPostToolReminder(contract) {
+  if (!hasStopObligations(contract)) {
+    return "";
+  }
+
+  const families = contract.families
+    .map((family) => `${family.label} (${family.risk})`)
+    .join(", ");
+
+  return [
+    "Pharos change reminder:",
+    `- Current session delta: ${families || "no specific task family"}.`,
+    "- Keep this light now; do not auto-run heavy checks from the hook.",
+    "",
+    "Docs likely required if behavior changed:",
+    contract.docsLikelyRequired.length > 0 ? formatBullets(contract.docsLikelyRequired, { limit: 5 }) : "- None",
+    "",
+    "Checks to consider before finalizing:",
+    contract.checks.length > 0 ? formatBullets(contract.checks, { limit: 6 }) : "- Focused validation for touched code.",
+    "",
+    "Warnings:",
+    contract.warnings.length > 0 ? formatBullets(contract.warnings, { limit: 4 }) : "- None",
+  ].join("\n");
+}
+
+export function buildPostToolUseHookOutput(contract, hookInput = {}, { eventName = "PostToolUse", dedupe = true } = {}) {
+  const additionalContext = formatPostToolReminder(contract);
+  if (!additionalContext) {
+    return { continue: true };
+  }
+
+  if (dedupe) {
+    const reminderHash = hashJson({
+      checks: contract.checks,
+      docsLikelyRequired: contract.docsLikelyRequired,
+      eventName,
+      families: contract.families.map((family) => family.id),
+      warnings: contract.warnings,
+    });
+    const state = readSessionState(hookInput);
+    if (state?.lastPostToolReminderHash === reminderHash) {
+      return { continue: true };
+    }
+    mergeSessionState(hookInput, { lastPostToolReminderHash: reminderHash });
+  }
+
+  return {
+    hookSpecificOutput: {
+      additionalContext,
+      hookEventName: eventName,
+    },
+  };
+}
+
 function parseArgs(argv) {
   const options = {
     baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
@@ -759,6 +1437,12 @@ function parseArgs(argv) {
   return { explicitFiles, options };
 }
 
+function normalizeHookMode(hook) {
+  if (!hook) return null;
+  const normalized = String(hook).replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+  return HOOK_EVENT_NAMES.has(normalized) ? normalized : normalized;
+}
+
 function printHelp() {
   console.log(`Usage: node scripts/pharos-change-contract.mjs [options]
 
@@ -772,6 +1456,13 @@ Options:
   --head-ref <ref>        Classify git diff base...head
   --file <path>           Classify an explicit file path; repeatable
   --hook=session-start    Emit Codex SessionStart hook JSON
+  --hook=user-prompt-submit
+                          Emit prompt-routing hook JSON
+  --hook=pre-tool-use     Emit hard-block hook JSON for unsafe tool calls
+  --hook=permission-request
+                          Emit production permission-policy hook JSON
+  --hook=post-tool-use    Emit post-edit reminder hook JSON
+  --hook=post-tool-batch  Emit post-batch reminder hook JSON
   --hook=stop             Emit Codex Stop hook JSON
 `);
 }
@@ -784,21 +1475,49 @@ export function runCli(argv = process.argv.slice(2)) {
   }
 
   const hookInput = options.hook ? readHookInput() : {};
-  const changedFiles = explicitFiles.length > 0
-    ? explicitFiles
+  const hookMode = normalizeHookMode(options.hook);
+
+  if (hookMode === "user-prompt-submit") {
+    console.log(JSON.stringify(buildUserPromptSubmitHookOutput(hookInput)));
+    return;
+  }
+
+  if (hookMode === "pre-tool-use") {
+    console.log(JSON.stringify(buildPreToolUseHookOutput(hookInput)));
+    return;
+  }
+
+  if (hookMode === "permission-request") {
+    console.log(JSON.stringify(buildPermissionRequestHookOutput(hookInput)));
+    return;
+  }
+
+  const currentChangedFiles = explicitFiles.length > 0
+    ? normalizeChangedFiles(explicitFiles)
     : readChangedFiles({
       baseRef: options.baseRef,
       headRef: options.headRef,
       staged: options.staged,
     });
+  const changedFiles = hookMode === "stop" || hookMode === "post-tool-use" || hookMode === "post-tool-batch"
+    ? (explicitFiles.length > 0 ? currentChangedFiles : readChangedFilesSinceSessionStart(hookInput, currentChangedFiles))
+    : currentChangedFiles;
   const contract = classifyChangedFiles(changedFiles);
 
-  if (options.hook === "session-start") {
+  if (hookMode === "session-start") {
+    writeSessionBaseline(hookInput, currentChangedFiles);
     console.log(JSON.stringify(buildSessionStartHookOutput(contract)));
     return;
   }
 
-  if (options.hook === "stop") {
+  if (hookMode === "post-tool-use" || hookMode === "post-tool-batch") {
+    console.log(JSON.stringify(buildPostToolUseHookOutput(contract, hookInput, {
+      eventName: getHookEventName(hookMode, hookInput),
+    })));
+    return;
+  }
+
+  if (hookMode === "stop") {
     console.log(JSON.stringify(buildStopHookOutput(contract, hookInput)));
     return;
   }
