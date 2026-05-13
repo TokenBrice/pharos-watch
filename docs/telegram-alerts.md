@@ -48,7 +48,7 @@ primary navigation immediately after `/alt-pegs/`.
 - Route: `/pharoswatchbot/`
 - Legacy alias: `/telegram` redirects to `/pharoswatchbot/`, and `/telegram/*` redirects to the matching `/pharoswatchbot/*` path
 - Covers the public `@pharoswatch` digest channel, the `@pharoswatchers` community channel, and the `@PharosWatchBot` subscription bot
-- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry, including the hero pulse strip, adoption metrics board, explicit vs preset-implied alert follows, aggregate alert-type counts, privacy-filtered quiet-hours/pending-delivery counts, and snapshot-backed active-watcher history when available
+- Reads `/_site-data/telegram-pulse` for snapshot-first watcher/subscription telemetry, including the hero pulse strip, adoption metrics board, the estimated 5,000-active-watcher capacity target, explicit vs preset-implied alert follows, aggregate alert-type counts, privacy-filtered quiet-hours/pending-delivery counts, and full chart history from live fallback during the one-snapshot bootstrap window before exact daily lifecycle history has enough points
 - Does not call the webhook or any other mutating bot API; it links users to Telegram plus the on-site digest archive
 - Presents the bot around low-noise growth paths: the recommended `/subscribe dews,depeg usd-top25` default, preset cohorts, group-addressed commands, quiet hours, inline snooze, and the overflow delivery queue
 - The recommended setup deep link preloads a Telegram confirmation for `dews,depeg usd-top25`; it does not silently subscribe the user before they confirm in Telegram.
@@ -63,10 +63,10 @@ The public pulse keeps the exact `activeWatchers` total visible by product decis
 Freshness is split deliberately:
 
 - `currentSnapshotAt` / `updatedAt` describe the current aggregate pulse, refreshed on the 5-minute Telegram pulse cadence.
-- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when `historySource="snapshot"`.
+- `lifecycleHistoryUpdatedAt` describes the latest daily lifecycle-history snapshot when any lifecycle snapshot exists, including the one-snapshot bootstrap window where `historySource="live-fallback"` is used for the chart when older live fallback points are available.
 - `lifecycleHistoryEverySeconds=900` documents the lifecycle snapshot refresh cadence.
 
-The public chart labels these as daily lifecycle snapshots. It should not imply the latest history point is the live active-watcher count.
+The public chart labels snapshot-backed history as daily lifecycle snapshots. During the one-snapshot bootstrap window it uses live fallback history when available, which is cumulative current active chats by subscriber-created date and should not be presented as stable churn-adjusted lifecycle history.
 
 ## D1 Schema
 

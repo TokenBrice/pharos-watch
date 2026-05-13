@@ -10,6 +10,15 @@ vi.mock("@/hooks/use-telegram-pulse", () => ({
   useTelegramPulse: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-chart-container-ready", () => ({
+  useChartContainerReady: () => ({
+    ref: vi.fn(),
+    ready: false,
+    width: 0,
+    height: 0,
+  }),
+}));
+
 const mockUseTelegramPulse = vi.mocked(useTelegramPulse);
 
 const pulse: TelegramPulse = {
@@ -29,6 +38,13 @@ const pulse: TelegramPulse = {
       timestamp: 1_775_001_600_000,
       snapshotAt: 1_775_002_000,
       newWatchers: 12,
+      activeWatchers: 1700,
+    },
+    {
+      date: "2026-04-02",
+      timestamp: 1_775_088_000_000,
+      snapshotAt: 1_775_088_400,
+      newWatchers: 142,
       activeWatchers: 1842,
     },
   ],
@@ -68,6 +84,7 @@ describe("TelegramPulseStrip", () => {
     render(<TelegramPulseStrip />);
 
     expect(screen.getByText("1,842")).toBeTruthy();
+    expect(screen.getByText(/estimated capacity/i)).toBeTruthy();
     expect(screen.getByText("5,621")).toBeTruthy();
     expect(screen.getByText(/updated every 5m/i)).toBeTruthy();
     expect(screen.getByText(/USDT, USDC, USDe/)).toBeTruthy();
@@ -93,6 +110,9 @@ describe("TelegramPulseBoard", () => {
     render(<TelegramPulseBoard />);
 
     expect(screen.getByText("Active Telegram chats")).toBeTruthy();
+    expect(screen.getByText("Estimated capacity")).toBeTruthy();
+    expect(screen.getByText(/active watcher target/i)).toBeTruthy();
+    expect(screen.getByText(/37% used/i)).toBeTruthy();
     expect(screen.getByText("Alert follows")).toBeTruthy();
     expect(screen.getByText("Most followed")).toBeTruthy();
     expect(screen.getByText("Explicit follows")).toBeTruthy();
@@ -110,9 +130,56 @@ describe("TelegramPulseBoard", () => {
     expect(screen.getByText("1,701")).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
     expect(screen.getByText(/the chart is lifecycle history/i)).toBeTruthy();
+    expect(screen.getByRole("figure", { name: /watcher growth chart/i })).toBeTruthy();
+    expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
     expect(screen.getByText(/Low-cardinality deltas below 5/i)).toBeTruthy();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
+  });
+
+  it("keeps the lifecycle placeholder only when no history points are available", () => {
+    mockUseTelegramPulse.mockReturnValue({
+      data: {
+        ...pulse,
+        watcherHistory: [],
+        lifecycleHistoryUpdatedAt: null,
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useTelegramPulse>);
+
+    render(<TelegramPulseBoard />);
+
+    expect(screen.getByText(/Historical watcher points will appear/i)).toBeTruthy();
+    expect(screen.queryByRole("figure", { name: /watcher growth chart/i })).toBeNull();
+  });
+
+  it("renders the lifecycle chart for a single snapshot history point", () => {
+    mockUseTelegramPulse.mockReturnValue({
+      data: {
+        ...pulse,
+        activeWatchers: 519,
+        watcherHistory: [
+          {
+            date: "2026-05-13",
+            timestamp: 1_778_630_400_000,
+            snapshotAt: 1_778_680_473,
+            newWatchers: 305,
+            activeWatchers: 519,
+            churnedWatchers: 0,
+            reactivatedWatchers: 0,
+          },
+        ],
+        lifecycleHistoryUpdatedAt: 1_778_680_473,
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useTelegramPulse>);
+
+    render(<TelegramPulseBoard />);
+
+    expect(screen.getByRole("figure", { name: /1 daily points/i })).toBeTruthy();
+    expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
   });
 
   it("renders generic partial telemetry state without exposing operator errors", () => {

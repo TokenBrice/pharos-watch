@@ -153,6 +153,10 @@ function parseCachedPulse(value: string): TelegramPulse | null {
   }
 }
 
+function needsBootstrapHistoryRebuild(pulse: TelegramPulse): boolean {
+  return pulse.historySource === "snapshot" && pulse.watcherHistory.length < 2;
+}
+
 async function loadFreshTelegramPulseSnapshot(
   db: D1Database,
   nowSec: number,
@@ -160,7 +164,9 @@ async function loadFreshTelegramPulseSnapshot(
   try {
     const cached = await getCache(db, TELEGRAM_PULSE_CACHE_KEY);
     if (!cached || nowSec - cached.updatedAt > TELEGRAM_PULSE_CACHE_SECONDS) return null;
-    return parseCachedPulse(cached.value);
+    const pulse = parseCachedPulse(cached.value);
+    if (!pulse || needsBootstrapHistoryRebuild(pulse)) return null;
+    return pulse;
   } catch {
     return null;
   }
@@ -181,17 +187,18 @@ async function buildTelegramPulseSnapshot(
     }),
     loadTelegramLifecycleHistory(db),
   ]);
-  const fallbackHistory = snapshotHistory.points.length > 0
+  const fallbackHistory = snapshotHistory.points.length >= 2
     ? []
     : await loadFallbackWatcherHistory(db).catch((error) => {
         console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
         unavailableFields.add("watcherHistory");
         return [];
       });
-  const watcherHistory = snapshotHistory.points.length > 0
+  const shouldUseSnapshotHistory = snapshotHistory.points.length >= 2 || fallbackHistory.length === 0;
+  const watcherHistory = shouldUseSnapshotHistory
     ? snapshotHistory.points
     : fallbackHistory;
-  const historySource = snapshotHistory.points.length > 0
+  const historySource = shouldUseSnapshotHistory && snapshotHistory.points.length > 0
     ? snapshotHistory.source
     : "live-fallback";
   const suppressedFields = new Set<string>();

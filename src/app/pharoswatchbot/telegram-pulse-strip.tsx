@@ -23,6 +23,7 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
+const TELEGRAM_ESTIMATED_CAPACITY_WATCHERS = 5_000;
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);
@@ -46,6 +47,10 @@ function formatUpdatedAt(value: number | undefined): string {
 function formatSnapshotAt(value: number | null | undefined): string | null {
   if (!value) return null;
   return PULSE_UPDATED_FORMATTER.format(new Date(value * 1000));
+}
+
+function formatCapacityUsage(activeWatchers: number): string {
+  return `${Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100)}% used`;
 }
 
 function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
@@ -77,8 +82,9 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
             stroke="var(--brand-accent)"
             fill="url(#telegramWatcherGrowthGrad)"
             strokeWidth={2}
-            dot={false}
+            dot={data.length === 1 ? { r: 3, strokeWidth: 2 } : false}
             activeDot={{ r: 4 }}
+            isAnimationActive={false}
           />
         </AreaChart>
       ) : null}
@@ -108,6 +114,13 @@ export function TelegramPulseStrip() {
       <span className="text-muted-foreground">
         <span className="font-semibold text-foreground font-mono">{formatCount(data.activeWatchers)}</span> active
         Telegram chats
+      </span>
+      <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
+      <span className="text-muted-foreground">
+        <span className="font-semibold text-foreground font-mono">
+          {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
+        </span>{" "}
+        estimated capacity
       </span>
       <span className="hidden text-border sm:inline" aria-hidden="true">&middot;</span>
       <span className="text-muted-foreground">
@@ -255,7 +268,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </p>
       ) : null}
 
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-8">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]">
         <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
           <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
             Active Telegram chats
@@ -265,6 +278,18 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
             chats with at least one alert enabled
+          </p>
+        </div>
+        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:pb-0 lg:border-r lg:pr-6">
+          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
+            Estimated capacity
+          </p>
+          <p className="mt-3 font-mono text-4xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-5xl lg:text-[3.5rem]">
+            {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
+            <span className="block">active watcher target</span>
+            <span className="block">{formatCapacityUsage(data.activeWatchers)}</span>
           </p>
         </div>
         <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
@@ -344,11 +369,11 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             </div>
           ) : null}
         </div>
-        {watcherHistory.length > 1 ? (
+        {watcherHistory.length > 0 ? (
           <TelegramWatcherGrowthChart data={watcherHistory} />
         ) : (
           <div className="mt-4 flex h-[120px] items-center justify-center rounded-lg border border-dashed border-border/60 text-xs text-muted-foreground">
-            Historical watcher points will appear once multiple subscription days are available.
+            Historical watcher points will appear once subscription telemetry is available.
           </div>
         )}
       </div>
