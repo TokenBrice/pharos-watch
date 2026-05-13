@@ -419,7 +419,7 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
     expect(body.rankings[0]?.sourceRisk).toBeUndefined();
     expect(body.publication).toBeUndefined();
-    expect(body.methodology?.version).toBe("8.0");
+    expect(body.methodology?.version).toBe("8.1");
   });
 
   it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
@@ -491,7 +491,7 @@ describe("handleYieldRankings", () => {
     const body = await res.json() as YieldRankingsResponse;
 
     expect(res.status).toBe(200);
-    expect(body.methodology?.version).toBe("8.0");
+    expect(body.methodology?.version).toBe("8.1");
     expect(body.publication).toMatchObject({
       generationId: SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
       status: "published",

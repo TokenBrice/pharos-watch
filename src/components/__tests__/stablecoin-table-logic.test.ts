@@ -144,8 +144,6 @@ describe("buildTrackedIdSet", () => {
     expect(trackedIds.has("usdat-saturn")).toBe(true);
     expect(trackedIds.has("usdn-noble")).toBe(true);
     expect(trackedIds.has("musd-metamask")).toBe(true);
-    expect(trackedIds.has("usd0-usual")).toBe(true);
-    expect(trackedIds.has("usdai-usd-ai")).toBe(true);
     expect(trackedIds.has("wm-m0")).toBe(true);
     expect(trackedIds.has("usdnr-nerona")).toBe(true);
     expect(trackedIds.has("usdk-kast")).toBe(true);

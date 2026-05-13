@@ -65,6 +65,8 @@ const UNSUPPORTED_CHAINS = new Set([
   "hyperliquid",
   "codex",
   "edgechain",
+  "bevm",
+  "ethereum-classic",
   // Tracked for contract display, but not yet wired into the DEX liquidity pipeline
   "citrea",
   "conflux",

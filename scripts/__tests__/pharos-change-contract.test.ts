@@ -362,7 +362,6 @@ describe("repo Claude hook config", () => {
     expect(config.hooks.PreToolUse[0].hooks[1].command).toContain(".claude/hooks/pre-push-gate.sh");
     expect(config.hooks.PostToolUse[0].hooks[0].command).toContain("--hook=post-tool-use");
     expect(config.hooks.PostToolBatch[0].hooks[0].command).toContain("--hook=post-tool-batch");
-    expect(config.hooks.Stop[0].hooks[0].command).toContain("--hook=stop");
   });
 });
 

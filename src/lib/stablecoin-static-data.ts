@@ -442,7 +442,7 @@ export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [
   { id: "usdc-circle", name: "USD Coin", symbol: "USDC" },
   { id: "susdc-spark", name: "Spark Savings USDC", symbol: "spUSDC" },
   { id: "gtusdcp-gauntlet", name: "Gauntlet USDC Prime", symbol: "gtUSDCp" },
-  { id: "gtusdc-gauntlet", name: "Gauntlet USDC Core", symbol: "gtUSDC" },
+  { id: "gtusdc-gauntlet", name: "Gauntlet USDC Prime V1", symbol: "gtUSDC" },
   { id: "yvusdc-yearn", name: "Yearn v3 USDC Vault", symbol: "yvUSDC-1" },
   { id: "steakusdc-steakhouse", name: "Steakhouse USDC V2", symbol: "steakUSDC" },
   { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" },

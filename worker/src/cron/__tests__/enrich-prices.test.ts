@@ -718,7 +718,7 @@ describe("enrichMissingPrices", () => {
       {
         id: "mystery-usd",
         name: "Mystery USD",
-        symbol: "MUSD",
+        symbol: "USDT",
         price: 0,
         pegType: "peggedUSD",
         chains: ["Ethereum"],
