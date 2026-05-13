@@ -17049,7 +17049,7 @@
       {
         "name": "Superstate USTB Treasury positions",
         "pct": 20,
-        "risk": "very-low",
+        "risk": "low",
         "coinId": "ustb-superstate"
       },
       {

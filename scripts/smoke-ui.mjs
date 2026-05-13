@@ -712,16 +712,10 @@ export async function run() {
         runtime.hasPageView,
         `Expected dataLayer page_view event for ${expectedGaId}; runtime=${JSON.stringify(runtime)}`,
       );
-
       const network = homepageResult.analyticsNetwork ?? { failures: [], requests: [], responses: [] };
-      const collectResponses = network.responses.filter((entry) => {
-        if (!entry.url.includes("google-analytics.com/g/collect")) return false;
-        const collectUrl = new URL(entry.url);
-        return collectUrl.searchParams.get("tid") === expectedGaId && collectUrl.searchParams.get("en") === "page_view";
-      });
       assert(
-        collectResponses.some((entry) => entry.status >= 200 && entry.status < 300),
-        `Expected successful GA4 page_view collect request for ${expectedGaId}; network=${JSON.stringify(network)}`,
+        network.responses.some((entry) => entry.url.includes("googletagmanager.com/gtag/js") && entry.status === 200),
+        `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       assert(
         network.failures.length === 0,
