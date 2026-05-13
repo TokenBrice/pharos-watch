@@ -8,6 +8,11 @@ import { YieldSourceLink } from "@/components/yield-source-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  classifyYieldSourceDepth,
+  getYieldSourceRiskDrivers,
+} from "@/lib/yield-source-risk";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -53,6 +58,18 @@ function YieldSourceSheetBody({
       yieldSource: source.yieldSource,
     })),
   ];
+  const previousBestSourceKey = ranking.provenance?.previousBestSourceKey ?? null;
+  const previousBestSourceLabel = previousBestSourceKey
+    ? allSources.find((source) => source.sourceKey === previousBestSourceKey)?.yieldSource ?? previousBestSourceKey
+    : null;
+  const sourceRiskDrivers = getYieldSourceRiskDrivers({
+    sourceRisk: ranking.sourceRisk,
+    sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+  });
+  const depthLens = classifyYieldSourceDepth({
+    sourceRisk: ranking.sourceRisk,
+    sourceTvlUsd: ranking.sourceTvlUsd,
+  });
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -70,7 +87,7 @@ function YieldSourceSheetBody({
           <div>
             <SheetTitle>{ranking.name}</SheetTitle>
             <SheetDescription>
-              {totalSources} yield source{totalSources !== 1 ? "s" : ""}
+              {totalSources} yield source observation{totalSources !== 1 ? "s" : ""}
             </SheetDescription>
           </div>
         </div>
@@ -79,7 +96,7 @@ function YieldSourceSheetBody({
       <div className="space-y-4 px-4">
         <div className="rounded-xl border border-border/60 border-l-[3px] border-l-emerald-500 bg-background/55 px-3 py-2.5">
           <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Best Source
+            Chosen Yield Source
           </p>
           <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -106,13 +123,55 @@ function YieldSourceSheetBody({
                 {ranking.provenance.confidenceTier}
               </span>
             )}
+            <span
+              className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]"
+              title={YIELD_SOURCE_DEPTH_DEFINITIONS[depthLens].description}
+            >
+              {YIELD_SOURCE_DEPTH_DEFINITIONS[depthLens].label} depth
+            </span>
+            {ranking.provenance?.sourceSwitch ? (
+              <span
+                className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300"
+                title="The chosen source changed versus the prior published snapshot. This explains source provenance, not stablecoin safety."
+              >
+                source changed
+              </span>
+            ) : null}
           </div>
+          {ranking.provenance?.selectionReason ? (
+            <p className="mt-2 text-xs text-muted-foreground">{ranking.provenance.selectionReason}</p>
+          ) : null}
+          {previousBestSourceLabel ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Previous source: <span className="font-mono text-foreground">{previousBestSourceLabel}</span>
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Source-risk drivers
+          </p>
+          {sourceRiskDrivers.length > 0 ? (
+            <ul className="mt-2 space-y-2 text-xs">
+              {sourceRiskDrivers.map((driver) => (
+                <li key={driver.key}>
+                  <span className="font-medium text-foreground">{driver.label}</span>
+                  <span className="block text-muted-foreground">{driver.description}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">
+              No populated source-risk driver is currently reducing this row beyond the neutral source penalty.
+            </p>
+          )}
         </div>
 
         {(ranking.altSources?.length ?? 0) > 0 && (
           <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
             <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Alternative Sources
+              Retained alternates
             </p>
             <div className="mt-2 space-y-1.5">
               {[...ranking.altSources]

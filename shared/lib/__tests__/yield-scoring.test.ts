@@ -11,6 +11,26 @@ import {
   derivePysSourceRiskPenalty,
   resolvePysSourceRiskPenalty,
 } from "../yield-scoring";
+import type { PysSourceRiskPenaltyInput } from "../yield-scoring";
+
+type SourceRiskGoldenRow = {
+  label: string;
+  input: PysSourceRiskPenaltyInput;
+  expectedPenalty: number;
+  apy30d?: number;
+  safetyScore?: number | null;
+};
+
+const SOURCE_RISK_GOLDEN_ROWS: SourceRiskGoldenRow[] = [
+  { label: "reward-heavy", input: { rewardShare: 0.9 }, expectedPenalty: 1.4 },
+  { label: "stale-source-age", input: { sourceAgeSeconds: 7 * 60 * 60 }, expectedPenalty: 1.25 },
+  { label: "low-source-depth", input: { sourceDepthRatio: 0.0005 }, expectedPenalty: 1.35 },
+  { label: "source-switch-churn", input: { sourceSwitchCount30d: 4 }, expectedPenalty: 1.3 },
+  { label: "bootstrap-observation-count", input: { observationCount30d: 3 }, expectedPenalty: 1.2 },
+  { label: "zero-apy", input: {}, expectedPenalty: 1, apy30d: 0 },
+  { label: "negative-apy", input: {}, expectedPenalty: 1, apy30d: -1 },
+  { label: "missing-safety", input: {}, expectedPenalty: 1, safetyScore: null },
+];
 
 describe("PYS constants", () => {
   it("exports benchmark spread weight of 0.25", () => {
@@ -76,6 +96,12 @@ describe("derivePysSourceRiskPenalty", () => {
     expect(derivePysSourceRiskPenalty({})).toBe(1);
   });
 
+  it("matches source-risk golden row penalties", () => {
+    for (const row of SOURCE_RISK_GOLDEN_ROWS) {
+      expect(derivePysSourceRiskPenalty(row.input), row.label).toBeCloseTo(row.expectedPenalty, 6);
+    }
+  });
+
   it("adds measured reward, depth, freshness, switch, bootstrap, and venue penalties", () => {
     expect(derivePysSourceRiskPenalty({
       rewardShare: 0.9,
@@ -85,6 +111,62 @@ describe("derivePysSourceRiskPenalty", () => {
       observationCount30d: 3,
       venueRiskTier: "high",
     })).toBeCloseTo(2.5, 6);
+  });
+});
+
+describe("PYS source-risk golden rows", () => {
+  it("never improves PYS from source-risk penalty alone", () => {
+    for (const row of SOURCE_RISK_GOLDEN_ROWS) {
+      const apy30d = row.apy30d ?? 8;
+      const safetyScore = row.safetyScore === undefined ? 80 : row.safetyScore;
+      const neutral = computePYS({
+        apy30d,
+        safetyScore,
+        apyVarianceScore: 0.1,
+        scalingFactor: 8,
+        sourceRiskPenalty: 1,
+      });
+      const penalized = computePYS({
+        apy30d,
+        safetyScore,
+        apyVarianceScore: 0.1,
+        scalingFactor: 8,
+        sourceRiskPenalty: derivePysSourceRiskPenalty(row.input),
+      });
+
+      expect(penalized, row.label).toBeLessThanOrEqual(neutral);
+    }
+  });
+
+  it("keeps missing source-risk evidence neutral and caps extreme derived penalties", () => {
+    expect(derivePysSourceRiskPenalty({
+      rewardShare: null,
+      sourceDepthRatio: null,
+      sourceAgeSeconds: null,
+      sourceSwitchCount30d: null,
+      observationCount30d: null,
+      venueRiskTier: "unknown",
+    })).toBe(1);
+    expect(derivePysSourceRiskPenalty({
+      rewardShare: 1,
+      sourceDepthRatio: 0.0001,
+      sourceAgeSeconds: 24 * 60 * 60,
+      sourceSwitchCount30d: 10,
+      observationCount30d: 1,
+      venueRiskTier: "high",
+    })).toBe(PYS_MAX_SOURCE_RISK_PENALTY);
+  });
+
+  it("keeps zero and negative APY at PYS 0 even with source-risk penalties", () => {
+    for (const apy30d of [0, -1]) {
+      expect(computePYS({
+        apy30d,
+        safetyScore: 80,
+        apyVarianceScore: 0,
+        scalingFactor: 8,
+        sourceRiskPenalty: PYS_MAX_SOURCE_RISK_PENALTY,
+      })).toBe(0);
+    }
   });
 });
 

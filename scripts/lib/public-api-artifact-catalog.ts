@@ -18,16 +18,19 @@ export interface PublicApiArtifactEndpoint {
   description: string;
   tags: readonly string[];
   security?: "apiKey" | "none";
+  responseSchema?: string;
   parameters?: readonly PublicApiArtifactParameter[];
-  postman?: {
-    folder: PostmanFolderName;
-    order?: number;
-    name?: string;
-    path?: string;
-    description?: string;
-    query?: Record<string, string>;
-    noAuth?: boolean;
-  };
+  postman?: PostmanRequestConfig | readonly PostmanRequestConfig[];
+}
+
+export interface PostmanRequestConfig {
+  folder: PostmanFolderName;
+  order?: number;
+  name?: string;
+  path?: string;
+  description?: string;
+  query?: Record<string, string>;
+  noAuth?: boolean;
 }
 
 interface PostmanStaticRequest {
@@ -550,6 +553,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Yield rankings",
     description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
     tags: ["Yield"],
+    responseSchema: "YieldRankingsResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },
@@ -560,6 +564,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Yield history",
     description: "Historical yield observations for a stablecoin, with optional publication/source-risk metadata fields.",
     tags: ["Yield", "History"],
+    responseSchema: "YieldHistoryResponse",
     parameters: [
       YIELD_HISTORY_STABLECOIN_QUERY_PARAM,
       YIELD_HISTORY_DAYS_PARAM,
@@ -568,15 +573,30 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         name: "sourceKey",
         in: "query",
         schema: { type: "string" },
-        description: "Optional source key filter.",
+        description: "Required with `mode=source`; filters history to a single source key.",
       },
     ],
-    postman: {
-      folder: "Historical data",
-      order: 2,
-      description: "Historical yield observations for a required stablecoin, with optional publication/source-risk metadata fields. `days` accepts 1-365; `mode` accepts `best` or `source`.",
-      query: { stablecoin: "{{stablecoinId}}", days: "{{days}}", mode: "best" },
-    },
+    postman: [
+      {
+        folder: "Historical data",
+        order: 2,
+        name: "Yield history - best source",
+        description: "Historical best-source yield observations for a required stablecoin. `days` accepts 1-365; `mode=best` returns rows selected as best source at publication time.",
+        query: { stablecoin: "{{stablecoinId}}", days: "{{days}}", mode: "best" },
+      },
+      {
+        folder: "Historical data",
+        order: 3,
+        name: "Yield history - source key",
+        description: "Source-specific historical yield observations. `mode=source` requires a stablecoin id plus `sourceKey` for the source series to inspect.",
+        query: {
+          stablecoin: "{{yieldSourceStablecoinId}}",
+          days: "{{days}}",
+          mode: "source",
+          sourceKey: "{{yieldSourceKey}}",
+        },
+      },
+    ],
   },
   {
     key: "chains",

@@ -138,6 +138,7 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
   supplementalMaxAgeSec: 6 * 3600,
   benchmarkMaxAgeSec: 48 * 3600,
   coverageAuditMaxAgeSec: 45 * 24 * 3600,
+  sourceRiskCoverageRatio: 0.75,
 } as const;
 
 // --- Discovery scan ---

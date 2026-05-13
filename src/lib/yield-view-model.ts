@@ -1,4 +1,10 @@
 import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  classifyYieldSourceDepth,
+  type YieldSourceDepthLens,
+} from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
@@ -17,6 +23,8 @@ export type YieldSourceConfidenceFilter =
   | NonNullable<NonNullable<YieldRanking["provenance"]>["confidenceTier"]>;
 export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
+export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
+export type YieldSourceChangedFilter = "all" | "only" | "none";
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -28,6 +36,8 @@ export interface YieldViewModelUrlParams {
   sourceConfidence?: string | null;
   benchmark?: string | null;
   opportunity?: string | null;
+  depth?: string | null;
+  sourceChanged?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -46,6 +56,8 @@ export interface YieldViewModelFilters {
   sourceConfidence: YieldSourceConfidenceFilter;
   benchmark: YieldBenchmarkFilter;
   opportunity: YieldOpportunityFilter;
+  depth: YieldDepthFilter;
+  sourceChanged: YieldSourceChangedFilter;
 }
 
 export interface YieldViewModelOptions {
@@ -57,13 +69,15 @@ export interface YieldViewModelOptions {
   sourceConfidence: YieldFilterOption<YieldSourceConfidenceFilter>[];
   benchmark: YieldFilterOption<YieldBenchmarkFilter>[];
   opportunity: YieldFilterOption<YieldOpportunityFilter>[];
+  depth: YieldFilterOption<YieldDepthFilter>[];
+  sourceChanged: YieldFilterOption<YieldSourceChangedFilter>[];
 }
 
 export interface YieldComparableSet {
   key: string;
   label: string;
   count: number;
-  basis: "yield-type" | "peg" | "benchmark" | "warning-state" | "source-confidence" | "tvl";
+  basis: "yield-type" | "peg" | "benchmark" | "warning-state" | "source-confidence" | "tvl" | "source-depth";
 }
 
 export type YieldViewModelRow = YieldRanking & {
@@ -73,6 +87,7 @@ export type YieldViewModelRow = YieldRanking & {
   rankLabel: string;
   comparableSetLabel: string;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
+  sourceDepthLens: YieldSourceDepthLens;
 };
 
 export interface YieldViewModelStats {
@@ -153,6 +168,8 @@ const DEFAULT_FILTERS: YieldViewModelFilters = {
   sourceConfidence: "all",
   benchmark: "all",
   opportunity: "all",
+  depth: "all",
+  sourceChanged: "all",
 };
 
 function formatCountLabel(label: string, count: number): string {
@@ -213,6 +230,13 @@ function getOpportunity(row: YieldRanking): Exclude<YieldOpportunityFilter, "all
   return row.yieldType === "lending-opportunity" ? "lending-opportunity" : "holder-yield";
 }
 
+function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
+  return classifyYieldSourceDepth({
+    sourceRisk: row.sourceRisk,
+    sourceTvlUsd: row.sourceTvlUsd,
+  });
+}
+
 function matchesSearch(row: YieldRanking, query: string): boolean {
   const normalized = query.trim().toLowerCase();
   return normalized.length === 0
@@ -259,6 +283,9 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
   let noWarningCount = 0;
   let holderYieldCount = 0;
   let lendingOpportunityCount = 0;
+  let sourceChangedCount = 0;
+  let sourceUnchangedCount = 0;
+  const depthCounts = new Map<YieldSourceDepthLens, number>();
 
   for (const row of rows) {
     yieldTypeCounts.set(row.yieldType, (yieldTypeCounts.get(row.yieldType) ?? 0) + 1);
@@ -274,6 +301,12 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
 
     if (getOpportunity(row) === "lending-opportunity") lendingOpportunityCount += 1;
     else holderYieldCount += 1;
+
+    if (row.provenance?.sourceSwitch) sourceChangedCount += 1;
+    else sourceUnchangedCount += 1;
+
+    const sourceDepthLens = getSourceDepthLens(row);
+    depthCounts.set(sourceDepthLens, (depthCounts.get(sourceDepthLens) ?? 0) + 1);
   }
 
   return {
@@ -311,7 +344,7 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
         .filter((value) => confidenceCounts.has(value))
         .map((value) => ({
           value,
-          label: value.charAt(0).toUpperCase() + value.slice(1),
+          label: YIELD_SOURCE_CONFIDENCE_DEFINITIONS[value].label,
           count: confidenceCounts.get(value) ?? 0,
         })),
     ],
@@ -325,6 +358,20 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
       { value: "all", label: "All opportunities", count: rows.length },
       { value: "holder-yield", label: "Holder yield", count: holderYieldCount },
       { value: "lending-opportunity", label: "Lending opp.", count: lendingOpportunityCount },
+    ],
+    depth: [
+      { value: "all", label: "All depth", count: rows.length },
+      { value: "hide-thin", label: "Hide thin", count: rows.filter((row) => getSourceDepthLens(row) !== "thin").length },
+      ...(["deep", "moderate", "thin", "unknown"] as const).map((value) => ({
+        value,
+        label: YIELD_SOURCE_DEPTH_DEFINITIONS[value].label,
+        count: depthCounts.get(value) ?? 0,
+      })),
+    ],
+    sourceChanged: [
+      { value: "all", label: "All changes", count: rows.length },
+      { value: "only", label: "Source changed", count: sourceChangedCount },
+      { value: "none", label: "No source change", count: sourceUnchangedCount },
     ],
   };
 }
@@ -340,6 +387,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   const validConfidence = new Set(options.sourceConfidence.map((option) => option.value));
   const validBenchmarks = new Set(options.benchmark.map((option) => option.value));
   const validOpportunities = new Set(options.opportunity.map((option) => option.value));
+  const validDepth = new Set(options.depth.map((option) => option.value));
+  const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -351,6 +400,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     sourceConfidence: normalizeOption(params.sourceConfidence, validConfidence, DEFAULT_FILTERS.sourceConfidence),
     benchmark: normalizeOption(params.benchmark, validBenchmarks, DEFAULT_FILTERS.benchmark),
     opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity),
+    depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
+    sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
@@ -363,6 +414,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     sourceConfidence: filters.sourceConfidence === DEFAULT_FILTERS.sourceConfidence ? null : filters.sourceConfidence,
     benchmark: filters.benchmark === DEFAULT_FILTERS.benchmark ? null : filters.benchmark,
     opportunity: filters.opportunity === DEFAULT_FILTERS.opportunity ? null : filters.opportunity,
+    depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
+    sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
   };
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
@@ -388,6 +441,10 @@ function rowMatchesFilters(row: YieldRanking, filters: YieldViewModelFilters): b
   if (filters.sourceConfidence !== "all" && row.provenance?.confidenceTier !== filters.sourceConfidence) return false;
   if (filters.benchmark !== "all" && getBenchmarkKey(row) !== filters.benchmark) return false;
   if (filters.opportunity !== "all" && getOpportunity(row) !== filters.opportunity) return false;
+  if (filters.depth === "hide-thin" && getSourceDepthLens(row) === "thin") return false;
+  if (filters.depth !== "all" && filters.depth !== "hide-thin" && getSourceDepthLens(row) !== filters.depth) return false;
+  if (filters.sourceChanged === "only" && !row.provenance?.sourceSwitch) return false;
+  if (filters.sourceChanged === "none" && row.provenance?.sourceSwitch) return false;
 
   return true;
 }
@@ -400,6 +457,10 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   if (filters.warnings === "only") return "Warning set";
   if (filters.sourceConfidence !== "all") return `${filters.sourceConfidence} confidence`;
   if (filters.minTvl !== null) return `${formatTvlOption(filters.minTvl)} TVL`;
+  if (filters.depth === "hide-thin") return "Non-thin source depth";
+  if (filters.depth !== "all") return `${YIELD_SOURCE_DEPTH_DEFINITIONS[filters.depth].label} source depth`;
+  if (filters.sourceChanged === "only") return "Rows with source changed";
+  if (filters.sourceChanged === "none") return "Rows without source changed";
   return "Current view";
 }
 
@@ -415,6 +476,7 @@ function rankRows(rows: readonly YieldRanking[], filters: YieldViewModelFilters)
       rankLabel: `#${rank} in ${comparisonLabel}`,
       comparableSetLabel: comparisonLabel,
       opportunity: getOpportunity(row),
+      sourceDepthLens: getSourceDepthLens(row),
     };
   });
 }
@@ -462,7 +524,7 @@ function buildStats(
   };
 }
 
-function buildComparableSets(rows: readonly YieldRanking[]): YieldComparableSet[] {
+function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparableSet[] {
   const sets = new Map<string, YieldComparableSet>();
   const add = (basis: YieldComparableSet["basis"], key: string, label: string) => {
     const id = `${basis}:${key}`;
@@ -482,6 +544,7 @@ function buildComparableSets(rows: readonly YieldRanking[]): YieldComparableSet[
     add("warning-state", row.warningSignals.length > 0 ? "warning" : "no-warning", row.warningSignals.length > 0 ? "Warning rows" : "No-warning rows");
     if (row.provenance?.confidenceTier) add("source-confidence", row.provenance.confidenceTier, `${row.provenance.confidenceTier} confidence`);
     add("tvl", row.sourceTvlUsd === null ? "unknown" : "available", row.sourceTvlUsd === null ? "TVL unknown" : "TVL available");
+    add("source-depth", row.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label} source depth`);
   }
 
   return Array.from(sets.values()).sort((a, b) => {

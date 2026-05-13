@@ -1,9 +1,14 @@
 import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldPublicationMetadata, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/yield-methodology-version";
 import { batchExecute } from "../../lib/db";
 import { getCache, type CacheWriteResult } from "../../lib/db-cache";
-import { readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
+import { buildMethodologyEnvelope, readCachedJson, validatePayloadWithSchema } from "../../lib/api-utils";
 import { PYS_SCALING_FACTOR } from "../../lib/constants";
 import { resolveYieldSourceUrl } from "../../lib/yield-source-links";
 import { getRankingStaleThresholdMs } from "../yield-helpers";
@@ -18,6 +23,17 @@ const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
 const MAX_SOURCE_DECISION_ANOMALIES = 6;
 const MAX_SOURCE_DECISION_TEXT_LENGTH = 160;
 const MAX_SOURCE_DECISION_ALTERNATIVES_JSON_BYTES = 4_096;
+
+function buildYieldMethodology(asOf: number) {
+  return buildMethodologyEnvelope({
+    version: YIELD_METHODOLOGY_VERSION,
+    versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+    currentVersion: YIELD_METHODOLOGY_VERSION,
+    currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+    changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+    asOf,
+  });
+}
 
 function countYieldRankings(
   rankingsPayload: { rankings?: Array<{ id?: string }> },
@@ -204,6 +220,7 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
     scalingFactor: PYS_SCALING_FACTOR,
     medianApy: input.medianApy,
     updatedAt: input.startSec,
+    methodology: buildYieldMethodology(input.startSec),
     ...(input.publication ? { publication: input.publication } : {}),
     provenance: {
       selectionMethod: "confidence-weighted" as const,
@@ -236,6 +253,8 @@ function buildYieldPublicationMetadata(params: {
 export function attachYieldPublicationMetadata<
   T extends {
     rankings?: Array<Record<string, unknown>>;
+    updatedAt?: number;
+    methodology?: unknown;
   },
 >(
   payload: T,
@@ -245,8 +264,12 @@ export function attachYieldPublicationMetadata<
     status: YieldPublicationMetadata["status"];
   },
 ): T & { publication: YieldPublicationMetadata } {
+  const updatedAt = typeof payload.updatedAt === "number" && Number.isFinite(payload.updatedAt)
+    ? payload.updatedAt
+    : params.startSec;
   return {
     ...payload,
+    methodology: payload.methodology ?? buildYieldMethodology(updatedAt),
     publication: buildYieldPublicationMetadata(params),
     rankings: Array.isArray(payload.rankings)
       ? payload.rankings.map((ranking, index) => ({

@@ -135,6 +135,18 @@ export function YieldLeaderboardControls({
           onChange={(value) => onFilterChange("minTvl", value)}
         />
         <FilterSelect
+          label="Depth"
+          value={filters.depth}
+          options={options.depth}
+          onChange={(value) => onFilterChange("depth", value)}
+        />
+        <FilterSelect
+          label="Source changed"
+          value={filters.sourceChanged}
+          options={options.sourceChanged}
+          onChange={(value) => onFilterChange("sourceChanged", value)}
+        />
+        <FilterSelect
           label="Confidence"
           value={filters.sourceConfidence}
           options={options.sourceConfidence}

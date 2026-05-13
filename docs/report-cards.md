@@ -24,6 +24,19 @@ Cemetery coins get a permanent F.
 
 Current-version note: v7.24 makes redemption-backed Liquidity / Exit uplift capacity-aware, confidence-aware, and correlation-aware through Redemption Backstop v4. Eventual-only route quality remains visible, but Safety liquidity now requires current executable redemption capacity for redemption-only uplift.
 
+## Yield Source-Risk Boundary
+
+Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS) and same-confidence yield source arbitration, but they do not change the Safety Score, Resilience, or Dependency Risk dimensions here.
+
+`shared/lib/report-card-yield-risk.ts` keeps the integration boundary explicit by returning no-op adjustments for the current cases:
+
+- `external-lending-opportunity`: an external lending venue belongs to an opportunity row, not the base stablecoin's Safety Score.
+- `missing-yield-config`: the asset lacks a yield configuration that would define how a report-card adjustment should be interpreted.
+- `missing-source-risk`: the yield row has no source-risk payload to evaluate.
+- `source-risk-unconsumed`: source-risk exists, but the report-card methodology has not defined a scored cap, haircut, or modifier for it.
+
+Those reasons are documentation and handoff guards, not hidden penalties. Any future use of yield source-risk that affects Safety Score, Resilience, Dependency Risk, or the overall grade must ship as a report-card methodology change with the corresponding `docs/report-cards.md` and `docs/report-cards-timeline.md` updates.
+
 ## Dimensions
 
 ### Base dimensions (weighted sum)

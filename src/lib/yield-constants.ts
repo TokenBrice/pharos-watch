@@ -9,10 +9,26 @@ export const WARNING_SIGNAL_LABELS: Record<string, string> = {
   "tvl-outflow": "TVL outflow",
   "data-stale": "Data stale",
   "zero-yield": "Zero yield",
+  "low-source-tvl": "Low source TVL",
+};
+
+const WARNING_SIGNAL_DESCRIPTIONS: Record<string, string> = {
+  "yield-spike": "APY moved sharply above recent history. Check the chart and source sheet before treating it as durable.",
+  "yield-divergence": "Current APY diverges from comparable source history. Cross-check retained alternates before sizing exposure.",
+  "negative-trend": "APY trend is falling. Compare the 7d and 30d views before relying on the headline APY.",
+  "reward-heavy": "A large share of APY comes from incentives. Inspect the base/reward split and expect rewards to change faster than base yield.",
+  "tvl-outflow": "Venue TVL is falling. Check venue depth and recent withdrawals before relying on the quote.",
+  "data-stale": "Latest source observation is older than expected. Treat APY as stale until the source refreshes.",
+  "zero-yield": "Current source reports zero yield. Verify whether the program paused or the source failed.",
+  "low-source-tvl": "Venue TVL is small. Use the depth lens and retained alternates before comparing this APY with deeper venues.",
 };
 
 export function formatYieldWarningSignal(signal: string) {
   return WARNING_SIGNAL_LABELS[signal] ?? signal.replace(/-/g, " ");
+}
+
+export function formatYieldWarningSignalDescription(signal: string) {
+  return WARNING_SIGNAL_DESCRIPTIONS[signal] ?? "Review the source sheet and history chart before treating this warning as durable.";
 }
 
 /** Static PYS color classes (Tailwind purge-safe). */

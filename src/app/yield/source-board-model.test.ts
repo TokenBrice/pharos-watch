@@ -65,6 +65,12 @@ describe("buildYieldSourceBoardModel", () => {
       fallback: 0,
     });
     expect(model.selectedConfidenceUnknownCount).toBe(0);
+    expect(model.depthCounts).toEqual({
+      deep: 0,
+      moderate: 0,
+      thin: 0,
+      unknown: 2,
+    });
     expect(model.sourceSwitchCount).toBe(1);
     expect(model.anomalyCount).toBe(1);
     expect(model.sourceRowApy).toEqual({ min: 4, median: 5.5, max: 8 });
@@ -170,6 +176,12 @@ describe("buildYieldSourceBoardModel", () => {
         fallback: 0,
       },
       selectedConfidenceUnknownCount: 0,
+      depthCounts: {
+        deep: 0,
+        moderate: 0,
+        thin: 0,
+        unknown: 0,
+      },
       sourceSwitchCount: 0,
       anomalyCount: 0,
       sourceRowApy: null,

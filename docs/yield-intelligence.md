@@ -12,9 +12,9 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
-The `/yield` route-level Yield Sources board is presentation-only: it derives selected and alternate source rows from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
+The `/yield` route-level Yield Sources board is presentation-only: it derives chosen sources and retained alternate source observations from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
 
-Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, selected-source switches, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
+Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, source changes, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
 
 Rankings provenance now carries source-native freshness for derived sources:
 
@@ -350,12 +350,16 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - `sourceRisk` may be omitted, `null`, or partially populated on ranking, history, and alt-source rows.
 - Public API source-risk fields are nested under `sourceRisk.*` (`sourceRisk.sourceRiskPenalty`, `sourceRisk.rewardShare`, and so on). Do not document or consume flattened public fields such as top-level `sourceRiskPenalty`; calibration scripts that ingest saved payloads must normalize from the nested API contract before analysis.
 - `sourceRisk.sourceRiskPenalty` is the active v8 source-risk multiplier. It is derived from reliable `rewardShare`, `sourceDepthRatio`, `sourceAgeSeconds`, `sourceSwitchCount30d`, `observationCount30d`, and sourced `venueRiskTier` inputs where available. Missing, `null`, or invalid evidence is equivalent to a neutral multiplier of `1`; values below 1 clamp to 1 and values above `PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) clamp to 2.5.
+- Frontend source-risk driver labels use the same scoring thresholds: `reward-heavy` when `rewardShare > 0.5`, `thin source depth` when `sourceDepthRatio < 0.001`, `stale source` when `sourceAgeSeconds > 6h`, `limited history` when `0 < observationCount30d < 7`, and `source changed` when the selected source changed versus the prior published snapshot or `sourceSwitchCount30d > 0`.
+- The `/yield` depth lens is explanatory context, not guaranteed executable capacity. It classifies rows only when both `sourceRisk.sourceDepthRatio` and `sourceTvlUsd` are present: `deep` is `>= 1%` of tracked stablecoin supply, `moderate` is `0.1%` to `< 1%`, `thin` is `< 0.1%`, and missing TVL or supply-relative depth is `unknown`.
 - DeFiLlama rows use the shared DeFiLlama input metadata timestamp/age when an individual resolved row does not carry `sourceObservedAt`, so provenance and PYS source-age penalties are based on the same freshness evidence.
 - `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
 - `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
 - v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production-snapshot baseline. The production snapshot predates populated public `sourceRisk.*` fields, so it proves real-universe distribution/cap/non-USD behavior under neutral fallback; regenerate it after v8 publishes live source-risk evidence to measure final rank churn.
-- External `lending-opportunity` rows do not modify the base stablecoin's Safety Score. They may later inform an opportunity-level yield risk label, DEWS input, or report-card modifier only after the consuming methodology explicitly versions that behavior.
-- DEWS and report-card consumers treat unavailable source-risk fields and legacy rows as no-op inputs. Report-card yield-risk helpers currently normalize the source-risk payload but return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts.
+- External `lending-opportunity` rows do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may later inform an opportunity-level yield risk label, DEWS input, or report-card modifier only after the consuming methodology explicitly versions that behavior.
+- Report-card consumers treat yield source-risk as no-op today. `shared/lib/report-card-yield-risk.ts` names the no-op reasons as `external-lending-opportunity`, `missing-yield-config`, `missing-source-risk`, and `source-risk-unconsumed`; the helper may normalize the source-risk payload, but it does not emit score modifiers, Resilience caps, or Dependency Risk caps.
+- Any future report-card score impact from yield source-risk requires a report-card methodology update and matching report-card timeline entry before runtime scoring can consume those fields.
+- DEWS currently consumes yield anomaly warning signals rather than structured `sourceRisk.*` inputs. Structured source-risk, source-change, or rank-attribution signals are a follow-up boundary: missing source-risk fields and legacy rows remain explicit no-ops unless a DEWS methodology version defines scored use.
 
 Rollback compatibility is part of the contract. Production-shaped `v7.48` payloads without `publication`, `publishedRank`, `liveRank`, `sourceRisk`, or `rankChangeAttribution` remain valid. With no nested source-risk penalty, v8 resolves the same neutral penalty (`1`) and keeps the benchmark-aware v7 scoring path equivalent.
 
@@ -531,7 +535,7 @@ CREATE TABLE yield_history (
 Migration `0125_yield_publication_generations.sql` adds a compact generation ledger:
 
 - `yield_publication_generations` records `generation_id`, `started_at`, publication `state`, ranking/source row counts, `published_at` or `failed_at`, and failure/debug metadata.
-- `yield_source_decisions` records the selected source per stablecoin for a generation, selected confidence/data-source details, selected 30d APY and score, previous best source, source-switch flag, rejected-candidate count, and a bounded alternatives JSON payload.
+- `yield_source_decisions` records the selected source per stablecoin for a generation, selected confidence/data-source details, selected 30d APY and score, previous best source, source-changed flag, rejected-candidate count, and a bounded alternatives JSON payload.
 
 The generation ID format is `yield-<startSec>`. Public payloads expose only `published` generations. Legacy rows with no generation ID remain readable through the existing cutoff fallback, which is what keeps rollback to old Worker versions compatible with the additive schema.
 
@@ -555,7 +559,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 7. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3 → 4, potentially multiple sources per coin), reusing cached supplemental families instead of live-fetching them on the publisher path, then append auto-discovered lending rows for any remaining eligible tracked coins
 8. Batch preload source-aware `yield_history` datasets (previous best source, previous TVL by source, 30d APY history by source) and legacy best-history fallbacks, chunking stablecoin ID lists so each D1 statement stays under the 100-bind limit
 9. Compute 7d/30d APY, variance, and PYS per resolved source using source-specific history instead of coin-level mixed history
-10. Run confidence-weighted arbitration to select `is_best` per coin and flag source switches vs. the prior best source
+10. Run confidence-weighted arbitration to select `is_best` per coin and flag source changes vs. the prior best source
 11. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
 12. Stage a publication generation and preflight the rankings payload
 13. Publish the `yield-rankings` cache payload with `publication.status = "published"` plus row-level `publishedRank`, upsert `yield_data` (all sources), insert `yield_history` points, insert selected-source decision evidence, and mark the generation `published` in one guarded D1 batch; if cache publication fails or CAS skips because a newer cache exists, mark only the generation `failed` and leave the previous published D1 rows in place
@@ -568,7 +572,7 @@ The generation ID format is `yield-<startSec>`. Public payloads expose only `pub
 Implementation stages:
 - `yield-sync/sources.ts` + `yield-sync/pool-filter.ts`: DL pool loading, wrapper-relevant pool filtering, on-chain reads, benchmark cache loading, price-derived, scrvUSD current-rate, and B.Protocol helpers
 - `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery candidate shaping
-- `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-switch tracking
+- `yield-sync/evaluation.ts`: source-aware history normalization, trailing metric computation, confidence arbitration, and source-change tracking
 - `yield-sync/publication.ts` + `yield-sync/rankings.ts`: persistence helpers, rankings shaping, provenance/warning parsing, TVL-weighted median helper, and cache writes
 - `yield-sync/history.ts`: batched history preloads plus stale/orphan cleanup
 - `sync-yield-data.ts`: safety snapshot handling, orchestration glue, and degraded-mode policy
@@ -758,20 +762,21 @@ Compact provenance board rendered before the scatter on `/yield`. It consumes th
 
 The model derives only from published selected rows and retained `altSources[]` in the current rankings payload:
 
-- selected best-source row count, alternate-source row count, represented source-row count, and represented data-source family count
-- source lanes grouped by `yieldType` and `dataSource`, with selected count, alternate count, source-row APY min/median/max, and source labels
-- selected-source confidence counts from `YieldRanking.provenance.confidenceTier` only; alternate rows do not carry or display confidence tiers
-- selected-row source-switch count and selected-row anomaly count from row provenance
-- source-row APY min/median/max across selected plus alternate rows in the current view
-- benchmark labels present in the selected rows, falling back to the response benchmark registry when row-level labels are absent
+- chosen source count, retained alternate count, represented source-observation count, and represented data-family count
+- source lanes grouped by `yieldType` and `dataSource`, with chosen count, retained alternate count, observation APY min/median/max, and source labels
+- chosen-source confidence counts from `YieldRanking.provenance.confidenceTier` only; retained alternates do not carry or display confidence tiers
+- chosen-source source-changed count and chosen-source anomaly count from row provenance
+- observation APY min/median/max across chosen plus retained alternate source observations in the current view
+- benchmark labels present in the chosen rows, falling back to the response benchmark registry when row-level labels are absent
+- depth-lens counts for selected rows: `deep`, `moderate`, `thin`, and `unknown`
 
-The visible board labels APY as source-row APY context. It is not an asset median, market median, investability rating, safety signal, or methodology input. Mobile stacks source lanes as readable rows with the same counts and APY values visible without hover.
+The visible board labels APY as observation APY context. The header helper reads: "Counts every chosen source plus retained alternates for the rows currently visible. This is provenance coverage, not a recommendation ranking." Depth is venue-depth context, not guaranteed executable capacity. Observation APY is not an asset median, market median, investability rating, safety signal, or methodology input. Mobile stacks source lanes as readable rows with the same counts and APY values visible without hover.
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
 Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability) plus 30d Excess Yield, source info, source links, alt sources, warning callouts, embedded `YieldHistoryChart`, and contextual methodology hints / footer links for PYS and yield stability. Conditional: only renders for coins with yield data.
 
-It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-switch state), and passes the selected benchmark context, peer median, and source list into `YieldHistoryChart`.
+It reuses the cached `/api/yield-rankings` payload to find the coin's chosen source row, surfaces row-level provenance (selection reason, source age, benchmark state, source-changed state, previous source key when available), and passes the selected benchmark context, peer median, and source list into `YieldHistoryChart`.
 
 **Layout (top to bottom):**
 
@@ -781,7 +786,7 @@ It reuses the cached `/api/yield-rankings` payload to find the coin's best-sourc
    - 1 active signal: compact inline alert row
 3. 30d Excess Yield callout plus four stat cards: Current APY, 30d APY, PYS (with click/focus disclosure for the score breakdown), Stability
 4. Source info row: clickable source name, normalized data-source badge, source TVL
-5. Alternative sources list when `altSources.length > 0`
+5. Retained alternates list when `altSources.length > 0`
 6. Shared `YieldHistoryChart`
 
 The section returns `null` once rankings have loaded and the coin is neither `yieldBearing` nor present in the rankings cache. If a coin is marked `yieldBearing` in metadata but has no ranking row yet, it renders an inline empty/error state instead of silently disappearing.
@@ -805,15 +810,15 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 Sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
-The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `sourceConfidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
+The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `depth`, `sourceChanged`, `sourceConfidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
 
 **Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals, and a trailing chevron for row expansion.
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
 
-**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Effective Yield, benchmark adjustment, Source Risk Penalty, Yield Efficiency, the adjusted safety-penalty line, Safety (grade + score with `40` fallback), and Consistency (`max(0.3, yieldStability)` shown as a percentage). Detail-page PYS breakdowns pass the nested `sourceRisk.sourceRiskPenalty` so the displayed decomposition matches the API score.
+**PYS tooltip:** Hovering a non-null PYS score opens a component breakdown tooltip with Effective Yield, benchmark adjustment, Source Risk Penalty, Yield Efficiency, the adjusted safety-penalty line, Safety (grade + score with `40` fallback), Consistency (`max(0.3, yieldStability)` shown as a percentage), and the active source-risk driver labels. Detail-page PYS breakdowns pass the nested `sourceRisk.sourceRiskPenalty` so the displayed decomposition matches the API score.
 
-**Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`).
+**Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions and an actionable next check (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `zero-yield`, `data-stale`, `low-source-tvl`).
 
 **Source inspection:** The table row delegates source inspection to the shared `YieldSourceSheet`, which opens from the retained source controls in the row/expanded state instead of the old inline `+N` popover.
 
@@ -821,16 +826,16 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
-The chart now supports source-aware inspection. When alternative sources exist, users can switch between:
+The chart now supports source-aware inspection. When retained alternates exist, users can switch between:
 
 - `Best source`: historically selected best-source rows (`mode=best`)
 - a specific retained source row (`sourceKey=<key>`)
 
-This lets the detail page and leaderboard inspect the actual history of an alternative source instead of only showing its current snapshot.
+This lets the detail page and leaderboard inspect the actual history of a retained alternate instead of only showing its current snapshot.
 
 Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: the row's benchmark rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y. The legend labels the primary line source and keys source overlays by `sourceKey`, adding a short source-key suffix when two retained sources share the same display name.
 
-It reads `/api/yield-history` through `useYieldHistory`, and points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
+It reads `/api/yield-history` through `useYieldHistory`, and points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip. Source-change markers use readable tooltip copy that explains the marker as source provenance churn, not an asset-risk change.
 
 The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) plus an optional breakdown toggle. Compact mode keeps the same data semantics for inline leaderboard expansion, but shortens the chart height to 200px and drops reference-line labels to protect legibility in tighter rows.
 
@@ -947,7 +952,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/lib/__tests__/yield-constants.test.ts`          | Unit tests for shared frontend yield utilities                                                                                               |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
-| `src/app/yield/source-board-model.ts`                | Pure source-board model for selected/alternate source counts, source lanes, confidence counts, anomaly/switch counts, APY context, and benchmarks |
+| `src/app/yield/source-board-model.ts`                | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks |
 | `src/app/yield/source-board.tsx`                     | Compact `/yield` source-provenance board rendered before the scatter                                                                         |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |

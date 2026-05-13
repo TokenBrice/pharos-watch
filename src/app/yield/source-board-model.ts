@@ -1,4 +1,10 @@
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import {
+  YIELD_SOURCE_CONFIDENCE_ORDER,
+  classifyYieldSourceDepth,
+  type YieldSourceConfidenceTier,
+  type YieldSourceDepthLens,
+} from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type {
   AltYieldSource,
@@ -9,16 +15,10 @@ import type {
   YieldType,
 } from "@shared/types";
 
-export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
-
-export const YIELD_SOURCE_CONFIDENCE_ORDER: readonly YieldSourceConfidenceTier[] = [
-  "deterministic",
-  "curated",
-  "discovered",
-  "fallback",
-];
+export { YIELD_SOURCE_CONFIDENCE_ORDER, type YieldSourceConfidenceTier };
 
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
+export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;
 
 export interface YieldSourceBoardApySummary {
   min: number;
@@ -51,6 +51,7 @@ export interface YieldSourceBoardModel {
   representedDataSourceCount: number;
   selectedConfidenceCounts: YieldSourceConfidenceCounts;
   selectedConfidenceUnknownCount: number;
+  depthCounts: YieldSourceDepthCounts;
   sourceSwitchCount: number;
   anomalyCount: number;
   sourceRowApy: YieldSourceBoardApySummary | null;
@@ -89,6 +90,15 @@ function emptyConfidenceCounts(): YieldSourceConfidenceCounts {
     curated: 0,
     discovered: 0,
     fallback: 0,
+  };
+}
+
+function emptyDepthCounts(): YieldSourceDepthCounts {
+  return {
+    deep: 0,
+    moderate: 0,
+    thin: 0,
+    unknown: 0,
   };
 }
 
@@ -193,6 +203,7 @@ export function buildYieldSourceBoardModel(
   options: BuildYieldSourceBoardModelOptions = {},
 ): YieldSourceBoardModel {
   const selectedConfidenceCounts = emptyConfidenceCounts();
+  const depthCounts = emptyDepthCounts();
   const benchmarkLabelCounts = new Map<string, number>();
   const groupMap = new Map<string, MutableGroup>();
   const sourceRowApyValues: number[] = [];
@@ -210,6 +221,11 @@ export function buildYieldSourceBoardModel(
     const confidenceTier = ranking.provenance?.confidenceTier;
     if (confidenceTier) selectedConfidenceCounts[confidenceTier] += 1;
     else selectedConfidenceUnknownCount += 1;
+
+    depthCounts[classifyYieldSourceDepth({
+      sourceRisk: ranking.sourceRisk,
+      sourceTvlUsd: ranking.sourceTvlUsd,
+    })] += 1;
 
     if (ranking.provenance?.sourceSwitch) sourceSwitchCount += 1;
     if ((ranking.provenance?.anomalies?.length ?? 0) > 0) anomalyCount += 1;
@@ -273,6 +289,7 @@ export function buildYieldSourceBoardModel(
     representedDataSourceCount: representedDataSources.size,
     selectedConfidenceCounts,
     selectedConfidenceUnknownCount,
+    depthCounts,
     sourceSwitchCount,
     anomalyCount,
     sourceRowApy: summarizeApy(sourceRowApyValues),

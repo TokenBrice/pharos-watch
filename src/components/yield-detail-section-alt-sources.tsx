@@ -53,7 +53,7 @@ export function YieldDetailSectionAltSources({
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        Alternative Sources
+        Retained alternates
       </p>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-xs">

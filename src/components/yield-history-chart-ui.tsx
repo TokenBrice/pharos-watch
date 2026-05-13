@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Toggle } from "@/components/ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { cn } from "@/lib/utils";
 import {
   PRESET_DAYS,
@@ -175,8 +175,11 @@ export function YieldHistoryTooltip({
         ) : null}
       </div>
       {point.sourceSwitch ? (
-        <div className="mt-2 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-[10px] uppercase tracking-[0.14em] text-sky-700 dark:text-sky-300">
-          Source switch
+        <div className="mt-2 rounded-md border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-[10px] text-sky-700 dark:text-sky-300">
+          <span className="block font-medium uppercase tracking-[0.14em]">Source changed</span>
+          <span className="mt-1 block normal-case tracking-normal">
+            The selected source changed versus the prior published snapshot. This explains provenance churn, not stablecoin safety.
+          </span>
         </div>
       ) : null}
       {point.warningSignals.length > 0 ? (
@@ -187,7 +190,8 @@ export function YieldHistoryTooltip({
           <div className="mt-1 space-y-1">
             {point.warningSignals.map((signal) => (
               <div key={signal} className="text-muted-foreground">
-                {formatYieldWarningSignal(signal)}
+                <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
+                <span className="block">{formatYieldWarningSignalDescription(signal)}</span>
               </div>
             ))}
           </div>

@@ -5,6 +5,12 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { getYieldBenchmarkGapReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
+import {
+  classifyYieldSourceDepth,
+  getYieldSourceRiskDrivers,
+  type YieldSourceDepthLens,
+  type YieldSourceRiskDriver,
+} from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
@@ -52,6 +58,8 @@ export interface YieldDetailSectionReadyModel {
   benchmarkRate: number;
   medianApy: number;
   benchmarkIsFallback: boolean;
+  sourceDepthLens: YieldSourceDepthLens;
+  sourceRiskDrivers: YieldSourceRiskDriver[];
   externalSourceKeys?: string[];
   historySources: Array<{ sourceKey: string; yieldSource: string }>;
   dataSourceMeta: { label: string; badge: string };
@@ -185,6 +193,14 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const pysColor = getPysColor(ranking.pharosYieldScore);
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
+  const sourceDepthLens = classifyYieldSourceDepth({
+    sourceRisk: ranking.sourceRisk,
+    sourceTvlUsd: ranking.sourceTvlUsd,
+  });
+  const sourceRiskDrivers = getYieldSourceRiskDrivers({
+    sourceRisk: ranking.sourceRisk,
+    sourceChanged: ranking.provenance?.sourceSwitch ?? false,
+  });
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const historySources = buildHistorySources(ranking);
   const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
@@ -197,6 +213,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     benchmarkRate: ranking.benchmarkRate ?? data?.riskFreeRate ?? 0,
     medianApy: data?.medianApy ?? 0,
     benchmarkIsFallback: ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback,
+    sourceDepthLens,
+    sourceRiskDrivers,
     externalSourceKeys: selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined,
     historySources,
     dataSourceMeta,

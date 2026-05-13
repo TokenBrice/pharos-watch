@@ -1148,7 +1148,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonValue"
+                  "$ref": "#/components/schemas/YieldRankingsResponse"
                 }
               }
             }
@@ -1215,7 +1215,7 @@
             "name": "sourceKey",
             "in": "query",
             "required": false,
-            "description": "Optional source key filter.",
+            "description": "Required with `mode=source`; filters history to a single source key.",
             "schema": {
               "type": "string"
             }
@@ -1227,7 +1227,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonValue"
+                  "$ref": "#/components/schemas/YieldHistoryResponse"
                 }
               }
             }
@@ -1665,6 +1665,694 @@
     "schemas": {
       "JsonValue": {
         "description": "Endpoint-specific JSON response. See https://pharos.watch/about/api/ for detailed contracts."
+      },
+      "YieldRankingsResponse": {
+        "type": "object",
+        "description": "Yield Intelligence rankings payload.",
+        "required": [
+          "rankings",
+          "riskFreeRate",
+          "scalingFactor",
+          "medianApy",
+          "updatedAt"
+        ],
+        "properties": {
+          "rankings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/YieldRanking"
+            }
+          },
+          "riskFreeRate": {
+            "type": "number"
+          },
+          "benchmarks": {
+            "type": "object",
+            "description": "Benchmark registry keyed by currency such as USD, EUR, and CHF.",
+            "additionalProperties": true
+          },
+          "scalingFactor": {
+            "type": "number"
+          },
+          "medianApy": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Unix seconds when the rankings were last computed."
+          },
+          "provenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Snapshot-level source, benchmark, pool, and safety provenance.",
+            "additionalProperties": true
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "code",
+                "message"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "reasons": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "publication": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldPublicationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "_meta": {
+            "type": "object",
+            "description": "Cache freshness metadata when present.",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldRanking": {
+        "type": "object",
+        "description": "Ranked stablecoin yield row.",
+        "required": [
+          "id",
+          "symbol",
+          "name",
+          "currentApy",
+          "apy7d",
+          "apy30d",
+          "apyBase",
+          "apyReward",
+          "yieldSource",
+          "yieldType",
+          "dataSource",
+          "sourceTvlUsd",
+          "pharosYieldScore",
+          "safetyScore",
+          "safetyGrade",
+          "yieldToRisk",
+          "excessYield",
+          "yieldStability",
+          "apyVariance30d",
+          "apyMin30d",
+          "apyMax30d",
+          "warningSignals",
+          "altSources"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "currentApy": {
+            "type": "number"
+          },
+          "apy7d": {
+            "type": "number"
+          },
+          "apy30d": {
+            "type": "number"
+          },
+          "apyBase": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apyReward": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "yieldSource": {
+            "type": "string"
+          },
+          "yieldSourceUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldType": {
+            "type": "string"
+          },
+          "dataSource": {
+            "type": "string"
+          },
+          "sourceTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pharosYieldScore": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safetyScore": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "safetyGrade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldToRisk": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "excessYield": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "benchmarkKey": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "CHF"
+            ]
+          },
+          "benchmarkLabel": {
+            "type": "string"
+          },
+          "benchmarkCurrency": {
+            "type": "string"
+          },
+          "benchmarkRate": {
+            "type": "number"
+          },
+          "benchmarkRecordDate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "benchmarkIsFallback": {
+            "type": "boolean"
+          },
+          "benchmarkFallbackMode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "benchmarkSelectionMode": {
+            "type": "string",
+            "enum": [
+              "native",
+              "fallback-usd",
+              "manual-override"
+            ]
+          },
+          "benchmarkIsProxy": {
+            "type": "boolean"
+          },
+          "yieldStability": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apyVariance30d": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apyMin30d": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apyMax30d": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "warningSignals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "altSources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AltYieldSource"
+            }
+          },
+          "provenance": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Selected-source provenance, benchmark state, and source-switch metadata.",
+            "additionalProperties": true
+          },
+          "publicationGenerationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publishedRank": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "liveRank": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sourceRisk": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldSourceRisk"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rankChangeAttribution": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Reserved optional rank-change attribution scaffold.",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      },
+      "AltYieldSource": {
+        "type": "object",
+        "description": "Retained non-selected yield source row for the same stablecoin.",
+        "required": [
+          "sourceKey",
+          "yieldSource",
+          "yieldType",
+          "currentApy",
+          "apy30d",
+          "sourceTvlUsd",
+          "dataSource"
+        ],
+        "properties": {
+          "sourceKey": {
+            "type": "string"
+          },
+          "yieldSource": {
+            "type": "string"
+          },
+          "yieldSourceUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldType": {
+            "type": "string"
+          },
+          "currentApy": {
+            "type": "number"
+          },
+          "apy30d": {
+            "type": "number"
+          },
+          "sourceTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "dataSource": {
+            "type": "string"
+          },
+          "sourceRisk": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldSourceRisk"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldSourceRisk": {
+        "type": "object",
+        "description": "Nested source-risk evidence used by PYS v8. Missing or unknown evidence is neutral.",
+        "properties": {
+          "sourceRiskScore": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 100
+          },
+          "sourceRiskPenalty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "PYS v8 source-risk multiplier; runtime clamps populated values to the active range."
+          },
+          "sourceDepthRatio": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "rewardShare": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "sourceAgeSeconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "observationCount30d": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "sourceSwitchCount30d": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "deploymentPlace": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "native-wrapper",
+              "issuer-savings",
+              "lending-market",
+              "strategy-vault",
+              "lp-or-dex",
+              "rwa-fund",
+              "reward-program",
+              "rate-derived",
+              "price-derived",
+              null
+            ]
+          },
+          "venueProtocol": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "venueChain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "venueRiskTier": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "unknown",
+              null
+            ],
+            "description": "`unknown` remains neutral and should be treated as missing evidence."
+          },
+          "investabilityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldPublicationMetadata": {
+        "type": "object",
+        "description": "Generation metadata for published yield payloads.",
+        "properties": {
+          "generationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "cutoffAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "schemaVersion": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "staged",
+              "published",
+              "failed",
+              null
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldHistoryResponse": {
+        "type": "object",
+        "description": "Per-stablecoin yield history payload.",
+        "required": [
+          "current",
+          "history",
+          "methodology"
+        ],
+        "properties": {
+          "current": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldHistoryPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/YieldHistoryPoint"
+            }
+          },
+          "warning": {
+            "type": "string"
+          },
+          "methodology": {
+            "type": "object",
+            "description": "Yield methodology envelope.",
+            "additionalProperties": true
+          },
+          "publication": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldPublicationMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldHistoryPoint": {
+        "type": "object",
+        "description": "One historical yield observation.",
+        "required": [
+          "date",
+          "apy",
+          "apyBase",
+          "apyReward",
+          "exchangeRate",
+          "sourceTvlUsd",
+          "warningSignals"
+        ],
+        "properties": {
+          "date": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "apy": {
+            "type": "number"
+          },
+          "apyBase": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "apyReward": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "exchangeRate": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sourceTvlUsd": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "warningSignals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sourceKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldSource": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldSourceUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "yieldType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dataSource": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isBest": {
+            "type": "boolean"
+          },
+          "sourceSwitch": {
+            "type": "boolean"
+          },
+          "publicationGenerationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceRisk": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/YieldSourceRisk"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true
       }
     }
   }

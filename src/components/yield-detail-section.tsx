@@ -8,7 +8,8 @@ import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
+import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
@@ -115,7 +116,12 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       {view.singleWarning ? (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-          <span>{formatYieldWarningSignal(view.singleWarning)}</span>
+          <span>
+            <span className="font-medium">{formatYieldWarningSignal(view.singleWarning)}</span>
+            <span className="block text-xs text-amber-800/80 dark:text-amber-200/80">
+              {formatYieldWarningSignalDescription(view.singleWarning)}
+            </span>
+          </span>
         </div>
       ) : null}
 
@@ -127,7 +133,12 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               <strong>Multiple risk signals active:</strong>
               <ul className="mt-1 space-y-0.5 text-xs text-amber-700/90 dark:text-amber-300/85">
                 {view.warningSignals.map((signal) => (
-                  <li key={signal}>{formatYieldWarningSignal(signal)}</li>
+                  <li key={signal}>
+                    <span className="font-medium">{formatYieldWarningSignal(signal)}</span>
+                    <span className="block text-amber-700/80 dark:text-amber-300/75">
+                      {formatYieldWarningSignalDescription(signal)}
+                    </span>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -190,6 +201,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {view.ranking.provenance?.usedDefaultSafety ? (
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
+          {view.sourceRiskDrivers.length > 0 ? (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {view.sourceRiskDrivers.map((driver) => driver.label).join(", ")}
+            </p>
+          ) : (
+            <p className="mt-1 text-[11px] text-muted-foreground">No populated source-risk driver.</p>
+          )}
         </YieldDetailSectionStatCard>
         <YieldDetailSectionStatCard
           label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>}
@@ -221,12 +239,18 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ) : null}
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL and depth</p>
           <p className="mt-2 font-mono text-sm tabular-nums text-foreground">
             {view.ranking.sourceTvlUsd !== null ? formatCurrency(view.ranking.sourceTvlUsd) : "—"}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].description}>
+            {YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].label} depth
+          </p>
           {view.ranking.provenance?.sourceSwitch ? (
-            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Current best source recently switched</p>
+            <p className="mt-1 text-xs text-sky-700 dark:text-sky-300">
+              Source changed versus the prior published snapshot
+              {view.ranking.provenance.previousBestSourceKey ? ` (${view.ranking.provenance.previousBestSourceKey})` : ""}
+            </p>
           ) : null}
         </div>
       </div>
@@ -246,7 +270,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         />
       ) : view.ranking.altSources.length === 1 ? (
         <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Alternative Sources</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Retained alternates</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {view.ranking.altSources.map((source) => (
               <div

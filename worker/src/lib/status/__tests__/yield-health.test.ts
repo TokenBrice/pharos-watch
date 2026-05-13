@@ -58,7 +58,15 @@ describe("loadYieldHealthSummary", () => {
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
-          value: "{}",
+          value: JSON.stringify({
+            manifestMissingCount: 0,
+            yieldBearingMissingFromRankingsCount: 0,
+            unmatchedHighTvlPoolCount: 0,
+            missingProtocolCount: 0,
+            nativeExactPoolRecommendationCount: 0,
+            sourceFamilyAdapterRecommendationCount: 0,
+            lendingAllowlistRecommendationCount: 0,
+          }),
         },
       ]),
       NOW,
@@ -66,7 +74,7 @@ describe("loadYieldHealthSummary", () => {
     );
 
     expect(summary).toMatchObject({
-      status: "healthy",
+      status: "degraded",
       statusImpact: "admin-watch",
       rankingCount: 2,
       rankingUpdatedAt: NOW - 600,
@@ -91,8 +99,11 @@ describe("loadYieldHealthSummary", () => {
       coverageAudit: {
         ageSec: 86400,
         status: "healthy",
+        headlineGapCount: 0,
+        recommendationCandidateCount: 0,
       },
       sourceRiskCoverage: {
+        status: "degraded",
         totalRows: 2,
         bestRows: 2,
         altRows: 0,
@@ -162,7 +173,15 @@ describe("loadYieldHealthSummary", () => {
         {
           key: "yield-coverage-audit",
           updated_at: NOW - 86400,
-          value: "{}",
+          value: JSON.stringify({
+            manifestMissingIds: ["missing-yield-asset"],
+            yieldBearingMissingFromRankings: ["missing-ranking-asset"],
+            unmatchedHighTvlPoolCount: 2,
+            missingProtocols: [{ project: "new-protocol" }],
+            nativeExactPoolRecommendationCount: 3,
+            sourceFamilyAdapterRecommendations: [{ project: "aave-v3" }],
+            lendingAllowlistRecommendationCount: 5,
+          }),
         },
       ]),
       NOW,
@@ -194,6 +213,78 @@ describe("loadYieldHealthSummary", () => {
       eligibleCount: 2,
       populatedCount: 1,
       nullRate: 0.5,
+    });
+    expect(summary.coverageAudit).toMatchObject({
+      headlineGapCount: 5,
+      recommendationCandidateCount: 9,
+      manifestMissingCount: 1,
+      yieldBearingMissingFromRankingsCount: 1,
+      unmatchedHighTvlPoolCount: 2,
+      missingProtocolCount: 1,
+      nativeExactPoolRecommendationCount: 3,
+      sourceFamilyAdapterRecommendationCount: 1,
+      lendingAllowlistRecommendationCount: 5,
+    });
+  });
+
+  it("treats unknown venue risk tiers as missing evidence for penalty coverage", async () => {
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        {
+          key: "yield-rankings",
+          updated_at: NOW - 300,
+          value: JSON.stringify({
+            updatedAt: NOW - 300,
+            rankings: [
+              {
+                id: "usdc-circle",
+                sourceRisk: {
+                  sourceRiskPenalty: 1,
+                  venueRiskTier: "unknown",
+                },
+              },
+            ],
+            provenance: {
+              safetySnapshot: {
+                coverageRatio: 1,
+                coveredCount: 1,
+                trackedCount: 1,
+                reason: null,
+              },
+              benchmark: {
+                fetchedAt: NOW - 3600,
+                ageSeconds: 3600,
+                source: "tbill-cache",
+                isFallback: false,
+                fallbackMode: null,
+              },
+            },
+          }),
+        },
+        {
+          key: "yield:supplemental-sources:v1",
+          updated_at: NOW - 3600,
+          value: "{}",
+        },
+        {
+          key: "yield-coverage-audit",
+          updated_at: NOW - 86400,
+          value: "{}",
+        },
+      ]),
+      NOW,
+      { "sync-yield-data": cron() },
+    );
+
+    expect(summary.sourceRiskCoverage.fields.venueRiskTier).toMatchObject({
+      eligibleCount: 1,
+      populatedCount: 0,
+      nullRate: 1,
+    });
+    expect(summary.sourceRiskCoverage.fields.sourceRiskPenalty).toMatchObject({
+      eligibleCount: 1,
+      populatedCount: 0,
+      nullRate: 1,
     });
   });
 

@@ -231,7 +231,7 @@ describe("YieldDetailSection", () => {
 
     const { rerender } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
 
-    expect(screen.getByText("Alternative Sources")).toBeTruthy();
+    expect(screen.getByText("Retained alternates")).toBeTruthy();
     expect(screen.getByTestId("yield-history-chart").getAttribute("data-available-sources")).toBe(
       "primary-source,alt-source,second-alt-source",
     );

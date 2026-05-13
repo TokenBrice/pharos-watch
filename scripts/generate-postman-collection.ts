@@ -4,6 +4,7 @@ import {
   POSTMAN_FOLDERS,
   PUBLIC_API_ARTIFACT_ENDPOINTS,
   PUBLIC_STATIC_POSTMAN_REQUESTS,
+  type PostmanRequestConfig,
   type PostmanFolderName,
   type PublicApiArtifactEndpoint,
 } from "./lib/public-api-artifact-catalog";
@@ -33,23 +34,30 @@ interface PostmanRequestEntry {
 
 const COLLECTION_SCHEMA = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json";
 
+function normalizePostmanRequests(postman: PublicApiArtifactEndpoint["postman"]): readonly PostmanRequestConfig[] {
+  if (!postman) {
+    return [];
+  }
+
+  if (Array.isArray(postman)) {
+    return postman as readonly PostmanRequestConfig[];
+  }
+  return [postman as PostmanRequestConfig];
+}
+
 const requests: PostmanRequestEntry[] = [
   ...PUBLIC_API_ARTIFACT_ENDPOINTS.flatMap((endpoint: PublicApiArtifactEndpoint) => {
-    if (!endpoint.postman) {
-      return [];
-    }
-
-    return [{
-      folder: endpoint.postman.folder,
-      order: endpoint.postman.order,
+    return normalizePostmanRequests(endpoint.postman).map((postman) => ({
+      folder: postman.folder,
+      order: postman.order,
       request: {
-        name: endpoint.postman.name ?? endpoint.summary,
-        path: endpoint.postman.path ?? endpoint.path,
-        description: endpoint.postman.description ?? endpoint.description,
-        query: endpoint.postman.query,
-        noAuth: endpoint.postman.noAuth,
+        name: postman.name ?? endpoint.summary,
+        path: postman.path ?? endpoint.path,
+        description: postman.description ?? endpoint.description,
+        query: postman.query,
+        noAuth: postman.noAuth,
       },
-    }];
+    }));
   }),
   ...PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => ({
     folder: "Static datasets" as const,
@@ -126,6 +134,8 @@ function renderCollection() {
       { key: "apiBaseUrl", value: "https://api.pharos.watch" },
       { key: "siteBaseUrl", value: "https://pharos.watch" },
       { key: "stablecoinId", value: "usdt-tether" },
+      { key: "yieldSourceStablecoinId", value: "usde-ethena" },
+      { key: "yieldSourceKey", value: "onchain:susde-ethena" },
       { key: "blacklistStablecoinSymbol", value: "USDT" },
       { key: "reserveStablecoinId", value: "usdc-circle" },
       { key: "days", value: "90" },
@@ -148,6 +158,8 @@ function renderEnvironment() {
       { key: "siteBaseUrl", value: "https://pharos.watch", type: "default", enabled: true },
       { key: "apiKey", value: "ph_live_REPLACE_WITH_YOUR_KEY", type: "secret", enabled: true },
       { key: "stablecoinId", value: "usdt-tether", type: "default", enabled: true },
+      { key: "yieldSourceStablecoinId", value: "usde-ethena", type: "default", enabled: true },
+      { key: "yieldSourceKey", value: "onchain:susde-ethena", type: "default", enabled: true },
       { key: "blacklistStablecoinSymbol", value: "USDT", type: "default", enabled: true },
       { key: "reserveStablecoinId", value: "usdc-circle", type: "default", enabled: true },
       { key: "days", value: "90", type: "default", enabled: true },

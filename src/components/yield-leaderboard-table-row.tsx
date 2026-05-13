@@ -14,7 +14,17 @@ import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
-import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
+import {
+  computePysBreakdown,
+  formatYieldWarningSignal,
+  formatYieldWarningSignalDescription,
+  getPysColor,
+} from "@/lib/yield-constants";
+import {
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  formatYieldSourceRiskDriverSummary,
+  getYieldSourceRiskDrivers,
+} from "@/lib/yield-source-risk";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 interface YieldLeaderboardTableRowProps {
@@ -64,6 +74,17 @@ function YieldLeaderboardTableRowBase({
     [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore],
   );
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
+  const sourceRiskDrivers = useMemo(
+    () => getYieldSourceRiskDrivers({
+      sourceRisk: row.sourceRisk,
+      sourceChanged: row.provenance?.sourceSwitch ?? false,
+    }),
+    [row.provenance?.sourceSwitch, row.sourceRisk],
+  );
+  const sourceRiskSummary = useMemo(
+    () => formatYieldSourceRiskDriverSummary(sourceRiskDrivers),
+    [sourceRiskDrivers],
+  );
   const availableSources = useMemo(
     () => [
       ...(row.provenance?.sourceKey
@@ -172,6 +193,9 @@ function YieldLeaderboardTableRowBase({
                     <span className="text-muted-foreground">, utility </span>
                     <span className="font-mono tabular-nums">{rowUtility.toFixed(1)}</span>
                   </div>
+                  <div className="rounded-md border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                    {sourceRiskSummary}
+                  </div>
                   <div className="text-[11px] text-muted-foreground">
                     <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY
                     {benchmarkSpread !== null ? (
@@ -218,11 +242,14 @@ function YieldLeaderboardTableRowBase({
               </YieldSourceLink>
               {row.provenance?.sourceSwitch ? (
                 <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                  switch
+                  source changed
                 </span>
               ) : null}
             </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">{benchmarkReferenceText}</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].description}>
+              Depth: {YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label}
+            </p>
           </div>
         </TableCell>
         <TableCell className="hidden text-center sm:table-cell">
@@ -286,10 +313,13 @@ function YieldLeaderboardTableRowBase({
                   />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>
-                <ul className="space-y-1 text-xs">
+              <TooltipContent className="max-w-[300px]">
+                <ul className="space-y-2 text-xs">
                   {row.warningSignals.map((signal) => (
-                    <li key={signal}>{formatYieldWarningSignal(signal)}</li>
+                    <li key={signal}>
+                      <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
+                      <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
+                    </li>
                   ))}
                 </ul>
               </TooltipContent>
@@ -355,7 +385,7 @@ function YieldLeaderboardTableRowBase({
                     </YieldSourceLink>
                     {row.provenance?.sourceSwitch ? (
                       <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
-                        switch
+                        source changed
                       </span>
                     ) : null}
                   </div>
@@ -369,7 +399,10 @@ function YieldLeaderboardTableRowBase({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Signals</p>
                     <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
                       {row.warningSignals.map((signal) => (
-                        <li key={signal}>{formatYieldWarningSignal(signal)}</li>
+                        <li key={signal}>
+                          <span>{formatYieldWarningSignal(signal)}</span>
+                          <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>

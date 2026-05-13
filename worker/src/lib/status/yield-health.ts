@@ -27,6 +27,14 @@ const SOURCE_RISK_COVERAGE_FIELDS = [
   "venueChain",
   "venueRiskTier",
 ] satisfies YieldSourceRiskCoverageField[];
+const SOURCE_RISK_CORE_COVERAGE_FIELDS = [
+  "sourceRiskPenalty",
+  "rewardShare",
+  "sourceAgeSeconds",
+  "sourceDepthRatio",
+  "venueRiskTier",
+  "sourceRiskScore",
+] satisfies YieldSourceRiskCoverageField[];
 
 interface CacheRow {
   key: string;
@@ -166,13 +174,44 @@ function buildSourceRiskCoverage(rankings: unknown[] | null): YieldSourceRiskCov
     }),
   ) as YieldSourceRiskCoverageSummary["fields"];
 
+  const coreRatios = SOURCE_RISK_CORE_COVERAGE_FIELDS
+    .map((field) => fields[field])
+    .filter((field) => field.eligibleCount > 0)
+    .map((field) => field.coverageRatio);
+  const status: YieldHealthFieldStatus = coreRatios.length === 0
+    ? "unknown"
+    : Math.min(...coreRatios) >= STATUS_YIELD_HEALTH_THRESHOLDS.sourceRiskCoverageRatio
+      ? "healthy"
+      : "degraded";
+
   return {
+    status,
+    threshold: STATUS_YIELD_HEALTH_THRESHOLDS.sourceRiskCoverageRatio,
     totalRows: sourceRows.length,
     bestRows: sourceRows.filter((row) => row.isBest).length,
     altRows: sourceRows.filter((row) => !row.isBest).length,
     rowsWithSourceRisk: sourceRows.filter((row) => row.sourceRisk != null).length,
     fields,
   };
+}
+
+function getArrayCount(value: unknown): number | null {
+  return Array.isArray(value) ? value.length : null;
+}
+
+function getCount(payload: Record<string, unknown> | null, countKey: string, arrayKey?: string): number | null {
+  return getNumber(payload?.[countKey]) ?? (arrayKey ? getArrayCount(payload?.[arrayKey]) : null);
+}
+
+function sumKnown(values: Array<number | null>): number | null {
+  let hasKnownValue = false;
+  let total = 0;
+  for (const value of values) {
+    if (value == null) continue;
+    hasKnownValue = true;
+    total += value;
+  }
+  return hasKnownValue ? total : null;
 }
 
 function buildSupplementalHealth(
@@ -309,12 +348,47 @@ export async function loadYieldHealthSummary(
     : benchmarkStaleness;
 
   const coverageAuditUpdatedAt = byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.updated_at ?? null;
+  const coverageAuditPayload = safeJson(byKey.get(YIELD_COVERAGE_AUDIT_CACHE_KEY)?.value ?? null);
   const coverageAuditAgeSec = ageSeconds(now, coverageAuditUpdatedAt);
   const coverageAuditStatus = freshnessStatus(
     coverageAuditAgeSec,
     STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
     { missingIs: "unknown", degradedAfterOne: true },
   );
+  const manifestMissingCount = getCount(coverageAuditPayload, "manifestMissingCount", "manifestMissingIds");
+  const yieldBearingMissingFromRankingsCount = getCount(
+    coverageAuditPayload,
+    "yieldBearingMissingFromRankingsCount",
+    "yieldBearingMissingFromRankings",
+  );
+  const unmatchedHighTvlPoolCount = getCount(coverageAuditPayload, "unmatchedHighTvlPoolCount", "unmatchedHighTvlPools");
+  const missingProtocolCount = getCount(coverageAuditPayload, "missingProtocolCount", "missingProtocols");
+  const nativeExactPoolRecommendationCount = getCount(
+    coverageAuditPayload,
+    "nativeExactPoolRecommendationCount",
+    "nativeExactPoolRecommendations",
+  );
+  const sourceFamilyAdapterRecommendationCount = getCount(
+    coverageAuditPayload,
+    "sourceFamilyAdapterRecommendationCount",
+    "sourceFamilyAdapterRecommendations",
+  );
+  const lendingAllowlistRecommendationCount = getCount(
+    coverageAuditPayload,
+    "lendingAllowlistRecommendationCount",
+    "lendingAllowlistRecommendations",
+  );
+  const headlineGapCount = sumKnown([
+    manifestMissingCount,
+    yieldBearingMissingFromRankingsCount,
+    unmatchedHighTvlPoolCount,
+    missingProtocolCount,
+  ]);
+  const recommendationCandidateCount = sumKnown([
+    nativeExactPoolRecommendationCount,
+    sourceFamilyAdapterRecommendationCount,
+    lendingAllowlistRecommendationCount,
+  ]);
 
   const status = worstStatus([
     rankingStatus,
@@ -322,6 +396,7 @@ export async function loadYieldHealthSummary(
     supplemental.status,
     benchmarkStatus,
     coverageAuditStatus,
+    sourceRiskCoverage.status,
   ]);
 
   return {
@@ -356,6 +431,15 @@ export async function loadYieldHealthSummary(
       ageSec: coverageAuditAgeSec,
       maxAgeSec: STATUS_YIELD_HEALTH_THRESHOLDS.coverageAuditMaxAgeSec,
       status: coverageAuditStatus,
+      headlineGapCount,
+      recommendationCandidateCount,
+      manifestMissingCount,
+      yieldBearingMissingFromRankingsCount,
+      unmatchedHighTvlPoolCount,
+      missingProtocolCount,
+      nativeExactPoolRecommendationCount,
+      sourceFamilyAdapterRecommendationCount,
+      lendingAllowlistRecommendationCount,
     },
     sourceRiskCoverage,
     latestCronStatus: crons["sync-yield-data"]?.lastRun?.status ?? null,

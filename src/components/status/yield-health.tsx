@@ -1,9 +1,24 @@
 "use client";
 
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
-import type { StatusSectionError, YieldHealthFieldStatus, YieldHealthSummary } from "@shared/types";
+import type {
+  StatusSectionError,
+  YieldHealthFieldStatus,
+  YieldHealthSummary,
+  YieldSourceRiskCoverageField,
+  YieldSourceRiskFieldCoverage,
+} from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusMetricCard } from "./status-metric-card";
+
+const SOURCE_RISK_COVERAGE_FIELDS = [
+  ["sourceRiskPenalty", "Penalty"],
+  ["rewardShare", "Rewards"],
+  ["sourceAgeSeconds", "Age"],
+  ["sourceDepthRatio", "Depth"],
+  ["venueRiskTier", "Venue tier"],
+  ["sourceRiskScore", "Score"],
+] satisfies Array<[YieldSourceRiskCoverageField, string]>;
 
 function statusClassName(status: YieldHealthFieldStatus): string {
   if (status === "healthy") return "text-green-700 dark:text-green-400";
@@ -25,6 +40,26 @@ function supplementalSubtext(supplemental: YieldHealthSummary["supplemental"]): 
     return `${fresh}/${supplemental.familyCount} fresh · ${degraded} degraded · ${stale} stale · ${missing} missing`;
   }
   return ageLabel(supplemental.ageSec);
+}
+
+function coverageStatus(
+  field: YieldSourceRiskFieldCoverage | undefined,
+  threshold: number,
+): YieldHealthFieldStatus {
+  if (!field || field.eligibleCount <= 0) return "unknown";
+  return field.coverageRatio >= threshold ? "healthy" : "degraded";
+}
+
+function coverageSubtext(coverage: YieldHealthSummary["sourceRiskCoverage"]): string {
+  if (coverage.totalRows <= 0) return "no ranking rows";
+  return `${coverage.rowsWithSourceRisk}/${coverage.totalRows} rows with sourceRisk`;
+}
+
+function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): string {
+  if (coverageAudit.headlineGapCount == null && coverageAudit.recommendationCandidateCount == null) {
+    return "queue unavailable";
+  }
+  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates`;
 }
 
 export function YieldHealthCard({
@@ -65,7 +100,7 @@ export function YieldHealthCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
           <StatusMetricCard
             label="Rankings"
             value={<span className={statusClassName(health.rankingStatus)}>{health.rankingCount ?? "-"}</span>}
@@ -98,6 +133,38 @@ export function YieldHealthCard({
                 : `${health.benchmark.source ?? "source"} · ${ageLabel(health.benchmark.ageSec)}`
             }
           />
+          <StatusMetricCard
+            label="Source Risk"
+            value={
+              <span className={statusClassName(health.sourceRiskCoverage.status)}>
+                {health.sourceRiskCoverage.status}
+              </span>
+            }
+            subtext={coverageSubtext(health.sourceRiskCoverage)}
+          />
+        </div>
+
+        <div className="rounded-lg border border-border/50 p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-medium text-muted-foreground">Source-risk coverage</div>
+            <div className="text-xs text-muted-foreground">
+              Warn below {formatPercentFromRatio(health.sourceRiskCoverage.threshold, 0)}
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="Source-risk coverage fields">
+            {SOURCE_RISK_COVERAGE_FIELDS.map(([field, label]) => {
+              const coverage = health.sourceRiskCoverage.fields[field];
+              const fieldStatus = coverageStatus(coverage, health.sourceRiskCoverage.threshold);
+              return (
+                <div key={field} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className={`font-mono font-semibold ${statusClassName(fieldStatus)}`}>
+                    {coverage ? formatPercentFromRatio(coverage.coverageRatio, 0) : "-"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
@@ -107,6 +174,9 @@ export function YieldHealthCard({
               {health.coverageAudit.status}
             </span>{" "}
             ({ageLabel(health.coverageAudit.ageSec)})
+          </span>
+          <span>
+            Coverage queue: {auditQueueSubtext(health.coverageAudit)}
           </span>
           <span>
             Status impact: {health.statusImpact === "public-critical" ? "public critical" : "admin watch"}

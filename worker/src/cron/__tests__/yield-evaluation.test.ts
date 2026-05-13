@@ -48,7 +48,144 @@ function resolvedYield(overrides: Partial<ResolvedYield>): ResolvedYield {
   };
 }
 
+function historyRows(sourceKey: string, count: number, startSec: number, apy = 5) {
+  return Array.from({ length: count }, (_, index) => ({
+    stablecoin_id: "coin-a",
+    source_key: sourceKey,
+    recorded_at: startSec - (index + 1) * 3600,
+    is_best: 1,
+    apy,
+    source_tvl_usd: 1_000_000,
+    data_source: "defillama",
+    yield_source: "Fixture source",
+    yield_type: "lending-vault" as const,
+  }));
+}
+
 describe("evaluateYieldSources", () => {
+  it("covers source-risk golden rows from evaluation inputs", () => {
+    const startSec = 1776729600;
+    const goldenRows = [
+      {
+        label: "reward-heavy",
+        yield: resolvedYield({
+          sourceKey: "protocol-api:coin-a:reward-heavy",
+          dataSource: "protocol-api",
+          currentApy: 10,
+          apyBase: 1,
+          apyReward: 9,
+        }),
+        historyCount: 9,
+        expectedPenalty: 1.4,
+      },
+      {
+        label: "stale-source-age",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:stale",
+          sourceObservedAt: startSec - 7 * 60 * 60,
+        }),
+        historyCount: 9,
+        expectedPenalty: 1.25,
+      },
+      {
+        label: "low-source-depth",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:thin",
+          sourceTvlUsd: 1_000,
+        }),
+        historyCount: 9,
+        expectedPenalty: 1.35,
+      },
+      {
+        label: "source-switch-churn",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:switch",
+        }),
+        historyCount: 9,
+        input: {
+          prevBestSourceKeyByCoin: new Map([["coin-a", "defillama:coin-a:prior"]]),
+          sourceSwitchCount30dByCoin: new Map([["coin-a", 2]]),
+        },
+        expectedPenalty: 1.3,
+        expectedSourceSwitchCount30d: 3,
+      },
+      {
+        label: "bootstrap-observation-count",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:bootstrap",
+        }),
+        historyCount: 0,
+        expectedPenalty: 1.2,
+      },
+      {
+        label: "zero-apy",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:zero",
+          currentApy: 0,
+          apyBase: 0,
+          apyReward: 0,
+        }),
+        historyCount: 0,
+        expectedPenalty: 1.2,
+        expectedPys: 0,
+      },
+      {
+        label: "negative-apy",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:negative",
+          currentApy: -1,
+          apyBase: -1,
+          apyReward: null,
+        }),
+        historyCount: 0,
+        expectedPenalty: 1.2,
+        expectedPys: 0,
+      },
+      {
+        label: "missing-safety",
+        yield: resolvedYield({
+          sourceKey: "defillama:coin-a:missing-safety",
+        }),
+        historyCount: 9,
+        input: {
+          safetyScores: new Map(),
+        },
+        expectedPenalty: 1,
+        expectedUsedDefaultSafety: true,
+      },
+    ];
+
+    for (const row of goldenRows) {
+      const sourceHistory = row.historyCount > 0
+        ? new Map([
+            [
+              buildHistoryKey("coin-a", row.yield.sourceKey),
+              historyRows(row.yield.sourceKey, row.historyCount, startSec),
+            ],
+          ])
+        : new Map();
+      const result = evaluateYieldSources(baseEvaluationInput({
+        startSec,
+        sevenDaysAgoSec: startSec - 7 * 86400,
+        resolved: [{ id: "coin-a", symbol: "A", yield: row.yield }],
+        sourceHistory,
+        ...(row.input ?? {}),
+      }));
+      const source = result.evaluatedSources[0];
+
+      expect(source?.sourceRiskPenalty, row.label).toBeCloseTo(row.expectedPenalty, 6);
+      if (row.expectedSourceSwitchCount30d != null) {
+        expect(source?.sourceSwitchCount30d, row.label).toBe(row.expectedSourceSwitchCount30d);
+      }
+      if (row.expectedPys != null) {
+        expect(source?.pharosYieldScore, row.label).toBe(row.expectedPys);
+      }
+      if (row.expectedUsedDefaultSafety != null) {
+        expect(source?.usedDefaultSafety, row.label).toBe(row.expectedUsedDefaultSafety);
+      }
+    }
+  });
+
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {
     const result = evaluateYieldSources(baseEvaluationInput({
       resolved: [
@@ -77,6 +214,7 @@ describe("evaluateYieldSources", () => {
     expect(result.bestSourceKeyByCoin.get("coin-a")).toBe("protocol-api:coin-a:clean");
     const fragile = result.evaluatedSources.find((source) => source.sourceKey === "defillama:coin-a:fragile");
     const clean = result.evaluatedSources.find((source) => source.sourceKey === "protocol-api:coin-a:clean");
+    expect(fragile?.sourceRisk).toMatchObject({ sourceRiskPenalty: 2.5 });
     expect(fragile?.sourceRiskPenalty).toBe(2.5);
     expect(clean?.sourceRiskPenalty).toBe(1.2);
     expect(clean?.sourceRiskPenaltyReason).toBe("provided");

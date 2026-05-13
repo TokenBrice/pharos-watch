@@ -364,7 +364,13 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       sourceKey: "defillama:alt-a",
       yieldSource: "Shared Venue",
       currentApy: 5,
+      apyReward: 2.5,
       pharosYieldScore: 80,
+      sourceRiskPenalty: 1.5,
+      sourceRiskPenaltyReason: "provided",
+      sourceRiskPenaltyProvided: true,
+      sourceDepthRatio: 0.0005,
+      observationCount30d: 4,
     });
     const altB = makeEvaluatedSource({
       sourceKey: "defillama:alt-b",
@@ -390,7 +396,19 @@ describe("validateYieldRankingsPayloadForPublish", () => {
       "defillama:alt-a",
       "defillama:alt-b",
     ]);
-    expect(payload.rankings[0]?.altSources[0]?.sourceRisk?.sourceSwitchCount30d).toBeNull();
+    const ranking = payload.rankings[0];
+    const firstAlt = ranking?.altSources[0];
+    expect(firstAlt?.sourceRisk).toMatchObject({
+      sourceRiskPenalty: 1.5,
+      sourceDepthRatio: 0.0005,
+      rewardShare: 0.5,
+      observationCount30d: 4,
+      sourceSwitchCount30d: null,
+      deploymentPlace: "strategy-vault",
+      venueRiskTier: "unknown",
+    });
+    expect((ranking as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
+    expect((firstAlt as unknown as Record<string, unknown> | undefined)?.sourceRiskPenalty).toBeUndefined();
   });
 });
 

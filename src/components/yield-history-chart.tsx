@@ -309,7 +309,7 @@ export function YieldHistoryChart({
         </span>
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
           <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
-          Source switches
+          Source changed
         </span>
         {model.overlayLabels.map((source, i) => (
           <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">

@@ -86,6 +86,7 @@ export interface YieldRankChangeAttribution {
     benchmark?: number | null;
     stablecoinSafety?: number | null;
     sourceRisk?: number | null;
+    sourceSwitch?: number | null;
     freshness?: number | null;
     volatility?: number | null;
     tvlDepth?: number | null;
@@ -235,6 +236,7 @@ const YieldRankChangeAttributionSchema: z.ZodType<YieldRankChangeAttribution> = 
       benchmark: z.number().nullable().optional(),
       stablecoinSafety: z.number().nullable().optional(),
       sourceRisk: z.number().nullable().optional(),
+      sourceSwitch: z.number().nullable().optional(),
       freshness: z.number().nullable().optional(),
       volatility: z.number().nullable().optional(),
       tvlDepth: z.number().nullable().optional(),
@@ -419,6 +421,7 @@ export interface YieldRankingsResponse {
   provenance?: YieldRankingsProvenance | null;
   warnings?: YieldResponseWarning[];
   publication?: YieldPublicationMetadata | null;
+  methodology?: MethodologyEnvelope;
 }
 
 export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.object({
@@ -439,6 +442,7 @@ export const YieldRankingsResponseSchema: z.ZodType<YieldRankingsResponse> = z.o
     )
     .optional(),
   publication: YieldPublicationMetadataSchema.nullable().optional(),
+  methodology: MethodologyEnvelopeSchema.optional(),
 });
 
 export interface YieldHistoryResponse {

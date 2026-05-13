@@ -11,12 +11,16 @@ const rows = [
     warningSignals: [],
     safetyScore: 82,
     sourceTvlUsd: 5_000_000,
+    sourceRisk: {
+      sourceDepthRatio: 0.0005,
+    },
     pharosYieldScore: 72,
     benchmarkKey: "USD",
     benchmarkLabel: "USD 3M T-Bill",
     benchmarkRate: 4.25,
     provenance: makeYieldProvenance({
       confidenceTier: "curated",
+      sourceSwitch: true,
       benchmarkKey: "USD",
       benchmarkLabel: "USD 3M T-Bill",
       benchmarkRate: 4.25,
@@ -56,6 +60,9 @@ const rows = [
     warningSignals: ["low-source-tvl"],
     safetyScore: 65,
     sourceTvlUsd: 50_000_000,
+    sourceRisk: {
+      sourceDepthRatio: 0.005,
+    },
     pharosYieldScore: 58,
     benchmarkKey: "USD",
     benchmarkLabel: "USD 3M T-Bill",
@@ -160,7 +167,7 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(rows, {});
 
     expect(model.comparableSets.map((set) => set.basis)).toEqual(
-      expect.arrayContaining(["yield-type", "peg", "benchmark", "warning-state", "source-confidence", "tvl"]),
+      expect.arrayContaining(["yield-type", "peg", "benchmark", "warning-state", "source-confidence", "tvl", "source-depth"]),
     );
     expect(model.comparableSets.map((set) => set.basis)).not.toEqual(
       expect.arrayContaining(["chain", "venue", "risk-tier", "deployment-place"]),
@@ -177,5 +184,24 @@ describe("buildYieldViewModel", () => {
       description: "Reset one or more filters to broaden the comparable set.",
     });
     expect(model.stats.avgApy).toBe(0);
+  });
+
+  it("filters by URL-backed source depth lens", () => {
+    expect(buildYieldViewModel(rows, { depth: "thin" }).visibleRows.map((row) => row.id)).toEqual(["usdc-circle"]);
+    expect(buildYieldViewModel(rows, { depth: "moderate" }).visibleRows.map((row) => row.id)).toEqual(["usdt-tether"]);
+    expect(buildYieldViewModel(rows, { depth: "hide-thin" }).visibleRows.map((row) => row.id)).toEqual([
+      "eurc-circle",
+      "usdt-tether",
+    ]);
+  });
+
+  it("filters rows with changed sources from URL state", () => {
+    expect(buildYieldViewModel(rows, { sourceChanged: "only" }).visibleRows.map((row) => row.id)).toEqual([
+      "usdc-circle",
+    ]);
+    expect(buildYieldViewModel(rows, { sourceChanged: "none" }).visibleRows.map((row) => row.id)).toEqual([
+      "eurc-circle",
+      "usdt-tether",
+    ]);
   });
 });

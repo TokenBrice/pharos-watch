@@ -15,6 +15,8 @@ Internal changelog reconstructed from git history. Covers Yield Intelligence `v1
 - The hourly publisher now publishes the `yield-rankings` cache through CAS before replacing current `yield_data` rows, so failed cache writes or older-run CAS skips leave the last published D1 snapshot visible to downstream readers
 - Legacy `v7.48` payloads remain valid without `publication`, `sourceRisk`, rank, or attribution fields because missing source-risk inputs resolve to the neutral penalty
 - Report-card yield-risk helpers normalize the source-risk payload but still return explicit no-op adjustments until a separate report-card methodology version defines sourced caps or haircuts
+- Current yield source-risk does not affect Safety Score, Dependency Risk, Resilience, or overall report-card grades; future score-affecting use requires a report-card methodology update and matching report-card timeline entry
+- DEWS continues to use yield anomaly warning signals rather than structured `sourceRisk.*`, source-switch, or rank-attribution fields until a future DEWS methodology version defines scored consumption
 
 ---
 

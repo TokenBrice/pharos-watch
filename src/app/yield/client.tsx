@@ -112,6 +112,8 @@ export function YieldClient() {
       sourceConfidence: searchParams.get("sourceConfidence"),
       benchmark: searchParams.get("benchmark"),
       opportunity: searchParams.get("opportunity"),
+      depth: searchParams.get("depth"),
+      sourceChanged: searchParams.get("sourceChanged"),
     }),
     [searchParams],
   );

@@ -607,6 +607,8 @@ export interface YieldSourceRiskFieldCoverage {
 }
 
 export interface YieldSourceRiskCoverageSummary {
+  status: YieldHealthFieldStatus;
+  threshold: number;
   totalRows: number;
   bestRows: number;
   altRows: number;
@@ -662,6 +664,15 @@ export interface YieldHealthSummary {
     ageSec: number | null;
     maxAgeSec: number;
     status: YieldHealthFieldStatus;
+    headlineGapCount: number | null;
+    recommendationCandidateCount: number | null;
+    manifestMissingCount: number | null;
+    yieldBearingMissingFromRankingsCount: number | null;
+    unmatchedHighTvlPoolCount: number | null;
+    missingProtocolCount: number | null;
+    nativeExactPoolRecommendationCount: number | null;
+    sourceFamilyAdapterRecommendationCount: number | null;
+    lendingAllowlistRecommendationCount: number | null;
   };
   sourceRiskCoverage: YieldSourceRiskCoverageSummary;
   latestCronStatus: string | null;

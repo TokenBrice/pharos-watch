@@ -454,6 +454,79 @@ describe("handleYieldHistory", () => {
     expect(historyQuery?.binds[2]).toBe(publishedAt);
   });
 
+  it("attaches nested sourceRisk to generation-matched history points from the rankings cache", async () => {
+    const publishedAt = 1_774_526_400;
+    const generatedRow = {
+      ...makeYieldHistoryRow({ recorded_at: publishedAt, source_key: "aave-v3:usdt" }),
+      publication_generation_id: "yield-1774526400",
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["yield-rankings"],
+        rows: [
+          {
+            key: "yield-rankings",
+            value: JSON.stringify({
+              updatedAt: publishedAt,
+              publication: {
+                generationId: "yield-1774526400",
+                updatedAt: publishedAt,
+                cutoffAt: publishedAt,
+                schemaVersion: 1,
+                status: "published",
+              },
+              rankings: [
+                {
+                  id: "usdt-tether",
+                  publicationGenerationId: "yield-1774526400",
+                  provenance: { sourceKey: "aave-v3:usdt" },
+                  sourceRisk: {
+                    sourceRiskPenalty: 1.35,
+                    sourceRiskScore: 72,
+                    sourceDepthRatio: 0.18,
+                    rewardShare: 0.25,
+                    sourceAgeSeconds: 420,
+                    observationCount30d: 18,
+                    sourceSwitchCount30d: 1,
+                    deploymentPlace: "lending-market",
+                    venueProtocol: "aave-v3",
+                    venueChain: "ethereum",
+                    venueRiskTier: "low",
+                    investabilityFlags: ["reward-heavy"],
+                  },
+                },
+              ],
+            }),
+            updated_at: publishedAt,
+          },
+        ],
+      },
+      { match: "yield_history", rows: [generatedRow] },
+    ]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as YieldHistoryResponse;
+    expect(body.current?.sourceRisk).toMatchObject({
+      sourceRiskPenalty: 1.35,
+      sourceRiskScore: 72,
+      sourceDepthRatio: 0.18,
+      rewardShare: 0.25,
+      sourceAgeSeconds: 420,
+      observationCount30d: 18,
+      sourceSwitchCount30d: 1,
+      deploymentPlace: "lending-market",
+      venueProtocol: "aave-v3",
+      venueChain: "ethereum",
+      venueRiskTier: "low",
+      investabilityFlags: ["reward-heavy"],
+    });
+    expect(body.history[0]?.sourceRisk).toEqual(body.current?.sourceRisk);
+    expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
+  });
+
   it("keeps legacy history behavior when the rankings cache has no generation metadata", async () => {
     const publishedAt = 1_774_526_400;
     const legacyRow = makeYieldHistoryRow({ recorded_at: publishedAt });

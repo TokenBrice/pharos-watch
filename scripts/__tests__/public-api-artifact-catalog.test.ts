@@ -7,6 +7,8 @@ import {
   PUBLIC_API_ARTIFACT_ENDPOINTS,
   PUBLIC_API_ARTIFACT_TAGS,
   PUBLIC_STATIC_POSTMAN_REQUESTS,
+  type PostmanRequestConfig,
+  type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 
 const integrationFacingPublicKeys = ENDPOINT_DEFINITIONS
@@ -24,6 +26,11 @@ const FORBIDDEN_ARTIFACT_PATHS = [
   "/api/api-key-requests/verify",
   "/api/api-key-requests-admin",
 ];
+
+function postmanRequests(postman: PublicApiArtifactEndpoint["postman"]): readonly PostmanRequestConfig[] {
+  if (!postman) return [];
+  return Array.isArray(postman) ? postman : [postman];
+}
 
 describe("public API artifact catalog", () => {
   it("covers every integration-facing public GET endpoint definition", () => {
@@ -63,7 +70,9 @@ describe("public API artifact catalog", () => {
 
     for (const endpoint of PUBLIC_API_ARTIFACT_ENDPOINTS) {
       expect(endpoint.postman, endpoint.key).toBeDefined();
-      expect(folderNames.has(endpoint.postman?.folder), endpoint.key).toBe(true);
+      for (const request of postmanRequests(endpoint.postman)) {
+        expect(folderNames.has(request.folder), endpoint.key).toBe(true);
+      }
     }
 
     expect(PUBLIC_STATIC_POSTMAN_REQUESTS.map((request) => request.base)).toEqual(["site", "site", "site"]);
@@ -141,7 +150,7 @@ describe("public API artifact catalog", () => {
     expect(sortDirection?.schema.enum).toEqual(["asc", "desc"]);
     const limit = endpoint?.parameters?.find((parameter) => parameter.name === "limit");
     expect(limit?.schema.maximum).toBe(1000);
-    expect(endpoint?.postman?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
+    expect(postmanRequests(endpoint?.postman)[0]?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
   });
 
   it("documents the yield-history query contract used by OpenAPI and Postman", () => {
@@ -163,7 +172,9 @@ describe("public API artifact catalog", () => {
 
     const mode = endpoint?.parameters?.find((parameter) => parameter.name === "mode");
     expect(mode?.schema.enum).toEqual(["best", "source"]);
-    expect(endpoint?.postman?.query?.mode).toBe("best");
-    expect(endpoint?.postman?.description).toContain("1-365");
+    const requests = postmanRequests(endpoint?.postman);
+    expect(requests.map((request) => request.query?.mode)).toEqual(["best", "source"]);
+    expect(requests[0]?.description).toContain("1-365");
+    expect(requests[1]?.query?.sourceKey).toBe("{{yieldSourceKey}}");
   });
 });

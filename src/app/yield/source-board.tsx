@@ -1,7 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+} from "@/lib/yield-source-risk";
 import { formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import {
@@ -15,20 +21,40 @@ interface YieldSourceBoardProps {
   model: YieldSourceBoardModel;
 }
 
-const CONFIDENCE_LABELS: Record<(typeof YIELD_SOURCE_CONFIDENCE_ORDER)[number], string> = {
-  deterministic: "Deterministic",
-  curated: "Curated",
-  discovered: "Discovered",
-  fallback: "Fallback",
-};
-
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function InfoBadge({
+  children,
+  description,
+  className,
+}: {
+  children: ReactNode;
+  description: string;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className={cn(
+            "pharos-focus-ring inline-flex cursor-help items-center rounded-full border px-2 py-1 text-xs font-medium",
+            className,
+          )}
+        >
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[260px] text-xs">{description}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function ApyTriplet({ summary, compact = false }: { summary: YieldSourceBoardApySummary | null; compact?: boolean }) {
   if (!summary) {
-    return <span className="text-muted-foreground">No source-row APY</span>;
+    return <span className="text-muted-foreground">No observation APY</span>;
   }
 
   if (compact) {
@@ -73,7 +99,7 @@ function SourceGroupRow({ group }: { group: YieldSourceBoardGroup }) {
           </Badge>
           <span className="text-sm font-medium text-foreground">{group.dataSourceLabel}</span>
           <span className="font-mono text-xs tabular-nums text-muted-foreground">
-            {pluralize(group.representedSourceCount, "source row")}
+            {pluralize(group.representedSourceCount, "source observation")}
           </span>
         </div>
         {visibleSources.length > 0 ? (
@@ -85,15 +111,15 @@ function SourceGroupRow({ group }: { group: YieldSourceBoardGroup }) {
       </div>
       <div className="grid grid-cols-3 gap-3 text-left sm:text-right">
         <div>
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Selected</p>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">Chosen sources</p>
           <p className="font-mono text-sm tabular-nums text-foreground">{group.selectedCount}</p>
         </div>
         <div>
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Alt</p>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">Retained alternates</p>
           <p className="font-mono text-sm tabular-nums text-foreground">{group.alternateCount}</p>
         </div>
         <div>
-          <p className="text-[10px] font-medium uppercase text-muted-foreground">Source-row APY</p>
+          <p className="text-[10px] font-medium uppercase text-muted-foreground">Observation APY</p>
           <ApyTriplet summary={group.apy} compact />
         </div>
       </div>
@@ -107,16 +133,17 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
   const confidenceEntries = YIELD_SOURCE_CONFIDENCE_ORDER
     .map((tier) => ({
       tier,
-      label: CONFIDENCE_LABELS[tier],
+      label: YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label,
       count: model.selectedConfidenceCounts[tier],
     }))
     .filter((entry) => entry.count > 0);
 
   return (
-    <section
-      aria-labelledby="yield-source-board-heading"
-      className="pharos-card-shell overflow-hidden"
-    >
+      <TooltipProvider>
+        <section
+          aria-labelledby="yield-source-board-heading"
+          className="pharos-card-shell overflow-hidden"
+        >
       <div className="pharos-panel-header flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="pharos-kicker">Yield Sources</p>
@@ -124,19 +151,26 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
             Source provenance in the current view
           </h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            Selected rows and retained alternatives from the live rankings payload, grouped by source family and yield type.
+            Counts every chosen source plus retained alternates for the rows currently visible. This is provenance
+            coverage, not a recommendation ranking.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {model.sourceSwitchCount > 0 ? (
-            <span className="inline-flex items-center rounded-full border border-sky-500/25 bg-sky-500/10 px-2 py-1 text-xs font-medium text-sky-700 dark:text-sky-300">
-              {pluralize(model.sourceSwitchCount, "source switch", "source switches")}
-            </span>
+            <InfoBadge
+              className="border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+              description="A source changed when the selected source differs from the prior published snapshot. It explains provenance churn, not a change in stablecoin safety."
+            >
+              {pluralize(model.sourceSwitchCount, "source changed", "sources changed")}
+            </InfoBadge>
           ) : null}
           {model.anomalyCount > 0 ? (
-            <span className="inline-flex items-center rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-              {pluralize(model.anomalyCount, "selected row")} with source anomalies
-            </span>
+            <InfoBadge
+              className="border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Inspect the source sheet before treating the row as durable."
+            >
+              {pluralize(model.anomalyCount, "chosen source")} with anomalies
+            </InfoBadge>
           ) : null}
         </div>
       </div>
@@ -146,27 +180,27 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
           <div className="grid gap-x-5 gap-y-3 border-b border-border/60 px-4 py-4 sm:grid-cols-[1fr_1fr_1.3fr] sm:px-5">
             <dl className="grid grid-cols-3 gap-3">
               <div>
-                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Selected</dt>
+                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Chosen sources</dt>
                 <dd className="font-mono text-lg font-semibold tabular-nums text-foreground">{model.selectedCount}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Alt</dt>
+                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Retained alternates</dt>
                 <dd className="font-mono text-lg font-semibold tabular-nums text-foreground">{model.alternateCount}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Source rows</dt>
+                <dt className="text-[10px] font-medium uppercase text-muted-foreground">Source observations</dt>
                 <dd className="font-mono text-lg font-semibold tabular-nums text-foreground">{model.representedSourceCount}</dd>
               </div>
             </dl>
             <div>
-              <p className="text-[10px] font-medium uppercase text-muted-foreground">Source families</p>
+              <p className="text-[10px] font-medium uppercase text-muted-foreground">Data families</p>
               <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
                 {model.representedDataSourceCount}
               </p>
               <p className="text-xs text-muted-foreground">{pluralize(model.groups.length, "source lane")}</p>
             </div>
             <div>
-              <p className="text-[10px] font-medium uppercase text-muted-foreground">Source-row APY</p>
+              <p className="text-[10px] font-medium uppercase text-muted-foreground">Observation APY</p>
               <ApyTriplet summary={model.sourceRowApy} />
             </div>
           </div>
@@ -180,12 +214,14 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
 
         <aside className="space-y-4 border-t border-border/60 px-4 py-4 sm:px-5 lg:border-l lg:border-t-0">
           <div className="space-y-2">
-            <p className="pharos-kicker">Selected-source confidence</p>
+            <p className="pharos-kicker">Chosen-source confidence</p>
             {confidenceEntries.length > 0 ? (
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {confidenceEntries.map((entry) => (
                   <div key={entry.tier} className="flex items-baseline justify-between gap-3">
-                    <dt className="text-xs text-muted-foreground">{entry.label}</dt>
+                    <dt className="text-xs text-muted-foreground" title={YIELD_SOURCE_CONFIDENCE_DEFINITIONS[entry.tier].description}>
+                      {entry.label}
+                    </dt>
                     <dd className="font-mono text-sm tabular-nums text-foreground">{entry.count}</dd>
                   </div>
                 ))}
@@ -199,7 +235,7 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
                 ) : null}
               </dl>
             ) : (
-              <p className="text-sm text-muted-foreground">No selected-source confidence tiers reported.</p>
+              <p className="text-sm text-muted-foreground">No chosen-source confidence tiers reported.</p>
             )}
           </div>
 
@@ -219,12 +255,28 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
             </div>
           ) : null}
 
+          <div className="space-y-2">
+            <p className="pharos-kicker">Depth lens</p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+              {(["deep", "moderate", "thin", "unknown"] as const).map((depth) => (
+                <div key={depth} className="flex items-baseline justify-between gap-3">
+                  <dt className="text-xs text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[depth].description}>
+                    {YIELD_SOURCE_DEPTH_DEFINITIONS[depth].label}
+                  </dt>
+                  <dd className="font-mono text-sm tabular-nums text-foreground">{model.depthCounts[depth]}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
           <p className="border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
-            Source-row APY is current payload context across selected and alternate rows. It is not an asset median,
-            market median, investability rating, or safety signal.
+            Observation APY is current payload context across chosen and alternate source observations. Depth is
+            venue context, not guaranteed executable capacity. Neither is an asset median, market median, investability
+            rating, or safety signal.
           </p>
         </aside>
       </div>
-    </section>
+      </section>
+    </TooltipProvider>
   );
 }

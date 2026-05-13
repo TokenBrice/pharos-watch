@@ -90,6 +90,99 @@ describe("yield-pys-v8-calibration", () => {
     expect(zero?.driver).toBe("negative-zero");
   });
 
+  it("locks golden source-risk rows to non-improving PYS semantics", () => {
+    const scored = scoreRows([
+      row({
+        id: "reward-heavy",
+        symbol: "RWD",
+        apy30d: 12,
+        currentApy: 12,
+        sourceRisk: { rewardShare: 0.9 },
+      }),
+      row({
+        id: "stale",
+        symbol: "OLD",
+        sourceRisk: { sourceAgeSeconds: 7 * 60 * 60 },
+      }),
+      row({
+        id: "low-depth",
+        symbol: "THIN",
+        sourceRisk: { sourceDepthRatio: 0.0005 },
+      }),
+      row({
+        id: "source-switch",
+        symbol: "SWCH",
+        sourceRisk: { sourceSwitchCount30d: 4 },
+      }),
+      row({
+        id: "bootstrap",
+        symbol: "BOOT",
+        sourceRisk: { observationCount30d: 3 },
+      }),
+      row({
+        id: "zero",
+        symbol: "ZERO",
+        apy30d: 0,
+        currentApy: 0,
+      }),
+      row({
+        id: "negative",
+        symbol: "NEG",
+        apy30d: -1,
+        currentApy: -1,
+      }),
+      row({
+        id: "missing-safety",
+        symbol: "MISS",
+        safetyScore: null,
+      }),
+      row({
+        id: "capped",
+        symbol: "CAP",
+        sourceRisk: { sourceRiskPenalty: 99 },
+      }),
+    ]);
+    const byId = new Map(scored.map((item) => [item.id, item]));
+
+    expect(byId.get("reward-heavy")).toMatchObject({ driver: "reward-heavy", sourceRiskPenalty: 1.4 });
+    expect(byId.get("stale")).toMatchObject({ driver: "stale", sourceRiskPenalty: 1.25 });
+    expect(byId.get("low-depth")).toMatchObject({ driver: "low-depth", sourceRiskPenalty: 1.35 });
+    expect(byId.get("source-switch")).toMatchObject({ driver: "source-switch", sourceRiskPenalty: 1.3 });
+    expect(byId.get("bootstrap")).toMatchObject({ driver: "bootstrap", sourceRiskPenalty: 1.2 });
+    expect(byId.get("missing-safety")).toMatchObject({ driver: "missing-safety", sourceRiskPenalty: 1 });
+    expect(byId.get("capped")?.sourceRiskPenalty).toBe(2.5);
+    expect(byId.get("zero")?.v8Score).toBe(0);
+    expect(byId.get("negative")?.v8Score).toBe(0);
+
+    for (const scoredRow of scored) {
+      expect(scoredRow.v8Score, scoredRow.id).toBeLessThanOrEqual(scoredRow.v7Score);
+    }
+  });
+
+  it("keeps neutral or missing source-risk evidence at penalty 1", () => {
+    const [missing, neutral] = scoreRows([
+      row({ id: "missing", symbol: "MISS" }),
+      row({
+        id: "neutral",
+        symbol: "NEUT",
+        sourceRisk: {
+          sourceRiskPenalty: null,
+          rewardShare: null,
+          sourceDepthRatio: null,
+          sourceAgeSeconds: null,
+          sourceSwitchCount30d: null,
+          observationCount30d: null,
+          venueRiskTier: "unknown",
+        },
+      }),
+    ]);
+
+    expect(missing?.sourceRiskPenalty).toBe(1);
+    expect(neutral?.sourceRiskPenalty).toBe(1);
+    expect(missing?.v8Score).toBe(missing?.v7Score);
+    expect(neutral?.v8Score).toBe(neutral?.v7Score);
+  });
+
   it("renders required calibration sections and golden fixtures", () => {
     const markdown = buildCalibrationReport([
       row({ id: "eur", symbol: "EUR", benchmarkKey: "EUR", benchmarkRate: 2.5, sourceAgeSeconds: 30_000 }),

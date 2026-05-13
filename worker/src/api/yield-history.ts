@@ -19,7 +19,11 @@ import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
 import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
-import type { YieldPublicationMetadata } from "@shared/types/yield";
+import {
+  YIELD_DEPLOYMENT_PLACE_VALUES,
+  type YieldPublicationMetadata,
+  type YieldSourceRisk,
+} from "@shared/types/yield";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -43,6 +47,140 @@ interface YieldHistoryRow {
 }
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
+const YIELD_VENUE_RISK_TIERS = new Set(["low", "medium", "high", "unknown"]);
+const YIELD_DEPLOYMENT_PLACES = new Set<string>(YIELD_DEPLOYMENT_PLACE_VALUES);
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function readNullableFiniteNumber(value: unknown): number | null | undefined {
+  if (value === null) return null;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function readNullableString(value: unknown): string | null | undefined {
+  if (value === null) return null;
+  return typeof value === "string" ? value : undefined;
+}
+
+function readNullableDeploymentPlace(value: unknown): YieldSourceRisk["deploymentPlace"] | undefined {
+  if (value === null) return null;
+  return typeof value === "string" && YIELD_DEPLOYMENT_PLACES.has(value)
+    ? (value as YieldSourceRisk["deploymentPlace"])
+    : undefined;
+}
+
+function readNullableVenueRiskTier(value: unknown): YieldSourceRisk["venueRiskTier"] | undefined {
+  if (value === null) return null;
+  return typeof value === "string" && YIELD_VENUE_RISK_TIERS.has(value)
+    ? (value as YieldSourceRisk["venueRiskTier"])
+    : undefined;
+}
+
+function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
+  if (!isRecord(value)) return null;
+
+  const sourceRisk: YieldSourceRisk = {};
+  let hasKnownField = false;
+  const assignNumber = (key: keyof YieldSourceRisk) => {
+    if (!hasOwn(value, key)) return;
+    const parsed = readNullableFiniteNumber(value[key]);
+    if (parsed !== undefined) {
+      (sourceRisk as Record<string, unknown>)[key] = parsed;
+      hasKnownField = true;
+    }
+  };
+  const assignString = (key: keyof YieldSourceRisk) => {
+    if (!hasOwn(value, key)) return;
+    const parsed = readNullableString(value[key]);
+    if (parsed !== undefined) {
+      (sourceRisk as Record<string, unknown>)[key] = parsed;
+      hasKnownField = true;
+    }
+  };
+
+  assignNumber("sourceRiskScore");
+  assignNumber("sourceRiskPenalty");
+  assignNumber("sourceDepthRatio");
+  assignNumber("rewardShare");
+  assignNumber("sourceAgeSeconds");
+  assignNumber("observationCount30d");
+  assignNumber("sourceSwitchCount30d");
+  assignString("venueProtocol");
+  assignString("venueChain");
+
+  if (hasOwn(value, "deploymentPlace")) {
+    const deploymentPlace = readNullableDeploymentPlace(value.deploymentPlace);
+    if (deploymentPlace !== undefined) {
+      sourceRisk.deploymentPlace = deploymentPlace;
+      hasKnownField = true;
+    }
+  }
+  if (hasOwn(value, "venueRiskTier")) {
+    const venueRiskTier = readNullableVenueRiskTier(value.venueRiskTier);
+    if (venueRiskTier !== undefined) {
+      sourceRisk.venueRiskTier = venueRiskTier;
+      hasKnownField = true;
+    }
+  }
+  if (hasOwn(value, "investabilityFlags")) {
+    if (Array.isArray(value.investabilityFlags)) {
+      sourceRisk.investabilityFlags = value.investabilityFlags.filter(
+        (flag): flag is string => typeof flag === "string",
+      );
+      hasKnownField = true;
+    }
+  }
+
+  return hasKnownField ? sourceRisk : null;
+}
+
+function buildSourceRiskLookupKey(generationId: string, stablecoinId: string, sourceKey: string): string {
+  return `${generationId}\u0000${stablecoinId}\u0000${sourceKey}`;
+}
+
+function buildYieldHistorySourceRiskLookup(
+  cached: { value: string } | null,
+): Map<string, YieldSourceRisk | null> {
+  const lookup = new Map<string, YieldSourceRisk | null>();
+  if (!cached) return lookup;
+
+  try {
+    const payload = JSON.parse(cached.value) as unknown;
+    if (!isRecord(payload) || !Array.isArray(payload.rankings)) return lookup;
+    const rootPublication = isRecord(payload.publication) ? payload.publication : null;
+    const rootGenerationId = typeof rootPublication?.generationId === "string" ? rootPublication.generationId : null;
+
+    for (const row of payload.rankings) {
+      if (!isRecord(row)) continue;
+      const stablecoinId = typeof row.id === "string" ? row.id : null;
+      const generationId =
+        typeof row.publicationGenerationId === "string" ? row.publicationGenerationId : rootGenerationId;
+      const provenance = isRecord(row.provenance) ? row.provenance : null;
+      const sourceKey = typeof provenance?.sourceKey === "string" ? provenance.sourceKey : null;
+      if (stablecoinId && generationId && sourceKey && hasOwn(row, "sourceRisk")) {
+        lookup.set(
+          buildSourceRiskLookupKey(generationId, stablecoinId, sourceKey),
+          normalizeYieldSourceRisk(row.sourceRisk),
+        );
+      }
+
+      if (!stablecoinId || !generationId || !Array.isArray(row.altSources)) continue;
+      for (const alt of row.altSources) {
+        if (!isRecord(alt) || typeof alt.sourceKey !== "string" || !hasOwn(alt, "sourceRisk")) continue;
+        lookup.set(
+          buildSourceRiskLookupKey(generationId, stablecoinId, alt.sourceKey),
+          normalizeYieldSourceRisk(alt.sourceRisk),
+        );
+      }
+    }
+  } catch {
+    return lookup;
+  }
+
+  return lookup;
+}
 
 function parseYieldPublicationMetadata(
   cached: { value: string; updatedAt: number } | null,
@@ -127,6 +265,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
 
   const rankingsCache = await getCache(db, "yield-rankings");
   const publication = parseYieldPublicationMetadata(rankingsCache);
+  const sourceRiskByHistoryKey = buildYieldHistorySourceRiskLookup(rankingsCache);
   const publishedCutoffResult = parseYieldRankingsPublishedCutoff(rankingsCache);
   const publishedCutoffLookup = publishedCutoffResult.status === "ok"
     ? { timestamp: publishedCutoffResult.updatedAt, status: "ok" as const }
@@ -180,6 +319,11 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
     ))
     .map((row) => {
       const normalizedSourceKey = normalizeHistorySourceKey(parsed.stablecoinId, row, mode);
+      const sourceRiskKey = row.publication_generation_id
+        ? buildSourceRiskLookupKey(row.publication_generation_id, parsed.stablecoinId, normalizedSourceKey)
+        : null;
+      const hasSourceRisk = sourceRiskKey != null && sourceRiskByHistoryKey.has(sourceRiskKey);
+      const sourceRisk = sourceRiskKey != null ? sourceRiskByHistoryKey.get(sourceRiskKey) : undefined;
       const sourceSwitch =
         mode === "best" &&
         previousSourceKey != null &&
@@ -205,6 +349,7 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
         dataSource: row.data_source,
         isBest: row.is_best === 1,
         publicationGenerationId: row.publication_generation_id ?? null,
+        ...(hasSourceRisk ? { sourceRisk: sourceRisk ?? null } : {}),
         sourceSwitch,
       };
     });

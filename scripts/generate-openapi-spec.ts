@@ -15,6 +15,18 @@ function schemaRef(name: string) {
   return { $ref: `#/components/schemas/${name}` };
 }
 
+function nullableRef(name: string) {
+  return {
+    oneOf: [
+      schemaRef(name),
+      { type: "null" },
+    ],
+  };
+}
+
+const stringOrNull = { type: ["string", "null"] };
+const numberOrNull = { type: ["number", "null"] };
+
 function buildParameters(endpoint: PublicApiArtifactEndpoint) {
   return endpoint.parameters?.map((parameter) => ({
     name: parameter.name,
@@ -39,6 +51,8 @@ function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
 }
 
 function buildOperation(endpoint: PublicApiArtifactEndpoint) {
+  const responseSchema = endpoint.responseSchema ?? "JsonValue";
+
   return {
     tags: endpoint.tags,
     summary: endpoint.summary,
@@ -54,7 +68,7 @@ function buildOperation(endpoint: PublicApiArtifactEndpoint) {
         description: "Successful response. See the public API reference for endpoint-specific payload fields.",
         content: {
           "application/json": {
-            schema: schemaRef("JsonValue"),
+            schema: schemaRef(responseSchema),
           },
         },
       },
@@ -115,6 +129,307 @@ function render() {
       schemas: {
         JsonValue: {
           description: "Endpoint-specific JSON response. See https://pharos.watch/about/api/ for detailed contracts.",
+        },
+        YieldRankingsResponse: {
+          type: "object",
+          description: "Yield Intelligence rankings payload.",
+          required: ["rankings", "riskFreeRate", "scalingFactor", "medianApy", "updatedAt"],
+          properties: {
+            rankings: {
+              type: "array",
+              items: schemaRef("YieldRanking"),
+            },
+            riskFreeRate: { type: "number" },
+            benchmarks: {
+              type: "object",
+              description: "Benchmark registry keyed by currency such as USD, EUR, and CHF.",
+              additionalProperties: true,
+            },
+            scalingFactor: { type: "number" },
+            medianApy: { type: "number" },
+            updatedAt: {
+              type: "number",
+              description: "Unix seconds when the rankings were last computed.",
+            },
+            provenance: {
+              type: ["object", "null"],
+              description: "Snapshot-level source, benchmark, pool, and safety provenance.",
+              additionalProperties: true,
+            },
+            warnings: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["code", "message"],
+                properties: {
+                  code: { type: "string" },
+                  message: { type: "string" },
+                  reasons: {
+                    type: "array",
+                    items: { type: "string" },
+                  },
+                },
+                additionalProperties: true,
+              },
+            },
+            publication: nullableRef("YieldPublicationMetadata"),
+            _meta: {
+              type: "object",
+              description: "Cache freshness metadata when present.",
+              additionalProperties: true,
+            },
+          },
+          additionalProperties: true,
+        },
+        YieldRanking: {
+          type: "object",
+          description: "Ranked stablecoin yield row.",
+          required: [
+            "id",
+            "symbol",
+            "name",
+            "currentApy",
+            "apy7d",
+            "apy30d",
+            "apyBase",
+            "apyReward",
+            "yieldSource",
+            "yieldType",
+            "dataSource",
+            "sourceTvlUsd",
+            "pharosYieldScore",
+            "safetyScore",
+            "safetyGrade",
+            "yieldToRisk",
+            "excessYield",
+            "yieldStability",
+            "apyVariance30d",
+            "apyMin30d",
+            "apyMax30d",
+            "warningSignals",
+            "altSources",
+          ],
+          properties: {
+            id: { type: "string" },
+            symbol: { type: "string" },
+            name: { type: "string" },
+            currentApy: { type: "number" },
+            apy7d: { type: "number" },
+            apy30d: { type: "number" },
+            apyBase: numberOrNull,
+            apyReward: numberOrNull,
+            yieldSource: { type: "string" },
+            yieldSourceUrl: stringOrNull,
+            yieldType: { type: "string" },
+            dataSource: { type: "string" },
+            sourceTvlUsd: numberOrNull,
+            pharosYieldScore: numberOrNull,
+            safetyScore: numberOrNull,
+            safetyGrade: stringOrNull,
+            yieldToRisk: numberOrNull,
+            excessYield: numberOrNull,
+            benchmarkKey: {
+              type: "string",
+              enum: ["USD", "EUR", "CHF"],
+            },
+            benchmarkLabel: { type: "string" },
+            benchmarkCurrency: { type: "string" },
+            benchmarkRate: { type: "number" },
+            benchmarkRecordDate: stringOrNull,
+            benchmarkIsFallback: { type: "boolean" },
+            benchmarkFallbackMode: stringOrNull,
+            benchmarkSelectionMode: {
+              type: "string",
+              enum: ["native", "fallback-usd", "manual-override"],
+            },
+            benchmarkIsProxy: { type: "boolean" },
+            yieldStability: numberOrNull,
+            apyVariance30d: numberOrNull,
+            apyMin30d: numberOrNull,
+            apyMax30d: numberOrNull,
+            warningSignals: {
+              type: "array",
+              items: { type: "string" },
+            },
+            altSources: {
+              type: "array",
+              items: schemaRef("AltYieldSource"),
+            },
+            provenance: {
+              type: ["object", "null"],
+              description: "Selected-source provenance, benchmark state, and source-switch metadata.",
+              additionalProperties: true,
+            },
+            publicationGenerationId: stringOrNull,
+            publishedRank: numberOrNull,
+            liveRank: numberOrNull,
+            sourceRisk: nullableRef("YieldSourceRisk"),
+            rankChangeAttribution: {
+              type: ["object", "null"],
+              description: "Reserved optional rank-change attribution scaffold.",
+              additionalProperties: true,
+            },
+          },
+          additionalProperties: true,
+        },
+        AltYieldSource: {
+          type: "object",
+          description: "Retained non-selected yield source row for the same stablecoin.",
+          required: [
+            "sourceKey",
+            "yieldSource",
+            "yieldType",
+            "currentApy",
+            "apy30d",
+            "sourceTvlUsd",
+            "dataSource",
+          ],
+          properties: {
+            sourceKey: { type: "string" },
+            yieldSource: { type: "string" },
+            yieldSourceUrl: stringOrNull,
+            yieldType: { type: "string" },
+            currentApy: { type: "number" },
+            apy30d: { type: "number" },
+            sourceTvlUsd: numberOrNull,
+            dataSource: { type: "string" },
+            sourceRisk: nullableRef("YieldSourceRisk"),
+          },
+          additionalProperties: true,
+        },
+        YieldSourceRisk: {
+          type: "object",
+          description: "Nested source-risk evidence used by PYS v8. Missing or unknown evidence is neutral.",
+          properties: {
+            sourceRiskScore: {
+              ...numberOrNull,
+              minimum: 0,
+              maximum: 100,
+            },
+            sourceRiskPenalty: {
+              ...numberOrNull,
+              minimum: 1,
+              description: "PYS v8 source-risk multiplier; runtime clamps populated values to the active range.",
+            },
+            sourceDepthRatio: {
+              ...numberOrNull,
+              minimum: 0,
+            },
+            rewardShare: {
+              ...numberOrNull,
+              minimum: 0,
+              maximum: 1,
+            },
+            sourceAgeSeconds: {
+              type: ["integer", "null"],
+              minimum: 0,
+            },
+            observationCount30d: {
+              type: ["integer", "null"],
+              minimum: 0,
+            },
+            sourceSwitchCount30d: {
+              type: ["integer", "null"],
+              minimum: 0,
+            },
+            deploymentPlace: {
+              type: ["string", "null"],
+              enum: [
+                "native-wrapper",
+                "issuer-savings",
+                "lending-market",
+                "strategy-vault",
+                "lp-or-dex",
+                "rwa-fund",
+                "reward-program",
+                "rate-derived",
+                "price-derived",
+                null,
+              ],
+            },
+            venueProtocol: stringOrNull,
+            venueChain: stringOrNull,
+            venueRiskTier: {
+              type: ["string", "null"],
+              enum: ["low", "medium", "high", "unknown", null],
+              description: "`unknown` remains neutral and should be treated as missing evidence.",
+            },
+            investabilityFlags: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+          additionalProperties: true,
+        },
+        YieldPublicationMetadata: {
+          type: "object",
+          description: "Generation metadata for published yield payloads.",
+          properties: {
+            generationId: stringOrNull,
+            updatedAt: numberOrNull,
+            cutoffAt: numberOrNull,
+            schemaVersion: {
+              type: ["integer", "null"],
+              minimum: 1,
+            },
+            status: {
+              type: ["string", "null"],
+              enum: ["staged", "published", "failed", null],
+            },
+          },
+          additionalProperties: true,
+        },
+        YieldHistoryResponse: {
+          type: "object",
+          description: "Per-stablecoin yield history payload.",
+          required: ["current", "history", "methodology"],
+          properties: {
+            current: nullableRef("YieldHistoryPoint"),
+            history: {
+              type: "array",
+              items: schemaRef("YieldHistoryPoint"),
+            },
+            warning: { type: "string" },
+            methodology: {
+              type: "object",
+              description: "Yield methodology envelope.",
+              additionalProperties: true,
+            },
+            publication: nullableRef("YieldPublicationMetadata"),
+          },
+          additionalProperties: true,
+        },
+        YieldHistoryPoint: {
+          type: "object",
+          description: "One historical yield observation.",
+          required: ["date", "apy", "apyBase", "apyReward", "exchangeRate", "sourceTvlUsd", "warningSignals"],
+          properties: {
+            date: {
+              oneOf: [
+                { type: "number" },
+                { type: "string" },
+              ],
+            },
+            apy: { type: "number" },
+            apyBase: numberOrNull,
+            apyReward: numberOrNull,
+            exchangeRate: numberOrNull,
+            sourceTvlUsd: numberOrNull,
+            warningSignals: {
+              type: "array",
+              items: { type: "string" },
+            },
+            sourceKey: stringOrNull,
+            yieldSource: stringOrNull,
+            yieldSourceUrl: stringOrNull,
+            yieldType: stringOrNull,
+            dataSource: stringOrNull,
+            isBest: { type: "boolean" },
+            sourceSwitch: { type: "boolean" },
+            publicationGenerationId: stringOrNull,
+            sourceRisk: nullableRef("YieldSourceRisk"),
+          },
+          additionalProperties: true,
         },
       },
     },

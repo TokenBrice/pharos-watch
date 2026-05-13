@@ -414,6 +414,7 @@ describe("handleYieldRankings", () => {
     expect(body.rankings[0]?.publishedRank).toBeUndefined();
     expect(body.rankings[0]?.sourceRisk).toBeUndefined();
     expect(body.publication).toBeUndefined();
+    expect(body.methodology?.version).toBe("8.0");
   });
 
   it("uses nested sourceRiskPenalty when live safety hydration recomputes PYS", async () => {
@@ -449,6 +450,66 @@ describe("handleYieldRankings", () => {
       benchmarkRate: payload.rankings[0].benchmarkRate ?? null,
       sourceRiskPenalty: 2,
     }));
+  });
+
+  it("synthesizes publication metadata from generation-aware rows and preserves nested source risk", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          id: "rated-coin",
+          symbol: "RATE",
+          name: "Rated Coin",
+          publicationGenerationId: "yield-1774526400",
+          sourceRisk: {
+            sourceRiskPenalty: 1.4,
+            sourceRiskScore: 76,
+            sourceDepthRatio: 0.12,
+            rewardShare: 0.2,
+            venueRiskTier: "medium",
+          },
+          altSources: [
+            {
+              ...v748RankingsPayload.rankings[0].altSources[0],
+              sourceRisk: {
+                sourceRiskPenalty: 1.1,
+                venueRiskTier: "unknown",
+              },
+            },
+          ],
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(res.status).toBe(200);
+    expect(body.methodology?.version).toBe("8.0");
+    expect(body.publication).toMatchObject({
+      generationId: "yield-1774526400",
+      status: "published",
+      cutoffAt: updatedAt,
+    });
+    expect(body.rankings[0]).toMatchObject({
+      publicationGenerationId: "yield-1774526400",
+      publishedRank: 1,
+      sourceRisk: {
+        sourceRiskPenalty: 1.4,
+        sourceRiskScore: 76,
+        sourceDepthRatio: 0.12,
+        rewardShare: 0.2,
+        venueRiskTier: "medium",
+      },
+    });
+    expect(body.rankings[0]?.altSources[0]?.sourceRisk).toMatchObject({
+      sourceRiskPenalty: 1.1,
+      venueRiskTier: "unknown",
+    });
   });
 
   it("preserves publishedRank and assigns liveRank after safety hydration reorders rows", async () => {
@@ -490,6 +551,25 @@ describe("handleYieldRankings", () => {
     expect(body.rankings.map((row) => row.id)).toEqual(["rated-coin", "nr-coin"]);
     expect(body.rankings[0]).toMatchObject({ id: "rated-coin", publishedRank: 2, liveRank: 1 });
     expect(body.rankings[1]).toMatchObject({ id: "nr-coin", publishedRank: 1, liveRank: 2 });
+    expect(body.rankings[0]?.rankChangeAttribution).toMatchObject({
+      previousRank: 2,
+      rankDelta: 1,
+      previousPys: 8,
+      primaryDriver: "stablecoin-safety",
+    });
+    expect(body.rankings[0]?.rankChangeAttribution?.pysDelta).toBe(
+      computePYS({
+        apy30d: 5,
+        safetyScore: 66,
+        apyVarianceScore: yieldStabilityToApyVarianceScore(baseRow.yieldStability),
+        scalingFactor: payload.scalingFactor,
+        benchmarkRate: baseRow.benchmarkRate ?? null,
+        sourceRiskPenalty: null,
+      }) - 8,
+    );
+    expect(body.rankings[0]?.rankChangeAttribution?.driverContributions?.stablecoinSafety).toBe(
+      body.rankings[0]?.rankChangeAttribution?.pysDelta,
+    );
   });
 
   it("accepts nullable optional publication, source-risk, rank, and attribution scaffolding", () => {
