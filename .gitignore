@@ -118,8 +118,6 @@ output/playwright/
 /test-results/
 /playwright-report/
 
-.codex
-
 # local screenshot artifacts from browser automation
 /alt-pegs-*.png
 /*-screenshot.png

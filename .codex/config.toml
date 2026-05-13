@@ -1,0 +1,19 @@
+[features]
+codex_hooks = true
+
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=session-start'
+timeout = 10
+statusMessage = "Loading Pharos change contract"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=stop'
+timeout = 10
+statusMessage = "Checking Pharos change contract"
