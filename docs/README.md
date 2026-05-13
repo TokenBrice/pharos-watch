@@ -37,11 +37,16 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 ## Runbooks
 
 - [runbooks/blacklist-sync.md](./runbooks/blacklist-sync.md) - blacklist sync incidents, stale windows, and remediation entrypoints
+- [runbooks/d1-telemetry-kill-switch.md](./runbooks/d1-telemetry-kill-switch.md) - D1 route/source telemetry kill-switch order and degraded-mode controls
 - [runbooks/db-connectivity.md](./runbooks/db-connectivity.md) - D1/connectivity outage triage and recovery checks
 - [runbooks/mint-burn-integrity.md](./runbooks/mint-burn-integrity.md) - mint/burn divergence, stale coverage, and repair actions
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
+- [runbooks/telegram-admin-broadcast-safety.md](./runbooks/telegram-admin-broadcast-safety.md) - admin broadcast safety controls and dry-run pre-flight
+- [runbooks/telegram-backlog-expiration.md](./runbooks/telegram-backlog-expiration.md) - Telegram pending backlog expiration triage and replay window recovery
 - [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
+- [runbooks/telegram-operator-queries.md](./runbooks/telegram-operator-queries.md) - read-only SQL queries for PharosWatchBot incident triage
 - [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+- [runbooks/telegram-webhook-retry-dedupe.md](./runbooks/telegram-webhook-retry-dedupe.md) - Telegram webhook retry/dedupe incidents, stuck processing rows, and recovery
 - [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage
 - [runbooks/yield-deterministic-cooldown.md](./runbooks/yield-deterministic-cooldown.md) - deterministic on-chain all-fail and cooldown triage
 - [runbooks/yield-health.md](./runbooks/yield-health.md) - admin yield health summary thresholds and remediation

@@ -59,7 +59,7 @@
     },
     {
       "name": "pages-functions-hosting",
-      "sources": ["functions/**", "shared/lib/site-data-routes.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/serve-static-export.mjs", "next.config.ts"],
+      "sources": ["functions/**", "shared/lib/site-data-lane.ts", "shared/lib/runtime-origins.ts", "src/lib/api.ts", "scripts/serve-static-export.mjs", "next.config.ts"],
       "docs": ["docs/architecture.md", "docs/worker-infrastructure.md", "docs/deployment-process.md", "docs/operator-origin-access.md"],
       "notes": ["Same-origin site-data proxy behavior and internal host lanes are coupled."]
     },

@@ -605,7 +605,7 @@ Workers enforce a **6 concurrent fetch connections** limit per cron trigger invo
 | 15      | `5 8 * * *`        |                         4 (Bluechip batch of 3 + Anthropic; digest/recap chained)                  |    2     |
 | 16      | `10 8 * * *`       |                                  1 (weekly CoinGecko discovery scan)                               |    5     |
 | 17      | `0 6 1 * *`        |                                      1 (DeFiLlama yield scan)                                      |    5     |
-| 18      | `0 3 * * *`        |             0 (status-probe, cron-history, and Telegram inactive-cleanup maintenance; all DB-only)  |    6     |
+| 18      | `0 3 * * *`        |             0 (status-probe, cron-history, Telegram inactive-cleanup, and Telegram retention-cleanup maintenance; all DB-only)  |    6     |
 
 The `*/5 * * * *` digest-trigger poll slot exists in the scheduled runner registry but is not represented in `CRON_JOB_DEFINITIONS` because it does not create a separate `/api/status` job row. It is represented in `CRON_CONNECTION_BUDGET_ENTRIES` as the budget-only `digest-trigger-poll` entry, so `npm run check:cron-connections` enforces its one-connection peak alongside job-bearing trigger slots.
 
@@ -1179,7 +1179,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 35 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
+Returns raw and effective status, recent `cron_runs`, active `cron_run_progress` rows, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 36 cron jobs across 18 job-bearing runner slots via `CRON_INTERVALS` and `CRON_JOB_DEFINITIONS` in `shared/lib/cron-jobs.ts`. Budget-only scheduled surfaces are intentionally absent from `/api/status` job health but present in `CRON_CONNECTION_BUDGET_ENTRIES` for `npm run check:cron-connections`. That includes Telegram registration reconciliation and the `*/5 * * * *` digest-trigger poll slot:
 
 | Job                             | Interval         | Trigger                                           |
 | ------------------------------- | ---------------- | ------------------------------------------------- |
@@ -1217,6 +1217,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `prune-status-probe-runs`       | 86,400s (24h)    | `0 3 * * *`                                       |
 | `prune-cron-history`            | 86,400s (24h)    | `0 3 * * *`                                       |
 | `telegram-inactive-cleanup`     | 604,800s (7d)    | `0 3 * * *` (daily invocation, 7-day cache guard) |
+| `telegram-retention-cleanup`    | 86,400s (24h)    | `0 3 * * *`                                       |
 | `yield-coverage-audit`          | 2,592,000s (30d) | `0 6 1 * *`                                       |
 
 A job is treated as healthy when cron telemetry is unavailable, when a fresh in-flight run exists, when the last run is fresh and `ok`/`degraded`, when a fresh `skipped_locked` run has another fresh `ok` run in recent history, or when a watch-tier job has no history yet. Otherwise it is unhealthy, including stale history or non-fresh errors. `/api/status` now also exposes `crons[*].inFlight` while a long-running leased job is active, including `stage`, `itemsDone/itemsTotal`, the last heartbeat timestamp, and a `stale` flag when the active-progress row stops updating. Only progress rows backed by a still-active matching lease are surfaced this way.

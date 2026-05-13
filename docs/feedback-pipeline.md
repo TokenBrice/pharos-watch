@@ -25,7 +25,7 @@ Inside the worker route, the handler is intentionally split into focused modules
 
 ### `FeedbackButton` (`src/components/feedback-button.tsx`)
 
-A fixed-position FAB rendered globally in `src/app/layout.tsx`. Renders at `bottom-6 right-6 z-50`. Opens `FeedbackModal` with default type `"bug"`.
+A fixed-position FAB mounted globally in `src/app/layout.tsx` but shown only on `sm+` viewports (`hidden ... sm:flex`). Renders at `bottom-6 right-6 z-50`. Opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` provides the equivalent entry.
 
 ```tsx
 <FeedbackButton />

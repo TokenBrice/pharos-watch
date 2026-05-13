@@ -147,7 +147,7 @@ Edge encoding:
 When a node is hovered, the graph visualizes how stress could propagate through the dependency chain:
 
 - **Direct neighbors** (both upstream collateral and downstream dependents) highlight at distance 1.
-- **Downstream contagion** (nodes that depend on the hovered node, transitively) ripples outward up to `MAX_RIPPLE_HOPS = 4` hops via BFS following dependency direction (`tgtId` → `srcId`).
+- **Downstream contagion** (nodes that depend on the hovered node, transitively) ripples outward up to 4 hops (`maxRippleHops` default in `buildRippleContext`) via BFS following dependency direction (`tgtId` → `srcId`).
 - **Staggered timing**: each hop adds `100ms` of transition delay, creating a visible wave of emphasis radiating from the hovered node.
 - **Distance-based fade**: multi-hop nodes and edges receive slightly reduced opacity further from the source, reinforcing the sense of attenuation.
 - All non-connected nodes dim to `0.4` opacity; non-connected edges dim to `0.05`.
