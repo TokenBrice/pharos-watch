@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MarketHighlights } from "@/components/market-highlights";
-import type { StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
@@ -29,7 +29,7 @@ vi.mock("@/components/methodology-hint", () => ({
 describe("MarketHighlights copy (Task 1.2)", () => {
   it("uses the 'Biggest 7-Day Supply Moves' kicker and the depeg bps hint", () => {
     const data: StablecoinData[] = [];
-    const html = renderToStaticMarkup(<MarketHighlights data={data} />);
+    const html = renderToStaticMarkup(<MarketHighlights data={data} pegScores={new Map()} />);
 
     // New kicker copy (source case — CSS renders uppercase)
     expect(html).toContain("Biggest 7-Day Supply Moves");
@@ -40,7 +40,7 @@ describe("MarketHighlights copy (Task 1.2)", () => {
   });
 
   it("keeps each highlight module labeled with its own mobile context", () => {
-    const html = renderToStaticMarkup(<MarketHighlights data={[]} />);
+    const html = renderToStaticMarkup(<MarketHighlights data={[]} pegScores={new Map()} />);
 
     expect(html).toContain('aria-labelledby="market-highlights-depegs-title"');
     expect(html).toContain('id="market-highlights-depegs-title"');
@@ -70,12 +70,42 @@ describe("MarketHighlights copy (Task 1.2)", () => {
       }),
     ];
 
-    const html = renderToStaticMarkup(<MarketHighlights data={data} />);
+    const html = renderToStaticMarkup(<MarketHighlights data={data} pegScores={new Map()} />);
 
     expect(html).toContain("Supply up");
     expect(html).toContain("Supply down");
     expect(html).toContain("Tether (USDT) 7-day supply change: +20.0%");
     expect(html).toContain("USD Coin (USDC) 7-day supply change: -20.0%");
+  });
+
+  it("only shows confirmed active depegs in the biggest depegs module", () => {
+    const data: StablecoinData[] = [
+      makeStablecoin({
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        price: 0.5081,
+        currentSupply: 10_000_000,
+        previousWeekSupply: 10_000_000,
+      }),
+      makeStablecoin({
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        price: 0.97,
+        currentSupply: 10_000_000,
+        previousWeekSupply: 10_000_000,
+      }),
+    ];
+    const pegScores = new Map<string, PegSummaryCoin>([
+      ["usdt-tether", makePegSummaryCoin({ id: "usdt-tether", symbol: "USDT", activeDepeg: false, currentDeviationBps: -4919 })],
+      ["usdc-circle", makePegSummaryCoin({ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -300 })],
+    ]);
+
+    const html = renderToStaticMarkup(<MarketHighlights data={data} pegScores={pegScores} />);
+
+    expect(html).toContain("USD Coin (USDC) price deviation: -300 bps from peg");
+    expect(html).not.toContain("Tether (USDT) price deviation: -4919 bps from peg");
   });
 });
 
@@ -117,4 +147,27 @@ function makeStablecoin({
     chainCirculating: {},
     chains: [],
   } as StablecoinData;
+}
+
+function makePegSummaryCoin(overrides: Partial<PegSummaryCoin>): PegSummaryCoin {
+  return {
+    id: "usdt-tether",
+    symbol: "USDT",
+    name: "Tether",
+    pegType: "peggedUSD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    currentDeviationBps: 0,
+    pegScore: 100,
+    pegPct: 100,
+    severityScore: 100,
+    spreadPenalty: 0,
+    eventCount: 0,
+    worstDeviationBps: null,
+    activeDepeg: false,
+    lastEventAt: null,
+    trackingSpanDays: 365,
+    methodologyVersion: "test",
+    ...overrides,
+  };
 }

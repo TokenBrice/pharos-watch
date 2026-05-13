@@ -248,7 +248,7 @@ export function HomepageClient() {
       />
 
       <SectionErrorBoundary name="highlights">
-        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+        <MarketHighlights data={data?.peggedAssets} logos={logos} pegScores={pegScores} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="table">

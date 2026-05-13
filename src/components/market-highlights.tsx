@@ -8,10 +8,9 @@ import { MethodologyHint } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatPegDeviation } from "@shared/lib/format";
-import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
-import type { StablecoinData } from "@shared/types";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -47,7 +46,7 @@ const MOVER_VIS: Record<number, string> = {
 interface MarketHighlightsProps {
   data: StablecoinData[] | undefined;
   logos?: Record<string, string>;
-  pegRates?: Record<string, number>;
+  pegScores?: Map<string, PegSummaryCoin>;
 }
 
 interface DepegItem {
@@ -66,9 +65,9 @@ interface MoverItem {
 
 /* ─── Data hooks ────────────────────────────────────────────────── */
 
-function useDepegs(data: StablecoinData[] | undefined, pegRates: Record<string, number>) {
+function useDepegs(data: StablecoinData[] | undefined, pegScores: Map<string, PegSummaryCoin> | undefined) {
   return useMemo(() => {
-    if (!data) return [];
+    if (!data || !pegScores) return [];
 
     const entries: DepegItem[] = [];
 
@@ -76,20 +75,18 @@ function useDepegs(data: StablecoinData[] | undefined, pegRates: Record<string, 
       const meta = ACTIVE_META_BY_ID.get(coin.id);
       if (!meta) continue;
       if (meta.flags.navToken) continue;
-      if (coin.price == null || typeof coin.price !== "number" || isNaN(coin.price)) continue;
       const supply = getCirculatingRaw(coin);
       if (supply < SUPPLY_FLOOR) continue;
-
-      const pegRef = getPegReference(coin.pegType, pegRates, meta.commodityOunces);
-      if (pegRef === 0) continue;
-      const bps = Math.round((coin.price / pegRef - 1) * 10000);
+      const peg = pegScores.get(coin.id);
+      if (!peg?.activeDepeg || peg.currentDeviationBps == null) continue;
+      const bps = peg.currentDeviationBps;
 
       entries.push({ id: coin.id, symbol: coin.symbol, name: coin.name, bps });
     }
 
     entries.sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
     return entries.slice(0, 6);
-  }, [data, pegRates]);
+  }, [data, pegScores]);
 }
 
 function useMovers(data: StablecoinData[] | undefined) {
@@ -348,11 +345,11 @@ function MarketSignalsSkeleton() {
 
 /* ─── Main export ───────────────────────────────────────────────── */
 
-export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProps) {
-  const depegs = useDepegs(data, pegRates ?? {});
+export function MarketHighlights({ data, logos, pegScores }: MarketHighlightsProps) {
+  const depegs = useDepegs(data, pegScores);
   const { growers, shrinkers } = useMovers(data);
 
-  if (!data) return <MarketSignalsSkeleton />;
+  if (!data || !pegScores) return <MarketSignalsSkeleton />;
 
   return (
     <div
