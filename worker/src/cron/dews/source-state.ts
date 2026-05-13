@@ -7,6 +7,10 @@ import type {
   DewsSourceState,
   PersistedJsonDecodeReason,
 } from "./contracts";
+import type {
+  YieldRankChangeAttribution,
+  YieldSourceRisk,
+} from "@shared/types/yield";
 
 const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
 const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
@@ -43,6 +47,84 @@ function isMissingTableError(error: unknown): boolean {
 
 function isBootstrapAllowedMissingTableSource(source: string): boolean {
   return BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES.has(source);
+}
+
+function getObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function getNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
+  const row = getObject(value);
+  if (!row) return null;
+  const venueRiskTier = getString(row.venueRiskTier);
+  const deploymentPlace = getString(row.deploymentPlace);
+  return {
+    sourceRiskScore: getNumber(row.sourceRiskScore),
+    sourceRiskPenalty: getNumber(row.sourceRiskPenalty),
+    sourceDepthRatio: getNumber(row.sourceDepthRatio),
+    rewardShare: getNumber(row.rewardShare),
+    sourceAgeSeconds: getNumber(row.sourceAgeSeconds),
+    observationCount30d: getNumber(row.observationCount30d),
+    sourceSwitchCount30d: getNumber(row.sourceSwitchCount30d),
+    deploymentPlace:
+      deploymentPlace === "native-wrapper" ||
+      deploymentPlace === "issuer-savings" ||
+      deploymentPlace === "lending-market" ||
+      deploymentPlace === "strategy-vault" ||
+      deploymentPlace === "lp-or-dex" ||
+      deploymentPlace === "rwa-fund" ||
+      deploymentPlace === "reward-program" ||
+      deploymentPlace === "rate-derived" ||
+      deploymentPlace === "price-derived"
+        ? deploymentPlace
+        : null,
+    venueProtocol: getString(row.venueProtocol),
+    venueChain: getString(row.venueChain),
+    venueRiskTier:
+      venueRiskTier === "low" ||
+      venueRiskTier === "medium" ||
+      venueRiskTier === "high" ||
+      venueRiskTier === "unknown"
+        ? venueRiskTier
+        : null,
+    investabilityFlags: Array.isArray(row.investabilityFlags)
+      ? row.investabilityFlags.filter((flag): flag is string => typeof flag === "string")
+      : [],
+  };
+}
+
+function normalizeYieldRankChangeAttribution(value: unknown): YieldRankChangeAttribution | null {
+  const row = getObject(value);
+  if (!row) return null;
+  const primaryDriver = getString(row.primaryDriver);
+  return {
+    previousRank: getNumber(row.previousRank),
+    rankDelta: getNumber(row.rankDelta),
+    previousPys: getNumber(row.previousPys),
+    pysDelta: getNumber(row.pysDelta),
+    primaryDriver:
+      primaryDriver === "apy" ||
+      primaryDriver === "benchmark" ||
+      primaryDriver === "stablecoin-safety" ||
+      primaryDriver === "source-risk" ||
+      primaryDriver === "source-switch" ||
+      primaryDriver === "freshness" ||
+      primaryDriver === "volatility" ||
+      primaryDriver === "tvl-depth"
+        ? primaryDriver
+        : null,
+    driverContributions: null,
+  };
 }
 
 export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): Promise<DewsSourceState> {
@@ -333,6 +415,57 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   }
   sourceCoverage.yieldWarnings = yieldWarningRowsRead;
 
+  const yieldSourceRisk = new Map<string, YieldSourceRisk>();
+  const yieldRankChangeAttribution = new Map<string, YieldRankChangeAttribution>();
+  try {
+    const rankingsCache = await options.db
+      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .bind("yield-rankings")
+      .first<{ value: string | null; updated_at: number | null }>();
+    const decoded = decodeJsonString<unknown[], PersistedJsonDecodeReason>(rankingsCache?.value ?? null, {
+      mode: "degraded",
+      updatedAt: rankingsCache?.updated_at ?? null,
+      missingReason: "missing",
+      parseErrorReason: "json-parse-failed",
+      normalize: (parsed) => {
+        const payload = getObject(parsed);
+        return Array.isArray(payload?.rankings)
+          ? { ok: true, payload: payload.rankings }
+          : { ok: false, reason: "invalid-shape" as const };
+      },
+    });
+    if (decoded.ok) {
+      for (const ranking of decoded.payload) {
+        const row = getObject(ranking);
+        const stablecoinId = getString(row?.id);
+        if (!stablecoinId) continue;
+
+        const sourceRisk = normalizeYieldSourceRisk(row?.sourceRisk);
+        if (sourceRisk) yieldSourceRisk.set(stablecoinId, sourceRisk);
+
+        const rankChangeAttribution = normalizeYieldRankChangeAttribution(row?.rankChangeAttribution);
+        if (rankChangeAttribution) yieldRankChangeAttribution.set(stablecoinId, rankChangeAttribution);
+      }
+    } else if (rankingsCache?.value != null) {
+      options.registerMalformedPersistedInput({
+        source: "yield-rankings",
+        context: "cache.yield-rankings",
+        stablecoinId: "aggregate",
+        updatedAt: rankingsCache?.updated_at ?? null,
+        reason: decoded.reason,
+        degradesRun: false,
+      });
+    }
+  } catch (error) {
+    options.registerSourceFailure("yield-rankings", error, {
+      bootstrapAllowed:
+        options.bootstrapPending &&
+        isMissingTableError(error) &&
+        isBootstrapAllowedMissingTableSource("yield-data"),
+    });
+  }
+  sourceCoverage.yieldStructuredRows = yieldSourceRisk.size;
+
   let latestPsiScore: number | null = null;
   try {
     const psiRow = await options.db
@@ -358,6 +491,8 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     prevSignals,
     mintBurnMap,
     yieldWarnings,
+    yieldSourceRisk,
+    yieldRankChangeAttribution,
     latestPsiScore,
     sourceCoverage,
   };

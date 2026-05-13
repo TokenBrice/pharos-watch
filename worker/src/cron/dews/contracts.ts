@@ -1,4 +1,5 @@
 import type { StablecoinData } from "@shared/types/market";
+import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 
 export interface SourceFailure {
   source: string;
@@ -71,6 +72,8 @@ export interface DewsSourceState {
   prevSignals: Map<string, Record<string, { value: number }>>;
   mintBurnMap: Map<string, MintBurnSnapshot>;
   yieldWarnings: Map<string, string[]>;
+  yieldSourceRisk: Map<string, YieldSourceRisk>;
+  yieldRankChangeAttribution: Map<string, YieldRankChangeAttribution>;
   latestPsiScore: number | null;
   sourceCoverage: Record<string, number>;
 }

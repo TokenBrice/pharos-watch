@@ -14,6 +14,7 @@ function mockDbWithPrevRows(
     band: string;
     computed_at: number;
   }>,
+  rankingsCache?: { value: string; updated_at: number },
 ): D1Database {
   const stmt = (sql: string) => {
     const all = async <T>() => {
@@ -22,7 +23,10 @@ function mockDbWithPrevRows(
       }
       return { results: [] as T[] };
     };
-    const first = async <T>() => null as T | null;
+    const first = async <T>() => {
+      if (sql.includes("FROM cache WHERE key = ?")) return (rankingsCache ?? null) as T | null;
+      return null as T | null;
+    };
     const run = async () => ({ success: true, meta: { changes: 0 } });
     return {
       bind: () => ({ all, first, run }),
@@ -103,5 +107,48 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     // The amplifiers envelope is stripped — downstream hydration defaults it
     // to { psi: 1, contagion: 1 } when re-scoring.
     expect((prev as Record<string, unknown>).amplifiers).toBeUndefined();
+  });
+
+  it("hydrates structured yield source-risk and rank attribution from rankings cache", async () => {
+    const db = mockDbWithPrevRows([], {
+      value: JSON.stringify({
+        rankings: [
+          {
+            id: "usdt-tether",
+            sourceRisk: {
+              sourceRiskPenalty: 1.5,
+              rewardShare: 0.9,
+              sourceAgeSeconds: 30_000,
+              venueRiskTier: "unknown",
+            },
+            rankChangeAttribution: {
+              rankDelta: -5,
+              primaryDriver: "source-risk",
+            },
+          },
+        ],
+      }),
+      updated_at: nowSec,
+    });
+
+    const sourceState = await loadDewsSourceState({
+      db,
+      nowSec,
+      bootstrapPending: false,
+      registerSourceFailure: () => {},
+      registerMalformedPersistedInput: () => {},
+    });
+
+    expect(sourceState.yieldSourceRisk.get("usdt-tether")).toMatchObject({
+      sourceRiskPenalty: 1.5,
+      rewardShare: 0.9,
+      sourceAgeSeconds: 30_000,
+      venueRiskTier: "unknown",
+    });
+    expect(sourceState.yieldRankChangeAttribution.get("usdt-tether")).toMatchObject({
+      rankDelta: -5,
+      primaryDriver: "source-risk",
+    });
+    expect(sourceState.sourceCoverage.yieldStructuredRows).toBe(1);
   });
 });

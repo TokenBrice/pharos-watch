@@ -90,8 +90,8 @@ export interface DEWSInput {
   flowDataAgeDays: number;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];
-  // Phase 4 yield-risk scaffolding. Nullable/omitted fields are explicit no-ops
-  // until DEWS has sourced structured weights for source-risk and attribution.
+  // Structured yield-risk evidence. Nullable, omitted, or neutral rows remain
+  // no-ops; populated stress drivers use the active DEWS methodology weights.
   yieldSourceRisk?: YieldSourceRisk | null;
   yieldRankChangeAttribution?: YieldRankChangeAttribution | null;
   // Systemic backdrop (optional — latest PSI score from previous cycle)
@@ -574,28 +574,69 @@ const YIELD_WARNING_SCORES: Record<string, number> = {
 
 function computeStructuredYieldSignal(
   input: Pick<DEWSInput, "yieldSourceRisk" | "yieldRankChangeAttribution">,
-): SignalResult | null {
+): { value: number; warnings: string[] } | null {
   if (input.yieldSourceRisk == null && input.yieldRankChangeAttribution == null) {
     return null;
   }
-  return null;
+  const sourceRisk = input.yieldSourceRisk;
+  const attribution = input.yieldRankChangeAttribution;
+  const warnings: string[] = [];
+  let value = 0;
+
+  if (typeof sourceRisk?.rewardShare === "number" && sourceRisk.rewardShare > 0.5) {
+    value += 20;
+    warnings.push("structured-reward-heavy");
+  }
+  if (typeof sourceRisk?.sourceDepthRatio === "number" && sourceRisk.sourceDepthRatio < 0.001) {
+    value += 35;
+    warnings.push("structured-thin-source-depth");
+  }
+  if (typeof sourceRisk?.sourceAgeSeconds === "number" && sourceRisk.sourceAgeSeconds > 6 * 60 * 60) {
+    value += 15;
+    warnings.push("structured-stale-source");
+  }
+  if (typeof sourceRisk?.sourceSwitchCount30d === "number" && sourceRisk.sourceSwitchCount30d > 0) {
+    value += 20;
+    warnings.push("structured-source-switch");
+  }
+  if (typeof sourceRisk?.sourceRiskPenalty === "number" && sourceRisk.sourceRiskPenalty >= 1.5) {
+    value += 20;
+    warnings.push("structured-source-risk-penalty");
+  }
+  if (sourceRisk?.venueRiskTier === "high") {
+    value += 25;
+    warnings.push("structured-high-risk-venue");
+  }
+  if (attribution?.primaryDriver === "source-switch") {
+    value += 20;
+    warnings.push("structured-rank-source-switch");
+  } else if (attribution?.primaryDriver === "source-risk") {
+    value += 20;
+    warnings.push("structured-rank-source-risk");
+  }
+
+  if (value <= 0) return null;
+  return { value: clamp(value, 0, 100), warnings };
 }
 
 function computeYieldSignal(input: DEWSInput): SignalResult {
   const structuredSignal = computeStructuredYieldSignal(input);
-  if (structuredSignal) return structuredSignal;
 
-  if (input.yieldWarnings.length === 0) {
+  if (input.yieldWarnings.length === 0 && !structuredSignal) {
     return { value: 0, available: false };
   }
 
-  const sum = input.yieldWarnings.reduce(
+  const warningSum = input.yieldWarnings.reduce(
     (acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0),
     0,
   );
-  const value = clamp(sum, 0, 100);
+  const value = clamp(warningSum + (structuredSignal?.value ?? 0), 0, 100);
 
-  return { value, available: true, warnings: input.yieldWarnings };
+  return {
+    value,
+    available: true,
+    warnings: [...input.yieldWarnings, ...(structuredSignal?.warnings ?? [])],
+  };
 }
 
 // ---------------------------------------------------------------------------

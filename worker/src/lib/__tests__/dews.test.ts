@@ -355,7 +355,7 @@ describe("computeDEWS", () => {
     expect(result.signals.yield).toEqual({ value: 0, available: false });
   });
 
-  it("does not score structured yield-risk scaffolding without sourced DEWS weights", () => {
+  it("scores structured yield-risk and rank-attribution inputs when populated", () => {
     const legacy = computeDews(baseInput({ yieldWarnings: [] }));
     const structured = computeDews(
       baseInput({
@@ -376,9 +376,16 @@ describe("computeDEWS", () => {
       }),
     );
 
-    expect(structured.signals.yield).toEqual(legacy.signals.yield);
-    expect(structured.score).toBe(legacy.score);
-    expect(structured.band).toBe(legacy.band);
+    expect(structured.signals.yield.available).toBe(true);
+    expect(structured.signals.yield.value).toBe(100);
+    expect(structured.signals.yield.warnings).toEqual(expect.arrayContaining([
+      "structured-reward-heavy",
+      "structured-stale-source",
+      "structured-source-risk-penalty",
+      "structured-high-risk-venue",
+      "structured-rank-source-risk",
+    ]));
+    expect(structured.score).toBeGreaterThan(legacy.score);
   });
 
   it("amplifies score when PSI indicates market stress", () => {

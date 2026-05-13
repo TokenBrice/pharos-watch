@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "5.98",
+  currentVersion: "5.99",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+    {
+      version: "5.99",
+      title: "Structured Yield Source-Risk DEWS Input",
+      date: "2026-05-13",
+      effectiveAt: 1778700960,
+      summary:
+        "DEWS now consumes populated Yield Intelligence source-risk and rank-attribution fields inside the existing Yield Anomaly sub-signal, while neutral or missing structured rows remain no-ops.",
+      impact: [
+        "The `yield` sub-signal can now score populated `sourceRisk.rewardShare`, `sourceRisk.sourceDepthRatio`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.sourceRiskPenalty`, high reviewed `venueRiskTier`, and rank-attribution source-risk/source-switch drivers",
+        "Structured yield evidence is additive with existing `yield_data.warning_signals` and still caps the Yield Anomaly sub-signal at 100",
+        "Neutral structured rows do not become available zero-stress signals, so missing or neutral evidence does not dilute the DEWS weighted average",
+        "The DEWS source-state loader reads structured evidence from the published `yield-rankings` cache and preserves legacy warning-only behavior when that cache is missing or malformed",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "5.98",
       title: "Registry-backed depeg source families",

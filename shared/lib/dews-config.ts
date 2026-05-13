@@ -35,7 +35,7 @@ export const DEWS_SIGNAL_DESCRIPTIONS: Record<DewsSignalKey, string> = {
   diverg: "fragmented pricing between multi-source consensus price, DEX price, and peg reference",
   black: "issuer emergency freeze surges for the live blacklist-tracked symbol set",
   flow: "redemption surge vs minting from on-chain Transfer event data; mature 30-day coverage stays available even when the latest 24-hour window is quiet, contributing zero flow stress instead of disappearing",
-  yield: "warning-signal accumulation from yield spikes, divergence, TVL outflows, negative trends, and reward-heavy regimes",
+  yield: "warning-signal and structured source-risk accumulation from yield spikes, divergence, TVL outflows, negative trends, reward-heavy regimes, thin/stale sources, source switches, and source-risk rank drivers",
 };
 
 export const DEWS_THREAT_BANDS = [

@@ -151,6 +151,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
       flowDataAgeDays: mintBurn?.dataAgeDays ?? 0,
       yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
+      yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
+      yieldRankChangeAttribution: sourceState.yieldRankChangeAttribution.get(meta.id) ?? null,
       psiScore: sourceState.latestPsiScore,
       prevPoolValue: (prev?.pool as { value?: number })?.value,
       prevDivergValue: (prev?.diverg as { value?: number })?.value,

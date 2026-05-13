@@ -133,6 +133,7 @@ interface MakeDbOptions {
     is_best?: number | null;
     publication_state?: string | null;
   }>;
+  yieldRankingsPayload?: unknown;
   signalIds?: string[];
   historyIds?: string[];
   onBind?: (sql: string, args: unknown[]) => void;
@@ -229,6 +230,13 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     };
 
     const first = async <T>() => {
+      if (sql.includes("FROM cache WHERE key = ?")) {
+        if (opts.yieldRankingsPayload === undefined) return null as T | null;
+        return {
+          value: JSON.stringify(opts.yieldRankingsPayload),
+          updated_at: Math.floor(Date.now() / 1000),
+        } as T;
+      }
       if (sql.includes("stress_signal_history")) return null as T | null;
       if (sql.includes("stability_index_samples")) return null as T | null;
       return null as T | null;
@@ -484,6 +492,46 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         yieldWarnings: ["reward-heavy"],
+      }),
+    );
+  });
+
+  it("passes structured yield source-risk and rank attribution from rankings cache into DEWS", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      yieldRankingsPayload: {
+        rankings: [
+          {
+            id: "usdt-tether",
+            sourceRisk: {
+              sourceRiskPenalty: 1.5,
+              rewardShare: 0.9,
+              sourceAgeSeconds: 30_000,
+              venueRiskTier: "unknown",
+            },
+            rankChangeAttribution: {
+              rankDelta: -5,
+              primaryDriver: "source-risk",
+            },
+          },
+        ],
+      },
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(sqlSeen.some((sql) => sql.includes("FROM cache WHERE key = ?"))).toBe(true);
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        yieldSourceRisk: expect.objectContaining({
+          sourceRiskPenalty: 1.5,
+          rewardShare: 0.9,
+        }),
+        yieldRankChangeAttribution: expect.objectContaining({
+          rankDelta: -5,
+          primaryDriver: "source-risk",
+        }),
       }),
     );
   });
