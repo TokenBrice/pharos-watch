@@ -69,7 +69,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ),
     docs: [
       sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/pathUSD", ["route", "access", "fees"]),
-      sourceRef("Bridge FAQ", "https://bridge.xyz/faq", ["capacity", "settlement", "fees"]),
+      sourceRef("Bridge issuance FAQ", "https://apidocs.bridge.xyz/platform/issuance/faq", ["capacity", "settlement", "fees"]),
     ],
     notes: [
       "Modeled as verified Bridge/Tempo primary-market redeemability into USDC rather than independently measured instant on-chain liquidity",

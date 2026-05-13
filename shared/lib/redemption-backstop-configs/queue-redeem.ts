@@ -459,13 +459,13 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Neutrl redemption is available to whitelisted KYC participants and supports instant or queued execution depending on AssetReserve liquidity; public fee schedule is not disclosed",
     ),
     docs: [
-      sourceRef("Neutrl minting", "https://docs.neutrl.fi/protocol-mechanics/minting", ["route", "capacity"]),
-      sourceRef("Neutrl redemption", "https://docs.neutrl.fi/protocol-mechanics/redemption", [
+      sourceRef("Neutrl minting", "https://docs.neutrl.finance/protocol-mechanics/minting", ["route", "capacity"]),
+      sourceRef("Neutrl redemption", "https://docs.neutrl.finance/protocol-mechanics/redemption", [
         "route",
         "capacity",
         "access",
       ]),
-      sourceRef("Neutrl transparency", "https://docs.neutrl.fi/protocol-design/transparency", ["capacity"]),
+      sourceRef("Neutrl transparency", "https://docs.neutrl.finance/protocol-design/transparency", ["capacity"]),
     ],
     notes: [
       "Neutrl docs establish a dual-path redemption system with instant execution when AssetReserve liquidity is available and an onchain queued fallback when it is not; current model scores eventual redeemability rather than a separately measured live instant buffer",
