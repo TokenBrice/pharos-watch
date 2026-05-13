@@ -137,7 +137,9 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
   return (
     <div className="mb-6 space-y-4">
       <h1 className="sr-only">
-        {coin.name} ({coin.symbol}) stablecoin analytics
+        {coin.status === "frozen"
+          ? `${coin.name} (${coin.symbol}) frozen stablecoin archive`
+          : `${coin.name} (${coin.symbol}) stablecoin analytics`}
       </h1>
 
       <section

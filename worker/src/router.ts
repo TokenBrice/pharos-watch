@@ -20,6 +20,15 @@ function addAdminGetNoStoreHeader(path: string, request: Request | undefined, re
   return response;
 }
 
+function stripHeadBody(request: Request | undefined, response: Response): Response {
+  if (request?.method !== "HEAD") return response;
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 export function getRouteDependencies(url: URL): readonly RouteDependency[] | null {
   return getRegisteredRouteDependencies(url.pathname);
 }
@@ -41,7 +50,8 @@ async function handleRouteWithErrorBoundary(
     response = errorResponse(500, "Internal Server Error");
   }
 
-  return addAdminGetNoStoreHeader(routeMatch.endpoint?.path ?? path, routeCtx.request, response);
+  const responseWithHeaders = addAdminGetNoStoreHeader(routeMatch.endpoint?.path ?? path, routeCtx.request, response);
+  return stripHeadBody(routeCtx.request, responseWithHeaders);
 }
 
 export function route(routeCtx: FullRouteContext): Promise<Response> | null {

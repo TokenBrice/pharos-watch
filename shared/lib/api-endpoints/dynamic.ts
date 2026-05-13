@@ -4,7 +4,7 @@ import type {
   EndpointSiteDataAccess,
 } from "./definitions";
 
-type EndpointMethod = "GET" | "POST";
+type EndpointMethod = "GET" | "HEAD" | "POST";
 
 export type DynamicEndpointDescriptorKey =
   | "stablecoin-summary"
@@ -78,7 +78,7 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
   {
     key: "og-image",
     pattern: /^\/api\/og\//,
-    methods: ["GET"],
+    methods: ["GET", "HEAD"],
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
     adminRequired: false,

@@ -227,7 +227,7 @@ export default function ApiAccessPage() {
             return (
               <Link
                 key={endpoint.path}
-                href="/about/api/#public-endpoints"
+                href="/about/api/#endpoint-directory"
                 className="pharos-focus-ring rounded-2xl border border-border/60 bg-card/72 px-4 py-4 transition-colors hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">

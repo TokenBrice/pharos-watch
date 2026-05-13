@@ -159,6 +159,10 @@ export function StablecoinTaxonomyShell({
             </div>
           </details>
         )}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Source: checked-in StablecoinMeta profile fields in the current Pharos build. Counts and cohort membership are
+          static directory context; use the live table below for current market, coverage, and risk data.
+        </p>
       </section>
 
       <section className="space-y-3">

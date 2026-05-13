@@ -140,6 +140,11 @@ export default async function StaticComparisonPage({ params }: { params: Promise
             </tbody>
           </table>
         </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Source: checked-in StablecoinMeta profile fields in the current Pharos build. Static deployment counts and
+          reserve-provider labels are structural context; open the live detail and compare tools for current market,
+          peg, liquidity, and reserve freshness.
+        </p>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

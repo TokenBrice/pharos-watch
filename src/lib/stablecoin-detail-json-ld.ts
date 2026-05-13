@@ -11,6 +11,9 @@ export function buildStablecoinDatasetJsonLd(
 ) {
   const siteUrl = options.siteUrl ?? SITE_URL;
   const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const datasetSameAs = [
     coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
     coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
@@ -24,12 +27,43 @@ export function buildStablecoinDatasetJsonLd(
       value: contract.address,
     }));
 
+  const statusCopy =
+    coin.status === "frozen"
+      ? {
+          name: `${coin.name} Frozen Stablecoin Archive`,
+          description: `Historical archive for ${coin.name} (${coin.symbol}), a now-defunct stablecoin. ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Static profile, historical context, chain deployments, and archived risk metadata.`,
+          keywords: ["stablecoin archive", "frozen stablecoin", "historical stablecoin data"],
+          variableMeasured: [
+            { "@type": "PropertyValue", name: "archivedStatus" },
+            { "@type": "PropertyValue", name: "historicalPegContext" },
+            { "@type": "PropertyValue", name: "historicalChainDeployments" },
+            { "@type": "PropertyValue", name: "archivedRiskProfile" },
+          ],
+          measurementTechnique:
+            "Checked-in stablecoin metadata, archived Pharos observations, and historical source references preserved for now-defunct assets.",
+        }
+      : {
+          name: `${coin.name} Stablecoin Analytics`,
+          description: `Live analytics for ${coin.name} (${coin.symbol}). ${governanceLabel} stablecoin, ${backingLabel}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
+          keywords: ["analytics", "peg tracking"],
+          variableMeasured: [
+            { "@type": "PropertyValue", name: "price", unitText: "USD" },
+            { "@type": "PropertyValue", name: "marketCap", unitText: "USD" },
+            { "@type": "PropertyValue", name: "circulatingSupply", unitText: coin.symbol },
+            { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
+            { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
+            { "@type": "PropertyValue", name: "safetyGrade" },
+          ],
+          measurementTechnique:
+            "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+        };
+
   return {
     "@context": "https://schema.org",
     "@type": "Dataset",
     "@id": `${detailUrl}#dataset`,
-    name: `${coin.name} Stablecoin Analytics`,
-    description: `Live analytics for ${coin.name} (${coin.symbol}). ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoin, ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}, pegged to ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
+    name: statusCopy.name,
+    description: statusCopy.description,
     url: detailUrl,
     ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
     creator: { "@id": `${siteUrl}#organization` },
@@ -42,11 +76,10 @@ export function buildStablecoinDatasetJsonLd(
       coin.name,
       "stablecoin",
       ...(coin.variantKind ? [coin.variantKind, "stablecoin variant"] : []),
-      GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance,
-      BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing,
-      PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency,
-      "analytics",
-      "peg tracking",
+      governanceLabel,
+      backingLabel,
+      pegLabel,
+      ...statusCopy.keywords,
     ],
     identifier: [
       ...(coin.geckoId ? [{ "@type": "PropertyValue", propertyID: "geckoId", value: coin.geckoId }] : []),
@@ -54,17 +87,48 @@ export function buildStablecoinDatasetJsonLd(
       ...(coin.variantKind ? [{ "@type": "PropertyValue", propertyID: "variantKind", value: coin.variantKind }] : []),
       ...contractIdentifiers,
     ],
-    variableMeasured: [
-      { "@type": "PropertyValue", name: "price", unitText: "USD" },
-      { "@type": "PropertyValue", name: "marketCap", unitText: "USD" },
-      { "@type": "PropertyValue", name: "circulatingSupply", unitText: coin.symbol },
-      { "@type": "PropertyValue", name: "pegScore", minValue: 0, maxValue: 100 },
-      { "@type": "PropertyValue", name: "dewsScore", minValue: 0, maxValue: 100 },
-      { "@type": "PropertyValue", name: "safetyGrade" },
-    ],
+    variableMeasured: statusCopy.variableMeasured,
     ...(options.dateModified ? { dateModified: options.dateModified } : {}),
     spatialCoverage: { "@type": "Place", name: "Global" },
-    measurementTechnique:
-      "Aggregated supply and price from DefiLlama, CoinGecko, GeckoTerminal, Pyth, Chainlink and on-chain RPCs; normalized in a Cloudflare Worker pipeline.",
+    measurementTechnique: statusCopy.measurementTechnique,
   };
+}
+
+export function buildPreLaunchStablecoinJsonLd(
+  coin: StablecoinMeta,
+  options: { siteUrl?: string } = {},
+) {
+  const siteUrl = options.siteUrl ?? SITE_URL;
+  const detailUrl = `${siteUrl}${buildStablecoinUrl(coin.id)}`;
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const description = `Pre-launch profile for ${coin.name} (${coin.symbol}). Planned ${pegLabel} stablecoin with ${governanceLabel} governance and ${backingLabel} backing. Live market, peg, liquidity, and safety data begin only after launch.`;
+  const sameAs = [
+    coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
+    coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
+    ...(coin.links?.map((link) => link.url) ?? []),
+  ].filter((url): url is string => Boolean(url));
+
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": `${detailUrl}#webpage`,
+      name: `${coin.name} (${coin.symbol}) Pre-Launch Stablecoin Tracker`,
+      description,
+      url: detailUrl,
+      isPartOf: { "@id": `${siteUrl}#website` },
+      about: { "@id": `${detailUrl}#stablecoin` },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Thing",
+      "@id": `${detailUrl}#stablecoin`,
+      name: coin.name,
+      alternateName: coin.symbol,
+      description,
+      ...(sameAs.length > 0 ? { sameAs } : {}),
+    },
+  ];
 }

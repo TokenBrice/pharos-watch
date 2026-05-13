@@ -84,9 +84,13 @@ function emptyCounters() {
     imageRequests: 0,
     siteDataRequests: 0,
     knownContentLengthBytes: 0,
+    observedTransferBytes: 0,
     scriptKnownBytes: 0,
+    scriptObservedBytes: 0,
     styleKnownBytes: 0,
+    styleObservedBytes: 0,
     fontKnownBytes: 0,
+    fontObservedBytes: 0,
   };
 }
 
@@ -111,6 +115,21 @@ function addResponse(counters, response) {
     counters.imageRequests += 1;
   } else if (type === "siteData") {
     counters.siteDataRequests += 1;
+  }
+}
+
+function addPerformanceResource(counters, resource) {
+  const observedBytes = Math.max(resource.transferSize ?? 0, resource.encodedBodySize ?? 0);
+  if (!Number.isFinite(observedBytes) || observedBytes <= 0) return;
+
+  const type = classifyResource(resource.name, resource.initiatorType);
+  counters.observedTransferBytes += observedBytes;
+  if (type === "script") {
+    counters.scriptObservedBytes += observedBytes;
+  } else if (type === "style") {
+    counters.styleObservedBytes += observedBytes;
+  } else if (type === "font") {
+    counters.fontObservedBytes += observedBytes;
   }
 }
 
@@ -182,6 +201,17 @@ async function auditRoute(browser, baseUrl, route, waitMs) {
       responseStartMs: Math.round(nav.responseStart),
     };
   });
+  const resources = await page.evaluate(() =>
+    performance.getEntriesByType("resource").map((entry) => ({
+      name: entry.name,
+      initiatorType: entry.initiatorType,
+      transferSize: "transferSize" in entry ? entry.transferSize : 0,
+      encodedBodySize: "encodedBodySize" in entry ? entry.encodedBodySize : 0,
+    })),
+  );
+  for (const resource of resources) {
+    addPerformanceResource(counters, resource);
+  }
   const title = await page.title();
   const textLength = await page.locator("main").evaluate((main) => main.textContent?.replace(/\s+/g, " ").trim().length ?? 0).catch(() => 0);
   await page.close();
@@ -209,7 +239,7 @@ function formatTable(rows) {
     "cssReq",
     "fontReq",
     "siteData",
-    "knownKB",
+    "byteKB",
     "cfCache",
   ];
   const lines = [headers.join("\t")];
@@ -225,7 +255,7 @@ function formatTable(rows) {
         row.styleRequests,
         row.fontRequests,
         row.siteDataRequests,
-        Math.round(row.knownContentLengthBytes / 1024),
+        Math.round((row.htmlBytes + Math.max(row.knownContentLengthBytes, row.observedTransferBytes)) / 1024),
         row.cfCacheStatus || "-",
       ].join("\t"),
     );
@@ -259,4 +289,3 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-

@@ -32,17 +32,14 @@ const RICHNESS_CHECKS = [
   {
     label: "stablecoin detail",
     pattern: /^\/stablecoin\/[^/]+\/$/,
-    preferredRoutes: ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/"],
     minVisibleWords: 60,
   },
   {
     label: "chain detail",
     pattern: /^\/chains\/[^/]+\/$/,
-    preferredRoutes: ["/chains/ethereum/", "/chains/solana/"],
     minVisibleWords: 35,
   },
 ];
-const RICHNESS_SAMPLE_LIMIT = 2;
 const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pending)\b/gi;
 const MAX_LOADING_WORD_RATIO = 0.15;
 const MAX_LOADING_WORD_COUNT = 4;
@@ -327,30 +324,23 @@ function analyzeStaticRichness(record) {
   };
 }
 
-function selectRepresentativeRichnessRecords(pageRecords, check) {
-  const candidates = pageRecords
+function selectRichnessRecords(pageRecords, check) {
+  return pageRecords
     .filter((record) => check.pattern.test(record.route) && isIndexable(record.robotsTags))
     .sort((a, b) => a.route.localeCompare(b.route));
-  if (candidates.length === 0) return [];
+}
 
-  const byRoute = new Map(candidates.map((record) => [record.route, record]));
-  const selected = [];
-  for (const route of check.preferredRoutes) {
-    const record = byRoute.get(route);
-    if (record && !selected.includes(record)) {
-      selected.push(record);
-    }
-    if (selected.length >= RICHNESS_SAMPLE_LIMIT) return selected;
+function getAnchorHrefs(html) {
+  const hrefs = [];
+  const anchorPattern = /<a\b[^>]*>/gi;
+  let match = anchorPattern.exec(html);
+  while (match) {
+    const attrs = parseAttributes(match[0]);
+    const href = attrs.get("href");
+    if (href) hrefs.push(href);
+    match = anchorPattern.exec(html);
   }
-
-  for (const record of candidates) {
-    if (!selected.includes(record)) {
-      selected.push(record);
-    }
-    if (selected.length >= RICHNESS_SAMPLE_LIMIT) break;
-  }
-
-  return selected;
+  return hrefs;
 }
 
 function sitemapRouteFromPharosUrl(loc) {
@@ -414,7 +404,8 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
 
     if (!record.title) errors.push(`${record.route}: missing <title>`);
     if (!record.description) errors.push(`${record.route}: missing meta description`);
-    if (!record.canonical) errors.push(`${record.route}: missing canonical`);
+    const indexable = isIndexable(record.robotsTags);
+    if (indexable && !record.canonical) errors.push(`${record.route}: missing canonical`);
     if (!record.ogTitle) errors.push(`${record.route}: missing og:title`);
     if (!record.ogDescription) errors.push(`${record.route}: missing og:description`);
     if (!record.twitterCard) errors.push(`${record.route}: missing twitter:card`);
@@ -424,7 +415,6 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
       errors.push(`${record.route}: conflicting robots directives (${conflict}) in ${record.robotsTags.join(" | ")}`);
     }
 
-    const indexable = isIndexable(record.robotsTags);
     if (indexable && !record.ogType) {
       errors.push(`${record.route}: missing og:type`);
     }
@@ -466,15 +456,12 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
   }
 
   for (const record of pageRecords) {
-    const hrefRegex = /<a\b[^>]*href="([^"]+)"/gi;
-    let match = hrefRegex.exec(record.html);
-    while (match) {
-      const normalized = normalizeHref(match[1]);
+    for (const href of getAnchorHrefs(record.html)) {
+      const normalized = normalizeHref(href);
       if (normalized && routeSet.has(normalized)) {
         graph.get(record.route).add(normalized);
         inbound.set(normalized, (inbound.get(normalized) ?? 0) + 1);
       }
-      match = hrefRegex.exec(record.html);
     }
   }
 
@@ -550,7 +537,7 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
   }
 
   for (const check of RICHNESS_CHECKS) {
-    for (const record of selectRepresentativeRichnessRecords(pageRecords, check)) {
+    for (const record of selectRichnessRecords(pageRecords, check)) {
       const richness = analyzeStaticRichness(record);
       if (richness.words < check.minVisibleWords) {
         errors.push(

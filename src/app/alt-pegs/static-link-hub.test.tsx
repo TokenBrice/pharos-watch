@@ -33,10 +33,11 @@ describe("StaticAltPegLinkHub", () => {
     expect(html).toContain("References beyond geography");
   });
 
-  it("keeps the static crawlable directory hidden with separate anchor ids", () => {
+  it("keeps the static crawlable directory visible with separate anchor ids", () => {
     const { container } = render(withQueryClient(<StaticAltPegLinkHub />));
-    const hiddenDirectory = container.querySelector("#static-alt-peg-cohort-list")?.closest("[hidden]");
-    expect(hiddenDirectory).not.toBeNull();
+    const directory = container.querySelector("#static-alt-peg-cohort-list");
+    expect(directory).not.toBeNull();
+    expect(directory?.closest("[hidden]")).toBeNull();
     expect(container.querySelector("#static-alt-peg-region-europe")).not.toBeNull();
     expect(container.querySelector("#alt-peg-region-europe")).toBeNull();
   });

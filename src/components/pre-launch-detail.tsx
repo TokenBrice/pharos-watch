@@ -317,7 +317,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       <header className="flex items-start gap-4">
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <div className="min-w-0 space-y-1">
-          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">{coin.name}</h1>
+          <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {coin.name} ({coin.symbol}) Pre-Launch Stablecoin Tracker
+          </h1>
           <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
         </div>
       </header>

@@ -35,21 +35,26 @@ async function writePage(
     mainText = "Static body text for a crawlable page.",
     robots = [],
     ogType = "website",
+    canonical = pageUrl(route),
     extraHead = "",
+    quote = "\"",
   }: {
     h1?: string;
     links?: string[];
     mainText?: string;
     robots?: string[];
     ogType?: string | null;
+    canonical?: string | null;
     extraHead?: string;
+    quote?: "\"" | "'";
   } = {},
 ) {
   const filePath = pagePath(root, route);
   await mkdir(path.dirname(filePath), { recursive: true });
   const robotsTags = robots.map((content) => `<meta name="robots" content="${content}"/>`).join("");
-  const linkTags = links.map((href) => `<a href="${href}">${href}</a>`).join("");
+  const linkTags = links.map((href) => `<a href=${quote}${href}${quote}>${href}</a>`).join("");
   const ogTypeTag = ogType ? `<meta property="og:type" content="${ogType}"/>` : "";
+  const canonicalTag = canonical ? `<link rel="canonical" href="${canonical}"/>` : "";
   await writeFile(
     filePath,
     `<!doctype html>
@@ -58,7 +63,7 @@ async function writePage(
     <title>${h1} | Pharos</title>
     <meta name="description" content="${h1} description"/>
     ${robotsTags}
-    <link rel="canonical" href="${pageUrl(route)}"/>
+    ${canonicalTag}
     <meta property="og:title" content="${h1}"/>
     <meta property="og:description" content="${h1} description"/>
     ${ogTypeTag}
@@ -145,6 +150,22 @@ describe("check-seo-static", () => {
     expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: missing og:type")]));
   });
 
+  it("allows noindex pages to omit canonical", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"] });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writePage(root, "/404/", {
+      h1: "Not Found",
+      robots: ["noindex, follow"],
+      canonical: null,
+    });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectSeoStaticCheckResult({ outDir: root });
+
+    expect(result.errors.some((error) => error.includes("/404/: missing canonical"))).toBe(false);
+  });
+
   it("fails conflicting robots directives across robots tags", async () => {
     const root = await makeOutDir();
     await writePage(root, "/", {
@@ -180,6 +201,17 @@ describe("check-seo-static", () => {
     );
   });
 
+  it("follows single-quoted internal links when calculating reachability", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", { h1: "Home", links: ["/stability-index/"], quote: "'" });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectSeoStaticCheckResult({ outDir: root });
+
+    expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
+  });
+
   it("fails thin representative chain detail static HTML", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/chains/ethereum/"]);
@@ -194,6 +226,38 @@ describe("check-seo-static", () => {
     expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.stringContaining("/chains/ethereum/: chain detail static HTML visible text is too thin"),
+      ]),
+    );
+  });
+
+  it("fails thin non-canary stablecoin detail pages", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/", "/stablecoin/thin/"]);
+    await writePage(root, "/stablecoin/usdt-tether/", {
+      h1: "Tether",
+      mainText: "Useful stablecoin detail text ".repeat(20),
+    });
+    await writePage(root, "/stablecoin/usdc-circle/", {
+      h1: "USD Coin",
+      mainText: "Useful stablecoin detail text ".repeat(20),
+    });
+    await writePage(root, "/stablecoin/thin/", {
+      h1: "Thin Coin",
+      mainText: "",
+    });
+    await writeSitemap(root, [
+      "/",
+      "/stability-index/",
+      "/stablecoin/usdt-tether/",
+      "/stablecoin/usdc-circle/",
+      "/stablecoin/thin/",
+    ]);
+
+    const result = collectSeoStaticCheckResult({ outDir: root });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/stablecoin/thin/: stablecoin detail static HTML visible text is too thin"),
       ]),
     );
   });

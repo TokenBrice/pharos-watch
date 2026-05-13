@@ -283,6 +283,7 @@ describe("api endpoint registry", () => {
     });
     expect(findDynamicEndpointDescriptor("/api/og/stablecoin/usdt-tether")).toMatchObject({
       key: "og-image",
+      methods: ["GET", "HEAD"],
       publicApiAccess: "exempt",
       siteDataAccess: "denied",
       adminRequired: false,
@@ -328,6 +329,7 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/request-source-stats"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/og/stablecoin/usdt-tether"), "HEAD")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/discovery-candidates/1/dismiss"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys/1/update"), "POST")).toBeNull();
@@ -344,6 +346,10 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/backfill-dews"), "POST")).toBeNull();
 
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "POST")).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "HEAD")).toEqual({
       message: "Method not allowed",
       allowedMethods: ["GET"],
     });

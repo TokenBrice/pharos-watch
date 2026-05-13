@@ -16,7 +16,7 @@ import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import aiSummaries from "../../../../data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
-import { buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
+import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 
@@ -108,23 +108,40 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     );
   }
 
+  const summary = typedSummaries[id] ?? null;
+
   if (coin.status === "pre-launch") {
     return (
-      <PreLaunchDetail
-        coin={coin}
-        logoSrc={logosById[coin.id]}
-        summary={typedSummaries[id] ?? null}
-        logos={logosById}
-      />
+      <>
+        <PreLaunchDetail
+          coin={coin}
+          logoSrc={logosById[coin.id]}
+          summary={summary}
+          logos={logosById}
+        />
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Home", url: "/" },
+            { name: "Upcoming", url: "/upcoming/" },
+            { name: `${coin.name} (${coin.symbol})`, url: buildStablecoinUrl(id) },
+          ]}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(buildPreLaunchStablecoinJsonLd(coin)),
+          }}
+        />
+      </>
     );
   }
 
   const related = getRelatedStablecoins(coin, { candidates: ACTIVE_STABLECOINS });
   const staticComparisonPages = getStaticComparisonPagesForCoin(id);
-  const summary = typedSummaries[id] ?? null;
   const staticCoin = buildStablecoinStaticMeta(coin, {
     hasCollateralUsage: hasCollateralUsageTarget(id),
   });
+  const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
 
   return (
     <>
@@ -155,7 +172,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: safeJsonLd(buildStablecoinDatasetJsonLd(coin)),
+          __html: safeJsonLd(buildStablecoinDatasetJsonLd(coin, {
+            dateModified: structuredDataDateModified,
+          })),
         }}
       />
     </>

@@ -92,6 +92,19 @@ describe("router contract: strict frontend paths are routable", () => {
     await expect(response!.text()).resolves.toBe("Malformed URI");
   });
 
+  it("allows HEAD on dynamic OG routes without returning a body", async () => {
+    const malformedOgPath = "https://api.pharos.watch/api/og/stablecoin/%E0%A4%A";
+    const response = await route(makeRouteCtx({
+      url: new URL(malformedOgPath),
+      request: new Request(malformedOgPath, { method: "HEAD" }),
+    }));
+
+    expect(response).not.toBeNull();
+    expect(response!.status).toBe(400);
+    expect(response!.headers.get("Content-Type")).toBe("text/plain");
+    await expect(response!.text()).resolves.toBe("");
+  });
+
   it("keeps router static paths registered in endpoint definitions", () => {
     const registeredPaths = new Set(ENDPOINT_DEFINITIONS.map((endpoint) => endpoint.path));
 

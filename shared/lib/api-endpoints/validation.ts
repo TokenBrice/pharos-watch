@@ -9,7 +9,7 @@ import type {
 import { findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
 
-type EndpointMethod = "GET" | "POST";
+type EndpointMethod = "GET" | "HEAD" | "POST";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
@@ -187,13 +187,16 @@ function getResolvedDynamicEndpointDescriptor(path: string) {
 }
 
 export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
-  if (method !== "GET" && method !== "POST") {
+  if (method !== "GET" && method !== "HEAD" && method !== "POST") {
     return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
   }
 
   const allowedMethods = getAllowedEndpointMethods(url);
   if (!allowedMethods) {
     if (method === "POST") {
+      return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
+    }
+    if (method === "HEAD") {
       return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
     }
     return null;
@@ -203,7 +206,8 @@ export function validateEndpointMethod(url: URL, method: string): EndpointMethod
     return null;
   }
 
-  const postOnly = method === "GET" && allowedMethods.length === 1 && allowedMethods[0] === "POST";
+  const postOnly =
+    (method === "GET" || method === "HEAD") && allowedMethods.length === 1 && allowedMethods[0] === "POST";
   return {
     message: postOnly ? "Method not allowed. Use POST for this endpoint." : "Method not allowed",
     allowedMethods,

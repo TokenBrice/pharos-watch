@@ -49,9 +49,6 @@ export const metadata: Metadata = {
     creator: "@TokenBrice",
     images: [{ url: `${SITE_URL}/og-card.png`, width: 1200, height: 628 }],
   },
-  alternates: {
-    canonical: `${SITE_URL}/`,
-  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },

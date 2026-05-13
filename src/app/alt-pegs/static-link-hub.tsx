@@ -10,7 +10,7 @@ export function StaticAltPegLinkHub() {
     .flatMap((g) => g.items);
 
   return (
-    <div hidden>
+    <div>
       <AltPegCohortDirectory
         fiatItems={fiatItems}
         commodityIndexItems={commodityIndexItems}

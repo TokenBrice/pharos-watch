@@ -93,4 +93,11 @@ describe("StablecoinDetailSeoContent", () => {
     expect(container.textContent).toContain("Source: checked-in StablecoinMeta profile fields.");
     expect(container.textContent).toContain("the summary above was last updated May 2, 2026");
   });
+
+  it("uses archive h1 wording for frozen stablecoins", () => {
+    const frozenCoin: StablecoinMeta = { ...coin, status: "frozen", frozenAt: "2026-05-01" };
+    const { container } = render(<StablecoinDetailSeoContent coin={frozenCoin} summary={summary} />);
+
+    expect(container.querySelector("h1")?.textContent).toContain("Test Dollar (TSTD) frozen stablecoin archive");
+  });
 });

@@ -78,8 +78,9 @@
     "check:classifier-sensitive-copy": "node scripts/check-classifier-sensitive-copy.mjs",
     "check:safe-browsing": "node scripts/check-safe-browsing.mjs",
     "check:llms-txt": "tsx scripts/generate-llms-txt.ts --check",
-    "refresh:html-fixtures": "tsx scripts/refresh-reserve-html-fixtures.ts",
-    "seo:check": "node scripts/check-seo-static.mjs",
+  "refresh:html-fixtures": "tsx scripts/refresh-reserve-html-fixtures.ts",
+  "seo:live-smoke": "node scripts/check-seo-live-smoke.mjs",
+  "seo:check": "node scripts/check-seo-static.mjs",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
   },

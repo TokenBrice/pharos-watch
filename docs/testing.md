@@ -227,7 +227,9 @@ The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/c
 
 `npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, missing `og:type` on indexable pages, duplicate or missing `h1`s on indexable pages, invalid JSON-LD, indexable structured-data URLs that point under `/_site-data/`, conflicting robots directives, sitemap omissions, sitemap URLs without local static HTML artifacts, orphan pages, and indexable routes that are more than three clicks away from `/`. It also samples representative stablecoin detail and chain detail pages for crawlable static text so those routes do not regress into loading-shell-only exports.
 
-`node scripts/audit-seo-render-budget.mjs --url https://pharos.watch` is an optional live/local render-budget probe for SEO work. It records per-route HTML size, visible text length, request counts, asset mix, cache headers, and known content length; use it to investigate render budget or cacheability risks without making it part of the default CI gate.
+`node scripts/audit-seo-render-budget.mjs --url https://pharos.watch` is an optional live/local render-budget probe for SEO work. It records per-route HTML size, visible text length, request counts, asset mix, cache headers, and observed/known transfer size; use it to investigate render budget or cacheability risks without making it part of the default CI gate.
+
+`npm run seo:live-smoke -- --url https://pharos.watch` is the post-deploy/live SEO smoke. It checks sitemap URLs for redirects, 404s, and `noindex`, verifies `/chains/` HTML is not served with immutable asset caching, verifies direct generated markdown URLs carry `X-Robots-Tag` plus canonical `Link` headers, and runs JS-disabled Playwright canaries on key pages. It is intentionally not part of the local merge gate because it targets a deployed host; use `--sitemap-limit <n>` for a shorter sampling pass.
 
 ## Vitest Runtime Profiling
 

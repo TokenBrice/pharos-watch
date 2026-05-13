@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
+  buildPreLaunchStablecoinJsonLd,
   buildStablecoinDatasetJsonLd,
   CONTRACT_IDENTIFIER_JSON_LD_LIMIT,
 } from "@/lib/stablecoin-detail-json-ld";
@@ -34,5 +35,41 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
     expect(withoutDate).not.toHaveProperty("dateModified");
     expect(withDate.dateModified).toBe("2026-05-13T00:00:00.000Z");
+  });
+
+  it("uses archive wording for frozen stablecoin datasets", () => {
+    const coin = TRACKED_META_BY_ID.get("usnd-nerite")!;
+    const jsonLd = buildStablecoinDatasetJsonLd(coin, {
+      siteUrl: "https://pharos.watch",
+      dateModified: "2026-05-13",
+    });
+
+    expect(jsonLd.name).toContain("Frozen Stablecoin Archive");
+    expect(jsonLd.description).toContain("Historical archive");
+    expect(jsonLd.description).not.toContain("Live analytics");
+    expect(JSON.stringify(jsonLd.variableMeasured)).not.toContain("marketCap");
+  });
+});
+
+describe("buildPreLaunchStablecoinJsonLd", () => {
+  it("uses conservative WebPage and Thing schema for pre-launch stablecoins", () => {
+    const coin = TRACKED_META_BY_ID.get("fiusd-fiserv")!;
+    const jsonLd = buildPreLaunchStablecoinJsonLd(coin, {
+      siteUrl: "https://pharos.watch",
+    });
+
+    expect(jsonLd).toHaveLength(2);
+    expect(jsonLd[0]).toMatchObject({
+      "@type": "WebPage",
+      name: expect.stringContaining("Pre-Launch Stablecoin Tracker"),
+      url: "https://pharos.watch/stablecoin/fiusd-fiserv/",
+    });
+    expect(jsonLd[1]).toMatchObject({
+      "@type": "Thing",
+      name: coin.name,
+      alternateName: coin.symbol,
+    });
+    expect(JSON.stringify(jsonLd)).not.toContain("Dataset");
+    expect(JSON.stringify(jsonLd)).not.toContain("Live analytics");
   });
 });
