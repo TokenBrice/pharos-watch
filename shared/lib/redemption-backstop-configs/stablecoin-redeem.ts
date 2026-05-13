@@ -16,6 +16,7 @@ const REVIEWED_WRAPPER_REDEMPTION_AT = "2026-04-21";
 const REVIEWED_STABLECOIN_BATCH_AT = "2026-05-05";
 const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
 const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
+const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_DIRECT_REDEMPTION_AT,
 );
@@ -865,6 +866,54 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
     ],
     notes: [
       "Modeled as a NAV tranche exit to underlying USDC exposure, with whitelist and CDO-liquidity constraints rather than an issuer fiat redemption route.",
+    ],
+  },
+  "usdb-blast": {
+    ...stablecoinRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    settlementModel: "days",
+    outputAssetType: "stable-single",
+    costModel: documentedVariableFee(
+      "Blast docs describe USDB redemption for DAI when bridging back to Ethereum; bridge gas and withdrawal costs are variable and no separate fixed redemption fee was identified",
+    ),
+    routeExitCorrelation: "wrapper-to-parent-dependency",
+    docs: [
+      sourceRef("Blast developer docs", "https://docs.blast.io/", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Models the canonical Blast bridge exit from USDB to Ethereum DAI, not secondary-market USDB liquidity on Blast.",
+      "Existing live reserve telemetry tracks the Blast USDB yield manager, but this static route only claims documented eventual bridge redeemability.",
+    ],
+  },
+  "usdv-solomon": {
+    ...stablecoinRedeemBase,
+    accessModel: "whitelisted-onchain",
+    capacityModel: { kind: "supply-ratio", ratio: 0.005, confidence: "documented-bound", basis: "hot-buffer" },
+    costModel: documentedVariableFee(
+      "Solomon docs disclose a 0.2% mint fee; redemption fee is not separately published, and access is limited to approved or whitelisted participants",
+    ),
+    reviewedAt: REVIEWED_FOLLOWUP_REMEDIATION_AT,
+    docs: [
+      sourceRef("Solomon minting USDv", "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv", [
+        "route",
+        "access",
+        "fees",
+      ]),
+      sourceRef(
+        "Solomon peg arbitrage",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as the whitelisted USDv to USDC redemption path via Solomon protocol reserves, not as full strategy-collateral redeemability.",
+      "The documented 0.5% reserve buffer is the immediate capacity bound; strategy assets and derivatives backing remain outside immediate redemption capacity.",
     ],
   },
   "weusd-picwe": {

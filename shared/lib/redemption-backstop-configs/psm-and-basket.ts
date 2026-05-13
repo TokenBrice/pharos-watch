@@ -14,6 +14,7 @@ const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const REVIEWED_RESERVE_PROTOCOL_DTF_AT = "2026-05-05";
 const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
+const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(
   REVIEWED_BASKET_REDEMPTION_AT,
 );
@@ -267,6 +268,35 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ),
     notes: [
       "Reserve Protocol API-backed reserve sync exposes the current basket weights, but redemption scoring remains documented-bound rather than live-direct capacity because the feed does not publish current redeemable capacity or throttle state",
+    ],
+  },
+  "xmd-metal-dollar": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    accessModel: "whitelisted-onchain",
+    outputAssetType: "stable-basket",
+    costModel: fixedFee(
+      0,
+      "Metal Dollar materials describe 1:1 redemption into supported basket stablecoins with no slippage, AMM dependency, or trading spread; no separate protocol redemption fee was identified",
+    ),
+    holderEligibility: "whitelisted-primary",
+    routeExitCorrelation: "same-stablecoin-pool-backing",
+    docs: [
+      sourceRef("Metal Dollar product page", "https://www.metallicus.com/metal-dollar", [
+        "route",
+        "capacity",
+        "access",
+      ]),
+      sourceRef(
+        "XPR Network XMD redeem guide",
+        "https://help.xprnetwork.org/hc/en-us/articles/11560190160151-How-do-I-redeem-Metal-Dollar-XMD",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef("Metal Dollar site", "https://metaldollar.com/", ["route", "capacity"]),
+    ],
+    notes: [
+      "Holder must complete the XPR/Metal account-verification path and use WebAuth Wallet, so access is modeled as whitelisted onchain rather than permissionless.",
+      "Pharos does not currently model XPR Network contracts, so this remains a static documented-bound route unless a supported-chain capacity adapter is added later.",
     ],
   },
 };

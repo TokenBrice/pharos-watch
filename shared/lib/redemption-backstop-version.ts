@@ -1,9 +1,25 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "4.01",
+  currentVersion: "4.02",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "4.02",
+      title: "Follow-up redemption coverage expansion",
+      date: "2026-05-13",
+      effectiveAt: 1778673600,
+      summary:
+        "Source-reviewed follow-up coverage adds documented Mento local-FX CDP routes, Enosys CDP redemptions, Blast USDB bridge exit, Metal Dollar basket redemption, MoveUSD issuer redemption, and Solomon USDv whitelisted reserve-buffer redemption.",
+      impact: [
+        "AUDm, BRLm, CADm, COPm, GHSm, KESm, PHPm, and ZARm now carry documented-bound Mento CDP collateral-redeem routes with explicit notes that current per-symbol CDP telemetry is not modeled yet",
+        "CDP Enosys now carries a Liquity-style collateral-redeem route, while USDB and USDv add stablecoin-redeem coverage and XMD adds whitelisted basket-redeem coverage",
+        "MoveUSD now carries a source-reviewed offchain issuer redemption route through CFX designated channels for verified customers",
+        "Coverage rises to 280 configured redemption routes, with route-family totals now at 126 offchain-issuer, 60 stablecoin-redeem, 41 collateral-redeem, 35 queue-redeem, 10 psm-swap, and 8 basket-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.01",
       title: "Yearn yBOLD wrapper redemption coverage",

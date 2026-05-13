@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.01`
+- **Current methodology version:** `v4.02`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.01` update: yBOLD now carries a reviewed Yearn ERC-4626 wrapper route into BOLD, modeled separately from BOLD's downstream Liquity collateral-redemption route.
+Latest `v4.02` update: source-reviewed follow-up coverage adds Mento local-FX CDP routes, Enosys CDP redemptions, Blast USDB bridge exit, Metal Dollar basket redemption, MoveUSD issuer redemption, and Solomon USDv whitelisted reserve-buffer redemption.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 267
-- **Route families:** 125 `offchain-issuer`, 58 `stablecoin-redeem`, 32 `collateral-redeem`, 35 `queue-redeem`, 10 `psm-swap`, 7 `basket-redeem`
+- **Configured coins:** 280
+- **Route families:** 126 `offchain-issuer`, 60 `stablecoin-redeem`, 41 `collateral-redeem`, 35 `queue-redeem`, 10 `psm-swap`, 8 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

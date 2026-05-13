@@ -11,6 +11,7 @@ import {
 import {
   reviewedDirectRedemptionSupplyFull,
   REVIEWED_DIRECT_REDEMPTION_AT,
+  REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
 } from "./shared";
@@ -237,6 +238,30 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
         ["route", "capacity", "access"],
       ),
       sourceRef("USA₮ website terms", "https://usat.io/terms/", ["access"]),
+    ],
+  },
+  "moveusd-cfx": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    costModel: documentedVariableFee(
+      "CFX documents 1:1 MOVEUSD redemption through designated channels; fees, currency conversions, and account-maintenance charges may apply, and no single fixed public redemption fee is published",
+    ),
+    docs: [
+      sourceRef("MoveUSD overview", "https://docs.moveusd.com/docs/what-is-moveusd", [
+        "route",
+        "capacity",
+        "access",
+      ]),
+      sourceRef("MoveUSD disclosures", "https://docs.moveusd.com/docs/disclosures-disclaimers", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Modeled as CFX's verified-customer designated-channel redemption rail, not secondary-market Perena or Solana liquidity.",
+      "Docs state redemptions can use designated bank accounts, authorized OTC partners, or direct transfer mechanisms, with KYC/AML and good-standing account requirements.",
     ],
   },
 };

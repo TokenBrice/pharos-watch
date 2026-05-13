@@ -16,6 +16,7 @@ const REVIEWED_REMEDIATION_AT = "2026-03-30";
 const REVIEWED_HIVE_HBD_AT = "2026-05-05";
 const REVIEWED_MENTO_CDP_AT = "2026-05-11";
 const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
+const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 const reviewedDirectRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_DIRECT_REDEMPTION_AT);
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/collateral-redeem.ts";
 const BASE_COLLATERAL_REDEEM_IDS = [
@@ -69,11 +70,60 @@ const mentoCdpRedeemConfig: RedemptionBackstopConfig = {
   ],
 };
 
+const mentoLocalFxCdpRedeemConfig: RedemptionBackstopConfig = {
+  ...collateralRedeemBase,
+  ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+  outputAssetType: "stable-single",
+  costModel: documentedVariableFee(
+    "Mento CDP redemptions follow Liquity v2-style mechanics against USDm collateral with FX oracle pricing; public docs reviewed do not publish one global fixed redemption fee",
+  ),
+  docs: [
+    sourceRef("Mento CDP docs", "https://docs.mento.org/mento-v3/dive-deeper/cdp", [
+      "route",
+      "capacity",
+      "access",
+      "settlement",
+      "fees",
+    ]),
+    sourceRef("Mento CDP smart-contract docs", "https://docs.mento.org/mento-v3/build/smart-contracts/cdps", [
+      "route",
+      "capacity",
+      "access",
+      "settlement",
+      "fees",
+    ]),
+    sourceRef("Mento V3 addresses", "https://docs.mento.org/mento-v3/build/deployments/addresses", [
+      "route",
+      "access",
+    ]),
+    sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity"]),
+  ],
+  notes: [
+    "Mento V3 docs describe FX stables as USDm-collateralized Liquity v2-style CDP debt, with normal redemptions following the CDP branch mechanics.",
+    "FX market-hours gating can temporarily block normal redemptions and close-trove operations; current docs list Friday 21:00 UTC through Sunday 23:00 UTC plus specified holidays.",
+    "Current Mento reserve sync exposes reserve-wide collateral for these local-FX rows, so this static route stays documented-bound/eventual-only until per-symbol CDP telemetry is available.",
+  ],
+};
+
 export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
   ...defineBatch(["gbpm-mento", "jpym-mento", "chfm-mento"], mentoCdpRedeemConfig, {
     sourceFilePath: SOURCE_FILE_PATH,
   }),
+  ...defineBatch(
+    [
+      "audm-mento",
+      "brlm-mento",
+      "cadm-mento",
+      "copm-mento",
+      "ghsm-mento",
+      "kesm-mento",
+      "phpm-mento",
+      "zarm-mento",
+    ],
+    mentoLocalFxCdpRedeemConfig,
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
   ...defineCollateralRecordEntries({
     "bold-liquity": {
       ...collateralRedeemBase,
@@ -159,6 +209,25 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ...reviewedDirectRedemptionSupplyFull,
       outputAssetType: "mixed-collateral",
       costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+    },
+    "cdp-enosys": {
+      ...collateralRedeemBase,
+      ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+      outputAssetType: "mixed-collateral",
+      costModel: documentedVariableFee(LIQUITY_STYLE_REDEMPTION_FEE, "formula"),
+      docs: [
+        sourceRef("Flare Enosys Loans launch update", "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+          "settlement",
+        ]),
+      ],
+      notes: [
+        "Modeled as a Liquity V2-style collateral redemption route on Flare; lowest-rate troves are redeemed first when CDP trades below peg.",
+        "Capacity should stay documented-bound until a Flare adapter can read current branch debt and collateral directly.",
+      ],
     },
     "ausdt-tether-alloy": {
       ...collateralRedeemBase,
