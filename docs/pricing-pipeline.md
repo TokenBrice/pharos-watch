@@ -21,7 +21,7 @@ When an asset still has no usable current price after validation and fallback re
 
 ## Versioning
 
-- **Current methodology version:** `v6.0`
+- **Current methodology version:** `v6.01`
 - **Canonical version module:** `shared/lib/pricing-pipeline-version.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -242,12 +242,14 @@ When a live override validates successfully, the cached asset is written with:
 
 For tracked-base inheritance paths, the authoritative layer does not query a bespoke contract path; it inherits the tracked parent asset's live price and historical replay because Pharos models the child as an instantly redeemable wrapper or extension of that parent rail.
 
-Live tracked-base inheritance only promotes parent prices that are fresh, replay-safe, and either high-confidence or
-explicitly authoritative themselves. Low-confidence, fallback, cached, stale, or provenance-less parent prices are skipped
-instead of being upgraded into `protocol-redeem` high-confidence child prices. When inheritance is accepted, the override
-carries the parent source, confidence, observed-at timestamp, observed-at mode, and replay-safety status for diagnostics,
-and the published child observation timestamp follows the trusted parent observation rather than being restamped as a
-local fetch.
+Live tracked-base and NAV-wrapper inheritance only promotes parent prices that are replay-safe and either
+high-confidence or explicitly authoritative themselves. Low-confidence, fallback, cached, stale-sync, single-source stale,
+or provenance-less parent prices are skipped instead of being upgraded into `protocol-redeem` high-confidence child
+prices. For high-confidence composite parents, a fresh same-run `priceSyncedAt` can satisfy the live inheritance
+freshness check when the composite's single displayed `observedAt` is older than one short-window component source; this
+preserves source-specific admission from the parent run without falsely rejecting mixed-cadence composites such as
+USDC. When inheritance is accepted, the override carries the parent source, confidence, observed-at timestamp,
+observed-at mode, and replay-safety status for diagnostics.
 
 Current tracked-base inheritance paths are:
 

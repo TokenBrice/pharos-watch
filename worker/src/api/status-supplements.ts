@@ -2,7 +2,7 @@ import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custo
 import {
   STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT,
 } from "@shared/lib/status-thresholds";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import type {
   ClassificationWarning,
   CoinGeckoPriceDiff,
@@ -125,7 +125,7 @@ async function loadCoinGeckoPriceDiff(
   }
 
   const trackedWithGeckoId = stablecoinsCache.payload.peggedAssets.filter(
-    (asset) => ACTIVE_IDS.has(asset.id) && typeof asset.geckoId === "string" && asset.geckoId.length > 0,
+    (asset) => !asset.frozen && ACTIVE_IDS.has(asset.id) && typeof asset.geckoId === "string" && asset.geckoId.length > 0,
   );
   if (trackedWithGeckoId.length === 0) {
     return {

@@ -1,6 +1,15 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.0` (2026-02-01 -> 2026-05-13).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.01` (2026-02-01 -> 2026-05-13).
+
+---
+
+## v6.01 - Composite-parent NAV inheritance freshness (May 13, 2026)
+
+- Protocol-backed NAV wrappers can inherit from fresh same-run high-confidence composite parent prices even when the composite's oldest displayed component timestamp is older than one short-window source
+- `gtusdc-gauntlet` recovers its ERC-4626 `protocol-redeem` price from on-chain `convertToAssets(1 share)` times the tracked `usdc-circle` parent instead of publishing a DEX/GeckoTerminal market price
+- The fallback applies only to replay-safe composite parents with a fresh `priceSyncedAt`; low-confidence, stale-sync, cached, single-source, or non-replay-safe parent prices still cannot upgrade into child `protocol-redeem` prices
+- The CoinGecko drift status comparison ignores frozen archive rows, so discontinued assets such as BUCK do not dominate the active price-drift watchlist
 
 ---
 

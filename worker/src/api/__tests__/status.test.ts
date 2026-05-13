@@ -475,6 +475,19 @@ describe("handleStatus", () => {
           chainCirculating: {},
           chains: [],
         },
+        {
+          id: "buck-buck-assets",
+          name: "Buck",
+          symbol: "BUCK",
+          geckoId: "buck-2",
+          frozen: true,
+          price: 1,
+          priceSource: "coinmarketcap",
+          priceConfidence: "fallback",
+          circulating: { peggedUSD: 4_600 },
+          chainCirculating: {},
+          chains: [],
+        },
       ],
     });
 
@@ -484,6 +497,7 @@ describe("handleStatus", () => {
         body: {
           tether: { usd: 1 },
           "paypal-usd": { usd: 1 },
+          "buck-2": { usd: 0.09 },
         },
       },
     ]);
@@ -541,6 +555,7 @@ describe("handleStatus", () => {
       priceConfidence: "single-source",
     });
     expect(body.coingeckoPriceDiff?.rows[0].diffPct ?? 0).toBeGreaterThan(5);
+    expect(body.coingeckoPriceDiff?.rows.map((row) => row.stablecoinId)).not.toContain("buck-buck-assets");
   });
 
   it("surfaces CoinGecko comparison loader failures through sectionErrors", async () => {

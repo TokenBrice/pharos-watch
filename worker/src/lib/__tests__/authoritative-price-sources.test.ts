@@ -819,6 +819,46 @@ describe("authoritative-price-sources", () => {
     expect(override?.price).toBeCloseTo(1.01 * 0.9999, 4);
   });
 
+  it("prices an ERC-4626 NAV vault when a fresh same-run composite parent has an older component timestamp", async () => {
+    const oneShareUsdcRaw = 1_115_989n.toString(16).padStart(64, "0");
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const overrides = await fetchAuthoritativeLivePriceOverrides([
+      {
+        id: "gtusdc-gauntlet",
+        name: "Gauntlet USDC Core",
+        symbol: "gtUSDC",
+        circulating: { peggedUSD: 128_000_000 },
+      },
+      {
+        id: "usdc-circle",
+        name: "USDC",
+        symbol: "USDC",
+        price: 0.9999,
+        priceSource: "coingecko+pyth",
+        priceConfidence: "high",
+        priceObservedAt: nowSec - 900,
+        priceObservedAtMode: "upstream",
+        priceSyncedAt: nowSec - 60,
+      },
+    ]);
+
+    const override = overrides.get("gtusdc-gauntlet");
+    expect(override).toMatchObject({
+      source: "protocol-redeem",
+      confidence: "high",
+      observedAt: nowSec - 60,
+      observedAtMode: "local_fetch",
+      metadata: {
+        inheritedFrom: "usdc-circle",
+        parentSource: "coingecko+pyth",
+        parentConfidence: "high",
+      },
+    });
+    expect(override?.price).toBeCloseTo(1.115989 * 0.9999, 4);
+  });
+
   it("prices audited ERC-4626 NAV vaults from their configured parent assets", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const cases = [

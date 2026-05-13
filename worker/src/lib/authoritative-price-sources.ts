@@ -1,3 +1,4 @@
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
@@ -42,6 +43,7 @@ const CAP_SAMPLE_SUPPLY_FRACTION = 0.01;
 const CAP_SAMPLE_NOTIONAL_MIN_USD = 1_000;
 const CAP_SAMPLE_NOTIONAL_MAX_USD = 1_000_000;
 const CAP_HISTORICAL_MIN_COVERAGE = 0.8;
+const INHERITED_PARENT_SYNC_MAX_AGE_SEC = 30 * 60;
 const INHERITED_TRACKED_PRICE_PARENTS = {
   [USDAI_USD_AI_ID]: PYUSD_PAYPAL_ID,
   "iusd-initia": AUSD_AGORA_ID,
@@ -349,6 +351,13 @@ function isExplicitAuthoritativeParent(asset: PeggedAsset): boolean {
     asset.priceConfidence != null;
 }
 
+function normalizeFreshSyncedAt(value: number | null | undefined, nowSec: number): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+  const syncedAt = Math.floor(value);
+  if (syncedAt > nowSec + 60) return null;
+  return nowSec - syncedAt <= INHERITED_PARENT_SYNC_MAX_AGE_SEC ? syncedAt : null;
+}
+
 function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
   price: number;
   observedAt: number;
@@ -377,7 +386,23 @@ function resolveTrustedInheritedParent(asset: PeggedAsset, nowSec: number): {
     nowSec,
     requireObservedAt: true,
   });
-  if (!freshness.accepted || freshness.observedAt == null) return null;
+  if (!freshness.accepted || freshness.observedAt == null) {
+    const syncedAt = normalizeFreshSyncedAt(asset.priceSyncedAt, nowSec);
+    if (
+      freshness.accepted === false &&
+      freshness.reason === "stale_observed_at" &&
+      syncedAt != null &&
+      splitCompositePriceSource(parentSource).length > 1
+    ) {
+      return {
+        price,
+        observedAt: syncedAt,
+        observedAtMode: "local_fetch",
+        replaySafe,
+      };
+    }
+    return null;
+  }
 
   return {
     price,
