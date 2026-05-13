@@ -12,6 +12,8 @@ import {
 import { decodeAddress, decodeUint256 } from "../src/lib/evm-logs";
 import {
   fetchKycRipRows,
+  parseKycRipCliArgs,
+  type KycRipCliOptions,
   type KycRipEventRow,
   type KycRipValidationStats,
 } from "./lib/kyc-rip";
@@ -52,14 +54,7 @@ type ReceiptClient = {
   getBlock(args: { blockNumber: bigint }): Promise<{ timestamp: bigint }>;
 };
 
-export type EventCliOptions = {
-  apply: boolean;
-  remote: true;
-  database: string;
-  timeoutMs: number;
-  minRows: number;
-  providerUrl?: string;
-};
+export type EventCliOptions = KycRipCliOptions;
 
 export type EventReconcileDependencies = {
   fetchImpl?: typeof fetch;
@@ -68,69 +63,12 @@ export type EventReconcileDependencies = {
   log?: (message: string) => void;
 };
 
-const DEFAULT_TIMEOUT_MS = 15_000;
-const DEFAULT_MIN_ROWS = 100;
-const DEFAULT_DATABASE = "stablecoin-db";
-
 export function parseEventArgs(argv: string[]): EventCliOptions {
-  const options: EventCliOptions = {
-    apply: false,
-    remote: true,
-    database: DEFAULT_DATABASE,
-    timeoutMs: DEFAULT_TIMEOUT_MS,
-    minRows: DEFAULT_MIN_ROWS,
-  };
-
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--help") {
-      printHelp();
-      process.exit(0);
-    }
-    if (arg === "--apply") {
-      options.apply = true;
-      continue;
-    }
-    if (arg === "--remote") {
-      continue;
-    }
-    if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
-      if (arg === "--timeout-ms") options.timeoutMs = parsePositiveInteger(value, arg);
-      if (arg === "--min-rows") options.minRows = parsePositiveInteger(value, arg);
-      if (arg === "--database") options.database = value;
-      if (arg === "--provider-url") options.providerUrl = value;
-      index++;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return options;
-}
-
-function parsePositiveInteger(value: string, flag: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
-  }
-  return parsed;
-}
-
-function printHelp(): void {
-  console.log(`Usage: tsx worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts [options]
-
-Default mode is dry-run. Remote D1 writes require --apply.
-
-Options:
-  --apply                Execute remote D1 reads and inserts
-  --remote               Target remote D1 (default and only supported D1 target)
-  --timeout-ms <ms>      kyc.rip request timeout (default: ${DEFAULT_TIMEOUT_MS})
-  --min-rows <count>     Minimum accepted rows before reconciliation (default: ${DEFAULT_MIN_ROWS})
-  --database <name>      D1 database name (default: ${DEFAULT_DATABASE})
-  --provider-url <url>   Override kyc.rip ban-list URL
-  --help                 Show this help`);
+  return parseKycRipCliArgs(argv, {
+    scriptName: "worker/scripts/reconcile-blacklist-events-from-kyc-rip.ts",
+    applyDescription: "Execute remote D1 reads and inserts",
+    minRowsDescription: "Minimum accepted rows before reconciliation",
+  });
 }
 
 function buildAddressKey(stablecoin: "USDT" | "USDC", address: string): string {

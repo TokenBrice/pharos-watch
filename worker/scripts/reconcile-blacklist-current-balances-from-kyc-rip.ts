@@ -3,6 +3,8 @@ import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import {
   fetchKycRipRows,
+  parseKycRipCliArgs,
+  type KycRipCliOptions,
   type KycRipCurrentBalanceRow,
   type KycRipValidationStats,
 } from "./lib/kyc-rip";
@@ -24,14 +26,7 @@ type ExistingCountRow = {
   count: number;
 };
 
-export type CurrentBalanceCliOptions = {
-  apply: boolean;
-  remote: true;
-  database: string;
-  timeoutMs: number;
-  minRows: number;
-  providerUrl?: string;
-};
+export type CurrentBalanceCliOptions = KycRipCliOptions;
 
 export type CurrentBalanceReconcileDependencies = {
   fetchImpl?: typeof fetch;
@@ -40,73 +35,16 @@ export type CurrentBalanceReconcileDependencies = {
   log?: (message: string) => void;
 };
 
-const DEFAULT_TIMEOUT_MS = 15_000;
-const DEFAULT_MIN_ROWS = 100;
-const DEFAULT_DATABASE = "stablecoin-db";
-
 function buildCurrentBalanceId(stablecoin: "USDT" | "USDC", chainId: "ethereum" | "tron", address: string): string {
   return buildBlacklistAddressCountKey(stablecoin, chainId, address);
 }
 
 export function parseCurrentBalanceArgs(argv: string[]): CurrentBalanceCliOptions {
-  const options: CurrentBalanceCliOptions = {
-    apply: false,
-    remote: true,
-    database: DEFAULT_DATABASE,
-    timeoutMs: DEFAULT_TIMEOUT_MS,
-    minRows: DEFAULT_MIN_ROWS,
-  };
-
-  for (let index = 0; index < argv.length; index++) {
-    const arg = argv[index];
-    if (arg === "--help") {
-      printHelp();
-      process.exit(0);
-    }
-    if (arg === "--apply") {
-      options.apply = true;
-      continue;
-    }
-    if (arg === "--remote") {
-      continue;
-    }
-    if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
-      if (arg === "--timeout-ms") options.timeoutMs = parsePositiveInteger(value, arg);
-      if (arg === "--min-rows") options.minRows = parsePositiveInteger(value, arg);
-      if (arg === "--database") options.database = value;
-      if (arg === "--provider-url") options.providerUrl = value;
-      index++;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
-  }
-
-  return options;
-}
-
-function parsePositiveInteger(value: string, flag: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
-  }
-  return parsed;
-}
-
-function printHelp(): void {
-  console.log(`Usage: tsx worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts [options]
-
-Default mode is dry-run. Remote D1 writes require --apply.
-
-Options:
-  --apply                Execute the remote D1 replacement
-  --remote               Target remote D1 (default and only supported D1 target)
-  --timeout-ms <ms>      kyc.rip request timeout (default: ${DEFAULT_TIMEOUT_MS})
-  --min-rows <count>     Minimum accepted rows before replacement (default: ${DEFAULT_MIN_ROWS})
-  --database <name>      D1 database name (default: ${DEFAULT_DATABASE})
-  --provider-url <url>   Override kyc.rip ban-list URL
-  --help                 Show this help`);
+  return parseKycRipCliArgs(argv, {
+    scriptName: "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",
+    applyDescription: "Execute the remote D1 replacement",
+    minRowsDescription: "Minimum accepted rows before replacement",
+  });
 }
 
 export async function normalizeCurrentBalanceRows(rows: KycRipCurrentBalanceRow[]): Promise<SnapshotRow[]> {

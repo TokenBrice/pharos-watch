@@ -2,6 +2,9 @@ const DEFAULT_PROVIDER_URL = "https://api.kyc.rip/v1/tools/ban-list";
 const DEFAULT_LIMIT = 1000;
 const DEFAULT_MAX_MALFORMED_ROWS = 10;
 const DEFAULT_RETRIES = 2;
+export const KYC_RIP_DEFAULT_TIMEOUT_MS = 15_000;
+export const KYC_RIP_DEFAULT_MIN_ROWS = 100;
+export const KYC_RIP_DEFAULT_DATABASE = "stablecoin-db";
 
 export type KycRipAsset = "USDT" | "USDC";
 export type KycRipChain = "ETH" | "TRON";
@@ -46,6 +49,21 @@ export type FetchKycRipRowsResult<T> = {
   providerUrl: string;
 };
 
+export type KycRipCliOptions = {
+  apply: boolean;
+  remote: true;
+  database: string;
+  timeoutMs: number;
+  minRows: number;
+  providerUrl?: string;
+};
+
+type KycRipCliHelpOptions = {
+  scriptName: string;
+  applyDescription: string;
+  minRowsDescription: string;
+};
+
 class RetryableHttpError extends Error {
   constructor(readonly status: number) {
     super(`kyc.rip returned retryable HTTP ${status}`);
@@ -54,6 +72,67 @@ class RetryableHttpError extends Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null && !Array.isArray(value);
+}
+
+function parsePositiveInteger(value: string, flag: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${flag} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function printKycRipCliHelp(help: KycRipCliHelpOptions): void {
+  console.log(`Usage: tsx ${help.scriptName} [options]
+
+Default mode is dry-run. Remote D1 writes require --apply.
+
+Options:
+  --apply                ${help.applyDescription}
+  --remote               Target remote D1 (default and only supported D1 target)
+  --timeout-ms <ms>      kyc.rip request timeout (default: ${KYC_RIP_DEFAULT_TIMEOUT_MS})
+  --min-rows <count>     ${help.minRowsDescription} (default: ${KYC_RIP_DEFAULT_MIN_ROWS})
+  --database <name>      D1 database name (default: ${KYC_RIP_DEFAULT_DATABASE})
+  --provider-url <url>   Override kyc.rip ban-list URL
+  --help                 Show this help`);
+}
+
+export function parseKycRipCliArgs(argv: string[], help: KycRipCliHelpOptions): KycRipCliOptions {
+  const options: KycRipCliOptions = {
+    apply: false,
+    remote: true,
+    database: KYC_RIP_DEFAULT_DATABASE,
+    timeoutMs: KYC_RIP_DEFAULT_TIMEOUT_MS,
+    minRows: KYC_RIP_DEFAULT_MIN_ROWS,
+  };
+
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === "--help") {
+      printKycRipCliHelp(help);
+      process.exit(0);
+    }
+    if (arg === "--apply") {
+      options.apply = true;
+      continue;
+    }
+    if (arg === "--remote") {
+      continue;
+    }
+    if (arg === "--timeout-ms" || arg === "--min-rows" || arg === "--database" || arg === "--provider-url") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) throw new Error(`${arg} requires a value`);
+      if (arg === "--timeout-ms") options.timeoutMs = parsePositiveInteger(value, arg);
+      if (arg === "--min-rows") options.minRows = parsePositiveInteger(value, arg);
+      if (arg === "--database") options.database = value;
+      if (arg === "--provider-url") options.providerUrl = value;
+      index++;
+      continue;
+    }
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+
+  return options;
 }
 
 function isSupportedAsset(value: unknown): value is KycRipAsset {
