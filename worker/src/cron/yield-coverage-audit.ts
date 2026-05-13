@@ -17,6 +17,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
+  YIELD_WEIGHTED_POOL_GROUPS,
 } from "./yield-config";
 import type { DlPool } from "./yield-sync/types";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
@@ -225,6 +226,7 @@ export async function runYieldCoverageAudit(
     ...Object.values(YIELD_POOL_MAP),
     ...Object.values(AUTO_LENDING_POOL_MAP),
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
+    ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
   const gaps = identifyCoverageGaps(dlPools, coveredPools, LENDING_PROTOCOL_ALLOWLIST);
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));

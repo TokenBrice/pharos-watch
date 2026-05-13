@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.47",
+  currentVersion: "7.48",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.48",
+    title: "dTRINITY sdUSD Multi-Chain Weighted Source",
+    date: "2026-05-13",
+    effectiveAt: 1778630400,
+    summary:
+      "dTRINITY dUSD yield now publishes a TVL-weighted sdUSD source across the Ethereum and Fraxtal dStake vaults instead of using only the Ethereum DeFiLlama row.",
+    impact: [
+      "`dusd-dtrinity` resolves an exact DeFiLlama weighted pool group for Ethereum and Fraxtal sdUSD",
+      "The synthetic source key starts a new history series so prior Ethereum-only rows are not treated as equivalent 30-day samples",
+      "The dUSD metadata entry stays unchanged because its checked-in collateral and contract data already documents chain-isolated deployments",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.47",
     title: "Avant savUSD ownership correction",

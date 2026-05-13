@@ -12,6 +12,7 @@ import {
   RATE_DERIVED_CONFIGS,
   YIELD_POOL_MAP,
   YIELD_VARIANT_MAP,
+  YIELD_WEIGHTED_POOL_GROUPS,
 } from "../yield-config";
 import {
   getPriceDerivedApy,
@@ -30,6 +31,7 @@ import {
   TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID,
 } from "./tracked-optional-source-registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { buildWeightedYieldPoolGroupSource } from "./weighted-pools";
 
 export async function resolveTrackedYieldSources(params: {
   db: D1Database;
@@ -132,13 +134,31 @@ export async function resolveTrackedYieldSources(params: {
     const alreadyResolvedKeys = new Set(
       resolved.flatMap((entry) => entry.id === id && entry.yield != null ? [entry.yield.sourceKey] : []),
     );
+    const weightedPoolGroup = YIELD_WEIGHTED_POOL_GROUPS[id];
+    const weightedPoolGroupSource = weightedPoolGroup
+      ? buildWeightedYieldPoolGroupSource(weightedPoolGroup, params.dlPools)
+      : null;
+    const weightedPoolGroupMemberIds = new Set(
+      weightedPoolGroupSource && weightedPoolGroup ? weightedPoolGroup.poolIds : [],
+    );
+    if (weightedPoolGroupSource && !alreadyResolvedKeys.has(weightedPoolGroupSource.sourceKey)) {
+      resolved.push({ id, symbol, yield: weightedPoolGroupSource });
+      alreadyResolvedKeys.add(weightedPoolGroupSource.sourceKey);
+      hasAnySource = true;
+    }
+
     const dlSources = matchAllDlPools(id, symbol, params.dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP, {
       chainFilter: buildDlChainFilter(meta),
       contractAddresses: getTrackedContractAddresses(meta),
       reservedPoolIds: reservedExplicitPoolIds,
     });
     for (const dlPool of dlSources) {
-      if (alreadyResolvedKeys.has(dlPool.pool) || dlPool.apy == null || dlPool.apy < 0) {
+      if (
+        weightedPoolGroupMemberIds.has(dlPool.pool) ||
+        alreadyResolvedKeys.has(dlPool.pool) ||
+        dlPool.apy == null ||
+        dlPool.apy < 0
+      ) {
         continue;
       }
 

@@ -187,6 +187,7 @@ vi.mock("../yield-helpers", async (importOriginal) => {
 vi.mock("../yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {},
+  YIELD_WEIGHTED_POOL_GROUPS: {},
   EXPLICIT_YIELD_SOURCE_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),

@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.47` (2026-03-01 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.48` (2026-03-01 -> 2026-05-13).
+
+---
+
+## v7.48 - dTRINITY sdUSD Multi-Chain Weighted Source (May 13, 2026)
+
+- `dusd-dtrinity` now resolves a curated exact-pool group that TVL-weights DeFiLlama's Ethereum and Fraxtal sdUSD dStake rows
+- The published dUSD source no longer represents only the Ethereum sdUSD vault when Fraxtal sdUSD is also live
+- The new synthetic source key starts a fresh history series, so prior Ethereum-only rows are not carried forward as equivalent 30-day samples
 
 ---
 

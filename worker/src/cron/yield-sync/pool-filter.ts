@@ -1,4 +1,9 @@
-import { EXPLICIT_YIELD_SOURCE_POOL_MAP, YIELD_POOL_MAP, YIELD_VARIANT_MAP } from "../yield-config";
+import {
+  EXPLICIT_YIELD_SOURCE_POOL_MAP,
+  YIELD_POOL_MAP,
+  YIELD_VARIANT_MAP,
+  YIELD_WEIGHTED_POOL_GROUPS,
+} from "../yield-config";
 import type { DlPool } from "./types";
 
 function isNativeYieldPoolId(poolId: string): boolean {
@@ -9,6 +14,11 @@ function isExplicitYieldPoolId(poolId: string): boolean {
   return Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP)
     .flat()
     .some((config) => config.poolId === poolId);
+}
+
+function isWeightedYieldPoolId(poolId: string): boolean {
+  return Object.values(YIELD_WEIGHTED_POOL_GROUPS)
+    .some((config) => config.poolIds.includes(poolId));
 }
 
 function isYieldVariantSymbol(symbol: string): boolean {
@@ -24,5 +34,6 @@ export function isYieldRelevantDlPool(
   if (pool.stablecoin) return true;
   if (isNativeYieldPoolId(pool.pool)) return true;
   if (isExplicitYieldPoolId(pool.pool)) return true;
+  if (isWeightedYieldPoolId(pool.pool)) return true;
   return isYieldVariantSymbol(pool.symbol);
 }

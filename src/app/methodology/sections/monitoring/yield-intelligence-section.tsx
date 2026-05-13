@@ -131,8 +131,9 @@ export function YieldIntelligenceMethodologySection() {
                       <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a
                       DeFiLlama yield pool via static mapping, chain-scoped wrapper rules, and address-first fallback
                       matching, while explicitly preserving wrapper pools that upstream marks as non-stablecoin when they
-                      are configured as relevant yield sources and allowing exact-pool curated overrides for assets such as
-                      XAUT. Wrapper-over-native venues such as BOLD/yBOLD stay classified as native yield rather than
+                      are configured as relevant yield sources, allowing exact-pool curated overrides for assets such as
+                      XAUT, and TVL-weighting exact pool groups when one tracked asset maps to chain-isolated wrapper
+                      vaults. Wrapper-over-native venues such as BOLD/yBOLD stay classified as native yield rather than
                       governance-set when the wrapper is just packaging the protocol&apos;s own Stability Pool return
                     </li>
                     <li>
