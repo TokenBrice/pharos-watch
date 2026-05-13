@@ -99,6 +99,7 @@ describe("api endpoint registry", () => {
       "/api/yield-history",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/yield-rankings",
+      "/api/yield-source-decisions",
     ];
 
     const actualPaths = [...new Set(ENDPOINT_DEFINITIONS.flatMap((endpoint) => [
