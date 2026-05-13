@@ -321,7 +321,7 @@ describe("hard-block hook outputs", () => {
 });
 
 describe("repo Codex hook config", () => {
-  it("enables the tracked repo hook set", () => {
+  it("wires only the SessionStart routing context and the hard-block guards", () => {
     const config = readFileSync(resolve(process.cwd(), ".codex/config.toml"), "utf8");
 
     expect(config).toContain("hooks = true");
@@ -329,18 +329,19 @@ describe("repo Codex hook config", () => {
     expect(config).not.toContain("trusted_hash");
     expect(config).toContain("[[hooks.SessionStart]]");
     expect(config).toContain("--hook=session-start");
-    expect(config).toContain("[[hooks.UserPromptSubmit]]");
-    expect(config).toContain("--hook=user-prompt-submit");
     expect(config).toContain("[[hooks.PreToolUse]]");
     expect(config).toContain("--hook=pre-tool-use");
     expect(config).toContain("[[hooks.PermissionRequest]]");
     expect(config).toContain("--hook=permission-request");
-    expect(config).toContain("[[hooks.PostToolUse]]");
-    expect(config).toContain("--hook=post-tool-use");
-    expect(config).toContain("[[hooks.Stop]]");
-    expect(config).toContain("--hook=stop");
     expect(config).toContain("[[hooks.PreToolUse.hooks]]");
     expect(config).toContain("type = \"command\"");
+
+    expect(config).not.toContain("[[hooks.UserPromptSubmit]]");
+    expect(config).not.toContain("--hook=user-prompt-submit");
+    expect(config).not.toContain("[[hooks.PostToolUse]]");
+    expect(config).not.toContain("--hook=post-tool-use");
+    expect(config).not.toContain("[[hooks.Stop]]");
+    expect(config).not.toContain("--hook=stop");
   });
 
   it("uses catch-all Codex tool matchers so native tool names are covered", () => {
@@ -353,15 +354,17 @@ describe("repo Codex hook config", () => {
 });
 
 describe("repo Claude hook config", () => {
-  it("enables Claude parity hooks and preserves the pre-push gate", () => {
+  it("wires only SessionStart, the PreToolUse guards, and the pre-push gate", () => {
     const config = JSON.parse(readFileSync(resolve(process.cwd(), ".claude/settings.json"), "utf8"));
 
     expect(config.hooks.SessionStart[0].hooks[0].command).toContain("--hook=session-start");
-    expect(config.hooks.UserPromptSubmit[0].hooks[0].command).toContain("--hook=user-prompt-submit");
     expect(config.hooks.PreToolUse[0].hooks[0].command).toContain("--hook=pre-tool-use");
     expect(config.hooks.PreToolUse[0].hooks[1].command).toContain(".claude/hooks/pre-push-gate.sh");
-    expect(config.hooks.PostToolUse[0].hooks[0].command).toContain("--hook=post-tool-use");
-    expect(config.hooks.PostToolBatch[0].hooks[0].command).toContain("--hook=post-tool-batch");
+    expect(config.hooks.PreToolUse[1].hooks[0].command).toContain("--hook=pre-tool-use");
+
+    expect(config.hooks.UserPromptSubmit).toBeUndefined();
+    expect(config.hooks.PostToolUse).toBeUndefined();
+    expect(config.hooks.PostToolBatch).toBeUndefined();
   });
 });
 
