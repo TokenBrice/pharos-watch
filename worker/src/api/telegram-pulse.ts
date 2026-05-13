@@ -1,6 +1,10 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type { TelegramPulse, TelegramWatcherHistoryPoint } from "@shared/types/status";
+import {
+  TelegramPulseSchema,
+  type TelegramPulse,
+  type TelegramWatcherHistoryPoint,
+} from "@shared/types/status";
 import { getCache, setCache } from "../lib/db-cache";
 import {
   computeTelegramCurrentLifecycleSnapshot,
@@ -10,7 +14,9 @@ import {
 } from "../lib/telegram-usage-analytics";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
+const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
 const TELEGRAM_PULSE_CACHE_KEY = "telegram:pulse:snapshot";
+const PUBLIC_LOW_CARDINALITY_THRESHOLD = 5;
 
 const ACTIVE_WATCHER_SQL_CONDITION = `s.global_alert_dews = 1
   OR s.global_alert_depeg = 1
@@ -47,6 +53,60 @@ const ACTIVE_PRESET_COUNTS_SQL = `SELECT chat_id,
 function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function shouldSuppressLowCardinality(value: number): boolean {
+  return value > 0 && value < PUBLIC_LOW_CARDINALITY_THRESHOLD;
+}
+
+function publicRequiredCount(
+  value: number,
+  field: string,
+  suppressedFields: Set<string>,
+): number | null {
+  if (shouldSuppressLowCardinality(value)) {
+    suppressedFields.add(field);
+    return null;
+  }
+  return value;
+}
+
+function publicOptionalCount(
+  value: number,
+  field: string,
+  suppressedFields: Set<string>,
+): number | null | undefined {
+  if (shouldSuppressLowCardinality(value)) {
+    suppressedFields.add(field);
+    return null;
+  }
+  return value;
+}
+
+function sanitizeWatcherHistory(
+  points: TelegramWatcherHistoryPoint[],
+  suppressedFields: Set<string>,
+): TelegramWatcherHistoryPoint[] {
+  return points.map((point) => ({
+    ...point,
+    newWatchers: point.newWatchers == null
+      ? point.newWatchers
+      : publicOptionalCount(point.newWatchers, "watcherHistory.newWatchers", suppressedFields),
+    churnedWatchers: point.churnedWatchers == null
+      ? point.churnedWatchers
+      : publicOptionalCount(point.churnedWatchers, "watcherHistory.churnedWatchers", suppressedFields),
+    reactivatedWatchers: point.reactivatedWatchers == null
+      ? point.reactivatedWatchers
+      : publicOptionalCount(point.reactivatedWatchers, "watcherHistory.reactivatedWatchers", suppressedFields),
+  }));
+}
+
+function latestLifecycleHistoryUpdatedAt(points: TelegramWatcherHistoryPoint[]): number | null {
+  const latest = points.reduce<number | null>((max, point) => {
+    if (point.snapshotAt == null) return max;
+    return max == null ? point.snapshotAt : Math.max(max, point.snapshotAt);
+  }, null);
+  return latest;
 }
 
 async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatcherHistoryPoint[]> {
@@ -86,16 +146,8 @@ async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatch
 
 function parseCachedPulse(value: string): TelegramPulse | null {
   try {
-    const parsed = JSON.parse(value) as Partial<TelegramPulse>;
-    if (
-      typeof parsed.activeWatchers !== "number" ||
-      typeof parsed.coinSubscriptions !== "number" ||
-      typeof parsed.updatedAt !== "number" ||
-      !Array.isArray(parsed.watcherHistory)
-    ) {
-      return null;
-    }
-    return parsed as TelegramPulse;
+    const result = TelegramPulseSchema.safeParse(JSON.parse(value));
+    return result.success ? result.data : null;
   } catch {
     return null;
   }
@@ -120,18 +172,31 @@ async function buildTelegramPulseSnapshot(
 ): Promise<TelegramPulse> {
   const currentSnapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec);
   await refreshTelegramLifecycleSnapshotIfStale(db, nowSec, currentSnapshot);
+  const unavailableFields = new Set(currentSnapshot.unavailableFields ?? []);
   const [topRows, snapshotHistory] = await Promise.all([
-    loadTelegramTopFollowedCoins(db, 5),
+    loadTelegramTopFollowedCoins(db, 5).catch((error) => {
+      console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
+      unavailableFields.add("topCoins");
+      return [];
+    }),
     loadTelegramLifecycleHistory(db),
   ]);
-  const fallbackHistory =
-    snapshotHistory.points.length > 0 ? [] : await loadFallbackWatcherHistory(db);
+  const fallbackHistory = snapshotHistory.points.length > 0
+    ? []
+    : await loadFallbackWatcherHistory(db).catch((error) => {
+        console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+        unavailableFields.add("watcherHistory");
+        return [];
+      });
   const watcherHistory = snapshotHistory.points.length > 0
     ? snapshotHistory.points
     : fallbackHistory;
   const historySource = snapshotHistory.points.length > 0
     ? snapshotHistory.source
     : "live-fallback";
+  const suppressedFields = new Set<string>();
+  const publicWatcherHistory = sanitizeWatcherHistory(watcherHistory, suppressedFields);
+  const qualityUnavailableFields = [...unavailableFields].sort();
 
   return {
     activeWatchers: currentSnapshot.activeWatchers,
@@ -139,17 +204,39 @@ async function buildTelegramPulseSnapshot(
     explicitCoinSubscriptions: currentSnapshot.explicitCoinFollows,
     presetImpliedCoinSubscriptions: currentSnapshot.presetImpliedCoinFollows,
     activePresetFollowers: currentSnapshot.activePresetFollowers,
-    newWatchersToday: currentSnapshot.newWatchers,
-    churnedWatchersToday: currentSnapshot.churnedWatchers,
-    reactivatedWatchersToday: currentSnapshot.reactivatedWatchers,
+    newWatchersToday: publicOptionalCount(currentSnapshot.newWatchers, "newWatchersToday", suppressedFields),
+    churnedWatchersToday: publicOptionalCount(currentSnapshot.churnedWatchers, "churnedWatchersToday", suppressedFields),
+    reactivatedWatchersToday: publicOptionalCount(
+      currentSnapshot.reactivatedWatchers,
+      "reactivatedWatchersToday",
+      suppressedFields,
+    ),
     historySource,
     topCoins: topRows.map(
       (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
     ),
-    watcherHistory,
+    watcherHistory: publicWatcherHistory,
     alertTypeChats: currentSnapshot.alertTypeOptIns,
-    quietHoursEnabledChats: currentSnapshot.quietHoursEnabledChats,
-    pendingDeliveries: currentSnapshot.pendingDeliveries,
+    quietHoursEnabledChats: publicRequiredCount(
+      currentSnapshot.quietHoursEnabledChats,
+      "quietHoursEnabledChats",
+      suppressedFields,
+    ),
+    pendingDeliveries: unavailableFields.has("pendingDeliveries")
+      ? null
+      : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),
+    currentSnapshotAt: currentSnapshot.snapshotAt,
+    lifecycleHistoryUpdatedAt: latestLifecycleHistoryUpdatedAt(snapshotHistory.points),
+    lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,
+    quality: {
+      status: qualityUnavailableFields.length > 0 ? "partial" : "complete",
+      unavailableFields: qualityUnavailableFields,
+    },
+    privacy: {
+      exactActiveWatchers: true,
+      lowCardinalityThreshold: PUBLIC_LOW_CARDINALITY_THRESHOLD,
+      suppressedFields: [...suppressedFields].sort(),
+    },
     updatedAt: nowSec,
     updatedEverySeconds: TELEGRAM_PULSE_CACHE_SECONDS,
   };

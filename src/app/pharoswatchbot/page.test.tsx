@@ -59,6 +59,7 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/brief").length).toBeGreaterThan(0);
     expect(screen.getByText("360")).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
+    expect(screen.getByText(/Opens a Telegram confirmation that preloads DEWS and depeg alerts/i)).toBeTruthy();
 
     const jsonLd = [...container.querySelectorAll('script[type="application/ld+json"]')]
       .map((node) => node.textContent ?? "")

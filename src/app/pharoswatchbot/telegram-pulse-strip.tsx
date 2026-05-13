@@ -43,6 +43,11 @@ function formatUpdatedAt(value: number | undefined): string {
   return `updated ${PULSE_UPDATED_FORMATTER.format(new Date(value * 1000))}`;
 }
 
+function formatSnapshotAt(value: number | null | undefined): string | null {
+  if (!value) return null;
+  return PULSE_UPDATED_FORMATTER.format(new Date(value * 1000));
+}
+
 function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -169,6 +174,9 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const topCoins = data.topCoins.slice(0, 5);
   const watcherHistory = data.watcherHistory ?? [];
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
+  const latestHistoryLabel = data.historySource === "snapshot"
+    ? formatSnapshotAt(data.lifecycleHistoryUpdatedAt)
+    : null;
   const alertTypeChats = data.alertTypeChats;
   const telemetryItems = [
     {
@@ -236,9 +244,16 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Telegram pulse</h2>
         </div>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-          {formatUpdatedAt(data.updatedAt)}
+          current pulse {formatUpdatedAt(data.currentSnapshotAt ?? data.updatedAt).replace(/^updated /, "")}
         </span>
       </div>
+
+      {data.quality?.status === "partial" ? (
+        <p className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+          Some public Telegram telemetry is temporarily unavailable. Counts shown here keep working where source data is
+          complete.
+        </p>
+      ) : null}
 
       <div className="grid gap-x-6 gap-y-5 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-8">
         <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
@@ -311,14 +326,21 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
               {data.historySource === "snapshot"
-                ? "Daily active watcher snapshots. Past points stay fixed when chats churn."
+                ? "Daily active watcher snapshots. Past points stay fixed when chats churn; the chart is lifecycle history, not the live pulse."
                 : "Cumulative current active chats by the day each chat first subscribed."}
             </p>
+            {(data.privacy?.suppressedFields.length ?? 0) > 0 ? (
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Low-cardinality deltas below {data.privacy?.lowCardinalityThreshold ?? 5} are hidden in public
+                telemetry.
+              </p>
+            ) : null}
           </div>
           {latestHistoryPoint ? (
             <div className="font-mono text-xs text-muted-foreground">
-              current{" "}
+              latest daily snapshot{" "}
               <span className="font-semibold text-foreground">{formatCount(latestHistoryPoint.activeWatchers)}</span>
+              {latestHistoryLabel ? <span> · {latestHistoryLabel}</span> : null}
             </div>
           ) : null}
         </div>

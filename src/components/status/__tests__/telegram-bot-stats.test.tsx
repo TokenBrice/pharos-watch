@@ -79,4 +79,23 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText("rate_limit")).toBeTruthy();
     expect(screen.getByText("auth_error")).toBeTruthy();
   });
+
+  it("shows field-level partial telemetry diagnostics for operators", () => {
+    render(
+      <TelegramBotStats
+        telegramBot={{
+          ...telegramBot,
+          quality: {
+            status: "partial",
+            unavailableFields: ["pendingDeliveryBacklog"],
+            errors: { pendingDeliveryBacklog: "no such table" },
+          },
+        }}
+        nowSeconds={1_700_000_300}
+      />,
+    );
+
+    expect(screen.getByText(/Telegram telemetry is partial: pendingDeliveryBacklog/i)).toBeTruthy();
+    expect(screen.getByText(/no such table/i)).toBeTruthy();
+  });
 });

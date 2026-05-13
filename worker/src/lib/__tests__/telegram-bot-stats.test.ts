@@ -83,6 +83,10 @@ describe("mapTelegramBotStats", () => {
       avgSubscriptionsPerSubscribedChat: 3.5,
       pendingDisambiguations: 11,
       pendingDeliveries: 12,
+      quality: {
+        status: "complete",
+        unavailableFields: [],
+      },
       lastSubscriberActivityAt: 1710000000,
       customPreferenceChats: 3,
       quietHoursEnabledChats: 2,
@@ -182,6 +186,10 @@ describe("mapTelegramBotStats", () => {
       avgSubscriptionsPerSubscribedChat: 0,
       pendingDisambiguations: 0,
       pendingDeliveries: 0,
+      quality: {
+        status: "complete",
+        unavailableFields: [],
+      },
       lastSubscriberActivityAt: null,
       customPreferenceChats: 0,
       quietHoursEnabledChats: 0,

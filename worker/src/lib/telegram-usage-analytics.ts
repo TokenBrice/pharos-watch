@@ -48,6 +48,7 @@ export interface TelegramCurrentLifecycleSnapshot {
   alertTypeOptIns: TelegramAlertTypeChats;
   quietHoursEnabledChats: number;
   pendingDeliveries: number;
+  unavailableFields?: string[];
 }
 
 export interface TelegramTopFollowedCoin {
@@ -295,14 +296,16 @@ async function calculatePresetImpliedCoinFollows(
   return { total, byCoin };
 }
 
-async function loadPendingDeliveryCount(db: D1Database): Promise<number> {
+async function loadPendingDeliveryCount(
+  db: D1Database,
+): Promise<{ count: number; unavailableFields: string[] }> {
   try {
     const row = await db
       .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts")
       .first<PendingCountRow>();
-    return coerceCount(row?.pending_count);
+    return { count: coerceCount(row?.pending_count), unavailableFields: [] };
   } catch {
-    return 0;
+    return { count: 0, unavailableFields: ["pendingDeliveries"] };
   }
 }
 
@@ -445,7 +448,8 @@ export async function computeTelegramCurrentLifecycleSnapshot(
       allTypes: coerceCount(aggregate?.active_all_types_opt_ins),
     },
     quietHoursEnabledChats: coerceCount(aggregate?.quiet_hours_enabled_chats),
-    pendingDeliveries,
+    pendingDeliveries: pendingDeliveries.count,
+    unavailableFields: pendingDeliveries.unavailableFields,
   };
 }
 
@@ -556,6 +560,7 @@ export async function loadTelegramLifecycleHistory(
         return {
           date: day,
           timestamp,
+          snapshotAt: coerceNullableTimestamp(row.snapshot_at),
           newWatchers: coerceCount(row.new_watchers),
           activeWatchers: coerceCount(row.active_watchers),
           churnedWatchers: coerceCount(row.churned_watchers),
@@ -642,7 +647,7 @@ export async function recordTelegramReplyOutcome(
            recent_failure_class,
            updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?)
+         VALUES (?, NULL, ?, ?, ?, ?)
          ON CONFLICT(chat_id) DO UPDATE SET
            last_successful_delivery_at = COALESCE(
              excluded.last_successful_delivery_at,
@@ -658,7 +663,6 @@ export async function recordTelegramReplyOutcome(
       )
       .bind(
         input.chatId,
-        input.ok ? nowSec : null,
         input.ok ? nowSec : null,
         nowSec,
         input.ok ? null : input.errorClass ?? "unknown",

@@ -436,7 +436,8 @@ export default function PharosWatchBotPage() {
                 </Button>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Subscribes you to DEWS and depeg alerts on the top 25 USD stablecoins. Tune later with /set.
+                Opens a Telegram confirmation that preloads DEWS and depeg alerts on the top 25 USD stablecoins.
+                Tune later with /set.
               </p>
             </div>
           </div>

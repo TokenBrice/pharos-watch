@@ -27,6 +27,7 @@ const pulse: TelegramPulse = {
     {
       date: "2026-04-01",
       timestamp: 1_775_001_600_000,
+      snapshotAt: 1_775_002_000,
       newWatchers: 12,
       activeWatchers: 1842,
     },
@@ -39,7 +40,16 @@ const pulse: TelegramPulse = {
     allTypes: 1191,
   },
   quietHoursEnabledChats: 42,
-  pendingDeliveries: 3,
+  pendingDeliveries: null,
+  currentSnapshotAt: 1_771_856_400,
+  lifecycleHistoryUpdatedAt: 1_775_002_000,
+  lifecycleHistoryEverySeconds: 900,
+  quality: { status: "complete", unavailableFields: [] },
+  privacy: {
+    exactActiveWatchers: true,
+    lowCardinalityThreshold: 5,
+    suppressedFields: ["pendingDeliveries"],
+  },
   updatedAt: 1_771_856_400,
   updatedEverySeconds: 300,
 };
@@ -97,12 +107,28 @@ describe("TelegramPulseBoard", () => {
     expect(screen.getByText("Launch chats")).toBeTruthy();
     expect(screen.getByText("All alert families")).toBeTruthy();
     expect(screen.getByText("Quiet hours enabled")).toBeTruthy();
-    expect(screen.getByText("Queued deliveries")).toBeTruthy();
     expect(screen.getByText("1,701")).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
-    expect(screen.getByText(/Past points stay fixed/i)).toBeTruthy();
+    expect(screen.getByText(/the chart is lifecycle history/i)).toBeTruthy();
+    expect(screen.getByText(/Low-cardinality deltas below 5/i)).toBeTruthy();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
-    expect(within(telemetry).getAllByText("3").length).toBeGreaterThanOrEqual(1);
+    expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
+  });
+
+  it("renders generic partial telemetry state without exposing operator errors", () => {
+    mockUseTelegramPulse.mockReturnValue({
+      data: {
+        ...pulse,
+        quality: { status: "partial", unavailableFields: ["topCoins"], errors: { topCoins: "D1 unavailable" } },
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useTelegramPulse>);
+
+    render(<TelegramPulseBoard />);
+
+    expect(screen.getByText(/Some public Telegram telemetry is temporarily unavailable/i)).toBeTruthy();
+    expect(screen.queryByText(/D1 unavailable/i)).toBeNull();
   });
 
   it("renders loading placeholders", () => {

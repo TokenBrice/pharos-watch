@@ -61,6 +61,7 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
   const pendingBacklog = telegramBot.pendingDeliveryBacklog;
   const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {})
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const telemetryQuality = telegramBot.quality;
 
   const summaryCards = [
     {
@@ -90,6 +91,18 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
 
   return (
     <div className="space-y-4">
+      {telemetryQuality?.status === "partial" ? (
+        <Card className="border-amber-500/35 bg-amber-500/10">
+          <CardContent className="py-3 text-sm text-amber-800 dark:text-amber-200">
+            Telegram telemetry is partial: {telemetryQuality.unavailableFields.join(", ")}
+            {telemetryQuality.errors ? (
+              <span className="block pt-1 font-mono text-xs">
+                {Object.entries(telemetryQuality.errors).map(([field, message]) => `${field}: ${message}`).join(" · ")}
+              </span>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <Card key={card.label}>

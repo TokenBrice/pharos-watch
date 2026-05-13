@@ -138,7 +138,8 @@ export const TELEGRAM_COMMAND_GROUPS = [
       },
       {
         command: "/unsubscribe all",
-        description: "Clear every per-coin and all-stablecoin subscription.",
+        description:
+          "Clear every per-coin, preset, and all-stablecoin subscription. Operational chat metadata can remain until inactive cleanup.",
         example: null,
       },
     ],
@@ -294,7 +295,12 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How do I unsubscribe?",
     answer:
-      "Send /unsubscribe <targets> to remove specific coin subscriptions, or /unsubscribe all to clear every subscription and disable all alert flags.",
+      "Send /unsubscribe <targets> to remove specific coin subscriptions, or /unsubscribe all to clear every subscription and disable all alert flags. This stops alerts but does not immediately delete operational chat metadata.",
+  },
+  {
+    question: "What does Pharos store for Telegram privacy?",
+    answer:
+      "Pharos stores chat-level alert settings, quiet hours, snooze state, and short-lived command or delivery metadata. Inactive unsubscribed chats are pruned after 180 days, and public pulse metrics hide low-cardinality deltas while keeping the exact active watcher total visible.",
   },
 ];
 
@@ -316,9 +322,10 @@ export const TELEGRAM_HOW_IT_WORKS_CARDS = [
   {
     title: "Privacy",
     description:
-      "We store your Telegram chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived command/alert queue metadata.",
+      "We store your Telegram chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived command/alert queue metadata. Public pulse metrics hide low-cardinality deltas; exact active watcher totals are public by current product decision.",
     unsubscribeCommand: "/unsubscribe all",
-    descriptionAfterCommand: "at any time to remove coin subscriptions and disable alert flags.",
+    descriptionAfterCommand:
+      "at any time to stop alerts; inactive unsubscribed chat rows are pruned after 180 days.",
   },
 ] as const;
 

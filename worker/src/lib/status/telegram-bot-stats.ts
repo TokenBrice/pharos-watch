@@ -50,6 +50,11 @@ interface TelegramBotTopStablecoinRow {
   preset_implied_subscribers?: number | string | null;
 }
 
+interface OptionalTelegramTelemetry<T> {
+  value: T | null;
+  error?: string;
+}
+
 const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
@@ -218,6 +223,21 @@ function roundMetric(value: unknown, digits = 2): number {
   return Math.round(parsed * factor) / factor;
 }
 
+function formatTelemetryError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function loadOptionalTelegramTelemetry<T>(
+  field: string,
+  loader: Promise<T | null>,
+): Promise<OptionalTelegramTelemetry<T>> {
+  try {
+    return { value: await loader };
+  } catch (error) {
+    return { value: null, error: formatTelemetryError(error) };
+  }
+}
+
 async function loadTelegramBotAggregate(db: D1Database): Promise<TelegramBotAggregateRow | null> {
   return db.prepare(TELEGRAM_BOT_AGGREGATE_SQL).first<TelegramBotAggregateRow>();
 }
@@ -236,23 +256,15 @@ async function loadTelegramPendingDeliveryTelemetry(
   now: number,
 ): Promise<TelegramBotPendingDeliveryTelemetryRow | null> {
   const cutoff = now - TELEGRAM_PENDING_ALERT_TTL_SEC;
-  try {
-    return await db
-      .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
-      .bind(cutoff, cutoff, now, cutoff, now)
-      .first<TelegramBotPendingDeliveryTelemetryRow>();
-  } catch {
-    return null;
-  }
+  return db
+    .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
+    .bind(cutoff, cutoff, now, cutoff, now)
+    .first<TelegramBotPendingDeliveryTelemetryRow>();
 }
 
 async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBotRetryErrorClassRow[] | null> {
-  try {
-    const result = await db.prepare(TELEGRAM_RETRY_ERROR_CLASSES_SQL).all<TelegramBotRetryErrorClassRow>();
-    return result.results ?? [];
-  } catch {
-    return null;
-  }
+  const result = await db.prepare(TELEGRAM_RETRY_ERROR_CLASSES_SQL).all<TelegramBotRetryErrorClassRow>();
+  return result.results ?? [];
 }
 
 async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTopStablecoinRow[]> {
@@ -269,34 +281,26 @@ async function loadInactiveSubscribersCleanedThisWeek(
   db: D1Database,
   now: number,
 ): Promise<number | null> {
-  try {
-    const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
-    const row = await db
-      .prepare(
-        "SELECT item_count FROM cron_runs WHERE job = ? AND started_at >= ? ORDER BY started_at DESC LIMIT 1",
-      )
-      .bind(INACTIVE_CLEANUP_JOB, cutoff)
-      .first<{ item_count: number | string | null }>();
-    if (!row) return null;
-    const parsed = Number(row.item_count ?? 0);
-    return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
-  } catch {
-    return null;
-  }
+  const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
+  const row = await db
+    .prepare(
+      "SELECT item_count FROM cron_runs WHERE job = ? AND started_at >= ? ORDER BY started_at DESC LIMIT 1",
+    )
+    .bind(INACTIVE_CLEANUP_JOB, cutoff)
+    .first<{ item_count: number | string | null }>();
+  if (!row) return null;
+  const parsed = Number(row.item_count ?? 0);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
 }
 
 async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
-  try {
-    const row = await db
-      .prepare("SELECT value FROM cache WHERE key = ?")
-      .bind(PRESET_QUERY_FAILURE_CACHE_KEY)
-      .first<{ value: string }>();
-    if (!row) return 0;
-    const parsed = Number(row.value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
-  } catch {
-    return 0;
-  }
+  const row = await db
+    .prepare("SELECT value FROM cache WHERE key = ?")
+    .bind(PRESET_QUERY_FAILURE_CACHE_KEY)
+    .first<{ value: string }>();
+  if (!row) return 0;
+  const parsed = Number(row.value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
 export function mapTelegramBotStats(input: {
@@ -310,6 +314,8 @@ export function mapTelegramBotStats(input: {
   presetQueryFailures?: number;
   inactiveSubscribersCleanedThisWeek?: number | null;
   lifecycleSnapshot?: TelegramCurrentLifecycleSnapshot | null;
+  unavailableFields?: string[];
+  telemetryErrors?: Record<string, string>;
 }): TelegramBotStats {
   const {
     aggregate,
@@ -322,6 +328,8 @@ export function mapTelegramBotStats(input: {
     inactiveSubscribersCleanedThisWeek,
     lifecycleSnapshot,
   } = input;
+  const unavailableFields = input.unavailableFields ?? [];
+  const telemetryErrors = input.telemetryErrors ?? {};
   const now = input.now ?? Math.floor(Date.now() / 1000);
 
   const pendingCount = coerceCount(pendingDeliveries?.pending_count ?? pendingDeliveryTelemetry?.pending_count);
@@ -411,6 +419,14 @@ export function mapTelegramBotStats(input: {
     stats.inactiveSubscribersCleanedThisWeek = inactiveSubscribersCleanedThisWeek;
   }
 
+  stats.quality = unavailableFields.length > 0
+    ? {
+        status: "partial",
+        unavailableFields,
+        ...(Object.keys(telemetryErrors).length > 0 ? { errors: telemetryErrors } : {}),
+      }
+    : { status: "complete", unavailableFields: [] };
+
   return stats;
 }
 
@@ -419,34 +435,51 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     aggregate,
     pendingDisambiguations,
     pendingDeliveries,
-    pendingDeliveryTelemetry,
-    retryErrorClasses,
+    pendingDeliveryTelemetryResult,
+    retryErrorClassesResult,
     topStablecoins,
-    presetQueryFailures,
-    inactiveSubscribersCleanedThisWeek,
-    lifecycleSnapshot,
+    presetQueryFailuresResult,
+    inactiveCleanupResult,
+    lifecycleSnapshotResult,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DISAMBIGUATION_SQL, now),
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
-    loadTelegramPendingDeliveryTelemetry(db, now),
-    loadTelegramRetryErrorClasses(db),
+    loadOptionalTelegramTelemetry("pendingDeliveryBacklog", loadTelegramPendingDeliveryTelemetry(db, now)),
+    loadOptionalTelegramTelemetry("retryErrorClassCounts", loadTelegramRetryErrorClasses(db)),
     loadTelegramTopStablecoins(db),
-    loadPresetQueryFailureCount(db),
-    loadInactiveSubscribersCleanedThisWeek(db, now),
-    refreshTelegramLifecycleSnapshotIfStale(db, now).catch(() => null),
+    loadOptionalTelegramTelemetry("presetQueryFailures", loadPresetQueryFailureCount(db)),
+    loadOptionalTelegramTelemetry("inactiveSubscribersCleanedThisWeek", loadInactiveSubscribersCleanedThisWeek(db, now)),
+    loadOptionalTelegramTelemetry("lifecycleSnapshot", refreshTelegramLifecycleSnapshotIfStale(db, now)),
   ]);
+  const optionalResults = {
+    pendingDeliveryBacklog: pendingDeliveryTelemetryResult,
+    retryErrorClassCounts: retryErrorClassesResult,
+    presetQueryFailures: presetQueryFailuresResult,
+    inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
+    lifecycleSnapshot: lifecycleSnapshotResult,
+  };
+  const unavailableFields = Object.entries(optionalResults)
+    .filter(([, result]) => Boolean(result.error))
+    .map(([field]) => field);
+  const telemetryErrors = Object.fromEntries(
+    Object.entries(optionalResults)
+      .filter(([, result]) => Boolean(result.error))
+      .map(([field, result]) => [field, result.error as string]),
+  );
 
   return mapTelegramBotStats({
     now,
     aggregate,
     pendingDisambiguations,
     pendingDeliveries,
-    pendingDeliveryTelemetry,
-    retryErrorClasses,
+    pendingDeliveryTelemetry: pendingDeliveryTelemetryResult.value,
+    retryErrorClasses: retryErrorClassesResult.value,
     topStablecoins,
-    presetQueryFailures,
-    inactiveSubscribersCleanedThisWeek,
-    lifecycleSnapshot,
+    presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
+    inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,
+    lifecycleSnapshot: lifecycleSnapshotResult.value,
+    unavailableFields,
+    telemetryErrors,
   });
 }
