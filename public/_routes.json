@@ -1,20 +1,7 @@
 {
   "version": 1,
   "include": [
-    "/methodology",
-    "/methodology/*",
-    "/stablecoin/*",
-    "/changelog",
-    "/changelog/*",
-    "/digest/*",
-    "/docs",
-    "/docs/*",
-    "/_site-data/*",
-    "/admin",
-    "/admin/*",
-    "/admin-api",
-    "/admin-api/*",
-    "/api/admin/*"
+    "/*"
   ],
   "exclude": [
     "/_next/*",
@@ -22,9 +9,11 @@
     "/favicon.svg",
     "/apple-touch-icon.png",
     "/logos/*",
-    "/chains/*",
     "/dexes/*",
     "/featured/*",
+    "/maps/*",
+    "/datasets/*",
+    "/postman/*",
     "/og-*.png",
     "/llms.txt",
     "/sitemap.xml",

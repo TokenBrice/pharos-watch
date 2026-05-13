@@ -4,7 +4,8 @@ import routes from "../../public/_routes.json";
 
 describe("admin-api host gate", () => {
   it("is included in Pages function routing so static exports cannot bypass the gate", () => {
-    expect(routes.include).toEqual(expect.arrayContaining(["/admin-api", "/admin-api/*"]));
+    expect(routes.include).toContain("/*");
+    expect(routes.exclude).not.toEqual(expect.arrayContaining(["/admin-api", "/admin-api/*"]));
   });
 
   it("returns 404 outside the configured ops host", async () => {
