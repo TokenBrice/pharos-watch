@@ -356,6 +356,8 @@ All `circulating` values are already in USD (the list endpoint does not return n
 Historical price and supply chart data for a single stablecoin. Proxies DefiLlama (or CoinGecko for commodity/CG-only tokens) with a 5-minute server-side cache.
 All upstream calls use `fetchWithRetry` with explicit per-request timeouts; on upstream/parse failures, or when CoinGecko-derived history is empty/stale, logs include source tags and stablecoin ID before stale-cache fallback or `supply_history` reconstruction. CoinGecko history is treated as stale when its newest point is more than 72 hours old.
 
+When a D1 detail cache row exists but is older than the 5-minute TTL, the Worker serves that stale row immediately with `Warning: 110` and `X-Data-Age`, then refreshes the coin in the background. Refresh work is best-effort single-flight per coin within a Worker isolate, so bursts of stale reads do not all fan out to upstream providers. Cold misses still refresh synchronously, sharing an in-flight refresh where one already exists in the same isolate.
+
 **Path parameter:** `:id` — Pharos stablecoin ID.
 
 **Cache:** per-coin — custom `Cache-Control` with a 5-minute server-side D1 TTL (`public, s-maxage<=300, max-age=10`)
@@ -874,7 +876,9 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 | `stablecoin` | `string`  | —       | Filter by Pharos stablecoin ID                               |
 | `active`     | `"true"`  | —       | When `"true"`, return only ongoing (unresolved) depeg events |
 | `limit`      | `integer` | `100`   | Max results (1–1000)                                         |
-| `offset`     | `integer` | `0`     | Pagination offset                                            |
+| `offset`     | `integer` | `0`     | Pagination offset (0–50,000); cannot be combined with `cursor` |
+| `cursor`     | `string`  | —       | Opaque keyset cursor from `nextCursor`                       |
+| `includeTotal` | `boolean` | `true` | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false` |
 
 **Response**
 
@@ -882,6 +886,8 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 {
   "events": [DepegEvent, ...],
   "total": 4080,
+  "totalExact": true,
+  "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyNjA2NDAwLDQwODBdfQ",
   "methodology": {
     "version": "5.95",
     "versionLabel": "v5.95",
@@ -893,6 +899,8 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   }
 }
 ```
+
+Results are ordered by `startedAt DESC, id DESC`. Prefer `cursor`/`nextCursor` for deep pagination; offset pagination is retained for shallow compatibility only.
 
 Results are ordered by `startedAt` descending (most recent first).
 
@@ -1716,7 +1724,7 @@ Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origi
 
 ### `GET /api/telegram-pulse`
 
-Lightweight Telegram adoption metrics for the public PharosWatchBot page. The canonical page route is `/pharoswatchbot/`; the legacy `/telegram` alias redirects there. Returns aggregate watcher/subscription counts, the most subscribed coin symbols, and all-time cumulative watcher growth for the current active watcher base.
+Lightweight Telegram adoption metrics for the public PharosWatchBot page. The canonical page route is `/pharoswatchbot/`; the legacy `/telegram` alias redirects there. Returns aggregate watcher/subscription counts, explicit vs preset-implied alert follows, the most subscribed coin symbols, and snapshot-backed watcher history when available.
 
 **Cache:** `public, max-age=300, s-maxage=300`
 
@@ -1726,6 +1734,13 @@ Lightweight Telegram adoption metrics for the public PharosWatchBot page. The ca
 {
   "activeWatchers": 1842,
   "coinSubscriptions": 5621,
+  "explicitCoinSubscriptions": 5000,
+  "presetImpliedCoinSubscriptions": 621,
+  "activePresetFollowers": 81,
+  "newWatchersToday": 12,
+  "churnedWatchersToday": 3,
+  "reactivatedWatchersToday": 5,
+  "historySource": "snapshot",
   "pendingDeliveries": 3,
   "quietHoursEnabledChats": 42,
   "alertTypeChats": {
@@ -1749,7 +1764,9 @@ Lightweight Telegram adoption metrics for the public PharosWatchBot page. The ca
       "date": "2026-04-02",
       "timestamp": 1775088000000,
       "newWatchers": 9,
-      "activeWatchers": 21
+      "activeWatchers": 21,
+      "churnedWatchers": 1,
+      "reactivatedWatchers": 2
     }
   ]
 }
@@ -1757,15 +1774,22 @@ Lightweight Telegram adoption metrics for the public PharosWatchBot page. The ca
 
 | Field                    | Type       | Description                                                                                                                                                                                            |
 | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `activeWatchers`         | `number`   | Subscribers with at least one active alert type or per-coin alert                                                                                                                                      |
-| `coinSubscriptions`      | `number`   | Total active per-coin subscription rows                                                                                                                                                                |
+| `activeWatchers`         | `number`   | Subscribers with at least one active global, explicit coin, or preset alert follow                                                                                                                     |
+| `coinSubscriptions`      | `number`   | Total active alert follows, including explicit coin follows plus preset-implied follows                                                                                                                |
+| `explicitCoinSubscriptions` | `number` | Active explicit per-coin subscription rows                                                                                                                                                              |
+| `presetImpliedCoinSubscriptions` | `number` | Dynamic preset follower count multiplied by each preset's currently resolved coin set                                                                                                           |
+| `activePresetFollowers`  | `number`   | Chats with at least one active preset follow                                                                                                                                                           |
+| `newWatchersToday`       | `number`   | Active watchers created in the current UTC day snapshot                                                                                                                                                |
+| `churnedWatchersToday`   | `number`   | Snapshot-estimated active watcher churn for the current UTC day                                                                                                                                        |
+| `reactivatedWatchersToday` | `number` | Snapshot-estimated active watcher reactivation for the current UTC day                                                                                                                                  |
+| `historySource`          | `"snapshot" \| "live-fallback"` | `snapshot` when `telegram_watcher_lifecycle_daily` rows exist; otherwise the endpoint falls back to live subscriber-created-at aggregation for older deployments |
 | `pendingDeliveries`      | `number`   | Privacy-safe count of queued Telegram alert deliveries                                                                                                                                                 |
 | `quietHoursEnabledChats` | `number`   | Aggregate count of chats with quiet hours enabled                                                                                                                                                      |
 | `alertTypeChats`         | `object`   | Aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage                                                                                                                    |
 | `updatedAt`              | `number`   | Unix seconds when the pulse payload was produced                                                                                                                                                       |
 | `updatedEverySeconds`    | `number`   | Cache cadence for consumers that display freshness                                                                                                                                                     |
 | `topCoins`               | `string[]` | Up to five most subscribed coin tickers, ordered by subscription count                                                                                                                                 |
-| `watcherHistory`         | `array`    | UTC day buckets for the current active watcher base, grouped by `telegram_subscribers.created_at`; each point includes `date`, millisecond `timestamp`, `newWatchers`, and cumulative `activeWatchers` |
+| `watcherHistory`         | `array`    | UTC day buckets. Snapshot-backed points preserve historical active/churn/reactivation values; fallback points use current active watcher created-at aggregation and cumulative active watchers. |
 
 Browser consumers on `pharos.watch` and `ops.pharos.watch` should use same-origin `/_site-data/telegram-pulse`, which proxies onto the internal website lane instead of calling the external API host directly.
 
@@ -1902,7 +1926,9 @@ When present, `collateralDriftCoins` lists live-reserve scoring deltas that exce
 
 For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
 
-`GET /api/report-cards` treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, the endpoint continues serving a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
+`GET /api/report-cards` normally serves the full `report-cards:snapshot` envelope published by `publish-report-card-cache`; compute-on-read is reserved for missing or malformed published snapshots. The published envelope is also the preferred Safety Score source for yield hydration, while the smaller `report_card_cache` score map remains available for lightweight Chain Health/OG consumers.
+
+Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
 
 **`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
 
@@ -2183,7 +2209,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the current report-card snapshot at read time so Yield Intelligence stays aligned with `/api/report-cards`. PYS is benchmark-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, and then applies the current Safety Score. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
+Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. PYS is benchmark-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, and then applies the current Safety Score. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API now retains the row and falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR` instead of dropping coverage.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2279,7 +2305,7 @@ When present, `YieldRanking.provenance` includes:
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
 
-For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`), parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`.
+For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2309,8 +2335,8 @@ For the five tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, 
   },
   "history": [YieldHistoryPoint, "..."],
   "methodology": {
-    "version": "7.46",
-    "currentVersion": "7.46",
+    "version": "7.47",
+    "currentVersion": "7.47",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2502,18 +2528,22 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 | `scope`     | `string`  | `"all"` | `"all"` or `"counted"`                                   | `counted` returns only rows used in economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
 | `minAmount` | `number`  | —       | —                                                        | Minimum USD amount; unpriced rows are excluded when this filter is used                                                 |
 | `limit`     | `integer` | `50`    | 1–500                                                    | Max results                                                                                                             |
-| `offset`    | `integer` | `0`     | —                                                        | Pagination offset                                                                                                       |
+| `offset`    | `integer` | `0`     | 0–25,000                                                | Pagination offset; cannot be combined with `cursor`                                                                     |
+| `cursor`    | `string`  | —       | opaque                                                  | Keyset cursor from `nextCursor`                                                                                         |
+| `includeTotal` | `boolean` | `true` | `true` or `false`                                      | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false`                 |
 
 **Response**
 
 ```text
 {
   "events": [MintBurnEvent, ...],
-  "total": 1234
+  "total": 1234,
+  "totalExact": true,
+  "nextCursor": "eyJ2IjoxLCJ2YWx1ZXMiOlsxNzcyMDAwMDAwLDE5MDAwMDAwLCJtYi0xIl19"
 }
 ```
 
-Results are ordered by `timestamp` descending (most recent first).
+Results are ordered by `timestamp DESC, blockNumber DESC, id DESC`. Prefer `cursor`/`nextCursor` for deep pagination; offset pagination is capped for D1 safety.
 
 **`MintBurnEvent`**
 
@@ -2836,12 +2866,13 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/top <view>` — Top movers/leaders for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety`
 - `/why <ticker>` — Explain the current Safety Score for a coin
 - `/coverage <ticker>` — Per-coin coverage diagnostics for the subscriber surface
+- `/health` — Chat self-diagnostics: last successful delivery/reply, queued alerts, recent failure class, quiet-hours/snooze state, and alert readiness
 - `/unsnooze` — Clear an active alert snooze without waiting for it to expire
 - `/cancel` — Cancel a pending disambiguation flow
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
 
-Preset watchlists currently resolve at command time into standard `telegram_subscriptions` rows. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
 
 ---
 
@@ -2951,6 +2982,9 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
     "emptyAlertChats": 2,
     "mutedChatsWithSubscriptions": 3,
     "totalSubscriptions": 611,
+    "explicitCoinSubscriptions": 560,
+    "presetImpliedCoinSubscriptions": 51,
+    "activePresetFollowers": 8,
     "avgSubscriptionsPerSubscribedChat": 4.9,
     "pendingDisambiguations": 1,
     "pendingDeliveries": 6,
@@ -2968,9 +3002,29 @@ Full admin dashboard: cron run history, cache freshness for all keys, data quali
       "allTypes": 95
     },
     "topStablecoins": [
-      { "stablecoinId": "usdc-circle", "symbol": "USDC", "subscribers": 82 },
-      { "stablecoinId": "usdt-tether", "symbol": "USDT", "subscribers": 77 }
-    ]
+      { "stablecoinId": "usdc-circle", "symbol": "USDC", "subscribers": 82, "explicitSubscribers": 72, "presetImpliedSubscribers": 10 },
+      { "stablecoinId": "usdt-tether", "symbol": "USDT", "subscribers": 77, "explicitSubscribers": 70, "presetImpliedSubscribers": 7 }
+    ],
+    "lifecycleSnapshot": {
+      "date": "2026-05-13",
+      "snapshotAt": 1778674145,
+      "activeWatchers": 121,
+      "newWatchers": 2,
+      "churnedWatchers": 1,
+      "reactivatedWatchers": 0,
+      "explicitCoinFollows": 560,
+      "presetImpliedCoinFollows": 51,
+      "activePresetFollowers": 8,
+      "alertTypeOptIns": {
+        "dews": 121,
+        "depeg": 118,
+        "launch": 97,
+        "safety": 102,
+        "allTypes": 95
+      },
+      "quietHoursEnabledChats": 18,
+      "pendingDeliveries": 6
+    }
   },
   "datasetFreshness": {
     "stablecoins": 1771856400,

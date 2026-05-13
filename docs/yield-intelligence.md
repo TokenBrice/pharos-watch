@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.46`
+- **Current methodology version:** `v7.47`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -18,7 +18,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
-- `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, and `scrvUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, and `crvUSD`
+- `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, and `savUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, and `avUSD`
 - Solayer `sUSD` now has rate-derived Treasury fallback coverage through the yield manifest, while newly added reward-bearing account or restricted strategy assets stay out of runtime yield until a reliable APY source is wired
 - Parent-side wrapper history for those five base assets is filtered immediately from `/api/yield-history` and purged on the hourly sync path, so the post-handoff discontinuity is explicit rather than silently grandfathered
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
@@ -190,7 +190,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Avalon USDa (220)     | sUSDa   | Avalon staked USDa          |
 | infiniFi USD (298)    | siUSD   | infiniFi savings            |
 | Falcon USD (246)      | sUSDf   | Falcon Finance savings      |
-| Avant USD (271)       | savUSD  | Avant savings               |
 | Unitas (283)          | sUSDu   | Unitas savings              |
 | Yuzu USD (344)        | syzUSD   | Yuzu savings                |
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
@@ -201,7 +200,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
 
-`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of April 22, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` are tracked directly, so their base assets no longer resolve through those wrapper paths.
+`YIELD_VARIANT_MAP` is only used when the yield-bearing wrapper is not already modeled as its own tracked asset. As of May 13, 2026, `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, `sUSDai`, `stcUSD`, `sAID`, `msY`, K3 `sBOLD`, and `savUSD` are tracked directly, so their base assets no longer resolve through those wrapper paths.
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 

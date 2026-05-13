@@ -76,14 +76,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Falcon Finance savings (sUSDf)",
     yieldType: "lending-vault",
   },
-  // Avant USD -> savUSD (savings wrapper, $86M TVL)
-  "avusd-avant": {
-    variantSymbol: "savUSD",
-    variantAddress: "0x24dE8771bC5DdB3362Db529Fc3358F2df3A0E346",
-    variantChain: "avalanche",
-    yieldSource: "Avant savings (savUSD)",
-    yieldType: "lending-vault",
-  },
   // Unitas -> sUSDu (savings wrapper, $64M TVL — governance-set rate)
   "usdu-unitas": {
     variantSymbol: "sUSDu",

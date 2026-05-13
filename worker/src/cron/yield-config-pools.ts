@@ -65,8 +65,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "susdai-usd-ai": "712ce948-bd9e-4f4a-8916-b72c447f7578",
   // wsrUSD - reservoir-protocol native, Ethereum, $159M TVL, ~4.8% APY
   "wsrusd-reservoir": "d646f32f-d5af-4e34-a29f-8ebeea6a8520",
-  // avUSD -> savUSD - merkl HOLD pool, Avalanche, $72M TVL, APY via on-chain rate
-  "avusd-avant": "2fe112ff-95a5-4ba0-8ee3-a741e6a8f7c9",
+  // savUSD - Avant native savings, Avalanche, $62M TVL, APY via savUSD/avUSD exchange-rate growth
+  "savusd-avant": "c74227a1-e738-4021-bbe1-13363815aecb",
   // Neutrl USD -> sNUSD - pendle PT-buying pool, Ethereum, $41M TVL, ~7.5% APY
   "nusd-neutrl": "0f38d9a4-8e34-4abc-b9ba-25f326ef7828",
   // Main Street msY - mainstreet native pool, Ethereum, $50M+ TVL, ~12.0% APY

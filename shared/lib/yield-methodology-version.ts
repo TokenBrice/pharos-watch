@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "7.46",
+  currentVersion: "7.47",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "7.47",
+    title: "Avant savUSD ownership correction",
+    date: "2026-05-13",
+    effectiveAt: 1778630400,
+    summary:
+      "Avant yield is now attributed to the tracked savUSD senior-tranche wrapper rather than base avUSD, matching Avant's current token documentation.",
+    impact: [
+      "`savusd-avant` now owns the Avant native savings pool directly in the yield manifest",
+      "`avusd-avant` is no longer marked yield-bearing because avUSD is the non-yield base asset and savUSD is the yield-accruing route",
+      "Parent-side `avusd-avant` savUSD variant and pool mappings were removed so new yield history publishes under the tracked savUSD asset",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "7.46",
     title: "Zephyr ZYS direct yield source",

@@ -125,7 +125,7 @@ describe("yield config registry", () => {
   });
 
   it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {
-    for (const stablecoinId of ["usde-ethena", "usds-sky", "dai-makerdao", "frxusd-frax", "crvusd-curve"]) {
+    for (const stablecoinId of ["usde-ethena", "usds-sky", "dai-makerdao", "frxusd-frax", "crvusd-curve", "avusd-avant"]) {
       expect(YIELD_POOL_MAP[stablecoinId], stablecoinId).toBeUndefined();
       expect(YIELD_VARIANT_MAP[stablecoinId], stablecoinId).toBeUndefined();
     }
@@ -135,6 +135,7 @@ describe("yield config registry", () => {
     expect(YIELD_POOL_MAP["sdai-sky"]).toBe("13392973-be6e-4b2f-bce9-4f7dd53d1c3a");
     expect(YIELD_POOL_MAP["sfrxusd-frax"]).toBe("42523cca-14b0-44f6-95fb-4781069520a5");
     expect(YIELD_POOL_MAP["scrvusd-curve"]).toBe("5fd328af-4203-471b-bd16-1705c726d926");
+    expect(YIELD_POOL_MAP["savusd-avant"]).toBe("c74227a1-e738-4021-bbe1-13363815aecb");
   });
 
   it("includes high-TVL stablecoin lending protocols from 2026-03-25 audit", () => {

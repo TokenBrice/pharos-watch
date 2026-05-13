@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.46` (2026-03-01 -> 2026-05-12).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v7.47` (2026-03-01 -> 2026-05-13).
+
+---
+
+## v7.47 - Avant savUSD ownership correction (May 13, 2026)
+
+- `savusd-avant` now owns the Avant native savings pool directly in the yield manifest
+- Base `avusd-avant` is no longer marked yield-bearing because Avant docs identify avUSD as the non-yield base asset and savUSD as the yield-accruing senior tranche
+- Parent-side `avusd-avant` savUSD variant and pool mappings were removed so new yield history publishes under the tracked savUSD asset
 
 ---
 
