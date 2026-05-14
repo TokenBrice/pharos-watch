@@ -26,6 +26,7 @@ import {
   applySettingToSubscriptions,
   clearPendingDisambiguation,
   loadSubscriptionsByIds,
+  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingConfirmBulk,
   removePresetSubscriptions,
   removeSubscriptions,
@@ -292,11 +293,15 @@ async function persistAndPromptBulkConfirm(
           coinIds,
           unsubscribeAll: false,
         };
-  await persistPendingConfirmBulk(context.db, {
+  const persisted = await persistPendingConfirmBulk(context.db, {
     chatId: context.chatId,
     payload,
     initiatorUserId: context.initiatorUserId,
   });
+  if (!persisted) {
+    await replyToChat(context.db, context.chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken);
+    return GATED_SENTINEL;
+  }
   await replyToChat(
     context.db,
     context.chatId,

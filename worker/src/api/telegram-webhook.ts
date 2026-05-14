@@ -27,6 +27,7 @@ import {
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
   maybePruneTelegramProcessedUpdates,
+  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
 } from "./telegram-webhook-store";
 import { withErrorHandler } from "../lib/api-utils";
@@ -274,7 +275,12 @@ export const handleTelegramWebhook = withErrorHandler(
         }
         // A new slash command in setup state clears the wizard before running the command.
         if (parsedCommand) {
-          await clearPendingDisambiguation(db, chatId);
+          if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
+            await clearPendingDisambiguation(db, chatId);
+          } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
+            await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+            return finishOk();
+          }
         }
       }
 
@@ -602,7 +608,11 @@ function isAddressedToPharosBot(botMention: string | null): boolean {
 }
 
 function canActOnPending(pending: PendingAction, actorUserId: string | null): boolean {
-  return pending.initiatorUserId == null || pending.initiatorUserId === actorUserId;
+  return canActOnPendingOwner(pending.initiatorUserId, actorUserId);
+}
+
+function canActOnPendingOwner(initiatorUserId: string | null, actorUserId: string | null): boolean {
+  return initiatorUserId == null || initiatorUserId === actorUserId;
 }
 
 function looksLikeDisambiguationSelection(text: string): boolean {

@@ -12,6 +12,7 @@ import type {
 } from "./telegram-webhook-shared";
 import {
   clearPendingDisambiguation,
+  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguation,
 } from "./telegram-webhook-store";
 import { dedupeCoins } from "./telegram-webhook-parsing";
@@ -94,7 +95,7 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   }
 
   if (resolution.kind === "ambiguous") {
-    await persistPendingDisambiguation(db, {
+    const persisted = await persistPendingDisambiguation(db, {
       chatId,
       actionType,
       actionPayload,
@@ -105,6 +106,10 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
       remainingTickers: resolution.remainingTickers,
       initiatorUserId,
     });
+    if (!persisted) {
+      await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+      return;
+    }
     await reply(
       escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)),
     );

@@ -655,6 +655,61 @@ describe("handleTelegramWebhook", () => {
     ).toBe(false);
   });
 
+  it("/start in a group does not overwrite another user's fresh setup state", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [
+          {
+            action_type: "setup-step",
+            action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
+            alert_types: "[]",
+            resolved_ids: "[]",
+            ambiguous_ticker: "",
+            candidates: "[]",
+            remaining_tickers: "[]",
+            expires_at: 9_999_999_999,
+            initiator_user_id: "111",
+          },
+        ],
+      },
+      {
+        match: "INSERT INTO telegram_pending_disambiguation",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+    fetchSpy.mockImplementation(async (url) => {
+      if (String(url).includes("getChatMember")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: { user: { id: 222, is_bot: false, first_name: "admin" }, status: "administrator" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    });
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeWebhookRequest(-123, "/start@PharosWatchBot", "test-secret", {
+        chatType: "supergroup",
+        fromId: 222,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const body = latestSendMessageBody();
+    expect(body.text).toContain("Another user has a pending selection");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_pending_disambiguation"))).toBe(true);
+  });
+
   it("/start sub_<types>_<targets> in a private chat dispatches into /subscribe", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },

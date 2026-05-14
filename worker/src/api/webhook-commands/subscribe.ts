@@ -9,7 +9,10 @@ import {
   buildNotFoundMessage,
   buildPresetUnavailableMessage,
 } from "../telegram-webhook-messages";
-import { persistPendingConfirmBulk } from "../telegram-webhook-store";
+import {
+  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
+  persistPendingConfirmBulk,
+} from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
 import {
   BULK_CONFIRM_REPLY_MARKUP,
@@ -49,7 +52,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   }
 
   if (parsed.subscribeAll) {
-    await persistPendingConfirmBulk(db, {
+    const persisted = await persistPendingConfirmBulk(db, {
       chatId,
       payload: {
         kind: "subscribe",
@@ -61,6 +64,10 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
       },
       initiatorUserId: actorUserId,
     });
+    if (!persisted) {
+      await ctx.replyToChat(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
+      return;
+    }
     await ctx.replyToChatWithMarkup(
       buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
       { replyMarkup: BULK_CONFIRM_REPLY_MARKUP },

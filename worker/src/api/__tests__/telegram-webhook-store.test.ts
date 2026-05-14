@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import {
   maybePruneTelegramProcessedUpdates,
+  persistPendingConfirmBulk,
+  persistPendingDisambiguationRow,
   pruneTelegramProcessedUpdates,
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
@@ -38,6 +40,75 @@ describe("upsertSubscriberRow", () => {
       "alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg)",
     );
     expect(entry.sql).not.toContain("alert_safety = MAX");
+  });
+});
+
+describe("persistPendingDisambiguationRow", () => {
+  it("returns false when a fresh pending row is owned by another user", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO telegram_pending_disambiguation",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const persisted = await persistPendingDisambiguationRow(db, {
+      chatId: "-100",
+      actionType: "setup-step",
+      actionPayload: { step: "branch" },
+      alertTypes: [],
+      resolvedIds: [],
+      ambiguousTicker: "",
+      candidates: [],
+      remainingTickers: [],
+      initiatorUserId: "actor-2",
+      expiresAt: 1_700_000_300,
+    });
+
+    expect(persisted).toBe(false);
+    const [entry] = db.getHistory();
+    expect(entry?.sql).toContain("telegram_pending_disambiguation.expires_at <= ?");
+    expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
+    expect(entry?.binds).toEqual([
+      "-100",
+      "setup-step",
+      JSON.stringify({ step: "branch" }),
+      "[]",
+      "[]",
+      "",
+      "[]",
+      "[]",
+      1_700_000_300,
+      "actor-2",
+      expect.any(Number),
+    ]);
+  });
+
+  it("uses the same ownership guard for bulk confirmations", async () => {
+    const db = mockD1([
+      {
+        match: "INSERT INTO telegram_pending_disambiguation",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const persisted = await persistPendingConfirmBulk(db, {
+      chatId: "-100",
+      payload: {
+        kind: "unsubscribe",
+        presetIds: [],
+        coinIds: [],
+        unsubscribeAll: true,
+      },
+      initiatorUserId: "actor-2",
+    });
+
+    expect(persisted).toBe(false);
+    const [entry] = db.getHistory();
+    expect(entry?.binds).toContain("confirm-bulk");
+    expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
   });
 });
 

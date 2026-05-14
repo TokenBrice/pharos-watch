@@ -1,4 +1,5 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
+import { batchExecute } from "../lib/db";
 import type {
   ConfirmBulkPayload,
   ParsedSetCommand,
@@ -17,6 +18,9 @@ export function unixNow(): number {
 const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
 const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
 const TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC = 6 * 60 * 60;
+
+export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
+  "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
 
 export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight";
 
@@ -384,8 +388,8 @@ export async function persistPendingDisambiguation(
     alertTypes?: Set<string>;
     initiatorUserId: string | null;
   },
-): Promise<void> {
-  await persistPendingDisambiguationRow(db, {
+): Promise<boolean> {
+  return persistPendingDisambiguationRow(db, {
     chatId: input.chatId,
     actionType: input.actionType,
     actionPayload: input.actionPayload,
@@ -401,8 +405,10 @@ export async function persistPendingDisambiguation(
 export async function persistPendingDisambiguationRow(
   db: D1Database,
   input: PendingDisambiguationPersistenceInput,
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const nowSec = unixNow();
+  const expiresAt = input.expiresAt ?? nowSec + DISAMBIGUATION_TTL_SEC;
+  const result = await db
     .prepare(`
       INSERT INTO telegram_pending_disambiguation (
         chat_id,
@@ -427,6 +433,10 @@ export async function persistPendingDisambiguationRow(
         remaining_tickers = excluded.remaining_tickers,
         expires_at = excluded.expires_at,
         initiator_user_id = excluded.initiator_user_id
+      WHERE telegram_pending_disambiguation.expires_at <= ?
+         OR telegram_pending_disambiguation.initiator_user_id IS NULL
+         OR excluded.initiator_user_id IS NULL
+         OR telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id
     `)
     .bind(
       input.chatId,
@@ -437,10 +447,12 @@ export async function persistPendingDisambiguationRow(
       input.ambiguousTicker,
       JSON.stringify(input.candidates),
       JSON.stringify(input.remainingTickers),
-      input.expiresAt ?? unixNow() + DISAMBIGUATION_TTL_SEC,
+      expiresAt,
       input.initiatorUserId,
+      nowSec,
     )
     .run();
+  return d1ChangeCount(result) > 0;
 }
 
 /**
@@ -456,8 +468,8 @@ export async function persistPendingConfirmBulk(
     payload: ConfirmBulkPayload;
     initiatorUserId: string | null;
   },
-): Promise<void> {
-  await persistPendingDisambiguationRow(db, {
+): Promise<boolean> {
+  return persistPendingDisambiguationRow(db, {
     chatId: input.chatId,
     actionType: "confirm-bulk",
     actionPayload: input.payload,
@@ -588,7 +600,7 @@ export async function upsertSubscriberAndSubscriptions(
       ),
     );
   }
-  if (statements.length > 0) await db.batch(statements);
+  if (statements.length > 0) await batchExecute(db, statements);
 }
 
 export async function applySettingToSubscriptions(
@@ -684,7 +696,7 @@ export async function applySettingToSubscriptions(
     }
   }
 
-  if (statements.length > 0) await db.batch(statements);
+  if (statements.length > 0) await batchExecute(db, statements);
 }
 
 export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
@@ -837,7 +849,7 @@ export async function upsertPresetSubscriptions(
       now,
     );
   });
-  await db.batch(statements);
+  await batchExecute(db, statements);
 }
 
 export async function removePresetSubscriptions(

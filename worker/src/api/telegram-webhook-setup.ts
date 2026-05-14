@@ -32,6 +32,7 @@ import {
 } from "./telegram-webhook-shared";
 import {
   loadSubscriptionsByIds,
+  PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingDisambiguationRow,
   upsertPresetSubscriptions,
   upsertSubscriberAndSubscriptions,
@@ -154,13 +155,13 @@ async function persistSetupState(
   db: D1Database,
   chatId: string,
   state: SetupWizardState,
-): Promise<void> {
+): Promise<boolean> {
   const payload = {
     step: state.step,
     alertTypes: state.alertTypes,
     target: state.target,
   };
-  await persistPendingDisambiguationRow(db, {
+  return persistPendingDisambiguationRow(db, {
     chatId,
     actionType: SETUP_PENDING_ACTION_TYPE,
     actionPayload: payload,
@@ -232,12 +233,18 @@ export async function sendWizardIntro(
   initiatorUserId: string | null,
   options: { includeMiniAppButton?: boolean } = {},
 ): Promise<void> {
-  await persistSetupState(db, chatId, {
+  const persisted = await persistSetupState(db, chatId, {
     step: "branch",
     alertTypes: [],
     target: null,
     initiatorUserId,
   });
+  if (!persisted) {
+    await sendAuditedTelegramReply(db, chatId, PENDING_OWNERSHIP_CONFLICT_MESSAGE, botToken, {
+      actionDetail: "setup_conflict",
+    });
+    return;
+  }
   await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
     replyMarkup: buildBranchKeyboard(options),
