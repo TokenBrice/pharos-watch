@@ -189,6 +189,18 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "tsx scripts/generate-llms-txt.ts",
     script: "scripts/generate-llms-txt.ts",
   },
+  {
+    id: "stablecoin-frozen-registry",
+    checkCommand: "node scripts/generate-stablecoin-frozen-registry.mjs --check",
+    command: "node scripts/generate-stablecoin-frozen-registry.mjs",
+    script: "scripts/generate-stablecoin-frozen-registry.mjs",
+  },
+  {
+    id: "api-reference",
+    checkCommand: "node scripts/generate-api-reference.mjs --check",
+    command: "node scripts/generate-api-reference.mjs",
+    script: "scripts/generate-api-reference.mjs",
+  },
 ];
 
 export function buildGeneratedArtifactCommands({ check = false } = {}) {

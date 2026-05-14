@@ -176,6 +176,7 @@ describe("validate-ci parity", () => {
       "npm run check:shared-cycles",
       "npm run check:sql-safety",
       "npm run check:stablecoin-data",
+      "npm run check:stablecoin-frozen-registry",
       "npm run check:supply-helper-usage",
       "npm run check:unused-code",
       "npm run check:verified-doc-links",
@@ -192,6 +193,8 @@ describe("validate-ci parity", () => {
       "tsx scripts/generate-postman-collection.ts",
       "tsx scripts/generate-openapi-spec.ts",
       "tsx scripts/generate-llms-txt.ts",
+      "node scripts/generate-stablecoin-frozen-registry.mjs",
+      "node scripts/generate-api-reference.mjs",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
@@ -201,6 +204,8 @@ describe("validate-ci parity", () => {
       "postman",
       "openapi",
       "llms-txt",
+      "stablecoin-frozen-registry",
+      "api-reference",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
