@@ -88,6 +88,26 @@ const MINI_APP_FEATURES = [
     detail: "See whether Telegram can still reach you.",
     icon: Zap,
   },
+  {
+    title: "Coin search",
+    detail: "Find and add stablecoins fast.",
+    icon: Terminal,
+  },
+  {
+    title: "Bot sync",
+    detail: "Commands and app share one alert state.",
+    icon: Bot,
+  },
+  {
+    title: "Deep links",
+    detail: "Jump straight to settings, presets, or a coin.",
+    icon: ExternalLink,
+  },
+  {
+    title: "Launch alerts",
+    detail: "Catch tracked pre-launch assets going live.",
+    icon: Megaphone,
+  },
 ] as const satisfies readonly { title: string; detail: string; icon: LucideIcon }[];
 
 const MINI_APP_SCREENSHOTS = [
