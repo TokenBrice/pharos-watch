@@ -36,6 +36,13 @@ function scriptSrc(csp: string | null): string {
     .find((directive) => directive.startsWith("script-src ")) ?? "";
 }
 
+function imgSrc(csp: string | null): string {
+  return csp
+    ?.split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith("img-src ")) ?? "";
+}
+
 describe("prefersMarkdown", () => {
   it.each([
     ["text/markdown", true],
@@ -199,6 +206,8 @@ describe("pages middleware markdown negotiation", () => {
     expect(csp).toContain("'unsafe-eval'");
     expect(csp).toContain("https://www.googletagmanager.com");
     expect(csp).toContain("https://static.cloudflareinsights.com");
+    expect(imgSrc(csp)).toContain("https://www.googletagmanager.com");
+    expect(imgSrc(csp)).toContain("https://*.googletagmanager.com");
     expect(scriptSrc(csp)).not.toContain("'unsafe-inline'");
     expect(res.headers.get("Cloudflare-CDN-Cache-Control")).toBe("no-store");
     expect(res.headers.get("CDN-Cache-Control")).toBe("no-store");
@@ -237,7 +246,7 @@ describe("pages middleware markdown negotiation", () => {
 
   it("keeps the static fallback CSP free of unsafe inline script execution", () => {
     expect(buildContentSecurityPolicy("abc123")).toBe(
-      "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+      "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
     );
   });
 });

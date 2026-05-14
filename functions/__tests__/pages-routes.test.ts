@@ -6,6 +6,16 @@ import routes from "../../public/_routes.json";
 const headersFile = readFileSync(resolve(process.cwd(), "public/_headers"), "utf8");
 const redirectsFile = readFileSync(resolve(process.cwd(), "public/_redirects"), "utf8");
 
+function headerDirective(name: string): string {
+  return (
+    headersFile
+      .match(/^  Content-Security-Policy: (.+)$/m)?.[1]
+      ?.split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith(`${name} `)) ?? ""
+  );
+}
+
 function activeRedirectLines(): string[] {
   return redirectsFile
     .split(/\r?\n/)
@@ -47,6 +57,13 @@ describe("Pages static headers", () => {
     expect(headersFile).toContain(
       "/chains/*.svg\n  ! Cache-Control\n  Cache-Control: public, max-age=604800, immutable",
     );
+  });
+
+  it("allows analytics image beacons in static Pages CSP", () => {
+    const imgSrc = headerDirective("img-src");
+
+    expect(imgSrc).toContain("https://www.googletagmanager.com");
+    expect(imgSrc).toContain("https://*.googletagmanager.com");
   });
 });
 

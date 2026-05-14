@@ -47,6 +47,15 @@ async function listen(server: Server) {
   return `http://127.0.0.1:${address.port}`;
 }
 
+function directive(csp: string, name: string): string {
+  return (
+    csp
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${name} `)) ?? ""
+  );
+}
+
 describe("serve-static-export", () => {
   it("serves exact /api and /api/ from the static API access page", async () => {
     const root = await makeRoot();
@@ -107,6 +116,26 @@ describe("serve-static-export", () => {
     expect(csp).toContain("frame-ancestors https://telegram.org https://*.telegram.org");
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(await response.text()).toMatch(/<script nonce="[^"]+">1<\/script>/);
+  });
+
+  it("allows analytics image beacons in local static-export CSP", async () => {
+    const root = await makeRoot();
+    await writeFile(path.join(root, "index.html"), "<html><script>1</script></html>");
+
+    const app = createStaticExportServer({
+      apiBaseUrl: "http://127.0.0.1:1",
+      port: 0,
+      rootDir: root,
+    });
+    const baseUrl = await listen(app.server);
+
+    const response = await fetch(`${baseUrl}/`);
+    const csp = response.headers.get("Content-Security-Policy") ?? "";
+    const imgSrc = directive(csp, "img-src");
+
+    expect(response.status).toBe(200);
+    expect(imgSrc).toContain("https://www.googletagmanager.com");
+    expect(imgSrc).toContain("https://*.googletagmanager.com");
   });
 
   it("continues proxying nested /api paths when no static export file exists", async () => {
