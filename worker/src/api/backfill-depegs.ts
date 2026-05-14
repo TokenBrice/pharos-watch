@@ -51,6 +51,7 @@ import { backfillCoin } from "./backfill-depegs-replay";
 
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
+const BACKFILL_REPLAY_VERSION = "depeg-backfill-v6.0";
 /** Per-coin detail from /stablecoin/:id — includes gecko_id and historical supply */
 interface CoinDetail {
   gecko_id?: string;
@@ -63,6 +64,186 @@ interface PreparedBackfillCoin {
   geckoId?: string;
   supplyByDate: SupplySnapshot[];
   currentSupplyUsd: number | null;
+}
+
+type BackfillConfidenceTier = "high" | "medium" | "low";
+
+interface BackfillEventProvenanceInput {
+  replayRunId: string;
+  replayVersion: string;
+  sourceKind: "market" | "authoritative";
+  sourcePriceProviders: string[];
+  quoteMode: string | null;
+  pegReferenceSource: string;
+  supplySource: string;
+  confirmationPolicy: string;
+  confirmationPointCount: number;
+  marketDiagnostics: Record<string, unknown> | null;
+  policyAdjustments: unknown[];
+  confidenceTier: BackfillConfidenceTier;
+  auditVerdict: "confirmed" | "disputed" | "false_positive" | "no_data" | "repaired" | null;
+}
+
+interface BackfillRunInput {
+  runId: string;
+  sourceType: "market" | "authoritative";
+  expectedFingerprint: string;
+  expectedEventCount: number;
+  removedCount: number;
+  addedCount: number;
+  replayWindow: BackfillReplayWindow | null;
+}
+
+function stableHash(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+export function buildBackfillEventsFingerprint(events: Array<{
+  direction: string;
+  peakDeviationBps: number;
+  startedAt: number;
+  endedAt: number | null;
+  startPrice: number;
+  peakPrice: number;
+  recoveryPrice: number | null;
+  pegRef: number;
+}>): string {
+  return stableHash(JSON.stringify(events.map((event) => ({
+    direction: event.direction,
+    peakDeviationBps: event.peakDeviationBps,
+    startedAt: event.startedAt,
+    endedAt: event.endedAt,
+    startPrice: event.startPrice,
+    peakPrice: event.peakPrice,
+    recoveryPrice: event.recoveryPrice,
+    pegRef: event.pegRef,
+  }))));
+}
+
+function buildReplayRunId(stablecoinId: string): string {
+  const now = Date.now();
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${stablecoinId}:${now}:${suffix}`;
+}
+
+function inferBackfillConfidence(input: {
+  sourceKind: "market" | "authoritative";
+  quoteMode: string | null;
+  sourceCount: number;
+  policyAdjustmentCount: number;
+}): BackfillConfidenceTier {
+  if (input.sourceKind === "authoritative") return "high";
+  if (input.quoteMode === "native-peg" && input.sourceCount > 0 && input.policyAdjustmentCount === 0) return "high";
+  if (input.sourceCount >= 2 && input.policyAdjustmentCount <= 1) return "medium";
+  return "low";
+}
+
+function buildPublicProvenance(input: BackfillEventProvenanceInput, updatedAt: number): Record<string, unknown> {
+  return {
+    sourceKind: input.sourceKind,
+    replayRunId: input.replayRunId,
+    replayVersion: input.replayVersion,
+    sourcePriceProviders: input.sourcePriceProviders,
+    quoteMode: input.quoteMode,
+    pegReferenceSource: input.pegReferenceSource,
+    supplySource: input.supplySource,
+    confirmationPolicy: input.confirmationPolicy,
+    confirmationPointCount: input.confirmationPointCount,
+    confidenceTier: input.confidenceTier,
+    auditVerdict: input.auditVerdict,
+    pegScoreEligible: input.auditVerdict !== "false_positive" && input.auditVerdict !== "disputed",
+    updatedAt,
+  };
+}
+
+function buildUpsertBackfillRunStmt(
+  db: D1Database,
+  meta: { id: string },
+  run: BackfillRunInput,
+  status: "started" | "complete" | "incomplete",
+  nowSec: number,
+  insertedCount: number,
+  error: string | null,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_backfill_runs (
+         run_id, stablecoin_id, start_day, end_day, context_days, source_type,
+         expected_event_count, expected_fingerprint, removed_count, added_count,
+         inserted_count, status, error, started_at, finished_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(run_id) DO UPDATE SET
+         inserted_count = excluded.inserted_count,
+         status = excluded.status,
+         error = excluded.error,
+         finished_at = excluded.finished_at`,
+    )
+    .bind(
+      run.runId,
+      meta.id,
+      run.replayWindow?.startDay ?? null,
+      run.replayWindow?.endDay ?? null,
+      run.replayWindow?.contextDays ?? null,
+      run.sourceType,
+      run.expectedEventCount,
+      run.expectedFingerprint,
+      run.removedCount,
+      run.addedCount,
+      insertedCount,
+      status,
+      error,
+      nowSec,
+      status === "started" ? null : nowSec,
+    );
+}
+
+function buildInsertProvenanceStmt(
+  db: D1Database,
+  meta: { id: string },
+  event: { startedAt: number },
+  provenance: BackfillEventProvenanceInput,
+  nowSec: number,
+): D1PreparedStatement {
+  const publicJson = JSON.stringify(buildPublicProvenance(provenance, nowSec));
+  return db
+    .prepare(
+      `INSERT OR REPLACE INTO depeg_event_provenance (
+         event_id, source_kind, replay_run_id, replay_version, source_price_providers,
+         quote_mode, peg_reference_source, supply_source, confirmation_policy,
+         confirmation_point_count, market_diagnostics_json, policy_adjustments_json,
+         confidence_tier, audit_verdict, public_json, created_at, updated_at
+       )
+       SELECT
+         id, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       FROM depeg_events
+       WHERE stablecoin_id = ? AND source = 'backfill' AND started_at = ?`,
+    )
+    .bind(
+      provenance.sourceKind,
+      provenance.replayRunId,
+      provenance.replayVersion,
+      JSON.stringify(provenance.sourcePriceProviders),
+      provenance.quoteMode,
+      provenance.pegReferenceSource,
+      provenance.supplySource,
+      provenance.confirmationPolicy,
+      provenance.confirmationPointCount,
+      JSON.stringify(provenance.marketDiagnostics),
+      JSON.stringify(provenance.policyAdjustments),
+      provenance.confidenceTier,
+      provenance.auditVerdict,
+      publicJson,
+      nowSec,
+      nowSec,
+      meta.id,
+      event.startedAt,
+    );
 }
 
 export async function applyBackfillEvents(
@@ -78,42 +259,90 @@ export async function applyBackfillEvents(
     peakPrice: number;
     recoveryPrice: number | null;
     pegRef: number;
+    provenance?: BackfillEventProvenanceInput;
   }>,
   replayWindow: BackfillReplayWindow | null,
+  run?: BackfillRunInput,
 ): Promise<void> {
   const deleteStmt = buildBackfillDeleteStmt(db, meta.id, replayWindow);
-  if (events.length === 0) {
-    await db.batch([deleteStmt]);
-    return;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (run) {
+    await buildUpsertBackfillRunStmt(db, meta, run, "started", nowSec, 0, null).run();
   }
-  const insertStmts = events.map((e) =>
-    db
-      .prepare(
-        `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+  let insertedCount = 0;
+  try {
+    if (events.length === 0) {
+      await db.batch([deleteStmt]);
+      if (run) {
+        await buildUpsertBackfillRunStmt(db, meta, run, "complete", Math.floor(Date.now() / 1000), 0, null).run();
+      }
+      return;
+    }
+    const insertStmts = events.map((e) =>
+      db
+        .prepare(
+          `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'backfill')`,
-      )
-      .bind(
-        meta.id,
-        meta.symbol,
-        e.pegType,
-        e.direction,
-        e.peakDeviationBps,
-        e.startedAt,
-        e.endedAt,
-        e.startPrice,
-        e.peakPrice,
-        e.recoveryPrice,
-        e.pegRef,
-      ),
-  );
-  // First batch: delete + first chunk of inserts so partial crashes cannot leave the coin event-less.
-  // D1 limits each batch to 100 statements. Reserve one slot for the delete so the first batch
-  // never exceeds the limit; remaining inserts ship in full BATCH_CHUNK_SIZE (100) batches.
-  const firstChunkSize = Math.min(insertStmts.length, BATCH_CHUNK_SIZE - 1);
-  await db.batch([deleteStmt, ...insertStmts.slice(0, firstChunkSize)]);
-  for (let i = firstChunkSize; i < insertStmts.length; i += BATCH_CHUNK_SIZE) {
-    const chunk = insertStmts.slice(i, i + BATCH_CHUNK_SIZE);
-    await db.batch(chunk);
+        )
+        .bind(
+          meta.id,
+          meta.symbol,
+          e.pegType,
+          e.direction,
+          e.peakDeviationBps,
+          e.startedAt,
+          e.endedAt,
+          e.startPrice,
+          e.peakPrice,
+          e.recoveryPrice,
+          e.pegRef,
+        ),
+    );
+    // First batch: delete + first chunk of inserts so partial crashes cannot leave the coin event-less.
+    // D1 limits each batch to 100 statements. Reserve one slot for the delete so the first batch
+    // never exceeds the limit; remaining inserts ship in full BATCH_CHUNK_SIZE (100) batches.
+    const firstChunkSize = Math.min(insertStmts.length, BATCH_CHUNK_SIZE - 1);
+    await db.batch([deleteStmt, ...insertStmts.slice(0, firstChunkSize)]);
+    insertedCount += firstChunkSize;
+    for (let i = firstChunkSize; i < insertStmts.length; i += BATCH_CHUNK_SIZE) {
+      const chunk = insertStmts.slice(i, i + BATCH_CHUNK_SIZE);
+      await db.batch(chunk);
+      insertedCount += chunk.length;
+    }
+    const provenanceStmts = events
+      .filter((event): event is typeof event & { provenance: BackfillEventProvenanceInput } => event.provenance != null)
+      .map((event) => buildInsertProvenanceStmt(db, meta, event, event.provenance, Math.floor(Date.now() / 1000)));
+    for (let i = 0; i < provenanceStmts.length; i += BATCH_CHUNK_SIZE) {
+      await db.batch(provenanceStmts.slice(i, i + BATCH_CHUNK_SIZE));
+    }
+    if (run) {
+      await buildUpsertBackfillRunStmt(
+        db,
+        meta,
+        run,
+        "complete",
+        Math.floor(Date.now() / 1000),
+        insertedCount,
+        null,
+      ).run();
+    }
+  } catch (error) {
+    if (run) {
+      try {
+        await buildUpsertBackfillRunStmt(
+          db,
+          meta,
+          run,
+          "incomplete",
+          Math.floor(Date.now() / 1000),
+          insertedCount,
+          error instanceof Error ? error.message : String(error),
+        ).run();
+      } catch (markError) {
+        console.error(`[backfill-depegs] failed to mark incomplete run ${run.runId}:`, markError);
+      }
+    }
+    throw error;
   }
 }
 
@@ -406,6 +635,51 @@ export async function handleBackfillDepegs(
 
           // Only replace backfill-sourced events; preserve live-cron-detected events
           // (live cron catches brief intraday depegs that daily backfill data misses).
+          const existingRows = await loadExistingReplayRows(db, meta.id, replayWindow);
+          const preview = buildBackfillReplayPreview({
+            meta,
+            sourceKind: replay.sourceKind,
+            authoritativeSource: replay.authoritativeSource,
+            marketDiagnostics: replay.marketDiagnostics,
+            existingRows,
+            events,
+          });
+          const runId = buildReplayRunId(meta.id);
+          const sourceKind = replay.sourceKind === "authoritative" ? "authoritative" : "market";
+          const sourceProviders = sourceKind === "authoritative"
+            ? [replay.authoritativeSource ?? "authoritative"]
+            : replay.marketDiagnostics?.sourcesUsed ?? [];
+          const quoteMode = replay.marketDiagnostics?.quoteMode ?? (meta.flags.pegCurrency === "USD" ? "usd" : null);
+          const confidenceTier = inferBackfillConfidence({
+            sourceKind,
+            quoteMode,
+            sourceCount: sourceProviders.length,
+            policyAdjustmentCount: replay.marketDiagnostics?.policyAdjustments.length ?? 0,
+          });
+          const provenance: BackfillEventProvenanceInput = {
+            replayRunId: runId,
+            replayVersion: BACKFILL_REPLAY_VERSION,
+            sourceKind,
+            sourcePriceProviders: sourceProviders,
+            quoteMode,
+            pegReferenceSource: quoteMode === "native-peg"
+              ? "native-peg-history"
+              : meta.flags.pegCurrency === "USD"
+                ? "fixed-usd"
+                : "historical-fx-or-current-fallback",
+            supplySource: supplyByDate.length > 0 ? "defillama-history" : "stablecoins-cache-current",
+            confirmationPolicy: quoteMode === "native-peg" ? "two-point-36h-or-extreme" : "threshold-crossing",
+            confirmationPointCount: quoteMode === "native-peg" ? 2 : 1,
+            marketDiagnostics: replay.marketDiagnostics ? {
+              sourcesUsed: replay.marketDiagnostics.sourcesUsed,
+              mergeReasons: replay.marketDiagnostics.mergeReasons,
+              quoteMode: replay.marketDiagnostics.quoteMode,
+              quoteCurrency: replay.marketDiagnostics.quoteCurrency,
+            } : null,
+            policyAdjustments: replay.marketDiagnostics?.policyAdjustments ?? [],
+            confidenceTier,
+            auditVerdict: events.length > 0 ? "confirmed" : "no_data",
+          };
           const replayEvents = events.map((e) => ({
             pegType: e.pegType,
             direction: e.direction,
@@ -416,8 +690,17 @@ export async function handleBackfillDepegs(
             peakPrice: e.peakPrice,
             recoveryPrice: e.recoveryPrice,
             pegRef: e.pegRef,
+            provenance,
           }));
-          await applyBackfillEvents(db, { id: meta.id, symbol: meta.symbol }, replayEvents, replayWindow);
+          await applyBackfillEvents(db, { id: meta.id, symbol: meta.symbol }, replayEvents, replayWindow, {
+            runId,
+            sourceType: sourceKind,
+            expectedEventCount: events.length,
+            expectedFingerprint: buildBackfillEventsFingerprint(replayEvents),
+            removedCount: preview.removedBackfillEventCount,
+            addedCount: preview.addedBackfillEventCount,
+            replayWindow,
+          });
           totalEvents += events.length;
         } catch (err) {
           errors.push(`${meta.symbol}: ${err}`);

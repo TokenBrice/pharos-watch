@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
-import { applyBackfillEvents, handleBackfillDepegs } from "../backfill-depegs";
+import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegs } from "../backfill-depegs";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 
 stubCryptoForAuth();
@@ -108,5 +108,86 @@ describe("handleBackfillDepegs", () => {
     } as unknown as D1Database;
     await applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, [], { startDay: 0, endDay: 1e10 } as unknown as BackfillReplayWindow);
     expect(calls).toEqual([{ size: 1 }]);
+  });
+
+  it("records complete replay runs and inserts provenance for backfill rows", async () => {
+    const db = mockD1([
+      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
+      { match: "DELETE FROM depeg_events", rows: [] },
+      { match: "INSERT INTO depeg_events", rows: [] },
+      { match: "INSERT OR REPLACE INTO depeg_event_provenance", rows: [] },
+    ]) as MockD1Database;
+    const events = [{
+      pegType: "peggedUSD",
+      direction: "below" as const,
+      peakDeviationBps: -120,
+      startedAt: 1_700_000_000,
+      endedAt: 1_700_003_600,
+      startPrice: 0.988,
+      peakPrice: 0.984,
+      recoveryPrice: 0.999,
+      pegRef: 1,
+      provenance: {
+        replayRunId: "run-1",
+        replayVersion: "test",
+        sourceKind: "market" as const,
+        sourcePriceProviders: ["coingecko"],
+        quoteMode: "usd",
+        pegReferenceSource: "fixed-usd",
+        supplySource: "defillama-history",
+        confirmationPolicy: "threshold-crossing",
+        confirmationPointCount: 1,
+        marketDiagnostics: null,
+        policyAdjustments: [],
+        confidenceTier: "medium" as const,
+        auditVerdict: "confirmed" as const,
+      },
+    }];
+
+    await applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, events, null, {
+      runId: "run-1",
+      sourceType: "market",
+      expectedEventCount: events.length,
+      expectedFingerprint: buildBackfillEventsFingerprint(events),
+      removedCount: 0,
+      addedCount: 1,
+      replayWindow: null,
+    });
+
+    const history = db.getHistory();
+    expect(history.filter((entry) => entry.sql.includes("INSERT INTO depeg_backfill_runs"))).toHaveLength(2);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO depeg_event_provenance"))).toBe(true);
+    expect(history.some((entry) => entry.binds.includes("complete"))).toBe(true);
+  });
+
+  it("marks replay runs incomplete when chunked inserts fail", async () => {
+    const db = mockD1([
+      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
+      { match: "DELETE FROM depeg_events", rows: [] },
+      { match: "INSERT INTO depeg_events", rows: [], throwError: new Error("chunk failed") },
+    ]) as MockD1Database;
+    const events = [{
+      pegType: "peggedUSD",
+      direction: "below" as const,
+      peakDeviationBps: -120,
+      startedAt: 1_700_000_000,
+      endedAt: 1_700_003_600,
+      startPrice: 0.988,
+      peakPrice: 0.984,
+      recoveryPrice: 0.999,
+      pegRef: 1,
+    }];
+
+    await expect(applyBackfillEvents(db, { id: "usdt-tether", symbol: "USDT" }, events, null, {
+      runId: "run-2",
+      sourceType: "market",
+      expectedEventCount: events.length,
+      expectedFingerprint: buildBackfillEventsFingerprint(events),
+      removedCount: 0,
+      addedCount: 1,
+      replayWindow: null,
+    })).rejects.toThrow("chunk failed");
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_backfill_runs") && entry.binds.includes("incomplete"))).toBe(true);
   });
 });

@@ -9,6 +9,19 @@ export interface BacktestAnchor {
   peakAbsBps: number;
   /** One-line description used in reports. */
   description: string;
+  /** Short operator note describing how the timestamp/peak was verified. */
+  verificationNote: string;
+  /** Public source URLs or API URLs used for verification. */
+  sourceUrls: readonly string[];
+}
+
+export interface BacktestNegativeControl {
+  stablecoinId: string;
+  windowStart: number;
+  windowEnd: number;
+  description: string;
+  verificationNote: string;
+  sourceUrls: readonly string[];
 }
 
 /**
@@ -32,6 +45,8 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
     resolvedAt: 1772506873, // 2026-03-03 03:01:13 UTC
     peakAbsBps: 3101,
     description: "USDX severe early-March stress (-3101 bps)",
+    verificationNote: "Verified against live Pharos /api/depeg-events row on 2026-04-18.",
+    sourceUrls: ["https://api.pharos.watch/api/depeg-events?stablecoin=usdx-hex-trust&limit=100"],
   },
   {
     stablecoinId: "meusd-mezo",
@@ -39,6 +54,8 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
     resolvedAt: 1773294353, // 2026-03-12 05:45:53 UTC
     peakAbsBps: 296,
     description: "MEUSD mid-March brief depeg (-296 bps)",
+    verificationNote: "Verified against live Pharos /api/depeg-events row on 2026-04-18.",
+    sourceUrls: ["https://api.pharos.watch/api/depeg-events?stablecoin=meusd-mezo&limit=100"],
   },
   {
     stablecoinId: "uty-xsy",
@@ -46,6 +63,8 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
     resolvedAt: 1775981076, // 2026-04-12 08:04:36 UTC
     peakAbsBps: 287,
     description: "UTY mid-April upward deviation (+287 bps)",
+    verificationNote: "Verified against live Pharos /api/depeg-events row on 2026-04-18.",
+    sourceUrls: ["https://api.pharos.watch/api/depeg-events?stablecoin=uty-xsy&limit=100"],
   },
   {
     stablecoinId: "meusd-mezo",
@@ -53,8 +72,17 @@ export const BACKTEST_ANCHORS: readonly BacktestAnchor[] = Object.freeze([
     resolvedAt: 1776281649, // 2026-04-15 19:34:09 UTC
     peakAbsBps: 591,
     description: "MEUSD April sustained depeg (+591 bps)",
+    verificationNote: "Verified against live Pharos /api/depeg-events row on 2026-04-18.",
+    sourceUrls: ["https://api.pharos.watch/api/depeg-events?stablecoin=meusd-mezo&limit=100"],
   },
 ]);
+
+/**
+ * Negative controls intentionally start empty until each calm window is verified
+ * against both depeg_events absence and available stress_signal_history coverage.
+ * Tests reject placeholder entries so calibration does not invent calm windows.
+ */
+export const BACKTEST_NEGATIVE_CONTROLS: readonly BacktestNegativeControl[] = Object.freeze([]);
 
 /**
  * Flip to `true` once every BACKTEST_ANCHORS entry has been verified against the live

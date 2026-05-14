@@ -6,7 +6,7 @@ import {
   errorResponse,
   jsonResponse,
 } from "../lib/api-utils";
-import { BACKTEST_ANCHORS } from "../lib/backtest-anchors";
+import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
@@ -487,31 +487,65 @@ interface BacktestMetricsPerAnchor {
   detected: boolean;
   leadTimeDays: number | null;
   firstAlertBand: string | null;
+  alertDays: number;
+  bandTransitions: number;
+  pegType: string | null;
 }
 
 async function handleBacktestMetrics(db: D1Database): Promise<Response> {
   const perAnchor = await Promise.all(
     BACKTEST_ANCHORS.map(async (anchor): Promise<BacktestMetricsPerAnchor> => {
       const windowStart = anchor.onsetAt - BACKTEST_LOOKBACK_DAYS * DAY_SECONDS;
-      const row = await db
+      const rows = await db
         .prepare(
-          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC LIMIT 1",
+          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC",
         )
         .bind(anchor.stablecoinId, windowStart, anchor.onsetAt)
-        .first<{ snapshot_date: number; band: string }>();
+        .all<{ snapshot_date: number; band: string }>();
 
+      const alertRows = rows.results ?? [];
+      const row = alertRows[0] ?? null;
       const detected = row != null;
+      let bandTransitions = 0;
+      for (let i = 1; i < alertRows.length; i++) {
+        if (alertRows[i]?.band !== alertRows[i - 1]?.band) bandTransitions++;
+      }
       return {
         stablecoinId: anchor.stablecoinId,
         onsetAt: anchor.onsetAt,
         detected,
-        leadTimeDays: detected ? (anchor.onsetAt - row!.snapshot_date) / DAY_SECONDS : null,
+        leadTimeDays: detected ? (anchor.onsetAt - row.snapshot_date) / DAY_SECONDS : null,
         firstAlertBand: row?.band ?? null,
+        alertDays: alertRows.length,
+        bandTransitions,
+        pegType: PSI_ELIGIBLE_META_BY_ID.get(anchor.stablecoinId)
+          ? `pegged${PSI_ELIGIBLE_META_BY_ID.get(anchor.stablecoinId)!.flags.pegCurrency}`
+          : null,
+      };
+    }),
+  );
+
+  const negativeControls = await Promise.all(
+    BACKTEST_NEGATIVE_CONTROLS.map(async (control) => {
+      const rows = await db
+        .prepare(
+          "SELECT snapshot_date, band FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date >= ? AND snapshot_date <= ? AND band IN ('ALERT', 'WARNING', 'DANGER') ORDER BY snapshot_date ASC",
+        )
+        .bind(control.stablecoinId, control.windowStart, control.windowEnd)
+        .all<{ snapshot_date: number; band: string }>();
+      const alertRows = rows.results ?? [];
+      return {
+        stablecoinId: control.stablecoinId,
+        windowStart: control.windowStart,
+        windowEnd: control.windowEnd,
+        falsePositiveDays: alertRows.length,
+        firstAlertBand: alertRows[0]?.band ?? null,
       };
     }),
   );
 
   const detected = perAnchor.filter((entry) => entry.detected);
+  const falsePositiveDays = negativeControls.reduce((sum, entry) => sum + entry.falsePositiveDays, 0);
   const leadTimes = detected
     .map((entry) => entry.leadTimeDays!)
     .sort((a, b) => a - b);
@@ -519,12 +553,40 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
     leadTimes.length === 0
       ? null
       : leadTimes[Math.min(leadTimes.length - 1, Math.floor(q * leadTimes.length))];
+  const byPegType: Record<string, { anchors: number; detected: number; recall: number }> = {};
+  for (const entry of perAnchor) {
+    const key = entry.pegType ?? "unknown";
+    const bucket = byPegType[key] ?? { anchors: 0, detected: 0, recall: 0 };
+    bucket.anchors++;
+    if (entry.detected) bucket.detected++;
+    bucket.recall = bucket.anchors === 0 ? 0 : bucket.detected / bucket.anchors;
+    byPegType[key] = bucket;
+  }
+  const truePositives = detected.length;
+  const falseNegativeIncidents = perAnchor.length - truePositives;
+  const precisionDenominator = truePositives + falsePositiveDays;
 
   return jsonResponse({
-    detectionRate: BACKTEST_ANCHORS.length === 0 ? 0 : detected.length / BACKTEST_ANCHORS.length,
+    detectionRate: BACKTEST_ANCHORS.length === 0 ? 0 : truePositives / BACKTEST_ANCHORS.length,
+    precision: precisionDenominator === 0 ? null : truePositives / precisionDenominator,
+    recall: BACKTEST_ANCHORS.length === 0 ? 0 : truePositives / BACKTEST_ANCHORS.length,
+    falsePositiveDays,
+    falseNegativeIncidents,
     leadTimeDaysP50: percentile(0.5),
     leadTimeDaysP90: percentile(0.9),
+    alertChurn: {
+      averageAlertDaysPerAnchor:
+        perAnchor.length === 0 ? 0 : perAnchor.reduce((sum, entry) => sum + entry.alertDays, 0) / perAnchor.length,
+      bandTransitions: perAnchor.reduce((sum, entry) => sum + entry.bandTransitions, 0),
+    },
+    cohortMetrics: {
+      byPegType,
+      negativeControlCount: BACKTEST_NEGATIVE_CONTROLS.length,
+    },
+    negativeControls,
     granularity: "daily",
+    dataSource: "stress_signal_history",
+    diagnosticMode: "legacy-reconstruction remains available at GET /api/backfill-dews without mode=backtest-metrics",
     perAnchor,
   });
 }

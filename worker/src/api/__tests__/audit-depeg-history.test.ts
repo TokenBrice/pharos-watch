@@ -430,4 +430,92 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(result.deletedEvents).toHaveLength(0);
     expect(result.rejectedByValidationCount ?? 0).toBeGreaterThan(0);
   });
+
+  it("does not confirm a below-peg event with above-peg CoinGecko movement", async () => {
+    fetchWithRetryMock.mockReset();
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ prices: [[1_800_000_000_000, 1.02]] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const event = {
+      id: 43,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -150,
+      started_at: 1_800_000_000,
+      ended_at: 1_800_003_600,
+      start_price: 0.985,
+      peak_price: 0.985,
+      recovery_price: 0.999,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    };
+
+    const result = await auditEvents(mockD1(), {
+      events: [event],
+      minSupply: 0,
+      symbolFilter: null,
+      offset: 0,
+      limit: 10,
+      dryRun: true,
+    });
+
+    expect(result.auditedEvents[0]).toMatchObject({
+      verdict: "disputed",
+      cgMaxSameDirectionBps: 0,
+      cgMaxOppositeDirectionBps: 200,
+    });
+    expect(result.deletedEvents).toHaveLength(0);
+  });
+
+  it("persists no-data audit verdicts without deleting rows", async () => {
+    fetchWithRetryMock.mockReset();
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(JSON.stringify({ prices: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const event = {
+      id: 44,
+      stablecoin_id: "usdt-tether",
+      symbol: "USDT",
+      peg_type: "peggedUSD",
+      direction: "below",
+      peak_deviation_bps: -150,
+      started_at: 1_800_000_000,
+      ended_at: 1_800_003_600,
+      start_price: 0.985,
+      peak_price: 0.985,
+      recovery_price: 0.999,
+      peg_reference: 1,
+      source: "live",
+      confirmation_sources: null,
+      pending_reason: null,
+    };
+    const db = mockD1([
+      { match: "INSERT INTO depeg_event_provenance", rows: [] },
+      { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at", rows: [event] },
+    ]) as MockD1Database;
+
+    const result = await auditEvents(db, {
+      events: [event],
+      minSupply: 0,
+      symbolFilter: null,
+      offset: 0,
+      limit: 10,
+      dryRun: false,
+    });
+
+    expect(result.auditedEvents[0]?.verdict).toBe("no_data");
+    expect(result.deletedEvents).toHaveLength(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO depeg_event_provenance") && entry.binds.includes("no_data"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+  });
 });

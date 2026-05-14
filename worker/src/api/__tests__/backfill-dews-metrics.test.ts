@@ -52,15 +52,24 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       detectionRate: number;
+      precision: number | null;
+      recall: number;
+      falsePositiveDays: number;
+      falseNegativeIncidents: number;
       leadTimeDaysP50: number | null;
       leadTimeDaysP90: number | null;
+      alertChurn: { averageAlertDaysPerAnchor: number; bandTransitions: number };
+      cohortMetrics: { byPegType: Record<string, { anchors: number; detected: number; recall: number }> };
       granularity: string;
+      dataSource: string;
       perAnchor: Array<{
         stablecoinId: string;
         onsetAt: number;
         detected: boolean;
         leadTimeDays: number | null;
         firstAlertBand: string | null;
+        alertDays: number;
+        bandTransitions: number;
       }>;
     };
 
@@ -68,7 +77,14 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
     expect(body.detectionRate).toBeLessThanOrEqual(1);
     expect(body.leadTimeDaysP50).toBeDefined();
     expect(body.leadTimeDaysP90).toBeDefined();
+    expect(body.precision).toBe(1);
+    expect(body.recall).toBeCloseTo(2 / BACKTEST_ANCHORS.length, 6);
+    expect(body.falsePositiveDays).toBe(0);
+    expect(body.falseNegativeIncidents).toBe(BACKTEST_ANCHORS.length - 2);
+    expect(body.alertChurn.averageAlertDaysPerAnchor).toBeGreaterThan(0);
+    expect(body.cohortMetrics.byPegType).toHaveProperty("peggedUSD");
     expect(body.granularity).toBe("daily");
+    expect(body.dataSource).toBe("stress_signal_history");
     expect(Array.isArray(body.perAnchor)).toBe(true);
     expect(body.perAnchor.length).toBe(BACKTEST_ANCHORS.length);
     expect(body.perAnchor[0]).toMatchObject({

@@ -60,6 +60,14 @@ export interface PegScoreResult {
   spreadPenalty: number;
   /** Total depeg events */
   eventCount: number;
+  /** Events included after provenance/audit-quality filtering */
+  scoredEventCount: number;
+  /** Events excluded because audit provenance marked them false-positive/disputed */
+  excludedEventCount: number;
+  /** Included low-confidence events that receive reduced severity weight */
+  lowConfidenceEventCount: number;
+  /** True when provenance/audit quality changed the score inputs */
+  qualityAdjusted: boolean;
   /** Worst peak deviation in bps (signed), or null */
   worstDeviationBps: number | null;
   /** Whether there is an ongoing depeg event */
@@ -68,6 +76,17 @@ export interface PegScoreResult {
   lastEventAt: number | null;
   /** Tracking span in days */
   trackingSpanDays: number;
+}
+
+function isExcludedByAudit(event: DepegEvent): boolean {
+  const verdict = event.provenance?.auditVerdict;
+  return verdict === "false_positive" || verdict === "disputed";
+}
+
+function eventSeverityWeight(event: DepegEvent): number {
+  const confidenceTier = event.provenance?.confidenceTier;
+  if (confidenceTier === "low") return 0.5;
+  return 1;
 }
 
 /**
@@ -99,6 +118,10 @@ export function computePegScore(
       severityScore: 100,
       spreadPenalty: 0,
       eventCount: 0,
+      scoredEventCount: 0,
+      excludedEventCount: 0,
+      lowConfidenceEventCount: 0,
+      qualityAdjusted: false,
       worstDeviationBps: null,
       activeDepeg: false,
       lastEventAt: null,
@@ -109,9 +132,13 @@ export function computePegScore(
   const spanSec = Math.max(now - startSec, 1);
   const spanDays = spanSec / DAY_SECONDS;
   const insufficientData = spanDays < 7;
+  const scoringEvents = events.filter((event) => !isExcludedByAudit(event));
+  const excludedEventCount = events.length - scoringEvents.length;
+  const lowConfidenceEventCount = scoringEvents.filter((event) => eventSeverityWeight(event) < 1).length;
+  const qualityAdjusted = excludedEventCount > 0 || lowConfidenceEventCount > 0;
 
   // --- Time score (pegPct) ---
-  const totalDepegSec = mergeDepegSeconds(events, startSec, now);
+  const totalDepegSec = mergeDepegSeconds(scoringEvents, startSec, now);
   const pegPct = Math.max(0, (1 - totalDepegSec / spanSec) * 100);
 
   // --- Severity score ---
@@ -121,7 +148,7 @@ export function computePegScore(
   // minimum penalty proportional to their magnitude — a 2-hour 400 bps depeg
   // is not negligible just because it was brief.
   let totalPenalty = 0;
-  for (const e of events) {
+  for (const e of scoringEvents) {
     const rawBps = Math.abs(e.peakDeviationBps);
     const peakBps = Number.isFinite(rawBps) ? rawBps : 0;
     const endSec = e.endedAt ?? now;
@@ -131,7 +158,7 @@ export function computePegScore(
 
     const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;
     const magnitudeFloor = (peakBps / 2000) * recencyWeight;
-    totalPenalty += Math.max(durationPenalty, magnitudeFloor);
+    totalPenalty += Math.max(durationPenalty, magnitudeFloor) * eventSeverityWeight(e);
   }
   const severityScore = Math.max(0, 100 - totalPenalty);
 
@@ -139,8 +166,11 @@ export function computePegScore(
   // Coins with erratic, unpredictable depeg magnitudes get penalized.
   // stddev of |peakDeviationBps| scaled into 0-15 range.
   let spreadPenalty = 0;
-  if (events.length >= 2) {
-    const absBpsList = events.map((e) => { const v = Math.abs(e.peakDeviationBps); return Number.isFinite(v) ? v : 0; });
+  if (scoringEvents.length >= 2) {
+    const absBpsList = scoringEvents.map((e) => {
+      const v = Math.abs(e.peakDeviationBps) * eventSeverityWeight(e);
+      return Number.isFinite(v) ? v : 0;
+    });
     const mean = absBpsList.reduce((s, v) => s + v, 0) / absBpsList.length;
     const variance = absBpsList.reduce((s, v) => s + (v - mean) ** 2, 0) / absBpsList.length;
     const stdDev = Math.sqrt(variance);
@@ -151,7 +181,7 @@ export function computePegScore(
   // If there's an ongoing depeg, penalize based on its current peak severity.
   // A coin at -7800 bps shouldn't score 51 just because old events decayed.
   let activeDepegPenalty = 0;
-  for (const e of events) {
+  for (const e of scoringEvents) {
     if (e.endedAt === null) {
       // Scale: 100 bps (threshold) = 5 penalty (floor), 2500+ bps = 50 penalty (hard cap)
       // Use worst active event when multiple concurrent depegs exist.
@@ -166,7 +196,7 @@ export function computePegScore(
   const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---
-  const worstDeviationBps = worstDeviation(events);
+  const worstDeviationBps = worstDeviation(scoringEvents);
 
   return {
     pegScore,
@@ -174,10 +204,14 @@ export function computePegScore(
     severityScore,
     spreadPenalty,
     eventCount: events.length,
+    scoredEventCount: scoringEvents.length,
+    excludedEventCount,
+    lowConfidenceEventCount,
+    qualityAdjusted,
     worstDeviationBps,
-    activeDepeg: events.some((e) => e.endedAt === null),
-    lastEventAt: events.length > 0
-      ? events.reduce((m, e) => Math.max(m, e.startedAt), -Infinity)
+    activeDepeg: scoringEvents.some((e) => e.endedAt === null),
+    lastEventAt: scoringEvents.length > 0
+      ? scoringEvents.reduce((m, e) => Math.max(m, e.startedAt), -Infinity)
       : null,
     trackingSpanDays: Math.floor(spanDays),
   };

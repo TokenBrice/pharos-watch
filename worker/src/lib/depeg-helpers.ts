@@ -29,6 +29,11 @@ export interface DepegRow {
   source: string;
   confirmation_sources: string | null;
   pending_reason: string | null;
+  provenance_json?: string | null;
+  provenance_confidence_tier?: string | null;
+  provenance_audit_verdict?: string | null;
+  provenance_replay_run_id?: string | null;
+  provenance_replay_version?: string | null;
 }
 
 export interface DexPriceRow {
@@ -349,6 +354,26 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
   if (!VALID_SOURCES.has(row.source)) {
     console.warn(`[depeg-helpers] Invalid source "${row.source}" for event ${row.id}, defaulting to "live"`);
   }
+  let provenance: DepegEvent["provenance"] = null;
+  if (row.provenance_json) {
+    try {
+      const parsed = JSON.parse(row.provenance_json) as DepegEvent["provenance"];
+      provenance = parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      provenance = null;
+    }
+  }
+  if (
+    provenance == null &&
+    (row.provenance_confidence_tier || row.provenance_audit_verdict || row.provenance_replay_run_id || row.provenance_replay_version)
+  ) {
+    provenance = {
+      confidenceTier: row.provenance_confidence_tier ?? null,
+      auditVerdict: row.provenance_audit_verdict ?? null,
+      replayRunId: row.provenance_replay_run_id ?? null,
+      replayVersion: row.provenance_replay_version ?? null,
+    };
+  }
   return {
     id: row.id,
     stablecoinId: row.stablecoin_id,
@@ -365,5 +390,6 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     source: VALID_SOURCES.has(row.source) ? row.source as "live" | "backfill" : "live",
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
+    provenance,
   };
 }

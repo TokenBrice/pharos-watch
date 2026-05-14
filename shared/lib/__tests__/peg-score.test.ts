@@ -97,4 +97,46 @@ describe("computePegScore", () => {
       expect(Number.isFinite(result.pegScore)).toBe(true);
     }
   });
+
+  it("excludes false-positive and disputed events from PegScore inputs", () => {
+    const start = NOW - 90 * DAY;
+    const excludedEvents = [
+      {
+        startedAt: NOW - 30 * DAY,
+        endedAt: NOW - 20 * DAY,
+        peakDeviationBps: 5000,
+        direction: "below" as const,
+        provenance: { auditVerdict: "false_positive", confidenceTier: "low" },
+      },
+      {
+        startedAt: NOW - 10 * DAY,
+        endedAt: NOW - 9 * DAY,
+        peakDeviationBps: 800,
+        direction: "above" as const,
+        provenance: { auditVerdict: "disputed", confidenceTier: "medium" },
+      },
+    ];
+    const result = computePegScore(excludedEvents as never, start, NOW);
+    expect(result.pegScore).toBe(100);
+    expect(result.scoredEventCount).toBe(0);
+    expect(result.excludedEventCount).toBe(2);
+    expect(result.qualityAdjusted).toBe(true);
+  });
+
+  it("downweights low-confidence events without dropping them", () => {
+    const start = NOW - 180 * DAY;
+    const event = {
+      startedAt: NOW - 30 * DAY,
+      endedAt: NOW - 20 * DAY,
+      peakDeviationBps: 4000,
+      direction: "below" as const,
+    };
+    const highConfidence = computePegScore([{ ...event, provenance: { confidenceTier: "high" } }] as never, start, NOW);
+    const lowConfidence = computePegScore([{ ...event, provenance: { confidenceTier: "low" } }] as never, start, NOW);
+
+    expect(lowConfidence.pegScore!).toBeGreaterThan(highConfidence.pegScore!);
+    expect(lowConfidence.scoredEventCount).toBe(1);
+    expect(lowConfidence.lowConfidenceEventCount).toBe(1);
+    expect(lowConfidence.qualityAdjusted).toBe(true);
+  });
 });

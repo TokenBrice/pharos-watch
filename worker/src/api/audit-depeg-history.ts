@@ -21,7 +21,7 @@ import {
 } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-type Verdict = "false_positive" | "confirmed" | "no_data" | "skipped" | "error";
+type Verdict = "false_positive" | "confirmed" | "disputed" | "no_data" | "repaired" | "skipped" | "error";
 type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
@@ -44,6 +44,8 @@ interface AuditedEvent {
   startedAt: number;
   peakBps: number;
   cgMaxBps: number | null;
+  cgMaxSameDirectionBps?: number | null;
+  cgMaxOppositeDirectionBps?: number | null;
   verdict: Verdict;
 }
 
@@ -128,6 +130,52 @@ function getAbsoluteDeviationBps(price: number | null | undefined, pegReference:
     return null;
   }
   return Math.abs(Math.round(((price / pegReference) - 1) * 10_000));
+}
+
+function getSignedDeviationBps(price: number | null | undefined, pegReference: number): number | null {
+  if (price == null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(pegReference) || pegReference <= 0) {
+    return null;
+  }
+  return Math.round(((price / pegReference) - 1) * 10_000);
+}
+
+function directionFromSignedBps(bps: number): "above" | "below" {
+  return bps >= 0 ? "above" : "below";
+}
+
+function buildAuditVerdictProvenanceStmt(
+  db: D1Database,
+  event: DepegRow,
+  verdict: Verdict,
+  nowSec: number,
+): D1PreparedStatement {
+  const publicJson = JSON.stringify({
+    auditVerdict: verdict,
+    confidenceTier: verdict === "confirmed" || verdict === "repaired" ? "high" : verdict === "no_data" ? "low" : "medium",
+    pegScoreEligible: verdict !== "false_positive" && verdict !== "disputed",
+    updatedAt: nowSec,
+  });
+  return db
+    .prepare(
+      `INSERT INTO depeg_event_provenance (
+         event_id, source_kind, audit_verdict, confidence_tier, public_json, created_at, updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(event_id) DO UPDATE SET
+         audit_verdict = excluded.audit_verdict,
+         confidence_tier = excluded.confidence_tier,
+         public_json = json_patch(COALESCE(depeg_event_provenance.public_json, '{}'), excluded.public_json),
+         updated_at = excluded.updated_at`,
+    )
+    .bind(
+      event.id,
+      event.source,
+      verdict,
+      verdict === "confirmed" || verdict === "repaired" ? "high" : verdict === "no_data" ? "low" : "medium",
+      publicJson,
+      nowSec,
+      nowSec,
+    );
 }
 
 function parseDeleteIds(value: string): number[] | Response {
@@ -821,6 +869,7 @@ export async function auditEvents(
 
   const affectedDays = new Set<number>();
   const deleteStatements: D1PreparedStatement[] = [];
+  const provenanceStatements: D1PreparedStatement[] = [];
   const deletedIds: number[] = [];
 
   for (const event of paginatedEvents) {
@@ -895,6 +944,9 @@ export async function auditEvents(
       });
 
       if (validatedPrices.length === 0) {
+        if (!dryRun) {
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "no_data", Math.floor(Date.now() / 1000)));
+        }
         result.auditedEvents.push({
           id: event.id,
           symbol: event.symbol,
@@ -908,53 +960,63 @@ export async function auditEvents(
 
       // Find max deviation in CG data during the event window
       let maxCgBps = 0;
+      let maxSameDirectionBps = 0;
+      let maxOppositeDirectionBps = 0;
       for (const [, cgPrice] of validatedPrices) {
-        const cgBps = Math.abs(Math.round((cgPrice / event.peg_reference - 1) * 10000));
+        const signedCgBps = getSignedDeviationBps(cgPrice, event.peg_reference);
+        if (signedCgBps == null) continue;
+        const cgBps = Math.abs(signedCgBps);
         if (cgBps > maxCgBps) maxCgBps = cgBps;
+        if (directionFromSignedBps(signedCgBps) === event.direction) {
+          if (cgBps > maxSameDirectionBps) maxSameDirectionBps = cgBps;
+        } else if (cgBps > maxOppositeDirectionBps) {
+          maxOppositeDirectionBps = cgBps;
+        }
       }
 
-      if (maxCgBps < falsePositiveBar) {
-        // CoinGecko never confirmed this deviation — false positive
-        result.falsePositivesFound++;
-        result.auditedEvents.push({
-          id: event.id,
-          symbol: event.symbol,
-          startedAt: event.started_at,
-          peakBps: event.peak_deviation_bps,
-          cgMaxBps: maxCgBps,
-          verdict: "false_positive",
-        });
-
+      if (maxSameDirectionBps >= falsePositiveBar) {
         if (!dryRun) {
-          deleteStatements.push(db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id));
-          deletedIds.push(event.id);
-          result.deletedEvents.push({
-            id: event.id,
-            symbol: event.symbol,
-            startedAt: event.started_at,
-            peakBps: event.peak_deviation_bps,
-          });
-
-          // Track affected days for stability index recomputation
-          const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
-          const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY_SECONDS) * DAY_SECONDS;
-          for (let d = startDay; d <= endDay; d += DAY_SECONDS) {
-            affectedDays.add(d);
-          }
-
-          console.log(
-            `[audit] Deleted false positive: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps, CG max=${maxCgBps}bps`,
-          );
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "confirmed", Math.floor(Date.now() / 1000)));
         }
-      } else {
-        // CoinGecko confirms the deviation — keep the event
         result.auditedEvents.push({
           id: event.id,
           symbol: event.symbol,
           startedAt: event.started_at,
           peakBps: event.peak_deviation_bps,
           cgMaxBps: maxCgBps,
+          cgMaxSameDirectionBps: maxSameDirectionBps,
+          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
           verdict: "confirmed",
+        });
+      } else if (maxOppositeDirectionBps >= falsePositiveBar) {
+        if (!dryRun) {
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "disputed", Math.floor(Date.now() / 1000)));
+        }
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: maxCgBps,
+          cgMaxSameDirectionBps: maxSameDirectionBps,
+          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
+          verdict: "disputed",
+        });
+      } else {
+        // CoinGecko data was available but did not confirm this direction.
+        result.falsePositivesFound++;
+        if (!dryRun) {
+          provenanceStatements.push(buildAuditVerdictProvenanceStmt(db, event, "false_positive", Math.floor(Date.now() / 1000)));
+        }
+        result.auditedEvents.push({
+          id: event.id,
+          symbol: event.symbol,
+          startedAt: event.started_at,
+          peakBps: event.peak_deviation_bps,
+          cgMaxBps: maxCgBps,
+          cgMaxSameDirectionBps: maxSameDirectionBps,
+          cgMaxOppositeDirectionBps: maxOppositeDirectionBps,
+          verdict: "false_positive",
         });
       }
     } catch (err) {
@@ -970,12 +1032,12 @@ export async function auditEvents(
     }
   }
 
-  if (!dryRun && deleteStatements.length > 0) {
+  if (!dryRun && (deleteStatements.length > 0 || provenanceStatements.length > 0)) {
     const remainingDepegEvents = await loadRemainingDepegEvents(db, deletedIds);
     result.daysRecomputed = await commitAuditMutation(
       db,
-      deleteStatements,
-      "False-positive audit delete failed before the stability-index repair could finish",
+      [...provenanceStatements, ...deleteStatements],
+      "False-positive audit persistence failed before the stability-index repair could finish",
       { affectedDays, remainingDepegEvents },
     );
   }
