@@ -45,6 +45,10 @@ const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
     enabled: z.boolean(),
   }),
   z.object({
+    kind: z.literal("set-global-depeg-step"),
+    depegStepBps: DepegStepSchema,
+  }),
+  z.object({
     kind: z.literal("set-quiet-hours"),
     enabled: z.boolean(),
     startHourUtc: z.number().int().min(0).max(23).optional(),

@@ -8,12 +8,18 @@ import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
-import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
+import type { TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 const BOT_URL = "https://t.me/PharosWatchBot";
 const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
+const DEPEG_STEP_OPTIONS = [
+  { value: null, label: "Any depeg", caption: "No gate" },
+  { value: 100, label: "+100 bps", caption: "Tighter" },
+  { value: 250, label: "+250 bps", caption: "Balanced" },
+  { value: 500, label: "+500 bps", caption: "Quieter" },
+] as const satisfies readonly { value: TelegramDepegStepBps | null; label: string; caption: string }[];
 const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
 const TELEGRAM_BROWSER_PREVIEW_ATTEMPTS = 10;
 const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
@@ -199,6 +205,8 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate }: {
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
+  const currentDepegStep = state.subscriber.globalAlerts.depegStepBps;
+
   return (
     <div className="space-y-4">
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
@@ -210,6 +218,39 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate }: {
           {(Object.keys(ALERT_LABELS) as TelegramAlertType[]).map((type) => (
             <TogglePill key={type} label={ALERT_LABELS[type]} enabled={state.subscriber.globalAlerts[type]} disabled={!canMutate || isMutating} onToggle={() => onMutate({ kind: "set-global", alertType: type, enabled: !state.subscriber.globalAlerts[type] })} />
           ))}
+        </div>
+        <div className="mt-5 border-t border-border/60 pt-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-foreground">Depeg step</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Applies to all-stablecoin depeg alerts.</p>
+            </div>
+            <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+              {currentDepegStep == null ? "Any" : `${currentDepegStep} bps`}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {DEPEG_STEP_OPTIONS.map((option) => {
+              const selected = currentDepegStep === option.value;
+              return (
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-label={option.value == null ? "Set global depeg step to any depeg" : `Set global depeg step to ${option.value} bps`}
+                  aria-pressed={selected}
+                  disabled={!canMutate || isMutating}
+                  onClick={() => onMutate({ kind: "set-global-depeg-step", depegStepBps: option.value })}
+                  className={cn(
+                    "pharos-focus-ring min-h-12 rounded-lg border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                    selected ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.label}</span>
+                  <span className="block text-[11px] leading-tight">{option.caption}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
       <section className="rounded-2xl border border-border/70 bg-card/90 p-4">

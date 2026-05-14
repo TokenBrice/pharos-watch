@@ -3050,6 +3050,7 @@ Supported `operation.kind` values:
 
 - `recommended-setup` — follow a preset such as `usd-top25` with selected alert types.
 - `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`).
+- `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.
 - `clear-snooze` — clear chat-level snooze.
 - `set-coin` — add or tune one explicit coin subscription.

@@ -168,4 +168,31 @@ describe("PharosWatchBotMiniAppPage", () => {
       body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-global", alertType: "safety", enabled: true } }),
     }));
   });
+
+  it("posts global depeg-step mutations from settings", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
+    const nextState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: {
+        ...baseState.subscriber,
+        globalAlerts: { ...baseState.subscriber.globalAlerts, depegStepBps: 500 },
+      },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: true, json: async () => nextState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Set global depeg step to 500 bps" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(fetchMock).toHaveBeenLastCalledWith("/api/telegram-mini-app/mutate", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-global-depeg-step", depegStepBps: 500 } }),
+    }));
+    expect(screen.getByText("500 bps")).toBeTruthy();
+  });
 });

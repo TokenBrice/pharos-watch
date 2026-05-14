@@ -17,7 +17,7 @@ The safety-alert path now has an additional hard dependency: `publish-report-car
 
 ## Mini App Launch Entrypoints
 
-PharosWatchBot exposes the Mini App control panel at `https://pharos.watch/pharoswatchbot/app/`. The first launch phase is private-chat scoped: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies because Telegram `InlineKeyboardButton.web_app` is private-chat-only and the MVP does not support group mutation.
+PharosWatchBot exposes the Mini App control panel at `https://pharos.watch/pharoswatchbot/app/`. The first launch phase is private-chat scoped: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies because Telegram `InlineKeyboardButton.web_app` is private-chat-only and the MVP does not support group mutation. The private settings panel can toggle global alert families, choose the global depeg worsening step, and manage quiet hours through signed Mini App mutations.
 
 Launch paths:
 

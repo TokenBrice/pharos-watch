@@ -3,7 +3,16 @@ import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { applyCoinSetting, clearSnoozeViaSettings } from "./telegram-webhook-settings-mutations";
-import { removePresetSubscriptions, removeSubscriptions, upsertPresetSubscriptions, upsertSubscriberAndSubscriptions, upsertSubscriberRow, unixNow, type UpsertSubscriberInput } from "./telegram-webhook-store";
+import {
+  removePresetSubscriptions,
+  removeSubscriptions,
+  setGlobalDepegWorseningStep,
+  upsertPresetSubscriptions,
+  upsertSubscriberAndSubscriptions,
+  upsertSubscriberRow,
+  unixNow,
+  type UpsertSubscriberInput,
+} from "./telegram-webhook-store";
 import type { TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 
 export type TelegramMiniAppMutationErrorCode = "not-private" | "unknown-coin" | "unknown-preset" | "empty-alert-types" | "preset-unavailable" | "invalid-coin-patch";
@@ -60,6 +69,10 @@ async function setGlobal(db: D1Database, chatId: string, username: string | null
     nowSec: unixNow(),
     globalAlertOverrides: { [operation.alertType]: operation.enabled ? 1 : 0 } as NonNullable<UpsertSubscriberInput["globalAlertOverrides"]>,
   });
+}
+
+async function setGlobalDepegStep(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-global-depeg-step" }>): Promise<void> {
+  await setGlobalDepegWorseningStep(db, chatId, username, operation.depegStepBps);
 }
 
 async function setQuietHours(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-quiet-hours" }>): Promise<void> {
@@ -135,6 +148,9 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
     case "set-global":
       await setGlobal(db, chatId, username, operation);
       return;
+    case "set-global-depeg-step":
+      await setGlobalDepegStep(db, chatId, username, operation);
+      return;
     case "set-quiet-hours":
       await setQuietHours(db, chatId, username, operation);
       return;
@@ -167,6 +183,7 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
 
 export function mutationActionDetail(operation: TelegramMiniAppOperation): string {
   if (operation.kind === "set-global") return operation.alertType;
+  if (operation.kind === "set-global-depeg-step") return "depeg_step";
   if (operation.kind === "set-coin" || operation.kind === "remove-coin") return "coin";
   if (operation.kind === "recommended-setup" || operation.kind === "follow-preset" || operation.kind === "unfollow-preset") return "preset";
   if (operation.kind === "set-quiet-hours") return "quiet_hours";

@@ -241,6 +241,20 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(true);
   });
 
+  it("applies global depeg-step mutations", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-global-depeg-step", depegStepBps: 500 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(db.getHistory().some((entry) => entry.sql.includes("global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg)"))).toBe(true);
+    expect(historyHas(db, "global_depeg_worsening_bps_step = ?", [500, NOW_SEC, "42"])).toBe(true);
+  });
+
   it("applies quiet-hour mutations with exact quiet window binds", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables());

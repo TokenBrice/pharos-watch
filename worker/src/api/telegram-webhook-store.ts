@@ -712,6 +712,30 @@ export function validateGlobalSetCommand(command: ParsedSetCommand): string | nu
   return null;
 }
 
+export async function setGlobalDepegWorseningStep(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  step: 100 | 250 | 500 | null,
+): Promise<void> {
+  const now = unixNow();
+  await upsertSubscriberRow(db, {
+    chatId,
+    username,
+    nowSec: now,
+    globalAlertBumps: { depeg: 1 },
+  });
+  await db
+    .prepare(
+      `UPDATE telegram_subscribers
+          SET global_depeg_worsening_bps_step = ?,
+              last_active_at = ?
+        WHERE chat_id = ?`,
+    )
+    .bind(step, now, chatId)
+    .run();
+}
+
 export async function applyGlobalSetting(
   db: D1Database,
   chatId: string,
@@ -719,22 +743,7 @@ export async function applyGlobalSetting(
   command: ParsedSetCommand,
 ): Promise<void> {
   if (command.setting === "depeg-step") {
-    const now = unixNow();
-    await upsertSubscriberRow(db, {
-      chatId,
-      username,
-      nowSec: now,
-      globalAlertBumps: { depeg: 1 },
-    });
-    await db
-      .prepare(
-        `UPDATE telegram_subscribers
-            SET global_depeg_worsening_bps_step = ?,
-                last_active_at = ?
-          WHERE chat_id = ?`,
-      )
-      .bind(command.step, now, chatId)
-      .run();
+    await setGlobalDepegWorseningStep(db, chatId, username, command.step);
     return;
   }
   const override: 0 | 1 = command.enabled ? 1 : 0;
