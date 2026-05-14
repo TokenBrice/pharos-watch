@@ -67,14 +67,15 @@ class MiniAppRequestError extends Error {
   }
 }
 
-function initialViewFromStartParam(startParam: string | null): ViewKey {
+function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null } {
   const payload = parseMiniAppPayload(startParam);
-  if (!payload) return "home";
+  if (!payload) return { view: "home", coinId: null };
   const intent = miniAppPayloadIntent(payload);
-  if (intent === "settings" || intent === "presets") return intent;
-  if (intent === "quiet-hours" || intent === "forget") return "settings";
-  if (intent === "watchlist" || intent === "coin") return "watchlist";
-  return "home";
+  if (intent === "settings" || intent === "presets") return { view: intent, coinId: null };
+  if (intent === "quiet-hours" || intent === "forget") return { view: "settings", coinId: null };
+  if (intent === "coin") return { view: "watchlist", coinId: payload.kind === "coin" ? payload.coinId : null };
+  if (intent === "watchlist") return { view: "watchlist", coinId: null };
+  return { view: "home", coinId: null };
 }
 
 function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
@@ -699,7 +700,7 @@ const SAFETY_MODE_OPTIONS = [
 
 type SubscribedCoin = TelegramMiniAppState["subscriptions"][number];
 
-function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, nowSec }: {
+function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, nowSec, highlighted }: {
   coin: SubscribedCoin;
   canMutate: boolean;
   isMutating: boolean;
@@ -707,6 +708,7 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
   onRemove: (coin: SubscribedCoin) => void;
   webApp: TelegramWebAppSdk | null;
   nowSec: number;
+  highlighted: boolean;
 }) {
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled;
@@ -726,7 +728,15 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
   });
 
   return (
-    <article className="rounded-2xl border border-border/70 bg-card/90 p-4">
+    <article
+      id={`coin-row-${coin.stablecoinId}`}
+      className={cn(
+        "rounded-2xl border bg-card/90 p-4 transition-colors",
+        highlighted
+          ? "border-sky-500/60 ring-2 ring-sky-500/35"
+          : "border-border/70",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="truncate text-base font-semibold text-foreground">{coin.symbol}</h3>
@@ -860,7 +870,7 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
   );
 }
 
-function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pendingUndo, onUndo, webApp, nowSec }: {
+function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
@@ -870,6 +880,7 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pend
   onUndo: () => void;
   webApp: TelegramWebAppSdk | null;
   nowSec: number;
+  highlightedCoinId: string | null;
 }) {
   const [query, setQuery] = useState("");
   const subscribed = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
@@ -974,6 +985,7 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pend
             onRemove={onRemove}
             webApp={webApp}
             nowSec={nowSec}
+            highlighted={highlightedCoinId === coin.stablecoinId}
           />
         )) : (
           <section className="rounded-2xl border border-border/70 bg-card/90 p-4 text-sm text-muted-foreground">No explicit coin follows yet.</section>
@@ -1202,6 +1214,8 @@ export function PharosWatchBotMiniAppClient() {
   const [previewName, setPreviewName] = useState<string | null>(null);
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
   const [view, setView] = useState<ViewKey>("home");
+  const [coinTarget, setCoinTarget] = useState<string | null>(null);
+  const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
   const [status, setStatus] = useState<"preview" | "loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
@@ -1296,7 +1310,9 @@ export function PharosWatchBotMiniAppClient() {
       setWebApp(launch.webApp);
       setInitData(launch.initData);
       setStartParam(launch.startParam);
-      setView(initialViewFromStartParam(launch.startParam));
+      const initial = initialViewFromStartParam(launch.startParam);
+      setView(initial.view);
+      setCoinTarget(initial.coinId);
       setPreviewName(launch.previewName);
       applyTelegramTheme(launch.webApp);
       cleanup = bindTelegramViewportAndTheme(launch.webApp);
@@ -1560,6 +1576,32 @@ export function PharosWatchBotMiniAppClient() {
     };
   }, [view, webApp]);
 
+  // Scroll-to-coin: when launched with `coin_<id>`, scroll the matching row
+  // into view and apply a temporary highlight. Runs once per coin target.
+  useEffect(() => {
+    if (!coinTarget) return;
+    if (view !== "watchlist") return;
+    if (!state) return;
+    const exists = state.subscriptions.some((coin) => coin.stablecoinId === coinTarget);
+    if (!exists) return;
+    const targetId = coinTarget;
+    // Consume the target so re-renders don't repeatedly scroll.
+    setCoinTarget(null);
+    setHighlightedCoinId(targetId);
+    // Defer one tick so the highlighted-row re-render commits before scroll.
+    const scrollTimer = setTimeout(() => {
+      const node = typeof document === "undefined" ? null : document.getElementById(`coin-row-${targetId}`);
+      node?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+    const clearTimer = setTimeout(() => {
+      setHighlightedCoinId((current) => (current === targetId ? null : current));
+    }, 2_000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [coinTarget, state, view]);
+
   // SettingsButton
   useEffect(() => {
     const sb = webApp?.SettingsButton;
@@ -1581,7 +1623,10 @@ export function PharosWatchBotMiniAppClient() {
     });
   }, [webApp]);
 
-  // MainButton
+  // MainButton — track the currently-attached handler via ref so transitions
+  // to a no-handler render still detach the prior handler. Without this, the
+  // else branch only hides the button and leaves listeners stacked.
+  const mainButtonHandlerRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     const mb = webApp?.MainButton;
     if (!mb) return;
@@ -1597,14 +1642,25 @@ export function PharosWatchBotMiniAppClient() {
         handler = () => mutate({ kind: "clear-snooze" });
       }
     }
+
+    // Detach any previously attached handler before attaching a new one or hiding.
+    if (mainButtonHandlerRef.current) {
+      mb.offClick?.(mainButtonHandlerRef.current);
+      mainButtonHandlerRef.current = null;
+    }
+
     if (handler && text) {
       const buttonColor = webApp?.themeParams?.button_color;
       mb.setParams?.({ text, is_visible: true, is_active: true, ...(buttonColor ? { color: buttonColor } : {}) });
       mb.onClick?.(handler);
       mb.show?.();
+      mainButtonHandlerRef.current = handler;
       const localHandler = handler;
       return () => {
         mb.offClick?.(localHandler);
+        if (mainButtonHandlerRef.current === localHandler) {
+          mainButtonHandlerRef.current = null;
+        }
         mb.hide?.();
       };
     }
@@ -1716,6 +1772,7 @@ export function PharosWatchBotMiniAppClient() {
                   onUndo={handleUndoRemove}
                   webApp={webApp}
                   nowSec={nowSec}
+                  highlightedCoinId={highlightedCoinId}
                 />
               </section>
             ) : null}

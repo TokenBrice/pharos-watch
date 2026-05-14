@@ -135,6 +135,30 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByText(/Launch intent:/)).toBeTruthy();
   });
 
+  it("scrolls the targeted coin row into view when launched with coin_<id>", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdc-circle", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<PharosWatchBotMiniAppPage />);
+
+      await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+      // The targeted article has a stable id.
+      await waitFor(() => expect(document.getElementById("coin-row-usdc-circle")).toBeTruthy());
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      const target = document.getElementById("coin-row-usdc-circle");
+      const lastCall = scrollIntoView.mock.calls.at(-1);
+      expect(scrollIntoView.mock.instances.at(-1)).toBe(target);
+      expect(lastCall?.[0]).toEqual({ block: "center", behavior: "smooth" });
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it("routes quiet-hours start params to settings", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "quiet-hours", user: { username: "watcher" } }, ready: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
@@ -472,6 +496,60 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
 
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
+  });
+
+  it("does not stack MainButton listeners across view transitions", async () => {
+    const onClickHandlers: Array<() => void> = [];
+    const offClickHandlers: Array<() => void> = [];
+    const mainButton = {
+      show: vi.fn(),
+      hide: vi.fn(),
+      setParams: vi.fn(),
+      onClick: vi.fn((handler: () => void) => { onClickHandlers.push(handler); }),
+      offClick: vi.fn((handler: () => void) => { offClickHandlers.push(handler); }),
+    };
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, MainButton: mainButton } };
+    // States chosen so MainButton oscillates between handler-attached and no-handler:
+    //   1. No subscriber → "Use recommended setup" handler attached.
+    //   2. Subscriber active, snooze set → "Clear snooze" handler attached (different identity).
+    //   3. Subscriber active, no snooze → no handler.
+    const noSubscriberState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null },
+    };
+    const snoozedState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: 9_000_000_000 },
+    };
+    const clearedState: TelegramMiniAppState = {
+      ...baseState,
+      subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: null },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => noSubscriberState })
+      .mockResolvedValueOnce({ ok: true, json: async () => snoozedState })
+      .mockResolvedValueOnce({ ok: true, json: async () => clearedState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    await waitFor(() => expect(onClickHandlers.length).toBe(1));
+
+    // Transition 1: trigger a mutation; backend returns snoozed state → handler swaps.
+    fireEvent.click(screen.getByRole("button", { name: /Use recommended setup/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(onClickHandlers.length).toBe(2));
+
+    // Transition 2: trigger another mutation; backend returns cleared state → no handler.
+    fireEvent.click(screen.getByRole("button", { name: /Clear snooze/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+
+    // After all transitions, every attached handler except (at most) the last
+    // must have been detached via offClick.
+    const live = onClickHandlers.filter((handler) => !offClickHandlers.includes(handler));
+    expect(live.length).toBeLessThanOrEqual(1);
+    // Each attached handler should appear at most once in onClickHandlers (no double-attach).
+    expect(new Set(onClickHandlers).size).toBe(onClickHandlers.length);
   });
 
 });
