@@ -55,7 +55,7 @@ export const TELEGRAM_ALERT_EXAMPLES = [
     content: `DEWS
 
 USDT — WATCH → ALERT (score: 42)
-Top signals: pool_balance_drift (0.61), supply_velocity (0.48)
+Top signals: pool_balance_drift (61%), supply_velocity (48%)
 
 View on Pharos: pharos.watch/stablecoin/usdt-tether`,
     time: "09:41",
