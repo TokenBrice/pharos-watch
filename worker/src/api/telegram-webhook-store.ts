@@ -275,10 +275,10 @@ type AlertKey = (typeof ALERT_KEYS)[number];
  * - `globalAlertOverrides` replaces the value (used by `/set all ... off`).
  * - `quietHours` replaces unconditionally.
  */
-export async function upsertSubscriberRow(
+export function prepareUpsertSubscriberRow(
   db: D1Database,
   input: UpsertSubscriberInput,
-): Promise<void> {
+): D1PreparedStatement {
   if (input.globalAlertBumps && input.globalAlertOverrides) {
     // SQLite applies the UPDATE SET clauses left-to-right, so combining both
     // would silently let the override win for any shared column. Forbid it so
@@ -343,7 +343,7 @@ export async function upsertSubscriberRow(
     );
   }
 
-  await db
+  return db
     .prepare(`
       INSERT INTO telegram_subscribers (
         chat_id, username,
@@ -371,8 +371,14 @@ export async function upsertSubscriberRow(
       quietEnd,
       input.nowSec,
       input.nowSec,
-    )
-    .run();
+    );
+}
+
+export async function upsertSubscriberRow(
+  db: D1Database,
+  input: UpsertSubscriberInput,
+): Promise<void> {
+  await prepareUpsertSubscriberRow(db, input).run();
 }
 
 export async function persistPendingDisambiguation(
@@ -531,14 +537,14 @@ export async function upsertGlobalAlertTypes(
   });
 }
 
-export async function upsertSubscriberAndSubscriptions(
+export function prepareSubscriberAndSubscriptionStatements(
   db: D1Database,
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
   stablecoinIds: string[],
   options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
-): Promise<void> {
+): D1PreparedStatement[] {
   const now = unixNow();
   const alertDews = alertTypes.has("dews") ? 1 : 0;
   const alertDepeg = alertTypes.has("depeg") || options?.depegWorseningBpsStep !== undefined ? 1 : 0;
@@ -546,21 +552,19 @@ export async function upsertSubscriberAndSubscriptions(
   const alertLaunch = alertTypes.has("launch") ? 1 : 0;
   const uniqueStablecoinIds = Array.from(new Set(stablecoinIds));
 
-  // The subscriber row cannot share a batch with subscriptions because the helper
-  // uses a single .run(); run it first, then batch the subscriptions.
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: now,
-    perCoinAlertBumps: {
-      dews: alertDews,
-      depeg: alertDepeg,
-      safety: alertSafety,
-      launch: alertLaunch,
-    },
-  });
-
-  const statements: D1PreparedStatement[] = [];
+  const statements: D1PreparedStatement[] = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: {
+        dews: alertDews,
+        depeg: alertDepeg,
+        safety: alertSafety,
+        launch: alertLaunch,
+      },
+    }),
+  ];
   if (options?.clearPending) {
     statements.push(
       db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
@@ -600,6 +604,25 @@ export async function upsertSubscriberAndSubscriptions(
       ),
     );
   }
+  return statements;
+}
+
+export async function upsertSubscriberAndSubscriptions(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  alertTypes: Set<string>,
+  stablecoinIds: string[],
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+): Promise<void> {
+  const statements = prepareSubscriberAndSubscriptionStatements(
+    db,
+    chatId,
+    username,
+    alertTypes,
+    stablecoinIds,
+    options,
+  );
   if (statements.length > 0) await batchExecute(db, statements);
 }
 

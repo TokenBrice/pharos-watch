@@ -284,6 +284,12 @@ describe("handleTelegramMiniAppMutation", () => {
   it("does not re-enable an explicitly disabled coin alert family", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables());
+    const batchSizes: number[] = [];
+    const originalBatch = db.batch.bind(db);
+    (db as { batch: D1Database["batch"] }).batch = async (statements) => {
+      batchSizes.push(statements.length);
+      return originalBatch(statements);
+    };
 
     const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
       initData,
@@ -304,6 +310,8 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "alert_dews = excluded.alert_dews", ["42", "usdc-circle", 1, "WARNING"])).toBe(false);
     expect(historyHas(db, "alert_safety = excluded.alert_safety", ["42", "usdc-circle", 1, "downgrade-only"])).toBe(true);
     expect(historyHas(db, "alert_launch = excluded.alert_launch", ["42", "usdc-circle", 1])).toBe(true);
+    expect(batchSizes).toHaveLength(1);
+    expect(batchSizes[0]).toBeGreaterThan(1);
   });
 
   it("removes explicit coin subscriptions", async () => {

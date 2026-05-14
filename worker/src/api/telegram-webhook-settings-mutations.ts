@@ -15,8 +15,10 @@ import {
   type GlobalAlertType,
   type SafetyModeValue,
 } from "./telegram-webhook-settings-shared";
+import { batchExecute } from "../lib/db";
 import {
   loadSubscriberByChat,
+  prepareUpsertSubscriberRow,
   unixNow,
   upsertSubscriberRow,
 } from "./telegram-webhook-store";
@@ -92,198 +94,238 @@ export async function applyCoinSetting(
   setting: string,
   value: string,
 ): Promise<string | null> {
-  if (setting === "db") return applyDewsSetting(db, chatId, username, coinId, value);
-  if (setting === "sm") return applySafetySetting(db, chatId, username, coinId, value);
-  if (setting === "ds") return applyDepegSetting(db, chatId, username, coinId, value);
-  if (setting === "lc") return applyLaunchSetting(db, chatId, username, coinId, value);
-  return null;
+  const prepared = prepareCoinSettingStatements(db, chatId, username, coinId, setting, value);
+  if (prepared.description == null) return null;
+  await batchExecute(db, prepared.statements);
+  return prepared.description;
 }
 
-async function applyDewsSetting(
+export function prepareCoinSettingStatements(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  coinId: string,
+  setting: string,
+  value: string,
+): { description: string | null; statements: D1PreparedStatement[] } {
+  if (setting === "db") return prepareDewsSetting(db, chatId, username, coinId, value);
+  if (setting === "sm") return prepareSafetySetting(db, chatId, username, coinId, value);
+  if (setting === "ds") return prepareDepegSetting(db, chatId, username, coinId, value);
+  if (setting === "lc") return prepareLaunchSetting(db, chatId, username, coinId, value);
+  return { description: null, statements: [] };
+}
+
+function prepareDewsSetting(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   value: string,
-): Promise<string | null> {
+): { description: string | null; statements: D1PreparedStatement[] } {
   if (value === "0") {
-    await applyDews(db, chatId, username, coinId, { enabled: false, minBand: null });
-    return "DEWS off.";
+    return {
+      description: "DEWS off.",
+      statements: prepareDews(db, chatId, username, coinId, { enabled: false, minBand: null }),
+    };
   }
-  if (!isDewsBandCode(value)) return null;
+  if (!isDewsBandCode(value)) return { description: null, statements: [] };
   const band = DEWS_BAND_CODES[value];
-  await applyDews(db, chatId, username, coinId, { enabled: true, minBand: band });
-  return `DEWS >= ${band}.`;
+  return {
+    description: `DEWS >= ${band}.`,
+    statements: prepareDews(db, chatId, username, coinId, { enabled: true, minBand: band }),
+  };
 }
 
-async function applySafetySetting(
+function prepareSafetySetting(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   value: string,
-): Promise<string | null> {
+): { description: string | null; statements: D1PreparedStatement[] } {
   if (value === "0") {
-    await applySafety(db, chatId, username, coinId, { enabled: false, mode: null });
-    return "Safety off.";
+    return {
+      description: "Safety off.",
+      statements: prepareSafety(db, chatId, username, coinId, { enabled: false, mode: null }),
+    };
   }
-  if (!isSafetyModeCode(value)) return null;
+  if (!isSafetyModeCode(value)) return { description: null, statements: [] };
   const mode = SAFETY_MODE_CODES[value];
-  await applySafety(db, chatId, username, coinId, { enabled: true, mode });
-  return `Safety ${mode}.`;
+  return {
+    description: `Safety ${mode}.`,
+    statements: prepareSafety(db, chatId, username, coinId, { enabled: true, mode }),
+  };
 }
 
-async function applyDepegSetting(
+function prepareDepegSetting(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   value: string,
-): Promise<string | null> {
+): { description: string | null; statements: D1PreparedStatement[] } {
   if (value === "0") {
-    await applyDepegStep(db, chatId, username, coinId, null);
-    return "Depeg off.";
+    return {
+      description: "Depeg off.",
+      statements: prepareDepegStep(db, chatId, username, coinId, null),
+    };
   }
   const step = Number(value);
-  if (!isDepegStep(step)) return null;
-  await applyDepegStep(db, chatId, username, coinId, step);
-  return `Depeg +${step}bps.`;
+  if (!isDepegStep(step)) return { description: null, statements: [] };
+  return {
+    description: `Depeg +${step}bps.`,
+    statements: prepareDepegStep(db, chatId, username, coinId, step),
+  };
 }
 
-async function applyLaunchSetting(
+function prepareLaunchSetting(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   value: string,
-): Promise<string | null> {
-  if (value !== "0" && value !== "1") return null;
+): { description: string | null; statements: D1PreparedStatement[] } {
+  if (value !== "0" && value !== "1") return { description: null, statements: [] };
   const enabled = value === "1";
-  await applyLaunch(db, chatId, username, coinId, enabled);
-  return enabled ? "Launch on." : "Launch off.";
+  return {
+    description: enabled ? "Launch on." : "Launch off.",
+    statements: prepareLaunch(db, chatId, username, coinId, enabled),
+  };
 }
 
-async function applyDews(
+function prepareDews(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   payload: { enabled: false; minBand: null } | { enabled: true; minBand: DewsBandValue },
-): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    perCoinAlertBumps: payload.enabled ? { dews: 1 } : undefined,
-  });
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
-      )
-      VALUES (?, ?, ?, 0, 0, ?)
-      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_dews = excluded.alert_dews,
-        dews_min_band = excluded.dews_min_band
-    `)
-    .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.minBand)
-    .run();
+): D1PreparedStatement[] {
+  const now = unixNow();
+  return [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: payload.enabled ? { dews: 1 } : undefined,
+    }),
+    db
+      .prepare(`
+        INSERT INTO telegram_subscriptions (
+          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, dews_min_band
+        )
+        VALUES (?, ?, ?, 0, 0, ?)
+        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+          alert_dews = excluded.alert_dews,
+          dews_min_band = excluded.dews_min_band
+      `)
+      .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.minBand),
+  ];
 }
 
-async function applySafety(
+function prepareSafety(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   payload: { enabled: false; mode: null } | { enabled: true; mode: SafetyModeValue },
-): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    perCoinAlertBumps: payload.enabled ? { safety: 1 } : undefined,
-  });
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
-      )
-      VALUES (?, ?, 0, 0, ?, ?)
-      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_safety = excluded.alert_safety,
-        safety_mode = excluded.safety_mode
-    `)
-    .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.mode)
-    .run();
+): D1PreparedStatement[] {
+  const now = unixNow();
+  return [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: payload.enabled ? { safety: 1 } : undefined,
+    }),
+    db
+      .prepare(`
+        INSERT INTO telegram_subscriptions (
+          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, safety_mode
+        )
+        VALUES (?, ?, 0, 0, ?, ?)
+        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+          alert_safety = excluded.alert_safety,
+          safety_mode = excluded.safety_mode
+      `)
+      .bind(chatId, coinId, payload.enabled ? 1 : 0, payload.mode),
+  ];
 }
 
-async function applyDepegStep(
+function prepareDepegStep(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   step: 100 | 250 | 500 | null,
-): Promise<void> {
+): D1PreparedStatement[] {
   const enabled = step != null;
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    perCoinAlertBumps: enabled ? { depeg: 1 } : undefined,
-  });
+  const now = unixNow();
+  const statements = [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: enabled ? { depeg: 1 } : undefined,
+    }),
+  ];
   if (enabled) {
-    await db
+    statements.push(
+      db
+        .prepare(`
+          INSERT INTO telegram_subscriptions (
+            chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+          )
+          VALUES (?, ?, 0, 1, 0, ?)
+          ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+            alert_depeg = 1,
+            depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
+        `)
+        .bind(chatId, coinId, step),
+    );
+    return statements;
+  }
+  statements.push(
+    db
       .prepare(`
         INSERT INTO telegram_subscriptions (
           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
         )
-        VALUES (?, ?, 0, 1, 0, ?)
+        VALUES (?, ?, 0, 0, 0, NULL)
         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-          alert_depeg = 1,
-          depeg_worsening_bps_step = excluded.depeg_worsening_bps_step
+          alert_depeg = 0,
+          depeg_worsening_bps_step = NULL
       `)
-      .bind(chatId, coinId, step)
-      .run();
-    return;
-  }
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-      )
-      VALUES (?, ?, 0, 0, 0, NULL)
-      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_depeg = 0,
-        depeg_worsening_bps_step = NULL
-    `)
-    .bind(chatId, coinId)
-    .run();
+      .bind(chatId, coinId),
+  );
+  return statements;
 }
 
-async function applyLaunch(
+function prepareLaunch(
   db: D1Database,
   chatId: string,
   username: string | null,
   coinId: string,
   enabled: boolean,
-): Promise<void> {
-  await upsertSubscriberRow(db, {
-    chatId,
-    username,
-    nowSec: unixNow(),
-    perCoinAlertBumps: enabled ? { launch: 1 } : undefined,
-  });
-  await db
-    .prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
-      )
-      VALUES (?, ?, 0, 0, 0, ?)
-      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_launch = excluded.alert_launch
-    `)
-    .bind(chatId, coinId, enabled ? 1 : 0)
-    .run();
+): D1PreparedStatement[] {
+  const now = unixNow();
+  return [
+    prepareUpsertSubscriberRow(db, {
+      chatId,
+      username,
+      nowSec: now,
+      perCoinAlertBumps: enabled ? { launch: 1 } : undefined,
+    }),
+    db
+      .prepare(`
+        INSERT INTO telegram_subscriptions (
+          chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch
+        )
+        VALUES (?, ?, 0, 0, 0, ?)
+        ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+          alert_launch = excluded.alert_launch
+      `)
+      .bind(chatId, coinId, enabled ? 1 : 0),
+  ];
 }
 
 function subscriberHasGlobal(subscriber: SubscriberRow | null, type: GlobalAlertType): boolean {

@@ -1,9 +1,11 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { batchExecute } from "../lib/db";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
-import { applyCoinSetting, clearSnoozeViaSettings } from "./telegram-webhook-settings-mutations";
+import { clearSnoozeViaSettings, prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import {
+  prepareSubscriberAndSubscriptionStatements,
   removePresetSubscriptions,
   removeSubscriptions,
   setGlobalDepegWorseningStep,
@@ -90,10 +92,12 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
   assertCoin(operation.stablecoinId);
   const patch = operation.patch;
   let appliedCount = 0;
+  const statements: D1PreparedStatement[] = [];
 
-  const apply = async (setting: "db" | "ds" | "sm" | "lc", value: string): Promise<void> => {
-    const result = await applyCoinSetting(db, chatId, username, operation.stablecoinId, setting, value);
-    if (result == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+  const apply = (setting: "db" | "ds" | "sm" | "lc", value: string): void => {
+    const prepared = prepareCoinSettingStatements(db, chatId, username, operation.stablecoinId, setting, value);
+    if (prepared.description == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+    statements.push(...prepared.statements);
     appliedCount += 1;
   };
 
@@ -103,35 +107,38 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
       if (on) {
         enabled.add(alertType);
       } else if (alertType === "dews") {
-        await apply("db", "0");
+        apply("db", "0");
       } else if (alertType === "depeg") {
-        await apply("ds", "0");
+        apply("ds", "0");
       } else if (alertType === "safety") {
-        await apply("sm", "0");
+        apply("sm", "0");
       } else if (alertType === "launch") {
-        await apply("lc", "0");
+        apply("lc", "0");
       }
     }
     if (enabled.size > 0) {
-      await upsertSubscriberAndSubscriptions(db, chatId, username, enabled, [operation.stablecoinId]);
+      statements.push(
+        ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, enabled, [operation.stablecoinId]),
+      );
       appliedCount += 1;
     }
   }
   const explicitlyDisabled = (alertType: "dews" | "depeg" | "safety" | "launch"): boolean =>
     patch.alertTypes?.[alertType] === false;
   if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand") && !explicitlyDisabled("dews")) {
-    await apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
+    apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps") && !explicitlyDisabled("depeg")) {
-    await apply("ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
+    apply("ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "safetyMode") && !explicitlyDisabled("safety")) {
-    await apply("sm", patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
+    apply("sm", patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "launch") && !explicitlyDisabled("launch")) {
-    await apply("lc", patch.launch ? "1" : "0");
+    apply("lc", patch.launch ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+  await batchExecute(db, statements);
 }
 
 export async function applyTelegramMiniAppMutation(db: D1Database, auth: TelegramMiniAppAuthContext, operation: TelegramMiniAppOperation): Promise<void> {
