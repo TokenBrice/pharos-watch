@@ -39,6 +39,8 @@ export const API_PATHS = {
       includeTotal: params?.includeTotal,
       includePending: params?.includePending,
     }),
+  recentEvents: (params?: { limit?: number }) =>
+    buildQueryPath("/api/recent-events", { limit: params?.limit }),
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",

@@ -250,6 +250,31 @@
           "response": []
         },
         {
+          "name": "Recent events tape",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/recent-events?limit=20",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recent-events"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Unified chronological feed of recent depeg, freeze, and safety-grade transition events across all tracked stablecoins. Powers the homepage event ticker."
+          },
+          "response": []
+        },
+        {
           "name": "USDS freeze status",
           "request": {
             "method": "GET",

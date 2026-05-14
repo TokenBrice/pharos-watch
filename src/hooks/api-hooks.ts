@@ -22,6 +22,7 @@ import {
   type YieldHistoryResponse,
   type YieldRankingsResponse,
 } from "@shared/types";
+import type { RecentEventsResponse } from "@shared/types/tape";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
@@ -254,5 +255,11 @@ export function useStressSignalDetail(stablecoinId: string, days = 30) {
   return useRegisteredApiQueryWithMeta<StressSignalDetailResponse>(
     FRONTEND_API_QUERY_REGISTRY.stressSignalDetail(stablecoinId, days),
     { enabled: !!stablecoinId },
+  );
+}
+
+export function useRecentEvents(limit = 20) {
+  return useRegisteredApiQuery<RecentEventsResponse>(
+    FRONTEND_API_QUERY_REGISTRY.recentEvents(limit),
   );
 }

@@ -242,6 +242,29 @@
     }
   }
 
+  /* Homepage event-tape ticker */
+  @keyframes pharos-tape-scroll {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-50%, 0, 0); }
+  }
+
+  .pharos-tape-track {
+    animation: pharos-tape-scroll var(--pharos-tape-duration, 90s) linear infinite;
+    will-change: transform;
+  }
+
+  .pharos-tape-shell:hover .pharos-tape-track,
+  .pharos-tape-shell:focus-within .pharos-tape-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pharos-tape-track {
+      animation: none;
+      transform: none;
+    }
+  }
+
   /* Column resize handle */
   .pharos-resize-handle {
     position: absolute;

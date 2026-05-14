@@ -25,6 +25,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/blacklist",
   "/api/blacklist-summary",
   "/api/depeg-events",
+  "/api/recent-events",
   "/api/mint-burn-flows",
   "/api/stress-signals",
 ];
@@ -605,6 +606,20 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/depeg-events missing methodology.version",
     );
     return `${body.events.length}/${body.total} events`;
+  },
+  "/api/recent-events": (result) => {
+    assert(result.status === 200, `/api/recent-events returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.events), "/api/recent-events missing events[]");
+    for (const event of body.events) {
+      assert(typeof event.id === "string" && event.id.length > 0, "/api/recent-events event.id invalid");
+      assert(typeof event.type === "string" && event.type.includes("."), "/api/recent-events event.type invalid");
+      assert(typeof event.severity === "string", "/api/recent-events event.severity invalid");
+      assert(isFiniteNumber(event.ts) && event.ts > 0, "/api/recent-events event.ts invalid");
+      assert(typeof event.title === "string" && event.title.length > 0, "/api/recent-events event.title invalid");
+      assert(typeof event.href === "string" && event.href.startsWith("/"), "/api/recent-events event.href invalid");
+    }
+    return `${body.events.length} events`;
   },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);

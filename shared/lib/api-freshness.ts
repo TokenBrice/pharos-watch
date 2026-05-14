@@ -123,6 +123,7 @@ export const API_FRESHNESS_MAX_AGE_SEC = {
   chains: 1800,
   pegSummary: 900,
   depegEvents: 900,
+  recentEvents: 900,
   stressSignals: CACHE_FRESHNESS_LANES.dews.endpointMaxAgeSec,
   reportCards: 900,
   redemptionBackstops: CRON_INTERVALS["sync-redemption-backstops"] * 2,
