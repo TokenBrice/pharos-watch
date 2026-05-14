@@ -33,6 +33,11 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 vi.mock("../../lib/native-peg-quotes", () => ({
   fetchCurrentNativePegQuotes: vi.fn(async () => new Map()),
+  normalizeSupportedPegCurrency: vi.fn((pegCurrency: string | null | undefined) => {
+    if (!pegCurrency) return null;
+    const normalized = pegCurrency.trim().toUpperCase();
+    return ["ARS", "BRL", "EUR", "JPY", "NGN"].includes(normalized) ? normalized : null;
+  }),
 }));
 
 import { batchExecute } from "../../lib/db";
@@ -178,6 +183,16 @@ function makeDb(config: {
   } as unknown as D1Database;
 }
 
+function lastBatchStatements(): PreparedStatementWithMeta[] {
+  const calls = vi.mocked(batchExecute).mock.calls;
+  const lastCall = calls[calls.length - 1];
+  return (lastCall?.[1] ?? []) as PreparedStatementWithMeta[];
+}
+
+function pendingOutcomeInserts(statements = lastBatchStatements()): PreparedStatementWithMeta[] {
+  return statements.filter((stmt) => stmt.sql.includes("INSERT INTO depeg_pending_outcomes"));
+}
+
 describe("confirmPendingDepegs", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -221,7 +236,7 @@ describe("confirmPendingDepegs", () => {
             id: 5,
             stablecoin_id: "cusd-cap",
             symbol: "CUSD",
-            first_seen_at: nowSec - DEPEG_PENDING_EXPIRY_SEC - 60,
+            first_seen_at: nowSec - (DEPEG_PENDING_EXPIRY_SEC * 3) - 60,
           }),
         ],
         openRows: [{ stablecoin_id: "usdc-circle" }],
@@ -234,7 +249,7 @@ describe("confirmPendingDepegs", () => {
       ],
     );
 
-    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
     expect(batchExecute).toHaveBeenCalledTimes(1);
     const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
     const deletes = (statements as PreparedStatementWithMeta[])
@@ -304,16 +319,16 @@ describe("confirmPendingDepegs", () => {
 
     vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("tether")) {
-        return new Response(JSON.stringify({ tether: { usd: 0.95 } }), { status: 200 });
+        return new Response(JSON.stringify({ tether: { usd: 0.95, last_updated_at: nowSec - 30 } }), { status: 200 });
       }
       if (url.includes("usd-coin")) {
         return null;
       }
       if (url.includes("ethena-usde")) {
-        return new Response(JSON.stringify({ "ethena-usde": { usd: 1 } }), { status: 200 });
+        return new Response(JSON.stringify({ "ethena-usde": { usd: 1, last_updated_at: nowSec - 30 } }), { status: 200 });
       }
       if (url.includes("usds")) {
-        return new Response(JSON.stringify({ usds: { usd: 1 } }), { status: 200 });
+        return new Response(JSON.stringify({ usds: { usd: 1, last_updated_at: nowSec - 30 } }), { status: 200 });
       }
       return null;
     });
@@ -438,6 +453,284 @@ describe("confirmPendingDepegs", () => {
     expect(deletes).toEqual([10, 11, 12, 13]);
   });
 
+  it("treats missing CoinGecko confirmation timestamps as insufficient evidence", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95 } }), { status: 200 }));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 60,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledTimes(1);
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("treats missing DefiLlama confirmation timestamps as insufficient evidence", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({
+      coins: { "coingecko:tether": { price: 0.95 } },
+    }), { status: 200 }));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 65,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+          priceSource: "coingecko",
+          agreeSources: ["coingecko"],
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      expect.stringContaining("coins.llama.fi/prices/current/coingecko:tether"),
+      expect.anything(),
+      1,
+    );
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("keeps pending when authoritative primary remains depegged and only one soft source opposes", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({
+      tether: { usd: 1.0, last_updated_at: nowSec - 30 },
+    }), { status: 200 }));
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 61,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("rejects when authoritative primary remains depegged but two independent hard sources oppose", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
+      kind: "ok",
+      value: {
+        prices: new Map([["USDT", 1.03]]),
+        diagnostics: [{
+          source: "binance",
+          stage: "primary",
+          endpoint: "data-api.binance.vision/api/v3/ticker/price",
+          status: 200,
+          ok: true,
+          success: true,
+          matchedCount: 1,
+        }],
+      },
+    });
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 62,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 1.03,
+            updated_at: nowSec - 30,
+            source_pool_count: 4,
+            source_total_tvl: 6_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 1.03, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 1.031, tvl: 3_000_000, protocol: "uniswap", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const statements = lastBatchStatements();
+    const deletes = statements
+      .filter((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"))
+      .map((stmt) => stmt.boundValues[0]);
+    expect(deletes).toEqual([62]);
+    const outcome = pendingOutcomeInserts(statements)[0];
+    expect(outcome?.boundValues[15]).toBe("rejected");
+    expect(outcome?.boundValues[18]).toContain("cex:binance");
+    expect(outcome?.boundValues[21]).toMatch(/^two-hard-opposing-sources:/);
+  });
+
+  it("keeps expired-base pending rows when confirmation provider circuits are open", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 63,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -220,
+            first_seen_at: nowSec - DEPEG_PENDING_EXPIRY_SEC - 60,
+            first_price: 0.978,
+          }),
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.94,
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+    expect(batchExecute).not.toHaveBeenCalled();
+  });
+
+  it("persists a lifecycle outcome before deleting a promoted pending row", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 64,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            direction: "below",
+            first_seen_bps: -200,
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+            first_price: 0.98,
+            peg_reference: 1,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 0.988,
+            updated_at: nowSec - 30,
+            source_pool_count: 3,
+            source_total_tvl: 5_000_000,
+            price_sources_json: JSON.stringify([
+              { price: 0.988, tvl: 3_000_000, protocol: "curve", chain: "ethereum" },
+              { price: 0.987, tvl: 2_000_000, protocol: "uniswap", chain: "ethereum" },
+            ]),
+          },
+        ],
+      }),
+      [
+        makeAuthoritativeUsdAsset(nowSec, {
+          id: "usdt-tether",
+          symbol: "USDT",
+          geckoId: "tether",
+          price: 0.985,
+          priceSource: "defillama-list+coingecko",
+          agreeSources: ["defillama-list", "coingecko"],
+        }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    const statements = lastBatchStatements();
+    const outcomeIndex = statements.findIndex((stmt) => stmt.sql.includes("INSERT INTO depeg_pending_outcomes"));
+    const deleteIndex = statements.findIndex((stmt) => stmt.sql.startsWith("DELETE FROM depeg_pending"));
+    expect(outcomeIndex).toBeGreaterThanOrEqual(0);
+    expect(deleteIndex).toBeGreaterThan(outcomeIndex);
+    const outcome = statements[outcomeIndex]!;
+    expect(outcome.boundValues[0]).toBe(64);
+    expect(outcome.boundValues[15]).toBe("promoted");
+    expect(outcome.boundValues[17]).toContain("dex:curve+dex:uniswap");
+    expect(outcome.boundValues[21]).toBe("confirmed-by:dex:curve+dex:uniswap");
+  });
+
   it.each([
     {
       label: "native quote",
@@ -483,7 +776,7 @@ describe("confirmPendingDepegs", () => {
     {
       label: "off-chain quote",
       setup: async (nowSec: number): Promise<OppositeDirectionCase> => {
-        vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 1.03 } }), { status: 200 }));
+        vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 1.03, last_updated_at: nowSec - 30 } }), { status: 200 }));
         return {
           pendingRows: [
             makePendingRow({
@@ -640,7 +933,7 @@ describe("confirmPendingDepegs", () => {
       if (url.includes("coins.llama.fi/prices/current/coingecko:tether")) {
         return new Response(JSON.stringify({
           coins: {
-            "coingecko:tether": { price: 0.95 },
+            "coingecko:tether": { price: 0.95, timestamp: nowSec - 30 },
           },
         }), { status: 200 });
       }
@@ -714,7 +1007,7 @@ describe("confirmPendingDepegs", () => {
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
 
-    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95 } }), { status: 200 }));
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95, last_updated_at: nowSec - 30 } }), { status: 200 }));
 
     await confirmPendingDepegs(
       makeDb({
@@ -769,7 +1062,7 @@ describe("confirmPendingDepegs", () => {
     vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("coins.llama.fi/prices/current/coingecko:kinesis-gold")) {
         return new Response(JSON.stringify({
-          coins: { "coingecko:kinesis-gold": { price: 133.81 } },
+          coins: { "coingecko:kinesis-gold": { price: 133.81, timestamp: nowSec - 30 } },
         }), { status: 200 });
       }
       return null;
@@ -815,7 +1108,7 @@ describe("confirmPendingDepegs", () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95 } }), { status: 200 }));
+    vi.mocked(fetchWithRetry).mockResolvedValue(new Response(JSON.stringify({ tether: { usd: 0.95, last_updated_at: nowSec - 30 } }), { status: 200 }));
 
     await confirmPendingDepegs(
       makeDb({
@@ -1218,7 +1511,7 @@ describe("confirmPendingDepegs", () => {
     // CoinGecko returns ~$1 (disagrees with depeg)
     vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("dusd")) {
-        return new Response(JSON.stringify({ "dusd-trinity": { usd: 1.0 } }), { status: 200 });
+        return new Response(JSON.stringify({ "dusd-trinity": { usd: 1.0, last_updated_at: nowSec - 30 } }), { status: 200 });
       }
       return null;
     });
@@ -1284,7 +1577,7 @@ describe("confirmPendingDepegs", () => {
     // CoinGecko disagrees
     vi.mocked(fetchWithRetry).mockImplementation(async (url: string) => {
       if (url.includes("tether")) {
-        return new Response(JSON.stringify({ tether: { usd: 1.0 } }), { status: 200 });
+        return new Response(JSON.stringify({ tether: { usd: 1.0, last_updated_at: nowSec - 30 } }), { status: 200 });
       }
       return null;
     });

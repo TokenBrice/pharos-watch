@@ -123,6 +123,32 @@ describe("native-peg-quotes", () => {
     });
   });
 
+  it("rejects future-dated native quote responses", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(makeJsonResponse({
+      "euro-coin": {
+        eur: 1.0012,
+        last_updated_at: 1_700_000_601,
+      },
+    }));
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    const quotes = await fetchCurrentNativePegQuotes(
+      [{ stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" }],
+      undefined,
+      undefined,
+      { diagnostics, stage: "fallback" },
+    );
+
+    expect(quotes.size).toBe(0);
+    expect(diagnostics[0]).toMatchObject({
+      source: "native-peg",
+      stage: "fallback",
+      ok: true,
+      success: false,
+      rejectionReasonCounts: { future: 1 },
+    });
+  });
+
   it("records diagnostics for failed native quote fetches", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(new Response("blocked", { status: 403 }));
     const diagnostics: PricingProviderAttemptDiagnostic[] = [];

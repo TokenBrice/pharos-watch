@@ -94,4 +94,58 @@ describe("decideDepegAsset", () => {
       warnSpy.mockRestore();
     }
   });
+
+  it("routes near-threshold market-cap weak-source severe moves to pending", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        price: 0.975,
+        circulating: { ethereum: 999_000_000 },
+        priceSource: "pyth",
+        agreeSources: ["pyth"],
+      }),
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "upsert-pending",
+      payload: {
+        stablecoinId: "usdt-tether",
+        direction: "below",
+        bps: -250,
+        reason: "large-cap",
+      },
+    });
+  });
+
+  it("keeps strong near-threshold evidence on the immediate live path", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        price: 0.985,
+        priceSource: "binance+pyth",
+        priceConfidence: "high",
+        agreeSources: ["binance", "pyth"],
+        circulating: { ethereum: 999_000_000 },
+      }),
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" },
+      pegRateCounts: { peggedUSD: 4 },
+    });
+
+    expect(decision.commands).toHaveLength(1);
+    expect(decision.commands[0]).toMatchObject({
+      type: "insert-live",
+      event: {
+        stablecoinId: "usdt-tether",
+        direction: "below",
+        peakDeviationBps: -150,
+      },
+    });
+  });
 });

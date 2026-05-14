@@ -1,4 +1,5 @@
 import { getPegReference } from "@shared/lib/peg-rates";
+import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { DepegEvent } from "@shared/types/market";
 import {
@@ -60,6 +61,10 @@ interface DecisionContext {
   requiresConfirmation: boolean;
   pendingReason: PendingDepegReason;
 }
+
+const DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.75;
+const DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.5;
+const DEPEG_TIERED_CONFIRMATION_SEVERITY_MULTIPLIER = 2;
 
 function emptyDecision(trackedCoinId?: string): DepegAssetDecision {
   return {
@@ -145,6 +150,27 @@ function buildPendingCommand(
     reason,
   };
   return { type: "upsert-pending", payload };
+}
+
+function getPrimarySourceDepth(asset: DepegAssetDecisionInput["asset"]): number {
+  const sources = asset.agreeSources && asset.agreeSources.length > 0
+    ? asset.agreeSources
+    : asset.priceSource ?? "";
+  return new Set(normalizePricingSourceKeys(sources)).size;
+}
+
+function requiresTieredMarketCapConfirmation(params: {
+  supply: number;
+  sourceDepth: number;
+  absBps: number;
+  threshold: number;
+}): boolean {
+  if (params.supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) return true;
+  const severe = params.absBps >= params.threshold * DEPEG_TIERED_CONFIRMATION_SEVERITY_MULTIPLIER;
+  if (params.supply >= DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD) {
+    return params.sourceDepth < 2 || severe;
+  }
+  return params.supply >= DEPEG_CONFIRMATION_WEAK_SEVERE_SUPPLY_THRESHOLD && params.sourceDepth < 2 && severe;
 }
 
 /**
@@ -416,8 +442,15 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     dexAbsBps < threshold &&
     dexRecoveryProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN &&
     !dexRecoveryChallenged;
+  const sourceDepth = getPrimarySourceDepth(asset);
+  const tieredMarketCapRequiresConfirmation = requiresTieredMarketCapConfirmation({
+    supply,
+    sourceDepth,
+    absBps,
+    threshold,
+  });
   const requiresConfirmation =
-    supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD ||
+    tieredMarketCapRequiresConfirmation ||
     primaryTrust === "confirm_required" ||
     absBps >= DEPEG_EXTREME_MOVE_BPS;
   const primarySupportsRecovery =
@@ -425,7 +458,7 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     hasFreshMultiSourcePrimaryAgreement(asset, now);
   const reasonFlags: PendingDepegReasonFlag[] = [];
   if (absBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
-  if (supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) reasonFlags.push("large-cap");
+  if (tieredMarketCapRequiresConfirmation) reasonFlags.push("large-cap");
   if (primaryTrust === "confirm_required") reasonFlags.push("low-confidence");
   if (reasonFlags.length === 0) reasonFlags.push("large-cap"); // defensive - requiresConfirmation is true so at least one reason must apply.
   const pendingReason: PendingDepegReason = buildPendingReason(reasonFlags);

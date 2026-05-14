@@ -11,6 +11,7 @@ import {
 
 const COINGECKO_NATIVE_PEG_BATCH_SIZE = 50;
 const COINGECKO_NATIVE_PEG_TIMEOUT_MS = 10_000;
+const COINGECKO_NATIVE_PEG_FUTURE_SKEW_SEC = 5 * 60;
 const SUPPORTED_COINGECKO_NATIVE_PEG_CURRENCIES = new Map<string, string[]>([
   ["AUD", ["aud"]],
   ["ARS", ["ars"]],
@@ -178,6 +179,7 @@ export async function fetchCurrentNativePegQuotes(
 
           let filledAny = false;
           let staleCount = 0;
+          let futureCount = 0;
           let emptyCount = 0;
           for (const request of pendingRequests) {
             const rawEntry = payload[request.geckoId];
@@ -194,6 +196,10 @@ export async function fetchCurrentNativePegQuotes(
             }
             if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt) || updatedAt <= 0) {
               emptyCount++;
+              continue;
+            }
+            if (updatedAt - nowSec > COINGECKO_NATIVE_PEG_FUTURE_SKEW_SEC) {
+              futureCount++;
               continue;
             }
             if (nowSec - updatedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
@@ -214,9 +220,10 @@ export async function fetchCurrentNativePegQuotes(
           diagnostic.responseRowCount = Object.keys(payload).length;
           diagnostic.resolvedCount = pendingRequests.filter((request) => quotes.has(request.stablecoinId)).length;
           diagnostic.success = filledAny;
-          if (staleCount > 0 || emptyCount > 0 || filledAny) {
+          if (staleCount > 0 || futureCount > 0 || emptyCount > 0 || filledAny) {
             diagnostic.rejectionReasonCounts = {
               ...(staleCount > 0 ? { stale: staleCount } : {}),
+              ...(futureCount > 0 ? { future: futureCount } : {}),
               ...(emptyCount > 0 ? { "empty-response": emptyCount } : {}),
             };
             options?.diagnostics?.push(diagnostic);
