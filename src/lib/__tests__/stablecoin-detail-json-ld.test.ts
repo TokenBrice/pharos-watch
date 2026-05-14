@@ -19,6 +19,11 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
     expect((coin.contracts ?? []).length).toBeGreaterThan(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
     expect(identifiers).toHaveLength(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
+    expect(jsonLd).toMatchObject({
+      inLanguage: "en",
+      isPartOf: { "@id": "https://pharos.watch#website" },
+      mainEntityOfPage: "https://pharos.watch/stablecoin/usdt-tether/",
+    });
     expect(jsonLd).not.toHaveProperty("distribution");
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
