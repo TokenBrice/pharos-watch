@@ -27,6 +27,10 @@
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
   },
+  "worker/src/cron/yield-sync/cache.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield cache serialization and cache-key assembly now rank as a generated hotspot candidate after the Telegram alert parser/formatter split retired its waiver. Keep waived until the yield sync cache surface gets a focused cleanup that separates DefiLlama pool-cache shaping, supplemental family cache keys, and payload normalization."
+  },
   "worker/src/api/telegram-webhook-callbacks.ts": {
     "disposition": "queued-p4",
     "notes": "Callback routing now owns setup, settings, status, discovery, watchlist management, snooze, and per-coin alert toggles. Keep it waived after the command dispatcher split; the next Telegram decomposition pass should extract action-specific callback handlers."
@@ -38,10 +42,6 @@
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
-  },
-  "worker/src/lib/telegram-alerts.ts": {
-    "disposition": "queued-p4",
-    "notes": "Telegram alert policy now centralizes preset routing, delivery formatting, and subscription-aware branch handling for the dynamic preset rollout. Defer splitting preset selection, payload shaping, and notification text helpers until the bot command surface stabilizes."
   },
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
