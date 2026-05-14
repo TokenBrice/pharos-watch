@@ -417,7 +417,7 @@ describe("handleTelegramPulse", () => {
     });
   });
 
-  it("keeps live fallback history until daily lifecycle snapshots have at least two points", async () => {
+  it("prefixes snapshot history with active-chat lifecycle fallback during bootstrap", async () => {
     const db = mockD1([
       {
         match: "FROM telegram_watcher_lifecycle_daily",
@@ -494,10 +494,101 @@ describe("handleTelegramPulse", () => {
       {
         date: "2026-05-13",
         timestamp: 1_778_630_400_000,
+        snapshotAt: 1_778_680_000,
         newWatchers: 305,
         activeWatchers: 519,
+        churnedWatchers: 0,
+        reactivatedWatchers: 0,
       },
     ]);
+  });
+
+  it("keeps older lifecycle fallback days even after multiple snapshot days exist", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_watcher_lifecycle_daily",
+        rows: [
+          {
+            day: "2026-05-13",
+            snapshot_at: 1_778_680_000,
+            active_watchers: 519,
+            new_watchers: 305,
+            churned_watchers: 0,
+            reactivated_watchers: 0,
+          },
+          {
+            day: "2026-05-14",
+            snapshot_at: 1_778_766_000,
+            active_watchers: 540,
+            new_watchers: 0,
+            churned_watchers: 0,
+            reactivated_watchers: 0,
+          },
+        ],
+      },
+      {
+        match: "GROUP BY day",
+        rows: [
+          { day: "2026-03-08", day_ts: 1_741_392_000, new_watchers: 10 },
+          { day: "2026-05-11", day_ts: 1_778_457_600, new_watchers: 509 },
+          { day: "2026-05-13", day_ts: 1_778_630_400, new_watchers: 21 },
+        ],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 540,
+          new_watchers: 0,
+          explicit_coin_follows: 3233,
+          active_preset_followers: 48,
+          active_dews_opt_ins: 222,
+          active_depeg_opt_ins: 500,
+          active_safety_opt_ins: 87,
+          active_launch_opt_ins: 9,
+          active_all_types_opt_ins: 5,
+          quiet_hours_enabled_chats: 6,
+        },
+        rows: [],
+      },
+      {
+        match: "ORDER BY day DESC",
+        first: null,
+        rows: [],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [{ stablecoin_id: "usdc-circle", subscribers: 3233 }],
+      },
+      {
+        match: "FROM telegram_pending_alerts",
+        first: { pending_count: 0 },
+        rows: [],
+      },
+    ]);
+
+    const response = await handleTelegramPulse(db);
+    const body = (await response.json()) as {
+      historySource: string;
+      lifecycleHistoryUpdatedAt: number | null;
+      watcherHistory: Array<{ date: string; activeWatchers: number; snapshotAt?: number | null }>;
+    };
+
+    expect(body.historySource).toBe("live-fallback");
+    expect(body.lifecycleHistoryUpdatedAt).toBe(1_778_766_000);
+    expect(body.watcherHistory.map((point) => point.date)).toEqual([
+      "2026-03-08",
+      "2026-05-11",
+      "2026-05-13",
+      "2026-05-14",
+    ]);
+    expect(body.watcherHistory[0]?.activeWatchers).toBe(10);
+    const lastPoint = body.watcherHistory[body.watcherHistory.length - 1];
+    expect(lastPoint?.activeWatchers).toBe(540);
+    expect(lastPoint?.snapshotAt).toBe(1_778_766_000);
   });
 
   it("serves a one-point lifecycle snapshot only when live fallback history is empty", async () => {

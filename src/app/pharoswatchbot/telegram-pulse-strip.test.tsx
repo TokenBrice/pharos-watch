@@ -109,30 +109,32 @@ describe("TelegramPulseBoard", () => {
 
     render(<TelegramPulseBoard />);
 
-    expect(screen.getByText("Active Telegram chats")).toBeTruthy();
-    expect(screen.getByText("Estimated capacity")).toBeTruthy();
-    expect(screen.getByText(/active watcher target/i)).toBeTruthy();
+    expect(screen.getByText("Active / estimated capacity")).toBeTruthy();
     expect(screen.getByText(/37% used/i)).toBeTruthy();
     expect(screen.getByText("Alert follows")).toBeTruthy();
     expect(screen.getByText("Most followed")).toBeTruthy();
-    expect(screen.getByText("Explicit follows")).toBeTruthy();
-    expect(screen.getByText("Preset-implied")).toBeTruthy();
-    expect(screen.getByText("Preset followers")).toBeTruthy();
+    expect(screen.getByText("Follow composition")).toBeTruthy();
+    expect(screen.getByText("Explicit coin follows")).toBeTruthy();
+    expect(screen.getByText("Preset-implied follows")).toBeTruthy();
+    expect(screen.getByText("Chats using presets")).toBeTruthy();
+    expect(screen.getByText("Daily lifecycle")).toBeTruthy();
     expect(screen.getByText("New today")).toBeTruthy();
     expect(screen.getByText("Reactivated today")).toBeTruthy();
     expect(screen.getByText("Churned today")).toBeTruthy();
+    expect(screen.getByText("Alert coverage")).toBeTruthy();
     expect(screen.getByText("DEWS chats")).toBeTruthy();
     expect(screen.getByText("Depeg chats")).toBeTruthy();
     expect(screen.getByText("Safety chats")).toBeTruthy();
     expect(screen.getByText("Launch chats")).toBeTruthy();
-    expect(screen.getByText("All alert families")).toBeTruthy();
-    expect(screen.getByText("Quiet hours enabled")).toBeTruthy();
+    expect(screen.getByText("All four families")).toBeTruthy();
+    expect(screen.getByText("Delivery controls")).toBeTruthy();
+    expect(screen.getByText("Quiet-hours chats")).toBeTruthy();
     expect(screen.getByText("1,701")).toBeTruthy();
     expect(screen.getByText("42")).toBeTruthy();
-    expect(screen.getByText(/the chart is lifecycle history/i)).toBeTruthy();
-    expect(screen.getByRole("figure", { name: /watcher growth chart/i })).toBeTruthy();
+    expect(screen.getByText("Telegram chat lifecycle")).toBeTruthy();
+    expect(screen.getByRole("figure", { name: /chat lifecycle chart/i })).toBeTruthy();
     expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
-    expect(screen.getByText(/Low-cardinality deltas below 5/i)).toBeTruthy();
+    expect(screen.queryByText(/Low-cardinality deltas below 5/i)).toBeNull();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });
@@ -151,7 +153,7 @@ describe("TelegramPulseBoard", () => {
     render(<TelegramPulseBoard />);
 
     expect(screen.getByText(/Historical watcher points will appear/i)).toBeTruthy();
-    expect(screen.queryByRole("figure", { name: /watcher growth chart/i })).toBeNull();
+    expect(screen.queryByRole("figure", { name: /chat lifecycle chart/i })).toBeNull();
   });
 
   it("renders the lifecycle chart for a single snapshot history point", () => {

@@ -109,6 +109,36 @@ function latestLifecycleHistoryUpdatedAt(points: TelegramWatcherHistoryPoint[]):
   return latest;
 }
 
+function buildLifecycleHistory(
+  snapshotHistory: TelegramWatcherHistoryPoint[],
+  fallbackHistory: TelegramWatcherHistoryPoint[],
+): { source: TelegramPulse["historySource"]; points: TelegramWatcherHistoryPoint[] } {
+  if (snapshotHistory.length === 0) {
+    return {
+      source: fallbackHistory.length > 0 ? "live-fallback" : "snapshot",
+      points: fallbackHistory,
+    };
+  }
+
+  if (fallbackHistory.length === 0) {
+    return { source: "snapshot", points: snapshotHistory };
+  }
+
+  const firstSnapshotTimestamp = snapshotHistory[0]?.timestamp ?? 0;
+  const fallbackPrefix = fallbackHistory.filter(
+    (point) => point.timestamp > 0 && point.timestamp < firstSnapshotTimestamp,
+  );
+
+  if (fallbackPrefix.length === 0) {
+    return { source: "snapshot", points: snapshotHistory };
+  }
+
+  return {
+    source: "live-fallback",
+    points: [...fallbackPrefix, ...snapshotHistory],
+  };
+}
+
 async function loadFallbackWatcherHistory(db: D1Database): Promise<TelegramWatcherHistoryPoint[]> {
   const historyRows = await db
     .prepare(
@@ -187,22 +217,14 @@ async function buildTelegramPulseSnapshot(
     }),
     loadTelegramLifecycleHistory(db),
   ]);
-  const fallbackHistory = snapshotHistory.points.length >= 2
-    ? []
-    : await loadFallbackWatcherHistory(db).catch((error) => {
-        console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
-        unavailableFields.add("watcherHistory");
-        return [];
-      });
-  const shouldUseSnapshotHistory = snapshotHistory.points.length >= 2 || fallbackHistory.length === 0;
-  const watcherHistory = shouldUseSnapshotHistory
-    ? snapshotHistory.points
-    : fallbackHistory;
-  const historySource = shouldUseSnapshotHistory && snapshotHistory.points.length > 0
-    ? snapshotHistory.source
-    : "live-fallback";
+  const fallbackHistory = await loadFallbackWatcherHistory(db).catch((error) => {
+    console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
+    unavailableFields.add("watcherHistory");
+    return [];
+  });
+  const lifecycleHistory = buildLifecycleHistory(snapshotHistory.points, fallbackHistory);
   const suppressedFields = new Set<string>();
-  const publicWatcherHistory = sanitizeWatcherHistory(watcherHistory, suppressedFields);
+  const publicWatcherHistory = sanitizeWatcherHistory(lifecycleHistory.points, suppressedFields);
   const qualityUnavailableFields = [...unavailableFields].sort();
 
   return {
@@ -218,7 +240,7 @@ async function buildTelegramPulseSnapshot(
       "reactivatedWatchersToday",
       suppressedFields,
     ),
-    historySource,
+    historySource: lifecycleHistory.source,
     topCoins: topRows.map(
       (row) => TRACKED_META_BY_ID.get(row.stablecoinId)?.symbol ?? row.stablecoinId,
     ),

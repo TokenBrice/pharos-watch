@@ -17,6 +17,10 @@ const MONTH_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   year: "2-digit",
 });
+const DAY_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
 const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -24,6 +28,7 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 const TELEGRAM_ESTIMATED_CAPACITY_WATCHERS = 5_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function formatCount(value: number): string {
   return NUMBER_FORMATTER.format(value);
@@ -37,6 +42,12 @@ function formatMonthTick(value: unknown): string {
   const timestamp = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(timestamp)) return "";
   return MONTH_TICK_FORMATTER.format(new Date(timestamp));
+}
+
+function formatDayTick(value: unknown): string {
+  const timestamp = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(timestamp)) return "";
+  return DAY_TICK_FORMATTER.format(new Date(timestamp));
 }
 
 function formatUpdatedAt(value: number | undefined): string {
@@ -53,26 +64,48 @@ function formatCapacityUsage(activeWatchers: number): string {
   return `${Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100)}% used`;
 }
 
+function capacityUsagePercent(activeWatchers: number): number {
+  return Math.max(0, Math.min(100, Math.round((activeWatchers / TELEGRAM_ESTIMATED_CAPACITY_WATCHERS) * 100)));
+}
+
+function formatShare(value: number, total: number): string {
+  if (total <= 0) return "0%";
+  return `${Math.round((value / total) * 100)}%`;
+}
+
+function lifecycleRangeDays(data: TelegramWatcherHistoryPoint[]): number {
+  const first = data[0]?.timestamp;
+  const last = data.at(-1)?.timestamp;
+  if (!first || !last) return 0;
+  return Math.max(0, Math.round((last - first) / DAY_MS));
+}
+
 function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
   const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
+  const rangeDays = lifecycleRangeDays(data);
+  const tickFormatter = rangeDays > 120 ? formatMonthTick : formatDayTick;
+  const singlePointTimestamp = data.length === 1 ? data[0]?.timestamp : undefined;
+  const domain = singlePointTimestamp
+    ? ([singlePointTimestamp - 14 * DAY_MS, singlePointTimestamp + 14 * DAY_MS] as [number, number])
+    : (["dataMin", "dataMax"] as const);
 
   return (
     <div
       ref={ref}
-      className="mt-4 h-[180px] sm:h-[220px]"
+      className="mt-4 h-[210px] sm:h-[260px]"
       role="figure"
-      aria-label={`All-time Telegram watcher growth chart with ${data.length} daily points`}
+      aria-label={`Full Telegram chat lifecycle chart with ${data.length} daily points`}
     >
       {ready ? (
-        <AreaChart width={width} height={height} data={data} margin={{ top: 8, right: 8, bottom: 18, left: 0 }}>
+        <AreaChart width={width} height={height} data={data} margin={{ top: 10, right: 10, bottom: 22, left: 0 }}>
           <defs>
             <linearGradient id="telegramWatcherGrowthGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--brand-accent)" stopOpacity={0.28} />
-              <stop offset="95%" stopColor="var(--brand-accent)" stopOpacity={0.04} />
+              <stop offset="5%" stopColor="var(--brand-accent)" stopOpacity={0.34} />
+              <stop offset="95%" stopColor="var(--brand-accent)" stopOpacity={0.03} />
             </linearGradient>
           </defs>
           <TimeGrid />
-          <TimeXAxis dataKey="timestamp" minTickGap={64} tickFormatter={formatMonthTick} />
+          <TimeXAxis dataKey="timestamp" domain={domain} minTickGap={56} tickFormatter={tickFormatter} />
           <MonoYAxis width={42} allowDecimals={false} tickFormatter={(value) => formatCompactCount(Number(value))} />
           <DateTooltip formatter={(value, name) => [formatCount(Number(value)), String(name)]} />
           <Area
@@ -88,6 +121,62 @@ function TelegramWatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoin
           />
         </AreaChart>
       ) : null}
+    </div>
+  );
+}
+
+type PulseStat = {
+  label: string;
+  value: number;
+  detail?: string;
+  shareTotal?: number;
+};
+
+function isPulseStat(item: { value: unknown }): item is PulseStat {
+  return typeof item.value === "number";
+}
+
+function PulseStatGroup({
+  title,
+  items,
+}: {
+  title: string;
+  items: PulseStat[];
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/42 p-3.5 shadow-[inset_0_1px_0_oklch(1_0_0_/_0.035)]">
+      <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+        {title}
+      </p>
+      <div className="mt-3 space-y-3">
+        {items.map((item) => {
+          const sharePercent = item.shareTotal ? Math.max(3, Math.min(100, (item.value / item.shareTotal) * 100)) : 0;
+          return (
+            <div key={item.label} className="space-y-1.5">
+              <div className="flex min-w-0 items-baseline justify-between gap-3">
+                <span className="min-w-0 text-xs leading-tight text-muted-foreground">{item.label}</span>
+                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
+                  {formatCount(item.value)}
+                </span>
+              </div>
+              {item.detail ? <p className="text-[11px] leading-snug text-muted-foreground">{item.detail}</p> : null}
+              {item.shareTotal ? (
+                <div
+                  className="h-1.5 overflow-hidden rounded-full bg-muted"
+                  aria-label={`${item.label} is ${formatShare(item.value, item.shareTotal)}`}
+                >
+                  <div
+                    className="h-full rounded-full bg-[var(--brand-accent)]"
+                    style={{ width: `${sharePercent}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -187,67 +276,45 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
   const topCoins = data.topCoins.slice(0, 5);
   const watcherHistory = data.watcherHistory ?? [];
   const latestHistoryPoint = watcherHistory.at(-1) ?? null;
-  const latestHistoryLabel = data.historySource === "snapshot"
-    ? formatSnapshotAt(data.lifecycleHistoryUpdatedAt)
-    : null;
+  const latestHistoryLabel = formatSnapshotAt(data.lifecycleHistoryUpdatedAt);
   const alertTypeChats = data.alertTypeChats;
-  const telemetryItems = [
-    {
-      label: "Explicit follows",
-      value: data.explicitCoinSubscriptions,
-    },
-    {
-      label: "Preset-implied",
-      value: data.presetImpliedCoinSubscriptions,
-    },
-    {
-      label: "Preset followers",
-      value: data.activePresetFollowers,
-    },
-    {
-      label: "New today",
-      value: data.newWatchersToday,
-    },
-    {
-      label: "Reactivated today",
-      value: data.reactivatedWatchersToday,
-    },
-    {
-      label: "Churned today",
-      value: data.churnedWatchersToday,
-    },
-    {
-      label: "DEWS chats",
-      value: alertTypeChats?.dews,
-    },
-    {
-      label: "Depeg chats",
-      value: alertTypeChats?.depeg,
-    },
-    {
-      label: "Safety chats",
-      value: alertTypeChats?.safety,
-    },
-    {
-      label: "Launch chats",
-      value: alertTypeChats?.launch,
-    },
-    {
-      label: "All alert families",
-      value: alertTypeChats?.allTypes,
-    },
-    {
-      label: "Quiet hours enabled",
-      value: data.quietHoursEnabledChats,
-    },
-    {
-      label: "Queued deliveries",
-      value: data.pendingDeliveries,
-    },
-  ].filter((item): item is { label: string; value: number } => typeof item.value === "number");
+  const capacityPercent = capacityUsagePercent(data.activeWatchers);
+  const explicitFollows = data.explicitCoinSubscriptions ?? data.coinSubscriptions;
+  const presetImpliedFollows = data.presetImpliedCoinSubscriptions ?? 0;
+  const followStats = [
+    { label: "Explicit coin follows", value: explicitFollows, shareTotal: data.coinSubscriptions },
+    { label: "Preset-implied follows", value: presetImpliedFollows, shareTotal: data.coinSubscriptions },
+    { label: "Chats using presets", value: data.activePresetFollowers },
+  ].filter(isPulseStat);
+  const lifecycleStats = [
+    { label: "New today", value: data.newWatchersToday },
+    { label: "Reactivated today", value: data.reactivatedWatchersToday },
+    { label: "Churned today", value: data.churnedWatchersToday },
+  ].filter(isPulseStat);
+  const alertCoverageStats = [
+    { label: "DEWS chats", value: alertTypeChats?.dews, shareTotal: data.activeWatchers },
+    { label: "Depeg chats", value: alertTypeChats?.depeg, shareTotal: data.activeWatchers },
+    { label: "Safety chats", value: alertTypeChats?.safety, shareTotal: data.activeWatchers },
+    { label: "Launch chats", value: alertTypeChats?.launch, shareTotal: data.activeWatchers },
+    { label: "All four families", value: alertTypeChats?.allTypes, shareTotal: data.activeWatchers },
+  ].filter(isPulseStat);
+  const deliveryStats = [
+    { label: "Quiet-hours chats", value: data.quietHoursEnabledChats },
+    { label: "Queued deliveries", value: data.pendingDeliveries },
+  ].filter(isPulseStat);
 
   return (
-    <section className={cn("space-y-6", className)} aria-label="Live Telegram adoption metrics">
+    <section
+      className={cn(
+        "pharos-card-shell relative overflow-hidden p-4 sm:p-5 lg:p-6",
+        className,
+      )}
+      aria-label="Live Telegram adoption metrics"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--brand-accent)_18%,var(--brand-accent)_66%,transparent)] opacity-70"
+      />
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-border/55 pb-4">
         <div className="flex items-center gap-3">
           <span aria-hidden="true" className="relative flex h-2 w-2">
@@ -268,98 +335,89 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </p>
       ) : null}
 
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)]">
-        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
+      <div className="grid gap-5 pt-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-6">
+        <div className="rounded-2xl border border-frost-blue/25 bg-frost-blue/8 p-4 dark:bg-frost-blue/6 sm:p-5">
           <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-            Active Telegram chats
+            Active / estimated capacity
           </p>
-          <p className="mt-3 font-mono text-[3.25rem] font-semibold leading-[0.9] tabular-nums text-foreground sm:text-[4rem] lg:text-[4.75rem]">
-            {formatCount(data.activeWatchers)}
+          <p className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1 font-mono leading-none tabular-nums text-foreground">
+            <span className="text-[clamp(3.4rem,12vw,7rem)] font-semibold tracking-normal">
+              {formatCount(data.activeWatchers)}
+            </span>
+            <span className="pb-2 text-2xl font-semibold text-muted-foreground sm:pb-3 sm:text-4xl">
+              / {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
+            </span>
           </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-            chats with at least one alert enabled
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-background/80 ring-1 ring-border/45">
+            <div className="h-full rounded-full bg-[var(--brand-accent)]" style={{ width: `${capacityPercent}%` }} />
+          </div>
+          <p className="mt-3 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+            {formatCapacityUsage(data.activeWatchers)}
           </p>
         </div>
-        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:pb-0 lg:border-r lg:pr-6">
-          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-            Estimated capacity
-          </p>
-          <p className="mt-3 font-mono text-4xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-5xl lg:text-[3.5rem]">
-            {formatCount(TELEGRAM_ESTIMATED_CAPACITY_WATCHERS)}
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-            <span className="block">active watcher target</span>
-            <span className="block">{formatCapacityUsage(data.activeWatchers)}</span>
-          </p>
-        </div>
-        <div className="border-b border-border/55 pb-5 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-6">
-          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-            Alert follows
-          </p>
-          <p className="mt-3 font-mono text-4xl font-semibold leading-[0.95] tabular-nums text-foreground sm:text-5xl lg:text-[3.5rem]">
-            {formatCount(data.coinSubscriptions)}
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-[13px]">
-            {(data.explicitCoinSubscriptions ?? data.coinSubscriptions).toLocaleString("en-US")} explicit,{" "}
-            {(data.presetImpliedCoinSubscriptions ?? 0).toLocaleString("en-US")} preset-implied
-          </p>
-        </div>
-        <div>
-          <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
-            Most followed
-          </p>
-          {topCoins.length > 0 ? (
-            <ol className="mt-3 flex flex-wrap items-center gap-1.5">
-              {topCoins.map((coin, index) => (
-                <li
-                  key={coin}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-1.5 font-mono text-[13px] font-semibold tabular-nums text-sky-800 dark:text-sky-200"
-                >
-                  <span aria-hidden="true" className="text-[10px] font-medium text-sky-700/60 dark:text-sky-300/60">
-                    {index + 1}
-                  </span>
-                  {coin}
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">No ranked follows yet.</p>
-          )}
+
+        <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="rounded-xl border border-border/60 bg-background/42 p-3.5">
+            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+              Alert follows
+            </p>
+            <p className="mt-3 font-mono text-4xl font-semibold leading-none tabular-nums text-foreground sm:text-5xl">
+              {formatCount(data.coinSubscriptions)}
+            </p>
+            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2 text-xs text-muted-foreground">
+              <span>
+                <span className="block font-mono text-sm font-semibold text-foreground">
+                  {formatCount(explicitFollows)}
+                </span>
+                explicit
+              </span>
+              <span>
+                <span className="block font-mono text-sm font-semibold text-foreground">
+                  {formatCount(presetImpliedFollows)}
+                </span>
+                preset-implied
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-background/42 p-3.5">
+            <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.18em] text-muted-foreground">
+              Most followed
+            </p>
+            {topCoins.length > 0 ? (
+              <ol className="mt-3 flex flex-wrap items-center gap-1.5">
+                {topCoins.map((coin, index) => (
+                  <li
+                    key={coin}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-1.5 font-mono text-[13px] font-semibold tabular-nums text-sky-800 dark:text-sky-200"
+                  >
+                    <span aria-hidden="true" className="text-[10px] font-medium text-sky-700/60 dark:text-sky-300/60">
+                      {index + 1}
+                    </span>
+                    {coin}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">No ranked follows yet.</p>
+            )}
+          </div>
         </div>
       </div>
 
-      {telemetryItems.length > 0 ? (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
-          {telemetryItems.map((item) => (
-            <div key={item.label} className="rounded-lg border border-border/55 bg-muted/25 px-3 py-2.5">
-              <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.16em] text-muted-foreground">
-                {item.label}
-              </p>
-              <p className="mt-1.5 font-mono text-xl font-semibold tabular-nums text-foreground">
-                {formatCount(item.value)}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
+        <PulseStatGroup title="Follow composition" items={followStats} />
+        <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
+        <PulseStatGroup title="Alert coverage" items={alertCoverageStats} />
+        <PulseStatGroup title="Delivery controls" items={deliveryStats} />
+      </div>
 
-      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-4 sm:px-5">
+      <div className="mt-5 rounded-2xl border border-border/60 bg-background/46 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
               Telegram chat lifecycle
             </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-              {data.historySource === "snapshot"
-                ? "Daily active watcher snapshots. Past points stay fixed when chats churn; the chart is lifecycle history, not the live pulse."
-                : "Cumulative current active chats by the day each chat first subscribed."}
-            </p>
-            {(data.privacy?.suppressedFields.length ?? 0) > 0 ? (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Low-cardinality deltas below {data.privacy?.lowCardinalityThreshold ?? 5} are hidden in public
-                telemetry.
-              </p>
-            ) : null}
           </div>
           {latestHistoryPoint ? (
             <div className="font-mono text-xs text-muted-foreground">
