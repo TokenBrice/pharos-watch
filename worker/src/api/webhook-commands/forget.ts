@@ -23,7 +23,11 @@ const FORGET_CONFIRM_MESSAGE = [
   "- global alert toggles and quiet hours",
   "- delivery diagnostics and any pending alerts",
   "",
-  "Telegram updates already acknowledged are retained for idempotency.",
+  "Pharos will retain only:",
+  "- acknowledged Telegram updates (for idempotency)",
+  "- delivery audit manifests (alert-job and dead-letter rows)",
+  "- privacy-preserving aggregate counters",
+  "",
   "Confirm to proceed.",
 ].join("\n");
 

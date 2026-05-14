@@ -349,9 +349,22 @@ export const handleTelegramWebhook = withErrorHandler(
           );
           return finishOk();
         }
+        // Plain text at a non-ticker wizard step (e.g. typing "recommended" instead of tapping a button)
+        // would otherwise fall through silently — nudge the owner toward the inline keyboard.
+        if (!parsedCommand && canActOnPendingOwner(setupState?.initiatorUserId ?? null, actorUserId)) {
+          await reply("Tap one of the buttons above, or send /cancel to abort.");
+          return finishOk();
+        }
         // A new slash command in setup state clears the wizard before running the command.
         if (parsedCommand) {
           if (!setupState || canActOnPendingOwner(setupState.initiatorUserId, actorUserId)) {
+            // `/cancel` mid-wizard should confirm the cancellation rather than fall through to
+            // the global cancel handler, which would lie with "No pending selection to cancel."
+            if (parsedCommand.command === "/cancel") {
+              await clearPendingDisambiguation(db, chatId);
+              await reply("Setup cancelled. Send /start to begin again or /list to view subscriptions.");
+              return finishOk();
+            }
             await clearPendingDisambiguation(db, chatId);
           } else if (!PENDING_PASSTHROUGH_COMMANDS.has(parsedCommand.command)) {
             await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);

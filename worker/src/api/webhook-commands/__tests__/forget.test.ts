@@ -54,6 +54,10 @@ describe("handleForget", () => {
     expect(replyToChatWithMarkup).toHaveBeenCalledTimes(1);
     const [message, options] = replyToChatWithMarkup.mock.calls[0];
     expect(message).toContain("delete your Pharos subscriber data");
+    expect(message).toContain("Pharos will retain only");
+    expect(message).toContain("acknowledged Telegram updates");
+    expect(message).toContain("delivery audit manifests");
+    expect(message).toContain("privacy-preserving aggregate counters");
     expect(options).toEqual({
       replyMarkup: {
         inline_keyboard: [[

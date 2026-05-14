@@ -1235,6 +1235,59 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody().text).toContain("Commands");
   });
 
+  it("setup-step branch nudges the user when they type instead of tapping a button", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "setup-step",
+          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: null,
+        },
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "recommended"), "test-secret", "bot-token");
+
+    expect(sentMessageBody().text).toContain("Tap one of the buttons above");
+    const history = db.getHistory();
+    // Plain text at the branch step does not clear the wizard — the user can still tap a button.
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+  });
+
+  it("setup-step /cancel confirms cancellation instead of replying 'No pending selection'", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "setup-step",
+          action_payload: JSON.stringify({ step: "branch", alertTypes: [], target: null }),
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: null,
+        },
+      },
+    ]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/cancel"), "test-secret", "bot-token");
+
+    const body = sentMessageBody().text;
+    expect(body).toContain("Setup cancelled");
+    expect(body).not.toContain("No pending selection");
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+  });
+
   it("handles addressed commands in group chats", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(
