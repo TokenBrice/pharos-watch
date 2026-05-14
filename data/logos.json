@@ -492,12 +492,12 @@
   "eur0-usual": "https://coin-images.coingecko.com/coins/images/69788/large/Type_EUR0.png?1759653391",
   "emxn-telcoin": "https://coin-images.coingecko.com/coins/images/102171806/large/eMXN_256.png?1769832014",
   "hchf-hedera-swiss-franc": "/logos/200-hchf.png",
-  "eurot-token-teknoloji": "https://i0.wp.com/www.token.com.tr/wp-content/uploads/2023/10/eurot-logo.png",
+  "eurot-token-teknoloji": "/logos/eurot-token-teknoloji.png",
   "mxne-real-mxn": "https://coin-images.coingecko.com/coins/images/54735/large/mxne-logo-200.png?1741253834",
   "wmxn-ripio": "https://coin-images.coingecko.com/coins/images/102308557/large/wMXN.png?1770810670",
   "jpyt-dephaser": "https://coin-images.coingecko.com/coins/images/68576/large/JPYT_Logo_200x200_px.png?1756110424",
-  "euro3-3a-dao": "https://images.squarespace-cdn.com/content/v1/67d2d857ac6c8e765ee9712e/c39b2a8b-82c9-40ad-bf44-037a148b386a/Radiant1.png?format=1500w",
+  "euro3-3a-dao": "/logos/euro3-3a-dao.webp",
   "krwo-gimswap": "https://coin-images.coingecko.com/coins/images/54799/large/KRWO-Common.png?1741696516",
-  "xofm-mento": "https://cdn.prod.website-files.com/6807f97b456d6dff3e784225/695bb16e02aa5e97e5fa3ce7_XOFm%20%28Mento%20West%20African%20CFA%20franc%29.svg",
+  "xofm-mento": "/logos/xofm-mento.svg",
   "xnk-kinka": "/logos/cg-xnk.png"
 }

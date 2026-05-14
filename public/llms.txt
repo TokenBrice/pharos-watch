@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 353 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 363 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -439,6 +439,16 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [MYRC (MYRC)](https://pharos.watch/stablecoin/myrc-blox/): centralized stablecoin backed by real-world assets pegged to Malaysian Ringgit.
 - [VNDC (VNDC)](https://pharos.watch/stablecoin/vndc-jade-labs/): centralized stablecoin backed by real-world assets pegged to Vietnamese Dong.
 - [KRWQ (KRWQ)](https://pharos.watch/stablecoin/krwq-iq/): centralized stablecoin backed by real-world assets pegged to Korean Won.
+- [Usual EUR (EUR0)](https://pharos.watch/stablecoin/eur0-usual/): CeFi-dependent stablecoin backed by real-world assets pegged to Euro.
+- [Telcoin MXN (eMXN)](https://pharos.watch/stablecoin/emxn-telcoin/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
+- [Hedera Swiss Franc (HCHF)](https://pharos.watch/stablecoin/hchf-hedera-swiss-franc/): decentralized stablecoin collateralized by crypto assets pegged to Swiss Franc.
+- [Euro Token (EUROT)](https://pharos.watch/stablecoin/eurot-token-teknoloji/): centralized stablecoin backed by real-world assets pegged to Euro.
+- [Real MXN (MXNe)](https://pharos.watch/stablecoin/mxne-real-mxn/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
+- [Dephaser JPY (JPYT)](https://pharos.watch/stablecoin/jpyt-dephaser/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Japanese Yen.
+- [Ripio wMXN (WMXN)](https://pharos.watch/stablecoin/wmxn-ripio/): centralized stablecoin backed by real-world assets pegged to Mexican Peso.
+- [Mento West African CFA Franc (XOFm)](https://pharos.watch/stablecoin/xofm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to West African CFA Franc.
+- [EURO3 (EURO3)](https://pharos.watch/stablecoin/euro3-3a-dao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Euro.
+- [KRWO (KRWO)](https://pharos.watch/stablecoin/krwo-gimswap/): centralized stablecoin backed by real-world assets pegged to Korean Won.
 - [SoFiUSD (SOFID)](https://pharos.watch/stablecoin/sofid-sofi/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Onchain Yield Coin (ONYC)](https://pharos.watch/stablecoin/onyc-onre/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Hyperbeat USDT (hbUSDT)](https://pharos.watch/stablecoin/hbusdt-hyperbeat/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

@@ -209,7 +209,7 @@ describe("handlePegSummary", () => {
     });
   });
 
-  it("derives KGS and NGN DEX deviation from tracked peg metadata when cache pegType is empty", async () => {
+  it("derives secondary FX DEX deviation from tracked peg metadata when cache pegType is empty", async () => {
     const assets = [
       makeAsset({
         id: "kgst-kyrgyz-som",
@@ -229,12 +229,22 @@ describe("handlePegSummary", () => {
         price: null,
         circulating: { peggedNGN: 2_000_000 },
       }),
+      makeAsset({
+        id: "xofm-mento",
+        name: "Mento West African CFA Franc",
+        symbol: "XOFm",
+        geckoId: "celo-west-african-cfa-franc",
+        pegType: "",
+        price: null,
+        circulating: { peggedXOF: 2_000_000 },
+      }),
     ];
     const cacheValue = JSON.stringify({
       peggedAssets: assets,
       fxFallbackRates: {
         peggedKGS: 1 / 87,
         peggedNGN: 1 / 1370,
+        peggedXOF: 1 / 600,
       },
     });
     const db = mockD1([
@@ -263,6 +273,14 @@ describe("handlePegSummary", () => {
             source_total_tvl: 2_000_000,
             updated_at: nowSec - 60,
           },
+          {
+            stablecoin_id: "xofm-mento",
+            dex_price_usd: 1 / 600,
+            deviation_from_primary_bps: null,
+            source_pool_count: 2,
+            source_total_tvl: 2_000_000,
+            updated_at: nowSec - 60,
+          },
         ],
       },
       { match: "supply_history", rows: [] },
@@ -282,6 +300,10 @@ describe("handlePegSummary", () => {
       agrees: true,
     });
     expect(body.coins.find((coin) => coin.id === "cngn-compliant-naira")?.dexPriceCheck).toMatchObject({
+      dexDeviationBps: 0,
+      agrees: true,
+    });
+    expect(body.coins.find((coin) => coin.id === "xofm-mento")?.dexPriceCheck).toMatchObject({
       dexDeviationBps: 0,
       agrees: true,
     });

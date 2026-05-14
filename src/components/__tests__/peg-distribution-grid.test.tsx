@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import type { PegCurrency } from "@shared/types";
 
-const TEST_PEGS: PegCurrency[] = ["USD", "EUR", "GBP", "CHF", "BRL", "GOLD", "SILVER", "VAR"];
+const TEST_PEGS: PegCurrency[] = ["USD", "EUR", "GBP", "CHF", "BRL", "XOF", "GOLD", "SILVER", "VAR"];
 
 const TEST_COUNTS: Record<PegCurrency, number> = {
   USD: 154,
@@ -29,7 +29,7 @@ const TEST_COUNTS: Record<PegCurrency, number> = {
   VND: 0,
   UAH: 0,
   ARS: 0,
-  XOF: 0,
+  XOF: 1,
   IDR: 0,
   GOLD: 8,
   SILVER: 1,
@@ -52,18 +52,19 @@ describe("PegBrowseStrip", () => {
     expect(screen.getByRole("link", { name: "US Dollar (154)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Euro (13)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Swiss Franc (3)" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Fiat Except USD (19)" }).getAttribute("href")).toBe("/?peg=fiat-non-usd-peg#filter-bar");
+    expect(screen.getByRole("link", { name: "Fiat Except USD (20)" }).getAttribute("href")).toBe("/?peg=fiat-non-usd-peg#filter-bar");
     expect(screen.queryByRole("link", { name: "British Pound (2)" })).toBeNull();
   });
 
   it("restores individual fiat pegs when expanded", () => {
     render(<PegBrowseStrip pegs={TEST_PEGS} pegCoinCount={pegCoinCount} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "+1 more pegs" }));
+    fireEvent.click(screen.getByRole("button", { name: "+2 more pegs" }));
 
     expect(screen.getByRole("link", { name: "British Pound (2)" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Brazilian Real (1)" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Fiat Except USD (19)" })).toBeNull();
+    expect(screen.getByRole("link", { name: "West African CFA Franc (1)" }).getAttribute("href")).toBe("/stablecoins/xof");
+    expect(screen.queryByRole("link", { name: "Fiat Except USD (20)" })).toBeNull();
     expect(screen.getByRole("button", { name: "Show fewer" })).toBeTruthy();
   });
 });

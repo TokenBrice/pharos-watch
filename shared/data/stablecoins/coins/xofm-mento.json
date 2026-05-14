@@ -14,7 +14,6 @@
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
-  "geckoId": "celo-west-african-cfa-franc",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",

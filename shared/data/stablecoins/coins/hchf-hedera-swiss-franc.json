@@ -42,13 +42,9 @@
       "decimals": 8
     }
   ],
-  "canBeBlacklisted": "dilutable",
-  "canBeBlacklistedSource": {
-    "label": "Hedera Mirror Node token metadata",
-    "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
-  },
+  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": "dilutable",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Hedera Mirror Node token metadata",
@@ -59,7 +55,7 @@
         "url": "https://docs.hliquity.org/overview/overview"
       }
     ],
-    "evidence": "Conservative Dilutable review: Hedera token metadata has no admin, freeze, wipe, or pause key, but it exposes a non-null supply_key with INFINITE supply. HLiquity docs describe protocol minting against HBAR collateral rather than a holder-balance freeze path, so the explicit override is limited to dilution risk.",
+    "evidence": "Hedera token metadata has no admin, freeze, wipe, or pause key. The non-null supply_key supports protocol minting against HBAR collateral in HLiquity's Liquity-style CDP system rather than a privileged holder-freeze or unbounded admin-mint path.",
     "reviewer": "Codex Worker C",
     "reviewedAt": "2026-05-14"
   },

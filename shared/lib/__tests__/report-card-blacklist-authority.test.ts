@@ -7,7 +7,6 @@ const EXPECTED_DILUTABLE_IDS = [
   "dai-makerdao",
   "dola-inverse-finance",
   "fpi-frax",
-  "hchf-hedera-swiss-franc",
   "jpyt-dephaser",
   "krwo-gimswap",
   "luausd-lumi-finance",
@@ -87,6 +86,10 @@ describe("report-card blacklist authority", () => {
     // NXUSD: BoringOwnable with mint rate-limited to 15%/24h and no admin
     // reach into user balances. Bounded enough to remain a defensible "No".
     expect(resolved.get("nxusd-nereus")).toBe(false);
+    // HCHF: Hedera token metadata has no admin/freeze/wipe/pause key.
+    // The supply key is used by HLiquity's collateralized CDP mint path, not
+    // treated as standalone unbounded admin dilution authority.
+    expect(resolved.get("hchf-hedera-swiss-franc")).toBe(false);
   });
 
   it("pins the May 2026 unfreezable audit (upgradeable-proxy + admin-mint corrections)", () => {
