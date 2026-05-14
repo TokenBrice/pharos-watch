@@ -22,7 +22,7 @@ The page is intentionally product-facing, not admin-facing. It should describe u
 - **Client implementation:** `src/app/coverage/client.tsx`
 - **Error boundary:** `src/app/coverage/error.tsx`
 - **Core helpers:** `src/lib/coverage.ts`
-- **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` through a JSON-LD `<script>` in the page shell
+- **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` and a static methodological `Dataset` descriptor through JSON-LD `<script>` tags in the page shell
 
 The page uses `createClientFeaturePage(...)`, which wraps the route in the shared feature-page shell for public client-heavy surfaces. It remains indexable like the rest of the public feature routes.
 
@@ -139,6 +139,10 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. In that case, the matrix still renders with structural coverage where possible and uses the shared stale-data banner to surface data-health issues.
+
+## Structured Data Contract
+
+The `/coverage/` page emits a conservative `Dataset` JSON-LD node for the visible coverage matrix. The descriptor is static and methodological: it names the coverage fields, links the page to the public API documentation/catalog, and intentionally omits live metric values, `DataDownload` entries, `dateModified`, and `/_site-data/*` proxy URLs.
 
 ---
 

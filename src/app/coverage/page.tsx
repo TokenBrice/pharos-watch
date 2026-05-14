@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { buildCoverageDatasetJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -17,6 +18,7 @@ const coverageDescription =
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
 
 const COVERAGE_FAQ_JSON_LD = buildFaqJsonLd(COVERAGE_FAQ_ITEMS.map((item) => ({ question: item.q, answer: item.a })));
+const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
 const COVERAGE_STATIC_SECTION = (
   <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
@@ -92,7 +94,13 @@ export default createClientFeaturePage({
       </>,
     ],
     preface: (
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_FAQ_JSON_LD) }} />
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_DATASET_JSON_LD) }}
+        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(COVERAGE_FAQ_JSON_LD) }} />
+      </>
     ),
   },
   beforeClient: COVERAGE_STATIC_SECTION,
