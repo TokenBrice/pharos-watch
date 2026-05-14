@@ -8,8 +8,8 @@ import { handleStablecoinSummary } from "../api/stablecoin-summary";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
 import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
-import { handleApiKeyDeactivate, handleApiKeyRotate, handleApiKeyUpdate } from "../api/api-keys";
-import { handleApiKeyRequestReject, handleApiKeyRequestReleaseClaim } from "../api/api-key-requests";
+import { handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute } from "../api/api-keys";
+import { handleApiKeyRequestRejectRoute, handleApiKeyRequestReleaseClaimRoute } from "../api/api-key-requests";
 import { handleAdminTelegramChat } from "../api/admin-telegram-chat";
 import { errorResponse, resolveOrReject } from "../lib/api-utils";
 import {
@@ -118,40 +118,27 @@ const DYNAMIC_ADMIN_ROUTE_BINDINGS = {
   "api-key-update": defineDynamicAdminRouteBinding(
     "api-key-update",
     (routeCtx, dynamicAdminEndpoint) =>
-      handleApiKeyUpdate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+      handleApiKeyUpdateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
   ),
   "api-key-deactivate": defineDynamicAdminRouteBinding(
     "api-key-deactivate",
     (routeCtx, dynamicAdminEndpoint) =>
-      handleApiKeyDeactivate(routeCtx.db, dynamicAdminEndpoint.apiKeyId, routeCtx.trustedAdmin, routeCtx.request),
+      handleApiKeyDeactivateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
   ),
   "api-key-rotate": defineDynamicAdminRouteBinding(
     "api-key-rotate",
-    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRotate(
-      routeCtx.db,
-      dynamicAdminEndpoint.apiKeyId,
-      routeCtx.trustedAdmin,
-      routeCtx.request,
-      routeCtx.apiKeyHashPepper,
-    ),
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleApiKeyRotateRoute({ ...routeCtx, apiKeyId: dynamicAdminEndpoint.apiKeyId }),
   ),
   "api-key-request-reject": defineDynamicAdminRouteBinding(
     "api-key-request-reject",
-    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRequestReject(
-      routeCtx.db,
-      dynamicAdminEndpoint.requestId,
-      routeCtx.trustedAdmin,
-      routeCtx.request,
-    ),
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleApiKeyRequestRejectRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId }),
   ),
   "api-key-request-release-claim": defineDynamicAdminRouteBinding(
     "api-key-request-release-claim",
-    (routeCtx, dynamicAdminEndpoint) => handleApiKeyRequestReleaseClaim(
-      routeCtx.db,
-      dynamicAdminEndpoint.requestId,
-      routeCtx.trustedAdmin,
-      routeCtx.request,
-    ),
+    (routeCtx, dynamicAdminEndpoint) =>
+      handleApiKeyRequestReleaseClaimRoute({ ...routeCtx, requestId: dynamicAdminEndpoint.requestId }),
   ),
   "admin-telegram-chat": defineDynamicAdminRouteBinding(
     "admin-telegram-chat",

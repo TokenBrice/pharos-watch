@@ -1,10 +1,10 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   errorResponse,
   jsonResponse,
-  resolveOrReject,
 } from "../lib/api-utils";
 import { BACKTEST_ANCHORS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
@@ -230,10 +230,10 @@ async function handlePruneHistoryRepair(
 ): Promise<Response> {
   const stablecoinParam = url.searchParams.get("stablecoin");
   const resolvedStablecoin = stablecoinParam
-    ? resolveOrReject(stablecoinParam)
+    ? resolvePsiInclusiveStablecoinId(stablecoinParam)
     : null;
-  if (resolvedStablecoin instanceof Response) {
-    return resolvedStablecoin;
+  if (stablecoinParam && !resolvedStablecoin) {
+    return errorResponse(404, "Unknown stablecoin");
   }
   const stablecoinId = resolvedStablecoin?.canonicalId ?? null;
 

@@ -9,6 +9,23 @@ vi.mock("@shared/lib/stablecoins", () => ({
     ["dai-makerdao", { flags: { backing: "crypto-backed" }, commodityOunces: undefined }],
   ]),
   TRACKED_STABLECOINS: [],
+  ACTIVE_STABLECOINS: [
+    { id: "usdt-tether", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "usdc-circle", flags: { backing: "rwa-backed" }, commodityOunces: undefined },
+    { id: "dai-makerdao", flags: { backing: "crypto-backed" }, commodityOunces: undefined },
+  ],
+  ACTIVE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
+  ACTIVE_META_BY_ID: new Map([
+    ["usdt-tether", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
+    ["usdc-circle", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
+    ["dai-makerdao", { flags: { backing: "crypto-backed" }, commodityOunces: undefined }],
+  ]),
+  READABLE_IDS: new Set(["usdt-tether", "usdc-circle", "dai-makerdao"]),
+  READABLE_META_BY_ID: new Map([
+    ["usdt-tether", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
+    ["usdc-circle", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
+    ["dai-makerdao", { flags: { backing: "crypto-backed" }, commodityOunces: undefined }],
+  ]),
 }));
 
 import { handleChains } from "../chains";

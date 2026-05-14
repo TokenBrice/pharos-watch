@@ -1,9 +1,9 @@
 import {
-  adminErrorResponse,
   adminJsonResponse,
   type AdminRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
+import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 import {
   enqueuePendingAlerts,
@@ -15,6 +15,7 @@ import {
 import { TELEGRAM_ALERT_TTL_SEC } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
 import type { BatchMessage } from "../lib/telegram";
+import { z } from "zod";
 
 const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = (typeof SCOPES)[number];
@@ -28,43 +29,26 @@ interface BroadcastRequestBody {
   acknowledgeBacklogRisk: boolean;
 }
 
-function isScope(value: unknown): value is BroadcastScope {
-  return typeof value === "string" && (SCOPES as readonly string[]).includes(value);
-}
+const BroadcastRequestBodySchema = z.object({
+  messageHtml: z.string()
+    .refine((value) => value.trim().length > 0, "messageHtml must be a non-empty string"),
+  scope: z.enum(SCOPES, { message: `scope must be one of: ${SCOPES.join(", ")}` }),
+  dryRun: z.boolean({ message: "dryRun must be a boolean" }),
+  acknowledgeBacklogRisk: z
+    .boolean({ message: "acknowledgeBacklogRisk must be a boolean when provided" })
+    .optional()
+    .default(false),
+});
 
 async function parseBody(request: Request): Promise<BroadcastRequestBody | Response> {
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return adminErrorResponse(400, "Invalid JSON body");
-  }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return adminErrorResponse(400, "Body must be a JSON object");
-  }
-  const body = raw as Record<string, unknown>;
-  const messageHtml = body.messageHtml;
-  if (typeof messageHtml !== "string" || messageHtml.trim().length === 0) {
-    return adminErrorResponse(400, "messageHtml must be a non-empty string");
-  }
-  if (!isScope(body.scope)) {
-    return adminErrorResponse(400, `scope must be one of: ${SCOPES.join(", ")}`);
-  }
-  if (typeof body.dryRun !== "boolean") {
-    return adminErrorResponse(400, "dryRun must be a boolean");
-  }
-  if (
-    body.acknowledgeBacklogRisk !== undefined &&
-    typeof body.acknowledgeBacklogRisk !== "boolean"
-  ) {
-    return adminErrorResponse(400, "acknowledgeBacklogRisk must be a boolean when provided");
-  }
-  return {
-    messageHtml,
-    scope: body.scope,
-    dryRun: body.dryRun,
-    acknowledgeBacklogRisk: body.acknowledgeBacklogRisk === true,
-  };
+  return parseRequestJsonWithSchema(request, BroadcastRequestBodySchema, {
+    formatSchemaError: (issues) => {
+      const first = issues[0];
+      return first?.path.length === 0
+        ? "Body must be a JSON object"
+        : first?.message ?? "Invalid broadcast request body";
+    },
+  });
 }
 
 async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise<string[]> {

@@ -1,5 +1,5 @@
 import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints";
-import { errorResponse } from "../../lib/api-utils";
+import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { hmacSha256Hex } from "../../lib/api-key-core";
 import {
   ApiKeySelfServeRequestSchema,
@@ -70,29 +70,17 @@ export function requireVerifySelfServeEnv(env: ApiKeySelfServeEnv): RequiredVeri
 }
 
 export async function parseSelfServeRequest(request: Request): Promise<ParsedApiKeySelfServeRequest | Response> {
-  try {
-    const raw = await request.json();
-    const result = ApiKeySelfServeRequestSchema.safeParse(raw);
-    if (!result.success) {
-      return errorResponse(400, result.error.issues[0]?.message ?? "Invalid API key request data", { noStore: true });
-    }
-    return result.data;
-  } catch {
-    return errorResponse(400, "Invalid JSON body", { noStore: true });
-  }
+  return parseRequestJsonWithSchema(request, ApiKeySelfServeRequestSchema, {
+    responseOptions: { noStore: true },
+    formatSchemaError: (issues) => issues[0]?.message ?? "Invalid API key request data",
+  });
 }
 
 export async function parseSelfServeVerifyRequest(request: Request): Promise<ParsedApiKeySelfServeVerify | Response> {
-  try {
-    const raw = await request.json();
-    const result = ApiKeySelfServeVerifySchema.safeParse(raw);
-    if (!result.success) {
-      return errorResponse(400, result.error.issues[0]?.message ?? "Invalid verification data", { noStore: true });
-    }
-    return result.data;
-  } catch {
-    return errorResponse(400, "Invalid JSON body", { noStore: true });
-  }
+  return parseRequestJsonWithSchema(request, ApiKeySelfServeVerifySchema, {
+    responseOptions: { noStore: true },
+    formatSchemaError: (issues) => issues[0]?.message ?? "Invalid verification data",
+  });
 }
 
 export function normalizeSelfServeEmail(email: string): string | Response {

@@ -95,8 +95,7 @@ export const ADMIN_STATIC_ROUTES = [
   defineStaticRoute("kill-cron-in-flight", handleKillCronInFlight),
   defineStaticRoute("bulk-dismiss-discovery-candidates", handleBulkDismissDiscoveryCandidates),
   defineStaticRoute("clear-telegram-pending", handleClearTelegramPending),
-  defineStaticRoute("admin-telegram-resend", ({ db, request, trustedAdmin, telegramBotToken }) =>
-    handleAdminTelegramResend({ db, request, trustedAdmin, telegramBotToken })),
+  defineStaticRoute("admin-telegram-resend", handleAdminTelegramResend),
   defineStaticRoute("admin-telegram-broadcast", handleAdminTelegramBroadcast),
   defineStaticRoute("status-probe-history", handleStatusProbeHistory),
 ] as const satisfies readonly StaticRouteDefinition[];

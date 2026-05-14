@@ -1,4 +1,5 @@
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { errorResponse } from "./api-response";
 
 export type NumericRangePolicy = "clamp" | "reject";
@@ -46,25 +47,6 @@ export function resolveOrReject(id: string): { canonicalId: string } | Response 
     return errorResponse(404, "Unknown stablecoin");
   }
   return { canonicalId: resolved.canonicalId };
-}
-
-export async function parseOptionalRequestJsonObject(
-  request?: Request,
-): Promise<Record<string, unknown> | Response> {
-  if (!request || request.method !== "POST") return {};
-
-  const rawBody = await request.clone().text();
-  if (!rawBody.trim()) return {};
-
-  try {
-    const parsed = JSON.parse(rawBody);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return errorResponse(400, "Invalid JSON body");
-    }
-    return parsed as Record<string, unknown>;
-  } catch {
-    return errorResponse(400, "Invalid JSON body");
-  }
 }
 
 export function parseIntParam(
@@ -218,4 +200,39 @@ export function parseRequiredStablecoinIdParam(
   }
 
   return resolved.canonicalId;
+}
+
+export function parseTimestampSecondsParam(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) return null;
+    return numeric >= 1_000_000_000_000
+      ? Math.floor(numeric / 1000)
+      : Math.floor(numeric);
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  if (Number.isNaN(parsedMs)) return null;
+  return Math.floor(parsedMs / 1000);
+}
+
+export function parseDayStartParam(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d+$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    if (!Number.isFinite(numeric)) return null;
+    const seconds = numeric > 1_000_000_000_000 ? Math.floor(numeric / 1000) : numeric;
+    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  if (Number.isNaN(parsedMs)) return null;
+  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
 }

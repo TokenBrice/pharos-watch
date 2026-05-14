@@ -1,9 +1,8 @@
-export {
-  handleApiKeyRequest,
-  handleApiKeyRequestVerify,
-} from "./api-key-requests/public";
+export { handleApiKeyRequest, handleApiKeyRequestVerify } from "./api-key-requests/public";
 export {
   handleApiKeyRequestReject,
-  handleApiKeyRequestReleaseClaim,
+  handleApiKeyRequestRejectRoute,
+  handleApiKeyRequestReleaseClaimRoute,
   handleApiKeyRequestsAdmin,
+  handleApiKeyRequestsAdminRoute,
 } from "./api-key-requests/admin-handlers";

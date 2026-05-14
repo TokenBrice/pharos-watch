@@ -5,6 +5,7 @@ import {
   type AdminRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
+import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 import { sendToChat, type SendToChatResult } from "../lib/telegram";
 import {
@@ -18,6 +19,7 @@ import {
   type SafetyChange,
 } from "../lib/telegram-alerts";
 import { extractTopSignals } from "../cron/telegram-alert-snapshots";
+import { z } from "zod";
 
 const ALERT_TYPES = ["dews", "depeg", "safety", "launch"] as const;
 type AlertType = (typeof ALERT_TYPES)[number];
@@ -32,39 +34,31 @@ interface ResendContext extends AdminRouteContext {
   telegramBotToken: string | undefined;
 }
 
-function isAlertType(value: unknown): value is AlertType {
-  return typeof value === "string" && (ALERT_TYPES as readonly string[]).includes(value);
-}
+const ResendRequestBodySchema = z.object({
+  chatId: z.string().regex(/^-?\d+$/, "chatId must be a numeric string"),
+  alertType: z.enum(ALERT_TYPES, {
+    message: `alertType must be one of: ${ALERT_TYPES.join(", ")}`,
+  }),
+  stablecoinId: z.string().min(1, "stablecoinId must be a non-empty string")
+    .superRefine((stablecoinId, ctx) => {
+      if (!TRACKED_META_BY_ID.has(stablecoinId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Unknown stablecoinId: ${stablecoinId}`,
+        });
+      }
+    }),
+});
 
 async function parseBody(request: Request): Promise<ResendRequestBody | Response> {
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return adminErrorResponse(400, "Invalid JSON body");
-  }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return adminErrorResponse(400, "Body must be a JSON object");
-  }
-  const body = raw as Record<string, unknown>;
-  const chatId = body.chatId;
-  if (typeof chatId !== "string" || !/^-?\d+$/.test(chatId)) {
-    return adminErrorResponse(400, "chatId must be a numeric string");
-  }
-  if (!isAlertType(body.alertType)) {
-    return adminErrorResponse(
-      400,
-      `alertType must be one of: ${ALERT_TYPES.join(", ")}`,
-    );
-  }
-  const stablecoinId = body.stablecoinId;
-  if (typeof stablecoinId !== "string" || stablecoinId.length === 0) {
-    return adminErrorResponse(400, "stablecoinId must be a non-empty string");
-  }
-  if (!TRACKED_META_BY_ID.has(stablecoinId)) {
-    return adminErrorResponse(400, `Unknown stablecoinId: ${stablecoinId}`);
-  }
-  return { chatId, alertType: body.alertType, stablecoinId };
+  return parseRequestJsonWithSchema(request, ResendRequestBodySchema, {
+    formatSchemaError: (issues) => {
+      const first = issues[0];
+      return first?.path.length === 0
+        ? "Body must be a JSON object"
+        : first?.message ?? "Invalid resend request body";
+    },
+  });
 }
 
 function emptyAlerts(): ConsolidatedAlerts {

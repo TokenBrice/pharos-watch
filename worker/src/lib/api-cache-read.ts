@@ -1,7 +1,8 @@
 import type { ZodType } from "zod";
 import { getCache } from "./db-cache";
 import { buildFreshnessMeta, addFreshnessHeaders } from "./api-freshness";
-import { errorResponse, jsonResponse, validatePayloadWithSchema, withErrorHandler } from "./api-response";
+import { errorResponse, jsonResponse, withErrorHandler } from "./api-response";
+import { validatePayloadWithSchema } from "./api-schema";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const CACHE_JSON_PARSE_FAILURE_COUNTER_MAX_ENTRIES = 256;

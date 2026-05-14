@@ -1,4 +1,4 @@
-import { errorResponse, jsonResponse } from "../../lib/api-utils";
+import { errorResponse, jsonResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { checkFeedbackRateLimit } from "../../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import {
@@ -13,16 +13,9 @@ import {
 const FEEDBACK_DEPENDENCY_RETRY_AFTER_SEC = 60;
 
 export async function parseFeedbackRequest(request: Request): Promise<FeedbackBody | Response> {
-  try {
-    const raw = await request.json();
-    const result = FeedbackBodySchema.safeParse(raw);
-    if (!result.success) {
-      return errorResponse(400, result.error.issues[0]?.message ?? "Invalid feedback data");
-    }
-    return result.data;
-  } catch {
-    return errorResponse(400, "Invalid JSON body");
-  }
+  return parseRequestJsonWithSchema(request, FeedbackBodySchema, {
+    formatSchemaError: (issues) => issues[0]?.message ?? "Invalid feedback data",
+  });
 }
 
 export async function prepareFeedbackSubmission(

@@ -7,7 +7,13 @@ import {
   parseOptionalPositiveIntegerParam,
 } from "../../lib/api-utils";
 import { getNowSec } from "../../lib/api-key-core";
-import { adminErrorResponse, adminJsonResponse, runAdminRoute } from "../../lib/route-wrappers";
+import {
+  adminErrorResponse,
+  adminJsonResponse,
+  makeAdminRoute,
+  makeIdempotentAdminRoute,
+  type AdminRouteContext,
+} from "../../lib/route-wrappers";
 import {
   buildAdminMutationResponse,
   deactivateLinkedSelfServeKey,
@@ -31,32 +37,93 @@ const ADMIN_STATUS_FILTERS = new Set<ApiKeySelfServeStatus>([
   "expired",
 ]);
 
+interface ApiKeyRequestByIdRouteContext extends AdminRouteContext {
+  requestId: string;
+}
+
+export const handleApiKeyRequestsAdminRoute = makeAdminRoute<AdminRouteContext>(
+  "api-key-requests-admin",
+  async ({ db, request }) => {
+    const url = new URL(request.url);
+    const status = parseOptionalEnumParam(url.searchParams.get("status"), ADMIN_STATUS_FILTERS, "status");
+    if (status instanceof Response) return status;
+    const parsedLimit = parseOptionalPositiveIntegerParam(url.searchParams.get("limit"), "limit", { max: 100 });
+    if (parsedLimit instanceof Response) return parsedLimit;
+    const rows = await listAdminRequests(db, status ?? null, parsedLimit ?? 50);
+    const response: ApiKeySelfServeRequestAdminListResponse = {
+      generatedAt: getNowSec(),
+      requests: rows.map(mapAdminRow),
+    };
+    return adminJsonResponse(response);
+  },
+);
+
 export function handleApiKeyRequestsAdmin(
   db: D1Database,
   trustedAdmin: boolean,
   request: Request,
 ): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "api-key-requests-admin",
-      request,
-      trustedAdmin,
-    },
-    async () => {
-      const url = new URL(request.url);
-      const status = parseOptionalEnumParam(url.searchParams.get("status"), ADMIN_STATUS_FILTERS, "status");
-      if (status instanceof Response) return status;
-      const parsedLimit = parseOptionalPositiveIntegerParam(url.searchParams.get("limit"), "limit", { max: 100 });
-      if (parsedLimit instanceof Response) return parsedLimit;
-      const rows = await listAdminRequests(db, status ?? null, parsedLimit ?? 50);
-      const response: ApiKeySelfServeRequestAdminListResponse = {
-        generatedAt: getNowSec(),
-        requests: rows.map(mapAdminRow),
-      };
-      return adminJsonResponse(response);
-    },
-  );
+  return handleApiKeyRequestsAdminRoute({ db, trustedAdmin, request });
 }
+
+export const handleApiKeyRequestRejectRoute = makeIdempotentAdminRoute<ApiKeyRequestByIdRouteContext>(
+  "api-key-request-reject",
+  "api-key-request-reject",
+  async ({ db, request, requestId }) => {
+    const parsedBody = await parseAdminMutationBody(request);
+    if (parsedBody instanceof Response) return parsedBody;
+    const row = await selectRequestWithKeyStateByRequestId(db, requestId);
+    if (!row) return adminErrorResponse(404, "API key request not found");
+    const nowSec = getNowSec();
+    if (row.status === "rejected") {
+      return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
+    }
+    if (row.status !== "pending_verification" && row.status !== "issued") {
+      return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
+    }
+    if (row.api_key_id != null) {
+      const linkedKeyPrefix = row.linked_key_prefix;
+      const mismatch = row.linked_key_tier !== "self-serve"
+        || row.linked_key_owner_email !== row.normalized_email
+        || !linkedKeyPrefix;
+      if (mismatch) {
+        return adminErrorResponse(409, "Linked API key does not match the self-serve request");
+      }
+      await recordSelfServeRevocation(db, {
+        apiKeyId: row.api_key_id,
+        keyPrefix: linkedKeyPrefix,
+        requestId,
+        nowSec,
+        reason: "admin_reject",
+      });
+      await deactivateLinkedSelfServeKey(db, {
+        apiKeyId: row.api_key_id,
+        keyPrefix: linkedKeyPrefix,
+        requestId,
+        nowSec,
+      });
+    }
+    const updated = await db.prepare(
+      "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ? AND status IN ('pending_verification', 'issued')",
+    )
+      .bind(nowSec, nowSec, requestId)
+      .run();
+    if ((updated.meta?.changes ?? 0) === 0) {
+      return adminErrorResponse(409, "API key request state changed before rejection");
+    }
+    await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
+    await recordRequestAdminAction(db, {
+      action: "api_key_request_reject",
+      requestId,
+      status: 200,
+      resultStatus: "rejected",
+      claimStatus: "released",
+      reason: parsedBody.reason,
+      nowSec,
+    });
+    return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
+  },
+);
 
 export function handleApiKeyRequestReject(
   db: D1Database,
@@ -64,70 +131,42 @@ export function handleApiKeyRequestReject(
   trustedAdmin: boolean,
   request: Request,
 ): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "api-key-request-reject",
-      request,
-      trustedAdmin,
-      db,
-      action: "api-key-request-reject",
-    },
-    async () => {
-      const parsedBody = await parseAdminMutationBody(request);
-      if (parsedBody instanceof Response) return parsedBody;
-      const row = await selectRequestWithKeyStateByRequestId(db, requestId);
-      if (!row) return adminErrorResponse(404, "API key request not found");
-      const nowSec = getNowSec();
-      if (row.status === "rejected") {
-        return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
-      }
-      if (row.status !== "pending_verification" && row.status !== "issued") {
-        return adminErrorResponse(409, "Only pending or issued self-serve requests can be rejected");
-      }
-      if (row.api_key_id != null) {
-        const linkedKeyPrefix = row.linked_key_prefix;
-        const mismatch = row.linked_key_tier !== "self-serve"
-          || row.linked_key_owner_email !== row.normalized_email
-          || !linkedKeyPrefix;
-        if (mismatch) {
-          return adminErrorResponse(409, "Linked API key does not match the self-serve request");
-        }
-        await recordSelfServeRevocation(db, {
-          apiKeyId: row.api_key_id,
-          keyPrefix: linkedKeyPrefix,
-          requestId,
-          nowSec,
-          reason: "admin_reject",
-        });
-        await deactivateLinkedSelfServeKey(db, {
-          apiKeyId: row.api_key_id,
-          keyPrefix: linkedKeyPrefix,
-          requestId,
-          nowSec,
-        });
-      }
-      const updated = await db.prepare(
-        "UPDATE api_key_requests SET status = 'rejected', rejected_at = ?, updated_at = ? WHERE request_id = ? AND status IN ('pending_verification', 'issued')",
-      )
-        .bind(nowSec, nowSec, requestId)
-        .run();
-      if ((updated.meta?.changes ?? 0) === 0) {
-        return adminErrorResponse(409, "API key request state changed before rejection");
-      }
-      await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
-      await recordRequestAdminAction(db, {
-        action: "api_key_request_reject",
-        requestId,
-        status: 200,
-        resultStatus: "rejected",
-        claimStatus: "released",
-        reason: parsedBody.reason,
-        nowSec,
-      });
-      return adminJsonResponse(buildAdminMutationResponse(requestId, "rejected", "released"));
-    },
-  );
+  return handleApiKeyRequestRejectRoute({ db, requestId, trustedAdmin, request });
 }
+
+export const handleApiKeyRequestReleaseClaimRoute = makeIdempotentAdminRoute<ApiKeyRequestByIdRouteContext>(
+  "api-key-request-release-claim",
+  "api-key-request-release-claim",
+  async ({ db, request, requestId }) => {
+    const parsedBody = await parseAdminMutationBody(request);
+    if (parsedBody instanceof Response) return parsedBody;
+    const row = await selectRequestWithKeyStateByRequestId(db, requestId);
+    if (!row) return adminErrorResponse(404, "API key request not found");
+    const nowSec = getNowSec();
+    if (row.linked_key_active === 1 && (row.linked_key_expires_at == null || row.linked_key_expires_at > nowSec)) {
+      return adminErrorResponse(409, "Cannot release claim while the linked self-serve key is still active");
+    }
+    await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
+    if (row.status === "pending_verification") {
+      await markRequestExpired(db, requestId, nowSec);
+    }
+    const resultStatus = row.status === "pending_verification" ? "expired" : row.status;
+    await recordRequestAdminAction(db, {
+      action: "api_key_request_release_claim",
+      requestId,
+      status: 200,
+      resultStatus,
+      claimStatus: "released",
+      reason: parsedBody.reason,
+      nowSec,
+    });
+    return adminJsonResponse(buildAdminMutationResponse(
+      requestId,
+      resultStatus,
+      "released",
+    ));
+  },
+);
 
 export function handleApiKeyRequestReleaseClaim(
   db: D1Database,
@@ -135,42 +174,5 @@ export function handleApiKeyRequestReleaseClaim(
   trustedAdmin: boolean,
   request: Request,
 ): Promise<Response> {
-  return runAdminRoute(
-    {
-      endpoint: "api-key-request-release-claim",
-      request,
-      trustedAdmin,
-      db,
-      action: "api-key-request-release-claim",
-    },
-    async () => {
-      const parsedBody = await parseAdminMutationBody(request);
-      if (parsedBody instanceof Response) return parsedBody;
-      const row = await selectRequestWithKeyStateByRequestId(db, requestId);
-      if (!row) return adminErrorResponse(404, "API key request not found");
-      const nowSec = getNowSec();
-      if (row.linked_key_active === 1 && (row.linked_key_expires_at == null || row.linked_key_expires_at > nowSec)) {
-        return adminErrorResponse(409, "Cannot release claim while the linked self-serve key is still active");
-      }
-      await releaseEmailClaim(db, row.email_hash, requestId, nowSec);
-      if (row.status === "pending_verification") {
-        await markRequestExpired(db, requestId, nowSec);
-      }
-      const resultStatus = row.status === "pending_verification" ? "expired" : row.status;
-      await recordRequestAdminAction(db, {
-        action: "api_key_request_release_claim",
-        requestId,
-        status: 200,
-        resultStatus,
-        claimStatus: "released",
-        reason: parsedBody.reason,
-        nowSec,
-      });
-      return adminJsonResponse(buildAdminMutationResponse(
-        requestId,
-        resultStatus,
-        "released",
-      ));
-    },
-  );
+  return handleApiKeyRequestReleaseClaimRoute({ db, requestId, trustedAdmin, request });
 }

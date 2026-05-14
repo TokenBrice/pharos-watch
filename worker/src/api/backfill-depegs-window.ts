@@ -1,6 +1,6 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { errorResponse } from "../lib/api-utils";
+import { errorResponse, parseDayStartParam } from "../lib/api-utils";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 const BACKFILL_REPLAY_CONTEXT_DAYS = 7;
 const MAX_BACKFILL_REPLAY_CONTEXT_DAYS = 90;
@@ -13,20 +13,6 @@ export interface BackfillReplayWindow {
   compareEndSec: number | null;
   replayStartSec: number | null;
   replayEndSec: number | null;
-}
-
-function parseDayParam(raw: string | null): number | null {
-  if (!raw) return null;
-  if (/^\d+$/.test(raw)) {
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return null;
-    const seconds = parsed > 1e12 ? Math.floor(parsed / 1000) : parsed;
-    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
-  }
-
-  const parsedMs = Date.parse(raw);
-  if (Number.isNaN(parsedMs)) return null;
-  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
 }
 
 function parseContextDaysParam(raw: string | null): number | null {
@@ -67,8 +53,8 @@ export function parseOptionalDayWindow(
 ): OptionalDayWindow | Response {
   const startDayRaw = url.searchParams.get("startDay");
   const endDayRaw = url.searchParams.get("endDay");
-  const parsedStartDay = parseDayParam(startDayRaw);
-  const parsedEndDay = parseDayParam(endDayRaw);
+  const parsedStartDay = parseDayStartParam(startDayRaw);
+  const parsedEndDay = parseDayStartParam(endDayRaw);
   const invalidDayMessage =
     options.invalidDayMessage ??
     "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.";

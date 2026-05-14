@@ -1,10 +1,10 @@
 import { handleStatus } from "../api/status";
-import { handleStatusHistory } from "../api/status-history";
+import { handleStatusHistoryRoute } from "../api/status-history";
 import { handleRequestSourceStats } from "../api/request-source-stats";
 import { handleYieldSourceDecisions } from "../api/yield-source-decisions";
 import { handleApiKeyAuditLog } from "../api/api-key-audit-log";
-import { handleApiKeys } from "../api/api-keys";
-import { handleApiKeyRequestsAdmin } from "../api/api-key-requests";
+import { handleApiKeysRoute } from "../api/api-keys";
+import { handleApiKeyRequestsAdminRoute } from "../api/api-key-requests";
 import { handleDiscoveryCandidates } from "../api/discovery";
 import { handleAdminActionLog } from "../api/admin-action-log";
 import { handleDebugSyncState, handleResetBlacklistSync, handleTriggerDigest } from "../api/admin-actions";
@@ -14,16 +14,14 @@ import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 export const OPS_STATIC_ROUTES = [
   defineStaticRoute("status", ({ db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings }) =>
     handleStatus(db, trustedAdmin, request, coingeckoApiKey, cloudflareD1StatusBindings)),
-  defineStaticRoute("status-history", ({ db, trustedAdmin, request }) => handleStatusHistory(db, trustedAdmin, request)),
+  defineStaticRoute("status-history", handleStatusHistoryRoute),
   defineStaticRoute("request-source-stats", ({ db, trustedAdmin, request }) =>
     handleRequestSourceStats(db, trustedAdmin, request)),
   defineStaticRoute("yield-source-decisions", handleYieldSourceDecisions),
-  defineStaticRoute("api-keys", ({ db, trustedAdmin, request, apiKeyHashPepper }) =>
-    handleApiKeys(db, trustedAdmin, request, apiKeyHashPepper)),
+  defineStaticRoute("api-keys", handleApiKeysRoute),
   defineStaticRoute("api-key-audit-log", ({ db, trustedAdmin, request }) =>
     handleApiKeyAuditLog(db, trustedAdmin, request)),
-  defineStaticRoute("api-key-requests-admin", ({ db, trustedAdmin, request }) =>
-    handleApiKeyRequestsAdmin(db, trustedAdmin, request)),
+  defineStaticRoute("api-key-requests-admin", handleApiKeyRequestsAdminRoute),
   defineStaticRoute("trigger-digest", handleTriggerDigest),
   defineStaticRoute("admin-action-log", handleAdminActionLog),
   defineStaticRoute("reset-blacklist-sync", handleResetBlacklistSync),

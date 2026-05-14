@@ -5,6 +5,7 @@ import {
   fetchPaginatedEvents,
   handleStablecoinHistoryRequest,
   parseClampedIntegerParam,
+  parseDayStartParam,
   parseFloatParam,
   parseIntParam,
   parseOptionalNonNegativeIntegerParam,
@@ -12,9 +13,11 @@ import {
   parseOptionalPositiveIntegerParam,
   parseOptionalRequestJsonObject,
   parseEnumParam,
+  parseRequestJsonWithSchema,
   parseRequiredStablecoinIdParam,
   parseQueryParams,
   parseStablecoinHistoryQuery,
+  parseTimestampSecondsParam,
   jsonResponse,
   jsonFreshResponse,
   validatePayloadWithSchema,
@@ -345,6 +348,70 @@ describe("parseOptionalRequestJsonObject", () => {
     const response = await parseOptionalRequestJsonObject(request);
     expect(response).toBeInstanceOf(Response);
     await expect((response as Response).json()).resolves.toEqual({ error: "Invalid JSON body" });
+  });
+});
+
+describe("parseRequestJsonWithSchema", () => {
+  const schema = z.object({ ok: z.boolean() });
+
+  it("returns parsed schema data for valid JSON", async () => {
+    const request = new Request("https://api.pharos.watch/api/test", {
+      method: "POST",
+      body: JSON.stringify({ ok: true }),
+    });
+
+    await expect(parseRequestJsonWithSchema(request, schema)).resolves.toEqual({ ok: true });
+  });
+
+  it("returns configured schema errors", async () => {
+    const request = new Request("https://api.pharos.watch/api/test", {
+      method: "POST",
+      body: JSON.stringify({ ok: "yes" }),
+    });
+
+    const response = await parseRequestJsonWithSchema(request, schema, {
+      formatSchemaError: () => "Custom schema error",
+      responseOptions: { noStore: true },
+    });
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(400);
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      await expect(response.json()).resolves.toEqual({ error: "Custom schema error" });
+    }
+  });
+
+  it("returns invalid JSON errors before schema validation", async () => {
+    const request = new Request("https://api.pharos.watch/api/test", {
+      method: "POST",
+      body: "{",
+    });
+
+    const response = await parseRequestJsonWithSchema(request, schema);
+    expect(response).toBeInstanceOf(Response);
+    if (response instanceof Response) {
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "Invalid JSON body" });
+    }
+  });
+});
+
+describe("timestamp and day query parsers", () => {
+  it("parses Unix seconds, milliseconds, and ISO timestamps to seconds", () => {
+    expect(parseTimestampSecondsParam("1735689600")).toBe(1_735_689_600);
+    expect(parseTimestampSecondsParam("1735689600000")).toBe(1_735_689_600);
+    expect(parseTimestampSecondsParam("2025-01-01T00:00:00Z")).toBe(1_735_689_600);
+  });
+
+  it("returns null for missing or malformed timestamps", () => {
+    expect(parseTimestampSecondsParam(null)).toBeNull();
+    expect(parseTimestampSecondsParam("  ")).toBeNull();
+    expect(parseTimestampSecondsParam("not-a-time")).toBeNull();
+  });
+
+  it("normalizes date-like values to UTC day starts", () => {
+    expect(parseDayStartParam("2025-01-01T12:34:56Z")).toBe(1_735_689_600);
+    expect(parseDayStartParam("1735734896000")).toBe(1_735_689_600);
   });
 });
 

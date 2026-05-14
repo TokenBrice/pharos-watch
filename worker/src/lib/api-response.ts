@@ -1,4 +1,3 @@
-import type { ZodType } from "zod";
 import { addFreshnessHeaders } from "./api-freshness";
 
 type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
@@ -117,18 +116,4 @@ export async function respondWithFreshSnapshot<T extends { updatedAt: number }>(
     updatedAt: snapshot.updatedAt,
     maxAgeSec: args.maxAgeSec,
   });
-}
-
-export function validatePayloadWithSchema<T>(
-  schema: ZodType<T>,
-  payload: unknown,
-  context: string,
-): { ok: true; data: T } | { ok: false; issues: string } {
-  const parsed = schema.safeParse(payload);
-  if (parsed.success) return { ok: true, data: parsed.data };
-  const issues = parsed.error.issues
-    .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
-    .join(", ");
-  console.error(`[validate] ${context} schema validation failed: ${issues}`);
-  return { ok: false, issues };
 }

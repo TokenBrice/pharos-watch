@@ -266,6 +266,47 @@ describe("handleBackfillDEWS", () => {
     ]);
   });
 
+  it("accepts PSI shadow IDs for prune-history repair filters", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date >= ? AND snapshot_date <= ? AND stablecoin_id = ?",
+        matchBinds: [1_773_100_800, 1_773_273_600, "ust-terra"],
+        rows: [],
+        first: { cnt: 1 },
+      },
+      {
+        match: "ORDER BY snapshot_date ASC, stablecoin_id ASC",
+        matchBinds: [1_773_100_800, 1_773_273_600, "ust-terra"],
+        rows: [{ stablecoin_id: "ust-terra", snapshot_date: 1_773_100_800 }],
+      },
+      {
+        match: "SELECT MIN(snapshot_date) as min_day FROM stress_signal_history WHERE stablecoin_id = ?",
+        matchBinds: ["ust-terra"],
+        rows: [],
+        first: { min_day: 1_773_100_800 },
+      },
+      {
+        match: "SELECT MIN(snapshot_date) as min_day FROM stress_signal_history WHERE stablecoin_id = ? AND snapshot_date > ?",
+        matchBinds: ["ust-terra", 1_773_273_600],
+        rows: [],
+        first: { min_day: null },
+      },
+    ]);
+    const request = makeApiRequest(
+      "/api/backfill-dews?repair=prune-history&dry-run=true&stablecoin=ust-terra&startDay=2026-03-10&endDay=2026-03-12",
+      { adminKey: "secret" },
+    );
+
+    const response = await handleBackfillDEWS(db, makeApiUrl(request.url), true, request);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      stablecoinId: string | null;
+      candidateRowsSample: Array<{ stablecoinId: string; snapshotDate: number }>;
+    };
+    expect(body.stablecoinId).toBe("ust-terra");
+    expect(body.candidateRowsSample).toEqual([{ stablecoinId: "ust-terra", snapshotDate: 1_773_100_800 }]);
+  });
+
   it("deletes only the requested DEWS history window on POST prune repair", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-08T12:00:00.000Z"));
