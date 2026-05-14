@@ -95,6 +95,10 @@ Snapshot-strip reads:
 
 Repeated hook usage is expected. These surfaces share TanStack Query cache state rather than passing one large route payload through props.
 
+### `HomepageTape`
+
+The live tape reads `useRecentEvents(20)`, which resolves to `GET /api/recent-events?limit=20` and is delivered to browsers through same-origin `/_site-data/recent-events?limit=20` on production Pages hosts. The component renders nothing on endpoint errors or a valid empty event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+
 ---
 
 ## URL Filter Contract

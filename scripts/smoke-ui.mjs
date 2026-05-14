@@ -18,6 +18,7 @@ const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
 const DEFAULT_LOCAL_OVERFLOW_WORKERS = 2;
 const DEFAULT_LIVE_OVERFLOW_WORKERS = 1;
 const MAX_OVERFLOW_WORKERS = 6;
+export const HOMEPAGE_RECENT_EVENTS_SMOKE_PATH = "/_site-data/recent-events?limit=1";
 const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/freezewatch/", "/stability-index/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
@@ -220,6 +221,43 @@ function buildSmokeRunCode(config) {
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const matchesAny = (text, values) => values.some((value) => text.includes(value));
       const timeoutAt = Date.now() + waitTimeoutMs;
+      const captureRecentEventsContract = async () => {
+        try {
+          const response = await fetch(${JSON.stringify(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH)}, {
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+          });
+          const text = await response.text();
+          let body = null;
+          try {
+            body = text ? JSON.parse(text) : null;
+          } catch {
+            return {
+              bodyPreview: text.slice(0, 180),
+              count: null,
+              ok: false,
+              status: response.status,
+              error: "invalid JSON",
+            };
+          }
+          const events = body && Array.isArray(body.events) ? body.events : null;
+          return {
+            bodyPreview: text.slice(0, 180),
+            count: events ? events.length : null,
+            ok: response.ok && events !== null,
+            status: response.status,
+            error: response.ok && events === null ? "missing events[]" : null,
+          };
+        } catch (error) {
+          return {
+            bodyPreview: "",
+            count: null,
+            ok: false,
+            status: null,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
+      };
 
       while (Date.now() < timeoutAt) {
         const text = document.body?.innerText ?? "";
@@ -246,6 +284,7 @@ function buildSmokeRunCode(config) {
             hasLiveRefreshDelayed,
             hasNoStablecoinData,
             hasStablecoins404,
+            recentEvents: await captureRecentEventsContract(),
             rows,
             textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
             timedOut: false,
@@ -266,6 +305,7 @@ function buildSmokeRunCode(config) {
         hasLiveRefreshDelayed: matchesAny(text, ["Live refresh delayed", "Live refresh is running behind"]),
         hasNoStablecoinData: text.includes("No stablecoin data available"),
         hasStablecoins404: text.includes("stablecoins:404"),
+        recentEvents: await captureRecentEventsContract(),
         rows: document.querySelectorAll("table tbody tr").length,
         textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
         timedOut: true,
@@ -504,6 +544,20 @@ function buildSmokeRunCode(config) {
 }`;
 }
 
+function formatRecentEventsSmoke(summary) {
+  if (!summary || typeof summary !== "object") {
+    return "missing recent-events smoke result";
+  }
+  const status = summary.status == null ? "n/a" : String(summary.status);
+  const count = summary.count == null ? "n/a" : String(summary.count);
+  const error = typeof summary.error === "string" && summary.error.length > 0 ? summary.error : "none";
+  const preview =
+    typeof summary.bodyPreview === "string" && summary.bodyPreview.length > 0
+      ? summary.bodyPreview.replace(/\s+/g, " ").replace(/"/g, "'").slice(0, 180)
+      : "n/a";
+  return `status=${status}, events=${count}, error=${error}, preview="${preview}"`;
+}
+
 function formatOverflowFailure(summary) {
   const sampledDeltas = Array.isArray(summary.sampledDeltas) ? summary.sampledDeltas.join(",") : "n/a";
   const offenders =
@@ -535,7 +589,7 @@ function formatUiSummary(summary) {
     typeof summary.textPreview === "string" && summary.textPreview.length > 0
       ? summary.textPreview.replace(/"/g, "'")
       : "n/a";
-  return `title="${summary.title}", rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}, markers=${markerSummary}, preview="${preview}"`;
+  return `title="${summary.title}", rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}, markers=${markerSummary}, recentEvents=(${formatRecentEventsSmoke(summary.recentEvents)}), preview="${preview}"`;
 }
 
 export function hasGaConfigInit(html, expectedGaId) {
@@ -726,12 +780,17 @@ export async function run() {
     assert(!summary.hasNoStablecoinData, "Found 'No stablecoin data available' empty state");
     assert(summary.rows > 0, "Expected at least one stablecoin row in the homepage table");
     assert(summary.hasKnownTicker, "Could not find a known ticker (USDT/USDC) in homepage text");
+    assert(
+      summary.recentEvents?.ok === true,
+      `Homepage recent-events site-data check failed (${formatRecentEventsSmoke(summary.recentEvents)}; ${formatUiSummary(summary)})`,
+    );
 
     if (summary.hasLiveRefreshDelayed) {
       console.log(`[smoke-ui] WARN homepage shows a stale-data banner (${formatUiSummary(summary)})`);
     }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
+    console.log(`[smoke-ui] OK recent-events site-data ${formatRecentEventsSmoke(summary.recentEvents)}`);
 
     if (expectedGaId) {
       const runtime = homepageResult.analyticsRuntime;

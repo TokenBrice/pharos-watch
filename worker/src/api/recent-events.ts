@@ -262,7 +262,7 @@ export const handleRecentEvents = withErrorHandler(
       if (event) events.push(event);
     }
 
-    events.sort((a, b) => b.ts - a.ts);
+    events.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
     const top = events.slice(0, limit);
 
     const nowSec = Math.floor(Date.now() / 1000);

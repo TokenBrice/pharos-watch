@@ -195,6 +195,43 @@ describe("handleRecentEvents", () => {
     expect(body.events.map((e) => e.ts)).toEqual([1_747_300_000, 1_747_200_000]);
   });
 
+  it("uses event id as a deterministic tie-breaker for same-second rows", async () => {
+    const db = mockD1([
+      { match: "ended_at IS NOT NULL", rows: [] },
+      { match: "ended_at IS NULL", rows: [] },
+      {
+        match: "blacklist_events",
+        rows: [
+          {
+            id: "eth-0xdef-13",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            amount_usd_at_event: 200,
+            timestamp: 1_747_300_000,
+          },
+          {
+            id: "eth-0xabc-12",
+            stablecoin: "USDT",
+            chain_id: "ethereum",
+            chain_name: "Ethereum",
+            event_type: "blacklist",
+            amount_usd_at_event: 500,
+            timestamp: 1_747_300_000,
+          },
+        ],
+      },
+      { match: "safety_grade_history", rows: [] },
+    ]);
+    const res = await handleRecentEvents(db, new URL(URL_BASE));
+    const body = RecentEventsResponseSchema.parse(await res.json());
+    expect(body.events.map((e) => e.id)).toEqual([
+      "freeze.blocked:eth-0xabc-12",
+      "freeze.blocked:eth-0xdef-13",
+    ]);
+  });
+
   it("emits freshness headers", async () => {
     const res = await handleRecentEvents(emptyDb(), new URL(URL_BASE));
     expect(res.headers.get("X-Data-Age")).toMatch(/^\d+$/);

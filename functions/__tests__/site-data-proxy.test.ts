@@ -251,6 +251,39 @@ describe("site-data proxy", () => {
       && entry.binds[5] === 1)).toBe(true);
   });
 
+  it("proxies the homepage recent-events tape path with its query string", async () => {
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ events: [] }), {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60",
+        "Content-Type": "application/json",
+      },
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const response = await onRequest({
+      request: new Request("https://pharos.watch/_site-data/recent-events?limit=1", {
+        headers: { Origin: "https://pharos.watch" },
+      }),
+      env: makeEnv(),
+      params: { path: "recent-events" },
+    });
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "https://site-api.pharos.watch/api/recent-events?limit=1",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.any(Headers),
+      }),
+    );
+
+    const fetchInit = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    const forwardedHeaders = fetchInit.headers as Headers;
+    expect(forwardedHeaders.get("X-Pharos-Site-Proxy-Secret")).toBe("shared-secret");
+    await expect(response.json()).resolves.toEqual({ events: [] });
+  });
+
   it("records site-data attribution through waitUntil when the Pages DB binding is present", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
       status: 200,

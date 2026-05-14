@@ -7,6 +7,7 @@ import {
   getOverflowRoutes,
   getOverflowWorkerCount,
   hasGaConfigInit,
+  HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
@@ -154,6 +155,12 @@ describe("getOverflowRoutes", () => {
         process.env.SMOKE_UI_OVERFLOW_ROUTES = previousRoutes;
       }
     }
+  });
+});
+
+describe("HOMEPAGE_RECENT_EVENTS_SMOKE_PATH", () => {
+  it("checks the same same-origin site-data path used by the homepage tape", () => {
+    expect(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH).toBe("/_site-data/recent-events?limit=1");
   });
 });
 
