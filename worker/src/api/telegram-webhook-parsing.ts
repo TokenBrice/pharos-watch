@@ -22,7 +22,13 @@ function logPendingParseWarning(pending: PendingDisambiguationRow, field: string
 }
 
 function parsePendingActionType(value: string | null | undefined): PendingActionType | null {
-  if (value === "subscribe" || value === "unsubscribe" || value === "set" || value === "confirm-bulk") {
+  if (
+    value === "subscribe"
+    || value === "unsubscribe"
+    || value === "set"
+    || value === "confirm-bulk"
+    || value === "forget-confirm"
+  ) {
     return value;
   }
   return null;
@@ -184,6 +190,14 @@ export function parsePendingDisambiguation(pending: PendingDisambiguationRow): P
     return {
       actionType,
       payload: bulkPayload,
+      initiatorUserId: pending.initiator_user_id ?? null,
+    };
+  }
+
+  if (actionType === "forget-confirm") {
+    // No payload required; presence of the row + non-expired TTL is the gate.
+    return {
+      actionType,
       initiatorUserId: pending.initiator_user_id ?? null,
     };
   }

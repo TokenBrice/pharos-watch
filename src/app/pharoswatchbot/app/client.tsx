@@ -826,6 +826,20 @@ function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state:
       const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol ?? "Coin";
       return `${symbol} removed from watchlist.`;
     }
+    case "set-snooze":
+      return `Snoozed for ${operation.durationToken}.`;
+    case "set-coin-snooze": {
+      const symbol = state?.subscriptions.find((c) => c.stablecoinId === operation.stablecoinId)?.symbol ?? "Coin";
+      return operation.durationToken === "clear"
+        ? `${symbol} snooze cleared.`
+        : `${symbol} snoozed for ${operation.durationToken}.`;
+    }
+    case "set-timezone":
+      return operation.timezone == null ? "Timezone cleared." : `Timezone set to ${operation.timezone}.`;
+    case "unsubscribe-all":
+      return "All subscriptions cleared.";
+    case "forget-me":
+      return "All your data has been deleted.";
     case "follow-preset":
       return "Preset followed.";
     case "unfollow-preset":

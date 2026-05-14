@@ -33,6 +33,9 @@ export const TelegramMiniAppSessionRequestSchema = z.object({
   initData: z.string().min(1).max(8 * 1024),
 }).strict();
 
+const SnoozeDurationTokenSchema = z.enum(["1h", "4h", "24h"]);
+const CoinSnoozeDurationTokenSchema = z.enum(["1h", "4h", "24h", "clear"]);
+
 const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("recommended-setup"),
@@ -62,6 +65,21 @@ const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
     { message: "quiet-hours start and end must differ" },
   ),
   z.object({ kind: z.literal("clear-snooze") }).strict(),
+  z.object({
+    kind: z.literal("set-snooze"),
+    durationToken: SnoozeDurationTokenSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal("set-coin-snooze"),
+    stablecoinId: z.string().min(1),
+    durationToken: CoinSnoozeDurationTokenSchema,
+  }).strict(),
+  z.object({
+    kind: z.literal("set-timezone"),
+    timezone: z.string().min(1).max(64).nullable(),
+  }).strict(),
+  z.object({ kind: z.literal("unsubscribe-all") }).strict(),
+  z.object({ kind: z.literal("forget-me") }).strict(),
   z.object({
     kind: z.literal("set-coin"),
     stablecoinId: z.string().min(1),

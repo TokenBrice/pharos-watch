@@ -19,6 +19,7 @@ import { handleTimezone } from "./timezone";
 import { handleUnmuteHours } from "./unmutehours";
 import { handleUnsnooze } from "./unsnooze";
 import { handleCancel } from "./cancel";
+import { handleForget } from "./forget";
 
 export type { WebhookCommandContext, WebhookCommandHandler } from "./context";
 
@@ -52,4 +53,5 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/unmutehours": handleUnmuteHours,
   "/unsnooze": handleUnsnooze,
   "/cancel": handleCancel,
+  "/forget": handleForget,
 };

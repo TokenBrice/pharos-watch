@@ -2,21 +2,36 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { batchExecute } from "../lib/db";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";
+import { SNOOZE_SECONDS } from "../lib/telegram-constants";
+import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
-import { clearSnoozeViaSettings, prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
+import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import {
+  clearAlertSnooze,
+  forgetSubscriber,
   prepareRemovePresetSubscriptionStatements,
   prepareRemoveSubscriptionStatements,
   prepareSubscriberAndPresetStatements,
   prepareSubscriberAndSubscriptionStatements,
   setGlobalDepegWorseningStep,
+  setSubscriberSnooze,
+  setSubscriberTimezone,
+  setSubscriptionSnooze,
+  unsubscribeAll,
   upsertSubscriberRow,
   unixNow,
   type UpsertSubscriberInput,
 } from "./telegram-webhook-store";
 import type { TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 
-export type TelegramMiniAppMutationErrorCode = "not-private" | "unknown-coin" | "unknown-preset" | "empty-alert-types" | "preset-unavailable" | "invalid-coin-patch";
+export type TelegramMiniAppMutationErrorCode =
+  | "not-private"
+  | "unknown-coin"
+  | "unknown-preset"
+  | "empty-alert-types"
+  | "preset-unavailable"
+  | "invalid-coin-patch"
+  | "invalid-timezone";
 
 export class TelegramMiniAppMutationError extends Error {
   readonly code: TelegramMiniAppMutationErrorCode;
@@ -163,7 +178,31 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       await setQuietHours(db, chatId, username, operation);
       return;
     case "clear-snooze":
-      await clearSnoozeViaSettings(db, chatId, username);
+      await clearAlertSnooze(db, chatId, username);
+      return;
+    case "set-snooze":
+      await setSubscriberSnooze(db, chatId, username, unixNow() + SNOOZE_SECONDS[operation.durationToken]);
+      return;
+    case "set-coin-snooze":
+      assertCoin(operation.stablecoinId);
+      await setSubscriptionSnooze(
+        db,
+        chatId,
+        operation.stablecoinId,
+        operation.durationToken === "clear" ? null : unixNow() + SNOOZE_SECONDS[operation.durationToken],
+      );
+      return;
+    case "set-timezone":
+      if (operation.timezone != null && !isValidIanaTimezone(operation.timezone)) {
+        throw new TelegramMiniAppMutationError("invalid-timezone");
+      }
+      await setSubscriberTimezone(db, chatId, username, operation.timezone);
+      return;
+    case "unsubscribe-all":
+      await unsubscribeAll(db, chatId);
+      return;
+    case "forget-me":
+      await forgetSubscriber(db, chatId);
       return;
     case "set-coin":
       await setCoin(db, chatId, username, operation);
@@ -199,5 +238,9 @@ export function mutationActionDetail(operation: TelegramMiniAppOperation): strin
   if (operation.kind === "set-coin" || operation.kind === "remove-coin") return "coin";
   if (operation.kind === "recommended-setup" || operation.kind === "follow-preset" || operation.kind === "unfollow-preset") return "preset";
   if (operation.kind === "set-quiet-hours") return "quiet_hours";
+  if (operation.kind === "set-snooze") return "chat";
+  if (operation.kind === "set-coin-snooze") return "coin";
+  if (operation.kind === "set-timezone") return "mini_app";
+  if (operation.kind === "unsubscribe-all") return "mini_app_all";
   return operation.kind;
 }

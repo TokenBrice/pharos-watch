@@ -127,7 +127,7 @@ In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-
 // `DISAMBIGUATION_TTL_SEC` is defined in `../lib/telegram-constants` and
 // re-exported from the top of this module.
 
-export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk";
+export type PendingActionType = "subscribe" | "unsubscribe" | "set" | "confirm-bulk" | "forget-confirm";
 
 /**
  * Stored payload for a "confirm-bulk" pending action. Captures everything
@@ -315,6 +315,10 @@ export type PendingAction =
   | {
       actionType: "confirm-bulk";
       payload: ConfirmBulkPayload;
+      initiatorUserId: string | null;
+    }
+  | {
+      actionType: "forget-confirm";
       initiatorUserId: string | null;
     };
 

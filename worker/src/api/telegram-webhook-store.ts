@@ -488,6 +488,32 @@ export async function persistPendingConfirmBulk(
   });
 }
 
+/**
+ * Persist a "forget-confirm" pending action. Mirrors `persistPendingConfirmBulk`
+ * — same TTL, same ownership rules — but uses a distinct `action_type` so the
+ * `/forget` two-step flow stays separate from the `/subscribe all` / bulk
+ * confirmation flow.
+ */
+export async function persistPendingForgetConfirm(
+  db: D1Database,
+  input: {
+    chatId: string;
+    initiatorUserId: string | null;
+  },
+): Promise<boolean> {
+  return persistPendingDisambiguationRow(db, {
+    chatId: input.chatId,
+    actionType: "forget-confirm",
+    actionPayload: {},
+    alertTypes: [],
+    resolvedIds: [],
+    ambiguousTicker: "",
+    candidates: [],
+    remainingTickers: [],
+    initiatorUserId: input.initiatorUserId,
+  });
+}
+
 export async function loadSubscriberByChat(
   db: D1Database,
   chatId: string,
@@ -809,6 +835,113 @@ export async function setSubscriberTimezone(
     )
     .bind(chatId, username, timezone, now, now)
     .run();
+}
+
+/**
+ * Apply a chat-wide alert snooze. Mirrors the inline SQL the snooze callback
+ * (`telegram-webhook-callbacks.ts:367-385`) writes today; routed through the
+ * store so the Mini App `set-snooze` mutation stays seam-compliant.
+ */
+export async function setSubscriberSnooze(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  untilSec: number,
+): Promise<void> {
+  const now = unixNow();
+  await db
+    .prepare(
+      `INSERT INTO telegram_subscribers (
+         chat_id, username,
+         alert_dews, alert_depeg, alert_safety, alert_launch,
+         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+         alert_snooze_until_ts,
+         created_at, last_active_at
+       )
+       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
+       ON CONFLICT(chat_id) DO UPDATE SET
+         username = COALESCE(excluded.username, telegram_subscribers.username),
+         alert_snooze_until_ts = excluded.alert_snooze_until_ts,
+         last_active_at = excluded.last_active_at`,
+    )
+    .bind(chatId, username, untilSec, now, now)
+    .run();
+}
+
+/**
+ * Apply a per-coin snooze (or clear it). Mirrors the inline SQL the
+ * `coinsnooze:` callback (`telegram-webhook-callbacks.ts:434-449`) writes today.
+ * Inserts a zero-flagged subscription row when none exists so the dispatcher
+ * filter for `alert_snooze_until_ts` takes effect on global fan-out as well.
+ */
+export async function setSubscriptionSnooze(
+  db: D1Database,
+  chatId: string,
+  stablecoinId: string,
+  untilSec: number | null,
+): Promise<void> {
+  const now = unixNow();
+  await db.batch([
+    db
+      .prepare(
+        `INSERT INTO telegram_subscriptions (
+           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+           alert_snooze_until_ts
+         )
+         VALUES (?, ?, 0, 0, 0, 0, ?)
+         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+           alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
+      )
+      .bind(chatId, stablecoinId, untilSec),
+    db
+      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
+      .bind(now, chatId),
+  ]);
+}
+
+/**
+ * Atomically wipe every subscription, preset follow, and global-alert flag
+ * for the chat. Mirrors the inline SQL the bulk-confirm `unsubscribeAll` path
+ * (`telegram-webhook-callbacks.ts:1082-1106`) writes today.
+ */
+export async function unsubscribeAll(db: D1Database, chatId: string): Promise<void> {
+  const now = unixNow();
+  await db.batch([
+    db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
+    db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET alert_dews = 0,
+                alert_depeg = 0,
+                alert_safety = 0,
+                alert_launch = 0,
+                global_alert_dews = 0,
+                global_alert_depeg = 0,
+                global_alert_safety = 0,
+                global_alert_launch = 0,
+                global_depeg_worsening_bps_step = NULL,
+                last_active_at = ?
+          WHERE chat_id = ?`,
+      )
+      .bind(now, chatId),
+  ]);
+}
+
+/**
+ * Delete every row this subscriber owns across the Telegram tables. Retains
+ * `telegram_processed_updates` so replay-ack idempotency survives a re-/start.
+ */
+export async function forgetSubscriber(db: D1Database, chatId: string): Promise<void> {
+  await db.batch([
+    db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_pending_alerts WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(chatId),
+    db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
+  ]);
 }
 
 export async function clearAlertSnooze(

@@ -149,7 +149,7 @@ describe("parsePendingDisambiguation", () => {
       remainingTickers: ["USDC"],
       resolvedCoins: [],
     });
-    if (parsed && parsed.actionType !== "confirm-bulk") {
+    if (parsed && parsed.actionType !== "confirm-bulk" && parsed.actionType !== "forget-confirm") {
       expect(parsed.candidates).toHaveLength(2);
     }
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("field=resolved_ids"));

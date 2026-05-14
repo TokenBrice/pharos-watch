@@ -49,12 +49,20 @@ export interface TelegramMiniAppState {
   };
 }
 
+export type TelegramSnoozeDurationToken = "1h" | "4h" | "24h";
+export type TelegramCoinSnoozeDurationToken = TelegramSnoozeDurationToken | "clear";
+
 export type TelegramMiniAppOperation =
   | { kind: "recommended-setup"; presetId: "usd-top25"; alertTypes: ["dews", "depeg"] }
   | { kind: "set-global"; alertType: TelegramAlertType; enabled: boolean }
   | { kind: "set-global-depeg-step"; depegStepBps: TelegramDepegStepBps | null }
   | { kind: "set-quiet-hours"; enabled: boolean; startHourUtc?: number; endHourUtc?: number }
   | { kind: "clear-snooze" }
+  | { kind: "set-snooze"; durationToken: TelegramSnoozeDurationToken }
+  | { kind: "set-coin-snooze"; stablecoinId: string; durationToken: TelegramCoinSnoozeDurationToken }
+  | { kind: "set-timezone"; timezone: string | null }
+  | { kind: "unsubscribe-all" }
+  | { kind: "forget-me" }
   | { kind: "set-coin"; stablecoinId: string; patch: { alertTypes?: Partial<Record<TelegramAlertType, boolean>>; dewsMinBand?: TelegramDewsBand | null; depegStepBps?: TelegramDepegStepBps | null; safetyMode?: TelegramSafetyMode | null; launch?: boolean } }
   | { kind: "remove-coin"; stablecoinId: string }
   | { kind: "follow-preset"; presetId: string; alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>; depegStepBps?: TelegramDepegStepBps | null }

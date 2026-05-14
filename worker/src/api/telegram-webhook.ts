@@ -351,8 +351,8 @@ export const handleTelegramWebhook = withErrorHandler(
 
       if (pendingActive && pendingAction) {
         if (!parsedCommand) {
-          if (pendingAction.actionType === "confirm-bulk") {
-            // Bulk-confirm pending waits for an inline button tap, not a text reply.
+          if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+            // Bulk-confirm and forget-confirm pendings wait for an inline button tap, not a text reply.
             // Ignore plain text in groups; in private chats, nudge toward the buttons.
             if (isGroupChat(chatType)) return finishOk();
             await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
@@ -391,8 +391,8 @@ export const handleTelegramWebhook = withErrorHandler(
           await clearPendingDisambiguation(db, chatId);
           // Falls through to the gating + dispatch below.
         } else {
-          if (pendingAction.actionType === "confirm-bulk") {
-            await reply("You have a pending bulk confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
+          if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+            await reply("You have a pending confirmation. Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
             return finishOk();
           }
           await reply(`You have a pending selection. Reply with the number(s) you want, or use /cancel.
@@ -701,8 +701,8 @@ async function handleDisambiguationReply(
   botToken: string,
   username: string | null,
 ): Promise<void> {
-  if (pending.actionType === "confirm-bulk") {
-    // confirm-bulk uses inline buttons; plain text replies are handled upstream.
+  if (pending.actionType === "confirm-bulk" || pending.actionType === "forget-confirm") {
+    // Bulk-confirm and forget-confirm use inline buttons; plain text replies are handled upstream.
     return;
   }
   const selectedIndices = parseDisambiguationReply(text, pending.candidates.length);

@@ -510,6 +510,7 @@ describe("reconcileTelegramCommandRegistration", () => {
       "unsnooze",
       "unmutehours",
       "cancel",
+      "forget",
     ]);
 
     const groupBody = JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string);

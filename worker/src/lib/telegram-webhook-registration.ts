@@ -61,6 +61,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "unsnooze", description: "Clear active alert snooze" },
   { command: "unmutehours", description: "Disable quiet hours" },
   { command: "cancel", description: "Cancel a pending ticker selection" },
+  { command: "forget", description: "Delete all your subscriber data" },
 ] as const;
 
 export const TELEGRAM_BOT_GROUP_COMMANDS = [

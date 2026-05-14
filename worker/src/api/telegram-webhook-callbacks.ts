@@ -23,6 +23,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { answerCallbackQuery, editMessage } from "../lib/telegram";
 import {
   clearPendingDisambiguation,
+  forgetSubscriber,
   removePresetSubscriptions,
   removeSubscriptions,
   setSubscriberTimezone,
@@ -697,9 +698,19 @@ async function handleBulkActionCallback(
   if (
     (parsed.action !== "confirm" && parsed.action !== "cancel") ||
     !hasExactParts(parsed.parts, 2) ||
-    parsed.arg !== "bulk"
+    (parsed.arg !== "bulk" && parsed.arg !== "forget")
   ) {
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  if (parsed.arg === "forget") {
+    // /forget is private-chat-only; the command handler enforces that on the
+    // outgoing side, but defend in depth in case the keyboard leaks elsewhere.
+    if (callbackChatType(cb) !== "private") {
+      await answerCallbackQuery(cb.id, botToken, { text: "Open a private chat with PharosWatchBot." });
+      return;
+    }
+    await handleForgetConfirmCallback(db, botToken, cb, parsed.action);
     return;
   }
   if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
@@ -963,6 +974,86 @@ function inferCurrentManagePage(cb: TelegramCallbackQuery): number {
   if (prev != null) return prev + 1;
   if (next != null) return next - 1;
   return 0;
+}
+
+async function handleForgetConfirmCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  action: "confirm" | "cancel",
+): Promise<void> {
+  const chatId = cb.message?.chat?.id?.toString();
+  if (!chatId) {
+    await answerCallbackQuery(cb.id, botToken);
+    return;
+  }
+
+  const pendingRow = await db
+    .prepare(
+      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+    )
+    .bind(chatId)
+    .first<PendingDisambiguationRow>();
+
+  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
+    if (pendingRow) {
+      await clearPendingDisambiguation(db, chatId);
+    }
+    await answerCallbackQuery(cb.id, botToken, { text: "This confirmation has expired. Re-run /forget." });
+    return;
+  }
+
+  const pendingAction = parsePendingDisambiguation(pendingRow);
+  if (!pendingAction || pendingAction.actionType !== "forget-confirm") {
+    await answerCallbackQuery(cb.id, botToken, { text: "No forget confirmation is pending." });
+    return;
+  }
+
+  const actorUserId = callbackActorUserId(cb);
+  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
+    await answerCallbackQuery(cb.id, botToken, {
+      text: "Only the user who started this confirmation can complete it.",
+    });
+    return;
+  }
+
+  if (action === "cancel") {
+    await clearPendingDisambiguation(db, chatId);
+    await sendAuditedTelegramReply(db, chatId, "Cancelled.", botToken, {
+      actionDetail: "callback_forget",
+    });
+    await answerCallbackQuery(cb.id, botToken, { text: "Cancelled." });
+    return;
+  }
+
+  try {
+    await forgetSubscriber(db, chatId);
+  } catch (err) {
+    logTelegramEvent({
+      message: "forget execution failed",
+      chatId,
+      userId: cb.from?.id ?? null,
+      action: "forget-confirm",
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await answerCallbackQuery(cb.id, botToken, { text: "Could not delete data. Please try again." });
+    return;
+  }
+  // `forgetSubscriber` already cleared telegram_pending_disambiguation for the
+  // chat, so no extra clearPendingDisambiguation call is required here.
+  await recordTelegramUsageEvent(db, {
+    eventType: "command_forget",
+    actionDetail: "command",
+    outcome: "success",
+  });
+  await sendAuditedTelegramReply(
+    db,
+    chatId,
+    "Your subscriber data has been deleted. Use /start to begin again.",
+    botToken,
+    { actionDetail: "callback_forget" },
+  );
+  await answerCallbackQuery(cb.id, botToken, { text: "Deleted." });
 }
 
 async function handleBulkConfirmCallback(

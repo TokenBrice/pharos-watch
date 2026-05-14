@@ -30,7 +30,11 @@ export type TelegramUsageEventType =
   | "mini_app_coin_add"
   | "mini_app_coin_remove"
   | "mini_app_quiet_hours"
+  | "mini_app_snooze"
+  | "mini_app_coin_snooze"
+  | "mini_app_forget"
   | "mini_app_group_readonly"
+  | "command_forget"
   | "re_engagement_warning";
 
 export type TelegramLifecycleHistorySource = "snapshot" | "live-fallback";
