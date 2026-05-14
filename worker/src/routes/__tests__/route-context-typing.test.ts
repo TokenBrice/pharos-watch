@@ -23,6 +23,12 @@ describe("route context typing", () => {
       return new Response("ok");
     });
 
+    defineStaticRoute("backfill-depegs", async (routeCtx) => {
+      expectTypeOf(routeCtx).toEqualTypeOf<RouteContextFor<EndpointDependenciesForKey<"backfill-depegs">>>();
+      expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
+      return new Response("ok");
+    });
+
     defineStaticRoute("feedback", async (routeCtx) => {
       expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv>();
       expectTypeOf(routeCtx.telegramCreds).toEqualTypeOf<TelegramCreds | null | undefined>();

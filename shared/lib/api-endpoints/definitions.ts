@@ -584,6 +584,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    routeDependencies: ["coingeckoApiKey"],
     probeGroup: "manual",
     statusPageAction: {
       label: "Backfill Depegs",
