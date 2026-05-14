@@ -2,9 +2,9 @@
 
 import {
   TableCell,
-  TableRow,
 } from "@/components/ui/table";
 import {
+  DataTableEmptyRow,
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
@@ -196,13 +196,11 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 </TableCell>
               </InteractiveTableRow>
             );
-          })}
+      })}
       {paginated.length === 0 && (
-        <TableRow>
-          <TableCell colSpan={DEPEG_TRACKER_COLUMNS.length} className="text-center py-12 text-muted-foreground">
-            No depeg events detected.
-          </TableCell>
-        </TableRow>
+        <DataTableEmptyRow colSpan={DEPEG_TRACKER_COLUMNS.length}>
+          No depeg events detected.
+        </DataTableEmptyRow>
       )}
     </DataTableShell>
   );

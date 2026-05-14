@@ -3,9 +3,9 @@
 import Image from "next/image";
 import {
   TableCell,
-  TableRow,
 } from "@/components/ui/table";
 import {
+  DataTableEmptyRow,
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
@@ -187,13 +187,11 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 </TableCell>
               </InteractiveTableRow>
             );
-          })}
+      })}
       {sorted.length === 0 && (
-        <TableRow>
-          <TableCell colSpan={LIQUIDITY_COLUMNS.length} className="text-center text-muted-foreground py-12">
-            {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
-          </TableCell>
-        </TableRow>
+        <DataTableEmptyRow colSpan={LIQUIDITY_COLUMNS.length}>
+          {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
+        </DataTableEmptyRow>
       )}
     </DataTableShell>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankCommandPaletteResults } from "../command-palette";
+import { rankCommandPaletteResults } from "../command-palette-model";
 
 describe("command palette ranking", () => {
   it("demotes frozen entries on tied scores", () => {

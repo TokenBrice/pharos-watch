@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildCommandPaletteResultDescriptors,
   buildCommandPaletteActionDefinitions,
   fuzzyMatch,
   groupCommandPaletteResults,
+  rankCommandPaletteResults,
 } from "@/components/command-palette-model";
 
 describe("command palette model", () => {
@@ -35,5 +37,31 @@ describe("command palette model", () => {
       { section: "Stablecoins", items: [{ section: "Stablecoins", id: "coin" }] },
       { section: "Actions", items: [{ section: "Actions", id: "action" }] },
     ]);
+  });
+
+  it("demotes frozen entries on tied scores", () => {
+    const ranked = rankCommandPaletteResults([
+      { id: "frozen-coin", score: 5, status: "frozen" as const },
+      { id: "active-coin", score: 5, status: "active" as const },
+    ]);
+
+    expect(ranked.map((item) => item.id)).toEqual(["active-coin", "frozen-coin"]);
+  });
+
+  it("builds stablecoin, page, and action descriptors outside the component", () => {
+    const stablecoinResults = buildCommandPaletteResultDescriptors({
+      query: "usdt",
+      history: [],
+      isDark: false,
+    });
+    const pageAndActionResults = buildCommandPaletteResultDescriptors({
+      query: "api",
+      history: [],
+      isDark: false,
+    });
+
+    expect(stablecoinResults.some((result) => result.section === "Stablecoins" && result.href?.includes("/stablecoin/"))).toBe(true);
+    expect(pageAndActionResults.some((result) => result.section === "Pages" && result.href)).toBe(true);
+    expect(pageAndActionResults.some((result) => result.section === "Actions" && result.actionId)).toBe(true);
   });
 });

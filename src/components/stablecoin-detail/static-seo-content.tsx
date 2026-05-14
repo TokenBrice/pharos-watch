@@ -155,9 +155,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
               </h2>
             </div>
 
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              {buildProfileSentence(coin)}
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{buildProfileSentence(coin)}</p>
 
             <div className="flex flex-wrap gap-2" aria-label="Stablecoin taxonomy">
               <Link
@@ -198,9 +196,7 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground">
-                  {summarizeText(summary.text)}
-                </p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text)}</p>
               </div>
             ) : null}
           </div>

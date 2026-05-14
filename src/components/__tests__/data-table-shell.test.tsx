@@ -1,13 +1,22 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import {
+  DataTableEmptyRow,
+  DataTableLoadingRows,
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
 
 const columns: readonly DataTableColumn[] = [{ id: "name", label: "Name" }] as const;
 
 describe("DataTableShell", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("does not force-hide horizontal overflow at desktop breakpoints", () => {
     render(
       <DataTableShell columns={columns}>
@@ -52,5 +61,17 @@ describe("DataTableShell", () => {
 
     expect(sortButton.contains(helpButton)).toBe(false);
     expect(sortButton.closest("th")?.contains(helpButton)).toBe(true);
+  });
+
+  it("renders shared empty and loading rows with the configured columns", () => {
+    render(
+      <DataTableShell columns={columns}>
+        <DataTableLoadingRows columns={columns} rowCount={2} />
+        <DataTableEmptyRow colSpan={columns.length}>No rows</DataTableEmptyRow>
+      </DataTableShell>,
+    );
+
+    expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(4);
+    expect(screen.getByText("No rows").getAttribute("colspan")).toBe("1");
   });
 });

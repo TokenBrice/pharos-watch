@@ -12,40 +12,22 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import type { LiquidityRow } from "@/components/liquidity-table";
-import type { LiquidityStatsData } from "@/components/liquidity-stats-types";
 import type { PegCurrency } from "@shared/types";
-import { DEX_GLOBAL_KEY } from "@shared/types/market";
-import { PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
-
-const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "USD", label: "USD" },
-  { value: "EUR", label: "EUR" },
-  { value: "GOLD", label: "Gold" },
-];
-
-function formatWarningMessage(warning: string): string {
-  try {
-    return warning
-      .split(/,\s*(?=\d{3}\s+-)/)
-      .map((entry) => entry.match(/"(.+)"/)?.[1] ?? entry.trim())
-      .join(" ");
-  } catch {
-    return warning;
-  }
-}
+import {
+  PEG_FILTERS,
+  buildLiquidityViewModel,
+  formatLiquidityWarningMessage,
+  normalizePegFilter,
+} from "./model";
 
 export function LiquidityClient() {
   const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch, meta } = useDexLiquidity();
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const rawPeg = getParam("peg", "all");
-  const pegFilter: PegCurrency | "all" =
-    rawPeg === "all" || rawPeg in PEG_LABELS_SHORT ? (rawPeg as PegCurrency | "all") : "all";
+  const pegFilter = normalizePegFilter(rawPeg);
   const setPegFilter = useCallback(
     (v: PegCurrency | "all") => {
       trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v });
@@ -71,87 +53,10 @@ export function LiquidityClient() {
     };
   }, [deferredSearch, setParam]);
 
-  // Combine tracked stablecoins with liquidity data, applying filters
-  const rows = useMemo((): LiquidityRow[] => {
-    if (!liquidityMap) return [];
-    const q = deferredSearch.toLowerCase().trim();
-    return ACTIVE_STABLECOINS.filter((meta) => {
-      if (pegFilter !== "all" && meta.flags.pegCurrency !== pegFilter) return false;
-      if (q && !meta.name.toLowerCase().includes(q) && !meta.symbol.toLowerCase().includes(q)) return false;
-      return true;
-    })
-      .map((meta) => ({
-        meta,
-        liq: liquidityMap[meta.id],
-      }))
-      .filter((r): r is LiquidityRow => r.liq != null);
-  }, [liquidityMap, pegFilter, deferredSearch]);
-
-  const scoredRows = useMemo(() => rows.filter((row) => row.liq.liquidityScore != null), [rows]);
-  const unratedRows = useMemo(() => rows.filter((row) => row.liq.liquidityScore == null), [rows]);
-
-  // Summary stats computed from full (unfiltered) data
-  const summaryStats = useMemo((): LiquidityStatsData | null => {
-    if (!liquidityMap) return null;
-    // Use global deduped row for TVL/vol (avoids double-counting multi-stablecoin pools)
-    const globalData = liquidityMap[DEX_GLOBAL_KEY];
-    const totalTvl = globalData?.totalTvlUsd ?? 0;
-    const totalVol = globalData?.totalVolume24hUsd ?? 0;
-    let scoreSum = 0;
-    let scoreCount = 0;
-    let withLiquidity = 0;
-    let highConfidenceCoverage = 0;
-    let fallbackCoverage = 0;
-    let tvlForChange = 0; // current TVL only for coins with 7d change data
-    let totalPrevTvl = 0; // previous TVL for those same coins
-    let totalBalance = 0;
-    let balanceWeight = 0;
-    let totalOrganic = 0;
-    let organicWeight = 0;
-
-    for (const meta of ACTIVE_STABLECOINS) {
-      const liq = liquidityMap[meta.id];
-      if (!liq) continue;
-      if (liq.liquidityScore != null) {
-        scoreSum += liq.liquidityScore;
-        scoreCount++;
-        withLiquidity++;
-        if (liq.coverageClass === "primary" || liq.coverageClass === "mixed") highConfidenceCoverage++;
-        if (liq.coverageClass === "fallback") fallbackCoverage++;
-      }
-      if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
-        const prevTvl = liq.totalTvlUsd / (1 + liq.tvlChange7d / 100);
-        tvlForChange += liq.totalTvlUsd;
-        totalPrevTvl += prevTvl;
-      }
-      if (liq.weightedBalanceRatio != null) {
-        const measuredTvl = liq.balanceMeasuredTvlUsd;
-        totalBalance += liq.weightedBalanceRatio * measuredTvl;
-        balanceWeight += measuredTvl;
-      }
-      if (liq.organicFraction != null) {
-        const measuredTvl = liq.organicMeasuredTvlUsd;
-        totalOrganic += liq.organicFraction * measuredTvl;
-        organicWeight += measuredTvl;
-      }
-    }
-
-    // Compute aggregate 7d change using matched totals (only coins with 7d data)
-    const agg7dChange = totalPrevTvl > 0 ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100 : null;
-
-    return {
-      totalTvl,
-      totalVol,
-      avgScore: scoreCount > 0 ? Math.round(scoreSum / scoreCount) : 0,
-      withLiquidity,
-      highConfidenceCoverage,
-      fallbackCoverage,
-      totalTracked: ACTIVE_STABLECOINS.length,
-      agg7dChange: agg7dChange != null ? Math.round(agg7dChange * 10) / 10 : null,
-      avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
-      avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,
-    };
-  }, [liquidityMap]);
+  const { scoredRows, unratedRows, summaryStats } = useMemo(
+    () => buildLiquidityViewModel(liquidityMap, pegFilter, deferredSearch),
+    [liquidityMap, pegFilter, deferredSearch],
+  );
 
   const handleRowClick = useCallback(
     (id: string) => {
@@ -198,7 +103,7 @@ export function LiquidityClient() {
           role="alert"
           className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
         >
-          {formatWarningMessage(meta.warning)}
+          {formatLiquidityWarningMessage(meta.warning)}
         </div>
       )}
 

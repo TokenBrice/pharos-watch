@@ -2,20 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@/components/ui/table";
 import {
+  DataTableEmptyRow,
+  DataTableLoadingRows,
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -81,71 +77,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
 
   if (isLoading) {
     return (
-      <div className="scroll-shadow overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader className="bg-muted/80">
-            <TableRow>
-              <TableHead>Coin</TableHead>
-              <TableHead className="text-right">Pressure vs 30D</TableHead>
-              <TableHead className="text-right">Net 24h</TableHead>
-              <TableHead className="hidden text-right sm:table-cell">
-                Minted 24h
-              </TableHead>
-              <TableHead className="hidden text-right sm:table-cell">
-                Burned 24h
-              </TableHead>
-              <TableHead className="hidden text-right md:table-cell">
-                Net 7d
-              </TableHead>
-              <TableHead className="hidden text-right lg:table-cell">
-                Net 30d
-              </TableHead>
-              <TableHead className="hidden text-right xl:table-cell">
-                Net 90d
-              </TableHead>
-              <TableHead className="hidden text-right xl:table-cell">
-                Largest Event
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-6 w-6 rounded-full" />
-                    <Skeleton className="h-4 w-12" />
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Skeleton className="ml-auto h-10 w-24" />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Skeleton className="ml-auto h-8 w-20" />
-                </TableCell>
-                <TableCell className="hidden text-right sm:table-cell">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                </TableCell>
-                <TableCell className="hidden text-right sm:table-cell">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                </TableCell>
-                <TableCell className="hidden text-right md:table-cell">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                </TableCell>
-                <TableCell className="hidden text-right lg:table-cell">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                </TableCell>
-                <TableCell className="hidden text-right xl:table-cell">
-                  <Skeleton className="ml-auto h-4 w-16" />
-                </TableCell>
-                <TableCell className="hidden text-right xl:table-cell">
-                  <Skeleton className="ml-auto h-4 w-20" />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTableShell columns={FLOW_TABLE_COLUMNS} striped>
+        <DataTableLoadingRows columns={FLOW_TABLE_COLUMNS} rowCount={5} />
+      </DataTableShell>
     );
   }
 
@@ -305,13 +239,11 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 </TableCell>
               </InteractiveTableRow>
             );
-          })}
+      })}
       {sorted.length === 0 && (
-        <TableRow>
-          <TableCell colSpan={FLOW_TABLE_COLUMNS.length} className="py-12 text-center text-muted-foreground">
-            No mint/burn events in this period.
-          </TableCell>
-        </TableRow>
+        <DataTableEmptyRow colSpan={FLOW_TABLE_COLUMNS.length}>
+          No mint/burn events in this period.
+        </DataTableEmptyRow>
       )}
     </DataTableShell>
   );

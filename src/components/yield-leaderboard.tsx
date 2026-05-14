@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
-import { TableCell, TableRow } from "@/components/ui/table";
 import {
+  DataTableEmptyRow,
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
@@ -132,11 +132,9 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
           />
         ))}
         {sorted.length === 0 && (
-          <TableRow>
-            <TableCell colSpan={COLUMN_COUNT} className="text-center text-muted-foreground py-12">
-              {emptyMessage ?? "No yield data available."}
-            </TableCell>
-          </TableRow>
+          <DataTableEmptyRow colSpan={COLUMN_COUNT}>
+            {emptyMessage ?? "No yield data available."}
+          </DataTableEmptyRow>
         )}
       </DataTableShell>
       <YieldSourceSheet

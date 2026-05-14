@@ -3,10 +3,12 @@
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import {
   TablePagination,
@@ -110,4 +112,40 @@ export function DataTableShell<K extends string>({
       {pagination ? <TablePagination {...pagination} /> : null}
     </div>
   );
+}
+
+export function DataTableEmptyRow({
+  colSpan,
+  children,
+  className,
+}: {
+  colSpan: number;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} className={cn("py-12 text-center text-muted-foreground", className)}>
+        {children}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+export function DataTableLoadingRows({
+  columns,
+  rowCount = 5,
+}: {
+  columns: readonly Pick<DataTableColumn, "id" | "className">[];
+  rowCount?: number;
+}) {
+  return Array.from({ length: rowCount }, (_, rowIndex) => (
+    <TableRow key={rowIndex}>
+      {columns.map((column, columnIndex) => (
+        <TableCell key={column.id} className={column.className}>
+          <Skeleton className={cn(columnIndex === 0 ? "h-6 w-24" : "ml-auto h-5 w-16")} />
+        </TableCell>
+      ))}
+    </TableRow>
+  ));
 }

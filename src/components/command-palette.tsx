@@ -5,37 +5,16 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound } from "lucide-react";
 import { useLogos } from "@/hooks/use-logos";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
 import { useThemeToggle } from "@/hooks/use-theme-toggle";
-import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import {
-  COMMAND_PALETTE_PAGES,
-  buildCommandPaletteActionDefinitions,
-  fuzzyMatch,
+  buildCommandPaletteResultDescriptors,
   groupCommandPaletteResults,
   type CommandPaletteActionIcon,
   type CommandPaletteActionId,
+  type CommandPaletteResultDescriptor,
 } from "@/components/command-palette-model";
-
-// ── Ranking helper ───────────────────────────────────────────────────────────
-
-/**
- * Pure ranking helper: sorts items by score descending and demotes entries
- * whose status is "frozen" on tied scores so live (non-frozen) results appear
- * first when relevance is otherwise equal.
- */
-export function rankCommandPaletteResults<T extends { score: number; status?: string }>(
-  items: T[],
-): T[] {
-  return [...items].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    const aFrozen = a.status === "frozen" ? 1 : 0;
-    const bFrozen = b.status === "frozen" ? 1 : 0;
-    return aFrozen - bFrozen;
-  });
-}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +52,98 @@ function getActionIcon(icon: CommandPaletteActionIcon): React.ReactNode {
     case "api-docs":
       return <KeyRound className="h-4 w-4" />;
   }
+}
+
+function buildSearchResult(
+  descriptor: CommandPaletteResultDescriptor,
+  {
+    logos,
+    router,
+    closePalette,
+    addToHistory,
+    toggleTheme,
+  }: {
+    logos: Record<string, string>;
+    router: ReturnType<typeof useRouter>;
+    closePalette: () => void;
+    addToHistory: (
+      id: string,
+      type: "stablecoin" | "page",
+      label: string,
+      sublabel: string | undefined,
+      href: string,
+    ) => void;
+    toggleTheme: () => void;
+  },
+): SearchResult {
+  const selectAction = (actionId: CommandPaletteActionId) => {
+    switch (actionId) {
+      case "theme":
+        toggleTheme();
+        closePalette();
+        return;
+      case "copy-url":
+        if (typeof window !== "undefined" && navigator.clipboard) {
+          void navigator.clipboard.writeText(window.location.href);
+        }
+        closePalette();
+        return;
+      case "open-digest":
+        router.push("/digest/");
+        closePalette();
+        return;
+      case "open-methodology":
+        router.push("/methodology/");
+        closePalette();
+        return;
+      case "open-api-docs":
+        router.push("/about/api/");
+        closePalette();
+        return;
+    }
+  };
+
+  const PageIcon = descriptor.pageIcon;
+  const onSelect = () => {
+    if (descriptor.actionId) {
+      selectAction(descriptor.actionId);
+      return;
+    }
+    if (!descriptor.href) return;
+    if (descriptor.external) {
+      window.open(descriptor.href, "_blank", "noopener,noreferrer");
+      closePalette();
+      return;
+    }
+    if (descriptor.history) {
+      addToHistory(
+        descriptor.history.id,
+        descriptor.history.type,
+        descriptor.history.label,
+        descriptor.history.sublabel,
+        descriptor.history.href,
+      );
+    }
+    router.push(descriptor.href);
+    closePalette();
+  };
+
+  return {
+    id: descriptor.id,
+    label: descriptor.label,
+    sublabel: descriptor.sublabel,
+    section: descriptor.section,
+    logoUrl: descriptor.logoId ? logos[descriptor.logoId] : undefined,
+    icon: descriptor.actionIcon
+      ? getActionIcon(descriptor.actionIcon)
+      : PageIcon
+        ? <PageIcon className="h-4 w-4" />
+        : descriptor.kind === "recent" && !descriptor.logoId
+          ? <FileText className="h-4 w-4" />
+          : undefined,
+    frozen: descriptor.frozen,
+    onSelect,
+  };
 }
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
@@ -123,141 +194,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // ── Build results ──────────────────────────────────────────────────────
 
   const results = useMemo((): SearchResult[] => {
-    const q = query.trim();
-    const items: SearchResult[] = [];
-
-    // Recent items (only when no query)
-    if (!q && history.length > 0) {
-      for (const item of history) {
-        items.push({
-          id: `recent-${item.id}`,
-          label: item.label,
-          sublabel: item.sublabel,
-          section: "Recent",
-          logoUrl: item.type === "stablecoin" ? logos[item.id] : undefined,
-          icon: item.type === "page" ? <FileText className="h-4 w-4" /> : undefined,
-          onSelect: () => {
-            router.push(item.href);
-            closePalette();
-          },
-        });
-      }
-    }
-
-    // Stablecoins
-    if (q) {
-      const matched: Array<{
-        coin: (typeof COMMAND_PALETTE_STABLECOINS)[number];
-        score: number;
-        status: string;
-      }> = [];
-      for (const coin of COMMAND_PALETTE_STABLECOINS) {
-        const [id, name, symbol, status] = coin;
-        const symbolMatch = fuzzyMatch(q, symbol);
-        const nameMatch = fuzzyMatch(q, name);
-        const idMatch = fuzzyMatch(q, id);
-        if (!symbolMatch && !nameMatch && !idMatch) continue;
-        const score = (symbolMatch ? 3 : 0) + (nameMatch ? 2 : 0) + (idMatch ? 1 : 0);
-        matched.push({ coin, score, status: status ?? "active" });
-      }
-      const ranked = rankCommandPaletteResults(matched);
-      for (const { coin } of ranked) {
-        const [id, name, symbol, status, frozenAt] = coin;
-        const logoUrl = logos[id];
-        const href = buildStablecoinUrl(id);
-        const sublabel =
-          status === "pre-launch"
-            ? `${symbol} · Pre-launch`
-            : status === "frozen"
-              ? `${symbol} · Frozen${frozenAt ? ` ${frozenAt}` : ""}`
-              : symbol;
-        items.push({
-          id: `coin-${id}`,
-          label: name,
-          sublabel,
-          section: "Stablecoins",
-          logoUrl,
-          frozen: status === "frozen",
-          onSelect: () => {
-            addToHistory(id, "stablecoin", name, symbol, href);
-            router.push(href);
-            closePalette();
-          },
-        });
-      }
-    }
-
-    // Pages
-    if (q) {
-      for (const page of COMMAND_PALETTE_PAGES) {
-        if (
-          fuzzyMatch(q, page.label) ||
-          (page.description && fuzzyMatch(q, page.description))
-        ) {
-          const Icon = page.icon;
-          items.push({
-            id: `page-${page.href}`,
-            label: page.label,
-            sublabel: page.description,
-            section: "Pages",
-            icon: <Icon className="h-4 w-4" />,
-            onSelect: () => {
-              if (page.external) {
-                window.open(page.href, "_blank", "noopener,noreferrer");
-                closePalette();
-                return;
-              }
-              addToHistory(page.href, "page", page.label, page.description, page.href);
-              router.push(page.href);
-              closePalette();
-            },
-          });
-        }
-      }
-    }
-
-    // Actions
-    const selectAction = (actionId: CommandPaletteActionId) => {
-      switch (actionId) {
-        case "theme":
-          toggleTheme();
-          closePalette();
-          return;
-        case "copy-url":
-          if (typeof window !== "undefined" && navigator.clipboard) {
-            void navigator.clipboard.writeText(window.location.href);
-          }
-          closePalette();
-          return;
-        case "open-digest":
-          router.push("/digest/");
-          closePalette();
-          return;
-        case "open-methodology":
-          router.push("/methodology/");
-          closePalette();
-          return;
-        case "open-api-docs":
-          router.push("/about/api/");
-          closePalette();
-          return;
-      }
-    };
-
-    for (const action of buildCommandPaletteActionDefinitions(isDark)) {
-      if (!q || fuzzyMatch(q, action.label) || fuzzyMatch(q, action.keywords)) {
-        items.push({
-          id: action.id,
-          label: action.label,
-          sublabel: action.sublabel,
-          section: "Actions",
-          icon: getActionIcon(action.icon),
-          onSelect: () => selectAction(action.actionId),
-        });
-      }
-    }
-
-    return items;
+    return buildCommandPaletteResultDescriptors({ query, history, isDark }).map((descriptor) =>
+      buildSearchResult(descriptor, {
+        logos,
+        router,
+        closePalette,
+        addToHistory,
+        toggleTheme,
+      }),
+    );
   }, [query, logos, isDark, toggleTheme, router, closePalette, history, addToHistory]);
 
   // ── Grouped results for rendering ──────────────────────────────────────
