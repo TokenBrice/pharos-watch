@@ -63,10 +63,11 @@ The route renders:
    - `/openapi.json`
    - `/postman/pharos-api.postman_collection.json`
    - `/postman/pharos-api.postman_environment.json`
-6. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
-7. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
-8. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory
-9. An endpoint directory derived from the canonical public endpoint H3 headings, with a clear link to `/docs/api-reference/#public-endpoints` for exhaustive field tables and examples
+6. Data-catalog JSON-LD describing the public integration artifacts and crawlable static dataset downloads without pointing at `/_site-data/*`
+7. A visible API access FAQ rendered with matching `FAQPage` JSON-LD
+8. A `Before You Call The API` section rendered from the intro portion of `docs/api-reference.md`
+9. A top-level scrollspy rail driven by the concise rendered H2 sections and the endpoint directory
+10. An endpoint directory derived from the canonical public endpoint H3 headings, with a clear link to `/docs/api-reference/#public-endpoints` for exhaustive field tables and examples
 
 ---
 

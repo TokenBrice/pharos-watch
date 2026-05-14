@@ -4,6 +4,7 @@ import { ApiKeyRequestForm } from "@/components/api-key-request-form";
 import { CopyButton } from "@/components/copy-button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const metadata = buildPageMetadata({
   title: "Pharos API Access",
@@ -119,8 +120,8 @@ export default function ApiAccessPage() {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "API", item: "https://pharos.watch/api/" },
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+              { "@type": "ListItem", position: 2, name: "API", item: `${SITE_URL}/api/` },
             ],
           }),
         }}

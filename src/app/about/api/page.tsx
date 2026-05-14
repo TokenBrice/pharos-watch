@@ -8,7 +8,9 @@ import { ApiReferenceLayout } from "@/components/api-reference-layout";
 import type { SidebarSection } from "@/components/api-reference-sidebar";
 import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   getConciseApiReferenceSections,
   getPublicApiEndpointSummaries,
@@ -339,11 +341,17 @@ export default async function AboutApiPage() {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "About", item: "https://pharos.watch/about/" },
-              { "@type": "ListItem", position: 3, name: "API Reference", item: "https://pharos.watch/about/api/" },
+              { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+              { "@type": "ListItem", position: 2, name: "About", item: `${SITE_URL}/about/` },
+              { "@type": "ListItem", position: 3, name: "API Reference", item: `${SITE_URL}/about/api/` },
             ],
           }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(buildApiArtifactCatalogJsonLd()),
         }}
       />
 
