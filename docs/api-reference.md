@@ -16,7 +16,7 @@ The runtime now uses three HTTP lanes:
 
 Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The generated OpenAPI artifact includes named schemas for the richer Yield Intelligence ranking and history payloads, and the Postman collection includes both best-source and source-key yield-history examples. These are public integration/read onboarding artifacts, not a complete dump of every no-key route; they intentionally exclude Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, and dynamic OG image routes. Request keys through `https://pharos.watch/api/`.
+Machine-readable integration artifacts are also served from the public website for onboarding. The OpenAPI endpoint catalogue is available at `https://pharos.watch/openapi.json`, and Postman artifacts are available at `https://pharos.watch/postman/pharos-api.postman_collection.json` plus `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files, then replace the environment `apiKey` placeholder with a real `X-API-Key`. The generated OpenAPI artifact includes named schemas for the richer Yield Intelligence ranking and history payloads, and the Postman collection includes both best-source and source-key yield-history examples. These are public integration/read onboarding artifacts, not a complete dump of every no-key route; they intentionally exclude Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Request keys through `https://pharos.watch/api/`.
 
 Browser consumers should use same-origin `/_site-data/*` via the frontend helpers in `src/lib/api.ts`. In production, that Pages proxy targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations, CI smoke, and build-time sync scripts should target `https://api.pharos.watch` and send `X-API-Key` for protected public reads, including `/api/telegram-pulse`.
 
@@ -39,8 +39,12 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 - `POST /api/api-key-requests`
 - `POST /api/api-key-requests/verify`
 - `POST /api/telegram-webhook`
+- `POST /api/telegram-mini-app/session`
+- `POST /api/telegram-mini-app/mutate`
 
 `POST /api/telegram-webhook` is externally reachable but not anonymous: it requires `X-Telegram-Bot-Api-Secret-Token` instead of `X-API-Key`.
+
+`POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` are also externally reachable but not anonymous. They require Telegram Mini App `initData` signed for `@PharosWatchBot`; the worker validates the HMAC, `auth_date`, and user payload before any D1-backed state write. These endpoints are denied on the website-internal site-data lane and are intended only for the Mini App at `https://pharos.watch/pharoswatchbot/app/`.
 
 Admin/operator routes are also outside the public API-key gate, but they remain Cloudflare-Access-gated and are supported only through `ops-api.pharos.watch` or the `ops.pharos.watch/api/admin/*` Pages proxy. The public API host rejects known admin and admin-like path families before API-key auth, so a public API key cannot be used to reach `/api/status`, `/api/api-keys*`, `/api/api-key-requests-admin*`, or other operator roots on `api.pharos.watch`.
 
@@ -142,7 +146,7 @@ These profiles apply while the dataset is within its generic freshness runway. O
 | reserve-fallback   | `public, s-maxage=300, max-age=60`     | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                             |
 | no-store           | `no-store`                             | health plus all admin GET routes after router override (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `discovery-candidates`, `status-probe-history`) |
 
-`POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints explicitly return no-store responses so verification tokens and plaintext API keys are never cacheable.
+`POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
 ---
 
@@ -169,7 +173,7 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
 
 ### Per-key limit
 
@@ -227,7 +231,7 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints, `GET /api/backfill-dews`, and dry-run repair previews for `GET /api/backfill-dews?repair=...&dry-run=true`).
-- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, and `POST /api/telegram-webhook`.
+- `POST` is accepted for mutating admin endpoints, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`.
 - `GET, POST` is accepted on `/api/api-keys` so operators can list keys and create a new key through the same route.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
@@ -286,7 +290,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 ### Public Endpoints Quick Reference
 
-Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
+Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
 Total documented public operations: **31**.
 
@@ -2980,6 +2984,79 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 - `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`) or feedback limiter/storage dependency failure (`Retry-After: 60`)
 
 ---
+
+### `POST /api/telegram-mini-app/session`
+
+Returns the current private-chat Mini App control-panel state for a Telegram user.
+
+**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` and `signature` fields from the HMAC data-check string, rejects missing/invalid signatures, and accepts sessions up to 24 hours old for read-only state loading.
+
+**Site-data lane:** denied. The frontend calls the public API host through `src/lib/api.ts`; `/_site-data/*` never proxies this route.
+
+**Rate limiting:** cache-backed cooldown per Telegram user (`mini-app:session`, 2 seconds). Invalid-auth requests are rejected before cooldown or analytics writes.
+
+**Cache:** no-store.
+
+**Request body:**
+
+```json
+{
+  "initData": "query-string-from-Telegram.WebApp.initData",
+  "startParam": "settings"
+}
+```
+
+`startParam` is optional and is used only as a fallback when Telegram did not include `start_param` inside `initData`.
+
+**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`. Private sessions older than the 15-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group launches return read-only state with `viewer.mutationBlockReason="not-private"`.
+
+Key fields:
+
+- `viewer` — Telegram user, optional `chatId`, chat type, `startParam`, and mutation eligibility.
+- `subscriber` — global alert flags, quiet-hours settings, and chat-level snooze.
+- `subscriptions` — explicit per-coin follows with alert flags and per-coin thresholds.
+- `presets` — followed preset watchlists.
+- `catalog` — recommended presets and searchable tracked stablecoins for the UI.
+- `health` — last successful delivery/reply, recent failure class, and queued alert count.
+
+Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `429` cooldown, `503` missing bot-token configuration.
+
+### `POST /api/telegram-mini-app/mutate`
+
+Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
+
+**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-chat-only.
+
+**Site-data lane:** denied.
+
+**Rate limiting:** cache-backed cooldown per Telegram user and operation kind (`mini-app:<operation>`, 1 second).
+
+**Cache:** no-store.
+
+**Request body:**
+
+```json
+{
+  "initData": "query-string-from-Telegram.WebApp.initData",
+  "operation": {
+    "kind": "set-global",
+    "alertType": "safety",
+    "enabled": true
+  }
+}
+```
+
+Supported `operation.kind` values:
+
+- `recommended-setup` — follow a preset such as `usd-top25` with selected alert types.
+- `set-global` — toggle one global alert family (`dews`, `depeg`, `safety`, `launch`).
+- `set-quiet-hours` — enable or disable UTC quiet hours.
+- `clear-snooze` — clear chat-level snooze.
+- `set-coin` — add or tune one explicit coin subscription.
+- `remove-coin` — remove one explicit coin subscription.
+- `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
+
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
 
 ### `POST /api/telegram-webhook`
 

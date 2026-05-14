@@ -214,6 +214,27 @@ describe("pages middleware markdown negotiation", () => {
     expect(await res.text()).toBe("");
   });
 
+  it("allows Telegram bridge script and framing only on the Mini App route", async () => {
+    const req = new Request("https://pharos.watch/pharoswatchbot/app/");
+    const next = vi.fn(async () =>
+      new Response("<html><script>1</script></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html", "X-Frame-Options": "DENY" },
+      }),
+    );
+    const res = await onRequest({
+      request: req,
+      env: { ASSETS: { fetch: makeAssetsFetch({}) } },
+      next,
+    });
+    const csp = res.headers.get("Content-Security-Policy") ?? "";
+
+    expect(scriptSrc(csp)).toContain("https://telegram.org");
+    expect(csp).toContain("frame-ancestors https://telegram.org https://*.telegram.org");
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+  });
+
   it("keeps the static fallback CSP free of unsafe inline script execution", () => {
     expect(buildContentSecurityPolicy("abc123")).toBe(
       "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://pbs.twimg.com https://abs.twimg.com data:; connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",

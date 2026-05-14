@@ -1299,7 +1299,7 @@ describe("handleTelegramWebhook", () => {
     };
     const buttons = (body.reply_markup?.inline_keyboard ?? []).flat();
     expect(buttons.some((button) => button.callback_data === "manage:page:0")).toBe(false);
-    expect(buttons.some((button) => button.text === "Manage in app" && button.web_app?.url === "https://pharos.watch/pharoswatchbot/app/")).toBe(true);
+    expect(buttons.some((button) => button.text === "Manage in app" && button.web_app?.url === "https://pharos.watch/pharoswatchbot/app/?startapp=watchlist")).toBe(true);
   });
 
   it("replies to /presets with the preset catalog", async () => {
@@ -2417,7 +2417,7 @@ describe("handleTelegramWebhook", () => {
       "coverage:usdc-circle",
       "quicksub:usdc-circle",
     ]);
-    expect(buttons[3]?.web_app?.url).toBe("https://pharos.watch/pharoswatchbot/app/");
+    expect(buttons[3]?.web_app?.url).toBe("https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle");
     // Bot API limit: callback_data must stay ≤64 bytes.
     for (const button of buttons) {
       expect((button.callback_data ?? "").length).toBeLessThanOrEqual(64);

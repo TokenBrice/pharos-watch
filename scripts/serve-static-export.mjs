@@ -45,10 +45,27 @@ function createCspNonce() {
   return bytesToBase64(bytes);
 }
 
-function buildContentSecurityPolicy(nonce) {
+function isTelegramMiniAppPath(pathname) {
+  return pathname === "/pharoswatchbot/app" || pathname.startsWith("/pharoswatchbot/app/");
+}
+
+function buildContentSecurityPolicy(nonce, requestPathname) {
+  const telegramMiniApp = isTelegramMiniAppPath(requestPathname);
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "'unsafe-eval'",
+    ...(telegramMiniApp ? ["https://telegram.org"] : []),
+    "https://www.googletagmanager.com",
+    "https://static.cloudflareinsights.com",
+  ].join(" ");
+  const frameAncestors = telegramMiniApp
+    ? "frame-ancestors https://telegram.org https://*.telegram.org"
+    : "frame-ancestors 'none'";
+
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-eval' https://www.googletagmanager.com https://static.cloudflareinsights.com`,
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https://coin-images.coingecko.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://pbs.twimg.com https://abs.twimg.com data:",
     "connect-src 'self' https://api.pharos.watch https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com",
@@ -56,7 +73,7 @@ function buildContentSecurityPolicy(nonce) {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    frameAncestors,
   ].join("; ");
 }
 
@@ -163,7 +180,7 @@ async function readStaticExportFile(rootDir, requestPathname) {
   return { file, filePath };
 }
 
-function sendStaticExportFile(res, method, { file, filePath }) {
+function sendStaticExportFile(res, method, { file, filePath }, requestPathname) {
   const contentType = buildContentType(filePath);
   const headers = {
     "Content-Type": contentType,
@@ -173,9 +190,12 @@ function sendStaticExportFile(res, method, { file, filePath }) {
   if (contentType.startsWith("text/html")) {
     const nonce = createCspNonce();
     body = Buffer.from(addNonceToInlineScripts(file.toString("utf8"), nonce), "utf8");
-    headers["Content-Security-Policy"] = buildContentSecurityPolicy(nonce);
+    headers["Content-Security-Policy"] = buildContentSecurityPolicy(nonce, requestPathname);
     headers["Cloudflare-CDN-Cache-Control"] = "no-store";
     headers["CDN-Cache-Control"] = "no-store";
+    if (isTelegramMiniAppPath(requestPathname)) {
+      headers["X-Robots-Tag"] = "noindex, nofollow";
+    }
   }
 
   res.writeHead(200, {
@@ -212,7 +232,7 @@ export function createStaticExportServer({
     if (isNestedApiPath && canServeStaticMethod) {
       try {
         const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
-        sendStaticExportFile(res, method, staticFile);
+        sendStaticExportFile(res, method, staticFile, requestUrl.pathname);
         return;
       } catch (error) {
         if (isPathEscapeError(error)) {
@@ -295,7 +315,7 @@ export function createStaticExportServer({
 
     try {
       const staticFile = await readStaticExportFile(normalizedRoot, requestUrl.pathname);
-      sendStaticExportFile(res, method, staticFile);
+      sendStaticExportFile(res, method, staticFile, requestUrl.pathname);
       return;
     } catch (error) {
       if (isPathEscapeError(error)) {

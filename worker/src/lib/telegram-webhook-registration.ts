@@ -29,6 +29,15 @@ export const TELEGRAM_BOT_DESCRIPTION =
 export const TELEGRAM_MINI_APP_URL = new URL(TELEGRAM_MINI_APP_PATH, SITE_ORIGIN).toString();
 export const TELEGRAM_MINI_APP_BUTTON_TEXT = "Manage Alerts";
 
+export function buildTelegramMiniAppUrl(startParam?: string | null): string {
+  const url = new URL(TELEGRAM_MINI_APP_URL);
+  const trimmed = startParam?.trim();
+  if (trimmed) {
+    url.searchParams.set("startapp", trimmed);
+  }
+  return url.toString();
+}
+
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
   { command: "help", description: "Command reference" },

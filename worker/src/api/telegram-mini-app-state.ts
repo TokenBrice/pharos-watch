@@ -1,5 +1,5 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { listTelegramPresets } from "../lib/telegram-presets";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 
@@ -53,65 +53,128 @@ function coinMeta(stablecoinId: string): { symbol: string; name: string } {
   };
 }
 
+function normalizeDewsBand(value: string | null | undefined): "ALERT" | "WARNING" | "DANGER" | null {
+  return value === "ALERT" || value === "WARNING" || value === "DANGER" ? value : null;
+}
+
+function normalizeDepegStep(value: number | null | undefined): 100 | 250 | 500 | null {
+  return value === 100 || value === 250 || value === 500 ? value : null;
+}
+
+function normalizeSafetyMode(value: string | null | undefined): "all" | "downgrade-only" | "upgrade-only" | null {
+  return value === "all" || value === "downgrade-only" || value === "upgrade-only" ? value : null;
+}
+
+function alertTypes(row: {
+  alert_dews: number | null;
+  alert_depeg: number | null;
+  alert_safety: number | null;
+  alert_launch?: number | null;
+}): { dews: boolean; depeg: boolean; safety: boolean; launch: boolean } {
+  return {
+    dews: boolFlag(row.alert_dews),
+    depeg: boolFlag(row.alert_depeg),
+    safety: boolFlag(row.alert_safety),
+    launch: boolFlag(row.alert_launch),
+  };
+}
+
+function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition, "id" | "label" | "description"> {
+  const definition = listTelegramPresets().find((preset) => preset.id === row.preset_id);
+  return {
+    id: row.preset_id as TelegramPresetDefinition["id"],
+    label: definition?.label ?? row.preset_id,
+    description: definition?.description ?? "Telegram preset watchlist.",
+  };
+}
+
+function searchableCoins(): Array<{ stablecoinId: string; symbol: string; name: string; peg: string; status: string }> {
+  return TRACKED_STABLECOINS
+    .filter((coin) => (coin.status ?? "active") !== "frozen")
+    .map((coin) => ({
+      stablecoinId: coin.id,
+      symbol: coin.symbol,
+      name: coin.name,
+      peg: coin.flags.pegCurrency,
+      status: coin.status ?? "active",
+    }));
+}
+
 export async function loadTelegramMiniAppState(
   db: D1Database,
   auth: TelegramMiniAppAuthContext,
   options: LoadTelegramMiniAppStateOptions,
 ): Promise<Record<string, unknown>> {
-  const chatId = auth.userId;
-  const [subscriber, subscriptions, presets, health, pending] = await Promise.all([
-    db.prepare(
-      `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-              global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
-              quiet_hours_end_utc, timezone, alert_snooze_until_ts
-         FROM telegram_subscribers
-        WHERE chat_id = ?`,
-    ).bind(chatId).first<SubscriberRow>(),
-    db.prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-              dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
-         FROM telegram_subscriptions
-        WHERE chat_id = ?
-        ORDER BY stablecoin_id`,
-    ).bind(chatId).all<SubscriptionRow>(),
-    db.prepare(
-      `SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
-         FROM telegram_preset_subscriptions
-        WHERE chat_id = ?
-        ORDER BY preset_id`,
-    ).bind(chatId).all<PresetSubscriptionRow>(),
-    loadTelegramChatHealthDiagnostics(db, chatId),
-    db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
-      .bind(chatId)
-      .first<{ queued_alerts: number | string | null }>(),
-  ]);
+  const chatId = auth.canMutatePrivateChat ? auth.userId : null;
+  const mutationAuthExpired = options.nowSec - auth.authDate > options.mutationMaxAgeSec;
+  const canMutate = Boolean(chatId && !mutationAuthExpired);
+  const mutationBlockReason = auth.canMutatePrivateChat
+    ? mutationAuthExpired ? "stale-auth" : null
+    : "not-private";
+
+  const [subscriber, subscriptions, presets, health, pending] = chatId
+    ? await Promise.all([
+      db.prepare(
+        `SELECT global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+                global_depeg_worsening_bps_step, quiet_hours_enabled, quiet_hours_start_utc,
+                quiet_hours_end_utc, timezone, alert_snooze_until_ts
+           FROM telegram_subscribers
+          WHERE chat_id = ?`,
+      ).bind(chatId).first<SubscriberRow>(),
+      db.prepare(
+        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
+                dews_min_band, safety_mode, depeg_worsening_bps_step, alert_snooze_until_ts
+           FROM telegram_subscriptions
+          WHERE chat_id = ?
+          ORDER BY stablecoin_id`,
+      ).bind(chatId).all<SubscriptionRow>(),
+      db.prepare(
+        `SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+           FROM telegram_preset_subscriptions
+          WHERE chat_id = ?
+          ORDER BY preset_id`,
+      ).bind(chatId).all<PresetSubscriptionRow>(),
+      loadTelegramChatHealthDiagnostics(db, chatId),
+      db.prepare("SELECT COUNT(*) AS queued_alerts FROM telegram_pending_alerts WHERE chat_id = ?")
+        .bind(chatId)
+        .first<{ queued_alerts: number | string | null }>(),
+    ])
+    : [
+      null,
+      { results: [] as SubscriptionRow[] },
+      { results: [] as PresetSubscriptionRow[] },
+      null,
+      null,
+    ] as const;
 
   return {
     viewer: {
       userId: auth.userId,
       username: auth.username,
       firstName: auth.firstName,
+      chatId,
       chatType: auth.chatType,
       startParam: auth.startParam,
-      canMutate: auth.canMutatePrivateChat,
-      mutationBlockReason: auth.canMutatePrivateChat ? null : "not-private",
+      canMutate,
+      mutationBlockReason,
       mutationAuthExpiresAt: auth.authDate + options.mutationMaxAgeSec,
     },
     subscriber: {
+      exists: subscriber != null,
       globalAlerts: {
         dews: boolFlag(subscriber?.global_alert_dews),
         depeg: boolFlag(subscriber?.global_alert_depeg),
         safety: boolFlag(subscriber?.global_alert_safety),
         launch: boolFlag(subscriber?.global_alert_launch),
+        depegStepBps: normalizeDepegStep(subscriber?.global_depeg_worsening_bps_step),
       },
-      depegStepBps: subscriber?.global_depeg_worsening_bps_step ?? null,
       quietHours: {
         enabled: boolFlag(subscriber?.quiet_hours_enabled),
         startHourUtc: subscriber?.quiet_hours_start_utc ?? null,
         endHourUtc: subscriber?.quiet_hours_end_utc ?? null,
         timezone: subscriber?.timezone ?? "UTC",
       },
-      snoozeUntil: subscriber?.alert_snooze_until_ts ?? null,
+      snoozeUntilTs: subscriber?.alert_snooze_until_ts ?? null,
     },
     subscriptions: (subscriptions.results ?? []).map((row) => {
       const meta = coinMeta(row.stablecoin_id);
@@ -119,29 +182,34 @@ export async function loadTelegramMiniAppState(
         stablecoinId: row.stablecoin_id,
         symbol: meta.symbol,
         name: meta.name,
-        alerts: {
+        alertTypes: alertTypes(row),
+        dewsMinBand: normalizeDewsBand(row.dews_min_band),
+        safetyMode: normalizeSafetyMode(row.safety_mode),
+        depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),
+        snoozeUntilTs: row.alert_snooze_until_ts,
+      };
+    }),
+    presets: (presets.results ?? []).map((row) => {
+      const label = presetLabel(row);
+      return {
+        id: label.id,
+        label: label.label,
+        description: label.description,
+        alertTypes: {
           dews: boolFlag(row.alert_dews),
           depeg: boolFlag(row.alert_depeg),
           safety: boolFlag(row.alert_safety),
-          launch: boolFlag(row.alert_launch),
         },
-        dewsMinBand: row.dews_min_band,
-        safetyMode: row.safety_mode,
-        depegStepBps: row.depeg_worsening_bps_step,
-        snoozeUntil: row.alert_snooze_until_ts,
+        depegStepBps: normalizeDepegStep(row.depeg_worsening_bps_step),
       };
     }),
-    presets: (presets.results ?? []).map((row) => ({
-      presetId: row.preset_id,
-      alerts: {
-        dews: boolFlag(row.alert_dews),
-        depeg: boolFlag(row.alert_depeg),
-        safety: boolFlag(row.alert_safety),
-      },
-      depegStepBps: row.depeg_worsening_bps_step,
-    })),
     catalog: {
-      presets: listTelegramPresets(),
+      recommendedPresets: listTelegramPresets().map((preset) => ({
+        id: preset.id,
+        label: preset.label,
+        description: preset.description,
+      })),
+      searchableCoins: searchableCoins(),
     },
     health: {
       lastSuccessfulDeliveryAt: health?.lastSuccessfulDeliveryAt ?? null,

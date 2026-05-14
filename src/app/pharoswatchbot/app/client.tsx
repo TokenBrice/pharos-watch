@@ -4,20 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, Bot, Check, Clock3, ExternalLink, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { applyTelegramTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
+import { API_PATHS } from "@shared/lib/api-endpoints";
+import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramAlertType, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 
-const SESSION_ENDPOINT = "/api/telegram-mini-app/session";
-const MUTATE_ENDPOINT = "/api/telegram-mini-app/mutate";
+const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
+const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 const BOT_URL = "https://t.me/PharosWatchBot";
 const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
 const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
 
 type ViewKey = "home" | "watchlist" | "settings";
 
+function initialViewFromStartParam(startParam: string | null): ViewKey {
+  if (startParam === "settings") return "settings";
+  if (startParam === "watchlist" || startParam?.startsWith("coin_")) return "watchlist";
+  return "home";
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(path, {
+  const response = await apiRequest(path, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -31,7 +39,8 @@ function formatTime(ts: number | null): string {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(ts * 1000));
 }
 
-function MiniButton({ children, disabled, onClick, variant = "primary" }: {
+function MiniButton({ ariaLabel, children, disabled, onClick, variant = "primary" }: {
+  ariaLabel?: string;
   children: React.ReactNode;
   disabled?: boolean;
   onClick: () => void;
@@ -40,6 +49,7 @@ function MiniButton({ children, disabled, onClick, variant = "primary" }: {
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
       className={cn(
@@ -74,7 +84,7 @@ function TogglePill({ label, enabled, disabled, onToggle }: { label: string; ena
 
 function PreviewState({ previewName }: { previewName: string | null }) {
   return (
-    <main className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
+    <section className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
       <section className="rounded-2xl border border-border/70 bg-card/90 p-5 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
@@ -95,7 +105,7 @@ function PreviewState({ previewName }: { previewName: string | null }) {
           <Button asChild variant="outline"><Link href="/pharoswatchbot/">View setup guide</Link></Button>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
 
@@ -204,7 +214,8 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate }: {
           <Search className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden="true" />
           <h2 className="text-sm font-semibold text-foreground">Add a coin</h2>
         </div>
-        <input className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search symbol, name, or id" />
+        <label className="sr-only" htmlFor="telegram-mini-app-coin-search">Search stablecoins</label>
+        <input id="telegram-mini-app-coin-search" className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground placeholder:text-muted-foreground" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search symbol, name, or id" />
         {results.length > 0 ? (
           <div className="mt-3 grid gap-2">
             {results.map((coin) => (
@@ -213,7 +224,7 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate }: {
                   <p className="truncate text-sm font-semibold text-foreground">{coin.symbol}</p>
                   <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
                 </div>
-                <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { alertTypes: { dews: true, depeg: true } } })}>Add</MiniButton>
+                <MiniButton ariaLabel={`Add ${coin.symbol}`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "set-coin", stablecoinId: coin.stablecoinId, patch: { alertTypes: { dews: true, depeg: true } } })}>Add</MiniButton>
               </div>
             ))}
           </div>
@@ -228,7 +239,7 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate }: {
                 <h3 className="truncate text-base font-semibold text-foreground">{coin.symbol}</h3>
                 <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
               </div>
-              <MiniButton variant="danger" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "remove-coin", stablecoinId: coin.stablecoinId })}>
+              <MiniButton ariaLabel={`Remove ${coin.symbol}`} variant="danger" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "remove-coin", stablecoinId: coin.stablecoinId })}>
                 <Trash2 className="h-4 w-4" aria-hidden="true" /> Remove
               </MiniButton>
             </div>
@@ -274,15 +285,37 @@ export function PharosWatchBotMiniAppClient() {
   }, []);
 
   useEffect(() => {
-    const launch = getTelegramLaunchContext();
-    setWebApp(launch.webApp);
-    setInitData(launch.initData);
-    setStartParam(launch.startParam);
-    setPreviewName(launch.previewName);
-    applyTelegramTheme(launch.webApp);
-    launch.webApp?.ready?.();
-    launch.webApp?.expand?.();
-    void loadSession(launch.initData, launch.startParam);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let cleanup = () => {};
+    let attempts = 0;
+
+    const initialize = () => {
+      const launch = getTelegramLaunchContext();
+      if (!launch.webApp && !launch.initData && attempts < 10) {
+        attempts += 1;
+        timer = setTimeout(initialize, 50);
+        return;
+      }
+      if (cancelled) return;
+      setWebApp(launch.webApp);
+      setInitData(launch.initData);
+      setStartParam(launch.startParam);
+      setView(initialViewFromStartParam(launch.startParam));
+      setPreviewName(launch.previewName);
+      applyTelegramTheme(launch.webApp);
+      cleanup = bindTelegramViewportAndTheme(launch.webApp);
+      launch.webApp?.ready?.();
+      void loadSession(launch.initData, launch.startParam);
+    };
+
+    initialize();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      cleanup();
+    };
   }, [loadSession]);
 
   const mutate = useCallback(async (operation: TelegramMiniAppOperation) => {
@@ -307,8 +340,8 @@ export function PharosWatchBotMiniAppClient() {
   const canMutate = Boolean(initData && state?.viewer.canMutate);
 
   return (
-    <main className="min-h-[var(--telegram-viewport-height,100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
-      <div className="mx-auto flex max-w-2xl flex-col px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] sm:px-4">
+    <section className="min-h-[max(var(--telegram-viewport-height,100svh),100svh)] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
+      <div className="mx-auto flex max-w-2xl flex-col px-3 py-4 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
         <header className="rounded-2xl border border-border/70 bg-card/90 p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -323,9 +356,9 @@ export function PharosWatchBotMiniAppClient() {
           {startParam ? <p className="mt-3 rounded-lg border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground">Launch intent: <span className="font-mono text-foreground">{startParam}</span></p> : null}
         </header>
 
-        {status === "loading" ? <section className="mt-4 rounded-2xl border border-border/70 bg-card/90 p-5"><div className="flex items-center gap-3 text-sm text-muted-foreground"><RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading Telegram settings...</div></section> : null}
-        {status === "error" ? <section className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData, startParam)}>Retry</MiniButton></div></section> : null}
-        {message && status === "ready" ? <section className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
+        {status === "loading" ? <section aria-live="polite" className="mt-4 rounded-2xl border border-border/70 bg-card/90 p-5"><div className="flex items-center gap-3 text-sm text-muted-foreground"><RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading Telegram settings...</div></section> : null}
+        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData, startParam)}>Retry</MiniButton></div></section> : null}
+        {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
 
         {state ? (
           <>
@@ -340,6 +373,6 @@ export function PharosWatchBotMiniAppClient() {
           </>
         ) : null}
       </div>
-    </main>
+    </section>
   );
 }

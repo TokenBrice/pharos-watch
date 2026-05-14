@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { PharosWatchBotMiniAppClient } from "./client";
 
 export const metadata: Metadata = {
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function PharosWatchBotMiniAppPage() {
-  return <PharosWatchBotMiniAppClient />;
+  return (
+    <>
+      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" />
+      <PharosWatchBotMiniAppClient />
+    </>
+  );
 }

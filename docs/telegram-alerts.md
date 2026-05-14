@@ -23,10 +23,19 @@ Launch paths:
 
 - Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
 - Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
-- Private command replies: `/start`, `/settings`, `/list`, and `/status <ticker>` include Web App buttons in private chats. Group and supergroup replies keep the existing command and callback keyboards.
+- Private command replies: `/start`, `/settings`, `/list`, and `/status <ticker>` include Web App buttons in private chats. These buttons attach `startapp` context (`setup_recommended`, `settings`, `watchlist`, or `coin_<stablecoinId>`) so the Mini App opens on the matching panel. Group and supergroup replies keep the existing command and callback keyboards.
 - Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`.
 
 Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group rows until a safe numeric group `chat_id` mapping and admin verification path exists.
+
+BotFather-owned release checklist:
+
+- Configure the bot profile Main Mini App as `Launch app` with URL `https://pharos.watch/pharoswatchbot/app/`.
+- Enable the profile launch surface in BotFather separately from the reconciled persistent menu button.
+- Upload current preview screenshots/video and confirm they match the private-chat control-panel flow.
+- Configure the Mini App loading-screen icon and color in BotFather.
+- Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, and `coin_usdc-circle` on Telegram mobile, desktop, and web.
+- Verify the page loads inside Telegram with the Telegram bridge script, signed `initData`, and no frame denial headers.
 
 ## Files
 
@@ -42,10 +51,18 @@ Group behavior is intentionally unchanged. Group setup, settings, and subscripti
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/src/lib/telegram-presets.ts`
 - `worker/src/lib/telegram-digest-appendices.ts`
+- `worker/src/lib/telegram-mini-app-auth.ts`
 - `src/app/pharoswatchbot/page.tsx`
+- `src/app/pharoswatchbot/app/page.tsx`
+- `src/app/pharoswatchbot/app/client.tsx`
+- `src/app/pharoswatchbot/app/telegram-sdk.ts`
 - `src/app/pharoswatchbot/telegram-pulse-strip.tsx`
 - `src/hooks/use-telegram-pulse.ts`
 - `worker/src/api/telegram-pulse.ts`
+- `worker/src/api/telegram-mini-app.ts`
+- `worker/src/api/telegram-mini-app-state.ts`
+- `worker/src/api/telegram-mini-app-mutations.ts`
+- `worker/src/api/telegram-mini-app-schemas.ts`
 - `worker/src/lib/telegram-usage-analytics.ts`
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`

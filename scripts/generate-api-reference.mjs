@@ -114,7 +114,7 @@ function renderGeneratedBlock(spec) {
     "",
     "### Public Endpoints Quick Reference",
     "",
-    `Generated from \`public/openapi.json\` (\`${spec.info?.title || "Pharos API"}\` v${spec.info?.version || ""}). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.`,
+    `Generated from \`public/openapi.json\` (\`${spec.info?.title || "Pharos API"}\` v${spec.info?.version || ""}). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.`,
     "",
     `Total documented public operations: **${rows.length}**.`,
     "",

@@ -2,6 +2,7 @@ import {
   addNonceToInlineScripts,
   buildContentSecurityPolicy,
   createCspNonce,
+  isTelegramMiniAppPath,
 } from "../shared/lib/site-csp";
 
 interface MiddlewareEnv {
@@ -115,11 +116,15 @@ function addDirectMarkdownAssetSeoHeaders(headers: Headers, canonicalPath: strin
   headers.set("Link", existingLink ? `${existingLink}, ${canonicalLink}` : canonicalLink);
 }
 
-function addCspHeaders(headers: Headers, nonce: string): void {
-  headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce));
+function addCspHeaders(headers: Headers, nonce: string, options: { telegramMiniApp?: boolean } = {}): void {
+  headers.set("Content-Security-Policy", buildContentSecurityPolicy(nonce, options));
   headers.set("Cloudflare-CDN-Cache-Control", "no-store");
   headers.set("CDN-Cache-Control", "no-store");
   headers.delete("Content-Length");
+  if (options.telegramMiniApp) {
+    headers.delete("X-Frame-Options");
+    headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
 }
 
 function isHtmlResponse(response: Response): boolean {
@@ -140,12 +145,12 @@ function withNegotiationHeaders(response: Response, method: string): Response {
   return cloneForMethod(response, method, headers);
 }
 
-async function withHtmlCsp(response: Response, method: string): Promise<Response> {
+async function withHtmlCsp(response: Response, method: string, pathname: string): Promise<Response> {
   if (!isHtmlResponse(response)) return response;
 
   const nonce = createCspNonce();
   const headers = new Headers(response.headers);
-  addCspHeaders(headers, nonce);
+  addCspHeaders(headers, nonce, { telegramMiniApp: isTelegramMiniAppPath(pathname) });
 
   if (method === "HEAD") {
     return cloneForMethod(response, method, headers);
@@ -196,5 +201,5 @@ export const onRequest = async (ctx: MiddlewareContext): Promise<Response> => {
   const negotiated = matchesMarkdownRoute(url.pathname)
     ? withNegotiationHeaders(fallback, ctx.request.method)
     : fallback;
-  return withHtmlCsp(negotiated, ctx.request.method);
+  return withHtmlCsp(negotiated, ctx.request.method, url.pathname);
 };

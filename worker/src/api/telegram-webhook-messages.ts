@@ -1,5 +1,5 @@
 import { escapeHtml } from "../lib/telegram";
-import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
+import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
   TelegramPresetDefinition,
@@ -374,7 +374,7 @@ export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { in
     { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
     { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
   ]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Tune alerts", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Tune alerts", web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) } }]);
   return { inline_keyboard: rows };
 }
 
@@ -386,14 +386,14 @@ export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boole
   inline_keyboard: InlineKeyboardButton[][];
 } {
   const rows: InlineKeyboardButton[][] = [[{ text: "Manage", callback_data: "manage:page:0" }]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Manage in app", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Manage in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
   return { inline_keyboard: rows };
 }
 
 export function buildMiniAppOnlyKeyboard(text = "Open control panel"): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
-  return { inline_keyboard: [[{ text, web_app: { url: TELEGRAM_MINI_APP_URL } }]] };
+  return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]] };
 }
 
 /**

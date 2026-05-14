@@ -16,7 +16,11 @@ function hex(bytes: Uint8Array): string {
 
 async function signedInitData(fields: Record<string, string>): Promise<string> {
   const params = new URLSearchParams(fields);
-  const check = [...params.entries()].map(([key, value]) => `${key}=${value}`).sort().join("\n");
+  const check = [...params.entries()]
+    .filter(([key]) => key !== "hash" && key !== "signature")
+    .map(([key, value]) => `${key}=${value}`)
+    .sort()
+    .join("\n");
   const secret = await hmacSha256(encoder.encode("WebAppData"), BOT_TOKEN);
   params.set("hash", hex(await hmacSha256(secret, check)));
   return params.toString();
@@ -50,6 +54,56 @@ describe("validateTelegramMiniAppInitData", () => {
       user: JSON.stringify({ id: 42, username: "alice" }),
     });
     await expect(validateTelegramMiniAppInitData(initData.replace("alice", "mallory"), BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-signature" });
+  });
+
+  it("excludes Telegram signature from the HMAC data check", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      signature: "telegram-ed25519-signature",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const changedSignature = initData.replace("telegram-ed25519-signature", "changed-transport-signature");
+
+    await expect(validateTelegramMiniAppInitData(changedSignature, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).resolves.toMatchObject({ userId: "42", username: "alice" });
+  });
+
+  it("rejects missing hash", async () => {
+    const initData = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      user: JSON.stringify({ id: 42 }),
+    }).toString();
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects missing auth_date after signature validation", async () => {
+    const initData = await signedInitData({
+      user: JSON.stringify({ id: 42 }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects unequal-length hashes without parsing user JSON", async () => {
+    const initData = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      hash: "abc",
+      user: "{bad-json",
+    }).toString();
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
       maxAgeSec: 86_400,
       nowSec: NOW_SEC,
     })).rejects.toMatchObject({ code: "invalid-signature" });

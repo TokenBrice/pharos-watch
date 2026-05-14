@@ -8,6 +8,7 @@ import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
 export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 15 * 60;
+const SESSION_COOLDOWN_SEC = 2;
 const MUTATION_COOLDOWN_SEC = 1;
 const NO_STORE = { noStore: true };
 
@@ -41,7 +42,6 @@ function authResponse(err: TelegramMiniAppAuthError): Response {
 }
 
 async function validateOrResponse(
-  db: D1Database,
   initData: string,
   botToken: string,
   options: { maxAgeSec: number; startParam?: string | null },
@@ -53,12 +53,6 @@ async function validateOrResponse(
     });
   } catch (err) {
     if (err instanceof TelegramMiniAppAuthError) {
-      await recordMiniAppEvent(db, {
-        eventType: "mini_app_session_invalid",
-        startParam: options.startParam,
-        outcome: err.code === "stale-auth" ? "stale_auth" : "invalid_auth",
-        failureClass: err.code,
-      });
       return authResponse(err);
     }
     throw err;
@@ -89,11 +83,19 @@ export const handleTelegramMiniAppSession = withErrorHandler(
     const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppSessionRequestSchema, { responseOptions: NO_STORE });
     if (parsed instanceof Response) return parsed;
 
-    const auth = await validateOrResponse(db, parsed.initData, botToken, {
+    const auth = await validateOrResponse(parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
       startParam: parsed.startParam,
     });
     if (auth instanceof Response) return auth;
+
+    const cooldown = await acquireTelegramCommandCooldown(db, {
+      chatId: auth.userId,
+      commandKey: "mini-app:session",
+      nowSec: nowSec(),
+      cooldownSec: SESSION_COOLDOWN_SEC,
+    });
+    if (!cooldown.allowed) return errorResponse(429, "Mini App session rate limited", { noStore: true, retryAfterSec: cooldown.retryAfterSec });
 
     await recordMiniAppEvent(db, { eventType: "mini_app_open", auth, outcome: "success" });
     await recordMiniAppEvent(db, { eventType: "mini_app_session_valid", auth, outcome: "success" });
@@ -113,7 +115,7 @@ export const handleTelegramMiniAppMutation = withErrorHandler(
     const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppMutationRequestSchema, { responseOptions: NO_STORE });
     if (parsed instanceof Response) return parsed;
 
-    const auth = await validateOrResponse(db, parsed.initData, botToken, {
+    const auth = await validateOrResponse(parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
     });
     if (auth instanceof Response) return auth;

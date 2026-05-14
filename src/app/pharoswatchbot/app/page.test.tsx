@@ -35,11 +35,11 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(metadata.robots).toEqual({ index: false, follow: false });
   });
 
-  it("renders browser preview without calling session APIs", () => {
+  it("renders browser preview without calling session APIs", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     render(<PharosWatchBotMiniAppPage />);
-    expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
+    expect(await screen.findByText("PharosWatchBot app preview")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -54,11 +54,24 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     expect(ready).toHaveBeenCalled();
-    expect(expand).toHaveBeenCalled();
+    expect(expand).not.toHaveBeenCalled();
+    expect(screen.getByText("Global alerts")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ initData: "signed-init-data", startParam: "settings" }),
     }));
+  });
+
+  it("routes coin start params to the watchlist view", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdc-circle", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Add a coin")).toBeTruthy();
+    expect(screen.getByText(/Launch intent:/)).toBeTruthy();
   });
 
   it("posts mutations and replaces returned state", async () => {

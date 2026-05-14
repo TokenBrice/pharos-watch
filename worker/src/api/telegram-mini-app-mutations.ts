@@ -21,6 +21,7 @@ export class TelegramMiniAppMutationError extends Error {
 }
 
 const DEWS_BAND_TO_CODE = { ALERT: "A", WARNING: "W", DANGER: "D" } as const;
+const SAFETY_MODE_TO_CODE = { all: "a", "downgrade-only": "d", "upgrade-only": "u" } as const;
 
 function privateChatId(auth: TelegramMiniAppAuthContext): string {
   if (!auth.canMutatePrivateChat) throw new TelegramMiniAppMutationError("not-private", 403);
@@ -75,7 +76,13 @@ async function setQuietHours(db: D1Database, chatId: string, username: string | 
 async function setCoin(db: D1Database, chatId: string, username: string | null, operation: Extract<TelegramMiniAppOperation, { kind: "set-coin" }>): Promise<void> {
   assertCoin(operation.stablecoinId);
   const patch = operation.patch;
-  const applied: Array<Promise<string | null>> = [];
+  let appliedCount = 0;
+
+  const apply = async (setting: "db" | "ds" | "sm" | "lc", value: string): Promise<void> => {
+    const result = await applyCoinSetting(db, chatId, username, operation.stablecoinId, setting, value);
+    if (result == null) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+    appliedCount += 1;
+  };
 
   if (patch.alertTypes) {
     const enabled = new Set<string>();
@@ -83,33 +90,33 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
       if (on) {
         enabled.add(alertType);
       } else if (alertType === "dews") {
-        applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "db", "0"));
+        await apply("db", "0");
       } else if (alertType === "depeg") {
-        applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "ds", "0"));
+        await apply("ds", "0");
       } else if (alertType === "safety") {
-        applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "sm", "0"));
+        await apply("sm", "0");
       } else if (alertType === "launch") {
-        applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "lc", "0"));
+        await apply("lc", "0");
       }
     }
     if (enabled.size > 0) {
-      applied.push(upsertSubscriberAndSubscriptions(db, chatId, username, enabled, [operation.stablecoinId]).then(() => "Alert types updated."));
+      await upsertSubscriberAndSubscriptions(db, chatId, username, enabled, [operation.stablecoinId]);
+      appliedCount += 1;
     }
   }
   if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand")) {
-    applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]));
+    await apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps")) {
-    applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps)));
+    await apply("ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
   }
   if (Object.prototype.hasOwnProperty.call(patch, "safetyMode")) {
-    applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "sm", patch.safetyMode ?? "0"));
+    await apply("sm", patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
   }
   if (Object.prototype.hasOwnProperty.call(patch, "launch")) {
-    applied.push(applyCoinSetting(db, chatId, username, operation.stablecoinId, "lc", patch.launch ? "1" : "0"));
+    await apply("lc", patch.launch ? "1" : "0");
   }
-  const results = await Promise.all(applied);
-  if (results.length === 0 || results.some((result) => result == null)) throw new TelegramMiniAppMutationError("invalid-coin-patch");
+  if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");
 }
 
 export async function applyTelegramMiniAppMutation(db: D1Database, auth: TelegramMiniAppAuthContext, operation: TelegramMiniAppOperation): Promise<void> {

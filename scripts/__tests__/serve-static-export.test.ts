@@ -87,6 +87,28 @@ describe("serve-static-export", () => {
     expect(await response.text()).toBe("static api route asset");
   });
 
+  it("serves Mini App HTML with Telegram-specific CSP", async () => {
+    const root = await makeRoot();
+    await mkdir(path.join(root, "pharoswatchbot", "app"), { recursive: true });
+    await writeFile(path.join(root, "pharoswatchbot", "app", "index.html"), "<html><script>1</script></html>");
+
+    const app = createStaticExportServer({
+      apiBaseUrl: "http://127.0.0.1:1",
+      port: 0,
+      rootDir: root,
+    });
+    const baseUrl = await listen(app.server);
+
+    const response = await fetch(`${baseUrl}/pharoswatchbot/app/`);
+    const csp = response.headers.get("Content-Security-Policy") ?? "";
+
+    expect(response.status).toBe(200);
+    expect(csp).toContain("https://telegram.org");
+    expect(csp).toContain("frame-ancestors https://telegram.org https://*.telegram.org");
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await response.text()).toMatch(/<script nonce="[^"]+">1<\/script>/);
+  });
+
   it("continues proxying nested /api paths when no static export file exists", async () => {
     const upstream = createServer((req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });

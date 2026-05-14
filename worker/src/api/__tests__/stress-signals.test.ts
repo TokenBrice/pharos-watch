@@ -460,4 +460,87 @@ describe("handleStressSignals contract tests", () => {
     expect(res.headers.get("Warning")).toContain("DEWS current row unavailable");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
+
+  it("classifies stale single-coin current rows by wall-clock age", async () => {
+    const db = makeStrictSingleCoinDb({
+      score: 25,
+      band: "WATCH",
+      signals_json: signalsJson,
+      computed_at: Math.floor(Date.now() / 1000) - 20_000,
+    });
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: { ageClassification?: string } | null;
+    };
+    expect(body.current?.ageClassification).toBe("stale");
+    expect(res.headers.get("Warning")).toContain("Response is stale");
+  });
+
+  it("reports malformed single-coin current and history rows", async () => {
+    const db = makeStrictSingleCoinDb(
+      {
+        score: 25,
+        band: "WATCH",
+        signals_json: "{bad-json",
+        computed_at: nowSec,
+      },
+      [
+        {
+          snapshot_date: nowSec - 86400,
+          score: 20,
+          band: "WATCH",
+          signals_json: "{bad-history-json",
+        },
+      ],
+    );
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: unknown;
+      currentReasons: string[];
+      history: unknown[];
+      malformedRows: number;
+    };
+    expect(body.current).toBeNull();
+    expect(body.currentReasons).toContain("current-row-malformed");
+    expect(body.currentReasons).toContain("computed-count-zero");
+    expect(body.history).toEqual([]);
+    expect(body.malformedRows).toBe(2);
+  });
+
+  it("marks aggregate rows unavailable when none are readable", async () => {
+    const db = makeStrictAggregateDb([
+      {
+        stablecoin_id: "usdpt-western-union",
+        score: 12,
+        band: "CALM",
+        signals_json: signalsJson,
+        computed_at: nowSec,
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, unknown>;
+      coverageStatus: string;
+      coverageReasons: string[];
+    };
+    expect(body.signals).toEqual({});
+    expect(body.coverageStatus).toBe("unavailable");
+    expect(body.coverageReasons).toContain("no-readable-current-rows");
+    expect(body.coverageReasons).toContain("computed-count-zero");
+  });
 });

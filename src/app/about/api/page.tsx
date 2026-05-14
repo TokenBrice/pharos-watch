@@ -58,7 +58,7 @@ const ABOUT_API_FAQ: FaqItem[] = [
   {
     question: "Do I need an API key for every endpoint?",
     answer:
-      "Almost every public data endpoint on https://api.pharos.watch requires X-API-Key. The no-key exceptions are health checks, OG images, feedback submission, the Telegram webhook, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret. Admin routes use Cloudflare Access instead of public API keys.",
+      "Almost every public data endpoint on https://api.pharos.watch requires X-API-Key. The no-key exceptions are health checks, OG images, feedback submission, the Telegram webhook, Telegram Mini App session/mutation, and the self-serve API-key request and verification endpoints; Telegram still authenticates with its own secret or signed Mini App initData. Admin routes use Cloudflare Access instead of public API keys.",
   },
   {
     question: "What is the difference between the public API lane and the website lane?",

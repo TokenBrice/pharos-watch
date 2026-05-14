@@ -7,7 +7,7 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { escapeHtml } from "../lib/telegram";
-import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
+import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { formatQuietHours } from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
@@ -69,7 +69,7 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: { i
     ]);
   }
   if (options.includeMiniAppButton) {
-    rows.push([{ text: "Open full settings", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+    rows.push([{ text: "Open full settings", web_app: { url: buildTelegramMiniAppUrl("settings") } }]);
   }
   return { inline_keyboard: rows };
 }
@@ -109,7 +109,7 @@ export function buildCoinKeyboard(
     ],
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open full settings", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Open full settings", web_app: { url: buildTelegramMiniAppUrl(`coin_${coinId}`) } }]);
   return { inline_keyboard: rows };
 }
 

@@ -9,7 +9,7 @@ import { FeedbackButton } from "@/components/feedback-button";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
-import { RouteChrome } from "@/components/route-chrome";
+import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
@@ -92,12 +92,9 @@ export default function RootLayout({
                 <SidebarSpacer />
               </RouteChrome>
               <div className="flex-1 flex flex-col min-w-0">
-                <main
-                  id="main-content"
-                  className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6"
-                >
+                <MainContent>
                   {children}
-                </main>
+                </MainContent>
                 <RouteChrome>
                   <Footer />
                 </RouteChrome>

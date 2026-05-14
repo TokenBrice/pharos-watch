@@ -9,7 +9,7 @@
  */
 
 import { escapeHtml } from "../lib/telegram";
-import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
+import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import {
   listTelegramPresets,
@@ -90,7 +90,7 @@ function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): 
     [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
     [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
   ];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open control panel", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl("setup_recommended") } }]);
   return { inline_keyboard: rows };
 }
 

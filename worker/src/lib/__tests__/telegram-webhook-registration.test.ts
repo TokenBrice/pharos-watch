@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
+  buildTelegramMiniAppUrl,
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,
   reconcileTelegramMenuButton,
@@ -80,6 +81,15 @@ describe("buildTelegramWebhookUrl", () => {
 
   it("falls back to the production API origin when SELF_URL is invalid", () => {
     expect(buildTelegramWebhookUrl("not a url")).toBe("https://api.pharos.watch/api/telegram-webhook");
+  });
+});
+
+describe("buildTelegramMiniAppUrl", () => {
+  it("adds sanitized startapp context to the Mini App URL", () => {
+    expect(buildTelegramMiniAppUrl(" coin_usdc-circle ")).toBe(
+      "https://pharos.watch/pharoswatchbot/app/?startapp=coin_usdc-circle",
+    );
+    expect(buildTelegramMiniAppUrl()).toBe(TELEGRAM_MINI_APP_URL);
   });
 });
 
