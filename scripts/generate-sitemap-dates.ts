@@ -15,10 +15,10 @@ function getLastModified(pagePath: string): string {
   try {
     return (
       execFileSync("git", ["log", "-1", "--format=%aI", "--", pagePath], { encoding: "utf-8" }).trim() ||
-      new Date().toISOString()
+      statSync(pagePath).mtime.toISOString()
     );
   } catch {
-    return new Date().toISOString();
+    return statSync(pagePath).mtime.toISOString();
   }
 }
 

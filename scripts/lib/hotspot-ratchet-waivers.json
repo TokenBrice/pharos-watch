@@ -83,21 +83,17 @@
     "disposition": "queued-p4",
     "notes": "Pre-launch detail presentation combines readiness, launch metadata, links, and timeline copy for a narrow route surface. It surfaced after nearby complexity reductions; split data shaping from rendering in a later pre-launch UI cleanup rather than widening this tranche."
   },
-  "worker/src/lib/telegram-usage-analytics.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after splitting Telegram pending queue and command palette hotspots. Usage analytics still centralizes dimension normalization, D1 rollups, and delivery outcome attribution; split aggregation and persistence in a dedicated Telegram analytics cleanup."
-  },
-  "worker/src/cron/yield-sync/publication.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after current frontend and Telegram reductions. Yield publication still coordinates ranking provenance, history rows, decisions, and atomic publication batches; split row builders from persistence in a dedicated yield publication pass."
-  },
-  "worker/src/api/telegram-webhook.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after Telegram queue decomposition. Webhook ingress still combines update parsing, command dispatch, callback handling, and auth/error response glue; split command adapters after callback/store modules settle."
-  },
   "worker/src/api/backfill-depegs.ts": {
     "disposition": "queued-p4",
     "notes": "Surfaced after adjacent admin cleanup. Backfill depegs still mixes request parsing, historical replay setup, PSI side effects, and mutation orchestration; split planning from execution in a focused depeg admin pass."
+  },
+  "worker/src/lib/telegram-usage-analytics.ts": {
+    "disposition": "queued-p4",
+    "notes": "Telegram Mini App usage events widened the existing analytics module. Usage analytics still centralizes dimension normalization, D1 rollups, Mini App events, and delivery outcome attribution; split aggregation and persistence in a dedicated Telegram analytics cleanup."
+  },
+  "worker/src/lib/dews.ts": {
+    "disposition": "queued-p4",
+    "notes": "Phase 2 DEWS hardening added evidence classification, source-quality scoring, expanded explainability metadata, and compatibility gates in the core scoring module. Keep the logic colocated for the v6.0 rollout; split signal families and evidence policy into focused helpers in the next DEWS cleanup pass."
   },
   "src/app/compare/client.tsx": {
     "disposition": "queued-p4",

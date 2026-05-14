@@ -172,6 +172,7 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/api/telegram-webhook-messages.ts::describeSubscriptionSettings",
   "worker/src/api/telegram-webhook-messages.ts::describeGlobalAlertSettings",
   "worker/src/api/telegram-webhook-messages.ts::formatCoinLines",
+  "worker/src/api/telegram-webhook-messages.ts::buildMiniAppOnlyKeyboard",
   "worker/src/api/telegram-webhook-parsing.ts::parseStoredSetCommand",
   "worker/src/api/telegram-webhook-parsing.ts::parseStringArray",
   "worker/src/api/telegram-webhook-parsing.ts::parseResolvedCoins",
