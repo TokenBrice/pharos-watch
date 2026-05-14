@@ -74,7 +74,7 @@ HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
 
 - Parse `URLSearchParams` from raw `initData`.
 - Require `hash`, `auth_date`, and `user` for mutations.
-- Build the data-check string from all fields except `hash` and `signature`, sorted alphabetically, joined by `\n`.
+- Build the bot-token HMAC data-check string from all fields except `hash`, sorted alphabetically, joined by `\n`. Keep Telegram's `signature` field in this bot-token HMAC path; only the third-party Ed25519 validation path excludes both `hash` and `signature`.
 - Derive the secret key with `HMAC-SHA-256(key="WebAppData", message=TELEGRAM_BOT_TOKEN)`.
 - Compare the computed hex HMAC with `hash` using timing-safe comparison.
 - Try `TELEGRAM_BOT_TOKEN` first and fall back to `TELEGRAM_BOT_TOKEN_PREVIOUS` when configured, so `initData` signed by either token validates during a bot-token rotation overlap. See [`runbooks/telegram-secret-rotation.md`](./runbooks/telegram-secret-rotation.md) for the rotation contract.

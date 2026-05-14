@@ -152,6 +152,20 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
+  it("accepts Telegram session initData with the Ed25519 signature field", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      signature: "telegram-ed25519-signature",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+  });
+
   it("keeps stale-but-valid sessions read-only", async () => {
     const initData = await privateInitData(3_600);
     const db = mockD1(stateReadTables());
