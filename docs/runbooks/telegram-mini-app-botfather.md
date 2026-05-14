@@ -35,7 +35,7 @@ Run after each Mini App deploy and after each BotFather UI change. Each test sho
 10. **Direct deep link: health** — Tap `https://t.me/PharosWatchBot?startapp=health`. Mini App loads the **Delivery health** panel.
 11. **Direct deep link: forget** — Tap `https://t.me/PharosWatchBot?startapp=forget`. Mini App loads the **Privacy** panel.
 12. **Direct deep link: setup_recommended** — Tap `https://t.me/PharosWatchBot?startapp=setup_recommended`. Mini App loads the **Recommended-setup confirmation** view.
-13. **Unknown payload fallback** — Tap `https://t.me/PharosWatchBot?startapp=zzz-unknown`. Mini App loads on the **Home** panel and emits a `mini_app_unknown_payload` usage event (verify the next day in `telegram_usage_daily`).
+13. **Unknown payload fallback** — Tap `https://t.me/PharosWatchBot?startapp=zzz-unknown`. Mini App loads on the **Home** panel without mutating alert state.
 14. **Cross-platform render** — Repeat tests 1, 2, 4, and 6 on Telegram Desktop, iOS, and Android. The Telegram bridge script loads, `initData` is signed, and there are no frame-denial headers.
 
 If any smoke test fails on a deploy, treat the failing payload as a Mini App release blocker and follow [`docs/telegram-mini-app.md`](../telegram-mini-app.md) section "Debugging Workflow" before re-running.

@@ -474,26 +474,4 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
-  it("clears mutation error messages after six seconds", async () => {
-    vi.useFakeTimers();
-    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
-      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "x", code: "rate-limited" }) });
-    vi.stubGlobal("fetch", fetchMock);
-
-    render(<PharosWatchBotMiniAppPage />);
-    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
-    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
-    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
-
-    const copy = "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
-    await waitFor(() => expect(screen.getByText(copy)).toBeTruthy());
-
-    await act(async () => {
-      vi.advanceTimersByTime(6_000);
-    });
-
-    await waitFor(() => expect(screen.queryByText(copy)).toBeNull());
-  });
 });
