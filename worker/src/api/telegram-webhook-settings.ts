@@ -59,6 +59,9 @@ export interface SettingsCallbackQuery {
 }
 
 type RenderTarget = { mode: "send" } | { mode: "edit"; messageId: number };
+interface SettingsRenderOptions {
+  includeMiniAppButton?: boolean;
+}
 
 /**
  * Render the chat-level or per-coin settings view as a top-level `/settings`
@@ -70,10 +73,11 @@ export async function handleSettingsCommand(
   chatId: string,
   _username: string | null,
   args: string,
+  options: SettingsRenderOptions = {},
 ): Promise<void> {
   const trimmed = args.trim();
   if (!trimmed) {
-    await renderHome(db, chatId, botToken, { mode: "send" });
+    await renderHome(db, chatId, botToken, { mode: "send" }, options);
     return;
   }
   const resolution = resolveTicker(trimmed, "tracked");
@@ -89,7 +93,7 @@ export async function handleSettingsCommand(
     });
     return;
   }
-  await renderCoin(db, chatId, resolution.matches[0].id, botToken, { mode: "send" });
+  await renderCoin(db, chatId, resolution.matches[0].id, botToken, { mode: "send" }, options);
 }
 
 /** Dispatch a `settings:*` callback_query. */
@@ -215,9 +219,10 @@ async function renderHome(
   chatId: string,
   botToken: string,
   target: RenderTarget,
+  options: SettingsRenderOptions = {},
 ): Promise<void> {
   const subscriber = await loadSubscriberByChat(db, chatId);
-  await deliver(db, chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber), botToken, target);
+  await deliver(db, chatId, buildHomeMessage(subscriber), buildHomeKeyboard(subscriber, options), botToken, target);
 }
 
 async function renderCoin(
@@ -226,10 +231,11 @@ async function renderCoin(
   coinId: string,
   botToken: string,
   target: RenderTarget,
+  options: SettingsRenderOptions = {},
 ): Promise<void> {
   const rows = await loadSubscriptionsByIds(db, chatId, [coinId]);
   const row = rows[0] ?? null;
-  await deliver(db, chatId, buildCoinMessage(coinId, row), buildCoinKeyboard(coinId, row), botToken, target);
+  await deliver(db, chatId, buildCoinMessage(coinId, row), buildCoinKeyboard(coinId, row, options), botToken, target);
 }
 
 async function deliver(

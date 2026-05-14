@@ -1,4 +1,5 @@
 import { escapeHtml } from "../lib/telegram";
+import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
   TelegramPresetDefinition,
@@ -10,6 +11,12 @@ import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
 
 const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
+
+interface InlineKeyboardButton {
+  text: string;
+  callback_data?: string;
+  web_app?: { url: string };
+}
 
 export function buildNotFoundMessage(ticker: string, suggestion?: ResolvedCoin): string {
   const lines = [`Ticker or preset "${ticker}" not found.`];
@@ -359,30 +366,34 @@ function formatUsdCompact(value: number | null | undefined): string | null {
   return `$${value.toFixed(0)}`;
 }
 
-export function buildStatusDiscoveryKeyboard(stablecoinId: string): {
-  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { includeMiniAppButton?: boolean } = {}): {
+  inline_keyboard: InlineKeyboardButton[][];
 } {
-  return {
-    inline_keyboard: [
-      [
-        { text: "Why?", callback_data: `why:${stablecoinId}` },
-        { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
-        { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
-      ],
-    ],
-  };
+  const rows: InlineKeyboardButton[][] = [[
+    { text: "Why?", callback_data: `why:${stablecoinId}` },
+    { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
+    { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
+  ]];
+  if (options.includeMiniAppButton) rows.push([{ text: "Tune alerts", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  return { inline_keyboard: rows };
 }
 
 /** Page size for the /list `[ Manage ]` keyboard. */
 export const MANAGE_PAGE_SIZE = 5;
 
 /** Inline keyboard with a single `[ Manage ]` entry button, attached to /list. */
-export function buildManageEntryKeyboard(): {
-  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boolean } = {}): {
+  inline_keyboard: InlineKeyboardButton[][];
 } {
-  return {
-    inline_keyboard: [[{ text: "Manage", callback_data: "manage:page:0" }]],
-  };
+  const rows: InlineKeyboardButton[][] = [[{ text: "Manage", callback_data: "manage:page:0" }]];
+  if (options.includeMiniAppButton) rows.push([{ text: "Manage in app", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  return { inline_keyboard: rows };
+}
+
+export function buildMiniAppOnlyKeyboard(text = "Open control panel"): {
+  inline_keyboard: InlineKeyboardButton[][];
+} {
+  return { inline_keyboard: [[{ text, web_app: { url: TELEGRAM_MINI_APP_URL } }]] };
 }
 
 /**

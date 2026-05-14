@@ -3,6 +3,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import {
   buildTelegramWebhookUrl,
   reconcileTelegramCommandRegistration,
+  reconcileTelegramMenuButton,
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
   TELEGRAM_BOT_COMMANDS,
@@ -10,6 +11,8 @@ import {
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
+  TELEGRAM_MINI_APP_BUTTON_TEXT,
+  TELEGRAM_MINI_APP_URL,
 } from "../telegram-webhook-registration";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
@@ -54,6 +57,17 @@ function expectedProfileCacheValue(): string {
     name: TELEGRAM_BOT_NAME,
     short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
     description: TELEGRAM_BOT_DESCRIPTION,
+  });
+}
+
+function expectedMenuCacheValue(url = TELEGRAM_MINI_APP_URL): string {
+  return JSON.stringify({
+    version: 1,
+    menu_button: {
+      type: "web_app",
+      text: TELEGRAM_MINI_APP_BUTTON_TEXT,
+      web_app: { url },
+    },
   });
 }
 
@@ -287,6 +301,81 @@ describe("reconcileTelegramWebhookRegistration", () => {
         selfUrl: "https://api.pharos.watch",
       }),
     ).rejects.toThrow("Telegram setWebhook rejected registration");
+  });
+});
+
+describe("reconcileTelegramMenuButton", () => {
+  beforeEach(() => {
+    fetchSpy.mockReset();
+  });
+
+  it("sets the default Web App menu button and records the cache marker", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:menu-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ]);
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, result: { type: "default" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, result: true }), { status: 200 }));
+
+    const result = await reconcileTelegramMenuButton(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({ attempted: true, skipped: false, miniAppUrl: TELEGRAM_MINI_APP_URL });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/getChatMenuButton");
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://api.telegram.org/botbot-token/setChatMenuButton");
+    expect(JSON.parse(fetchSpy.mock.calls[1]?.[1]?.body as string)).toEqual({
+      menu_button: {
+        type: "web_app",
+        text: "Manage Alerts",
+        web_app: { url: TELEGRAM_MINI_APP_URL },
+      },
+    });
+    const write = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "telegram:menu-reconciled"
+    );
+    expect(write?.binds[1]).toBe(expectedMenuCacheValue());
+  });
+
+  it("skips setChatMenuButton when the current menu button already matches", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:menu-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ]);
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+      ok: true,
+      result: {
+        type: "web_app",
+        text: "Manage Alerts",
+        web_app: { url: TELEGRAM_MINI_APP_URL },
+      },
+    }), { status: 200 }));
+
+    const result = await reconcileTelegramMenuButton(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({
+      attempted: false,
+      skipped: true,
+      reason: "already-current",
+      miniAppUrl: TELEGRAM_MINI_APP_URL,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
 

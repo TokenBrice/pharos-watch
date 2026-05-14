@@ -9,6 +9,7 @@
  */
 
 import { escapeHtml } from "../lib/telegram";
+import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import {
   listTelegramPresets,
@@ -63,6 +64,7 @@ const PRESET_PICKER_ORDER: TelegramPresetId[] = [
 interface InlineKeyboardButton {
   text: string;
   callback_data?: string;
+  web_app?: { url: string };
 }
 
 interface InlineKeyboardMarkup {
@@ -82,14 +84,14 @@ function presetLabelById(presetId: string): string {
   return presetId;
 }
 
-function buildBranchKeyboard(): InlineKeyboardMarkup {
-  return {
-    inline_keyboard: [
-      [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
-      [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
-      [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
-    ],
-  };
+function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): InlineKeyboardMarkup {
+  const rows: InlineKeyboardButton[][] = [
+    [{ text: "Use recommended (DEWS + Depeg, usd-top25)", callback_data: "setup:branch:recommended" }],
+    [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
+    [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
+  ];
+  if (options.includeMiniAppButton) rows.push([{ text: "Open control panel", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  return { inline_keyboard: rows };
 }
 
 function buildTypeToggleKeyboard(selected: Set<string>): InlineKeyboardMarkup {
@@ -228,6 +230,7 @@ export async function sendWizardIntro(
   botToken: string,
   chatId: string,
   initiatorUserId: string | null,
+  options: { includeMiniAppButton?: boolean } = {},
 ): Promise<void> {
   await persistSetupState(db, chatId, {
     step: "branch",
@@ -237,7 +240,7 @@ export async function sendWizardIntro(
   });
   await sendAuditedTelegramReply(db, chatId, WIZARD_INTRO_MESSAGE, botToken, {
     actionDetail: "setup",
-    replyMarkup: buildBranchKeyboard(),
+    replyMarkup: buildBranchKeyboard(options),
   });
 }
 

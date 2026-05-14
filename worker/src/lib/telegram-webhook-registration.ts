@@ -1,18 +1,22 @@
-import { API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
+import { API_ORIGIN, SITE_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { getCache, setCache } from "./db-cache";
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
+const TELEGRAM_MINI_APP_PATH = "/pharoswatchbot/app/";
 const TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY = "telegram:webhook-reconciled";
 const TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY = "telegram:commands-reconciled";
 const TELEGRAM_PROFILE_RECONCILED_CACHE_KEY = "telegram:profile-reconciled";
+const TELEGRAM_MENU_RECONCILED_CACHE_KEY = "telegram:menu-reconciled";
 const TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
+const TELEGRAM_MENU_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
 const TELEGRAM_COMMANDS_CACHE_VERSION = 5;
 const TELEGRAM_PROFILE_CACHE_VERSION = 3;
+const TELEGRAM_MENU_CACHE_VERSION = 1;
 
 // Profile metadata shown on the bot's About page, card preview, and chat
 // header. Kept in code so changes flow through git review and the 15-minute
@@ -22,6 +26,8 @@ export const TELEGRAM_BOT_SHORT_DESCRIPTION =
   "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track the Pharos universe.";
 export const TELEGRAM_BOT_DESCRIPTION =
   "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
+export const TELEGRAM_MINI_APP_URL = new URL(TELEGRAM_MINI_APP_PATH, SITE_ORIGIN).toString();
+export const TELEGRAM_MINI_APP_BUTTON_TEXT = "Manage Alerts";
 
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
@@ -63,6 +69,10 @@ interface TelegramApiResponse {
   description?: string;
 }
 
+interface TelegramChatMenuButtonResponse extends TelegramApiResponse {
+  result?: unknown;
+}
+
 export interface ReconcileTelegramWebhookResult {
   attempted: boolean;
   skipped: boolean;
@@ -80,6 +90,13 @@ export interface ReconcileTelegramProfileResult {
   attempted: boolean;
   skipped: boolean;
   reason?: "missing-bot-token" | "fresh-cache";
+}
+
+export interface ReconcileTelegramMenuButtonResult {
+  attempted: boolean;
+  skipped: boolean;
+  reason?: "missing-bot-token" | "fresh-cache" | "already-current";
+  miniAppUrl: string;
 }
 
 export function buildTelegramWebhookUrl(selfUrl?: string | null): string {
@@ -129,6 +146,25 @@ function buildExpectedProfileCacheValue(): string {
   });
 }
 
+function buildTelegramMenuButton(miniAppUrl = TELEGRAM_MINI_APP_URL): {
+  type: "web_app";
+  text: string;
+  web_app: { url: string };
+} {
+  return {
+    type: "web_app",
+    text: TELEGRAM_MINI_APP_BUTTON_TEXT,
+    web_app: { url: miniAppUrl },
+  };
+}
+
+function buildExpectedMenuCacheValue(miniAppUrl = TELEGRAM_MINI_APP_URL): string {
+  return JSON.stringify({
+    version: TELEGRAM_MENU_CACHE_VERSION,
+    menu_button: buildTelegramMenuButton(miniAppUrl),
+  });
+}
+
 async function shouldSkipFreshMatchingWebhookCache(db: D1Database, expectedValue: string): Promise<boolean> {
   const cached = await getCache(db, TELEGRAM_WEBHOOK_RECONCILED_CACHE_KEY);
   if (!cached) return false;
@@ -147,6 +183,13 @@ async function shouldSkipFreshMatchingProfileCache(db: D1Database, expectedValue
   const cached = await getCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY);
   if (!cached) return false;
   if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_PROFILE_RECONCILE_TTL_SEC) return false;
+  return cached.value === expectedValue;
+}
+
+async function shouldSkipFreshMatchingMenuCache(db: D1Database, expectedValue: string): Promise<boolean> {
+  const cached = await getCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY);
+  if (!cached) return false;
+  if (Date.now() / 1000 - cached.updatedAt >= TELEGRAM_MENU_RECONCILE_TTL_SEC) return false;
   return cached.value === expectedValue;
 }
 
@@ -185,6 +228,34 @@ async function applyProfileField(
     throw new Error(`Telegram ${method} HTTP ${response.status}: ${responseText.slice(0, 300)}`);
   }
   throw new Error(`Telegram ${method} rejected registration: ${(parsed?.description ?? responseText).slice(0, 300)}`);
+}
+
+async function fetchTelegramMenuButton(botToken: string): Promise<unknown | null> {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMenuButton`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+    signal: AbortSignal.timeout(10_000),
+  });
+  const responseText = await response.text();
+  let parsed: TelegramChatMenuButtonResponse | null = null;
+  try {
+    parsed = JSON.parse(responseText) as TelegramChatMenuButtonResponse;
+  } catch {
+    parsed = null;
+  }
+  if (parsed?.ok === true) return parsed.result ?? null;
+  if (!response.ok) throw new Error(`Telegram getChatMenuButton HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+  throw new Error(`Telegram getChatMenuButton rejected reconciliation: ${(parsed?.description ?? responseText).slice(0, 300)}`);
+}
+
+function menuButtonMatches(current: unknown, miniAppUrl: string): boolean {
+  if (!current || typeof current !== "object") return false;
+  const record = current as Record<string, unknown>;
+  const webApp = record.web_app;
+  return record.type === "web_app"
+    && record.text === TELEGRAM_MINI_APP_BUTTON_TEXT
+    && Boolean(webApp && typeof webApp === "object" && (webApp as Record<string, unknown>).url === miniAppUrl);
 }
 
 export async function reconcileTelegramWebhookRegistration(
@@ -321,4 +392,50 @@ export async function reconcileTelegramProfileRegistration(
 
   await setCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY, expectedCacheValue);
   return { attempted: true, skipped: false };
+}
+
+export async function reconcileTelegramMenuButton(
+  db: D1Database,
+  options: {
+    botToken?: string | null;
+    miniAppUrl?: string | null;
+  },
+): Promise<ReconcileTelegramMenuButtonResult> {
+  const botToken = options.botToken?.trim();
+  const miniAppUrl = options.miniAppUrl?.trim() || TELEGRAM_MINI_APP_URL;
+  const expectedCacheValue = buildExpectedMenuCacheValue(miniAppUrl);
+
+  if (!botToken) {
+    return { attempted: false, skipped: true, reason: "missing-bot-token", miniAppUrl };
+  }
+  if (await shouldSkipFreshMatchingMenuCache(db, expectedCacheValue)) {
+    return { attempted: false, skipped: true, reason: "fresh-cache", miniAppUrl };
+  }
+
+  const current = await fetchTelegramMenuButton(botToken);
+  if (menuButtonMatches(current, miniAppUrl)) {
+    await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);
+    return { attempted: false, skipped: true, reason: "already-current", miniAppUrl };
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ menu_button: buildTelegramMenuButton(miniAppUrl) }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const responseText = await response.text();
+  let parsed: TelegramApiResponse | null = null;
+  try {
+    parsed = JSON.parse(responseText) as TelegramApiResponse;
+  } catch {
+    parsed = null;
+  }
+  if (parsed?.ok !== true) {
+    if (!response.ok) throw new Error(`Telegram setChatMenuButton HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+    throw new Error(`Telegram setChatMenuButton rejected reconciliation: ${(parsed?.description ?? responseText).slice(0, 300)}`);
+  }
+
+  await setCache(db, TELEGRAM_MENU_RECONCILED_CACHE_KEY, expectedCacheValue);
+  return { attempted: true, skipped: false, miniAppUrl };
 }

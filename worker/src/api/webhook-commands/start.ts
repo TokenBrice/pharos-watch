@@ -59,7 +59,9 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
       // Empty payload or `?start=setup` both open the wizard in private chats
       // and for group admins. Non-admin group members get the read-only start
       // message above.
-      await sendWizardIntro(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId);
+      await sendWizardIntro(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId, {
+        includeMiniAppButton: ctx.chatType === "private",
+      });
       return;
   }
 };

@@ -77,6 +77,8 @@ export const API_PATHS = {
       window: params?.window,
     }),
   telegramPulse: () => "/api/telegram-pulse",
+  telegramMiniAppSession: () => "/api/telegram-mini-app/session",
+  telegramMiniAppMutation: () => "/api/telegram-mini-app/mutate",
   feedback: () => "/api/feedback",
   apiKeyRequests: () => "/api/api-key-requests",
   apiKeyRequestVerify: () => "/api/api-key-requests/verify",

@@ -26,6 +26,6 @@ export const handleStatus: WebhookCommandHandler = async (ctx, args) => {
   const coin = resolution.matches[0];
   const status = await loadStatusForCoin(ctx.db, coin.id);
   await ctx.replyToChatWithMarkup(buildStatusMessage(coin.symbol, status), {
-    replyMarkup: buildStatusDiscoveryKeyboard(coin.id),
+    replyMarkup: buildStatusDiscoveryKeyboard(coin.id, { includeMiniAppButton: ctx.chatType === "private" }),
   });
 };

@@ -91,6 +91,8 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
       "/api/supply-history",
       "/api/supply-history?stablecoin=usdt-tether",
+      "/api/telegram-mini-app/mutate",
+      "/api/telegram-mini-app/session",
       "/api/telegram-pending",
       "/api/telegram-pulse",
       "/api/telegram-webhook",
@@ -197,6 +199,8 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/feedback")).toBe(true);
     expect(isCacheBypassPath("/api/api-key-requests")).toBe(true);
     expect(isCacheBypassPath("/api/api-key-requests/verify")).toBe(true);
+    expect(isCacheBypassPath("/api/telegram-mini-app/session")).toBe(true);
+    expect(isCacheBypassPath("/api/telegram-mini-app/mutate")).toBe(true);
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
   });
 
@@ -325,6 +329,8 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests/verify"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/mutate"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-keys"), "POST")).toBeNull();
@@ -376,6 +382,10 @@ describe("api endpoint registry", () => {
       message: "Method not allowed. Use POST for this endpoint.",
       allowedMethods: ["POST"],
     });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/telegram-mini-app/session"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/api-key-requests-admin"), "POST")).toEqual({
       message: "Method not allowed",
       allowedMethods: ["GET"],
@@ -403,6 +413,8 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/health")).toBe("exempt");
     expect(getPublicApiAccess("/api/api-key-requests")).toBe("exempt");
     expect(getPublicApiAccess("/api/api-key-requests/verify")).toBe("exempt");
+    expect(getPublicApiAccess("/api/telegram-mini-app/session")).toBe("exempt");
+    expect(getPublicApiAccess("/api/telegram-mini-app/mutate")).toBe("exempt");
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");
     expect(getPublicApiAccess("/api/telegram-pulse")).toBe("protected");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
@@ -415,6 +427,8 @@ describe("api endpoint registry", () => {
     expect(getSiteDataAccess("/api/telegram-pulse")).toBe("allowed");
     expect(getSiteDataAccess("/api/api-key-requests")).toBe("denied");
     expect(getSiteDataAccess("/api/api-key-requests/verify")).toBe("denied");
+    expect(getSiteDataAccess("/api/telegram-mini-app/session")).toBe("denied");
+    expect(getSiteDataAccess("/api/telegram-mini-app/mutate")).toBe("denied");
     expect(getSiteDataAccess("/api/api-key-requests-admin")).toBe("denied");
     expect(getSiteDataAccess("/api/stablecoin-summary/usdt-tether")).toBe("allowed");
     expect(isSiteDataAllowedPath("/api/stablecoins")).toBe(true);

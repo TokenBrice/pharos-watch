@@ -7,6 +7,7 @@
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { escapeHtml } from "../lib/telegram";
+import { TELEGRAM_MINI_APP_URL } from "../lib/telegram-webhook-registration";
 import { formatQuietHours } from "./telegram-webhook-messages";
 import { unixNow } from "./telegram-webhook-store";
 import type { SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
@@ -41,12 +42,14 @@ export function buildHomeMessage(subscriber: SubscriberRow | null): string {
   return lines.join("\n");
 }
 
-export function buildHomeKeyboard(subscriber: SubscriberRow | null): {
-  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+type SettingsButton = { text: string; callback_data?: string; web_app?: { url: string } };
+
+export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: { includeMiniAppButton?: boolean } = {}): {
+  inline_keyboard: SettingsButton[][];
 } {
   const quietOn = Boolean(subscriber?.quiet_hours_enabled);
   const snoozeActive = (subscriber?.alert_snooze_until_ts ?? 0) > unixNow();
-  const rows: Array<Array<{ text: string; callback_data: string }>> = [
+  const rows: SettingsButton[][] = [
     [
       {
         text: `Quiet hours: ${quietOn ? "ON" : "OFF"}`,
@@ -64,6 +67,9 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null): {
         callback_data: `settings:gt:${type}`,
       },
     ]);
+  }
+  if (options.includeMiniAppButton) {
+    rows.push([{ text: "Open full settings", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
   }
   return { inline_keyboard: rows };
 }
@@ -86,24 +92,25 @@ export function buildCoinMessage(coinId: string, row: SubscriptionRow | null): s
 export function buildCoinKeyboard(
   coinId: string,
   row: SubscriptionRow | null,
-): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
+  options: { includeMiniAppButton?: boolean } = {},
+): { inline_keyboard: SettingsButton[][] } {
   const dewsBand = row?.alert_dews ? row?.dews_min_band ?? "ALERT" : null;
   const safetyMode = row?.alert_safety ? row?.safety_mode ?? "all" : null;
   const depegStep: number | "off" = row?.alert_depeg ? row?.depeg_worsening_bps_step ?? -1 : "off";
   const launchOn = Boolean(row?.alert_launch);
 
-  return {
-    inline_keyboard: [
-      buildDewsRow(coinId, dewsBand),
-      buildSafetyRow(coinId, safetyMode),
-      buildDepegRow(coinId, depegStep),
-      [
-        { text: `${markIf(launchOn)}on`, callback_data: `settings:c:${coinId}:lc:1` },
-        { text: `${markIf(!launchOn)}off`, callback_data: `settings:c:${coinId}:lc:0` },
-      ],
-      [{ text: "← Back to chat settings", callback_data: "settings:home" }],
+  const rows: SettingsButton[][] = [
+    buildDewsRow(coinId, dewsBand),
+    buildSafetyRow(coinId, safetyMode),
+    buildDepegRow(coinId, depegStep),
+    [
+      { text: `${markIf(launchOn)}on`, callback_data: `settings:c:${coinId}:lc:1` },
+      { text: `${markIf(!launchOn)}off`, callback_data: `settings:c:${coinId}:lc:0` },
     ],
-  };
+    [{ text: "← Back to chat settings", callback_data: "settings:home" }],
+  ];
+  if (options.includeMiniAppButton) rows.push([{ text: "Open full settings", web_app: { url: TELEGRAM_MINI_APP_URL } }]);
+  return { inline_keyboard: rows };
 }
 
 // ---------- Row builders ----------

@@ -20,7 +20,17 @@ export type TelegramUsageEventType =
   | "group_admin_denial"
   | "unknown_command"
   | "command"
-  | "reply_failure";
+  | "reply_failure"
+  | "mini_app_open"
+  | "mini_app_session_valid"
+  | "mini_app_session_invalid"
+  | "mini_app_mutation"
+  | "mini_app_mutation_denied"
+  | "mini_app_recommended_setup"
+  | "mini_app_coin_add"
+  | "mini_app_coin_remove"
+  | "mini_app_quiet_hours"
+  | "mini_app_group_readonly";
 
 export type TelegramLifecycleHistorySource = "snapshot" | "live-fallback";
 

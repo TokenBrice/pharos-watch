@@ -13,6 +13,7 @@ import { cleanExpiredDisambiguations } from "../../cron/telegram-quiet-hours";
 import { logTelegramEvent } from "../../lib/telegram-log";
 import {
   reconcileTelegramCommandRegistration,
+  reconcileTelegramMenuButton,
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
 } from "../../lib/telegram-webhook-registration";
@@ -70,6 +71,13 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     });
     if (profileResult.attempted) {
       console.log("[cron] Reconciled Telegram bot profile metadata");
+    }
+
+    const menuResult = await reconcileTelegramMenuButton(runtime.db, {
+      botToken: runtime.env.TELEGRAM_BOT_TOKEN,
+    });
+    if (menuResult.attempted) {
+      console.log(`[cron] Reconciled Telegram menu button: ${menuResult.miniAppUrl}`);
     }
 
     const result = await reconcileTelegramWebhookRegistration(runtime.db, {

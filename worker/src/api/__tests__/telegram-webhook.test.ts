@@ -1272,7 +1272,7 @@ describe("handleTelegramWebhook", () => {
     expect(callbacks).toContain("manage:page:0");
   });
 
-  it("omits the [Manage] button when /list has no explicit coin subscriptions", async () => {
+  it("omits the callback [Manage] button when /list has no explicit coin subscriptions", async () => {
     const db = mockD1([
       { match: "telegram_pending_disambiguation", rows: [] },
       {
@@ -1293,8 +1293,13 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/list"), "test-secret", "bot-token");
 
-    const body = sentMessageBody() as { text: string; reply_markup?: unknown };
-    expect(body.reply_markup).toBeUndefined();
+    const body = sentMessageBody() as {
+      text: string;
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>> };
+    };
+    const buttons = (body.reply_markup?.inline_keyboard ?? []).flat();
+    expect(buttons.some((button) => button.callback_data === "manage:page:0")).toBe(false);
+    expect(buttons.some((button) => button.text === "Manage in app" && button.web_app?.url === "https://pharos.watch/pharoswatchbot/app/")).toBe(true);
   });
 
   it("replies to /presets with the preset catalog", async () => {
@@ -1749,7 +1754,7 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     const sent = sentMessageBody() as {
       text: string;
-      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>> };
     };
     expect(sent.text).toContain("Current timezone: Europe/Paris");
     const flat = (sent.reply_markup?.inline_keyboard ?? []).flat();
@@ -2396,7 +2401,7 @@ describe("handleTelegramWebhook", () => {
     expect(res.status).toBe(200);
     const sent = sentMessageBody() as {
       text: string;
-      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> };
+      reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>> };
     };
     expect(sent.text).toContain("USDC");
     expect(sent.text).toContain("CALM");
@@ -2404,13 +2409,15 @@ describe("handleTelegramWebhook", () => {
     expect(sent.text).toContain("Depeg: stable");
     expect(sent.text).toContain("Price: $0.9999");
     // P1-U11: discoverability buttons attached to the status card.
-    const buttons = (sent.reply_markup?.inline_keyboard ?? []).flat();
-    expect(buttons.map((b) => b.text)).toEqual(["Why?", "Coverage", "Subscribe"]);
-    expect(buttons.map((b) => b.callback_data)).toEqual([
+    const buttons: Array<{ text: string; callback_data?: string; web_app?: { url: string } }> =
+      (sent.reply_markup?.inline_keyboard ?? []).flat();
+    expect(buttons.map((b) => b.text)).toEqual(["Why?", "Coverage", "Subscribe", "Tune alerts"]);
+    expect(buttons.slice(0, 3).map((b) => b.callback_data)).toEqual([
       "why:usdc-circle",
       "coverage:usdc-circle",
       "quicksub:usdc-circle",
     ]);
+    expect(buttons[3]?.web_app?.url).toBe("https://pharos.watch/pharoswatchbot/app/");
     // Bot API limit: callback_data must stay ≤64 bytes.
     for (const button of buttons) {
       expect((button.callback_data ?? "").length).toBeLessThanOrEqual(64);
