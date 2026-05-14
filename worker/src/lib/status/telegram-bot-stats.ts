@@ -259,6 +259,11 @@ const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
   "mini_app_coin_add",
   "mini_app_coin_remove",
   "mini_app_quiet_hours",
+  "mini_app_snooze",
+  "mini_app_coin_snooze",
+  "mini_app_forget",
+  "timezone_change",
+  "unsubscribe",
 ] as const;
 const TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES
   .map(() => "?")
@@ -381,12 +386,12 @@ async function loadInactiveSubscribersCleanedThisWeek(
   const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
   const row = await db
     .prepare(
-      "SELECT item_count FROM cron_runs WHERE job = ? AND started_at >= ? ORDER BY started_at DESC LIMIT 1",
+      "SELECT COALESCE(SUM(item_count), 0) AS total FROM cron_runs WHERE job = ? AND status = 'ok' AND started_at >= ?",
     )
     .bind(INACTIVE_CLEANUP_JOB, cutoff)
-    .first<{ item_count: number | string | null }>();
+    .first<{ total: number | string | null }>();
   if (!row) return null;
-  const parsed = Number(row.item_count ?? 0);
+  const parsed = Number(row.total ?? 0);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
 }
 
