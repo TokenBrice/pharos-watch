@@ -1,0 +1,102 @@
+{
+  "id": "xnk-kinka",
+  "name": "Kinka",
+  "symbol": "XNK",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GOLD",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
+  "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
+  "commodityOunces": 1,
+  "detailProvider": "commodity",
+  "geckoId": "kinka",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
+    "provider": "Kinka issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://kinka-gold.com/"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+    },
+    {
+      "label": "Terms",
+      "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/kinka"
+    }
+  ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+      "decimals": 18
+    },
+    {
+      "chain": "cardano",
+      "address": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Kinka terms",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      }
+    ],
+    "evidence": "Kinka terms reserve issuer discretion over transfers and exchange and allow restrictions on Ethereum addresses; the centralized issuer and physical-gold redemption process create a direct blacklistability surface.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "single-asset",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "xnk-kinka",
+    "display": {
+      "url": "https://kinka-gold.com/",
+      "label": "Kinka"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "label": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands)",
+      "risk": "very-low"
+    }
+  }
+}

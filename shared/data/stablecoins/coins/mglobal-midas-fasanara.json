@@ -1,0 +1,88 @@
+{
+  "id": "mglobal-midas-fasanara",
+  "name": "Midas Fasanara Global",
+  "symbol": "mGLOBAL",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
+  "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-fasanara-global",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mglobal"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-fasanara-global"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Liechtenstein FMA",
+    "license": "EEA-restricted tokenized certificate"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7433806912eae67919e66aea853d46fa0aef98a8",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mGLOBAL",
+        "url": "https://midas.app/mglobal"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas Fasanara Global is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Fasanara global private-credit / strategy portfolio",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Midas Fasanara Global NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Contract-priced strategy token",
+      "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats MGLOBAL as a NAV-priced tokenized certificate."
+    }
+  ]
+}

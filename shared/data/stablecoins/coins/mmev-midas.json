@@ -1,0 +1,114 @@
+{
+  "id": "mmev-midas",
+  "name": "Midas mMEV",
+  "symbol": "mMEV",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
+  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mmev",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mmev"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/tokens/mmev"
+    },
+    {
+      "label": "Risks",
+      "url": "https://docs.midas.app/tokens/mmev/risks"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-mmev"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x7d611dc23267f508de90724731dc88ca28ef7473",
+      "decimals": 18
+    },
+    {
+      "chain": "etherlink",
+      "address": "0x5542f82389b76c23f5848268893234d8a63fd5c8",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas mMEV docs",
+        "url": "https://docs.midas.app/tokens/mmev"
+      },
+      {
+        "label": "Midas risks",
+        "url": "https://docs.midas.app/tokens/mmev/risks"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mMEV is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "MEV Capital DeFi lending, liquidity, arbitrage, carry, and liquidation strategies",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mmev-midas",
+    "display": {
+      "url": "https://midas.app/mmev",
+      "label": "Midas mMEV NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
+      "tokenAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+      "assetLabel": "MEV Capital DeFi strategy NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 604800
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas mMEV strategy NAV",
+    "yieldType": "nav-appreciation"
+  }
+}

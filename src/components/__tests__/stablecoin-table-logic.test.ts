@@ -159,7 +159,7 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("stusds-sky")).toBe(true);
     expect(allVariants.has("busd0-usual")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(34);
+    expect(allVariants.size).toBe(35);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(new Set([

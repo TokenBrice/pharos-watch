@@ -2,22 +2,22 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 360;
-export const ACTIVE_STABLECOIN_COUNT = 332;
+export const TRACKED_STABLECOIN_COUNT = 381;
+export const ACTIVE_STABLECOIN_COUNT = 353;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 25;
 export const FROZEN_STABLECOIN_COUNT = 3;
 export const DEAD_STABLECOIN_COUNT = 91;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
-  centralized: 159,
-  "centralized-dependent": 144,
+  centralized: 176,
+  "centralized-dependent": 148,
   decentralized: 29,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 244,
-  EUR: 17,
-  GBP: 4,
+  USD: 260,
+  EUR: 19,
+  GBP: 6,
   CHF: 4,
   BRL: 6,
   JPY: 5,
@@ -37,7 +37,7 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   KGS: 1,
   NGN: 1,
   IDR: 2,
-  GOLD: 11,
+  GOLD: 12,
   SILVER: 3,
   VAR: 3,
   OTHER: 6,
@@ -104,6 +104,14 @@ export const TRACKED_STABLECOIN_IDS = [
   "wtgxx-wisdomtree",
   "vbill-vaneck",
   "acred-apollo-securitize",
+  "jaaa-janus-henderson-anemoy",
+  "acrdx-anemoy-apollo",
+  "stac-securitize",
+  "hlscope-hamilton-lane",
+  "pc0000031-tradable",
+  "pc0000033-tradable",
+  "pc0000101-tradable",
+  "pc0000089-tradable",
   "usdd-tron-dao-reserve",
   "susdd-tron-dao-reserve",
   "usdtb-ethena",
@@ -134,6 +142,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "ausd-agora",
   "iusd-infinifi",
   "usdf-astherus",
+  "asusdf-astherus",
   "dusd-standx",
   "satusd-river",
   "brz-transfero",
@@ -258,6 +267,17 @@ export const TRACKED_STABLECOIN_IDS = [
   "ousg-ondo-finance",
   "mtbill-midas",
   "mre7yield-midas",
+  "mf-one-midas",
+  "mglobal-midas-fasanara",
+  "mhyper-midas",
+  "mmev-midas",
+  "mapollo-midas",
+  "safo-spiko-usd",
+  "spkcc-spiko",
+  "eursafo-spiko",
+  "eurspkcc-spiko",
+  "uktbl-spiko",
+  "gbpsafo-spiko",
   "jtrsy-anemoy",
   "ustbl-spiko",
   "bib01-backed",
@@ -277,6 +297,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "audf-forte",
   "tryb-bilira",
   "xaut-tether",
+  "xnk-kinka",
   "paxg-paxos",
   "gldy-streamex",
   "kau-kinesis",

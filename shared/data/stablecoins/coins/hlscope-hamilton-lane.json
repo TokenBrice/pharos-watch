@@ -1,0 +1,98 @@
+{
+  "id": "hlscope-hamilton-lane",
+  "name": "Hamilton Lane Senior Credit Opportunities Securitize Fund",
+  "symbol": "HLSCOPE",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
+  "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
+  "detailProvider": "coingecko",
+  "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+  "links": [
+    {
+      "label": "Securitize",
+      "url": "https://securitize.io/primary-market/hl-scope"
+    },
+    {
+      "label": "Hamilton Lane",
+      "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/hamilton-lane-senior-credit-opportunities-securitize-fund"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "SEC",
+    "license": "Delaware limited partnership; Rule 506(c) private placement; Investment Company Act Section 3(c)(7) exemption; qualified-purchaser access"
+  },
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x4c5ca366e26409845624e29b62c388a06961a792",
+      "decimals": 6
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+      "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Securitize",
+        "url": "https://securitize.io/"
+      },
+      {
+        "label": "Hamilton Lane",
+        "url": "https://www.hamiltonlane.com/"
+      }
+    ],
+    "evidence": "HLSCOPE is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Senior secured private-credit loans",
+      "pct": 95,
+      "risk": "high"
+    },
+    {
+      "name": "Cash and liquidity buffer",
+      "pct": 5,
+      "risk": "low"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Hamilton Lane SCOPE NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Contract-priced fund token",
+      "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats HLSCOPE as a NAV-priced fund share."
+    }
+  ]
+}

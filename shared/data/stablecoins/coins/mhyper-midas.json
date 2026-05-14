@@ -1,0 +1,115 @@
+{
+  "id": "mhyper-midas",
+  "name": "Midas mHYPER",
+  "symbol": "mHYPER",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
+  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mhyper",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mhyper"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-mhyper"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9b5528528656dbc094765e2abb79f293c21191b9",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mHYPER",
+        "url": "https://midas.app/mhyper"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mHYPER is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Hyperithm market-neutral stablecoin strategies",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mhyper-midas",
+    "display": {
+      "url": "https://midas.app/mhyper",
+      "label": "Midas mHYPER NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68",
+      "tokenAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
+      "assetLabel": "Hyperithm market-neutral stablecoin strategy NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 604800
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas mHYPER / Hyperithm NAV",
+    "yieldType": "nav-appreciation"
+  }
+}

@@ -5,7 +5,7 @@ import { formatCompactCount } from "@shared/lib/format";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
-import { TRACKED_STABLECOIN_IDS } from "@/lib/stablecoin-static-data";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 interface SiteHeaderProps {
   total: number;
@@ -66,12 +66,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
     const assets = stablecoinsData?.peggedAssets;
     if (!assets) return total;
 
-    const availableIds = new Set(assets.map((asset) => asset.id));
-    let count = 0;
-    for (const id of TRACKED_STABLECOIN_IDS) {
-      if (availableIds.has(id)) count++;
-    }
-    return count;
+    return assets.filter((asset) => TRACKED_META_BY_ID.has(asset.id)).length;
   }, [stablecoinsData, total]);
   const headlineMetrics = useMemo(
     () => [

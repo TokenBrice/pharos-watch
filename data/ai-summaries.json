@@ -1798,5 +1798,110 @@
     "title": "Peruvian Sol Coverage from Ripio",
     "text": "WPEN adds Peruvian sol exposure to Pharos through Ripio's local-currency stablecoin suite. DefiLlama supplies the runtime price and circulating-supply path, and Ripio's same-address EVM deployment pattern lets Pharos track contracts on Ethereum, Base, World Chain, BNB Chain, Polygon, and Gnosis. PEN is grouped under OTHER because it is not yet a first-class peg currency in the repo. Like the rest of the new Ripio rows, reserve transparency is the limiting factor: the backing model is described, but no per-token attestation feed was found.",
     "updatedAt": "2026-05-12"
+  },
+  "jaaa-janus-henderson-anemoy": {
+    "title": "AAA CLO Exposure as a Tokenized Fund",
+    "text": "JAAA is not a dollar redeemable stablecoin in the usual sense: it is a NAV-accreting Janus Henderson AAA CLO fund share issued through Anemoy and Centrifuge rails. Pharos treats the Chainlink NAV feed as live reserve evidence, while the reserve-risk model stays conservative because even AAA CLO tranches are structured credit rather than cash or Treasury bills. The token has multi-chain contract coverage, but primary-market access remains permissioned and KYC-gated.",
+    "updatedAt": "2026-05-14"
+  },
+  "acrdx-anemoy-apollo": {
+    "title": "Apollo Credit Through Anemoy",
+    "text": "ACRDX packages Apollo Diversified Credit Fund exposure into an Anemoy tokenized share class. The backing spans private corporate direct lending, asset-backed lending, performing credit, and opportunistic credit sleeves, so Pharos classifies the reserves as high-risk RWA credit rather than cash-like collateral. Chronicle proof-of-asset coverage provides useful NAV visibility, but redemption remains a permissioned fund process.",
+    "updatedAt": "2026-05-14"
+  },
+  "stac-securitize": {
+    "title": "CLO Fund Access on Securitize",
+    "text": "STAC is a Securitize-issued BNY CLO fund token with NAV-style exposure rather than a fixed dollar redemption promise. Its value depends on the fund's managed CLO portfolio and the Securitize primary-market process, which gives Pharos a clear centralized issuer and transfer-control profile. Chronicle proof-of-asset coverage improves transparency, but the collateral risk remains structured credit.",
+    "updatedAt": "2026-05-14"
+  },
+  "hlscope-hamilton-lane": {
+    "title": "Hamilton Lane Private Credit Rail",
+    "text": "HLSCOPE tokenizes Hamilton Lane Senior Credit Opportunities Fund exposure through Securitize. The asset belongs in the NAV-token cohort: price should follow fund NAV, while subscriptions and redemptions are handled through permissioned fund infrastructure rather than open stablecoin liquidity. Reserve risk is high because the backing is private credit, not short-term cash instruments.",
+    "updatedAt": "2026-05-14"
+  },
+  "pc0000031-tradable": {
+    "title": "Private Credit Note, Not a Liquid Dollar",
+    "text": "Tradable PC0000031 is tracked as a yield-bearing private-credit note with CoinGecko price and market-cap coverage, but no reliable public APY or cashflow feed is wired. Pharos keeps it out of live yield rankings as an intentional gap and does not assign a redemption backstop because there is no public primary redemption route comparable to issuer stablecoin redemption.",
+    "updatedAt": "2026-05-14"
+  },
+  "pc0000033-tradable": {
+    "title": "Tradable Private Credit With Runtime Price",
+    "text": "PC0000033 gives Pharos another Tradable private-credit reference point, admitted through runtime price and supply coverage rather than stablecoin-like liquidity. The collateral and redemption profile are intentionally modeled as high-risk private credit with centralized issuer dependence. Yield remains a documented gap until a trustworthy public rate or cashflow source exists.",
+    "updatedAt": "2026-05-14"
+  },
+  "pc0000101-tradable": {
+    "title": "Contract-Priced Private Credit Exposure",
+    "text": "PC0000101 is a Tradable note whose economics come from off-chain private-credit exposure, not from a fixed $1 peg. The dashboard classifies it as a NAV-style yield-bearing RWA asset and preserves the lack of live APY as an intentional runtime gap. That avoids manufacturing yield from stale or contract-priced metadata.",
+    "updatedAt": "2026-05-14"
+  },
+  "pc0000089-tradable": {
+    "title": "Another Tradable Credit Note Under Watch",
+    "text": "PC0000089 follows the same treatment as the other Tradable note additions: runtime price coverage is enough to display the asset, but not enough to publish a yield row. Pharos records the credit collateral and centralized control profile, while withholding live reserve and redemption-backstop claims until public source evidence exists.",
+    "updatedAt": "2026-05-14"
+  },
+  "asusdf-astherus": {
+    "title": "Astherus Yield Wrapper Over USDF",
+    "text": "asUSDF is the yield-accruing Astherus wrapper around USDF, with a queue-style redemption path rather than instant stablecoin conversion. The model now reflects the two-hour waiting period and a conservative partial capacity assumption because exits depend on downstream USDF liquidity. Reserve dependency is captured through the wrapped USDF exposure instead of a duplicate manual dependency entry.",
+    "updatedAt": "2026-05-14"
+  },
+  "mf-one-midas": {
+    "title": "Fasanara Strategy in Midas Form",
+    "text": "mF-ONE is a Midas liquid-yield token tracking a Fasanara F-ONE strategy rather than a bank-reserve stablecoin. Chainlink NAV coverage gives Pharos a live valuation route, while reserves remain high-risk because the exposure is private-credit and digital-asset strategy risk. Primary liquidity depends on Midas permissioned mint and redeem rails.",
+    "updatedAt": "2026-05-14"
+  },
+  "mglobal-midas-fasanara": {
+    "title": "Fasanara Global Without a Live NAV Adapter",
+    "text": "mGLOBAL adds another Midas-Fasanara strategy token to the dashboard, but without a verified live Chainlink NAV adapter in this pass. The asset is modeled as centralized-dependent, NAV-accreting, and high-risk strategy collateral. It remains visible through market data while live reserve coverage waits for a verified feed route.",
+    "updatedAt": "2026-05-14"
+  },
+  "mhyper-midas": {
+    "title": "Hyperithm Strategy Token With NAVLink",
+    "text": "mHYPER wraps a Hyperithm-managed market-neutral stablecoin strategy through Midas. The checked-in metadata includes the Katana deployment and a Chainlink NAV feed, giving Pharos a live valuation route while still classifying the exposure as high-risk institutional strategy collateral. Holders rely on Midas issuer rails for primary redemption.",
+    "updatedAt": "2026-05-14"
+  },
+  "mmev-midas": {
+    "title": "MEV Capital Strategy in a Midas Wrapper",
+    "text": "mMEV is a Midas NAV token tied to MEV Capital DeFi strategy exposure. Pharos wires its Chainlink NAV feed for live reserve visibility but keeps the reserve-risk grade high because the underlying strategy is complex and not cash-like. The token is best read as tokenized strategy access, not as a transactional stablecoin.",
+    "updatedAt": "2026-05-14"
+  },
+  "mapollo-midas": {
+    "title": "Apollo Crypto Strategy via Midas",
+    "text": "mAPOLLO tracks an Apollo Crypto managed yield strategy through Midas liquid-yield rails. Chainlink NAV data supports live valuation, while the risk model treats the backing as high-risk digital-asset strategy exposure. As with the rest of the Midas strategy set, redemption depends on permissioned issuer infrastructure.",
+    "updatedAt": "2026-05-14"
+  },
+  "safo-spiko-usd": {
+    "title": "Spiko Smart Cash USD Share Class",
+    "text": "SAFO is the USD share class of Spiko / Amundi Smart Cash exposure using fully collateralized overnight total-return swaps. Pharos classifies the reserve as medium-risk RWA strategy exposure rather than direct Treasury bills because the fund structure routes exposure through swap counterparties and collateral packages. The primary market remains permissioned through Spiko rails.",
+    "updatedAt": "2026-05-14"
+  },
+  "spkcc-spiko": {
+    "title": "Spiko Cash and Carry Fund Share",
+    "text": "SPKCC is a Spiko digital-asset cash-and-carry fund token, with Ethereum, Polygon, Arbitrum, Base, Starknet, and Stellar deployments recorded. The reserve model is deliberately conservative because the strategy combines digital-asset basis trades with short-duration cash and Treasury collateral. It is yield-bearing by NAV appreciation, not by a fixed stablecoin peg.",
+    "updatedAt": "2026-05-14"
+  },
+  "eursafo-spiko": {
+    "title": "EUR Smart Cash Through Spiko",
+    "text": "EURSAFO is the euro share class of Spiko / Amundi Smart Cash exposure. The fund uses fully collateralized overnight total-return swaps with tier-1 bank counterparties, so Pharos treats the reserve as medium-risk strategy exposure rather than a simple euro deposit reserve. KYC-gated Spiko fund rails control subscriptions and redemptions.",
+    "updatedAt": "2026-05-14"
+  },
+  "eurspkcc-spiko": {
+    "title": "Euro Cash and Carry Fund Token",
+    "text": "EURSPKCC adds the euro-denominated Spiko cash-and-carry fund share, including the Stellar deployment verified in this pass. The asset accrues NAV from fund performance and does not target a rigid EUR 1 redemption profile. Pharos keeps the reserve-risk view high because the strategy includes digital-asset carry exposure.",
+    "updatedAt": "2026-05-14"
+  },
+  "uktbl-spiko": {
+    "title": "Spiko Treasury Bills Dollar Fund",
+    "text": "UKTBL tracks Spiko's dollar treasury-bill fund product rather than a direct stablecoin issuer reserve. The fund structure is regulated and NAV-based, with primary access through permissioned fund rails. Pharos treats the collateral as low-risk tokenized money-market exposure but keeps the centralized issuer and transfer-control assumptions explicit.",
+    "updatedAt": "2026-05-14"
+  },
+  "gbpsafo-spiko": {
+    "title": "GBP Smart Cash Share Class",
+    "text": "GBPSAFO extends Spiko Smart Cash coverage to a sterling-denominated share class. The reserve description follows the same fully collateralized overnight total-return swap structure as the USD and EUR SAFO classes, so the risk model is medium rather than pure cash. The token is best understood as a permissioned NAV share, not a retail GBP stablecoin.",
+    "updatedAt": "2026-05-14"
+  },
+  "xnk-kinka": {
+    "title": "Japanese Gold Bullion Token",
+    "text": "XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Kinka's issuer and storage arrangements. The Cardano deployment is recorded alongside Ethereum, and the reserve model treats the backing as physical gold with centralized custody and issuer-controlled exchange terms. Redemption into physical bars is possible only through the documented KYC process and size thresholds.",
+    "updatedAt": "2026-05-14"
   }
 }

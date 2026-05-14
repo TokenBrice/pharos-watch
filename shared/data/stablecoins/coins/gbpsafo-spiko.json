@@ -1,0 +1,107 @@
+{
+  "id": "gbpsafo-spiko",
+  "name": "Spiko Amundi Overnight Swap Fund (GBP)",
+  "symbol": "GBPSAFO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "GBP",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "GBP share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
+  "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "detailProvider": "coingecko",
+  "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.spiko.io/spiko-pound",
+    "provider": "Spiko fund NAV and holdings disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.spiko.io/spiko-pound"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/spiko-amundi-overnight-swap-fund-gbp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France",
+    "regulator": "AMF",
+    "license": "UCITS SICAV sub-fund"
+  },
+  "contracts": [
+    {
+      "chain": "arbitrum",
+      "address": "0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
+      "decimals": 5
+    },
+    {
+      "chain": "polygon",
+      "address": "0x4fe515c67eeeadb3282780325f09bb7c244fe774",
+      "decimals": 5
+    },
+    {
+      "chain": "base",
+      "address": "0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
+      "decimals": 5
+    },
+    {
+      "chain": "etherlink",
+      "address": "0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
+      "decimals": 5
+    },
+    {
+      "chain": "ethereum",
+      "address": "0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
+      "decimals": 5
+    },
+    {
+      "chain": "stellar",
+      "address": "CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP",
+      "decimals": 5
+    },
+    {
+      "chain": "starknet",
+      "address": "0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
+      "decimals": 5
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Spiko Pound",
+        "url": "https://www.spiko.io/spiko-pound"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ],
+    "evidence": "GBPSAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "regulated-entity",
+  "reserves": [
+    {
+      "name": "Fully collateralized overnight total-return swap exposure",
+      "pct": 100,
+      "risk": "medium"
+    }
+  ],
+  "yieldConfig": {
+    "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
+    "yieldType": "nav-appreciation"
+  }
+}

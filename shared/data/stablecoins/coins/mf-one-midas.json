@@ -1,0 +1,105 @@
+{
+  "id": "mf-one-midas",
+  "name": "Midas mF-ONE",
+  "symbol": "mF-ONE",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": true
+  },
+  "collateral": "Fasanara F-ONE strategy exposure through Midas tokenized certificate rails, including fintech receivables, SME lending, real-estate-backed credit, and digital-asset strategies.",
+  "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mf-one",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mfone"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-mf-one"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Germany",
+    "regulator": "Liechtenstein FMA",
+    "license": "EEA-restricted tokenized certificate"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mF-ONE",
+        "url": "https://midas.app/mfone"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mF-ONE is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Fasanara F-ONE private-credit and digital-asset strategy",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mf-one-midas",
+    "display": {
+      "url": "https://midas.app/mfone",
+      "label": "Midas mF-ONE NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C",
+      "tokenAddress": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+      "assetLabel": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 604800
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas mF-ONE / Fasanara F-ONE NAV",
+    "yieldType": "nav-appreciation"
+  }
+}

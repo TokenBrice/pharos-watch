@@ -1,0 +1,107 @@
+{
+  "id": "mapollo-midas",
+  "name": "Midas mAPOLLO",
+  "symbol": "mAPOLLO",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
+  "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "detailProvider": "coingecko",
+  "geckoId": "midas-mapollo",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://midas.app/transparency",
+    "provider": "Midas transparency dashboard and issuer disclosures"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://midas.app/mapollo"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/midas-mapollo"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas smart contracts",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      },
+      {
+        "label": "Midas",
+        "url": "https://midas.app/mapollo"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas mAPOLLO is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "ethereum",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "exotic",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Apollo Crypto managed yield strategy",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mapollo-midas",
+    "display": {
+      "url": "https://midas.app/mapollo",
+      "label": "Midas mAPOLLO NAV"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B",
+      "tokenAddress": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+      "assetLabel": "Apollo Crypto managed yield strategy NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 604800
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Midas mAPOLLO / Apollo Crypto NAV",
+    "yieldType": "nav-appreciation"
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Not the Apollo credit fund",
+      "message": "mAPOLLO is a Midas / Apollo Crypto liquid-yield token and is distinct from ACRED or ACRDX private-credit fund shares."
+    }
+  ]
+}

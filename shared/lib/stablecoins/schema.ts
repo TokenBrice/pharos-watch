@@ -219,6 +219,14 @@ export const StablecoinMetaAssetSchema = z.object({
     path: ["variantOf"],
   });
 }).superRefine((meta, ctx) => {
+  if (meta.variantOf != null && meta.pegReferenceId != null && meta.variantOf !== meta.pegReferenceId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `pegReferenceId (${meta.pegReferenceId}) must equal variantOf (${meta.variantOf}) when both are present`,
+      path: ["pegReferenceId"],
+    });
+  }
+}).superRefine((meta, ctx) => {
   if (meta.status === "frozen") {
     if (!meta.frozenAt) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "frozen coins require frozenAt", path: ["frozenAt"] });

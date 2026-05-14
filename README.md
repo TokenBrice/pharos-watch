@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 360 stablecoins in repo metadata: 332 active assets on public data surfaces, 25 pre-launch entries, 3 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 381 stablecoins in repo metadata: 353 active assets on public data surfaces, 25 pre-launch entries, 3 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -33,7 +33,7 @@ Public-facing analytics dashboard tracking 360 stablecoins in repo metadata: 332
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 91 curated dead stablecoins plus 3 frozen archives documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
-- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 238 configured assets
+- **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 287 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
 - **Public API access + private operator admin** — self-serve email-verified API keys on `/api/`, read-only system health on `/status/`, plus Access-gated monitoring and recovery controls on `ops.pharos.watch/admin/` and API management on `ops.pharos.watch/admin-api/`
 - **Backing type breakdown** — active public surfaces expose RWA-backed and crypto-backed cohorts; algorithmic remains a legacy metadata label only, with no generated algorithmic backing route because there are no active algorithmic assets

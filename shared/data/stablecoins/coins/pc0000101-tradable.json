@@ -1,0 +1,65 @@
+{
+  "id": "pc0000101-tradable",
+  "name": "Tradable NA Post-Settlement Legal Financing Receivables",
+  "symbol": "PC0000101",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized",
+    "yieldBearing": true,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
+  "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+  "detailProvider": "coingecko",
+  "geckoId": "na-post-settlement-legal-financing-receivables",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.tradable.xyz/"
+    },
+    {
+      "label": "CoinGecko",
+      "url": "https://www.coingecko.com/en/coins/na-post-settlement-legal-financing-receivables"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "zksync",
+      "address": "0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81",
+      "decimals": 6
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tradable",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "evidence": "PC0000101 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "stage1-l2",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Legal-finance receivables",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Contract-priced private credit",
+      "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+    }
+  ]
+}

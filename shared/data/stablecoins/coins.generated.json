@@ -169,6 +169,114 @@
     }
   },
   {
+    "id": "acrdx-anemoy-apollo",
+    "detailProvider": "coingecko",
+    "name": "Anemoy Tokenized Apollo Diversified Credit Fund",
+    "symbol": "ACRDX",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tokenized feeder exposure to Apollo Diversified Credit Fund through the Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio, investing across corporate direct lending, asset-backed lending, performing credit, and dislocated credit.",
+    "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
+    "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
+    "protocolSlug": "centrifuge",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse",
+      "provider": "Chronicle Proof of Asset"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Proof of Asset",
+        "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+      },
+      {
+        "label": "Centrifuge",
+        "url": "https://centrifuge.io/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/anemoy-tokenized-apollo-diversified-credit-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Anemoy",
+          "url": "https://www.anemoy.io/"
+        },
+        {
+          "label": "Centrifuge docs",
+          "url": "https://docs.centrifuge.io/"
+        }
+      ],
+      "evidence": "ACRDX is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Apollo diversified credit strategy",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "Cash and liquidity buffer",
+        "pct": 5,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Separate Apollo credit wrapper",
+        "message": "ACRDX overlaps economically with ACRED private-credit exposure, but uses a distinct Anemoy / Centrifuge issuer route and token contract set."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "acred-apollo-securitize",
     "detailProvider": "coingecko",
     "name": "Apollo Diversified Credit Securitize Fund",
@@ -827,6 +935,89 @@
         "sourceUrl": "https://www.coindesk.com/markets/2025/11/20/india-s-debt-backed-arc-token-eyes-tentative-january-2026-debut-sources-say/"
       }
     ]
+  },
+  {
+    "id": "asusdf-astherus",
+    "detailProvider": "coingecko",
+    "name": "Aster Staked USDF",
+    "symbol": "asUSDF",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegReferenceId": "usdf-astherus",
+    "collateral": "USDF deposited into the Aster Earn asToken wrapper; upstream USDF is backed by USDT held through Ceffu and delta-neutral Binance / MirrorX strategies.",
+    "pegMechanism": "Users stake USDF to mint asUSDF. asUSDF APY is reflected in NAV from delta-neutral and funding-fee strategies; withdrawals return USDF after Aster's documented T+1 hour / two-hour waiting period with no mint or withdrawal fee.",
+    "geckoId": "astherus-staked-usdf",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+      },
+      {
+        "label": "Contracts",
+        "url": "https://docs.asterdex.com/overview/what-is-aster/our-smart-contracts"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/Aster_DEX"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/astherus-staked-usdf"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "bsc",
+        "address": "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sources": [
+        {
+          "label": "Aster asUSDF FAQ",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+        },
+        {
+          "label": "BscScan asUSDF contract",
+          "url": "https://bscscan.com/token/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb#code"
+        }
+      ],
+      "evidence": "asUSDF resolves to Upstream because it is a staked wrapper of USDF and inherits the parent asset's custody, reserve, and issuer-control exposure. The holder-facing asUSDF contract is role-controlled and pausable, with mint/burn authority assigned to privileged roles.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "cex",
+    "governanceQuality": "wrapper",
+    "variantOf": "usdf-astherus",
+    "variantKind": "savings-passthrough",
+    "reserves": [
+      {
+        "name": "USDF staking wrapper shares",
+        "pct": 100,
+        "risk": "medium",
+        "coinId": "usdf-astherus",
+        "depType": "wrapper"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Aster Earn asUSDF",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "audd-novatti",
@@ -8517,6 +8708,231 @@
     }
   },
   {
+    "id": "eursafo-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko Amundi Overnight Swap Fund (EUR)",
+    "symbol": "EURSAFO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
+    "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "geckoId": "spiko-amundi-overnight-swap-fund-eur",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-euro",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-euro"
+      },
+      {
+        "label": "Amundi announcement",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline="
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/spiko-amundi-overnight-swap-fund-eur"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS SICAV sub-fund"
+    },
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0x1412632f2b89e87bfa20c1318a43ced25f1d7b76",
+        "decimals": 5
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0990b149e915cb08e2143a5c6f669c907eddc8b0",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x272ea767712cc4839f4a27ee35eb73116158c8a2",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0xd879846cbe20751bde8a9342a3cca00a3e56ca47",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x35dfec1813c43d82e6b87c682f560bbb8ea0c121",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x0128f41ef8017ab56140ffad6439305a3196ed862841ba61ff4d78e380c346a6",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Euro",
+          "url": "https://www.spiko.io/spiko-euro"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "EURSAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko Amundi Overnight Swap Fund EUR NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "eurspkcc-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko Digital Assets Cash & Carry Fund - Euro Share Class",
+    "symbol": "EURSPKCC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Euro share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
+    "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+    "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-cash-and-carry",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/spiko-digital-assets-cash-carry-fund-euro-share-class"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "French Fonds Professionnel Specialise (FPS) / Alternative Investment Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3868d4e336d14d38031cf680329d31e4712e11cc",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "decimals": 5
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x0e389c83bc1d16d86412476f6103027555c03265",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x06472cabc51a3805975b9c60c7dec63897c9a287f2db173a1d6c589d18dd1e07",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Cash and Carry",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "EURSPKCC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Digital-asset cash-and-carry strategy",
+        "pct": 80,
+        "risk": "high"
+      },
+      {
+        "name": "Short-duration Treasury bills and cash",
+        "pct": 20,
+        "risk": "very-low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Strategy fund exposure",
+        "message": "Reserve weights use a conservative template because the cash-and-carry strategy allocation can vary over time."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko Cash and Carry EUR NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "eusd-electronic-usd",
     "llamaId": "106",
     "detailProvider": "defillama",
@@ -10438,6 +10854,113 @@
     }
   },
   {
+    "id": "gbpsafo-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko Amundi Overnight Swap Fund (GBP)",
+    "symbol": "GBPSAFO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GBP",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "GBP share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
+    "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-pound",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-pound"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/spiko-amundi-overnight-swap-fund-gbp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS SICAV sub-fund"
+    },
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0xbe023308ac2ef7e1c3799f4e6a3003ee6d342635",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x4fe515c67eeeadb3282780325f09bb7c244fe774",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0x2f6c0e5e06b43512706a9cdf66cd21f723fe0ec3",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0xfe20ebe3881491b2e158b9d10cb95bcfa652262d",
+        "decimals": 5
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc273986a91e4bfc543610a5cb5860b7cfefb6cc0",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CAGYRRKPFSWKM6SJOE4QAAVYMOSHMDS5WOQ4T5A2E6XNCU7LZZKUNQKP",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x06e8a99926ff6d56f4cb93c37b63286d736cd1f81740d53f88b4875b4cbe7f49",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Pound",
+          "url": "https://www.spiko.io/spiko-pound"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "GBPSAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko Amundi Overnight Swap Fund GBP NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "ggbr-goldfish-gold",
     "detailProvider": "commodity",
     "name": "Goldfish Gold",
@@ -11970,6 +12493,104 @@
     ]
   },
   {
+    "id": "hlscope-hamilton-lane",
+    "detailProvider": "coingecko",
+    "name": "Hamilton Lane Senior Credit Opportunities Securitize Fund",
+    "symbol": "HLSCOPE",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
+    "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
+    "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+    "links": [
+      {
+        "label": "Securitize",
+        "url": "https://securitize.io/primary-market/hl-scope"
+      },
+      {
+        "label": "Hamilton Lane",
+        "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/hamilton-lane-senior-credit-opportunities-securitize-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "SEC",
+      "license": "Delaware limited partnership; Rule 506(c) private placement; Investment Company Act Section 3(c)(7) exemption; qualified-purchaser access"
+    },
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0x4c5ca366e26409845624e29b62c388a06961a792",
+        "decimals": 6
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xda2ffa104356688e74d9340519b8c17f00d7752e",
+        "decimals": 6
+      },
+      {
+        "chain": "optimism",
+        "address": "0x720f86f4b5b5d5d0ea3e5718ec43071d4d05134b",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize",
+          "url": "https://securitize.io/"
+        },
+        {
+          "label": "Hamilton Lane",
+          "url": "https://www.hamiltonlane.com/"
+        }
+      ],
+      "evidence": "HLSCOPE is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Senior secured private-credit loans",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "Cash and liquidity buffer",
+        "pct": 5,
+        "risk": "low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced fund token",
+        "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats HLSCOPE as a NAV-priced fund share."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Hamilton Lane SCOPE NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "hlusd-hela",
     "detailProvider": "coingecko",
     "name": "HeLa USD",
@@ -13168,6 +13789,149 @@
         "message": "iUSD lives on Initia, a recently launched Move-based Cosmos L1 with limited operational history. Initia has not yet published a dedicated transparency feed for the AUSD-backed iUSD wrapper; reserve trust currently inherits from Agora's published AUSD attestations plus the LayerZero bridge endpoint. Redemption to USD ultimately routes back through the AUSD bridge to Agora."
       }
     ]
+  },
+  {
+    "id": "jaaa-janus-henderson-anemoy",
+    "detailProvider": "coingecko",
+    "name": "Janus Henderson Anemoy AAA CLO Fund",
+    "symbol": "JAAA",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Actively managed AAA-rated CLO tranche portfolio selected by Janus Henderson and tokenized through Anemoy / Centrifuge fund rails.",
+    "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
+    "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
+    "protocolSlug": "centrifuge",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2",
+      "provider": "Chainlink NAVLink / Centrifuge"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.anemoy.io/funds/jaaa"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/anemoycapital"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.centrifuge.io/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/janus-henderson-anemoy-aaa-clo-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "BVI FSC",
+      "license": "BVI Professional Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x58f93d6b1ef2f44ec379cb975657c132cbed3b6b",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0xad48f183e586e92a591a610397ebf534609df797",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Anemoy JAAA",
+          "url": "https://www.anemoy.io/funds/jaaa"
+        },
+        {
+          "label": "Centrifuge docs",
+          "url": "https://docs.centrifuge.io/"
+        }
+      ],
+      "evidence": "JAAA is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "AAA-rated CLO tranches",
+        "pct": 95,
+        "risk": "high"
+      },
+      {
+        "name": "Cash and liquidity buffer",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "jaaa-janus-henderson-anemoy",
+      "display": {
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2",
+        "label": "Chainlink JAAA NAV"
+      },
+      "adapter": "chainlink-nav",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x3BbccB2301759D2e4A5692bA72DAb4b75dC43B1a",
+        "tokenAddress": "0x5a0f93d040de44e78f251b03c43be9cf317dcf64",
+        "assetLabel": "Janus Henderson Anemoy AAA CLO Fund NAV",
+        "assetRisk": "high",
+        "oracleMethod": "latestRoundData",
+        "maxOracleAgeSec": 345600
+      }
+    },
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced fund token",
+        "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats JAAA as a NAV-priced fund share, not a liquid stablecoin peg."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Janus Henderson Anemoy AAA CLO Fund NAV",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -15375,6 +16139,113 @@
     ]
   },
   {
+    "id": "mapollo-midas",
+    "detailProvider": "coingecko",
+    "name": "Midas mAPOLLO",
+    "symbol": "mAPOLLO",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
+    "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "geckoId": "midas-mapollo",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mapollo"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-mapollo"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Midas smart contracts",
+          "url": "https://docs.midas.app/protocol-mechanics/smart-contracts"
+        },
+        {
+          "label": "Midas",
+          "url": "https://midas.app/mapollo"
+        }
+      ],
+      "evidence": "Explicit Yes: Midas mAPOLLO is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Apollo Crypto managed yield strategy",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "mapollo-midas",
+      "display": {
+        "url": "https://midas.app/mapollo",
+        "label": "Midas mAPOLLO NAV"
+      },
+      "adapter": "chainlink-nav",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x84303e5568C7B167fa4fEBc6253CDdfe12b7Ee4B",
+        "tokenAddress": "0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05",
+        "assetLabel": "Apollo Crypto managed yield strategy NAV",
+        "assetRisk": "high",
+        "maxOracleAgeSec": 604800
+      }
+    },
+    "notices": [
+      {
+        "type": "info",
+        "title": "Not the Apollo credit fund",
+        "message": "mAPOLLO is a Midas / Apollo Crypto liquid-yield token and is distinct from ACRED or ACRDX private-credit fund shares."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Midas mAPOLLO / Apollo Crypto NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "meusd-mezo",
     "llamaId": "303",
     "detailProvider": "defillama",
@@ -15467,6 +16338,314 @@
           ]
         }
       }
+    }
+  },
+  {
+    "id": "mf-one-midas",
+    "detailProvider": "coingecko",
+    "name": "Midas mF-ONE",
+    "symbol": "mF-ONE",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Fasanara F-ONE strategy exposure through Midas tokenized certificate rails, including fintech receivables, SME lending, real-estate-backed credit, and digital-asset strategies.",
+    "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "geckoId": "midas-mf-one",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mfone"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-mf-one"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Midas docs",
+          "url": "https://docs.midas.app/"
+        },
+        {
+          "label": "Midas mF-ONE",
+          "url": "https://midas.app/mfone"
+        }
+      ],
+      "evidence": "Explicit Yes: Midas mF-ONE is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Fasanara F-ONE private-credit and digital-asset strategy",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "mf-one-midas",
+      "display": {
+        "url": "https://midas.app/mfone",
+        "label": "Midas mF-ONE NAV"
+      },
+      "adapter": "chainlink-nav",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C",
+        "tokenAddress": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+        "assetLabel": "Fasanara F-ONE private-credit and digital-asset strategy NAV",
+        "assetRisk": "high",
+        "maxOracleAgeSec": 604800
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Midas mF-ONE / Fasanara F-ONE NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "mglobal-midas-fasanara",
+    "detailProvider": "coingecko",
+    "name": "Midas Fasanara Global",
+    "symbol": "mGLOBAL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
+    "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "geckoId": "midas-fasanara-global",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mglobal"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-fasanara-global"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Germany",
+      "regulator": "Liechtenstein FMA",
+      "license": "EEA-restricted tokenized certificate"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x7433806912eae67919e66aea853d46fa0aef98a8",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Midas docs",
+          "url": "https://docs.midas.app/"
+        },
+        {
+          "label": "Midas mGLOBAL",
+          "url": "https://midas.app/mglobal"
+        }
+      ],
+      "evidence": "Explicit Yes: Midas Fasanara Global is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Fasanara global private-credit / strategy portfolio",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced strategy token",
+        "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats MGLOBAL as a NAV-priced tokenized certificate."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Midas Fasanara Global NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "mhyper-midas",
+    "detailProvider": "coingecko",
+    "name": "Midas mHYPER",
+    "symbol": "mHYPER",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
+    "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "geckoId": "midas-mhyper",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mhyper"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-mhyper"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x9b5528528656dbc094765e2abb79f293c21191b9",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0xd90f6bfed23ffde40106fc4498dd2e9edb95e4e7",
+        "decimals": 18
+      },
+      {
+        "chain": "plasma",
+        "address": "0xb31bea5c2a43f942a3800558b1aa25978da75f8a",
+        "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0x926a8a63fa1e1fdbbeb811a0319933b1a0f1edbb",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Midas docs",
+          "url": "https://docs.midas.app/"
+        },
+        {
+          "label": "Midas mHYPER",
+          "url": "https://midas.app/mhyper"
+        }
+      ],
+      "evidence": "Explicit Yes: Midas mHYPER is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Hyperithm market-neutral stablecoin strategies",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "mhyper-midas",
+      "display": {
+        "url": "https://midas.app/mhyper",
+        "label": "Midas mHYPER NAV"
+      },
+      "adapter": "chainlink-nav",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x43881B05C3BE68B2d33eb70aDdF9F666C5005f68",
+        "tokenAddress": "0x9b5528528656dbc094765e2abb79f293c21191b9",
+        "assetLabel": "Hyperithm market-neutral stablecoin strategy NAV",
+        "assetRisk": "high",
+        "maxOracleAgeSec": 604800
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Midas mHYPER / Hyperithm NAV",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -15633,6 +16812,120 @@
           }
         ]
       }
+    }
+  },
+  {
+    "id": "mmev-midas",
+    "detailProvider": "coingecko",
+    "name": "Midas mMEV",
+    "symbol": "mMEV",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
+    "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "geckoId": "midas-mmev",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://midas.app/transparency",
+      "provider": "Midas transparency dashboard and issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://midas.app/mmev"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.midas.app/tokens/mmev"
+      },
+      {
+        "label": "Risks",
+        "url": "https://docs.midas.app/tokens/mmev/risks"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/midas-mmev"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0x7d611dc23267f508de90724731dc88ca28ef7473",
+        "decimals": 18
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x5542f82389b76c23f5848268893234d8a63fd5c8",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Midas mMEV docs",
+          "url": "https://docs.midas.app/tokens/mmev"
+        },
+        {
+          "label": "Midas risks",
+          "url": "https://docs.midas.app/tokens/mmev/risks"
+        }
+      ],
+      "evidence": "Explicit Yes: Midas mMEV is a permissioned liquid-yield token with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "MEV Capital DeFi lending, liquidity, arbitrage, carry, and liquidation strategies",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "mmev-midas",
+      "display": {
+        "url": "https://midas.app/mmev",
+        "label": "Midas mMEV NAV"
+      },
+      "adapter": "chainlink-nav",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "alchemy"
+        }
+      },
+      "params": {
+        "oracleAddress": "0x5f09Aff8B9b1f488B7d1bbaD4D89648579e55d61",
+        "tokenAddress": "0x030b69280892c888670edcdcd8b69fd8026a0bf3",
+        "assetLabel": "MEV Capital DeFi strategy NAV",
+        "assetRisk": "high",
+        "maxOracleAgeSec": 604800
+      }
+    },
+    "yieldConfig": {
+      "yieldSource": "Midas mMEV strategy NAV",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -18138,6 +19431,274 @@
     }
   },
   {
+    "id": "pc0000031-tradable",
+    "detailProvider": "coingecko",
+    "name": "Tradable NA Rent Financing Platform SSTN",
+    "symbol": "PC0000031",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Senior secured term notes tied to a North American rent-financing platform and tokenized through Tradable private-credit issuance rails.",
+    "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "geckoId": "tradable-na-rent-financing-platform-sstn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "Deal page",
+        "url": "https://app.tradable.xyz/investor/deals/861cce9e-08ae-45a0-aca8-9fa229a0189d"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/tradable-na-rent-financing-platform-sstn"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "zksync",
+        "address": "0xac4de1e9a9e83524f24af77972dd39d588de8164",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tradable",
+          "url": "https://www.tradable.xyz/"
+        }
+      ],
+      "evidence": "PC0000031 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Private-credit receivables / senior secured notes",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced private credit",
+        "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+      }
+    ]
+  },
+  {
+    "id": "pc0000033-tradable",
+    "detailProvider": "coingecko",
+    "name": "Tradable APAC Diversified Finance Provider SSTN",
+    "symbol": "PC0000033",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Senior secured term notes linked to an APAC diversified finance provider and tokenized through Tradable private-credit issuance rails.",
+    "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "geckoId": "tradable-apac-diversified-finance-provider-sstn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "Deal page",
+        "url": "https://app.tradable.xyz/investor/deals/e2c78ce9-1c20-4f4a-b6ca-eba1b2f575b1"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/tradable-apac-diversified-finance-provider-sstn"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "zksync",
+        "address": "0x6ff4fafd8d604614c704a5936d9146c0af19bd1e",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tradable",
+          "url": "https://www.tradable.xyz/"
+        }
+      ],
+      "evidence": "PC0000033 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Private-credit receivables / senior secured notes",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced private credit",
+        "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+      }
+    ]
+  },
+  {
+    "id": "pc0000089-tradable",
+    "detailProvider": "coingecko",
+    "name": "Tradable LatAm Residential SSTL",
+    "symbol": "PC0000089",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Latin American residential-lending private-credit exposure tokenized as a Tradable private-credit instrument.",
+    "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "geckoId": "latam-residential-sstl",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/latam-residential-sstl"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "zksync",
+        "address": "0xfb3fccdd38a96c3f769c62e578323f22c3bfcbec",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tradable",
+          "url": "https://www.tradable.xyz/"
+        }
+      ],
+      "evidence": "PC0000089 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "LatAm residential credit collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced private credit",
+        "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+      }
+    ]
+  },
+  {
+    "id": "pc0000101-tradable",
+    "detailProvider": "coingecko",
+    "name": "Tradable NA Post-Settlement Legal Financing Receivables",
+    "symbol": "PC0000101",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
+    "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "geckoId": "na-post-settlement-legal-financing-receivables",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.tradable.xyz/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/na-post-settlement-legal-financing-receivables"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "zksync",
+        "address": "0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Tradable",
+          "url": "https://www.tradable.xyz/"
+        }
+      ],
+      "evidence": "PC0000101 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Legal-finance receivables",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced private credit",
+        "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+      }
+    ]
+  },
+  {
     "id": "pgold-pleasing",
     "detailProvider": "commodity",
     "name": "Pleasing Gold",
@@ -20071,6 +21632,112 @@
     }
   },
   {
+    "id": "safo-spiko-usd",
+    "detailProvider": "coingecko",
+    "name": "Spiko Amundi Overnight Swap Fund",
+    "symbol": "SAFO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "USD share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
+    "pegMechanism": "USD-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+    "geckoId": "safo",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-dollar",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-dollar"
+      },
+      {
+        "label": "Amundi announcement",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4?inline="
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/safo"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS SICAV sub-fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0xcbade7d9bdee88411cb6cbcbb29952b742036992",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x6f64f47f95cf656f21b40e14798f6b49f80b3dc5",
+        "decimals": 5
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x0c709396739b9cfb72bcea6ac691ce0ddf66479c",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0x0bb754d8940e283d9ff6855ab5dafbc14165c059",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x035bdc17f7a7d09c45d31ab476a576d4f7aad916676b2948fe172c3bcb33725a",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Dollar",
+          "url": "https://www.spiko.io/spiko-dollar"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "SAFO is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Fully collateralized overnight total-return swap exposure",
+        "pct": 100,
+        "risk": "medium"
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko Amundi Overnight Swap Fund USD NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "said-gaib",
     "detailProvider": "coingecko",
     "name": "GAIB sAID",
@@ -21363,6 +23030,120 @@
     ]
   },
   {
+    "id": "spkcc-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko Digital Assets Cash & Carry Fund",
+    "symbol": "SPKCC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
+    "pegMechanism": "USD-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+    "geckoId": "spiko-digital-assets-cash-carry-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-cash-and-carry",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/spiko-digital-assets-cash-carry-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "French Fonds Professionnel Specialise (FPS) / Alternative Investment Fund"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "decimals": 5
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Cash and Carry",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "SPKCC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "exotic",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "Digital-asset cash-and-carry strategy",
+        "pct": 80,
+        "risk": "high"
+      },
+      {
+        "name": "Short-duration Treasury bills and cash",
+        "pct": 20,
+        "risk": "very-low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Strategy fund exposure",
+        "message": "Reserve weights use a conservative template because the cash-and-carry strategy allocation can vary over time."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko Cash and Carry USD NAV",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
     "id": "spusd-soulpeg",
     "detailProvider": "coingecko",
     "name": "SoulPeg USD",
@@ -21643,6 +23424,94 @@
     },
     "yieldConfig": {
       "yieldSource": "Strata senior USDe tranche",
+      "yieldType": "nav-appreciation"
+    }
+  },
+  {
+    "id": "stac-securitize",
+    "detailProvider": "coingecko",
+    "name": "Securitize Tokenized AAA CLO Fund",
+    "symbol": "STAC",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
+    "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
+    "geckoId": "securitize-tokenized-aaa-clo-fund",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://chroniclelabs.org/blog/chronicle-provides-proof-of-asset-verification-for-securitize-s-tokenized-aaa-clo-fund-bringing",
+      "provider": "Chronicle Proof of Asset"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Proof of Asset",
+        "url": "https://chroniclelabs.org/blog/chronicle-provides-proof-of-asset-verification-for-securitize-s-tokenized-aaa-clo-fund-bringing"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/securitize-tokenized-aaa-clo-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands",
+      "regulator": "SEC",
+      "license": "BVI Business Company; Rule 506(c) private placement; Investment Company Act Section 3(c)(1) exemption"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Securitize",
+          "url": "https://securitize.io/"
+        },
+        {
+          "label": "CoinGecko",
+          "url": "https://www.coingecko.com/en/coins/securitize-tokenized-aaa-clo-fund"
+        }
+      ],
+      "evidence": "STAC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "AAA CLO fund portfolio",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Contract-priced fund token",
+        "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats STAC as a NAV-priced fund share."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",
       "yieldType": "nav-appreciation"
     }
   },
@@ -24526,6 +26395,125 @@
           "rpcMode": "public-rpc"
         }
       }
+    }
+  },
+  {
+    "id": "uktbl-spiko",
+    "detailProvider": "coingecko",
+    "name": "Spiko UK T-Bills Money Market Fund",
+    "symbol": "UKTBL",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GBP",
+      "governance": "centralized",
+      "yieldBearing": true,
+      "rwa": true,
+      "navToken": true
+    },
+    "collateral": "GBP-denominated UK Treasury bill money-market exposure administered through Spiko fund rails.",
+    "pegMechanism": "GBP-denominated NAV-accreting money-market fund share; primary subscriptions and redemptions are KYC-gated through Spiko at fund NAV.",
+    "geckoId": "spiko-uk-t-bills-money-market-fund",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
+      "provider": "Spiko fund NAV and holdings disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/spiko-uk-t-bills-money-market-fund"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France",
+      "regulator": "AMF",
+      "license": "UCITS Short-Term VNAV Money Market Fund"
+    },
+    "contracts": [
+      {
+        "chain": "arbitrum",
+        "address": "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "decimals": 5
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "decimals": 5
+      },
+      {
+        "chain": "polygon",
+        "address": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "decimals": 5
+      },
+      {
+        "chain": "base",
+        "address": "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "decimals": 5
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "decimals": 5
+      },
+      {
+        "chain": "starknet",
+        "address": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "decimals": 5
+      },
+      {
+        "chain": "stellar",
+        "address": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "decimals": 5
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Spiko Treasury Bills",
+          "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ],
+      "evidence": "UKTBL is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "third-party-bridge",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-regulated",
+    "governanceQuality": "regulated-entity",
+    "reserves": [
+      {
+        "name": "UK Treasury Bills",
+        "pct": 95,
+        "risk": "very-low"
+      },
+      {
+        "name": "Cash and bank deposits",
+        "pct": 5,
+        "risk": "very-low"
+      }
+    ],
+    "notices": [
+      {
+        "type": "warning",
+        "title": "Low-liquidity fund token",
+        "message": "CoinGecko reports a live price and market cap but little or no secondary-market volume; Pharos treats UKTBL as a NAV-priced fund share."
+      }
+    ],
+    "yieldConfig": {
+      "yieldSource": "Spiko UK T-Bills MMF NAV",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -35281,6 +37269,108 @@
         "message": "CoinGecko resolves XMD on XPR Network, which is not currently a Pharos-supported chain. Runtime coverage uses CoinGecko price and market cap, while contract-level coverage is intentionally skipped."
       }
     ]
+  },
+  {
+    "id": "xnk-kinka",
+    "detailProvider": "commodity",
+    "name": "Kinka",
+    "symbol": "XNK",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "GOLD",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
+    "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
+    "commodityOunces": 1,
+    "geckoId": "kinka",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
+      "provider": "Kinka issuer disclosures"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://kinka-gold.com/"
+      },
+      {
+        "label": "Whitepaper",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Terms",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/kinka"
+      }
+    ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "decimals": 18
+      },
+      {
+        "chain": "cardano",
+        "address": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "Kinka terms",
+          "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+        }
+      ],
+      "evidence": "Kinka terms reserve issuer discretion over transfers and exchange and allow restrictions on Ethereum addresses; the centralized issuer and physical-gold redemption process create a direct blacklistability surface.",
+      "reviewer": "Codex 2026-05-14 execution-ready expansion",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "ethereum",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ],
+    "liveReservesConfig": {
+      "version": 1,
+      "semantics": "single-asset",
+      "breakerScope": "xnk-kinka",
+      "display": {
+        "url": "https://kinka-gold.com/",
+        "label": "Kinka"
+      },
+      "adapter": "single-asset",
+      "inputs": {
+        "primary": {
+          "kind": "onchain-evm",
+          "chain": "ethereum",
+          "rpcMode": "public-rpc"
+        }
+      },
+      "params": {
+        "label": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands)",
+        "risk": "very-low"
+      }
+    }
   },
   {
     "id": "xo-exodus",

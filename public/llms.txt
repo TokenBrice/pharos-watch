@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 332 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 353 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -131,6 +131,14 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [WisdomTree Government Money Market Digital Fund (WTGXX)](https://pharos.watch/stablecoin/wtgxx-wisdomtree/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [VanEck Treasury Fund (VBILL)](https://pharos.watch/stablecoin/vbill-vaneck/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Apollo Diversified Credit Securitize Fund (ACRED)](https://pharos.watch/stablecoin/acred-apollo-securitize/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Janus Henderson Anemoy AAA CLO Fund (JAAA)](https://pharos.watch/stablecoin/jaaa-janus-henderson-anemoy/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Anemoy Tokenized Apollo Diversified Credit Fund (ACRDX)](https://pharos.watch/stablecoin/acrdx-anemoy-apollo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Securitize Tokenized AAA CLO Fund (STAC)](https://pharos.watch/stablecoin/stac-securitize/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Hamilton Lane Senior Credit Opportunities Securitize Fund (HLSCOPE)](https://pharos.watch/stablecoin/hlscope-hamilton-lane/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Tradable NA Rent Financing Platform SSTN (PC0000031)](https://pharos.watch/stablecoin/pc0000031-tradable/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Tradable APAC Diversified Finance Provider SSTN (PC0000033)](https://pharos.watch/stablecoin/pc0000033-tradable/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Tradable NA Post-Settlement Legal Financing Receivables (PC0000101)](https://pharos.watch/stablecoin/pc0000101-tradable/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Tradable LatAm Residential SSTL (PC0000089)](https://pharos.watch/stablecoin/pc0000089-tradable/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDD (USDD)](https://pharos.watch/stablecoin/usdd-tron-dao-reserve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Savings USDD (sUSDD)](https://pharos.watch/stablecoin/susdd-tron-dao-reserve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Ethena USDtb (USDTB)](https://pharos.watch/stablecoin/usdtb-ethena/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -160,6 +168,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Agora Dollar (AUSD)](https://pharos.watch/stablecoin/ausd-agora/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [infiniFi USD (IUSD)](https://pharos.watch/stablecoin/iusd-infinifi/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Astherus (USDF)](https://pharos.watch/stablecoin/usdf-astherus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Aster Staked USDF (asUSDF)](https://pharos.watch/stablecoin/asusdf-astherus/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [StandX DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-standx/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [River Stablecoin (satUSD)](https://pharos.watch/stablecoin/satusd-river/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Brazilian Digital (BRZ)](https://pharos.watch/stablecoin/brz-transfero/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
@@ -283,6 +292,17 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Ondo OUSG (OUSG)](https://pharos.watch/stablecoin/ousg-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Midas mTBILL (mTBILL)](https://pharos.watch/stablecoin/mtbill-midas/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Midas mRe7YIELD (mRe7YIELD)](https://pharos.watch/stablecoin/mre7yield-midas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Midas mF-ONE (mF-ONE)](https://pharos.watch/stablecoin/mf-one-midas/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Midas Fasanara Global (mGLOBAL)](https://pharos.watch/stablecoin/mglobal-midas-fasanara/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Midas mHYPER (mHYPER)](https://pharos.watch/stablecoin/mhyper-midas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Midas mMEV (mMEV)](https://pharos.watch/stablecoin/mmev-midas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Midas mAPOLLO (mAPOLLO)](https://pharos.watch/stablecoin/mapollo-midas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Spiko Amundi Overnight Swap Fund (SAFO)](https://pharos.watch/stablecoin/safo-spiko-usd/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Spiko Digital Assets Cash & Carry Fund (SPKCC)](https://pharos.watch/stablecoin/spkcc-spiko/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Spiko Amundi Overnight Swap Fund (EUR) (EURSAFO)](https://pharos.watch/stablecoin/eursafo-spiko/): centralized stablecoin backed by real-world assets pegged to Euro.
+- [Spiko Digital Assets Cash & Carry Fund - Euro Share Class (EURSPKCC)](https://pharos.watch/stablecoin/eurspkcc-spiko/): centralized stablecoin backed by real-world assets pegged to Euro.
+- [Spiko UK T-Bills Money Market Fund (UKTBL)](https://pharos.watch/stablecoin/uktbl-spiko/): centralized stablecoin backed by real-world assets pegged to British Pound.
+- [Spiko Amundi Overnight Swap Fund (GBP) (GBPSAFO)](https://pharos.watch/stablecoin/gbpsafo-spiko/): centralized stablecoin backed by real-world assets pegged to British Pound.
 - [Janus Henderson Anemoy Treasury Fund (JTRSY)](https://pharos.watch/stablecoin/jtrsy-anemoy/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Spiko US T-Bills Money Market Fund (USTBL)](https://pharos.watch/stablecoin/ustbl-spiko/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Backed IB01 Treasury Bond 0-1yr (bIB01)](https://pharos.watch/stablecoin/bib01-backed/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -302,6 +322,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Forte AUD (AUDF)](https://pharos.watch/stablecoin/audf-forte/): centralized stablecoin backed by real-world assets pegged to Australian Dollar.
 - [BiLira (TRYB)](https://pharos.watch/stablecoin/tryb-bilira/): centralized stablecoin backed by real-world assets pegged to Turkish Lira.
 - [Tether Gold (XAUT)](https://pharos.watch/stablecoin/xaut-tether/): centralized stablecoin backed by real-world assets pegged to Gold.
+- [Kinka (XNK)](https://pharos.watch/stablecoin/xnk-kinka/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [PAX Gold (PAXG)](https://pharos.watch/stablecoin/paxg-paxos/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Streamex Gold Yield (GLDY)](https://pharos.watch/stablecoin/gldy-streamex/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Kinesis Gold (KAU)](https://pharos.watch/stablecoin/kau-kinesis/): centralized stablecoin backed by real-world assets pegged to Gold.
