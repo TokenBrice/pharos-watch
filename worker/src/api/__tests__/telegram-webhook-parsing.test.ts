@@ -56,6 +56,60 @@ describe("parseSetCommand", () => {
       enabled: false,
     });
   });
+
+  it("accepts `on` as an alias of `alert` for dews", () => {
+    expect(parseSetCommand("USDC dews on")).toEqual({
+      ticker: "USDC",
+      setting: "dews",
+      enabled: true,
+      minBand: null,
+    });
+    expect(parseSetCommand("USDC dews alert")).toEqual({
+      ticker: "USDC",
+      setting: "dews",
+      enabled: true,
+      minBand: null,
+    });
+  });
+
+  it("accepts `on` as an alias of `all` for safety", () => {
+    expect(parseSetCommand("USDC safety on")).toEqual({
+      ticker: "USDC",
+      setting: "safety",
+      enabled: true,
+      mode: null,
+    });
+    expect(parseSetCommand("USDC safety all")).toEqual({
+      ticker: "USDC",
+      setting: "safety",
+      enabled: true,
+      mode: null,
+    });
+  });
+
+  it("accepts the dews/safety `on` alias for global all-stablecoin writes", () => {
+    expect(parseSetCommand("all dews on")).toEqual({
+      ticker: "all",
+      setting: "dews",
+      enabled: true,
+      minBand: null,
+    });
+    expect(parseSetCommand("all safety on")).toEqual({
+      ticker: "all",
+      setting: "safety",
+      enabled: true,
+      mode: null,
+    });
+  });
+
+  it("still rejects truly invalid dews and safety values", () => {
+    expect(parseSetCommand("USDC dews danger-only")).toEqual({
+      error: "DEWS values: off, ALERT, WARNING, DANGER",
+    });
+    expect(parseSetCommand("USDC safety enabled")).toEqual({
+      error: "Safety values: off, all, downgrade-only, upgrade-only",
+    });
+  });
 });
 
 describe("parseStartPayload", () => {

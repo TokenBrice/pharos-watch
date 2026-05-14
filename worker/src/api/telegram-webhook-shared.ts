@@ -46,6 +46,7 @@ Other useful setups:
 <code>/why USDC</code> — short safety-grade explanation
 <code>/set all dews on</code> — global alerts across every tracked coin
 <code>/health</code> — delivery diagnostics for this chat
+<code>/forget</code> — delete all your subscriber data
 Inline buttons on each alert let you snooze 1h / 4h / 24h.
 
 <b>Groups</b>
@@ -74,6 +75,9 @@ Remove specific coin subscriptions or preset-expanded coins
 
 <code>/unsubscribe all</code>
 Remove all per-coin and all-stablecoin subscriptions
+
+<code>/forget</code>
+Delete all your subscriber data
 
 <code>/set &lt;ticker&gt; &lt;setting&gt; &lt;value&gt;</code>
 Examples:

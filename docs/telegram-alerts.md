@@ -122,7 +122,7 @@ The Telegram subscriber, disambiguation, and overflow-queue tables are part of `
 
 `telegram_subscribers` rows are auto-pruned after 180 days of inactivity. The `telegram-inactive-cleanup` job runs on the daily 03:00 UTC lane behind a 7-day cache guard (`cache` key `cron:telegram-inactive-cleanup:last-run`) and removes any subscriber whose `last_active_at` is older than 180 days and which has zero rows in `telegram_subscriptions`, `telegram_preset_subscriptions`, `telegram_pending_alerts`, and `telegram_pending_disambiguation`. Each eligible chat is removed via a batched cascade DELETE; the job caps at 100 deletions per run so a large backlog cannot push the daily slot past its per-statement budget. The most recent run's `item_count` in the trailing 7-day window is surfaced as `TelegramBotStats.inactiveSubscribersCleanedThisWeek`.
 
-Pending disambiguation rows expire with their command TTL. Pending alert rows leave the live queue when sent, expired, or permanently failed; dead-letter rows keep delivery-failure audit context without being a live subscription. A dedicated `/delete` or `/forget` command is not currently exposed, so the supported self-service stop path is `/unsubscribe all` plus inactivity pruning.
+Pending disambiguation rows expire with their command TTL. Pending alert rows leave the live queue when sent, expired, or permanently failed; dead-letter rows keep delivery-failure audit context without being a live subscription. Users can also issue `/forget` for an immediate two-step deletion of their subscriber data; `/unsubscribe all` plus inactivity pruning remains the lighter-touch alternative.
 
 The webhook claims individual Telegram update IDs in `telegram_processed_updates` before command handling and only marks rows processed after successful or terminal handled completion. Retried failed updates can be processed again without a high-watermark drop.
 
@@ -271,6 +271,7 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/unsnooze` | Clears active alert snooze immediately; private replies include a Mini App snooze button |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
+| `/forget` | Two-step inline-confirmed deletion of the caller's subscriber data (per-coin and preset subscriptions, global toggles, quiet hours, snooze, delivery diagnostics, pending alerts). Private chats only. Retained idempotency rows in `telegram_processed_updates` are not removed. |
 
 ### /start Deep-Link Payloads
 

@@ -273,7 +273,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       if (value === "off") {
         return { ticker, setting: "dews", enabled: false, minBand: null };
       }
-      if (value === "alert") {
+      if (value === "alert" || value === "on") {
         return { ticker, setting: "dews", enabled: true, minBand: null };
       }
       if (value === "warning") {
@@ -288,7 +288,7 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
       if (value === "off") {
         return { ticker, setting: "safety", enabled: false, mode: null };
       }
-      if (value === "all") {
+      if (value === "all" || value === "on") {
         return { ticker, setting: "safety", enabled: true, mode: null };
       }
       if (value === "downgrade-only" || value === "upgrade-only") {
