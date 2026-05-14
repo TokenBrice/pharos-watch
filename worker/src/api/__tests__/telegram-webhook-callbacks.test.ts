@@ -19,7 +19,12 @@ const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
 
-function lastSentMessageBody(): { text: string; reply_markup?: { inline_keyboard?: Array<Array<{ text: string; callback_data?: string }>> } } {
+function lastSentMessageBody(): {
+  text: string;
+  reply_markup?: {
+    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
+  };
+} {
   const sendCalls = fetchSpy.mock.calls.filter((call) => String(call[0]).includes("sendMessage"));
   const last = sendCalls[sendCalls.length - 1];
   if (!last) throw new Error("No sendMessage call recorded");
@@ -781,6 +786,10 @@ describe("handleCallbackQuery", () => {
 
       const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Subscribed/i);
+      const confirmation = lastSentMessageBody();
+      expect(confirmation.text).toContain("Subscribed to DEWS + depeg for USDC");
+      const buttons = (confirmation.reply_markup?.inline_keyboard ?? []).flat();
+      expect(buttons.some((button) => button.text === "Tune in app" && button.web_app?.url.includes("startapp=coin_usdc-circle"))).toBe(true);
     });
 
     it("quicksub:<id> in a group refuses non-admin without writing to D1", async () => {

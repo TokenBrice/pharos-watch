@@ -5,6 +5,7 @@ import {
   loadSubscriberByChat,
   setSubscriberTimezone,
 } from "../telegram-webhook-store";
+import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import type { WebhookCommandHandler } from "./context";
 
 /**
@@ -24,8 +25,16 @@ const TIMEZONE_QUICK_PICK_ZONES = [
   "Australia/Sydney",
 ] as const;
 
-function buildTimezoneKeyboard(): { inline_keyboard: Array<Array<{ text: string; callback_data: string }>> } {
-  const rows: Array<Array<{ text: string; callback_data: string }>> = [];
+type TimezoneKeyboardButton = {
+  text: string;
+  callback_data?: string;
+  web_app?: { url: string };
+};
+
+function buildTimezoneKeyboard(options: { includeMiniAppButton?: boolean } = {}): {
+  inline_keyboard: TimezoneKeyboardButton[][];
+} {
+  const rows: TimezoneKeyboardButton[][] = [];
   // Two zones per row keeps the callback labels readable on narrow Telegram
   // clients and well under the 64-byte callback_data limit.
   for (let i = 0; i < TIMEZONE_QUICK_PICK_ZONES.length; i += 2) {
@@ -34,6 +43,9 @@ function buildTimezoneKeyboard(): { inline_keyboard: Array<Array<{ text: string;
       callback_data: `tz:${zone}`,
     }));
     rows.push(row);
+  }
+  if (options.includeMiniAppButton) {
+    rows.push(buildMiniAppOnlyKeyboard("Set in app", "quiet-hours").inline_keyboard[0]);
   }
   return { inline_keyboard: rows };
 }
@@ -55,7 +67,9 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
       "Pick a common zone below, or send <code>/timezone &lt;IANA-zone&gt;</code> (e.g. <code>/timezone Europe/Paris</code>).",
       "Quiet hours from /mute are interpreted in this zone (NULL = UTC).",
     ].join("\n");
-    await ctx.replyToChatWithMarkup(message, { replyMarkup: buildTimezoneKeyboard() });
+    await ctx.replyToChatWithMarkup(message, {
+      replyMarkup: buildTimezoneKeyboard({ includeMiniAppButton: ctx.chatType === "private" }),
+    });
     return;
   }
 
@@ -85,9 +99,14 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
     actionDetail: "iana",
     outcome: "set",
   });
-  await ctx.replyToChat(
-    escapeHtml(
-      `Timezone set to ${trimmed}. Quiet hours from /mute will now be interpreted in this zone.`,
-    ),
+  const message = escapeHtml(
+    `Timezone set to ${trimmed}. Quiet hours from /mute will now be interpreted in this zone.`,
   );
+  if (ctx.chatType === "private") {
+    await ctx.replyToChatWithMarkup(message, {
+      replyMarkup: buildMiniAppOnlyKeyboard("Tweak quiet hours", "quiet-hours"),
+    });
+    return;
+  }
+  await ctx.replyToChat(message);
 };

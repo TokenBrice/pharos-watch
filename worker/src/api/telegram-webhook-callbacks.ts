@@ -36,6 +36,7 @@ import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
 import { loadStatusForCoin } from "./telegram-webhook-status";
 import {
   MANAGE_PAGE_SIZE,
+  buildMiniAppOnlyKeyboard,
   buildManageWatchlistKeyboard,
   buildManageWatchlistMessage,
   buildStatusDiscoveryKeyboard,
@@ -585,6 +586,18 @@ async function handleQuickSubCallback(
       text: "Could not save subscription. Please try again.",
     });
     return;
+  }
+  if (chatType === "private") {
+    await sendAuditedTelegramReply(
+      db,
+      chatId,
+      `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
+      botToken,
+      {
+        actionDetail: "callback_quicksub",
+        replyMarkup: buildMiniAppOnlyKeyboard("Tune in app", `coin_${arg}`),
+      },
+    );
   }
   await answerCallbackQuery(cb.id, botToken, {
     text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,

@@ -27,6 +27,7 @@ import {
   clearPendingDisambiguation,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
+  migrateTelegramChatId,
   maybePruneTelegramProcessedUpdates,
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   unixNow,
@@ -269,6 +270,31 @@ export const handleTelegramWebhook = withErrorHandler(
         return finishOk(myChatMemberErrorClass);
       }
 
+      const migration = resolveChatMigration(update.message);
+      if (migration) {
+        let migrationErrorClass: string | null = null;
+        try {
+          await migrateTelegramChatId(db, migration.oldChatId, migration.newChatId);
+          logTelegramEvent({
+            level: "info",
+            message: "telegram chat id migrated",
+            chatId: migration.newChatId,
+            oldChatId: migration.oldChatId,
+            action: "chat-migration",
+          });
+        } catch (err) {
+          logTelegramEvent({
+            message: "telegram chat migration failed",
+            chatId: migration.newChatId,
+            oldChatId: migration.oldChatId,
+            action: "chat-migration",
+            err: err instanceof Error ? err.message : String(err),
+          });
+          migrationErrorClass = "chat-migration";
+        }
+        return finishOk(migrationErrorClass);
+      }
+
       const chatId = update.message?.chat?.id?.toString();
       const text = update.message?.text?.trim();
       const username = update.message?.chat?.username ?? null;
@@ -504,6 +530,31 @@ function resolveUpdateChatId(update: TelegramWebhookUpdateWithChatMember): strin
   const memberChatId = update.my_chat_member?.chat?.id;
   if (typeof memberChatId === "number" && Number.isFinite(memberChatId)) {
     return String(memberChatId);
+  }
+  return null;
+}
+
+function resolveChatMigration(message: TelegramWebhookUpdate["message"] | undefined): {
+  oldChatId: string;
+  newChatId: string;
+} | null {
+  const currentChatId = message?.chat?.id;
+  if (typeof currentChatId !== "number" || !Number.isFinite(currentChatId)) {
+    return null;
+  }
+  const migrateToChatId = message?.migrate_to_chat_id;
+  if (typeof migrateToChatId === "number" && Number.isFinite(migrateToChatId)) {
+    return {
+      oldChatId: String(currentChatId),
+      newChatId: String(migrateToChatId),
+    };
+  }
+  const migrateFromChatId = message?.migrate_from_chat_id;
+  if (typeof migrateFromChatId === "number" && Number.isFinite(migrateFromChatId)) {
+    return {
+      oldChatId: String(migrateFromChatId),
+      newChatId: String(currentChatId),
+    };
   }
   return null;
 }

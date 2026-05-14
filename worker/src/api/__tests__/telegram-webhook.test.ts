@@ -74,6 +74,32 @@ function makeMyChatMemberRequest(
   });
 }
 
+function makeChatMigrationRequest(
+  options: {
+    chatId: number;
+    migrateToChatId?: number;
+    migrateFromChatId?: number;
+    updateId?: number;
+    secret?: string;
+  },
+): Request {
+  return new Request("https://x/api/telegram-webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Telegram-Bot-Api-Secret-Token": options.secret ?? "test-secret",
+    },
+    body: JSON.stringify({
+      ...(options.updateId != null ? { update_id: options.updateId } : {}),
+      message: {
+        chat: { id: options.chatId, type: "supergroup" },
+        ...(options.migrateToChatId != null ? { migrate_to_chat_id: options.migrateToChatId } : {}),
+        ...(options.migrateFromChatId != null ? { migrate_from_chat_id: options.migrateFromChatId } : {}),
+      },
+    }),
+  });
+}
+
 function sentMessageBody(callIndex = 0): { text: string; reply_markup?: unknown } {
   const [, init] = fetchSpy.mock.calls[callIndex] ?? [];
   if (!init?.body || typeof init.body !== "string") {
@@ -86,6 +112,26 @@ function latestSendMessageBody(): { text: string; reply_markup?: unknown } {
   const sendCall = [...fetchSpy.mock.calls].reverse().find((call) => String(call[0]).includes("sendMessage"));
   if (!sendCall) throw new Error("Expected sendMessage call");
   return JSON.parse((sendCall[1]?.body as string) ?? "{}") as { text: string; reply_markup?: unknown };
+}
+
+type InlineButton = {
+  text?: string;
+  callback_data?: string;
+  url?: string;
+  web_app?: { url?: string };
+};
+
+function inlineButtons(body: { reply_markup?: unknown }): InlineButton[] {
+  const markup = body.reply_markup as { inline_keyboard?: InlineButton[][] } | undefined;
+  return (markup?.inline_keyboard ?? []).flat();
+}
+
+function expectMiniAppButton(body: { reply_markup?: unknown }, text: string, startapp: string): void {
+  expect(
+    inlineButtons(body).some(
+      (button) => button.text === text && button.web_app?.url?.includes(`startapp=${startapp}`),
+    ),
+  ).toBe(true);
 }
 
 function makeStablecoinsCacheValue(overrides: Record<string, number>): string {
@@ -276,6 +322,64 @@ describe("handleTelegramWebhook", () => {
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
+    const db = mockD1();
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeChatMigrationRequest({
+        chatId: -123,
+        migrateToChatId: -100123,
+        updateId: 700,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const history = db.getHistory();
+    expect(history.some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_subscribers") &&
+      entry.binds[0] === "-100123" &&
+      entry.binds[1] === "-123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?") &&
+      entry.binds[0] === "-100123" &&
+      entry.binds[1] === "-123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("INSERT INTO cache") &&
+      entry.binds[0] === "telegram:group-welcome:-100123" &&
+      entry.binds[1] === "telegram:group-welcome:-123",
+    )).toBe(true);
+    expect(history.some((entry) =>
+      entry.sql.includes("DELETE FROM telegram_subscribers WHERE chat_id = ?") &&
+      entry.binds[0] === "-123",
+    )).toBe(true);
+  });
+
+  it("migrates stored chat state on migrate_from_chat_id service messages", async () => {
+    const db = mockD1();
+
+    await handleTelegramWebhook(
+      db,
+      makeChatMigrationRequest({
+        chatId: -100123,
+        migrateFromChatId: -123,
+        updateId: 701,
+      }),
+      "test-secret",
+      "bot-token",
+    );
+
+    const subscriberMigration = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_subscribers"),
+    );
+    expect(subscriberMigration?.binds.slice(0, 2)).toEqual(["-100123", "-123"]);
   });
 
   it("returns a retryable status for duplicate update ids still in flight", async () => {
@@ -507,8 +611,10 @@ describe("handleTelegramWebhook", () => {
 
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(sentMessageBody().text).toContain("Commands");
-    expect(sentMessageBody().text).toContain("/presets");
+    const body = sentMessageBody();
+    expect(body.text).toContain("Commands");
+    expect(body.text).toContain("/presets");
+    expectMiniAppButton(body, "Open control panel", "settings");
   });
 
   it("records command replies without stamping alert delivery success", async () => {
@@ -1474,10 +1580,12 @@ describe("handleTelegramWebhook", () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/presets"), "test-secret", "bot-token");
 
-    const text = sentMessageBody().text;
+    const body = sentMessageBody();
+    const text = body.text;
     expect(text).toContain("Preset Watchlists");
     expect(text).toContain("usd-top25");
     expect(text).toContain("mcap-ge-1b");
+    expectMiniAppButton(body, "Browse presets", "presets");
   });
 
   it("replies unknown command", async () => {
@@ -1737,8 +1845,10 @@ describe("handleTelegramWebhook", () => {
 
     await handleTelegramWebhook(db, makeWebhookRequest(123, "/set USDC dews WARNING"), "test-secret", "bot-token");
 
-    expect(sentMessageBody().text).toContain("Updated settings");
-    expect(sentMessageBody().text).toContain("DEWS&gt;=WARNING");
+    const body = sentMessageBody();
+    expect(body.text).toContain("Updated settings");
+    expect(body.text).toContain("DEWS&gt;=WARNING");
+    expectMiniAppButton(body, "Review in app", "coin_usdc-circle");
   });
 
   it("handles /set all for global alert flags", async () => {
@@ -1781,7 +1891,9 @@ describe("handleTelegramWebhook", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("global_alert_depeg = excluded.global_alert_depeg"))).toBe(true);
-    expect(sentMessageBody().text).toContain("Updated all-stablecoin alerts");
+    const body = sentMessageBody();
+    expect(body.text).toContain("Updated all-stablecoin alerts");
+    expectMiniAppButton(body, "Review in app", "watchlist");
   });
 
   it("handles /set all depeg-step for global worsening alerts", async () => {
@@ -1854,6 +1966,19 @@ describe("handleTelegramWebhook", () => {
     expect(text).toContain("22:00–07:00 UTC");
   });
 
+  it("/unsnooze clears alert snooze and offers private Mini App controls", async () => {
+    const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "/unsnooze"), "test-secret", "bot-token");
+
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("alert_snooze_until_ts = NULL") &&
+      entry.binds[0] === "123",
+    )).toBe(true);
+    const body = sentMessageBody();
+    expect(body.text).toContain("Alert snooze cleared");
+    expectMiniAppButton(body, "Manage snooze", "snooze");
+  });
+
   it("/timezone <zone> persists a valid IANA zone", async () => {
     const db = mockD1([{ match: "telegram_pending_disambiguation", rows: [] }]);
     const res = await handleTelegramWebhook(
@@ -1868,7 +1993,9 @@ describe("handleTelegramWebhook", () => {
       /INSERT INTO telegram_subscribers/.test(h.sql) && h.binds.includes("Europe/Paris"),
     );
     expect(upsert).toBeDefined();
-    expect(sentMessageBody().text).toContain("Timezone set to Europe/Paris");
+    const body = sentMessageBody();
+    expect(body.text).toContain("Timezone set to Europe/Paris");
+    expectMiniAppButton(body, "Tweak quiet hours", "quiet-hours");
   });
 
   it("/timezone rejects unknown zones without writing to D1", async () => {
@@ -1928,6 +2055,7 @@ describe("handleTelegramWebhook", () => {
     const flat = (sent.reply_markup?.inline_keyboard ?? []).flat();
     expect(flat.some((btn) => btn.callback_data === "tz:UTC")).toBe(true);
     expect(flat.some((btn) => btn.callback_data === "tz:Europe/Paris")).toBe(true);
+    expectMiniAppButton(sent, "Set in app", "quiet-hours");
   });
 
   it("finalizes pending disambiguation and continues remaining tickers", async () => {

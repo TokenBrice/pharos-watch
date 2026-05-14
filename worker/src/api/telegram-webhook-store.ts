@@ -945,6 +945,307 @@ export async function forgetSubscriber(db: D1Database, chatId: string): Promise<
   ]);
 }
 
+const CHAT_MIGRATION_CACHE_KEY_BUILDERS = [
+  (chatId: string) => `telegram:chat-admins:${chatId}`,
+  (chatId: string) => `telegram:group-welcome:${chatId}`,
+] as const;
+
+function prepareChatMigrationCacheStatements(
+  db: D1Database,
+  oldChatId: string,
+  newChatId: string,
+): D1PreparedStatement[] {
+  return CHAT_MIGRATION_CACHE_KEY_BUILDERS.flatMap((buildKey) => {
+    const oldKey = buildKey(oldChatId);
+    const newKey = buildKey(newChatId);
+    return [
+      db.prepare(`
+        INSERT INTO cache (key, value, updated_at)
+        SELECT ?, value, updated_at
+          FROM cache
+         WHERE key = ?
+        ON CONFLICT(key) DO UPDATE SET
+          value = CASE
+            WHEN cache.updated_at <= excluded.updated_at THEN excluded.value
+            ELSE cache.value
+          END,
+          updated_at = MAX(cache.updated_at, excluded.updated_at)
+      `).bind(newKey, oldKey),
+      db.prepare("DELETE FROM cache WHERE key = ?").bind(oldKey),
+    ];
+  });
+}
+
+/**
+ * Merge Telegram group state after Telegram upgrades a group to a supergroup.
+ * Telegram emits both `migrate_to_chat_id` and `migrate_from_chat_id` service
+ * messages; this helper is idempotent so either event can safely run first.
+ */
+export async function migrateTelegramChatId(
+  db: D1Database,
+  oldChatId: string,
+  newChatId: string,
+): Promise<void> {
+  if (!oldChatId || !newChatId || oldChatId === newChatId) return;
+
+  const statements: D1PreparedStatement[] = [
+    db.prepare(`
+      INSERT INTO telegram_subscribers (
+        chat_id,
+        username,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        alert_launch,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
+        global_alert_launch,
+        quiet_hours_enabled,
+        quiet_hours_start_utc,
+        quiet_hours_end_utc,
+        global_depeg_worsening_bps_step,
+        timezone,
+        alert_snooze_until_ts,
+        consecutive_block_count,
+        consecutive_block_first_at,
+        created_at,
+        last_active_at
+      )
+      SELECT
+        ?,
+        username,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        alert_launch,
+        global_alert_dews,
+        global_alert_depeg,
+        global_alert_safety,
+        global_alert_launch,
+        quiet_hours_enabled,
+        quiet_hours_start_utc,
+        quiet_hours_end_utc,
+        global_depeg_worsening_bps_step,
+        timezone,
+        alert_snooze_until_ts,
+        consecutive_block_count,
+        consecutive_block_first_at,
+        created_at,
+        last_active_at
+      FROM telegram_subscribers
+      WHERE chat_id = ?
+      ON CONFLICT(chat_id) DO UPDATE SET
+        username = COALESCE(telegram_subscribers.username, excluded.username),
+        alert_dews = MAX(telegram_subscribers.alert_dews, excluded.alert_dews),
+        alert_depeg = MAX(telegram_subscribers.alert_depeg, excluded.alert_depeg),
+        alert_safety = MAX(telegram_subscribers.alert_safety, excluded.alert_safety),
+        alert_launch = MAX(telegram_subscribers.alert_launch, excluded.alert_launch),
+        global_alert_dews = MAX(telegram_subscribers.global_alert_dews, excluded.global_alert_dews),
+        global_alert_depeg = MAX(telegram_subscribers.global_alert_depeg, excluded.global_alert_depeg),
+        global_alert_safety = MAX(telegram_subscribers.global_alert_safety, excluded.global_alert_safety),
+        global_alert_launch = MAX(telegram_subscribers.global_alert_launch, excluded.global_alert_launch),
+        quiet_hours_enabled = MAX(telegram_subscribers.quiet_hours_enabled, excluded.quiet_hours_enabled),
+        quiet_hours_start_utc = CASE
+          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_start_utc
+          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_start_utc
+          ELSE COALESCE(telegram_subscribers.quiet_hours_start_utc, excluded.quiet_hours_start_utc)
+        END,
+        quiet_hours_end_utc = CASE
+          WHEN telegram_subscribers.quiet_hours_enabled = 1 THEN telegram_subscribers.quiet_hours_end_utc
+          WHEN excluded.quiet_hours_enabled = 1 THEN excluded.quiet_hours_end_utc
+          ELSE COALESCE(telegram_subscribers.quiet_hours_end_utc, excluded.quiet_hours_end_utc)
+        END,
+        global_depeg_worsening_bps_step = COALESCE(
+          telegram_subscribers.global_depeg_worsening_bps_step,
+          excluded.global_depeg_worsening_bps_step
+        ),
+        timezone = COALESCE(telegram_subscribers.timezone, excluded.timezone),
+        alert_snooze_until_ts = NULLIF(
+          MAX(
+            COALESCE(telegram_subscribers.alert_snooze_until_ts, 0),
+            COALESCE(excluded.alert_snooze_until_ts, 0)
+          ),
+          0
+        ),
+        consecutive_block_count = MAX(
+          COALESCE(telegram_subscribers.consecutive_block_count, 0),
+          COALESCE(excluded.consecutive_block_count, 0)
+        ),
+        consecutive_block_first_at = CASE
+          WHEN telegram_subscribers.consecutive_block_first_at IS NULL THEN excluded.consecutive_block_first_at
+          WHEN excluded.consecutive_block_first_at IS NULL THEN telegram_subscribers.consecutive_block_first_at
+          ELSE MIN(telegram_subscribers.consecutive_block_first_at, excluded.consecutive_block_first_at)
+        END,
+        created_at = MIN(telegram_subscribers.created_at, excluded.created_at),
+        last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at)
+    `).bind(newChatId, oldChatId),
+    db.prepare(`
+      INSERT INTO telegram_subscriptions (
+        chat_id,
+        stablecoin_id,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        alert_launch,
+        dews_min_band,
+        safety_mode,
+        depeg_worsening_bps_step,
+        alert_snooze_until_ts
+      )
+      SELECT
+        ?,
+        stablecoin_id,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        alert_launch,
+        dews_min_band,
+        safety_mode,
+        depeg_worsening_bps_step,
+        alert_snooze_until_ts
+      FROM telegram_subscriptions
+      WHERE chat_id = ?
+      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
+        alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
+        alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
+        alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
+        alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
+        dews_min_band = COALESCE(telegram_subscriptions.dews_min_band, excluded.dews_min_band),
+        safety_mode = COALESCE(telegram_subscriptions.safety_mode, excluded.safety_mode),
+        depeg_worsening_bps_step = COALESCE(
+          telegram_subscriptions.depeg_worsening_bps_step,
+          excluded.depeg_worsening_bps_step
+        ),
+        alert_snooze_until_ts = NULLIF(
+          MAX(
+            COALESCE(telegram_subscriptions.alert_snooze_until_ts, 0),
+            COALESCE(excluded.alert_snooze_until_ts, 0)
+          ),
+          0
+        )
+    `).bind(newChatId, oldChatId),
+    db.prepare(`
+      INSERT INTO telegram_preset_subscriptions (
+        chat_id,
+        preset_id,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        depeg_worsening_bps_step,
+        created_at,
+        updated_at
+      )
+      SELECT
+        ?,
+        preset_id,
+        alert_dews,
+        alert_depeg,
+        alert_safety,
+        depeg_worsening_bps_step,
+        created_at,
+        updated_at
+      FROM telegram_preset_subscriptions
+      WHERE chat_id = ?
+      ON CONFLICT(chat_id, preset_id) DO UPDATE SET
+        alert_dews = MAX(telegram_preset_subscriptions.alert_dews, excluded.alert_dews),
+        alert_depeg = MAX(telegram_preset_subscriptions.alert_depeg, excluded.alert_depeg),
+        alert_safety = MAX(telegram_preset_subscriptions.alert_safety, excluded.alert_safety),
+        depeg_worsening_bps_step = COALESCE(
+          telegram_preset_subscriptions.depeg_worsening_bps_step,
+          excluded.depeg_worsening_bps_step
+        ),
+        created_at = MIN(telegram_preset_subscriptions.created_at, excluded.created_at),
+        updated_at = MAX(telegram_preset_subscriptions.updated_at, excluded.updated_at)
+    `).bind(newChatId, oldChatId),
+    db.prepare(`
+      INSERT OR IGNORE INTO telegram_pending_disambiguation (
+        chat_id,
+        alert_types,
+        resolved_ids,
+        ambiguous_ticker,
+        candidates,
+        remaining_tickers,
+        expires_at,
+        action_type,
+        action_payload,
+        initiator_user_id
+      )
+      SELECT
+        ?,
+        alert_types,
+        resolved_ids,
+        ambiguous_ticker,
+        candidates,
+        remaining_tickers,
+        expires_at,
+        action_type,
+        action_payload,
+        initiator_user_id
+      FROM telegram_pending_disambiguation
+      WHERE chat_id = ?
+    `).bind(newChatId, oldChatId),
+    db.prepare(`
+      INSERT INTO telegram_chat_delivery_diagnostics (
+        chat_id,
+        last_successful_delivery_at,
+        last_successful_reply_at,
+        last_delivery_attempt_at,
+        recent_failure_class,
+        updated_at
+      )
+      SELECT
+        ?,
+        last_successful_delivery_at,
+        last_successful_reply_at,
+        last_delivery_attempt_at,
+        recent_failure_class,
+        updated_at
+      FROM telegram_chat_delivery_diagnostics
+      WHERE chat_id = ?
+      ON CONFLICT(chat_id) DO UPDATE SET
+        last_successful_delivery_at = NULLIF(
+          MAX(
+            COALESCE(telegram_chat_delivery_diagnostics.last_successful_delivery_at, 0),
+            COALESCE(excluded.last_successful_delivery_at, 0)
+          ),
+          0
+        ),
+        last_successful_reply_at = NULLIF(
+          MAX(
+            COALESCE(telegram_chat_delivery_diagnostics.last_successful_reply_at, 0),
+            COALESCE(excluded.last_successful_reply_at, 0)
+          ),
+          0
+        ),
+        last_delivery_attempt_at = NULLIF(
+          MAX(
+            COALESCE(telegram_chat_delivery_diagnostics.last_delivery_attempt_at, 0),
+            COALESCE(excluded.last_delivery_attempt_at, 0)
+          ),
+          0
+        ),
+        recent_failure_class = COALESCE(
+          telegram_chat_delivery_diagnostics.recent_failure_class,
+          excluded.recent_failure_class
+        ),
+        updated_at = MAX(telegram_chat_delivery_diagnostics.updated_at, excluded.updated_at)
+    `).bind(newChatId, oldChatId),
+    db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("DELETE FROM telegram_pending_disambiguation WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(oldChatId),
+    db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(oldChatId),
+    ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),
+  ];
+
+  await batchExecute(db, statements);
+}
+
 export async function clearAlertSnooze(
   db: D1Database,
   chatId: string,

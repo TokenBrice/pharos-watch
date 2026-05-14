@@ -36,6 +36,23 @@ function request(path: string, body: unknown): Request {
   });
 }
 
+function streamedRequest(path: string, chunks: string[]): Request {
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(encoder.encode(chunk));
+      }
+      controller.close();
+    },
+  });
+  return new Request(`https://api.pharos.watch${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    duplex: "half",
+  } as RequestInit & { duplex: "half" });
+}
+
 async function privateInitData(ageSec = 60): Promise<string> {
   return signedInitData({
     auth_date: String(NOW_SEC - ageSec),
@@ -222,6 +239,21 @@ describe("handleTelegramMiniAppSession", () => {
 
     expect(response.status).toBe(413);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects oversized streamed session bodies without relying on Content-Length", async () => {
+    const db = mockD1();
+    const req = streamedRequest("/api/telegram-mini-app/session", [
+      "{\"initData\":\"",
+      "x".repeat(17 * 1024),
+      "\"}",
+    ]);
+
+    const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ code: "body-too-large" });
     expect(db.getHistory()).toHaveLength(0);
   });
 
@@ -585,6 +617,21 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(413);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects oversized streamed mutation bodies without relying on Content-Length", async () => {
+    const db = mockD1();
+    const req = streamedRequest("/api/telegram-mini-app/mutate", [
+      "{\"initData\":\"x\",\"operation\":{\"kind\":\"set-timezone\",\"timezone\":\"",
+      "x".repeat(17 * 1024),
+      "\"}}",
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ code: "body-too-large" });
     expect(db.getHistory()).toHaveLength(0);
   });
 

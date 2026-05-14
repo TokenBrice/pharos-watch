@@ -1,6 +1,7 @@
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { buildGlobalAlertSummaryMessage } from "../telegram-webhook-messages";
+import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { buildGlobalAlertSummaryMessage, buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
 import { parseSetCommand } from "../telegram-webhook-parsing";
 import {
   applyGlobalSetting,
@@ -31,10 +32,31 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
       outcome: parsed.enabled ? "opt_in" : "opt_out",
     });
     const subscriber = await loadSubscriberByChat(db, chatId);
-    await ctx.replyToChat(buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber));
+    const message = buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber);
+    if (ctx.chatType === "private") {
+      await ctx.replyToChatWithMarkup(message, {
+        replyMarkup: buildMiniAppOnlyKeyboard("Review in app", "watchlist"),
+      });
+      return;
+    }
+    await ctx.replyToChat(message);
     return;
   }
 
-  const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: actorUserId }, ctx.botToken);
+  const runAction = makeActionRunner(
+    { db, chatId, username, initiatorUserId: actorUserId },
+    ctx.botToken,
+    undefined,
+    ctx.chatType === "private"
+      ? {
+          replyMarkupForCompletion: ({ actionType, coins }) => {
+            if (actionType !== "set") return undefined;
+            const firstCoin = coins[0];
+            const payload = coins.length === 1 && firstCoin ? formatCoinPayload(firstCoin.id) : "watchlist";
+            return buildMiniAppOnlyKeyboard("Review in app", payload);
+          },
+        }
+      : undefined,
+  );
   await runAction({ tickers: [parsed.ticker], actionType: "set", actionPayload: parsed });
 };

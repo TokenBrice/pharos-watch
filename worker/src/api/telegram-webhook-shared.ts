@@ -205,6 +205,8 @@ export interface TelegramWebhookUpdate {
       username?: string;
     };
     text?: string;
+    migrate_to_chat_id?: number;
+    migrate_from_chat_id?: number;
   };
   callback_query?: {
     id: string;

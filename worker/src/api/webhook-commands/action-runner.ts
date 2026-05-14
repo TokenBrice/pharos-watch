@@ -237,6 +237,14 @@ export type BoundActionRunner = <TActionType extends "subscribe" | "unsubscribe"
   resolutionScope?: TickerResolutionScope;
 }) => Promise<void>;
 
+export interface ActionRunnerOptions {
+  replyMarkupForCompletion?: (input: {
+    actionType: CompletionActionType;
+    coins: ResolvedCoin[];
+    payload: ActionPayloadMap[CompletionActionType];
+  }) => unknown | undefined;
+}
+
 /**
  * Optional gate that, when satisfied, defers subscribe/unsubscribe execution
  * behind an inline Confirm/Cancel keyboard. The gate fires once coin resolution
@@ -320,10 +328,20 @@ export function makeActionRunner(
   context: TelegramActionContext,
   botToken: string,
   gate?: BulkGate,
+  runnerOptions: ActionRunnerOptions = {},
 ): BoundActionRunner {
+  let nextReplyMarkup: unknown | undefined;
   const reply = async (message: string) => {
     if (message === GATED_SENTINEL) return;
-    await replyToChat(context.db, context.chatId, message, botToken);
+    const replyMarkup = nextReplyMarkup;
+    nextReplyMarkup = undefined;
+    await replyToChat(
+      context.db,
+      context.chatId,
+      message,
+      botToken,
+      replyMarkup ? { replyMarkup } : undefined,
+    );
   };
   return ({ tickers, actionType, actionPayload, alertTypes, initialCoins, clearPendingOnTerminal, resolutionScope }) =>
     runCoinResolutionFlow({
@@ -338,11 +356,17 @@ export function makeActionRunner(
       clearPendingOnTerminal,
       resolutionScope,
       reply,
-      onComplete: async (coins, options) => {
+      onComplete: async (coins, resolutionOptions) => {
         if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
-          return persistAndPromptBulkConfirm(context, botToken, gate, coins, options.clearPending);
+          return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);
         }
-        return completionHandlers[actionType](context, coins, actionPayload, options);
+        const message = await completionHandlers[actionType](context, coins, actionPayload, resolutionOptions);
+        nextReplyMarkup = runnerOptions.replyMarkupForCompletion?.({
+          actionType,
+          coins,
+          payload: actionPayload as ActionPayloadMap[CompletionActionType],
+        });
+        return message;
       },
     });
 }

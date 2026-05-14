@@ -1,4 +1,5 @@
-import { jsonResponse, parseRequestJsonWithSchema } from "../lib/api-utils";
+import type { ZodType } from "zod";
+import { jsonResponse } from "../lib/api-utils";
 import type { JsonResponseOptions } from "../lib/api-response";
 import {
   TelegramMiniAppAuthError,
@@ -76,6 +77,61 @@ function rejectOversizedBody(request: Request): Response | null {
     return miniAppError(413, "body-too-large", "Request body too large");
   }
   return null;
+}
+
+async function readBoundedRequestText(request: Request): Promise<string | Response> {
+  const headerRejection = rejectOversizedBody(request);
+  if (headerRejection) return headerRejection;
+  if (!request.body) return "";
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return miniAppError(413, "body-too-large", "Request body too large");
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return miniAppError(400, "validation-error", "Invalid Mini App request body");
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+async function parseMiniAppRequestJson<T>(
+  request: Request,
+  schema: ZodType<T>,
+  invalidPayloadMessage: string,
+): Promise<T | Response> {
+  const text = await readBoundedRequestText(request);
+  if (text instanceof Response) return text;
+
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return miniAppError(400, "validation-error", invalidPayloadMessage);
+  }
+
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    return miniAppError(400, "validation-error", invalidPayloadMessage);
+  }
+  return parsed.data;
 }
 
 function nowSec(): number {
@@ -179,13 +235,13 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
   async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
-    const oversize = rejectOversizedBody(request);
-    if (oversize) return oversize;
-    const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppSessionRequestSchema, { responseOptions: NO_STORE });
+    const parsed = await parseMiniAppRequestJson(
+      request,
+      TelegramMiniAppSessionRequestSchema,
+      "Invalid Mini App session payload",
+    );
     if (parsed instanceof Response) {
-      // parseRequestJsonWithSchema returns a plain `{ error }` payload. Replay that
-      // through the local wrapper so the response carries a stable `code` field.
-      return miniAppError(400, "validation-error", "Invalid Mini App session payload");
+      return parsed;
     }
 
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
@@ -222,13 +278,13 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
   async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
-    const oversize = rejectOversizedBody(request);
-    if (oversize) return oversize;
-    const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppMutationRequestSchema, { responseOptions: NO_STORE });
+    const parsed = await parseMiniAppRequestJson(
+      request,
+      TelegramMiniAppMutationRequestSchema,
+      "Invalid Mini App mutation payload",
+    );
     if (parsed instanceof Response) {
-      // parseRequestJsonWithSchema returns a plain `{ error }` payload. Replay through
-      // the local wrapper so the response carries a stable `code` field.
-      return miniAppError(400, "validation-error", "Invalid Mini App mutation payload");
+      return parsed;
     }
 
     const auth = await validateOrResponse(db, parsed.initData, botToken, {
