@@ -11,6 +11,9 @@ const PER_ALERT_TYPE_LABELS: Record<TelegramAlertType, string> = {
   launch: "Launch",
 };
 
+const TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS = 15 * 60;
+const TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS = TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS * 2;
+
 interface TelegramBotStatsProps {
   telegramBot: StatusResponse["telegramBot"];
   dispatchCron?: StatusResponse["crons"][string];
@@ -34,6 +37,10 @@ function renderMetric(label: string, value: string | number | null | undefined) 
       <span className="font-mono tabular-nums">{value ?? "—"}</span>
     </div>
   );
+}
+
+function formatSnapshotCapturedAt(snapshotAt: number, ageSeconds: number) {
+  return `${new Date(snapshotAt * 1000).toLocaleString()} (${formatElapsedSeconds(ageSeconds)} ago)`;
 }
 
 export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds }: TelegramBotStatsProps) {
@@ -62,6 +69,12 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
   const retryErrorClasses = Object.entries(telegramBot.retryErrorClassCounts ?? {})
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   const telemetryQuality = telegramBot.quality;
+  const lifecycleSnapshot = telegramBot.lifecycleSnapshot;
+  const lifecycleSnapshotAgeSeconds = lifecycleSnapshot
+    ? Math.max(0, nowSeconds - lifecycleSnapshot.snapshotAt)
+    : null;
+  const isLifecycleSnapshotStale = lifecycleSnapshotAgeSeconds != null
+    && lifecycleSnapshotAgeSeconds > TELEGRAM_LIFECYCLE_SNAPSHOT_STALE_SECONDS;
 
   const summaryCards = [
     {
@@ -149,16 +162,27 @@ export function TelegramBotStats({ telegramBot, dispatchCron, error, nowSeconds 
               {renderMetric("Preset followers", telegramBot.activePresetFollowers ?? 0)}
               {renderMetric("Inactive cleaned 7d", telegramBot.inactiveSubscribersCleanedThisWeek)}
             </div>
-            {telegramBot.lifecycleSnapshot ? (
+            {lifecycleSnapshot ? (
               <div className="border-t pt-3">
-                <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  Lifecycle snapshot
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Lifecycle snapshot
+                  </div>
+                  {isLifecycleSnapshotStale ? (
+                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                      snapshot stale · {formatElapsedSeconds(lifecycleSnapshotAgeSeconds ?? 0)} old
+                    </Badge>
+                  ) : null}
                 </div>
-                {renderMetric("Snapshot date", telegramBot.lifecycleSnapshot.date)}
-                {renderMetric("New watchers", telegramBot.lifecycleSnapshot.newWatchers)}
-                {renderMetric("Churned watchers", telegramBot.lifecycleSnapshot.churnedWatchers)}
-                {renderMetric("Reactivated watchers", telegramBot.lifecycleSnapshot.reactivatedWatchers)}
-                {renderMetric("Preset-implied follows", telegramBot.lifecycleSnapshot.presetImpliedCoinFollows)}
+                {renderMetric("Snapshot date", lifecycleSnapshot.date)}
+                {renderMetric(
+                  "Snapshot captured",
+                  formatSnapshotCapturedAt(lifecycleSnapshot.snapshotAt, lifecycleSnapshotAgeSeconds ?? 0),
+                )}
+                {renderMetric("New watchers", lifecycleSnapshot.newWatchers)}
+                {renderMetric("Churned watchers", lifecycleSnapshot.churnedWatchers)}
+                {renderMetric("Reactivated watchers", lifecycleSnapshot.reactivatedWatchers)}
+                {renderMetric("Preset-implied follows", lifecycleSnapshot.presetImpliedCoinFollows)}
               </div>
             ) : null}
             {retryErrorClasses.length > 0 ? (

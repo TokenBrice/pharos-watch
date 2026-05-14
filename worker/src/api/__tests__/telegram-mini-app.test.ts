@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database, type MockTableConfig } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "./helpers/mock-d1";
 
 const { handleTelegramMiniAppMutation, handleTelegramMiniAppSession } = await import("../telegram-mini-app");
 
@@ -16,14 +16,14 @@ function hex(bytes: Uint8Array): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function signedInitData(fields: Record<string, string>): Promise<string> {
+async function signedInitData(fields: Record<string, string>, token = BOT_TOKEN): Promise<string> {
   const params = new URLSearchParams(fields);
   const check = [...params.entries()]
     .filter(([key]) => key !== "hash")
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join("\n");
-  const secret = await hmacSha256(encoder.encode("WebAppData"), BOT_TOKEN);
+  const secret = await hmacSha256(encoder.encode("WebAppData"), token);
   params.set("hash", hex(await hmacSha256(secret, check)));
   return params.toString();
 }
@@ -36,7 +36,7 @@ function request(path: string, body: unknown): Request {
   });
 }
 
-function streamedRequest(path: string, chunks: string[]): Request {
+function streamedRequest(path: string, chunks: string[], headers: Record<string, string> = {}): Request {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
       for (const chunk of chunks) {
@@ -47,7 +47,7 @@ function streamedRequest(path: string, chunks: string[]): Request {
   });
   return new Request(`https://api.pharos.watch${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body,
     duplex: "half",
   } as RequestInit & { duplex: "half" });
@@ -121,6 +121,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("handleTelegramMiniAppSession", () => {
@@ -202,6 +203,54 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.viewer.chatType).toBe("sender");
     expect(body.viewer.canMutate).toBe(true);
     expect(body.viewer.mutationBlockReason).toBeNull();
+  });
+
+  it("validates session initData with the previous bot token during rotation overlap", async () => {
+    const previousToken = "previous-bot-token";
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    }, previousToken);
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(
+      db,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+      previousToken,
+    );
+    const body = await response.json() as { viewer: { chatId: string | null; canMutate: boolean } };
+
+    expect(response.status).toBe(200);
+    expect(body.viewer.chatId).toBe("42");
+    expect(body.viewer.canMutate).toBe(true);
+  });
+
+  it("marks channel launches read-only without loading channel-scoped rows", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "channel",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as {
+      viewer: {
+        chatId: string | null;
+        chatType: string | null;
+        canMutate: boolean;
+        mutationBlockReason: string | null;
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.viewer.chatId).toBeNull();
+    expect(body.viewer.chatType).toBe("channel");
+    expect(body.viewer.canMutate).toBe(false);
+    expect(body.viewer.mutationBlockReason).toBe("not-private");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM telegram_subscribers"))).toBe(false);
   });
 
   it("rate-limits repeated session opens after successful auth", async () => {
@@ -291,6 +340,33 @@ describe("handleTelegramMiniAppSession", () => {
     expect(response.status).toBe(413);
     expect(await response.json()).toMatchObject({ code: "body-too-large" });
     // P1.3: single analytics row only — no state SELECT or cooldown INSERT.
+    expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
+  });
+
+  it("rejects lying-small Content-Length session streams through the bounded reader", async () => {
+    const db = mockD1();
+    const req = streamedRequest(
+      "/api/telegram-mini-app/session",
+      [
+        "{\"initData\":\"",
+        "x".repeat(17 * 1024),
+        "\"}",
+      ],
+      { "Content-Length": "12" },
+    );
+
+    const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ code: "body-too-large" });
+    const deniedRows = db
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("INSERT INTO telegram_usage_daily")
+        && entry.binds.includes("mini_app_session_invalid"),
+      );
+    expect(deniedRows).toHaveLength(1);
+    expect(deniedRows[0].binds).toContain("body-too-large");
     expect(db.getHistory().every((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(true);
   });
 
@@ -475,7 +551,7 @@ describe("handleTelegramMiniAppMutation", () => {
     const db = mockD1(stateReadTables());
     const batchSizes: number[] = [];
     const originalBatch = db.batch.bind(db);
-    (db as { batch: D1Database["batch"] }).batch = async (statements) => {
+    (db as { batch: D1Database["batch"] }).batch = async (statements: D1PreparedStatement[]) => {
       batchSizes.push(statements.length);
       return originalBatch(statements);
     };
@@ -552,6 +628,43 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(unfollowResponse.status).toBe(200);
     expect(historyHas(unfollowDb, "DELETE FROM telegram_subscriptions", ["42", "usdt-tether"])).toBe(true);
     expect(historyHas(unfollowDb, "DELETE FROM telegram_preset_subscriptions", ["42", "usd-top10"])).toBe(true);
+  });
+
+  it("does not persist subscription, preset, or analytics rows when D1 fails mid-batch", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([stablecoinsCacheTable()]);
+    const stagedStatements: Array<{ sql: string; binds: unknown[] }> = [];
+    const committedStatements: Array<{ sql: string; binds: unknown[] }> = [];
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    (db as { batch: D1Database["batch"] }).batch = (async <T = unknown>(statements: D1PreparedStatement[]) => {
+      const stagedForBatch: Array<{ sql: string; binds: unknown[] }> = [];
+      for (const statement of statements as MockPreparedStatement[]) {
+        const entry = { sql: statement.sql, binds: [...statement.boundValues] };
+        stagedForBatch.push(entry);
+        stagedStatements.push(entry);
+        if (statement.sql.includes("INSERT INTO telegram_preset_subscriptions")) {
+          throw new Error("mid-batch D1 failure");
+        }
+      }
+      committedStatements.push(...stagedForBatch);
+      return stagedForBatch.map(() => ({
+        success: true,
+        meta: { changes: 1 } as D1Meta & Record<string, unknown>,
+        results: [] as T[],
+      }));
+    }) as D1Database["batch"];
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(500);
+    expect(stagedStatements.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(true);
+    expect(stagedStatements.some((entry) => entry.sql.includes("INSERT INTO telegram_preset_subscriptions"))).toBe(true);
+    expect(committedStatements.some((entry) => entry.sql.includes("telegram_subscriptions"))).toBe(false);
+    expect(committedStatements.some((entry) => entry.sql.includes("telegram_preset_subscriptions"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"))).toBe(false);
   });
 
   it("denies group mutations", async () => {

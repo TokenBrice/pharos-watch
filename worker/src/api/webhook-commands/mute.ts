@@ -36,7 +36,7 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
   );
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup(message, {
-      replyMarkup: buildMiniAppOnlyKeyboard("Tweak in app", "quiet-hours"),
+      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
     });
     return;
   }

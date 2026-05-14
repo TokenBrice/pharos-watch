@@ -6,6 +6,7 @@ import {
 import { getCache, setCache } from "../lib/db-cache";
 import {
   formatDisambiguation,
+  findInvalidDisambiguationToken,
   parseDisambiguationReply,
   type ResolvedCoin,
 } from "../lib/telegram-alerts";
@@ -392,8 +393,8 @@ export const handleTelegramWebhook = withErrorHandler(
         if (!parsedCommand) {
           if (pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
             // Bulk-confirm and forget-confirm pendings wait for an inline button tap, not a text reply.
-            // Ignore plain text in groups; in private chats, nudge toward the buttons.
-            if (isGroupChat(chatType)) return finishOk();
+            // In groups, only the initiating user gets the nudge so unrelated chatter stays quiet.
+            if (isGroupChat(chatType) && !canActOnPending(pendingAction, actorUserId)) return finishOk();
             await reply("Tap Confirm or Cancel on the previous message, or send /cancel to abort.");
             return finishOk();
           }
@@ -471,14 +472,22 @@ ${escapeHtml(formatDisambiguation(pendingAction.ambiguousTicker, pendingAction.c
           parsedCommand.args,
           reply,
         );
-        if (!cooldown) {
-          await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "rate_limited");
+        if (!cooldown.allowed) {
+          await recordCommandUsage(
+            db,
+            parsedCommand.command,
+            commandStartedAtMs,
+            cooldown.outcome,
+            cooldown.failureClass,
+          );
           return finishOk();
         }
         await handler(commandContext, parsedCommand.args);
         await recordCommandUsage(db, parsedCommand.command, commandStartedAtMs, "ok");
       } else {
-        await reply("Unknown command. Try /help");
+        await replyWithMarkup("Unknown command. Try /help", {
+          replyMarkup: { inline_keyboard: [[{ text: "/help", callback_data: "help:commands" }]] },
+        });
         await recordTelegramUsageEvent(db, {
           eventType: "unknown_command",
           actionDetail: parsedCommand.command,
@@ -583,10 +592,13 @@ async function enforceCommandCooldown(
   command: string,
   args: string,
   reply: (message: string) => Promise<void>,
-): Promise<boolean> {
+): Promise<
+  | { allowed: true }
+  | { allowed: false; outcome: "rate_limited" | "failure"; failureClass: string | null }
+> {
   const commandKey = canonicalCommandKey(command);
   const cooldownSec = resolveCommandCooldownSec(commandKey, args);
-  if (cooldownSec == null) return true;
+  if (cooldownSec == null) return { allowed: true };
 
   let cooldown;
   try {
@@ -606,12 +618,12 @@ async function enforceCommandCooldown(
       err: err instanceof Error ? err.message : String(err),
     });
     await reply("Command traffic is busy. Please try again shortly.");
-    return false;
+    return { allowed: false, outcome: "failure", failureClass: "cooldown-store-error" };
   }
 
-  if (cooldown.allowed) return true;
+  if (cooldown.allowed) return { allowed: true };
   await reply(formatCommandCooldownMessage(commandKey, cooldown.retryAfterSec));
-  return false;
+  return { allowed: false, outcome: "rate_limited", failureClass: null };
 }
 
 function canonicalCommandKey(command: string): string {
@@ -701,11 +713,10 @@ async function maybeGateNonAdminGroupActor(
   }
 
   const admins = await getCachedChatAdministrators(db, botToken, chatId);
-  const mentions = admins ? formatAdministratorMentions(admins) : "";
-  const adminLine = mentions ? ` Admins here: ${mentions}.` : "";
+  const adminLine = admins ? formatAdminHint(admins) : "";
   await reply(
     escapeHtml(
-      `Only group admins can change alert settings (${command}).${adminLine}`,
+      `Only group admins can ${command}.${adminLine}`,
     ),
   );
   await recordTelegramUsageEvent(db, {
@@ -720,6 +731,15 @@ function commandRequiresGroupAdmin(command: string, args: string): boolean {
   if (GROUP_ADMIN_GATED_COMMANDS.has(command)) return true;
   if (command === "/timezone") return args.trim().length > 0;
   return false;
+}
+
+function formatAdminHint(admins: Awaited<ReturnType<typeof getCachedChatAdministrators>>): string {
+  if (!admins || admins.length === 0) return "";
+  const adminLabels = formatAdministratorMentions(admins).split(", ").filter(Boolean);
+  if (adminLabels.length === 0) return "";
+  const shown = adminLabels.slice(0, 3);
+  const overflow = adminLabels.length > shown.length ? ` and ${adminLabels.length - shown.length} more` : "";
+  return ` Ask ${shown.join(", ")}${overflow}.`;
 }
 
 function isAddressedToPharosBot(botMention: string | null): boolean {
@@ -771,8 +791,11 @@ async function handleDisambiguationReply(
   }
   const selectedIndices = parseDisambiguationReply(text, pending.candidates.length);
   if (!selectedIndices) {
+    const invalidToken = findInvalidDisambiguationToken(text, pending.candidates.length);
     const reminder = [
-      'Reply with the number(s) you want, e.g. "1" or "1,2".',
+      invalidToken
+        ? `I could not parse "${invalidToken}" — reply with numbers only (1 to ${pending.candidates.length}).`
+        : 'Reply with the number(s) you want, e.g. "1" or "1,2".',
       "Use /cancel to abandon this selection.",
       formatDisambiguation(pending.ambiguousTicker, pending.candidates),
     ].join("\n\n");

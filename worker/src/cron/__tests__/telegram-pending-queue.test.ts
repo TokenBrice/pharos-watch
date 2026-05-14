@@ -1,7 +1,265 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { DatabaseSync } from "node:sqlite";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 const mockSendToChat = vi.fn();
+
+function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
+}
+
+interface SqliteD1Statement {
+  bind(...values: unknown[]): SqliteD1Statement;
+  first<T>(): Promise<T | null>;
+  all<T>(): Promise<{ results: T[] }>;
+  run(): Promise<{ success: boolean; meta: { changes: number } }>;
+}
+
+function createSqliteD1(sqlite: DatabaseSync): D1Database {
+  function makeStatement(sql: string, values: unknown[] = []): SqliteD1Statement {
+    return {
+      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
+      first: async <T>() => (sqlite.prepare(sql).get(...(values as never[])) ?? null) as T | null,
+      all: async <T>() => ({ results: sqlite.prepare(sql).all(...(values as never[])) as T[] }),
+      run: async () => {
+        const result = sqlite.prepare(sql).run(...(values as never[]));
+        return { success: true, meta: { changes: Number(result.changes) } };
+      },
+    };
+  }
+
+  return {
+    prepare: (sql: string) => makeStatement(sql),
+    batch: async (statements: D1PreparedStatement[]) =>
+      Promise.all(statements.map((statement) => statement.run())),
+    exec: async (sql: string) => {
+      sqlite.exec(sql);
+      return { count: 0, duration: 0 };
+    },
+    dump: async () => new ArrayBuffer(0),
+  } as unknown as D1Database;
+}
+
+function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE telegram_pending_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id TEXT NOT NULL,
+      message_html TEXT NOT NULL,
+      disable_notification INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      not_before_at INTEGER,
+      last_error_class TEXT,
+      retry_after_sec INTEGER,
+      updated_at INTEGER,
+      dedupe_key TEXT UNIQUE,
+      chunk_index INTEGER DEFAULT 0,
+      priority INTEGER,
+      source_type TEXT,
+      alert_type TEXT,
+      expires_at INTEGER,
+      processing_owner TEXT,
+      processing_started_at INTEGER,
+      processing_expires_at INTEGER
+    );
+
+    CREATE TABLE telegram_subscribers (
+      chat_id TEXT PRIMARY KEY,
+      alert_snooze_until_ts INTEGER,
+      quiet_hours_enabled INTEGER DEFAULT 0,
+      quiet_hours_start_utc INTEGER,
+      quiet_hours_end_utc INTEGER,
+      timezone TEXT,
+      consecutive_block_count INTEGER DEFAULT 0,
+      consecutive_block_first_at INTEGER,
+      alert_dews INTEGER DEFAULT 1,
+      alert_depeg INTEGER DEFAULT 1,
+      alert_safety INTEGER DEFAULT 1,
+      alert_launch INTEGER DEFAULT 1,
+      global_alert_dews INTEGER DEFAULT 1,
+      global_alert_depeg INTEGER DEFAULT 1,
+      global_alert_safety INTEGER DEFAULT 1,
+      global_alert_launch INTEGER DEFAULT 1,
+      global_depeg_worsening_bps_step INTEGER
+    );
+
+    CREATE TABLE telegram_subscriptions (
+      chat_id TEXT NOT NULL,
+      stablecoin_id TEXT,
+      alert_dews INTEGER DEFAULT 1,
+      alert_depeg INTEGER DEFAULT 1,
+      alert_safety INTEGER DEFAULT 1,
+      alert_launch INTEGER DEFAULT 1
+    );
+
+    CREATE TABLE telegram_preset_subscriptions (
+      chat_id TEXT NOT NULL,
+      preset_id TEXT
+    );
+
+    CREATE TABLE telegram_alert_dead_letters (
+      pending_id INTEGER,
+      chat_id TEXT,
+      message_html TEXT,
+      source_type TEXT,
+      alert_type TEXT,
+      priority INTEGER,
+      created_at INTEGER,
+      expired_at INTEGER,
+      attempts INTEGER,
+      last_error_class TEXT,
+      reason TEXT,
+      dedupe_key TEXT,
+      chunk_index INTEGER
+    );
+
+    CREATE TABLE telegram_chat_delivery_diagnostics (
+      chat_id TEXT PRIMARY KEY,
+      last_successful_delivery_at INTEGER,
+      last_successful_reply_at INTEGER,
+      last_delivery_attempt_at INTEGER,
+      recent_failure_class TEXT,
+      updated_at INTEGER
+    );
+
+    CREATE TABLE telegram_alert_job_targets (
+      pending_dedupe_key TEXT,
+      status TEXT DEFAULT 'queued',
+      sent_at INTEGER,
+      enqueued_at INTEGER,
+      failed_at INTEGER,
+      error_class TEXT,
+      created_at INTEGER
+    );
+  `);
+  return { sqlite, db: createSqliteD1(sqlite) };
+}
+
+function insertPendingSqlite(
+  sqlite: DatabaseSync,
+  row: {
+    id: number;
+    chatId: string;
+    html: string;
+    createdAt: number;
+    disableNotification?: number;
+    attempts?: number;
+    notBeforeAt?: number | null;
+    dedupeKey?: string | null;
+    chunkIndex?: number | null;
+    priority?: number | null;
+    sourceType?: string | null;
+    alertType?: string | null;
+    expiresAt?: number | null;
+  },
+): void {
+  sqlite
+    .prepare(
+      `INSERT INTO telegram_pending_alerts (
+         id, chat_id, message_html, disable_notification, created_at, attempts,
+         not_before_at, dedupe_key, chunk_index, priority, source_type, alert_type, expires_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      row.id,
+      row.chatId,
+      row.html,
+      row.disableNotification ?? 0,
+      row.createdAt,
+      row.attempts ?? 0,
+      row.notBeforeAt ?? null,
+      row.dedupeKey ?? null,
+      row.chunkIndex ?? 0,
+      row.priority ?? TELEGRAM_PENDING_PRIORITY.legacy,
+      row.sourceType ?? "legacy",
+      row.alertType ?? null,
+      row.expiresAt ?? null,
+    );
+}
+
+function createClaimContentionD1(row: Record<string, unknown>): D1Database & {
+  getHistory(): Array<{ sql: string; binds: unknown[] }>;
+  getOwner(): string | null;
+} {
+  const history: Array<{ sql: string; binds: unknown[] }> = [];
+  let processingOwner: string | null = null;
+  let deleted = false;
+  let candidateReads = 0;
+  let releaseCandidateReads: (() => void) | null = null;
+  const bothOwnersReadCandidate = new Promise<void>((resolve) => {
+    releaseCandidateReads = resolve;
+  });
+
+  function makeStatement(sql: string, values: unknown[] = []): D1PreparedStatement {
+    return {
+      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
+      first: async <T>() => {
+        history.push({ sql, binds: [...values] });
+        return null as T | null;
+      },
+      all: async <T>() => {
+        history.push({ sql, binds: [...values] });
+        if (sql.includes("WHERE p.processing_owner = ?")) {
+          return {
+            results: (!deleted && processingOwner === values[0] ? [row] : []) as T[],
+          };
+        }
+        if (
+          sql.includes("SELECT p.id, p.chat_id, p.message_html") &&
+          sql.includes("processing_owner IS NULL")
+        ) {
+          candidateReads += 1;
+          if (candidateReads === 2) releaseCandidateReads?.();
+          await bothOwnersReadCandidate;
+          return { results: deleted ? [] : [{ id: row.id }] as T[] };
+        }
+        return { results: [] as T[] };
+      },
+      run: async () => {
+        history.push({ sql, binds: [...values] });
+        if (
+          sql.includes("UPDATE telegram_pending_alerts") &&
+          sql.includes("SET processing_owner = ?")
+        ) {
+          const proposedOwner = String(values[0]);
+          const id = Number(values[4]);
+          if (!deleted && processingOwner == null && id === row.id) {
+            processingOwner = proposedOwner;
+            return { success: true, meta: { changes: 1 } };
+          }
+          return { success: true, meta: { changes: 0 } };
+        }
+        if (sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")) {
+          if (values.includes(row.id)) deleted = true;
+          return { success: true, meta: { changes: deleted ? 1 : 0 } };
+        }
+        return { success: true, meta: { changes: 1 } };
+      },
+    } as unknown as D1PreparedStatement;
+  }
+
+  return {
+    prepare: (sql: string) => makeStatement(sql),
+    batch: async (statements: D1PreparedStatement[]) =>
+      Promise.all(statements.map((statement) => statement.run())),
+    exec: async () => ({ count: 0, duration: 0 }),
+    dump: async () => new ArrayBuffer(0),
+    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
+    getOwner: () => processingOwner,
+  } as unknown as D1Database & {
+    getHistory(): Array<{ sql: string; binds: unknown[] }>;
+    getOwner(): string | null;
+  };
+}
 
 vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();
@@ -25,6 +283,8 @@ const {
   BLOCK_STRIKE_WINDOW_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
+  TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
+  SEND_BATCH_SIZE,
   buildDedupeKey,
 } = await import("../telegram-pending-queue");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
@@ -149,6 +409,71 @@ describe("resetSubscriberBlockCount", () => {
 });
 
 describe("drainPendingQueue", () => {
+  it("lets only one owner deliver a row when two drains race the same claim", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    const db = createClaimContentionD1({
+      id: 701,
+      chat_id: "race-chat",
+      message_html: "<b>Race</b>",
+      disable_notification: 0,
+      created_at: now - 30,
+      expires_at: now + 600,
+      attempts: 0,
+      not_before_at: null,
+      priority: TELEGRAM_PENDING_PRIORITY.depeg,
+      source_type: "risk_alert",
+      alert_type: "depeg",
+      dedupe_key: "race-key",
+      chunk_index: 0,
+      last_error_class: null,
+      alert_snooze_until_ts: null,
+      quiet_hours_enabled: 0,
+      quiet_hours_start_utc: null,
+      quiet_hours_end_utc: null,
+      timezone: null,
+    });
+
+    const results = await Promise.all([
+      drainPendingQueue(db, "bot-token", 1),
+      drainPendingQueue(db, "bot-token", 1),
+    ]);
+
+    expect(results.map((result) => result.sent).sort()).toEqual([0, 1]);
+    expect(results.reduce((sum, result) => sum + result.attempted, 0)).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat).toHaveBeenCalledWith(
+      "race-chat",
+      "<b>Race</b>",
+      "bot-token",
+      expect.any(Object),
+    );
+
+    const claimUpdates = db.getHistory().filter((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET processing_owner = ?")
+    );
+    expect(claimUpdates).toHaveLength(2);
+    expect(new Set(claimUpdates.map((entry) => entry.binds[0])).size).toBe(2);
+    expect(db.getOwner()).toBeTruthy();
+
+    const deletes = db.getHistory().filter((entry) =>
+      entry.sql.includes("DELETE FROM telegram_pending_alerts WHERE id IN")
+    );
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0]?.binds).toEqual([701]);
+  });
+
   it("keeps retrying retryable rows past the legacy 5-attempt cap (age-based retry)", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false,
@@ -424,6 +749,44 @@ describe("drainPendingQueue", () => {
     expect(deletes.map((entry) => entry.binds.length)).toEqual([90, 11]);
   });
 
+  it("honors a drain budget that is exhausted before a full send batch", async () => {
+    mockSendToChat.mockResolvedValue({
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    });
+
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const drainLimit = 2;
+      expect(drainLimit).toBeLessThan(SEND_BATCH_SIZE);
+
+      insertPendingSqlite(sqlite, { id: 901, chatId: "budget-1", html: "<b>One</b>", createdAt: now - 30 });
+      insertPendingSqlite(sqlite, { id: 902, chatId: "budget-2", html: "<b>Two</b>", createdAt: now - 20 });
+      insertPendingSqlite(sqlite, { id: 903, chatId: "budget-3", html: "<b>Three</b>", createdAt: now - 10 });
+
+      const result = await drainPendingQueue(db, "bot-token", drainLimit);
+
+      expect(result.attempted).toBe(2);
+      expect(result.sent).toBe(2);
+      expect(mockSendToChat).toHaveBeenCalledTimes(2);
+      expect(mockSendToChat.mock.calls.map(([chatId]) => chatId)).toEqual(["budget-1", "budget-2"]);
+
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 1 });
+      expect(
+        sqlite.prepare("SELECT chat_id, processing_owner FROM telegram_pending_alerts").get(),
+      ).toEqual({ chat_id: "budget-3", processing_owner: null });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("records a first-strike 403 without zeroing alert flags and deletes the pending message", async () => {
     mockSendToChat.mockResolvedValue({
       ok: false, blocked: true, retryable: false, permanentFailure: true,
@@ -667,6 +1030,91 @@ describe("drainPendingQueue", () => {
     expect(result.rateLimited).toBe(true);
     expect(result.retryAfterSec).toBe(30);
     expect(mockSendToChat).toHaveBeenCalledTimes(8);
+  });
+
+  it("stamps row-level backoff without setting global backoff on a chat-scoped 429", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+      retryAfterSec: 45,
+      rateLimitScope: "chat" as const,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 610, chat_id: "chat-scoped", message_html: "<b>Limited</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
+        ],
+      },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
+    expect(result.rateLimited).toBe(true);
+    expect(result.retryAfterSec).toBe(45);
+    expect(result.notBeforeAt).toBe(now + 45);
+
+    const history = db.getHistory();
+    const retryUpdate = history.find((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET attempts = attempts + 1")
+    );
+    expect(retryUpdate?.binds).toEqual([now + 45, "rate_limit", 45, now, 610]);
+    expect(history.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+  });
+
+  it("sets global backoff and leaves row not_before_at clear on a global 429", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockSendToChat.mockResolvedValue({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+      retryAfterSec: 45,
+      rateLimitScope: "global" as const,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT p.id, p.chat_id, p.message_html",
+        rows: [
+          { id: 611, chat_id: "global-scoped", message_html: "<b>Limited</b>", disable_notification: 0, created_at: now - 30, attempts: 0 },
+        ],
+      },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+
+    expect(result.rateLimited).toBe(true);
+    expect(result.retryAfterSec).toBe(45);
+    expect(result.notBeforeAt).toBe(now + 45);
+
+    const history = db.getHistory();
+    const cacheWrite = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(cacheWrite?.binds).toEqual([
+      TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
+      String(now + 45),
+      now,
+    ]);
+
+    const retryUpdate = history.find((entry) =>
+      entry.sql.includes("UPDATE telegram_pending_alerts") &&
+      entry.sql.includes("SET attempts = attempts + 1")
+    );
+    expect(retryUpdate?.binds).toEqual([null, "rate_limit", 45, now, 611]);
   });
 
   it("does not select expired or not-yet-ready pending rows", async () => {
@@ -1217,6 +1665,62 @@ describe("enqueuePendingAlerts", () => {
     expect(inserts[0]?.sql).toContain("ON CONFLICT(dedupe_key) DO UPDATE");
   });
 
+  it("updates one existing row on a dedupe-key collision instead of adding another row", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const first = {
+        chatId: "dedupe-chat",
+        html: "<b>First chunk</b>",
+        canonicalHtml: "<b>Canonical alert body</b>",
+        disableNotification: false,
+        chunkIndex: 0,
+      };
+      const second = {
+        ...first,
+        html: "<b>Updated chunk</b>",
+        disableNotification: true,
+      };
+      const dedupeKey = buildDedupeKey(first);
+      expect(buildDedupeKey(second)).toBe(dedupeKey);
+
+      await enqueuePendingAlerts(db, [first], 1_000);
+      await enqueuePendingAlerts(db, [second], 1_060, {
+        notBeforeAt: 1_120,
+        lastErrorClass: "rate_limit",
+        retryAfterSec: 120,
+      });
+
+      expect(
+        sqlite
+          .prepare("SELECT COUNT(*) AS row_count, COUNT(DISTINCT dedupe_key) AS dedupe_count FROM telegram_pending_alerts")
+          .get(),
+      ).toEqual({ row_count: 1, dedupe_count: 1 });
+      expect(
+        sqlite
+          .prepare(
+            `SELECT id, chat_id, message_html, disable_notification, created_at, updated_at,
+                    attempts, not_before_at, last_error_class, retry_after_sec, dedupe_key
+               FROM telegram_pending_alerts`,
+          )
+          .get(),
+      ).toEqual({
+        id: 1,
+        chat_id: "dedupe-chat",
+        message_html: "<b>Updated chunk</b>",
+        disable_notification: 1,
+        created_at: 1_000,
+        updated_at: 1_060,
+        attempts: 0,
+        not_before_at: 1_120,
+        last_error_class: "rate_limit",
+        retry_after_sec: 120,
+        dedupe_key: dedupeKey,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("marks admin broadcasts as low-priority pending rows", async () => {
     const db = mockD1([
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
@@ -1400,6 +1904,16 @@ describe("loadChatsInBackoff", () => {
 });
 
 describe("cleanupExpiredPendingAlerts", () => {
+  let infoSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    infoSpy.mockRestore();
+  });
+
   it("deletes alerts older than PENDING_TTL_SEC", async () => {
     const nowSec = 5000;
     const expiredRows = [1, 2, 3].map((id) => ({
@@ -1429,6 +1943,113 @@ describe("cleanupExpiredPendingAlerts", () => {
     const deleteCall = history.find((e) => e.sql.includes("DELETE FROM telegram_pending_alerts"));
     expect(deleteCall).toBeDefined();
     expect(deleteCall!.binds).toEqual([1, 2, 3]);
+  });
+
+  it("logs each expired cleanup row with TTL and prior failure reason classes", async () => {
+    const nowSec = 5000;
+    const db = mockD1([
+      {
+        match: "SELECT id, chat_id, message_html",
+        rows: [
+          {
+            id: 10,
+            chat_id: "default-ttl-chat",
+            message_html: "<b>Default TTL</b>",
+            created_at: nowSec - PENDING_TTL_SEC - 5,
+            expires_at: null,
+            attempts: 0,
+            last_error_class: null,
+            dedupe_key: "default-key",
+            chunk_index: 0,
+            priority: TELEGRAM_PENDING_PRIORITY.depeg,
+            source_type: "risk_alert",
+            alert_type: "depeg",
+          },
+          {
+            id: 11,
+            chat_id: "explicit-ttl-chat",
+            message_html: "<b>Explicit TTL</b>",
+            created_at: nowSec - 30,
+            expires_at: nowSec - 1,
+            attempts: 2,
+            last_error_class: "bad_request",
+            dedupe_key: "explicit-key",
+            chunk_index: 1,
+            priority: TELEGRAM_PENDING_PRIORITY.launch,
+            source_type: "risk_alert",
+            alert_type: "launch",
+          },
+        ],
+      },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 2 } },
+    ]);
+
+    expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(2);
+
+    const logs = parseLogRecords(infoSpy).filter((record) =>
+      record.action === "cleanup-expired-pending-alert"
+    );
+    expect(logs).toHaveLength(2);
+    expect(logs[0]).toMatchObject({
+      scope: "telegram",
+      level: "info",
+      module: "telegram-pending-cleanup",
+      chatId: "default-ttl-chat",
+      pendingId: 10,
+      reason: "ttl_expired",
+      reasonClass: "default-ttl",
+      priorFailureReasonClass: "none",
+      dedupeKeyPresent: true,
+    });
+    expect(logs[1]).toMatchObject({
+      chatId: "explicit-ttl-chat",
+      pendingId: 11,
+      reasonClass: "explicit-ttl",
+      priorFailureReasonClass: "terminal",
+      lastErrorClass: "bad_request",
+      sourceType: "risk_alert",
+      alertType: "launch",
+      attempts: 2,
+      expiresAt: nowSec - 1,
+    });
+  });
+
+  it("dead-letters expired rows without bumping the subscriber block-strike counter", async () => {
+    const nowSec = 5000;
+    const db = mockD1([
+      {
+        match: "SELECT id, chat_id, message_html",
+        rows: [{
+          id: 44,
+          chat_id: "expired-blocked",
+          message_html: "<b>Expired blocked row</b>",
+          created_at: nowSec - PENDING_TTL_SEC - 1,
+          attempts: 1,
+          last_error_class: "blocked",
+          dedupe_key: "expired-blocked-key",
+          chunk_index: 0,
+          priority: TELEGRAM_PENDING_PRIORITY.depeg,
+          source_type: "risk_alert",
+          alert_type: "depeg",
+        }],
+      },
+      { match: "INSERT INTO telegram_alert_dead_letters", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    expect(await cleanupExpiredPendingAlerts(db, nowSec)).toBe(1);
+
+    const history = db.getHistory();
+    const deadLetter = history.find((entry) =>
+      entry.sql.includes("INSERT INTO telegram_alert_dead_letters")
+    );
+    expect(deadLetter?.binds[9]).toBe("blocked");
+    expect(deadLetter?.binds[10]).toBe("ttl_expired");
+    expect(history.some((entry) => entry.sql.includes("SELECT consecutive_block_count"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("UPDATE telegram_subscribers"))).toBe(false);
   });
 
   it("returns 0 when no alerts expired", async () => {

@@ -69,7 +69,7 @@ export function buildHomeKeyboard(subscriber: SubscriberRow | null, options: { i
     ]);
   }
   if (options.includeMiniAppButton) {
-    rows.push([{ text: "Open full settings", web_app: { url: buildTelegramMiniAppUrl("settings") } }]);
+    rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("settings") } }]);
   }
   return { inline_keyboard: rows };
 }
@@ -109,7 +109,7 @@ export function buildCoinKeyboard(
     ],
     [{ text: "← Back to chat settings", callback_data: "settings:home" }],
   ];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open full settings", web_app: { url: buildTelegramMiniAppUrl(`coin_${coinId}`) } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(`coin_${coinId}`) } }]);
   return { inline_keyboard: rows };
 }
 

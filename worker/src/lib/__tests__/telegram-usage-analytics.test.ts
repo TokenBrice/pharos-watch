@@ -27,7 +27,7 @@ describe("telegram usage analytics", () => {
     expect(bucketTelegramCommandLatency(12_000)).toBe("gte_10s");
   });
 
-  it("writes usage events as daily aggregate counters", async () => {
+  it("upserts usage events by incrementing daily aggregate counters", async () => {
     const db = mockD1([{ match: "INSERT INTO telegram_usage_daily", rows: [] }]);
 
     await recordTelegramUsageEvent(db, {
@@ -40,6 +40,9 @@ describe("telegram usage analytics", () => {
     });
 
     const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_usage_daily"));
+    expect(insert?.sql).toContain("VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)");
+    expect(insert?.sql).toContain("count = telegram_usage_daily.count + 1");
+    expect(insert?.sql).toContain("last_seen_at = excluded.last_seen_at");
     expect(insert?.binds).toEqual([
       "2026-02-23",
       "subscribe",
@@ -51,6 +54,7 @@ describe("telegram usage analytics", () => {
       1_771_833_600,
       1_771_833_600,
     ]);
+    expect(insert?.binds).toHaveLength(9);
   });
 
   it("merges explicit top-coin follows with the preset-aware shape", async () => {

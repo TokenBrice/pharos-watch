@@ -77,6 +77,10 @@ function countPendingAlertInsertBatches(db: MockD1Database): () => number {
   return () => pendingInsertBatchCount;
 }
 
+function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-23T12:00:00Z"));
@@ -1456,6 +1460,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("queues retryable fresh-send failures instead of dropping them", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     mockSendToChat.mockResolvedValue({
       ok: false,
@@ -1485,16 +1490,40 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
-      freshRetryQueued: number;
-      pendingEnqueued: number;
-      messagesSent: number;
-    };
+    try {
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      const metadata = JSON.parse(result.metadata) as {
+        freshAttempted: number;
+        freshSent: number;
+        freshRetryQueued: number;
+        freshPermanentFailures: number;
+        pendingEnqueued: number;
+        messagesSent: number;
+      };
 
-    expect(metadata.freshRetryQueued).toBe(1);
-    expect(metadata.pendingEnqueued).toBe(1);
-    expect(metadata.messagesSent).toBe(0);
+      expect(metadata.freshAttempted).toBe(1);
+      expect(metadata.freshSent).toBe(0);
+      expect(metadata.freshRetryQueued).toBe(1);
+      expect(metadata.freshPermanentFailures).toBe(0);
+      expect(metadata.pendingEnqueued).toBe(1);
+      expect(metadata.messagesSent).toBe(0);
+
+      const systemicLog = parseLogRecords(errorSpy).find((record) =>
+        record.action === "dispatch-systemic-fresh-failure"
+      );
+      expect(systemicLog).toMatchObject({
+        scope: "telegram",
+        level: "error",
+        module: "dispatch-telegram-alerts",
+        attemptedCount: 1,
+        sentCount: 0,
+        queuedCount: 1,
+        permanentFailureCount: 0,
+        pendingEnqueuedCount: 1,
+      });
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("isolates rate-limit deferral to the affected chat and still sends fresh alerts for other chats", async () => {
@@ -2377,6 +2406,7 @@ describe("dispatchTelegramAlerts", () => {
 
   it("degrades preset delivery when the preset-subscribers query fails but still sends direct/global alerts", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
@@ -2419,43 +2449,61 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
-      presetQueryFailures: number;
-      presetResolutionFailures: number;
-      presetFailure: boolean;
-      snapshotSeeded: boolean;
-      subscribersNotified: number;
-      messagesSent: number;
-    };
+    try {
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      const metadata = JSON.parse(result.metadata) as {
+        presetQueryFailures: number;
+        presetResolutionFailures: number;
+        presetFailure: boolean;
+        snapshotSeeded: boolean;
+        subscribersNotified: number;
+        messagesSent: number;
+      };
 
-    expect(metadata.presetFailure).toBe(true);
-    expect(metadata.presetQueryFailures).toBeGreaterThanOrEqual(1);
-    expect(metadata.presetResolutionFailures).toBe(0);
-    expect(metadata.snapshotSeeded).toBe(false);
-    expect(metadata.subscribersNotified).toBe(1);
-    expect(metadata.messagesSent).toBe(1);
-    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+      expect(metadata.presetFailure).toBe(true);
+      expect(metadata.presetQueryFailures).toBeGreaterThanOrEqual(1);
+      expect(metadata.presetResolutionFailures).toBe(0);
+      expect(metadata.snapshotSeeded).toBe(false);
+      expect(metadata.subscribersNotified).toBe(1);
+      expect(metadata.messagesSent).toBe(1);
+      expect(mockSendToChat).toHaveBeenCalledTimes(1);
 
-    const snapshotWrites = mockSetCache.mock.calls.filter(([_db, key]) =>
-      typeof key === "string" && key.startsWith("alert:"),
-    );
-    expect(snapshotWrites.length).toBeGreaterThan(0);
+      const presetQueryLog = parseLogRecords(warnSpy).find((record) =>
+        record.action === "preset-query"
+      );
+      expect(presetQueryLog).toMatchObject({
+        scope: "telegram",
+        level: "warn",
+        module: "dispatch-telegram-subscribers",
+        failureKind: "query-failed",
+        alertType: "dews",
+        requestedStablecoinCount: 1,
+        err: "D1_ERROR: connection reset",
+      });
 
-    // The failure counter is persisted.
-    const counterWrite = mockSetCache.mock.calls.find(
-      ([_db, key]) => key === "telegram:preset-query-failure-count",
-    );
-    expect(counterWrite).toBeTruthy();
-    expect(counterWrite?.[2]).toBe("1");
+      const snapshotWrites = mockSetCache.mock.calls.filter(([_db, key]) =>
+        typeof key === "string" && key.startsWith("alert:"),
+      );
+      expect(snapshotWrites.length).toBeGreaterThan(0);
 
-    // Preset failure no longer poisons the Telegram API circuit when direct
-    // delivery succeeds.
-    expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
+      // The failure counter is persisted.
+      const counterWrite = mockSetCache.mock.calls.find(
+        ([_db, key]) => key === "telegram:preset-query-failure-count",
+      );
+      expect(counterWrite).toBeTruthy();
+      expect(counterWrite?.[2]).toBe("1");
+
+      // Preset failure no longer poisons the Telegram API circuit when direct
+      // delivery succeeds.
+      expect(mockRecordOutcome).toHaveBeenCalledWith(expect.anything(), expect.anything(), true);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("degrades preset delivery when dynamic preset resolution fails but keeps direct delivery", async () => {
     const now = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
       if (key === "alert:dews-snapshot") {
@@ -2502,22 +2550,42 @@ describe("dispatchTelegramAlerts", () => {
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
 
-    const result = await dispatchTelegramAlerts(db, "bot-token");
-    const metadata = JSON.parse(result.metadata) as {
-      presetFailure: boolean;
-      presetQueryFailures: number;
-      presetResolutionFailures: number;
-      subscribersNotified: number;
-      messagesSent: number;
-    };
+    try {
+      const result = await dispatchTelegramAlerts(db, "bot-token");
+      const metadata = JSON.parse(result.metadata) as {
+        presetFailure: boolean;
+        presetQueryFailures: number;
+        presetResolutionFailures: number;
+        subscribersNotified: number;
+        messagesSent: number;
+      };
 
-    expect(metadata.presetFailure).toBe(true);
-    expect(metadata.presetQueryFailures).toBe(0);
-    expect(metadata.presetResolutionFailures).toBe(1);
-    expect(metadata.subscribersNotified).toBe(1);
-    expect(metadata.messagesSent).toBe(1);
-    expect(mockSendToChat).toHaveBeenCalledTimes(1);
-    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("direct-chat");
+      expect(metadata.presetFailure).toBe(true);
+      expect(metadata.presetQueryFailures).toBe(0);
+      expect(metadata.presetResolutionFailures).toBe(1);
+      expect(metadata.subscribersNotified).toBe(1);
+      expect(metadata.messagesSent).toBe(1);
+      expect(mockSendToChat).toHaveBeenCalledTimes(1);
+      expect(mockSendToChat.mock.calls[0]?.[0]).toBe("direct-chat");
+
+      const presetResolutionLog = parseLogRecords(warnSpy).find((record) =>
+        record.action === "preset-resolution"
+      );
+      expect(presetResolutionLog).toMatchObject({
+        scope: "telegram",
+        level: "warn",
+        module: "dispatch-telegram-subscribers",
+        failureKind: "resolution-failed",
+        alertType: "dews",
+        reason: "stablecoins-cache-unavailable",
+        presetIds: ["usd-top25"],
+        presetCount: 1,
+        subscriberRowCount: 1,
+        requestedStablecoinCount: 1,
+      });
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("clears the preset-failure counter on a successful run", async () => {

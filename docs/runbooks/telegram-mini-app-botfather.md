@@ -31,10 +31,10 @@ Run after each Mini App deploy and after each BotFather UI change. Each test sho
 6. **Direct deep link: coin row** — Tap `https://t.me/PharosWatchBot?startapp=coin_usdc-circle`. Mini App loads the **Watchlist** panel scrolled to USDC's row.
 7. **Direct deep link: presets** — Tap `https://t.me/PharosWatchBot?startapp=presets`. Mini App loads on the **Presets** panel.
 8. **Direct deep link: quiet-hours** — Tap `https://t.me/PharosWatchBot?startapp=quiet-hours`. Mini App loads the **Settings** panel with the quiet-hours card focused.
-9. **Direct deep link: snooze** — Tap `https://t.me/PharosWatchBot?startapp=snooze`. Mini App loads the **Settings** panel with the snooze card focused.
-10. **Direct deep link: health** — Tap `https://t.me/PharosWatchBot?startapp=health`. Mini App loads the **Delivery health** panel.
-11. **Direct deep link: forget** — Tap `https://t.me/PharosWatchBot?startapp=forget`. Mini App loads the **Privacy** panel.
-12. **Direct deep link: setup_recommended** — Tap `https://t.me/PharosWatchBot?startapp=setup_recommended`. Mini App loads the **Recommended-setup confirmation** view.
+9. **Direct deep link: snooze** — Tap `https://t.me/PharosWatchBot?startapp=snooze`. Mini App loads on the **Home** panel, where the snooze controls are visible when a chat snooze is active.
+10. **Direct deep link: health** — Tap `https://t.me/PharosWatchBot?startapp=health`. Mini App loads on the **Home** panel with the delivery-health card visible.
+11. **Direct deep link: forget** — Tap `https://t.me/PharosWatchBot?startapp=forget`. Mini App loads on the **Settings** panel, where the data-deletion control lives.
+12. **Direct deep link: setup_recommended** — Tap `https://t.me/PharosWatchBot?startapp=setup_recommended`. Mini App loads on the **Watchlist** panel; the recommended setup alias is retained for older launch buttons.
 13. **Unknown payload fallback** — Tap `https://t.me/PharosWatchBot?startapp=zzz-unknown`. Mini App loads on the **Home** panel without mutating alert state.
 14. **Cross-platform render** — Repeat tests 1, 2, 4, and 6 on Telegram Desktop, iOS, and Android. The Telegram bridge script loads, `initData` is signed, and there are no frame-denial headers.
 

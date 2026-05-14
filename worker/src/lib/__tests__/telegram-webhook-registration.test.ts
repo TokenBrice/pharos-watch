@@ -7,6 +7,7 @@ import {
   reconcileTelegramMenuButton,
   reconcileTelegramProfileRegistration,
   reconcileTelegramWebhookRegistration,
+  TELEGRAM_ALLOWED_UPDATES,
   TELEGRAM_BOT_COMMANDS,
   TELEGRAM_BOT_DESCRIPTION,
   TELEGRAM_BOT_GROUP_COMMANDS,
@@ -18,6 +19,8 @@ import {
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
+
+const MINI_APP_MVP_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
 
 async function secretTokenMarker(secret = "secret-token"): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
@@ -98,6 +101,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
     fetchSpy.mockReset();
   });
 
+  it("keeps Mini App MVP webhook updates limited to handled update types", () => {
+    expect([...TELEGRAM_ALLOWED_UPDATES]).toEqual([...MINI_APP_MVP_ALLOWED_UPDATES]);
+    expect(TELEGRAM_ALLOWED_UPDATES).not.toContain("web_app_data");
+  });
+
   it("skips the Telegram API call when the reconciliation cache is still fresh", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -162,6 +170,8 @@ describe("reconcileTelegramWebhookRegistration", () => {
       secret_token: "secret-token",
       allowed_updates: ["message", "callback_query", "my_chat_member"],
     });
+    expect(body.allowed_updates).toHaveLength(MINI_APP_MVP_ALLOWED_UPDATES.length);
+    expect(body.allowed_updates).not.toContain("web_app_data");
     const writes = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
     );

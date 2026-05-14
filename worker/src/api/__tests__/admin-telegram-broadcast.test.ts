@@ -90,6 +90,17 @@ describe("handleAdminTelegramBroadcast", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects messageHtml over the admin broadcast cap with 400", async () => {
+    const db = mockD1();
+    const res = await handleAdminTelegramBroadcast({
+      db,
+      request: adminRequest({ messageHtml: "x".repeat(16_001), scope: "all", dryRun: true }),
+      trustedAdmin: true,
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "messageHtml must be 16,000 characters or fewer" });
+  });
+
   it("rejects unknown scope with 400", async () => {
     const db = mockD1();
     const res = await handleAdminTelegramBroadcast({

@@ -14,13 +14,19 @@
  *   - `quicksub:<stablecoinId>` — enables DEWS+depeg for one coin (P1-U11)
  *   - `manage:page:N` — re-renders the /list management keyboard at page N (P1-U8)
  *   - `unsub:<stablecoinId>` — removes one coin from the chat's subscriptions (P1-U8)
+ *   - `select:<N>` — completes a pending ticker disambiguation selection
+ *   - `help:commands` — sends the command reference from a recovery button
  *
- * Unknown action codes receive a silent ack so the bot stays forward-compatible
- * with future keyboard changes.
+ * Unknown action codes receive a visible ack and usage telemetry so the bot
+ * stays forward-compatible with future keyboard changes.
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import { answerCallbackQuery, editMessage } from "../lib/telegram";
+import { answerCallbackQuery, editMessage, escapeHtml } from "../lib/telegram";
+import {
+  parseDisambiguationReply,
+  type ResolvedCoin,
+} from "../lib/telegram-alerts";
 import {
   clearPendingDisambiguation,
   forgetSubscriber,
@@ -54,10 +60,12 @@ import {
   parseSetupState,
 } from "./telegram-webhook-setup";
 import { handleSettingsCallback } from "./telegram-webhook-settings";
-import { parsePendingDisambiguation } from "./telegram-webhook-parsing";
+import { dedupeCoins, parsePendingDisambiguation } from "./telegram-webhook-parsing";
 import {
+  HELP_MESSAGE,
   SETUP_PENDING_ACTION_TYPE,
   type ConfirmBulkPayload,
+  type PendingAction,
   type PendingDisambiguationRow,
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
@@ -65,6 +73,7 @@ import { logTelegramEvent } from "../lib/telegram-log";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
 import { requireGroupAdminForCallback } from "./telegram-webhook-auth";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
+import { makeActionRunner } from "./webhook-commands/action-runner";
 
 // Re-export so any caller importing `SNOOZE_SECONDS` from this module keeps working.
 export { SNOOZE_SECONDS };
@@ -86,6 +95,8 @@ const CALLBACK_ACTIONS = [
   "cancel",
   "manage",
   "unsub",
+  "select",
+  "help",
   "settings",
   "tz",
 ] as const;
@@ -195,6 +206,11 @@ export async function handleCallbackQuery(
   // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs below.
   const action = parsed.action;
   if (!isKnownCallbackAction(action)) {
+    await recordTelegramUsageEvent(db, {
+      eventType: "unknown_command",
+      actionDetail: `callback:${action || "unknown"}`,
+      outcome: "unknown",
+    });
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
@@ -236,6 +252,12 @@ export async function handleCallbackQuery(
     case "unsub":
       await handleUnsubscribeActionCallback(db, botToken, cb, knownParsed);
       return;
+    case "select":
+      await handleSelectDisambiguationCallback(db, botToken, cb, chatId, { ...knownParsed, action: "select" });
+      return;
+    case "help":
+      await handleHelpActionCallback(db, botToken, cb, chatId, { ...knownParsed, action: "help" });
+      return;
     case "tz":
       await handleTimezoneCallback(db, botToken, cb, chatId, knownParsed);
       return;
@@ -243,6 +265,131 @@ export async function handleCallbackQuery(
       // Settings are handled before the allowlist check, but keep the switch
       // exhaustive for CallbackAction.
       return;
+  }
+}
+
+async function handleHelpActionCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData<"help">,
+): Promise<void> {
+  if (parsed.arg !== "commands" || !hasExactParts(parsed.parts, 2)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  await sendAuditedTelegramReply(db, chatId, HELP_MESSAGE, botToken, {
+    actionDetail: "callback_help",
+  });
+  await answerCallbackQuery(cb.id, botToken, { text: "Command reference sent." });
+}
+
+async function handleSelectDisambiguationCallback(
+  db: D1Database,
+  botToken: string,
+  cb: TelegramCallbackQuery,
+  chatId: string,
+  parsed: ParsedCallbackData<"select">,
+): Promise<void> {
+  if (!hasExactParts(parsed.parts, 2)) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
+    return;
+  }
+  const pendingRow = await db
+    .prepare(
+      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+    )
+    .bind(chatId)
+    .first<PendingDisambiguationRow>();
+  if (!pendingRow || unixNow() >= pendingRow.expires_at) {
+    if (pendingRow) await clearPendingDisambiguation(db, chatId);
+    await answerCallbackQuery(cb.id, botToken, { text: "Selection expired. Re-run the command." });
+    return;
+  }
+  const pendingAction = parsePendingDisambiguation(pendingRow);
+  if (!pendingAction || pendingAction.actionType === "confirm-bulk" || pendingAction.actionType === "forget-confirm") {
+    await answerCallbackQuery(cb.id, botToken, { text: "No ticker selection is pending." });
+    return;
+  }
+  const actorUserId = callbackActorUserId(cb);
+  if (pendingAction.initiatorUserId != null && pendingAction.initiatorUserId !== actorUserId) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Only the user who started this selection can choose." });
+    return;
+  }
+  const selectedIndices = parseDisambiguationReply(parsed.arg ?? "", pendingAction.candidates.length);
+  if (!selectedIndices) {
+    await answerCallbackQuery(cb.id, botToken, { text: "Selection not recognized." });
+    return;
+  }
+  await executePendingDisambiguationSelection(
+    db,
+    botToken,
+    chatId,
+    callbackUsername(cb),
+    pendingAction,
+    selectedIndices,
+  );
+  await answerCallbackQuery(cb.id, botToken, { text: "Selected." });
+}
+
+async function executePendingDisambiguationSelection(
+  db: D1Database,
+  botToken: string,
+  chatId: string,
+  username: string | null,
+  pending: Exclude<PendingAction, { actionType: "confirm-bulk" | "forget-confirm" }>,
+  selectedIndices: readonly number[],
+): Promise<void> {
+  const selectedCoins = dedupeCoins(
+    selectedIndices.map((index) => pending.candidates[index]).filter((coin): coin is ResolvedCoin => Boolean(coin)),
+  );
+  const initialCoins = dedupeCoins([...pending.resolvedCoins, ...selectedCoins]);
+  const sharedOpts = { tickers: pending.remainingTickers, initialCoins, clearPendingOnTerminal: true as const };
+
+  switch (pending.actionType) {
+    case "subscribe": {
+      const runAction = makeActionRunner(
+        { db, chatId, username, initiatorUserId: pending.initiatorUserId },
+        botToken,
+        {
+          kind: "subscribe",
+          alertTypes: [...pending.alertTypes],
+          presetIds: pending.presetIds,
+          depegWorseningBpsStep: pending.depegWorseningBpsStep,
+        },
+      );
+      await runAction({
+        ...sharedOpts,
+        actionType: "subscribe",
+        actionPayload: {
+          alertTypes: [...pending.alertTypes],
+          presetIds: pending.presetIds,
+          depegWorseningBpsStep: pending.depegWorseningBpsStep,
+        },
+        alertTypes: pending.alertTypes,
+      });
+      return;
+    }
+    case "unsubscribe": {
+      const runAction = makeActionRunner(
+        { db, chatId, username: null, initiatorUserId: pending.initiatorUserId },
+        botToken,
+        { kind: "unsubscribe", presetIds: pending.presetIds },
+      );
+      await runAction({
+        ...sharedOpts,
+        actionType: "unsubscribe",
+        actionPayload: { presetIds: pending.presetIds },
+        resolutionScope: "tracked",
+      });
+      return;
+    }
+    case "set": {
+      const runAction = makeActionRunner({ db, chatId, username, initiatorUserId: pending.initiatorUserId }, botToken);
+      await runAction({ ...sharedOpts, actionType: "set", actionPayload: pending.command });
+      return;
+    }
   }
 }
 
@@ -393,6 +540,12 @@ async function handleChatSnoozeCallback(
       action: "snooze",
       err: err instanceof Error ? err.message : String(err),
     });
+    await recordTelegramUsageEvent(db, {
+      eventType: "snooze_change",
+      actionDetail: "chat",
+      outcome: "failure",
+      failureClass: "d1_write_failed",
+    });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save snooze. Please try again.",
     });
@@ -456,6 +609,12 @@ async function handleCoinSnoozeCallback(
       userId: cb.from?.id ?? null,
       action: "coinsnooze",
       err: err instanceof Error ? err.message : String(err),
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "snooze_change",
+      actionDetail: "coin",
+      outcome: "failure",
+      failureClass: "d1_write_failed",
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save snooze. Please try again.",
@@ -605,7 +764,7 @@ async function handleQuickSubCallback(
         botToken,
         {
           actionDetail: "callback_quicksub",
-          replyMarkup: buildMiniAppOnlyKeyboard("Tune in app", `coin_${arg}`),
+          replyMarkup: buildMiniAppOnlyKeyboard("Open in app", `coin_${arg}`),
         },
       );
     }
@@ -840,6 +999,20 @@ async function handleTimezoneCallback(
       text: "Could not save timezone. Please try again.",
     });
     return;
+  }
+  const messageId = cb.message?.message_id;
+  if (messageId != null) {
+    await editMessage(
+      chatId,
+      messageId,
+      [
+        `Current timezone: ${escapeHtml(zone)}.`,
+        "",
+        "Quiet hours from /mute will now be interpreted in this zone.",
+      ].join("\n"),
+      botToken,
+      { disableWebPagePreview: true },
+    );
   }
   await answerCallbackQuery(cb.id, botToken, { text: `Timezone set to ${zone}.` });
 }

@@ -29,7 +29,7 @@ export type { WebhookCommandContext, WebhookCommandHandler } from "./context";
  * pending-disambiguation override path; commands not in this table fall
  * through to the "Unknown command" reply.
  *
- * `/market` is preserved as an alias for `/brief` (deprecated; remove in vN+1).
+ * `/market` is preserved as a deprecated compatibility alias for `/brief`.
  */
 export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/start": handleStart,

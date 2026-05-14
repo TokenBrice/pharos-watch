@@ -219,6 +219,42 @@ describe("PharosWatchBotMiniAppPage", () => {
     }));
   });
 
+  it("reloads session state after a stale-auth mutation rejection", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: "Telegram Mini App session expired", code: "stale-auth" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => staleState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      "/api/telegram-mini-app/session",
+      "/api/telegram-mini-app/mutate",
+      "/api/telegram-mini-app/session",
+    ]);
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data", operation: { kind: "set-global", alertType: "safety", enabled: true } }),
+    }));
+    expect(fetchMock.mock.calls[2]?.[1]).toEqual(expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data" }),
+    }));
+    fireEvent.click(screen.getByRole("tab", { name: "home" }));
+    await waitFor(() => expect(screen.getByText("Reopen Telegram to edit settings")).toBeTruthy());
+    expect(screen.getByText("Telegram authorization expired. Close and reopen from PharosWatchBot.")).toBeTruthy();
+  });
+
   it("posts global depeg-step mutations from settings", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { impactOccurred: vi.fn() } } };
     const nextState: TelegramMiniAppState = {
@@ -485,9 +521,16 @@ describe("PharosWatchBotMiniAppPage", () => {
     [500, "internal", "Something went wrong. Try again or reopen Telegram."],
   ] as const)("maps mutation status %i / code %s to copy", async (status, code, expected) => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const staleState: TelegramMiniAppState = {
+      ...baseState,
+      viewer: { ...baseState.viewer, canMutate: false, mutationBlockReason: "stale-auth" },
+    };
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => baseState })
       .mockResolvedValueOnce({ ok: false, status, json: async () => ({ error: "x", code }) });
+    if (code === "stale-auth") {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => staleState });
+    }
     vi.stubGlobal("fetch", fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);

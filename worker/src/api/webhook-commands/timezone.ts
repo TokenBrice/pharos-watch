@@ -6,6 +6,7 @@ import {
   setSubscriberTimezone,
 } from "../telegram-webhook-store";
 import { buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
+import { isGroupChatType } from "../telegram-webhook-auth";
 import type { WebhookCommandHandler } from "./context";
 
 /**
@@ -45,7 +46,7 @@ function buildTimezoneKeyboard(options: { includeMiniAppButton?: boolean } = {})
     rows.push(row);
   }
   if (options.includeMiniAppButton) {
-    rows.push(buildMiniAppOnlyKeyboard("Set in app", "quiet-hours").inline_keyboard[0]);
+    rows.push(buildMiniAppOnlyKeyboard("Open in app", "quiet-hours").inline_keyboard[0]);
   }
   return { inline_keyboard: rows };
 }
@@ -61,12 +62,19 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
 
   if (!trimmed) {
     const subscriber = await loadSubscriberByChat(db, chatId);
+    const includeQuickPick = !isGroupChatType(ctx.chatType);
     const message = [
       formatTimezoneStatusLine(subscriber?.timezone ?? null),
       "",
-      "Pick a common zone below, or send <code>/timezone &lt;IANA-zone&gt;</code> (e.g. <code>/timezone Europe/Paris</code>).",
+      includeQuickPick
+        ? "Pick a common zone below, or send <code>/timezone &lt;IANA-zone&gt;</code> (e.g. <code>/timezone Europe/Paris</code>)."
+        : "Ask a group admin to run <code>/timezone &lt;IANA-zone&gt;</code>.",
       "Quiet hours from /mute are interpreted in this zone (NULL = UTC).",
     ].join("\n");
+    if (!includeQuickPick) {
+      await ctx.replyToChat(message);
+      return;
+    }
     await ctx.replyToChatWithMarkup(message, {
       replyMarkup: buildTimezoneKeyboard({ includeMiniAppButton: ctx.chatType === "private" }),
     });
@@ -104,7 +112,7 @@ export const handleTimezone: WebhookCommandHandler = async (ctx, args) => {
   );
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup(message, {
-      replyMarkup: buildMiniAppOnlyKeyboard("Tweak quiet hours", "quiet-hours"),
+      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
     });
     return;
   }

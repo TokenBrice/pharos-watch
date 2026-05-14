@@ -21,6 +21,7 @@ const SCOPES = ["all", "deliverable-watchers", "global-subscribers"] as const;
 type BroadcastScope = (typeof SCOPES)[number];
 
 const SAMPLE_SIZE = 5;
+const MESSAGE_HTML_MAX_LENGTH = 16_000;
 
 interface BroadcastRequestBody {
   messageHtml: string;
@@ -31,7 +32,8 @@ interface BroadcastRequestBody {
 
 const BroadcastRequestBodySchema = z.object({
   messageHtml: z.string()
-    .refine((value) => value.trim().length > 0, "messageHtml must be a non-empty string"),
+    .refine((value) => value.trim().length > 0, "messageHtml must be a non-empty string")
+    .max(MESSAGE_HTML_MAX_LENGTH, `messageHtml must be ${MESSAGE_HTML_MAX_LENGTH.toLocaleString("en-US")} characters or fewer`),
   scope: z.enum(SCOPES, { message: `scope must be one of: ${SCOPES.join(", ")}` }),
   dryRun: z.boolean({ message: "dryRun must be a boolean" }),
   acknowledgeBacklogRisk: z

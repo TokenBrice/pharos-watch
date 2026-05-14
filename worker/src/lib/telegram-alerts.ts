@@ -335,6 +335,17 @@ export function parseDisambiguationReply(text: string, candidateCount: number): 
   return indices.length > 0 ? indices : null;
 }
 
+export function findInvalidDisambiguationToken(text: string, candidateCount: number): string | null {
+  const parts = text.split(/[,\s]+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  for (const part of parts) {
+    if (!/^\d+$/.test(part)) return part;
+    const n = Number(part);
+    if (!Number.isInteger(n) || n < 1 || n > candidateCount) return part;
+  }
+  return null;
+}
+
 // ---------- Alert Message Formatting ----------
 
 export interface DewsChange {
@@ -617,11 +628,11 @@ export function buildAlertReplyMarkup(
     [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
   ];
   if (privateChat) {
-    // Mini App "Tune in app" row — only valid in private DMs (Telegram
+    // Mini App "Open in app" row — only valid in private DMs (Telegram
     // rejects `web_app` inline buttons in groups/channels).
     baseRows.push([
       {
-        text: "Tune in app",
+        text: "Open in app",
         web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) },
       },
     ]);

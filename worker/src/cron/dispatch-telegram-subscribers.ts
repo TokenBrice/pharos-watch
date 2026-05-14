@@ -237,6 +237,9 @@ export async function loadPresetSubscriberRowsBatch(
       message: "dynamic preset query failed",
       action: "preset-query",
       module: "dispatch-telegram-subscribers",
+      failureKind: "query-failed",
+      alertType: type,
+      requestedStablecoinCount: stablecoinIds.length,
       err: err instanceof Error ? err.message : String(err),
     });
     return { kind: "query-failed", error: err };
@@ -247,7 +250,22 @@ export async function loadPresetSubscriberRowsBatch(
 
   const presetIds = Array.from(new Set(rows.map((row) => row.preset_id)));
   const resolved = await resolveTelegramPresetTargets(db, presetIds);
-  if (resolved.kind !== "ok") return { kind: "resolution-failed" };
+  if (resolved.kind !== "ok") {
+    logTelegramEvent({
+      level: "warn",
+      message: "dynamic preset resolution failed",
+      action: "preset-resolution",
+      module: "dispatch-telegram-subscribers",
+      failureKind: "resolution-failed",
+      alertType: type,
+      reason: resolved.reason,
+      presetIds,
+      presetCount: presetIds.length,
+      subscriberRowCount: rows.length,
+      requestedStablecoinCount: stablecoinIds.length,
+    });
+    return { kind: "resolution-failed" };
+  }
   const idsByPreset = new Map(resolved.presets.map((preset) => [preset.definition.id, new Set(preset.stablecoinIds)]));
   const wantedIds = new Set(stablecoinIds);
   const map = new Map<string, SubscriberRow[]>();

@@ -62,7 +62,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
           replyMarkup: {
             inline_keyboard: [[
               {
-                text: "Open Mini App",
+                text: "Open control panel",
                 web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.home) },
               },
             ]],

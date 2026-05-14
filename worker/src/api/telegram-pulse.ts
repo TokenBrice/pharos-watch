@@ -269,11 +269,12 @@ async function buildTelegramPulseSnapshot(
     miniAppMutationsToday: miniAppDailyAggregate
       ? publicOptionalCount(miniAppDailyAggregate.mutations, "miniAppMutationsToday", suppressedFields)
       : null,
+    // Denied/replay counts are abuse-health counters, not adoption counters.
     miniAppDeniedToday: miniAppDailyAggregate
-      ? publicOptionalCount(miniAppDailyAggregate.denied, "miniAppDeniedToday", suppressedFields)
+      ? miniAppDailyAggregate.denied
       : null,
     miniAppReplayClaimsToday: miniAppDailyAggregate
-      ? publicOptionalCount(miniAppDailyAggregate.replayClaimed, "miniAppReplayClaimsToday", suppressedFields)
+      ? miniAppDailyAggregate.replayClaimed
       : null,
     // P50 stays null until Wave 6 (T-64) wires bucketed session→first-mutation
     // latency through `telegram_usage_daily.latency_bucket`.

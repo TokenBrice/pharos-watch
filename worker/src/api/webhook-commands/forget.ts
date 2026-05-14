@@ -1,4 +1,6 @@
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
+import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
+import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {
   PENDING_OWNERSHIP_CONFLICT_MESSAGE,
   persistPendingForgetConfirm,
@@ -11,10 +13,13 @@ import type { WebhookCommandHandler } from "./context";
  * shares the existing `confirm:`/`cancel:` action namespace.
  */
 const FORGET_CONFIRM_REPLY_MARKUP = {
-  inline_keyboard: [[
-    { text: "Confirm delete", callback_data: "confirm:forget" },
-    { text: "Cancel", callback_data: "cancel:forget" },
-  ]],
+  inline_keyboard: [
+    [{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.forget) } }],
+    [
+      { text: "Confirm", callback_data: "confirm:forget" },
+      { text: "Cancel", callback_data: "cancel:forget" },
+    ],
+  ],
 } as const;
 
 const FORGET_CONFIRM_MESSAGE = [

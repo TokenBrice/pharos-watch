@@ -37,6 +37,7 @@ import { loadTerminalTelegramAlertTargetKeys } from "./telegram-alert-target-sta
 import { isQuietHoursActive } from "./telegram-quiet-hours";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { TELEGRAM_MAX_MESSAGES_PER_RUN } from "../lib/telegram-constants";
+import { recordSystemicFreshFailure } from "./dispatch-telegram-alerts-observability";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
@@ -118,7 +119,6 @@ async function writePresetFailureCount(db: D1Database, value: number): Promise<v
     });
   }
 }
-
 
 export async function dispatchTelegramAlerts(db: D1Database, botToken: string, signal?: AbortSignal): Promise<{ itemCount: number; metadata: string }> {
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
@@ -405,10 +405,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const attemptedMessages = result.pendingAttempted + result.freshAttempted;
     const hasSuccessfulEffect =
       result.messagesSent > 0 || result.blockedUsersCleanedUp > 0 || attemptedMessages === 0;
-    const systemicFreshFailure =
-      result.freshAttempted > 0 &&
-      result.freshSent === 0 &&
-      (result.freshRetryQueued > 0 || result.freshPermanentFailures > 0);
+    const systemicFreshFailure = recordSystemicFreshFailure(result);
     await recordOutcome(db, CIRCUIT_SOURCE.TELEGRAM_API, hasSuccessfulEffect && !systemicFreshFailure);
 
     return { itemCount: result.messagesSent, metadata: JSON.stringify(result) };

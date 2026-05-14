@@ -27,7 +27,6 @@ import {
 import {
   SETUP_PENDING_ACTION_TYPE,
   WIZARD_INTRO_MESSAGE,
-  START_MESSAGE,
   type SetupWizardState,
   type SetupWizardTarget,
 } from "./telegram-webhook-shared";
@@ -52,6 +51,15 @@ const ALERT_TYPE_LABELS: Record<(typeof ALERT_TYPE_ORDER)[number], string> = {
 
 const RECOMMENDED_ALERT_TYPES = ["dews", "depeg"] as const;
 const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
+const SETUP_SKIP_MESSAGE = `<b>Command reference</b>
+
+Use /help for the full command list.
+
+Common starts:
+<code>/subscribe dews,depeg usd-top25</code>
+<code>/presets</code>
+<code>/settings</code>
+<code>/list</code>`;
 
 const PRESET_PICKER_ORDER: TelegramPresetId[] = [
   "usd-top10",
@@ -328,7 +336,7 @@ export async function handleSetupBranch(
       actionDetail: "skip",
       outcome: "selected",
     });
-    await sendSetupReply(context, START_MESSAGE);
+    await sendSetupReply(context, SETUP_SKIP_MESSAGE);
     return { text: "OK." };
   }
   return { text: "Action not recognized." };
@@ -445,6 +453,11 @@ export async function handleSetupTarget(
       context,
       "Reply with a ticker (e.g. USDC) or send /cancel to abort.",
       { replyMarkup: buildForceReplyKeyboard() },
+    );
+    await sendSetupReply(
+      context,
+      "Need to stop?",
+      { replyMarkup: { inline_keyboard: [[{ text: "Cancel", callback_data: "setup:cancel" }]] } },
     );
     return { text: "Type a ticker." };
   }

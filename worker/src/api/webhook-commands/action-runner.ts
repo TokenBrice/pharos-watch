@@ -356,6 +356,15 @@ export function makeActionRunner(
       clearPendingOnTerminal,
       resolutionScope,
       reply,
+      replyWithMarkup: async (message, options) => {
+        await replyToChat(
+          context.db,
+          context.chatId,
+          message,
+          botToken,
+          options.replyMarkup ? { replyMarkup: options.replyMarkup } : undefined,
+        );
+      },
       onComplete: async (coins, resolutionOptions) => {
         if (gate && shouldGateBulk(coins.length) && (gate.kind === actionType)) {
           return persistAndPromptBulkConfirm(context, botToken, gate, coins, resolutionOptions.clearPending);

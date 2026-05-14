@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   maybePruneTelegramProcessedUpdates,
   persistPendingConfirmBulk,
@@ -113,10 +114,10 @@ describe("persistPendingDisambiguationRow", () => {
 });
 
 describe("pruneTelegramProcessedUpdates", () => {
-  it("deletes processed update rows older than the retention cutoff", async () => {
+  it("uses a capped D1-compatible delete for rows older than the retention cutoff", async () => {
     const db = mockD1([
       {
-        match: "DELETE FROM telegram_processed_updates WHERE received_at < ?",
+        match: "DELETE FROM telegram_processed_updates",
         rows: [],
         runMeta: { changes: 7 },
       },
@@ -128,7 +129,82 @@ describe("pruneTelegramProcessedUpdates", () => {
     });
 
     expect(pruned).toBe(7);
-    expect(db.getHistory()[0]?.binds).toEqual([1_699_999_940]);
+    const [entry] = db.getHistory();
+    expect(entry?.binds).toEqual([1_699_999_940]);
+    expect(entry?.sql).toContain("WHERE update_id IN");
+    expect(entry?.sql).toContain("ORDER BY received_at ASC, update_id ASC");
+    expect(entry?.sql).toContain("LIMIT 5000");
+  });
+
+  it("deletes at most 5000 expired processed update rows per call", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`
+        CREATE TABLE telegram_processed_updates (
+          update_id INTEGER PRIMARY KEY,
+          received_at INTEGER NOT NULL,
+          processed_at INTEGER,
+          update_type TEXT,
+          chat_id TEXT,
+          status TEXT NOT NULL DEFAULT 'processing',
+          error_class TEXT
+        );
+      `);
+
+      const insert = sqlite.prepare(
+        `INSERT INTO telegram_processed_updates (
+           update_id,
+           received_at,
+           processed_at,
+           update_type,
+           chat_id,
+           status,
+           error_class
+         )
+         VALUES (?, ?, NULL, 'message', '42', 'processed', NULL)`,
+      );
+
+      sqlite.exec("BEGIN");
+      try {
+        for (let updateId = 1; updateId <= 5_001; updateId += 1) {
+          insert.run(updateId, 1_699_999_000 - updateId);
+        }
+        insert.run(9_000, 1_699_999_940);
+        sqlite.exec("COMMIT");
+      } catch (err) {
+        sqlite.exec("ROLLBACK");
+        throw err;
+      }
+
+      const countRows = (where = "", ...args: unknown[]): number => {
+        const row = sqlite
+          .prepare(`SELECT COUNT(*) AS count FROM telegram_processed_updates ${where}`)
+          .get(...(args as never[])) as { count: number };
+        return Number(row.count);
+      };
+      const db = createSqliteD1(sqlite);
+
+      const firstPruned = await pruneTelegramProcessedUpdates(db, {
+        nowSec: 1_700_000_000,
+        retentionSec: 60,
+      });
+
+      expect(firstPruned).toBe(5_000);
+      expect(countRows("WHERE received_at < ?", 1_699_999_940)).toBe(1);
+      expect(countRows("WHERE received_at >= ?", 1_699_999_940)).toBe(1);
+
+      const secondPruned = await pruneTelegramProcessedUpdates(db, {
+        nowSec: 1_700_000_000,
+        retentionSec: 60,
+      });
+
+      expect(secondPruned).toBe(1);
+      expect(countRows("WHERE received_at < ?", 1_699_999_940)).toBe(0);
+      expect(countRows()).toBe(1);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("runs through the guarded production pruning path when the interval elapses", async () => {
@@ -139,7 +215,7 @@ describe("pruneTelegramProcessedUpdates", () => {
         runMeta: { changes: 1 },
       },
       {
-        match: "DELETE FROM telegram_processed_updates WHERE received_at < ?",
+        match: "DELETE FROM telegram_processed_updates",
         rows: [],
         runMeta: { changes: 3 },
       },

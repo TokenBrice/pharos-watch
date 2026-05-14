@@ -20,6 +20,19 @@ import {
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 
+function logReconciliationSuccess(
+  action: string,
+  details: Record<string, unknown> = {},
+): void {
+  logTelegramEvent({
+    level: "info",
+    message: "Telegram reconciliation succeeded",
+    action,
+    module: "five-minute-telegram",
+    ...details,
+  });
+}
+
 function buildTelegramSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
   return [
     {
@@ -63,7 +76,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
     });
     if (commandsResult.attempted) {
-      console.log("[cron] Reconciled Telegram command suggestions");
+      logReconciliationSuccess("reconcile-commands");
     }
   } catch (err) {
     logTelegramEvent({
@@ -79,7 +92,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
     });
     if (profileResult.attempted) {
-      console.log("[cron] Reconciled Telegram bot profile metadata");
+      logReconciliationSuccess("reconcile-profile");
     }
   } catch (err) {
     logTelegramEvent({
@@ -95,7 +108,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
     });
     if (menuResult.attempted) {
-      console.log(`[cron] Reconciled Telegram menu button: ${menuResult.miniAppUrl}`);
+      logReconciliationSuccess("reconcile-menu", { miniAppUrl: menuResult.miniAppUrl });
     }
   } catch (err) {
     logTelegramEvent({
@@ -113,7 +126,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
       selfUrl: runtime.env.SELF_URL,
     });
     if (result.attempted) {
-      console.log(`[cron] Reconciled Telegram webhook registration: ${result.expectedUrl}`);
+      logReconciliationSuccess("reconcile-webhook", { expectedUrl: result.expectedUrl });
     }
   } catch (err) {
     logTelegramEvent({

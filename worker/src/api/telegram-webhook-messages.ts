@@ -378,7 +378,7 @@ export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { in
     { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
     { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
   ]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Tune alerts", web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) } }]);
   return { inline_keyboard: rows };
 }
 
@@ -387,7 +387,7 @@ export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boole
   inline_keyboard: InlineKeyboardButton[][];
 } {
   const rows: InlineKeyboardButton[][] = [[{ text: "Manage", callback_data: "manage:page:0" }]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Manage in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
+  if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]);
   return { inline_keyboard: rows };
 }
 

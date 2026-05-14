@@ -23,6 +23,8 @@ export function unixNow(): number {
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
 
+const TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT = 5_000;
+
 export type TelegramProcessedUpdateClaimStatus = "claimed" | "duplicate" | "in_flight";
 
 export interface TelegramProcessedUpdateClaim {
@@ -173,7 +175,16 @@ export async function pruneTelegramProcessedUpdates(
   const nowSec = input.nowSec ?? unixNow();
   const retentionSec = input.retentionSec ?? TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC;
   const result = await db
-    .prepare("DELETE FROM telegram_processed_updates WHERE received_at < ?")
+    .prepare(
+      `DELETE FROM telegram_processed_updates
+        WHERE update_id IN (
+          SELECT update_id
+            FROM telegram_processed_updates
+           WHERE received_at < ?
+           ORDER BY received_at ASC, update_id ASC
+           LIMIT ${TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT}
+        )`,
+    )
     .bind(nowSec - retentionSec)
     .run();
   return d1ChangeCount(result);

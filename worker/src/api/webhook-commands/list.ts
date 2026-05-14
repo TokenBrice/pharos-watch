@@ -1,4 +1,5 @@
 import { buildListMessage, buildManageEntryKeyboard, buildMiniAppOnlyKeyboard } from "../telegram-webhook-messages";
+import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
 import { loadPresetSubscriptions, loadSubscriberByChat } from "../telegram-webhook-store";
 import type { SubscriptionRow } from "../telegram-webhook-shared";
 import type { WebhookCommandHandler } from "./context";
@@ -25,7 +26,14 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
   if (!subscriber && rows.length === 0 && presetSubscriptions.length === 0) {
     const message = "No active subscriptions. Use /subscribe to get started, or try /presets for preset watchlists.";
     if (isPrivateChat) {
-      await ctx.replyToChatWithMarkup(message, { replyMarkup: buildMiniAppOnlyKeyboard("Manage in app") });
+      await ctx.replyToChatWithMarkup(message, {
+        replyMarkup: {
+          inline_keyboard: [
+            [{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl("watchlist") } }],
+            [{ text: "Browse presets", web_app: { url: buildTelegramMiniAppUrl("presets") } }],
+          ],
+        },
+      });
       return;
     }
     await ctx.replyToChat(message);
@@ -39,7 +47,7 @@ export const handleList: WebhookCommandHandler = async (ctx) => {
   const replyMarkup = rows.length > 0
     ? buildManageEntryKeyboard({ includeMiniAppButton: isPrivateChat })
     : isPrivateChat
-      ? buildMiniAppOnlyKeyboard("Manage in app")
+      ? buildMiniAppOnlyKeyboard("Open control panel")
       : undefined;
   await ctx.replyToChatWithMarkup(message, replyMarkup ? { replyMarkup } : {});
 };

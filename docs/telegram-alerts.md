@@ -86,9 +86,9 @@ primary navigation immediately after `/alt-pegs/`.
 
 ## Public Pulse Privacy And Freshness
 
-The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries, quiet-hours chats, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero.
+The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, quiet-hours chats, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied and replay-claim counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`.
 
-`quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators.
+`quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
 
 Freshness is split deliberately:
 
@@ -223,7 +223,7 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/settings`, `/mute`, `/unmutehours`, `/unsnooze`, and `/timezone` are gated to group administrators so a single member cannot rewrite the chat's subscription, quiet-hours, or timezone state. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`. The `tz:<zone>` callback handler enforces the same admin check before persisting.
+`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`. The `tz:<zone>` callback handler enforces the same admin check before persisting.
 
 - **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change alert settings (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
@@ -250,7 +250,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples; private replies include a Mini App presets button |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat. When the chat has at least one explicit coin subscription the reply carries a `[ Manage ]` inline button that opens a paginated keyboard (5 coins per page) where each row is a one-tap `[ ❌ <SYMBOL> ]` removal. The keyboard edits the same message in place via `editMessageText`. Group chats apply the same admin gate as `/unsubscribe`. |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
-| `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated alias kept for one release cycle and shares the same cooldown bucket. |
+| `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated compatibility alias and shares the same cooldown bucket. |
 | `/top <view>` | Returns ranked current views for `depeg`, `dews`, `yield`, `liquidity`, `chains`, or `safety` |
 | `/why <ticker>` | Explains the current Safety Score, weakest dimensions, and key risk notes for one coin |
 | `/coverage <ticker>` | Shows which Pharos data surfaces currently cover one coin |
@@ -267,7 +267,7 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
 | `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
-| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone and an inline keyboard of common zones. Private replies include a Mini App quiet-hours button. NULL = UTC, the historical behavior. |
+| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone. Private no-argument replies also include common-zone buttons and a Mini App quiet-hours button; group no-argument replies are read-only and omit the keyboard. NULL = UTC, the historical behavior. |
 | `/unsnooze` | Clears active alert snooze immediately; private replies include a Mini App snooze button |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |

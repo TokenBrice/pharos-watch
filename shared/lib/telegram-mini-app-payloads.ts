@@ -4,8 +4,7 @@
  * Runtime-neutral (no Worker/D1 or browser-only imports). Consumed by:
  *   - `worker/src/api/telegram-webhook-parsing.ts` — to validate `?start=` payloads.
  *   - The Mini App client at `src/app/pharoswatchbot/app/client.tsx` — to map
- *     `?startapp=` payloads to a starting view (Phase 4 client integration is a
- *     future wave; the client is intentionally NOT edited in this commit).
+ *     `?startapp=` payloads to a starting view.
  *
  * Two Telegram deep-link surfaces share this registry:
  *   - `https://t.me/PharosWatchBot?start=<payload>` — bot `/start <payload>`
@@ -16,7 +15,7 @@
  *     same charset.
  *
  * Keep both surfaces consistent: changes to the non-parametric token set must
- * be reflected in both the worker parser and the eventual frontend mapping.
+ * be reflected in both the worker parser and the frontend mapping.
  */
 
 /**
@@ -119,10 +118,9 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
 }
 
 /**
- * Worker-side intent derived from a parsed payload. The frontend (Phase 4)
- * will consume `parseMiniAppPayload` directly and map to its own view union;
- * worker callers that need a coarse-grained "what did the user ask for?"
- * signal use this helper.
+ * Intent derived from a parsed payload. The frontend maps this to its view
+ * union, while worker callers use it as a coarse-grained "what did the user
+ * ask for?" signal.
  */
 export type TelegramMiniAppIntent =
   | "home"

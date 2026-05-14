@@ -38,12 +38,15 @@ Other useful setups:
 <code>/set USDC depeg-step 250</code>
 <code>/set all depeg-step 250</code>
 <code>/mute 22-07</code>  ← quiet hours (use /timezone first, defaults to UTC)
+<code>/settings</code>  ← review chat-level alert settings
 
 <b>Also useful</b>
 <code>/status USDC</code> — one-shot peg + DEWS + safety snapshot
+<code>/sample</code> — preview a sample DEWS alert
 <code>/brief</code> — latest market brief from the Pharos digest
 <code>/top depeg</code> — ranked live risk views
 <code>/why USDC</code> — short safety-grade explanation
+<code>/coverage USDC</code> — show Pharos data coverage for one coin
 <code>/set all dews on</code> — global alerts across every tracked coin
 <code>/health</code> — delivery diagnostics for this chat
 <code>/forget</code> — delete all your subscriber data
@@ -69,6 +72,9 @@ When used with <code>safety</code>, all-stablecoin follows deliver downgrades on
 
 <code>/presets</code>
 Show the preset watchlist catalog and examples
+
+<code>/sample</code>
+Preview a sample DEWS alert without changing subscriptions
 
 <code>/unsubscribe &lt;targets&gt;</code>
 Remove specific coin subscriptions or preset-expanded coins
@@ -101,6 +107,9 @@ Explain the current Safety Score in plain language
 
 <code>/coverage &lt;ticker&gt;</code>
 Show which Pharos data surfaces currently cover one coin
+
+<code>/settings</code>
+Review and edit chat-level alert settings
 
 <code>/health</code>
 Show delivery diagnostics for this chat: queued alerts, quiet hours, snooze, and recent failure class

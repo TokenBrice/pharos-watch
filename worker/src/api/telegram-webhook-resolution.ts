@@ -60,6 +60,7 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   actionPayload: TActionPayload;
   initiatorUserId: string | null;
   reply: (message: string) => Promise<void>;
+  replyWithMarkup?: (message: string, options: { replyMarkup?: unknown }) => Promise<void>;
   onComplete: (
     coins: ResolvedCoin[],
     options: { clearPending: boolean },
@@ -70,6 +71,17 @@ interface RunCoinResolutionFlowOptions<TActionPayload extends object> {
   resolutionScope?: TickerResolutionScope;
 }
 
+function buildDisambiguationKeyboard(candidates: readonly ResolvedCoin[]): {
+  inline_keyboard: Array<Array<{ text: string; callback_data: string }>>;
+} | null {
+  if (candidates.length === 0 || candidates.length > 5) return null;
+  return {
+    inline_keyboard: candidates.map((coin, index) => [
+      { text: `${index + 1}. ${coin.symbol}`, callback_data: `select:${index + 1}` },
+    ]),
+  };
+}
+
 export async function runCoinResolutionFlow<TActionPayload extends object>({
   db,
   chatId,
@@ -78,6 +90,7 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
   actionPayload,
   initiatorUserId,
   reply,
+  replyWithMarkup,
   onComplete,
   alertTypes,
   initialCoins = [],
@@ -110,9 +123,13 @@ export async function runCoinResolutionFlow<TActionPayload extends object>({
       await reply(PENDING_OWNERSHIP_CONFLICT_MESSAGE);
       return;
     }
-    await reply(
-      escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates)),
-    );
+    const message = escapeHtml(formatDisambiguation(resolution.ticker, resolution.candidates));
+    const replyMarkup = buildDisambiguationKeyboard(resolution.candidates);
+    if (replyMarkup && replyWithMarkup) {
+      await replyWithMarkup(message, { replyMarkup });
+      return;
+    }
+    await reply(message);
     return;
   }
 

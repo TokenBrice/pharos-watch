@@ -18,7 +18,7 @@ export const handleUnmuteHours: WebhookCommandHandler = async (ctx) => {
   });
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup("Quiet hours disabled.", {
-      replyMarkup: buildMiniAppOnlyKeyboard("Tweak in app", "quiet-hours"),
+      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "quiet-hours"),
     });
     return;
   }

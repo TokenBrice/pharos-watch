@@ -422,6 +422,134 @@ describe("handleTelegramPulse", () => {
     });
   });
 
+  it("suppresses low-cardinality Mini App usage counts but exposes abuse-health counts", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_watcher_lifecycle_daily",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 12,
+          new_watchers: 0,
+          explicit_coin_follows: 12,
+          active_preset_followers: 0,
+          active_dews_opt_ins: 12,
+          active_depeg_opt_ins: 8,
+          active_safety_opt_ins: 7,
+          active_launch_opt_ins: 6,
+          active_all_types_opt_ins: 6,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_pending_alerts",
+        first: { pending_count: 0 },
+        rows: [],
+      },
+      {
+        match: "FROM telegram_usage_daily",
+        first: {
+          mini_app_sessions: 3,
+          mini_app_mutations: 4,
+          mini_app_denied: 2,
+          mini_app_replay_claimed: 1,
+        },
+        rows: [],
+      },
+    ]);
+
+    const response = await handleTelegramPulse(db);
+    const body = (await response.json()) as {
+      miniAppSessionsToday: number | null;
+      miniAppMutationsToday: number | null;
+      miniAppDeniedToday: number | null;
+      miniAppReplayClaimsToday: number | null;
+      privacy: { suppressedFields: string[] };
+    };
+
+    expect(body.miniAppSessionsToday).toBeNull();
+    expect(body.miniAppMutationsToday).toBeNull();
+    expect(body.miniAppDeniedToday).toBe(2);
+    expect(body.miniAppReplayClaimsToday).toBe(1);
+    expect(body.privacy.suppressedFields).toEqual([
+      "miniAppMutationsToday",
+      "miniAppSessionsToday",
+    ]);
+  });
+
+  it("reports unavailable pending deliveries through quality instead of privacy suppression", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_watcher_lifecycle_daily",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscribers s",
+        first: {
+          active_watchers: 12,
+          new_watchers: 0,
+          explicit_coin_follows: 12,
+          active_preset_followers: 0,
+          active_dews_opt_ins: 12,
+          active_depeg_opt_ins: 8,
+          active_safety_opt_ins: 7,
+          active_launch_opt_ins: 6,
+          active_all_types_opt_ins: 6,
+          quiet_hours_enabled_chats: 0,
+        },
+        rows: [],
+      },
+      {
+        match: "FROM telegram_preset_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_subscriptions",
+        rows: [],
+      },
+      {
+        match: "FROM telegram_pending_alerts",
+        throwError: new Error("pending table unavailable"),
+        rows: [],
+      },
+      {
+        match: "FROM telegram_usage_daily",
+        first: {
+          mini_app_sessions: 0,
+          mini_app_mutations: 0,
+          mini_app_denied: 0,
+          mini_app_replay_claimed: 0,
+        },
+        rows: [],
+      },
+    ]);
+
+    const response = await handleTelegramPulse(db);
+    const body = (await response.json()) as {
+      pendingDeliveries: number | null;
+      quality: { status: string; unavailableFields: string[] };
+      privacy: { suppressedFields: string[] };
+    };
+
+    expect(body.pendingDeliveries).toBeNull();
+    expect(body.quality).toEqual({
+      status: "partial",
+      unavailableFields: ["pendingDeliveries"],
+    });
+    expect(body.privacy.suppressedFields).not.toContain("pendingDeliveries");
+  });
+
   it("prefixes snapshot history with active-chat lifecycle fallback during bootstrap", async () => {
     const db = mockD1([
       {

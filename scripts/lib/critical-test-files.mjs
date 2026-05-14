@@ -10,6 +10,8 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/telegram-webhook-auth.test.ts",
   "worker/src/api/__tests__/telegram-webhook.test.ts",
   "worker/src/api/__tests__/telegram-webhook-callbacks.test.ts",
+  "worker/src/api/__tests__/telegram-mini-app.test.ts",
+  "worker/src/lib/__tests__/telegram-mini-app-auth.test.ts",
   "worker/src/lib/__tests__/evm-rpc.test.ts",
   "worker/src/lib/__tests__/safety-scores.test.ts",
   "worker/src/lib/__tests__/stablecoins-cache.test.ts",

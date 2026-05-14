@@ -60,10 +60,18 @@ describe("handleForget", () => {
     expect(message).toContain("privacy-preserving aggregate counters");
     expect(options).toEqual({
       replyMarkup: {
-        inline_keyboard: [[
-          { text: "Confirm delete", callback_data: "confirm:forget" },
-          { text: "Cancel", callback_data: "cancel:forget" },
-        ]],
+        inline_keyboard: [
+          [
+            {
+              text: "Open control panel",
+              web_app: { url: "https://pharos.watch/pharoswatchbot/app/?startapp=forget" },
+            },
+          ],
+          [
+            { text: "Confirm", callback_data: "confirm:forget" },
+            { text: "Cancel", callback_data: "cancel:forget" },
+          ],
+        ],
       },
     });
     const writes = db.getHistory().filter((entry) =>

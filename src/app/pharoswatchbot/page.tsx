@@ -42,6 +42,14 @@ import {
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import {
+  MINI_APP_HOME_DEEP_LINK,
+  MINI_APP_WATCHLIST_DEEP_LINK,
+  PHAROSWATCHBOT_BOT_URL,
+  RECOMMENDED_SETUP_COMMAND,
+  RECOMMENDED_SETUP_DEEP_LINK,
+  SETUP_DEEP_LINK,
+} from "./telegram-route-constants";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "PharosWatchBot: Stablecoin Telegram Alerts",
@@ -51,11 +59,7 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const COIN_COUNT = TRACKED_STABLECOIN_COUNT;
-const BOT_URL = "https://t.me/PharosWatchBot";
-const SETUP_DEEP_LINK = `${BOT_URL}?start=setup`;
-const RECOMMENDED_SETUP_DEEP_LINK = `${BOT_URL}?start=sub_dews-depeg_usd-top25`;
-const MINI_APP_HOME_DEEP_LINK = `${BOT_URL}?startapp=home`;
-const MINI_APP_WATCHLIST_DEEP_LINK = `${BOT_URL}?startapp=watchlist`;
+const BOT_URL = PHAROSWATCHBOT_BOT_URL;
 
 const MINI_APP_FEATURES = [
   { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
@@ -106,7 +110,7 @@ const ACTION_ANCHORS = {
   community: "community",
 } as const satisfies Record<TelegramActionKey, string>;
 
-const RECOMMENDED_FIRST_COMMAND = "/subscribe dews,depeg usd-top25";
+const RECOMMENDED_FIRST_COMMAND = RECOMMENDED_SETUP_COMMAND;
 
 const RECOMMENDED_SETUPS = [
   {

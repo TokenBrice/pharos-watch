@@ -1231,12 +1231,12 @@ export function PharosWatchBotMiniAppClient() {
   const hasProbedHomeScreenRef = useRef(false);
   const [, startTransition] = useTransition();
 
-  const loadSession = useCallback(async (nextInitData: string) => {
+  const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
     setStatus("loading");
     try {
       setState(await postJson<TelegramMiniAppState>(SESSION_ENDPOINT, { initData: nextInitData }));
       setStatus("ready");
-      setMessage(null);
+      if (options.clearMessage !== false) setMessage(null);
     } catch (err) {
       setStatus("error");
       setMessage(sessionErrorMessage(err));
@@ -1457,12 +1457,15 @@ export function PharosWatchBotMiniAppClient() {
     } catch (err) {
       setMessage(mutationErrorMessage(err));
       webApp?.HapticFeedback?.notificationOccurred?.("error");
+      if (err instanceof MiniAppRequestError && err.status === 401 && err.code === "stale-auth") {
+        await loadSession(initData, { clearMessage: false });
+      }
       return null;
     } finally {
       setIsMutating(false);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
+  }, [initData, loadSession, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     startTransition(() => {

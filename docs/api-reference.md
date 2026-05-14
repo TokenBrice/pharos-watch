@@ -4554,7 +4554,7 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 }
 ```
 
-`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 30-minute admin TTL window. `messageHtml` must be a non-empty string and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
+`scope` is `all` (every row in `telegram_subscribers`), `deliverable-watchers` (rows with at least one active global, per-coin, or preset alert follow), or `global-subscribers` (rows where at least one `global_alert_*` flag is set). `dryRun` is required and must be a boolean. `acknowledgeBacklogRisk` is optional and must be boolean when present; live requests need it only when the projected admin broadcast backlog exceeds the 30-minute admin TTL window. `messageHtml` must be a non-empty string, is capped at 16,000 characters, and uses Telegram HTML formatting; long bodies are split via the same chunking pipeline as alerts.
 
 **Dry-run response (`dryRun: true`)**
 
@@ -4598,4 +4598,4 @@ Sends a pre-rendered maintenance/broadcast message to Telegram subscribers via t
 
 `enqueued` reports the number of target chat/chunk messages submitted to the pending queue (`targetChatCount * chunkCount`). Because the queue uses dedupe upserts, replaying the same broadcast before drain can update existing rows instead of inserting new rows. The dispatch cron drains the queue on its normal cadence.
 
-**Error responses:** `400` for invalid JSON, empty `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set.
+**Error responses:** `400` for invalid JSON, empty or over-16,000-character `messageHtml`, unknown `scope`, non-boolean `dryRun`, or non-boolean `acknowledgeBacklogRisk`. `409` when a live request would exceed the admin broadcast TTL window and `acknowledgeBacklogRisk` is not set.

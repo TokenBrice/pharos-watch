@@ -14,6 +14,7 @@ import {
   formatConsolidatedMessage,
   splitMessage,
   formatListOutput,
+  findInvalidDisambiguationToken,
   isDewsAlertable,
   isDewsDeescalation,
   suggestClosestToken,
@@ -365,6 +366,12 @@ describe("parseDisambiguationReply", () => {
 
   it("returns null for non-numeric input", () => {
     expect(parseDisambiguationReply("abc", 3)).toBeNull();
+  });
+
+  it("identifies the offending token for invalid replies", () => {
+    expect(findInvalidDisambiguationToken("1 abc", 3)).toBe("abc");
+    expect(findInvalidDisambiguationToken("4", 3)).toBe("4");
+    expect(findInvalidDisambiguationToken("1,2", 3)).toBeNull();
   });
 });
 

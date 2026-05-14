@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { TelegramBotStats } from "../telegram-bot-stats";
 import type { StatusResponse } from "@shared/types";
 
+const LIFECYCLE_SNAPSHOT_AT = 1_771_856_400;
+
 const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
   totalChats: 10,
   alertEnabledChats: 8,
@@ -37,7 +39,7 @@ const telegramBot: NonNullable<StatusResponse["telegramBot"]> = {
   inactiveSubscribersCleanedThisWeek: 6,
   lifecycleSnapshot: {
     date: "2026-05-13",
-    snapshotAt: 1_771_856_400,
+    snapshotAt: LIFECYCLE_SNAPSHOT_AT,
     activeWatchers: 8,
     newWatchers: 2,
     churnedWatchers: 1,
@@ -63,7 +65,7 @@ afterEach(() => {
 
 describe("TelegramBotStats", () => {
   it("surfaces pending backlog and retry telemetry for operators", () => {
-    render(<TelegramBotStats telegramBot={telegramBot} nowSeconds={1_700_000_300} />);
+    render(<TelegramBotStats telegramBot={telegramBot} nowSeconds={LIFECYCLE_SNAPSHOT_AT + 1_800} />);
 
     expect(screen.getByText("Pending delivery telemetry")).toBeTruthy();
     expect(screen.getByText("Oldest pending age")).toBeTruthy();
@@ -73,11 +75,20 @@ describe("TelegramBotStats", () => {
     expect(screen.getByText("Preset query failures")).toBeTruthy();
     expect(screen.getByText("Preset followers")).toBeTruthy();
     expect(screen.getByText("Lifecycle snapshot")).toBeTruthy();
+    expect(screen.getByText("Snapshot captured")).toBeTruthy();
+    expect(screen.getByText(`${new Date(LIFECYCLE_SNAPSHOT_AT * 1000).toLocaleString()} (30m ago)`)).toBeTruthy();
     expect(screen.getByText("Preset-implied follows")).toBeTruthy();
     expect(screen.getByText("Inactive cleaned 7d")).toBeTruthy();
     expect(screen.getByText("Pending retry classes")).toBeTruthy();
     expect(screen.getByText("rate_limit")).toBeTruthy();
     expect(screen.getByText("auth_error")).toBeTruthy();
+    expect(screen.queryByText(/snapshot stale/i)).toBeNull();
+  });
+
+  it("shows a lifecycle snapshot staleness chip after two refresh cadences", () => {
+    render(<TelegramBotStats telegramBot={telegramBot} nowSeconds={LIFECYCLE_SNAPSHOT_AT + 1_861} />);
+
+    expect(screen.getByText("snapshot stale · 31m old")).toBeTruthy();
   });
 
   it("shows field-level partial telemetry diagnostics for operators", () => {

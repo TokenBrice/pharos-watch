@@ -12,7 +12,7 @@ export const handleUnsnooze: WebhookCommandHandler = async (ctx) => {
   });
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup("Alert snooze cleared.", {
-      replyMarkup: buildMiniAppOnlyKeyboard("Manage snooze", "snooze"),
+      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "snooze"),
     });
     return;
   }

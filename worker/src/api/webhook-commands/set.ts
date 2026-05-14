@@ -35,7 +35,7 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
     const message = buildGlobalAlertSummaryMessage("Updated all-stablecoin alerts.", subscriber);
     if (ctx.chatType === "private") {
       await ctx.replyToChatWithMarkup(message, {
-        replyMarkup: buildMiniAppOnlyKeyboard("Review in app", "watchlist"),
+        replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "watchlist"),
       });
       return;
     }
@@ -53,7 +53,7 @@ export const handleSet: WebhookCommandHandler = async (ctx, args) => {
             if (actionType !== "set") return undefined;
             const firstCoin = coins[0];
             const payload = coins.length === 1 && firstCoin ? formatCoinPayload(firstCoin.id) : "watchlist";
-            return buildMiniAppOnlyKeyboard("Review in app", payload);
+            return buildMiniAppOnlyKeyboard("Open in app", payload);
           },
         }
       : undefined,
