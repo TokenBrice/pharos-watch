@@ -68,6 +68,7 @@ export async function enqueuePendingAlerts(
              ELSE telegram_pending_alerts.attempts
            END,
            not_before_at = CASE
+             WHEN telegram_pending_alerts.created_at < ? THEN excluded.not_before_at
              WHEN excluded.not_before_at IS NULL THEN telegram_pending_alerts.not_before_at
              WHEN telegram_pending_alerts.not_before_at IS NULL THEN excluded.not_before_at
              ELSE MAX(telegram_pending_alerts.not_before_at, excluded.not_before_at)
@@ -115,6 +116,7 @@ export async function enqueuePendingAlerts(
         sourceType,
         msg.alertType ?? null,
         expiresAt,
+        staleCutoff,
         staleCutoff,
         staleCutoff,
         staleCutoff,

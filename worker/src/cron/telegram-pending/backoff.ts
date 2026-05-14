@@ -66,12 +66,12 @@ export async function loadChatsInBackoff(
     .prepare(
       `SELECT chat_id, MAX(not_before_at) AS not_before_at
          FROM telegram_pending_alerts
-        WHERE created_at >= ?
+        WHERE COALESCE(expires_at, created_at + ?) > ?
           AND not_before_at IS NOT NULL
           AND not_before_at > ?
         GROUP BY chat_id`,
     )
-    .bind(nowSec - PENDING_TTL_SEC, nowSec)
+    .bind(PENDING_TTL_SEC, nowSec, nowSec)
     .all<{ chat_id: string; not_before_at: number | null }>();
   return new Map(
     (rows.results ?? [])

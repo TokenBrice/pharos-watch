@@ -793,6 +793,86 @@ describe("drainPendingQueue", () => {
     );
   });
 
+  it("orders pending chunks by chunk_index when priority, created_at, and not_before_at tie", async () => {
+    // P1.9 regression: when chunk 0 of a multi-chunk message is already claimed
+    // (or just retrying separately) and chunks 1-2 enter the queue with the same
+    // priority/created_at/not_before_at, the next drain must surface them in
+    // chunk_index order — no interleaving. Mock D1 does not sort; the test
+    // verifies the SQL ORDER BY ends with `p.chunk_index ASC` in both the
+    // candidate SELECT and the claimed-row SELECT.
+    mockSendToChat.mockResolvedValue({
+      ok: true,
+      blocked: false,
+      retryable: false,
+      permanentFailure: false,
+      statusCode: 200,
+      errorClass: null,
+      delivery: "sent",
+      retryAfterSec: null,
+    });
+
+    const now = Math.floor(Date.now() / 1000);
+    // Seed the SELECT in ORDER BY order. Chunk 0 is intentionally absent (e.g.
+    // already claimed by another owner).
+    const orderedChunks = [
+      {
+        id: 801,
+        chat_id: "multi-chunk-chat",
+        message_html: "<b>Chunk 1</b>",
+        disable_notification: 0,
+        created_at: now - 10,
+        attempts: 0,
+        not_before_at: null,
+        alert_snooze_until_ts: null,
+        quiet_hours_enabled: 0,
+        quiet_hours_start_utc: null,
+        quiet_hours_end_utc: null,
+        chunk_index: 1,
+        dedupe_key: "multi:chunk:1",
+      },
+      {
+        id: 802,
+        chat_id: "multi-chunk-chat",
+        message_html: "<b>Chunk 2</b>",
+        disable_notification: 0,
+        created_at: now - 10,
+        attempts: 0,
+        not_before_at: null,
+        alert_snooze_until_ts: null,
+        quiet_hours_enabled: 0,
+        quiet_hours_start_utc: null,
+        quiet_hours_end_utc: null,
+        chunk_index: 2,
+        dedupe_key: "multi:chunk:2",
+      },
+    ];
+    const db = mockD1([
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: orderedChunks },
+      { match: "UPDATE telegram_pending_alerts", rows: [] },
+      { match: "UPDATE telegram_subscribers", rows: [] },
+      { match: "UPDATE telegram_alert_job_targets", rows: [] },
+      { match: "DELETE FROM telegram_pending_alerts WHERE id IN", rows: [] },
+    ]);
+
+    const result = await drainPendingQueue(db, "bot-token", 10);
+    expect(result.sent).toBe(2);
+
+    // Both SELECTs (candidate-id scan and claimed-row load) must include
+    // chunk_index ASC as the final tiebreaker so chunks of the same message
+    // never interleave across drain runs.
+    const selects = db
+      .getHistory()
+      .filter((entry) => entry.sql.includes("FROM telegram_pending_alerts p"));
+    expect(selects.length).toBeGreaterThanOrEqual(2);
+    for (const entry of selects) {
+      expect(entry.sql).toMatch(/ORDER BY[\s\S]+p\.chunk_index ASC\s+LIMIT/);
+    }
+
+    // Order returned by drain reflects the SQL ORDER BY: chunk 1 before chunk 2.
+    const callOrder = mockSendToChat.mock.calls.map((call) => call[1] as string);
+    expect(callOrder).toEqual(["<b>Chunk 1</b>", "<b>Chunk 2</b>"]);
+  });
+
   it("returns zeros when queue is empty", async () => {
     const db = mockD1([
       { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
@@ -1160,6 +1240,37 @@ describe("enqueuePendingAlerts", () => {
     await enqueuePendingAlerts(db, [], 1000);
     expect(db.getHistory()).toHaveLength(0);
   });
+
+  it("resets not_before_at on the stale-row re-enqueue path", async () => {
+    // P1.6 regression: a stale row whose prior life ended in a rate-limit
+    // defer should not stay held back after a fresh start. The upsert must
+    // copy excluded.not_before_at when telegram_pending_alerts.created_at
+    // is older than the stale cutoff, alongside the other stale-reset fields.
+    const db = mockD1([
+      { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    ]);
+
+    const nowSec = 10_000;
+    const staleCutoff = nowSec - PENDING_TTL_SEC;
+
+    await enqueuePendingAlerts(
+      db,
+      [{ chatId: "stale-chat", html: "<b>Fresh</b>", disableNotification: false }],
+      nowSec,
+    );
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
+    expect(insert).toBeDefined();
+    // The new CASE branch must come first so it takes precedence over the
+    // existing MAX/COALESCE logic when the prior row is stale.
+    expect(insert!.sql).toMatch(
+      /not_before_at = CASE\s+WHEN telegram_pending_alerts\.created_at < \? THEN excluded\.not_before_at/,
+    );
+    // Seven staleCutoff binds: created_at, attempts, not_before_at,
+    // expires_at, processing_owner, processing_started_at, processing_expires_at.
+    const staleBindCount = insert!.binds.filter((bind) => bind === staleCutoff).length;
+    expect(staleBindCount).toBe(7);
+  });
 });
 
 describe("readPendingCapacitySnapshot", () => {
@@ -1246,10 +1357,10 @@ describe("loadChatsInBackoff", () => {
     const history = db.getHistory();
     const select = history.find((entry) => entry.sql.includes("SELECT chat_id, MAX(not_before_at)"));
     expect(select?.sql).toContain("not_before_at IS NOT NULL");
-    expect(select?.sql).toContain("created_at >= ?");
+    expect(select?.sql).toContain("COALESCE(expires_at, created_at + ?) > ?");
     expect(select?.sql).toContain("not_before_at > ?");
     expect(select?.sql).toContain("GROUP BY chat_id");
-    expect(select?.binds).toEqual([nowSec - PENDING_TTL_SEC, nowSec]);
+    expect(select?.binds).toEqual([PENDING_TTL_SEC, nowSec, nowSec]);
   });
 
   it("returns an empty set when no rows are in backoff", async () => {
@@ -1257,6 +1368,34 @@ describe("loadChatsInBackoff", () => {
       { match: "SELECT chat_id, MAX(not_before_at)", rows: [] },
     ]);
     expect(await loadChatsInBackoff(db, 1000)).toEqual(new Map());
+  });
+
+  it("does not report TTL-expired short-TTL rows as in backoff but does report unexpired ones", async () => {
+    // P1.8 regression: filter on COALESCE(expires_at, created_at + PENDING_TTL_SEC) > nowSec
+    // (matching the capacity.ts idiom), not on created_at + PENDING_TTL_SEC. A 30-min-TTL
+    // launch/admin row that has expired but not yet been swept must not surface as
+    // "in backoff"; a genuinely-future expires_at row on the same chat must.
+    const nowSec = 5000;
+    const db = mockD1([
+      {
+        match: "SELECT chat_id, MAX(not_before_at)",
+        // The mock returns whatever it is seeded; this fixture asserts on the SQL
+        // shape and bind values that drive the actual D1 filter.
+        rows: [{ chat_id: "fresh-chat", not_before_at: nowSec + 120 }],
+      },
+    ]);
+
+    const result = await loadChatsInBackoff(db, nowSec);
+    expect(result).toEqual(new Map([["fresh-chat", nowSec + 120]]));
+
+    const select = db.getHistory().find((entry) =>
+      entry.sql.includes("SELECT chat_id, MAX(not_before_at)"),
+    );
+    // Buggy form filtered by `created_at >= nowSec - PENDING_TTL_SEC`, which would
+    // include rows whose 30-min expires_at had already passed.
+    expect(select?.sql).not.toContain("created_at >= ?");
+    expect(select?.sql).toContain("COALESCE(expires_at, created_at + ?) > ?");
+    expect(select?.binds).toEqual([PENDING_TTL_SEC, nowSec, nowSec]);
   });
 });
 

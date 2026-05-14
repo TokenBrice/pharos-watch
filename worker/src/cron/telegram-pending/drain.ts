@@ -84,7 +84,8 @@ async function selectPendingClaimCandidateIds(
           )
         ORDER BY COALESCE(p.priority, ?) ASC,
                  COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC
+                 p.created_at ASC,
+                 p.chunk_index ASC
         LIMIT ?`,
     )
     .bind(
@@ -150,7 +151,8 @@ async function loadClaimedPendingRows(
         WHERE p.processing_owner = ?
         ORDER BY COALESCE(p.priority, ?) ASC,
                  COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC
+                 p.created_at ASC,
+                 p.chunk_index ASC
         LIMIT ?`,
     )
     .bind(owner, TELEGRAM_PENDING_PRIORITY.legacy, limit)
