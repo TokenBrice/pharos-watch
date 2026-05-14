@@ -43,9 +43,14 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
 - [runbooks/telegram-admin-broadcast-safety.md](./runbooks/telegram-admin-broadcast-safety.md) - admin broadcast safety controls and dry-run pre-flight
 - [runbooks/telegram-backlog-expiration.md](./runbooks/telegram-backlog-expiration.md) - Telegram pending backlog expiration triage and replay window recovery
+- [runbooks/telegram-group-admin-gating-rollback.md](./runbooks/telegram-group-admin-gating-rollback.md) - rollback the group-admin hard gate via the `TELEGRAM_GROUP_ADMIN_GATING="soft"` switch
+- [runbooks/telegram-mini-app-auth-failures.md](./runbooks/telegram-mini-app-auth-failures.md) - diagnose `mini_app_session_invalid` spikes (token rotation, replay, stale clients)
+- [runbooks/telegram-mini-app-botfather.md](./runbooks/telegram-mini-app-botfather.md) - capture BotFather Mini App configuration and post-deploy smoke tests
 - [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
 - [runbooks/telegram-operator-queries.md](./runbooks/telegram-operator-queries.md) - read-only SQL queries for PharosWatchBot incident triage
+- [runbooks/telegram-preset-resolution-failure.md](./runbooks/telegram-preset-resolution-failure.md) - investigate rising preset resolver failures and stale `TRACKED_STABLECOINS` drift
 - [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+- [runbooks/telegram-setup-wizard-stuck.md](./runbooks/telegram-setup-wizard-stuck.md) - clear stale `setup-step` rows in `telegram_pending_disambiguation`
 - [runbooks/telegram-webhook-retry-dedupe.md](./runbooks/telegram-webhook-retry-dedupe.md) - Telegram webhook retry/dedupe incidents, stuck processing rows, and recovery
 - [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage
 - [runbooks/yield-deterministic-cooldown.md](./runbooks/yield-deterministic-cooldown.md) - deterministic on-chain all-fail and cooldown triage
@@ -180,6 +185,8 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [digest-pipeline.md](./digest-pipeline.md) - digest generation, storage, distribution, and SSG pipeline
 - [feedback-pipeline.md](./feedback-pipeline.md) - feedback widget, POST contract, rate limiting, and GitHub routing
 - [telegram-alerts.md](./telegram-alerts.md) - PharosWatchBot page route, Telegram webhook commands, subscription tables, and alert dispatch rules
+- [telegram-architecture.md](./telegram-architecture.md) - PharosWatchBot worker seams, ownership, and freeze-window rules
+- [telegram-mini-app.md](./telegram-mini-app.md) - Telegram Mini App surface: launch entrypoints, payload registry, auth model, seam rules, debugging workflow
 - [shadow-stablecoins.md](./shadow-stablecoins.md) - PSI-only shadow asset boundary and UI exclusion rules
 - [chain-health.md](./chain-health.md) - Chain Health Score inputs, formula, factors, bands, and update contract
 
