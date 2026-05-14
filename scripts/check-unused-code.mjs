@@ -35,6 +35,8 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
   "shared/lib/chain-health-version.ts::getChainHealthMethodologyVersionAt",
   "shared/lib/chains.ts::CHAIN_RESILIENCE_TIER",
+  // Backward-compatible type export for callers that imported the old lib path.
+  "shared/lib/cause-of-death.ts::CauseOfDeath",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",
   "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX",
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
@@ -164,6 +166,9 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/api/backfill-fx.ts::mergeDateRates",
   "worker/src/api/mint-burn-flows-shared.ts::FLOW_CACHE_PREFIX",
   "worker/src/api/mint-burn-flows-shared.ts::readCachedFlow",
+  // Thin admin handler wrappers kept for direct test/script compatibility.
+  "worker/src/api/api-key-requests/admin-handlers.ts::handleApiKeyRequestReleaseClaim",
+  "worker/src/api/api-keys.ts::handleApiKeyDeactivate",
   "worker/src/api/telegram-webhook-messages.ts::describeSubscriptionSettings",
   "worker/src/api/telegram-webhook-messages.ts::describeGlobalAlertSettings",
   "worker/src/api/telegram-webhook-messages.ts::formatCoinLines",

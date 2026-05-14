@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { parseCliOptions, parseNonNegativeInt, readEnvFirst } from "./lib/smoke-runtime.mjs";
+
 const DEFAULT_BASE_URL = process.env.SEO_LIVE_SMOKE_URL ?? "https://pharos.watch";
 const SITEMAP_CONCURRENCY = 8;
 const JS_DISABLED_ROUTES = [
@@ -10,27 +12,28 @@ const JS_DISABLED_ROUTES = [
 
 function parseArgs(argv) {
   const args = {
-    baseUrl: DEFAULT_BASE_URL,
+    baseUrl: readEnvFirst("SEO_LIVE_SMOKE_URL", "https://pharos.watch"),
     sitemapLimit: Number.POSITIVE_INFINITY,
     skipSitemap: false,
     skipBrowser: false,
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--url") {
-      args.baseUrl = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--sitemap-limit") {
-      const value = Number.parseInt(argv[i + 1] ?? "", 10);
-      if (Number.isFinite(value) && value >= 0) args.sitemapLimit = value;
-      i += 1;
-    } else if (arg === "--skip-sitemap") {
+  parseCliOptions(argv, {
+    "--url": ({ readValue }) => {
+      args.baseUrl = readValue();
+      return "value";
+    },
+    "--sitemap-limit": ({ readValue }) => {
+      args.sitemapLimit = parseNonNegativeInt(readValue(), args.sitemapLimit);
+      return "value";
+    },
+    "--skip-sitemap": () => {
       args.skipSitemap = true;
-    } else if (arg === "--skip-browser") {
+    },
+    "--skip-browser": () => {
       args.skipBrowser = true;
-    }
-  }
+    },
+  });
 
   return args;
 }
@@ -204,7 +207,10 @@ async function checkJsDisabled(baseUrl, errors) {
         .locator("main")
         .evaluate((main) => main.textContent?.replace(/\s+/g, " ").trim().length ?? 0)
         .catch(() => 0);
-      const linkCount = await page.locator("main a[href]").count().catch(() => 0);
+      const linkCount = await page
+        .locator("main a[href]")
+        .count()
+        .catch(() => 0);
       if (h1Count !== 1) {
         errors.push(`${check.route}: JS-disabled page has ${h1Count} h1 elements`);
       }

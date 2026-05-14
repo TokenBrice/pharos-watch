@@ -21,7 +21,7 @@ Local dev-server (maintained): http://localhost:3000/
 - Put durable agent/process guidance in `/docs/`; use `docs/process/agent-artifacts.md` for artifact routing. `/agents/` is gitignored local scratch space for temporary plans, audits, research, screenshots, and handoff notes only.
 - Treat `/docs/` and `README.md` as the verified documentation corpus.
 - Preserve existing product and design system patterns unless explicitly asked for a redesign.
-- Read only the docs relevant to the area you touch. Start with `docs/architecture.md`, `docs/api-reference.md`, `docs/testing.md`, and `docs/worker-and-api-limits.md`.
+- Start non-trivial edits with `docs/agent-task-router.md`; it is the primary routing guide for choosing the smallest relevant doc and source context. Read only the docs listed for the matched task family, then follow local imports as needed.
 - For design work, read `docs/design-context.md`, `docs/design-language.md`, and `docs/design-tokens.md`.
 - For methodology work, read the specific methodology doc plus its timeline doc.
 - Update matching docs for behavior, API, pipeline, methodology, or data-source changes.

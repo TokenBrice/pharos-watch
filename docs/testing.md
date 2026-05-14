@@ -16,6 +16,7 @@ npm run typecheck:worker # Type-check Worker runtime code
 npm run typecheck:worker-scripts # Type-check worker-bound operational scripts
 npm run audit:deps    # Fails on high-severity npm advisories
 npm run seo:check     # Static SEO audit against built `out/` HTML
+npm run check:generated-artifacts # Verify all generated artifacts from the automation registry are current
 npm run check:cemetery-dataset # Verify generated Stablecoin Cemetery JSON/CSV exports match source data
 npm run check:agent-doc-sync # Verify AGENTS.md and CLAUDE.md stay synchronized where required
 npm run check:worker-boundary # Enforce the shared boundary in both directions (no worker -> `src` imports, no `src`/`shared`/`scripts`/`functions` -> `worker/src` imports; pure cross-runtime metadata belongs in `shared/`)
@@ -33,6 +34,7 @@ npm run check:doc-sync # Verify exact methodology versions, thresholds, weights,
 npm run check:env-contract # Verify shared env manifest, example files, and env-focused docs stay aligned
 npm run check:frozen-invariants # Verify frozen stablecoins stay out of live/public-active data surfaces
 npm run check:duplicate-exports # Detect duplicate export declarations within individual files
+npm run check:docs-api-reference # Verify generated docs API-reference block is current
 npm run check:llms-txt # Verify generated `/llms.txt` is current
 npm run check:openapi # Verify generated public OpenAPI artifact is current
 npm run check:postman # Verify generated public Postman collection/environment artifacts are current
@@ -80,7 +82,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - runs a pinned gitleaks commit-range scan for pull-request secret detection
    - uses the PR base SHA for the critical-coverage ratchet diff
 2. `validate` (runs before any deployment):
-   - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, env checks, duplicate/export/registry guards, unused-code/hotspot/sql/stablecoin-data checks
+   - runs the shared validate pre-build command set from `scripts/lib/validate-contract.mjs` with bounded parallelism: dependency/pricing audits, lint/typecheck, import boundaries, cycles, migrations, cron checks, docs checks, registry-derived generated-artifact checks, env checks, duplicate/export/registry guards, unused-code/hotspot/sql/stablecoin-data checks
    - starts `validate:prebuild` and the non-mutating leaf checks on separate runners at the same time: three non-critical Vitest shards, critical coverage, optional Worker runtime typecheck, optional Worker operational-script typecheck, and optional Pages build/SEO
    - runs all three `npm run test:noncritical -- --shard=N/3` shards and requires every shard before the aggregate `validate` job succeeds
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
@@ -219,7 +221,7 @@ The workflows pin `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/c
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It now prefers the `sqlite3` CLI when present and falls back to Node's built-in `node:sqlite`, which removes the old Node-25-first happy path while still catching schema typos in unapplied D1 migrations before `deploy-worker` touches production. Historical duplicate migration prefixes are tracked explicitly in `worker/migrations/MANIFEST.md`; the checker fails only on new undeclared duplicates and keeps the current allowlist visible in review. The same check now also enforces the rollout-safety contract for new migrations starting at `0071`: every new migration must declare `-- rollout-safety: backward-compatible`, destructive table/column drop-or-rename patterns are rejected, and `ALTER TABLE ... ADD COLUMN ... NOT NULL` without a `DEFAULT` is rejected because the still-live worker may still insert rows before promotion. The deploy workflow also reruns this check on the release runner immediately before remote `wrangler d1 migrations apply`.
 
-`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. The default changed-file range is `origin/main...HEAD`; the repo pre-push hook overrides that for pushes to `main` with Git's exact `remote_sha...local_sha` update range, matching the deploy workflow's `github.event.before...github.sha` classifier input. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it runs the shared prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, then `npm run test:noncritical` and critical coverage. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import-boundary/cycle checks, migrations, cron checks, documentation checks, generated-artifact checks, env contracts, frozen invariants, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, stablecoin data validation, and supply-helper usage. The critical coverage lane owns the critical test files, so the merge gate keeps the full deploy test surface without rerunning those files in the bare Vitest lane. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` + `npm run check:phishing-signatures` + `npm run check:classifier-sensitive-copy` when Pages-impacting files changed, and adds both `npm run typecheck:worker` and `npm run typecheck:worker-scripts` when worker-impacting files changed. After `validate:prebuild`, independent build/non-critical-test/critical-coverage/typecheck groups run in parallel by default; a failing parallel group aborts siblings and reports the failing command explicitly. Set `MERGE_GATE_SERIAL=1` for the older serial execution shape. Set `MERGE_GATE_HEAD_REF=<ref>` with `MERGE_GATE_BASE_REF=<ref>` for explicit range checks, or `MERGE_GATE_FULL_DEPLOY=1` when there is no usable base ref. It still skips deploy-time smoke suites.
+`npm run test:merge-gate` now mirrors the deploy-path validate contract locally. The default changed-file range is `origin/main...HEAD`; the repo pre-push hook overrides that for pushes to `main` with Git's exact `remote_sha...local_sha` update range, matching the deploy workflow's `github.event.before...github.sha` classifier input. If the changed-file set is not deploy-impacting, it prints the diff and exits successfully. For deploy-impacting diffs, it runs the shared prebuild guardrail registry from `scripts/lib/validate-contract.mjs`, then `npm run test:noncritical` and critical coverage. That registry is the source of truth for dependency/pricing audits, lint/typecheck, import-boundary/cycle checks, migrations, cron checks, documentation checks, the registry-derived `check:generated-artifacts` drift gate, env contracts, frozen invariants, duplicate-export and redemption-backstop guards, unused-code, hotspot-ratchet, SQL-safety, stablecoin data validation, and supply-helper usage. The critical coverage lane owns the critical test files, so the merge gate keeps the full deploy test surface without rerunning those files in the bare Vitest lane. The cycle step now blocks on cycles in `shared/`, `worker/src`, and `src`. It adds `npm run build` + `npm run seo:check` + `npm run check:phishing-signatures` + `npm run check:classifier-sensitive-copy` when Pages-impacting files changed, and adds both `npm run typecheck:worker` and `npm run typecheck:worker-scripts` when worker-impacting files changed. After `validate:prebuild`, independent build/non-critical-test/critical-coverage/typecheck groups run in parallel by default; a failing parallel group aborts siblings and reports the failing command explicitly. Set `MERGE_GATE_SERIAL=1` for the older serial execution shape. Set `MERGE_GATE_HEAD_REF=<ref>` with `MERGE_GATE_BASE_REF=<ref>` for explicit range checks, or `MERGE_GATE_FULL_DEPLOY=1` when there is no usable base ref. It still skips deploy-time smoke suites.
 
 `npm run check:unused-code` now scans all runtime code under `src/`, `shared/`, `worker/src/`, and `functions/`, with explicit module/export allowlists for intentional exceptions. `npm run check:hotspot-ratchet` now guards the maintained shell/facade files in `scripts/lib/hotspot-ratchet-baseline.json`, including `worker/src/cron/compute-dews.ts`, and also generates current repo-wide hotspot candidates from the top file-line, max-function-line, and branch-count outliers. Every generated candidate must either be enrolled in the baseline or explicitly waived in `scripts/lib/hotspot-ratchet-waivers.json`, so newly emerged hotspots cannot drift past the guardrail unseen. The ratchet still fails fast on stale target paths and unexpected baseline entries, and it now also fails on stale waiver entries. Each baseline entry declares a `disposition`, `targetBudget`, and implementation note so the ratchet doubles as a decomposition backlog rather than a blind ceiling list. Refresh the baseline only after an intentional refactor with `npm run check:hotspot-ratchet:update-baseline`, and update the matching waiver/backlog metadata at the same time.
 
@@ -265,7 +267,15 @@ export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
     execArgv: nodeExecArgv,
-    exclude: [...configDefaults.exclude, ...worktreeExcludes, ".claude/**", ".next/**", "out/**", "coverage/**", "tests/visual/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      ...worktreeExcludes,
+      ".claude/**",
+      ".next/**",
+      "out/**",
+      "coverage/**",
+      "tests/visual/**",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -325,7 +335,7 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 
 ### Mock D1 (`worker/src/api/__tests__/helpers/mock-d1.ts`)
 
-Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests can opt into stricter behavior.
+Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
 
 ```ts
 import { mockD1 } from "./helpers/mock-d1";
@@ -342,6 +352,7 @@ const db = mockD1([
 - `batch()` — executes each statement's `.all()` and returns array of results
 - `mockD1(tables, { requireMatch: true })` — throws if executed SQL does not match a configured entry
 - `mockD1(tables, { strictSql: true })` — matches normalized SQL exactly instead of substring search
+- `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
 - `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
 
 ### Mock Fetch (`worker/src/api/__tests__/helpers/mock-fetch.ts`)
@@ -362,24 +373,27 @@ const spy = mockFetch([
 - `status` — HTTP status code (default: 200)
 - `headers` — additional response headers
 - Unmatched URLs return 404
+- `mockFetch(routes, { requireMatch: true })` — throws on unexpected outbound URLs
+- `mockFetch(routes, { strictUrl: true })` — matches the full request URL exactly instead of substring search
+- `spy.assertAllRoutesUsed()` — optional assertion that every configured route was exercised during the test
 - Call `vi.restoreAllMocks()` in `afterEach` to clean up
 
 ### Shared Fixtures (`worker/src/api/__tests__/helpers/fixtures.ts`)
 
 Factory functions that return complete DB rows with sensible defaults. Pass `overrides` for specific values.
 
-| Factory                        | Returns                                                                     |
-| ------------------------------ | --------------------------------------------------------------------------- |
-| `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating) |
+| Factory                        | Returns                                                                                                                |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `makeAsset()`                  | DL pegged asset (id, symbol, price, pegType, circulating, chainCirculating)                                            |
 | `makeReportCardsDb()`          | Pre-wired `MockD1Database` for report-card style tests (`cache`, `dex_liquidity`, `depeg_events`, `supply_history`, …) |
-| `makeBlacklistRow()`           | blacklist_events row                                                        |
-| `makeDepegRow()`               | depeg_events row                                                            |
-| `makeSupplyRow()`              | supply_history row                                                          |
-| `makeMintBurnRow()`            | mint_burn_events row                                                        |
-| `makeDexLiquidityRow()`        | dex_liquidity row (with v2 fields)                                          |
-| `makeYieldHistoryRow()`        | yield_history row                                                           |
-| `makeDexLiquidityHistoryRow()` | dex_liquidity_history row                                                   |
-| `makeDigestRow()`              | daily_digest row                                                            |
+| `makeBlacklistRow()`           | blacklist_events row                                                                                                   |
+| `makeDepegRow()`               | depeg_events row                                                                                                       |
+| `makeSupplyRow()`              | supply_history row                                                                                                     |
+| `makeMintBurnRow()`            | mint_burn_events row                                                                                                   |
+| `makeDexLiquidityRow()`        | dex_liquidity row (with v2 fields)                                                                                     |
+| `makeYieldHistoryRow()`        | yield_history row                                                                                                      |
+| `makeDexLiquidityHistoryRow()` | dex_liquidity_history row                                                                                              |
+| `makeDigestRow()`              | daily_digest row                                                                                                       |
 
 Example:
 
@@ -446,7 +460,9 @@ Critical gate coverage is intentionally smaller than the full suite:
 
 - `npm run test:critical-contracts` covers strict endpoint registry, router mapping, cache passthrough, and high-impact API handlers.
 - `npm run test:invariants` covers numerical/schema invariants and critical cron-cache validation.
-- `npm run coverage:critical` runs the critical suite listed in `scripts/lib/critical-test-files.mjs` with line-coverage ratchets for files listed in `scripts/lib/critical-coverage.mjs`.
+- `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line-coverage ratchets owned by `scripts/lib/critical-coverage.mjs`.
+
+Lane ownership is script-owned, not prose-owned. Put critical test membership in `scripts/lib/critical-test-files.mjs`, put critical source coverage membership in `scripts/lib/critical-coverage.mjs`, and keep `test:noncritical` as the complement generated from that critical test list. Do not duplicate either file list in this document; use the scripts when you need the live membership.
 
 When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
 
@@ -508,7 +524,11 @@ CI does **not** run the full-suite `66%` coverage gate. CI runs the critical-pat
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 - The local merge gate now passes its changed-file set into `coverage:critical`, so touched critical-file regressions fail locally too
 
-Gate script: `scripts/check-critical-coverage.mjs`
+Gate scripts and ownership:
+
+- `scripts/lib/critical-test-files.mjs` owns critical test-file membership.
+- `scripts/lib/critical-coverage.mjs` owns critical source-file ratchet membership.
+- `scripts/check-critical-coverage.mjs` owns threshold parsing, explicit per-file override handling, and touched-file ratchet enforcement.
 
 Useful env controls:
 
@@ -519,41 +539,6 @@ Useful env controls:
 - `CRITICAL_COVERAGE_RATCHET_ALL`
 - `CRITICAL_COVERAGE_BASELINE_FILE`
 - Per-file overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_DISCOVERY`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`
-
-Current critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mjs`):
-
-- `src/lib/api.ts`
-- `worker/src/lib/api-cache-read.ts`
-- `worker/src/lib/api-freshness.ts`
-- `worker/src/lib/api-history.ts`
-- `worker/src/lib/api-pagination.ts`
-- `worker/src/lib/api-params.ts`
-- `worker/src/lib/api-response.ts`
-- `worker/src/lib/alerts.ts`
-- `worker/src/lib/auth.ts`
-- `worker/src/lib/evm-rpc.ts`
-- `worker/src/lib/stablecoins-cache.ts`
-- `worker/src/lib/safety-scores.ts`
-- `worker/src/handlers/scheduled.ts`
-- `worker/src/api/health.ts`
-- `worker/src/cron/sync-stablecoins.ts`
-- `worker/src/cron/daily-digest.ts`
-- `worker/src/cron/sync-yield-data.ts`
-- `worker/src/api/discovery.ts`
-- `worker/src/api/peg-summary.ts`
-- `worker/src/api/report-cards.ts`
-- `worker/src/api/dex-liquidity.ts`
-- `worker/src/api/stress-signals.ts`
-- `worker/src/api/mint-burn-flows.ts`
-- `worker/src/api/status.ts`
-- `worker/src/api/stablecoin-detail.ts`
-- `worker/src/cron/dex-liquidity/orchestrator.ts`
-- `worker/src/api/blacklist.ts`
-- `worker/src/api/blacklist-summary.ts`
-- `worker/src/lib/blacklist-contracts.ts`
-- `worker/src/cron/sync-blacklist.ts`
-- `shared/lib/report-card-blacklist-matchers.ts`
-- `shared/lib/blacklist-active-records.ts`
 
 Selected files have explicit threshold overrides in `scripts/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
 

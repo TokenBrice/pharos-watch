@@ -1,8 +1,6 @@
 #!/usr/bin/env npx tsx
 
-import { execSync } from "child_process";
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
+import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath, URL } from "node:url";
 import { DAY_SECONDS } from "../../shared/lib/time-constants";
@@ -18,14 +16,8 @@ import {
   buildFxLookup,
   fetchHistoricalFxRates,
 } from "../src/api/backfill-fx";
-import {
-  extractDepegEvents,
-  parseSupplyData,
-} from "../src/api/backfill-depegs-extraction";
-import {
-  summarizeBackfillReplayDiff,
-  type ExistingDepegEventRow,
-} from "../src/api/backfill-depegs-preview";
+import { extractDepegEvents, parseSupplyData } from "../src/api/backfill-depegs-extraction";
+import { summarizeBackfillReplayDiff, type ExistingDepegEventRow } from "../src/api/backfill-depegs-preview";
 import {
   collapsePricesToDailyTimestamps,
   fetchMarketBackfillPriceSeries,
@@ -37,10 +29,8 @@ import { fetchAuthoritativeHistoricalPriceSeries } from "../src/lib/authoritativ
 import { fetchWithRetry } from "../src/lib/fetch-retry";
 import { normalizeSupportedPegCurrency } from "../src/lib/native-peg-quotes";
 import { buildPriceReasonablenessOptions } from "../src/lib/price-validation";
-import {
-  describeDestructiveOperationMode,
-  parseDestructiveOperationMode,
-} from "./lib/destructive-operation-guard";
+import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
+import { createWorkerD1Client } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
 const SQL_BATCH_SIZE = 200;
@@ -54,7 +44,7 @@ const USE_EXISTING_WINDOW = process.argv.includes("--existing-window");
 const TARGET_IDS = parseListArg("--stablecoin");
 const TARGET_PEGS = parseListArg("--peg");
 const REPO_ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
-const WORKER_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const D1 = createWorkerD1Client(DB_NAME, OPERATION_MODE.remote ? "remote" : "local");
 const OPS_API_BASE = "https://ops-api.pharos.watch";
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 const PURGE_ONLY_ORPHAN_IDS: Record<string, { symbol: string; pegCurrency: string; reason: string }> = {
@@ -148,15 +138,7 @@ function sqlNumber(value: number | null): string {
 }
 
 function d1Query(sql: string): string {
-  return execSync(
-    `npx wrangler d1 execute ${DB_NAME} ${OPERATION_MODE.targetFlag} --command ${JSON.stringify(sql)} --json`,
-    {
-      cwd: WORKER_ROOT,
-      encoding: "utf-8",
-      maxBuffer: 50 * 1024 * 1024,
-      stdio: "pipe",
-    },
-  );
+  return D1.queryRaw(sql);
 }
 
 function d1QueryParsed<T>(sql: string): T[] {
@@ -165,26 +147,7 @@ function d1QueryParsed<T>(sql: string): T[] {
 }
 
 function d1ExecFile(statements: string[]): void {
-  if (statements.length === 0) return;
-  const tmpFile = join(tmpdir(), `repair-non-usd-fiat-${Date.now()}.sql`);
-  try {
-    writeFileSync(tmpFile, statements.join("\n")); // eslint-disable-line security/detect-non-literal-fs-filename
-    execSync(
-      `npx wrangler d1 execute ${DB_NAME} ${OPERATION_MODE.targetFlag} --file ${JSON.stringify(tmpFile)} --json`,
-      {
-        cwd: WORKER_ROOT,
-        encoding: "utf-8",
-        maxBuffer: 50 * 1024 * 1024,
-        stdio: "pipe",
-      },
-    );
-  } finally {
-    try {
-      unlinkSync(tmpFile); // eslint-disable-line security/detect-non-literal-fs-filename
-    } catch {
-      // Ignore temp cleanup errors.
-    }
-  }
+  D1.executeStatements(statements, "repair-non-usd-fiat");
 }
 
 function d1BatchExec(statements: string[]): void {
@@ -267,7 +230,7 @@ async function fetchDefiLlamaCoinDetail(meta: StablecoinMeta): Promise<CoinDetai
   });
   if (!response.ok) return null;
   const raw = await response.json();
-  return raw && typeof raw === "object" ? raw as CoinDetail : null;
+  return raw && typeof raw === "object" ? (raw as CoinDetail) : null;
 }
 
 async function fetchHistoricalSecondaryFxRatesDirect(
@@ -290,14 +253,12 @@ async function fetchHistoricalSecondaryFxRatesDirect(
         const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
         for (const url of [primaryUrl, fallbackUrl]) {
           try {
-            const response = await fetchWithRetry(
-              url,
-              { headers: { "User-Agent": USER_AGENT } },
-              1,
-              { timeoutMs: 20_000, passthrough404: true },
-            );
+            const response = await fetchWithRetry(url, { headers: { "User-Agent": USER_AGENT } }, 1, {
+              timeoutMs: 20_000,
+              passthrough404: true,
+            });
             if (!response?.ok) continue;
-            const payload = await response.json() as { usd?: Record<string, number> };
+            const payload = (await response.json()) as { usd?: Record<string, number> };
             if (payload?.usd) return [date, payload] as const;
           } catch {
             // Try the next mirror.
@@ -431,26 +392,34 @@ async function replayCoinHistory(
             extremeSinglePointBps: 5_000,
           }
         : undefined,
-    ).filter((event) => !replayRange || !(
-      (event.endedAt ?? event.startedAt) < replayRange.startSec || event.startedAt > replayRange.endSec
-    )),
+    ).filter(
+      (event) =>
+        !replayRange ||
+        !((event.endedAt ?? event.startedAt) < replayRange.startSec || event.startedAt > replayRange.endSec),
+    ),
     sourceKind,
     authoritativeSource: authoritativeHistory.matched ? authoritativeHistory.source : null,
     marketDiagnostics: diagnostics,
   };
 }
 
-function buildInsertStatements(stablecoinId: string, symbol: string, pegType: string, events: ReturnType<typeof extractDepegEvents>): string[] {
+function buildInsertStatements(
+  stablecoinId: string,
+  symbol: string,
+  pegType: string,
+  events: ReturnType<typeof extractDepegEvents>,
+): string[] {
   const escapedStablecoinId = escapeSqlString(stablecoinId);
   const escapedSymbol = escapeSqlString(symbol);
   const escapedPegType = escapeSqlString(pegType);
 
-  return events.map((event) => (
-    `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source) VALUES (` +
+  return events.map(
+    (event) =>
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source) VALUES (` +
       `'${escapedStablecoinId}', '${escapedSymbol}', '${escapedPegType}', '${escapeSqlString(event.direction)}', ` +
       `${event.peakDeviationBps}, ${event.startedAt}, ${sqlNumber(event.endedAt)}, ${sqlNumber(event.startPrice)}, ` +
-      `${sqlNumber(event.peakPrice)}, ${sqlNumber(event.recoveryPrice)}, ${sqlNumber(event.pegRef)}, 'backfill');`
-  ));
+      `${sqlNumber(event.peakPrice)}, ${sqlNumber(event.recoveryPrice)}, ${sqlNumber(event.pegRef)}, 'backfill');`,
+  );
 }
 
 function collectYearRanges(startDay: number, endDay: number): Array<{ startDay: number; endDay: number }> {
@@ -602,9 +571,8 @@ async function main(): Promise<void> {
 
     const supplyByDate = parseSupplyData(detail?.tokens ?? []);
     const earliestAnchorTs = parseLaunchDateSec(meta.launchDate) ?? supplyByDate[0]?.ts ?? null;
-    const earliestDateText = earliestAnchorTs != null
-      ? new Date(earliestAnchorTs * 1000).toISOString().slice(0, 10)
-      : defaultStartDate;
+    const earliestDateText =
+      earliestAnchorTs != null ? new Date(earliestAnchorTs * 1000).toISOString().slice(0, 10) : defaultStartDate;
     const deferHistoricalFxPrefetch = normalizeSupportedPegCurrency(meta.flags.pegCurrency) != null;
     preparedCoins.push({
       meta,
@@ -653,14 +621,15 @@ async function main(): Promise<void> {
   for (const prepared of preparedCoins) {
     const { meta, geckoId, supplyByDate, sourceIds, historicalStartDate, deferHistoricalFxPrefetch } = prepared;
     const pegType = `pegged${meta.flags.pegCurrency}`;
-    const fxCode = SECONDARY_PEG_TO_FX[meta.flags.pegCurrency]
-      ?? PEG_TO_FX[meta.flags.pegCurrency]
-      ?? OTHER_COIN_FX[meta.id]
-      ?? null;
+    const fxCode =
+      SECONDARY_PEG_TO_FX[meta.flags.pegCurrency] ??
+      PEG_TO_FX[meta.flags.pegCurrency] ??
+      OTHER_COIN_FX[meta.id] ??
+      null;
     const eagerSeries = fxCode
-      ? (secondaryFxSeries[fxCode] as Array<{ timestamp: number; rate: number }> | undefined)
-          ?? fxSeries[fxCode]
-          ?? []
+      ? ((secondaryFxSeries[fxCode] as Array<{ timestamp: number; rate: number }> | undefined) ??
+        fxSeries[fxCode] ??
+        [])
       : [];
     let getPegRef = buildFxLookup(eagerSeries, pegRates[pegType] ?? 0);
 
@@ -675,13 +644,10 @@ async function main(): Promise<void> {
       ].join(" "),
     );
     const minExistingStart = existingRows[0]?.started_at ?? null;
-    const maxExistingEnd = existingRows.reduce<number | null>(
-      (maxTs, row) => {
-        const rowEnd = row.ended_at ?? row.started_at;
-        return maxTs == null ? rowEnd : Math.max(maxTs, rowEnd);
-      },
-      null,
-    );
+    const maxExistingEnd = existingRows.reduce<number | null>((maxTs, row) => {
+      const rowEnd = row.ended_at ?? row.started_at;
+      return maxTs == null ? rowEnd : Math.max(maxTs, rowEnd);
+    }, null);
     const replayRange =
       USE_EXISTING_WINDOW && minExistingStart != null && maxExistingEnd != null
         ? {
@@ -699,7 +665,12 @@ async function main(): Promise<void> {
       coingeckoApiKey,
       replayRange,
     );
-    if (deferHistoricalFxPrefetch && fxCode && replay.sourceKind === "market" && replay.marketDiagnostics?.quoteMode !== "native-peg") {
+    if (
+      deferHistoricalFxPrefetch &&
+      fxCode &&
+      replay.sourceKind === "market" &&
+      replay.marketDiagnostics?.quoteMode !== "native-peg"
+    ) {
       const fallbackSeries = SECONDARY_PEG_TO_FX[meta.flags.pegCurrency]
         ? await fetchHistoricalSecondaryFxRatesDirect([fxCode], historicalStartDate, endDate)
         : await fetchHistoricalFxRates([fxCode], historicalStartDate, endDate);
@@ -753,9 +724,9 @@ async function main(): Promise<void> {
     });
 
     console.log(
-      `  existing=${existingRows.length} replay=${replay.events.length} remove=${diff.removedBackfillEventCount} add=${diff.addedBackfillEventCount}`
-        + ` source=${replay.sourceKind}`
-        + ` quote=${replay.marketDiagnostics?.quoteCurrency ?? "n/a"}`,
+      `  existing=${existingRows.length} replay=${replay.events.length} remove=${diff.removedBackfillEventCount} add=${diff.addedBackfillEventCount}` +
+        ` source=${replay.sourceKind}` +
+        ` quote=${replay.marketDiagnostics?.quoteCurrency ?? "n/a"}`,
     );
 
     if (diff.exactMatch) continue;
@@ -764,7 +735,8 @@ async function main(): Promise<void> {
     totalAdded += diff.addedBackfillEventCount;
     const affectedRange = buildAffectedRange(existingRows, replay.events);
     if (affectedRange) {
-      affectedStartDay = affectedStartDay == null ? affectedRange.startDay : Math.min(affectedStartDay, affectedRange.startDay);
+      affectedStartDay =
+        affectedStartDay == null ? affectedRange.startDay : Math.min(affectedStartDay, affectedRange.startDay);
       affectedEndDay = affectedEndDay == null ? affectedRange.endDay : Math.max(affectedEndDay, affectedRange.endDay);
     }
 
@@ -811,7 +783,8 @@ async function main(): Promise<void> {
     totalRemoved += existingRows.length;
     const affectedRange = buildAffectedRange(existingRows, []);
     if (affectedRange) {
-      affectedStartDay = affectedStartDay == null ? affectedRange.startDay : Math.min(affectedStartDay, affectedRange.startDay);
+      affectedStartDay =
+        affectedStartDay == null ? affectedRange.startDay : Math.min(affectedStartDay, affectedRange.startDay);
       affectedEndDay = affectedEndDay == null ? affectedRange.endDay : Math.max(affectedEndDay, affectedRange.endDay);
     }
 
@@ -825,11 +798,11 @@ async function main(): Promise<void> {
   console.log("\nSummary:");
   for (const summary of summaries) {
     console.log(
-      `  ${summary.symbol}: existing=${summary.existingBackfillEventCount} replay=${summary.recomputedBackfillEventCount ?? "preserve"}`
-        + ` remove=${summary.removedBackfillEventCount} add=${summary.addedBackfillEventCount}`
-        + ` source=${summary.replaySource}`
-        + ` quote=${summary.quoteCurrency ?? "n/a"}`
-        + `${summary.sourceIds.length > 1 ? ` ids=${summary.sourceIds.join("+")}` : ""}`,
+      `  ${summary.symbol}: existing=${summary.existingBackfillEventCount} replay=${summary.recomputedBackfillEventCount ?? "preserve"}` +
+        ` remove=${summary.removedBackfillEventCount} add=${summary.addedBackfillEventCount}` +
+        ` source=${summary.replaySource}` +
+        ` quote=${summary.quoteCurrency ?? "n/a"}` +
+        `${summary.sourceIds.length > 1 ? ` ids=${summary.sourceIds.join("+")}` : ""}`,
     );
   }
 

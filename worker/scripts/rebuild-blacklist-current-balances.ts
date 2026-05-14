@@ -1,7 +1,3 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { buildBlacklistAddressCountKey } from "../../shared/lib/blacklist";
 import { computeBlacklistAmountUsdAtEvent } from "../../shared/lib/blacklist";
 import { buildBlacklistActiveRecords } from "../../shared/lib/blacklist-active-records";
@@ -10,21 +6,11 @@ import { buildChainRpcs } from "../src/lib/chain-registry";
 import { bigIntToDecimal } from "../src/lib/bigint";
 import { encodeBalanceOfCallData } from "../src/lib/evm-selectors";
 import { createBudget, createRateLimiter } from "../src/lib/evm-logs";
-import {
-  fetchEvmTokenCurrentBalance,
-} from "../src/cron/blacklist/balance-providers";
+import { fetchEvmTokenCurrentBalance } from "../src/cron/blacklist/balance-providers";
 import { tronBase58ToHex } from "../src/lib/tron-address";
 import type { BlacklistStablecoin } from "../../shared/types/market";
-import {
-  describeDestructiveOperationMode,
-  parseDestructiveOperationMode,
-} from "./lib/destructive-operation-guard";
-
-type ExecuteWranglerOptions = {
-  remote: boolean;
-  sql?: string;
-  file?: string;
-};
+import { describeDestructiveOperationMode, parseDestructiveOperationMode } from "./lib/destructive-operation-guard";
+import { createWorkerD1Client, sqlString } from "./lib/remote-d1";
 
 type BlacklistEventRow = {
   id: string;
@@ -75,7 +61,11 @@ type CurrentBalanceWriteRow = {
 };
 
 function buildCurrentBalanceId(stablecoin: string, chainId: string, address: string): string {
-  return buildBlacklistAddressCountKey(stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0], chainId, address);
+  return buildBlacklistAddressCountKey(
+    stablecoin as Parameters<typeof buildBlacklistAddressCountKey>[0],
+    chainId,
+    address,
+  );
 }
 
 function parseArgs(argv: string[]): ScriptOptions {
@@ -107,23 +97,6 @@ function parseArgs(argv: string[]): ScriptOptions {
   };
 }
 
-function executeWrangler(options: ExecuteWranglerOptions): string {
-  const command = options.sql
-    ? ["d1", "execute", "stablecoin-db", options.remote ? "--remote" : "--local", "--json", "--command", options.sql]
-    : ["d1", "execute", "stablecoin-db", options.remote ? "--remote" : "--local", "--json", "--file", options.file!];
-  const workerCwd = process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
-  return execFileSync("npx", ["wrangler", ...command], {
-    cwd: workerCwd,
-    encoding: "utf8",
-    maxBuffer: 1024 * 1024 * 64,
-  });
-}
-
-function sqlString(value: string | null): string {
-  if (value == null) return "NULL";
-  return `'${value.replace(/'/g, "''")}'`;
-}
-
 function buildCurrentBalanceWriteRow(
   stablecoin: string,
   chainId: string,
@@ -133,11 +106,7 @@ function buildCurrentBalanceWriteRow(
   errorClass: string | null = null,
 ): CurrentBalanceWriteRow {
   return {
-    id: buildCurrentBalanceId(
-      stablecoin as Parameters<typeof buildCurrentBalanceId>[0],
-      chainId,
-      address,
-    ),
+    id: buildCurrentBalanceId(stablecoin as Parameters<typeof buildCurrentBalanceId>[0], chainId, address),
     stablecoin,
     chainId,
     address,
@@ -206,9 +175,8 @@ async function fetchTronCurrentBalanceRowsInBatches(
       for (let index = 0; index < batch.length; index++) {
         const record = batch[index]!;
         const item = byId.get(index + 1);
-        const amount = item?.result && item.result.startsWith("0x")
-          ? bigIntToDecimal(BigInt(item.result), decimals)
-          : null;
+        const amount =
+          item?.result && item.result.startsWith("0x") ? bigIntToDecimal(BigInt(item.result), decimals) : null;
         rowsToWrite.push(
           buildCurrentBalanceWriteRow(
             record.stablecoin,
@@ -224,14 +192,7 @@ async function fetchTronCurrentBalanceRowsInBatches(
       const errorClass = error instanceof Error ? error.message.slice(0, 200) : "provider_error";
       for (const record of batch) {
         rowsToWrite.push(
-          buildCurrentBalanceWriteRow(
-            record.stablecoin,
-            record.chainId,
-            record.address,
-            observedAt,
-            null,
-            errorClass,
-          ),
+          buildCurrentBalanceWriteRow(record.stablecoin, record.chainId, record.address, observedAt, null, errorClass),
         );
       }
     }
@@ -269,6 +230,7 @@ async function main() {
   const chainRpcs = buildChainRpcs(process.env.ALCHEMY_API_KEY, process.env.DRPC_API_KEY);
   const limiter = createRateLimiter(Math.max(1, options.requestsPerSecond));
   const budget = createBudget(1_000_000);
+  const d1 = createWorkerD1Client("stablecoin-db", options.remote ? "remote" : "local");
 
   const sql = `
     SELECT id, stablecoin, chain_id, chain_name, event_type, address, amount_native, amount_usd_at_event,
@@ -279,7 +241,7 @@ async function main() {
       AND chain_id = '${options.chainId}'
     ORDER BY timestamp DESC
   `;
-  const raw = executeWrangler({ remote: options.remote, sql });
+  const raw = d1.queryRaw(sql);
   const rows = (JSON.parse(raw)[0]?.results ?? []) as BlacklistEventRow[];
   const events = rows.map((row) => ({
     id: row.id,
@@ -291,7 +253,12 @@ async function main() {
     amountNative: row.amount_native,
     amountUsdAtEvent: row.amount_usd_at_event,
     amountSource: row.amount_source as "event" | "historical_balance" | "derived" | "unavailable",
-    amountStatus: row.amount_status as "resolved" | "recoverable_pending" | "permanently_unavailable" | "provider_failed" | "ambiguous",
+    amountStatus: row.amount_status as
+      | "resolved"
+      | "recoverable_pending"
+      | "permanently_unavailable"
+      | "provider_failed"
+      | "ambiguous",
     txHash: row.tx_hash,
     blockNumber: row.block_number,
     timestamp: row.timestamp,
@@ -330,7 +297,7 @@ async function main() {
 
   if (config.chain.type === "tron") {
     rowsToWrite.push(
-      ...await fetchTronCurrentBalanceRowsInBatches(
+      ...(await fetchTronCurrentBalanceRowsInBatches(
         active.map((record) => ({
           stablecoin: record.stablecoin,
           chainId: record.chainId,
@@ -340,7 +307,7 @@ async function main() {
         config.decimals,
         trongridApiKey,
         limiter,
-      ),
+      )),
     );
   } else {
     const queue = [...active];
@@ -362,13 +329,7 @@ async function main() {
             chainRpcs,
           );
           rowsToWrite.push(
-            buildCurrentBalanceWriteRow(
-              next.stablecoin,
-              next.chainId,
-              next.address,
-              observedAt,
-              amount,
-            ),
+            buildCurrentBalanceWriteRow(next.stablecoin, next.chainId, next.address, observedAt, amount),
           );
         } catch (error) {
           rowsToWrite.push(
@@ -392,33 +353,27 @@ async function main() {
     await Promise.all(Array.from({ length: Math.max(1, options.concurrency) }, () => worker()));
   }
 
-  const tmpDir = mkdtempSync(join(tmpdir(), "blacklist-current-balances-"));
-  try {
-    const sqlFile = join(tmpDir, "rebuild.sql");
-    const statements = [
+  d1.executeStatements(
+    [
       // SAFETY: stablecoin/chainId are constrained by the selected blacklist config scope before SQL generation.
       `DELETE FROM blacklist_current_balances WHERE stablecoin = '${options.stablecoin}' AND chain_id = '${options.chainId}';`,
-      ...rowsToWrite.map((row) =>
-        `INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
-         VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountNative ?? "NULL"}, ${row.amountUsd ?? "NULL"}, ${sqlString(row.source)}, ${sqlString(row.status)}, ${row.observedAt}, ${row.attemptCount}, ${row.lastAttemptedAt}, ${sqlString(row.lastErrorClass)})
-         ON CONFLICT(id) DO UPDATE SET
-           amount_native = excluded.amount_native,
-           amount_usd = excluded.amount_usd,
-           source = excluded.source,
-           status = excluded.status,
-           observed_at = excluded.observed_at,
-           attempt_count = excluded.attempt_count,
-           last_attempted_at = excluded.last_attempted_at,
-           last_error_class = excluded.last_error_class;`,
+      ...rowsToWrite.map(
+        (row) =>
+          `INSERT INTO blacklist_current_balances (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at, attempt_count, last_attempted_at, last_error_class)
+       VALUES (${sqlString(row.id)}, ${sqlString(row.stablecoin)}, ${sqlString(row.chainId)}, ${sqlString(row.address)}, ${row.amountNative ?? "NULL"}, ${row.amountUsd ?? "NULL"}, ${sqlString(row.source)}, ${sqlString(row.status)}, ${row.observedAt}, ${row.attemptCount}, ${row.lastAttemptedAt}, ${sqlString(row.lastErrorClass)})
+       ON CONFLICT(id) DO UPDATE SET
+         amount_native = excluded.amount_native,
+         amount_usd = excluded.amount_usd,
+         source = excluded.source,
+         status = excluded.status,
+         observed_at = excluded.observed_at,
+         attempt_count = excluded.attempt_count,
+         last_attempted_at = excluded.last_attempted_at,
+         last_error_class = excluded.last_error_class;`,
       ),
-    ];
-    // Temp SQL file is created under mkdtempSync() and never leaves this function.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    writeFileSync(sqlFile, statements.join("\n"));
-    executeWrangler({ remote: options.remote, file: sqlFile });
-  } finally {
-    rmSync(tmpDir, { recursive: true, force: true });
-  }
+    ],
+    "blacklist-current-balances",
+  );
 
   const resolvedTotal = rowsToWrite.reduce((sum, row) => sum + (row.amountUsd ?? 0), 0);
   const failedCount = rowsToWrite.filter((row) => row.status !== "resolved").length;

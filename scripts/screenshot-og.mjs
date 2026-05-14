@@ -5,38 +5,41 @@
  * Set OG_BASE_URL to capture another environment:
  *   OG_BASE_URL=http://127.0.0.1:4173 node scripts/screenshot-og.mjs
  */
-import { chromium } from '/usr/lib/node_modules/playwright/index.mjs';
-import { mkdirSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUT = path.join(__dirname, '../public');
-const BASE = process.env.OG_BASE_URL?.replace(/\/+$/, '') || 'https://pharos.watch';
+const OUT = path.join(__dirname, "../public");
+const BASE = process.env.OG_BASE_URL?.replace(/\/+$/, "") || "https://pharos.watch";
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 628;
 
 const PAGES = [
-  { path: '/',                file: 'og-card.png'           },
-  { path: '/about',           file: 'og-about.png'          },
-  { path: '/cemetery',        file: 'og-cemetery.png'       },
-  { path: '/chains',          file: 'og-chains.png'         },
-  { path: '/compare',         file: 'og-compare.png'        },
-  { path: '/coverage',        file: 'og-coverage.png'       },
-  { path: '/depeg',           file: 'og-depeg.png'          },
-  { path: '/flows',           file: 'og-flows.png'          },
-  { path: '/liquidity',       file: 'og-liquidity.png'      },
-  { path: '/safety-scores',   file: 'og-safety-scores.png'  },
-  { path: '/yield',           file: 'og-yield.png'          },
-  { path: '/freezewatch',     file: 'og-blacklist.png'      },
-  { path: '/stability-index', file: 'og-stability-index.png'},
-  { path: '/dependency-map',  file: 'og-dependency-map.png' },
-  { path: '/digest',          file: 'og-digest.png'          },
+  { path: "/", file: "og-card.png" },
+  { path: "/about", file: "og-about.png" },
+  { path: "/cemetery", file: "og-cemetery.png" },
+  { path: "/chains", file: "og-chains.png" },
+  { path: "/compare", file: "og-compare.png" },
+  { path: "/coverage", file: "og-coverage.png" },
+  { path: "/depeg", file: "og-depeg.png" },
+  { path: "/flows", file: "og-flows.png" },
+  { path: "/liquidity", file: "og-liquidity.png" },
+  { path: "/safety-scores", file: "og-safety-scores.png" },
+  { path: "/yield", file: "og-yield.png" },
+  { path: "/freezewatch", file: "og-blacklist.png" },
+  { path: "/stability-index", file: "og-stability-index.png" },
+  { path: "/dependency-map", file: "og-dependency-map.png" },
+  { path: "/digest", file: "og-digest.png" },
   // Portfolio pre-loaded with typical holdings so it shows data, not empty state
-  { path: '/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000', file: 'og-portfolio.png' },
-  { path: '/methodology',     file: 'og-methodology.png'    },
-  { path: '/start',           file: 'og-start.png'          },
-  { path: '/pharoswatchbot/', file: 'og-pharoswatchbot.png' },
+  {
+    path: "/portfolio?p=usdt-tether:10000,usdc-circle:5000,dai-makerdao:2000,usde-ethena:1000",
+    file: "og-portfolio.png",
+  },
+  { path: "/methodology", file: "og-methodology.png" },
+  { path: "/start", file: "og-start.png" },
+  { path: "/pharoswatchbot/", file: "og-pharoswatchbot.png" },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -44,13 +47,13 @@ mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: { width: OG_WIDTH, height: OG_HEIGHT },
-  colorScheme: 'dark',
+  colorScheme: "dark",
   // Prevent cookie banners / consent overlays from appearing
-  locale: 'en-US',
+  locale: "en-US",
 });
 
 // Suppress non-critical console noise
-context.on('console', () => {});
+context.on("console", () => {});
 
 const SOCIAL_CAPTURE_CSS = `
   html,
@@ -105,21 +108,20 @@ for (const { path: pagePath, file } of PAGES) {
 
   const page = await context.newPage();
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
     // Extra settle time for React hydration + data fetch
     await page.waitForTimeout(3000);
     await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });
     // Hide the feedback button and any overlays
     await page.evaluate(() => {
-      document.querySelectorAll('[data-radix-popper-content-wrapper], [role="dialog"]')
-        .forEach(el => el.remove());
+      document.querySelectorAll('[data-radix-popper-content-wrapper], [role="dialog"]').forEach((el) => el.remove());
       // Hide feedback button (find by aria-label or button text)
-      document.querySelectorAll('button').forEach(btn => {
-        if (btn.textContent?.includes('Feedback')) btn.style.display = 'none';
+      document.querySelectorAll("button").forEach((btn) => {
+        if (btn.textContent?.includes("Feedback")) btn.style.display = "none";
       });
     });
     await page.screenshot({ path: outFile, clip: { x: 0, y: 0, width: OG_WIDTH, height: OG_HEIGHT } });
-    console.log('done');
+    console.log("done");
   } catch (err) {
     console.log(`FAILED: ${err.message}`);
   } finally {
@@ -128,4 +130,4 @@ for (const { path: pagePath, file } of PAGES) {
 }
 
 await browser.close();
-console.log('\nAll screenshots saved to public/');
+console.log("\nAll screenshots saved to public/");

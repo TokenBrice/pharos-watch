@@ -1,23 +1,17 @@
 #!/usr/bin/env npx tsx
 
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
-import {
-  parseYieldHistoryWriterPause,
-  YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY,
-} from "../src/lib/yield-history-cleanup";
+import { parseYieldHistoryWriterPause, YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY } from "../src/lib/yield-history-cleanup";
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../src/lib/yield-history-ownership-handoffs";
+import { createWorkerD1Client } from "./lib/remote-d1";
 
 const DB_NAME = "stablecoin-db";
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const WORKER_ROOT = resolve(SCRIPT_DIR, "..");
 
 const YIELD_HISTORY_COLUMNS = [
   "stablecoin_id",
@@ -177,10 +171,7 @@ export function deleteCleanupRowsFromSqlite(dbPath: string): YieldHistoryCleanup
   }
 }
 
-export function restoreCleanupRowsToSqlite(
-  dbPath: string,
-  rows: readonly YieldHistoryCleanupRow[],
-): void {
+export function restoreCleanupRowsToSqlite(dbPath: string, rows: readonly YieldHistoryCleanupRow[]): void {
   const db = new DatabaseSync(dbPath);
   try {
     const placeholders = YIELD_HISTORY_COLUMNS.map(() => "?").join(", ");
@@ -208,47 +199,17 @@ export function restoreCleanupRowsToSqlite(
   }
 }
 
-function executeWranglerCommand(args: string[]): string {
-  return execFileSync("npx", ["wrangler", ...args], {
-    cwd: WORKER_ROOT,
-    encoding: "utf8",
-    maxBuffer: 1024 * 1024 * 32,
-  });
-}
-
 function queryRemoteRows(sql: string, remote: boolean): Array<Record<string, unknown>> {
-  const output = executeWranglerCommand([
-    "d1",
-    "execute",
-    DB_NAME,
-    remote ? "--remote" : "--local",
-    "--json",
-    "--command",
-    sql,
-  ]);
+  const output = createWorkerD1Client(DB_NAME, remote ? "remote" : "local").queryRaw(sql);
   const parsed = JSON.parse(output) as Array<{ results?: Array<Record<string, unknown>> }>;
   return parsed[0]?.results ?? [];
 }
 
 function execRemoteStatements(statements: string[], remote: boolean): void {
-  if (statements.length === 0) return;
-  const tempDir = mkdtempSync(join(tmpdir(), "yield-history-cleanup-"));
-  const filePath = join(tempDir, "cleanup.sql");
-  try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
-    writeFileSync(filePath, statements.join(";\n") + ";\n");
-    executeWranglerCommand([
-      "d1",
-      "execute",
-      DB_NAME,
-      remote ? "--remote" : "--local",
-      "--json",
-      "--file",
-      filePath,
-    ]);
-  } finally {
-    rmSync(tempDir, { recursive: true, force: true });
-  }
+  createWorkerD1Client(DB_NAME, remote ? "remote" : "local").executeStatements(
+    statements.map((statement) => (statement.endsWith(";") ? statement : `${statement};`)),
+    "yield-history-cleanup",
+  );
 }
 
 function loadCleanupRowsFromWrangler(remote: boolean): YieldHistoryCleanupRow[] {
@@ -293,28 +254,29 @@ function readWriterPauseFromWrangler(remote: boolean): ReturnType<typeof parseYi
 
 function setWriterPauseInWrangler(remote: boolean, operator: string | null): void {
   const payload = buildYieldHistoryWriterPausePayload("yield-history-cleanup", operator);
-  execRemoteStatements([
-    `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)}, ${sqlValue(JSON.stringify(payload))}, ${payload.pausedAt})`,
-  ], remote);
+  execRemoteStatements(
+    [
+      `INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)}, ${sqlValue(JSON.stringify(payload))}, ${payload.pausedAt})`,
+    ],
+    remote,
+  );
 }
 
 function clearWriterPauseInWrangler(remote: boolean): void {
-  execRemoteStatements([
-    // SAFETY: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY is a fixed repo constant,
-    // not user input, and sqlValue() still quotes it defensively.
-    `DELETE FROM cache WHERE key = ${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)}`,
-  ], remote);
+  execRemoteStatements(
+    [
+      // SAFETY: YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY is a fixed repo constant,
+      // not user input, and sqlValue() still quotes it defensively.
+      `DELETE FROM cache WHERE key = ${sqlValue(YIELD_HISTORY_CLEANUP_WRITER_PAUSE_KEY)}`,
+    ],
+    remote,
+  );
 }
 
 function isYieldWriterActiveInWrangler(remote: boolean): boolean {
   const now = Math.floor(Date.now() / 1000);
-  const rows = queryRemoteRows(
-    `SELECT lease_until FROM cron_leases WHERE job = 'sync-yield-data' LIMIT 1`,
-    remote,
-  );
-  const leaseUntil = rows[0] && typeof rows[0].lease_until === "number"
-    ? rows[0].lease_until
-    : null;
+  const rows = queryRemoteRows(`SELECT lease_until FROM cron_leases WHERE job = 'sync-yield-data' LIMIT 1`, remote);
+  const leaseUntil = rows[0] && typeof rows[0].lease_until === "number" ? rows[0].lease_until : null;
   return leaseUntil != null && leaseUntil >= now;
 }
 
@@ -408,9 +370,7 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  const beforeRows = sqlitePath
-    ? loadCleanupRowsFromSqlite(sqlitePath)
-    : loadCleanupRowsFromWrangler(remote);
+  const beforeRows = sqlitePath ? loadCleanupRowsFromSqlite(sqlitePath) : loadCleanupRowsFromWrangler(remote);
   const beforeSummary = summarizeYieldHistoryCleanupRows(beforeRows);
 
   if (exportPath) {
@@ -436,9 +396,7 @@ async function main(argv: string[]): Promise<void> {
   if (!sqlitePath) {
     const writerPause = readWriterPauseFromWrangler(remote);
     if (!writerPause) {
-      throw new Error(
-        `Writer pause guard is not armed. Run --arm-writer-pause before --execute.`,
-      );
+      throw new Error(`Writer pause guard is not armed. Run --arm-writer-pause before --execute.`);
     }
     if (isYieldWriterActiveInWrangler(remote)) {
       throw new Error("sync-yield-data lease is active; aborting cleanup.");
@@ -451,9 +409,7 @@ async function main(argv: string[]): Promise<void> {
     deleteCleanupRowsFromWrangler(remote);
   }
 
-  const afterRows = sqlitePath
-    ? loadCleanupRowsFromSqlite(sqlitePath)
-    : loadCleanupRowsFromWrangler(remote);
+  const afterRows = sqlitePath ? loadCleanupRowsFromSqlite(sqlitePath) : loadCleanupRowsFromWrangler(remote);
   const afterSummary = summarizeYieldHistoryCleanupRows(afterRows);
 
   printJson({

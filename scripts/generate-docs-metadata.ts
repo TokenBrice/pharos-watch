@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DOCS } from "../shared/lib/public-docs";
+import { syncGeneratedArtifacts } from "./lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = join(__dirname, "../src/generated/docs-metadata.json");
+const CHECK_MODE = process.argv.includes("--check");
 const HISTORY_FALLBACKS: Record<string, string> = {};
 
 interface DocMetadata {
@@ -53,6 +54,10 @@ for (const doc of PUBLIC_DOCS) {
   };
 }
 
-mkdirSync(dirname(OUTPUT), { recursive: true });
-writeFileSync(OUTPUT, JSON.stringify(metadata, null, 2) + "\n", "utf-8");
-console.log(`Generated docs metadata for ${PUBLIC_DOCS.length} public docs`);
+syncGeneratedArtifacts({
+  artifacts: [{ path: OUTPUT, contents: JSON.stringify(metadata, null, 2) + "\n" }],
+  check: CHECK_MODE,
+  staleMessage: "src/generated/docs-metadata.json is out of date. Run `tsx scripts/generate-docs-metadata.ts`.",
+  currentMessage: `Docs metadata is current for ${PUBLIC_DOCS.length} public docs`,
+  writtenMessage: `Generated docs metadata for ${PUBLIC_DOCS.length} public docs`,
+});

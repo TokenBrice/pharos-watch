@@ -149,6 +149,7 @@ describe("validate-ci parity", () => {
 
     expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
     expect(packageJson.scripts.prebuild).toBe("node scripts/run-generated-artifacts.mjs");
+    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/run-generated-artifacts.mjs --check");
     expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/run-noncritical-tests.mjs");
     expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
@@ -156,7 +157,6 @@ describe("validate-ci parity", () => {
       "npm run audit:pricing-providers",
       "npm run lint",
       "npm run typecheck",
-      "npm run check:cemetery-dataset",
       "npm run check:agent-doc-sync",
       "npm run check:cron-abort-contract",
       "npm run check:cron-connections",
@@ -167,16 +167,13 @@ describe("validate-ci parity", () => {
       "npm run check:duplicate-exports",
       "npm run check:env-contract",
       "npm run check:frozen-invariants",
+      "npm run check:generated-artifacts",
       "npm run check:hotspot-ratchet",
-      "npm run check:llms-txt",
       "npm run check:migrations",
-      "npm run check:openapi",
-      "npm run check:postman",
       "npm run check:redemption-backstops",
       "npm run check:shared-cycles",
       "npm run check:sql-safety",
       "npm run check:stablecoin-data",
-      "npm run check:stablecoin-frozen-registry",
       "npm run check:supply-helper-usage",
       "npm run check:unused-code",
       "npm run check:verified-doc-links",
@@ -196,6 +193,16 @@ describe("validate-ci parity", () => {
       "node scripts/generate-stablecoin-frozen-registry.mjs",
       "node scripts/generate-api-reference.mjs",
     ];
+    const expectedCheckCommands = [
+      "tsx scripts/generate-sitemap-dates.ts --check",
+      "tsx scripts/generate-docs-metadata.ts --check",
+      "tsx scripts/generate-cemetery-dataset.ts --check",
+      "tsx scripts/generate-postman-collection.ts --check",
+      "tsx scripts/generate-openapi-spec.ts --check",
+      "tsx scripts/generate-llms-txt.ts --check",
+      "node scripts/generate-stablecoin-frozen-registry.mjs --check",
+      "node scripts/generate-api-reference.mjs --check",
+    ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
       "sitemap-dates",
@@ -208,13 +215,17 @@ describe("validate-ci parity", () => {
       "api-reference",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
+    expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
       "scripts/generate-sitemap-dates.ts",
       "scripts/generate-docs-metadata.ts",
     ]);
+    expect(buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands))).toEqual(
+      expectedCommands.map((cmd) => [[cmd]]),
+    );
     expect(
-      buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands)),
-    ).toEqual(expectedCommands.map((cmd) => [[cmd]]));
+      buildGeneratedArtifactExecutionBatches({ check: true }).map((batch) => batch.map((unit) => unit.commands)),
+    ).toEqual(expectedCheckCommands.map((cmd) => [[cmd]]));
   });
 
   it("keeps the prebuild runner bounded while preserving the shared command set", () => {

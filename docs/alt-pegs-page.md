@@ -23,7 +23,7 @@ This route is intentionally not a generic filtered stablecoin table and not a pa
 - **Client implementation:** `src/app/alt-pegs/client.tsx`
 - **Route-local history chart:** `src/app/alt-pegs/alt-peg-cohort-history-chart.tsx`
 - **Shared frontend model:** `src/lib/alt-peg-market.ts`
-- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/cohort-directory.test.tsx`, `src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx`, `src/components/__tests__/non-usd-share-chart.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
+- **Tests:** `src/app/alt-pegs/page.test.tsx`, `src/app/alt-pegs/client.test.tsx`, `src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx`, `src/app/alt-pegs/fiat-world-atlas/__tests__/world-atlas.test.tsx`, `src/components/__tests__/non-usd-share-chart.test.tsx`, `src/lib/__tests__/alt-peg-market.test.ts`
 
 The route renders through `createClientFeaturePage(...)` / `FeaturePageShell` with:
 

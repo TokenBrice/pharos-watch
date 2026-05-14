@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  parseEventArgs,
-  runEventReconciliation,
-} from "../reconcile-blacklist-events-from-kyc-rip";
+import { parseEventArgs, runEventReconciliation } from "../reconcile-blacklist-events-from-kyc-rip";
 import type { RemoteD1Client } from "../lib/remote-d1";
 
 type D1Mock = RemoteD1Client & {
@@ -25,6 +22,7 @@ function createD1Mock(): D1Mock {
   const executeStatementsMock = vi.fn();
   return {
     query: queryMock as RemoteD1Client["query"],
+    queryRaw: vi.fn() as RemoteD1Client["queryRaw"],
     executeStatements: executeStatementsMock as RemoteD1Client["executeStatements"],
     queryMock,
     executeStatementsMock,

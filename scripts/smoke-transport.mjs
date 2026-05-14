@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { assert, parsePositiveInt } from "./lib/smoke-runtime.mjs";
+import { assert, parseCliOptions, parsePositiveInt, readEnvFirst, readPositiveIntEnv } from "./lib/smoke-runtime.mjs";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_API_URL = "http://api.pharos.watch/api/health?smoke=transport";
@@ -8,24 +8,25 @@ const DEFAULT_SITE_API_URL = "http://site-api.pharos.watch/api/stablecoins?limit
 
 function parseArgs(argv) {
   const args = {
-    apiUrl: process.env.SMOKE_TRANSPORT_API_URL ?? DEFAULT_API_URL,
-    siteApiUrl: process.env.SMOKE_TRANSPORT_SITE_API_URL ?? DEFAULT_SITE_API_URL,
-    timeoutMs: parsePositiveInt(process.env.SMOKE_TRANSPORT_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
+    apiUrl: readEnvFirst("SMOKE_TRANSPORT_API_URL", DEFAULT_API_URL),
+    siteApiUrl: readEnvFirst("SMOKE_TRANSPORT_SITE_API_URL", DEFAULT_SITE_API_URL),
+    timeoutMs: readPositiveIntEnv("SMOKE_TRANSPORT_TIMEOUT_MS", DEFAULT_TIMEOUT_MS),
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--api-url") {
-      args.apiUrl = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--site-api-url") {
-      args.siteApiUrl = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--timeout-ms") {
-      args.timeoutMs = parsePositiveInt(argv[i + 1], args.timeoutMs);
-      i += 1;
-    }
-  }
+  parseCliOptions(argv, {
+    "--api-url": ({ readValue }) => {
+      args.apiUrl = readValue();
+      return "value";
+    },
+    "--site-api-url": ({ readValue }) => {
+      args.siteApiUrl = readValue();
+      return "value";
+    },
+    "--timeout-ms": ({ readValue }) => {
+      args.timeoutMs = parsePositiveInt(readValue(), args.timeoutMs);
+      return "value";
+    },
+  });
 
   return args;
 }

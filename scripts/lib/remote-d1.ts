@@ -1,42 +1,104 @@
 import { execFileSync } from "node:child_process";
-import { writeFileSync, unlinkSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const DEFAULT_SQL_BATCH_SIZE = 200;
 const DEFAULT_MAX_BUFFER = 50 * 1024 * 1024;
 
+export type D1Target = "remote" | "local";
+
+export type D1ClientOptions = {
+  batchSize?: number;
+  cwd?: string;
+  maxBuffer?: number;
+  target?: D1Target;
+};
+
+export type D1Client = {
+  query<T>(sql: string): T[];
+  queryRaw(sql: string): string;
+  executeStatements(statements: string[], prefix: string): void;
+};
+
+export type RemoteD1Client = D1Client;
+
+export function sqlString(value: string | null): string {
+  if (value == null) return "NULL";
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function executeWrangler(args: string[], options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer">>): string {
+  return execFileSync("npx", ["wrangler", ...args], {
+    cwd: options.cwd,
+    encoding: "utf8",
+    maxBuffer: options.maxBuffer,
+    stdio: "pipe",
+  });
+}
+
+function executeSqlFile(
+  databaseName: string,
+  statements: string[],
+  prefix: string,
+  options: Required<Pick<D1ClientOptions, "cwd" | "maxBuffer" | "target">>,
+): void {
+  if (statements.length === 0) return;
+
+  const tmpDir = mkdtempSync(join(tmpdir(), `${prefix}-`));
+  try {
+    const sqlFile = join(tmpDir, "statements.sql");
+    // Temp SQL file is created under mkdtempSync() and never leaves this function.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    writeFileSync(sqlFile, statements.join("\n"));
+    executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+export function createD1Client(databaseName: string, options: D1ClientOptions = {}): D1Client {
+  const resolvedOptions = {
+    batchSize: options.batchSize ?? DEFAULT_SQL_BATCH_SIZE,
+    cwd: options.cwd ?? process.cwd(),
+    maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
+    target: options.target ?? "remote",
+  } satisfies Required<D1ClientOptions>;
+  const queryRaw = (sql: string): string =>
+    executeWrangler(
+      ["d1", "execute", databaseName, `--${resolvedOptions.target}`, "--command", sql, "--json"],
+      resolvedOptions,
+    );
+
+  return {
+    query<T>(sql: string): T[] {
+      const parsed = JSON.parse(queryRaw(sql));
+      return parsed[0]?.results ?? [];
+    },
+    queryRaw,
+    executeStatements(statements: string[], prefix: string): void {
+      for (let index = 0; index < statements.length; index += resolvedOptions.batchSize) {
+        executeSqlFile(
+          databaseName,
+          statements.slice(index, index + resolvedOptions.batchSize),
+          prefix,
+          resolvedOptions,
+        );
+      }
+    },
+  };
+}
+
 export function d1Query(databaseName: string, sql: string): string {
-  return execFileSync(
-    "npx",
-    ["wrangler", "d1", "execute", databaseName, "--remote", "--command", sql, "--json"],
-    { encoding: "utf-8", maxBuffer: DEFAULT_MAX_BUFFER, stdio: "pipe" },
-  );
+  return createD1Client(databaseName).queryRaw(sql);
 }
 
 export function d1QueryParsed<T>(databaseName: string, sql: string): T[] {
-  const parsed = JSON.parse(d1Query(databaseName, sql));
-  return parsed[0]?.results ?? [];
+  return createD1Client(databaseName).query<T>(sql);
 }
 
 export function d1ExecFile(databaseName: string, statements: string[], prefix: string): void {
-  if (statements.length === 0) return;
-
-  const tmpFile = join(tmpdir(), `${prefix}-${Date.now()}.sql`);
-  try {
-    writeFileSync(tmpFile, statements.join("\n")); // eslint-disable-line security/detect-non-literal-fs-filename
-    execFileSync(
-      "npx",
-      ["wrangler", "d1", "execute", databaseName, "--remote", "--file", tmpFile, "--json"],
-      { encoding: "utf-8", maxBuffer: DEFAULT_MAX_BUFFER, stdio: "pipe" },
-    );
-  } finally {
-    try {
-      unlinkSync(tmpFile); // eslint-disable-line security/detect-non-literal-fs-filename
-    } catch {
-      // best-effort cleanup for temporary SQL files
-    }
-  }
+  createD1Client(databaseName).executeStatements(statements, prefix);
 }
 
 export function d1BatchExec(
@@ -44,14 +106,8 @@ export function d1BatchExec(
   statements: string[],
   options?: { batchSize?: number; prefix?: string },
 ): void {
-  const batchSize = options?.batchSize ?? DEFAULT_SQL_BATCH_SIZE;
-  const prefix = options?.prefix ?? "remote-d1";
-
-  for (let i = 0; i < statements.length; i += batchSize) {
-    const chunk = statements.slice(i, i + batchSize);
-    d1ExecFile(databaseName, chunk, prefix);
-    if (i + batchSize < statements.length) {
-      process.stdout.write(`    batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(statements.length / batchSize)}...\r`);
-    }
-  }
+  createD1Client(databaseName, { batchSize: options?.batchSize }).executeStatements(
+    statements,
+    options?.prefix ?? "remote-d1",
+  );
 }

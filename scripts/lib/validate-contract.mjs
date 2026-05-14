@@ -3,7 +3,6 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run audit:pricing-providers",
   "npm run lint",
   "npm run typecheck",
-  "npm run check:cemetery-dataset",
   "npm run check:agent-doc-sync",
   "npm run check:cron-abort-contract",
   "npm run check:cron-connections",
@@ -14,16 +13,13 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:duplicate-exports",
   "npm run check:env-contract",
   "npm run check:frozen-invariants",
+  "npm run check:generated-artifacts",
   "npm run check:hotspot-ratchet",
-  "npm run check:llms-txt",
   "npm run check:migrations",
-  "npm run check:openapi",
-  "npm run check:postman",
   "npm run check:redemption-backstops",
   "npm run check:shared-cycles",
   "npm run check:sql-safety",
   "npm run check:stablecoin-data",
-  "npm run check:stablecoin-frozen-registry",
   "npm run check:supply-helper-usage",
   "npm run check:unused-code",
   "npm run check:verified-doc-links",
@@ -35,9 +31,7 @@ export const VALIDATE_PREBUILD_MAX_PARALLEL = 8;
 
 // Keep the top-level CI/merge-gate contract as the umbrella script while the
 // package-level implementation delegates to the shared registry above.
-export const COMMON_VALIDATE_PREBUILD_COMMANDS = [
-  "npm run validate:prebuild",
-];
+export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
@@ -46,10 +40,7 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run check:classifier-sensitive-copy",
 ];
 
-export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
-  "npm run test:noncritical",
-  "npm run coverage:critical",
-];
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = ["npm run test:noncritical", "npm run coverage:critical"];
 
 export const NONCRITICAL_TEST_SHARD_COUNT = 3;
 
@@ -60,15 +51,9 @@ export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_
   });
 }
 
-export const WORKER_VALIDATE_COMMANDS = [
-  "npm run typecheck:worker",
-  "npm run typecheck:worker-scripts",
-];
+export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker", "npm run typecheck:worker-scripts"];
 
-export function buildValidateCommandPlan({
-  pagesChanged = true,
-  workerChanged = true,
-} = {}) {
+export function buildValidateCommandPlan({ pagesChanged = true, workerChanged = true } = {}) {
   return [
     ...COMMON_VALIDATE_PREBUILD_COMMANDS,
     ...(pagesChanged ? PAGES_VALIDATE_COMMANDS : []),
@@ -77,11 +62,7 @@ export function buildValidateCommandPlan({
   ];
 }
 
-export function buildCiValidateStepPlan({
-  pagesChanged = true,
-  runPagesBuild = true,
-  workerChanged = true,
-} = {}) {
+export function buildCiValidateStepPlan({ pagesChanged = true, runPagesBuild = true, workerChanged = true } = {}) {
   return [
     ...COMMON_VALIDATE_PREBUILD_COMMANDS.map((cmd) => ({ cmd, condition: null })),
     ...PAGES_VALIDATE_COMMANDS.map((cmd) => ({

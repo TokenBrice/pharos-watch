@@ -6,7 +6,7 @@ vi.mock("node:child_process", () => ({
   execFileSync: execFileSyncMock,
 }));
 
-const { d1ExecFile, d1Query } = await import("../lib/remote-d1");
+const { d1ExecFile, d1Query, sqlString } = await import("../lib/remote-d1");
 
 describe("remote-d1 helpers", () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe("remote-d1 helpers", () => {
     expect(execFileSyncMock).toHaveBeenCalledWith(
       "npx",
       ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--command", "SELECT 1", "--json"],
-      expect.objectContaining({ encoding: "utf-8", stdio: "pipe" }),
+      expect.objectContaining({ encoding: "utf8", stdio: "pipe" }),
     );
   });
 
@@ -36,8 +36,13 @@ describe("remote-d1 helpers", () => {
       "stablecoin-db",
       "--remote",
       "--file",
-      expect.stringMatching(/test-remote-d1-\d+\.sql$/),
+      expect.stringMatching(/test-remote-d1-.+\/statements\.sql$/),
       "--json",
     ]);
+  });
+
+  it("escapes SQL string literals", () => {
+    expect(sqlString("O'Hara")).toBe("'O''Hara'");
+    expect(sqlString(null)).toBe("NULL");
   });
 });

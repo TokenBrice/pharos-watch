@@ -1,52 +1,29 @@
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  createD1Client,
+  sqlString,
+  type D1Client,
+  type D1Target,
+  type RemoteD1Client,
+} from "../../../scripts/lib/remote-d1";
 
-const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
+export { sqlString, type RemoteD1Client };
 
-export type RemoteD1Client = {
-  query<T>(sql: string): T[];
-  executeStatements(statements: string[], prefix: string): void;
-};
+const WORKER_CWD = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-export function sqlString(value: string | null): string {
-  if (value == null) return "NULL";
-  return `'${value.replace(/'/g, "''")}'`;
-}
-
-function getWorkerCwd(): string {
-  return process.cwd().endsWith("/worker") ? process.cwd() : join(process.cwd(), "worker");
-}
-
-function executeWrangler(args: string[]): string {
-  return execFileSync("npx", ["wrangler", ...args], {
-    cwd: getWorkerCwd(),
-    encoding: "utf8",
-    maxBuffer: DEFAULT_MAX_BUFFER,
-    stdio: "pipe",
+export function createWorkerD1Client(
+  database: string,
+  target: D1Target = "remote",
+  options: { cwd?: string } = {},
+): D1Client {
+  return createD1Client(database, {
+    cwd: options.cwd ?? WORKER_CWD,
+    maxBuffer: 64 * 1024 * 1024,
+    target,
   });
 }
 
 export function createRemoteD1Client(database: string): RemoteD1Client {
-  return {
-    query<T>(sql: string): T[] {
-      const raw = executeWrangler(["d1", "execute", database, "--remote", "--json", "--command", sql]);
-      return JSON.parse(raw)[0]?.results ?? [];
-    },
-    executeStatements(statements: string[], prefix: string): void {
-      if (statements.length === 0) return;
-
-      const tmpDir = mkdtempSync(join(tmpdir(), `${prefix}-`));
-      try {
-        const sqlFile = join(tmpDir, "statements.sql");
-        // Temp SQL file is created under mkdtempSync() and never leaves this function.
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        writeFileSync(sqlFile, statements.join("\n"));
-        executeWrangler(["d1", "execute", database, "--remote", "--json", "--file", sqlFile]);
-      } finally {
-        rmSync(tmpDir, { recursive: true, force: true });
-      }
-    },
-  };
+  return createWorkerD1Client(database, "remote");
 }

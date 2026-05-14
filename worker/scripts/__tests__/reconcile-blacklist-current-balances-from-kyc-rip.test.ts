@@ -19,6 +19,7 @@ function createD1Mock(): D1Mock {
   const executeStatementsMock = vi.fn();
   return {
     query: queryMock as RemoteD1Client["query"],
+    queryRaw: vi.fn() as RemoteD1Client["queryRaw"],
     executeStatements: executeStatementsMock as RemoteD1Client["executeStatements"],
     queryMock,
     executeStatementsMock,
@@ -92,10 +93,12 @@ describe("current-balance kyc.rip reconciliation", () => {
     const fetchImpl = vi.fn().mockResolvedValue(okPayload([currentRows[0]]));
     const d1 = createD1Mock();
 
-    await expect(runCurrentBalanceReconciliation(
-      { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 2 },
-      { fetchImpl, d1 },
-    )).rejects.toThrow(/below minimum/);
+    await expect(
+      runCurrentBalanceReconciliation(
+        { apply: true, remote: true, database: "stablecoin-db", timeoutMs: 1000, minRows: 2 },
+        { fetchImpl, d1 },
+      ),
+    ).rejects.toThrow(/below minimum/);
 
     expect(d1.queryMock).not.toHaveBeenCalled();
     expect(d1.executeStatementsMock).not.toHaveBeenCalled();

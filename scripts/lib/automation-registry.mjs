@@ -7,10 +7,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "package.json",
       "scripts/classify-deploy-changes.mjs",
     ],
-    prefixes: [
-      ".github/actions/",
-      "scripts/lib/",
-    ],
+    prefixes: [".github/actions/", "scripts/lib/"],
   },
   fullDeployGuardrails: {
     exactPaths: [
@@ -65,13 +62,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "scripts/sync-digests.ts",
       "tsconfig.json",
     ],
-    prefixes: [
-      "data/",
-      "functions/",
-      "public/",
-      "shared/",
-      "src/",
-    ],
+    prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
     workflowOnlyExactPaths: [
       ".github/workflows/pages-prepare.yml",
       ".github/workflows/pages-publish.yml",
@@ -86,22 +77,11 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "scripts/check-worker-migrations.mjs",
       "scripts/smoke-api.mjs",
     ],
-    prefixes: [
-      "shared/",
-      "worker/",
-    ],
+    prefixes: ["shared/", "worker/"],
   },
   workerPromotion: {
-    exactPaths: [
-      "worker/package.json",
-      "worker/tsconfig.json",
-      "worker/wrangler.toml",
-    ],
-    prefixes: [
-      "worker/assets/",
-      "worker/migrations/",
-      "worker/src/",
-    ],
+    exactPaths: ["worker/package.json", "worker/tsconfig.json", "worker/wrangler.toml"],
+    prefixes: ["worker/assets/", "worker/migrations/", "worker/src/"],
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",
       "shared/lib/public-docs.ts",
@@ -155,12 +135,14 @@ export const DEPLOY_IMPACT_REGISTRY = {
 export const GENERATED_ARTIFACT_REGISTRY = [
   {
     id: "sitemap-dates",
+    checkCommand: "tsx scripts/generate-sitemap-dates.ts --check",
     command: "tsx scripts/generate-sitemap-dates.ts",
     noncriticalTestPrerequisite: true,
     script: "scripts/generate-sitemap-dates.ts",
   },
   {
     id: "docs-metadata",
+    checkCommand: "tsx scripts/generate-docs-metadata.ts --check",
     command: "tsx scripts/generate-docs-metadata.ts",
     noncriticalTestPrerequisite: true,
     script: "scripts/generate-docs-metadata.ts",
@@ -213,7 +195,7 @@ export function buildGeneratedArtifactCommands({ check = false } = {}) {
 }
 
 export function getNoncriticalTestGeneratedPrerequisites() {
-  return GENERATED_ARTIFACT_REGISTRY
-    .filter((artifact) => artifact.noncriticalTestPrerequisite === true)
-    .map((artifact) => artifact.script);
+  return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => artifact.noncriticalTestPrerequisite === true).map(
+    (artifact) => artifact.script,
+  );
 }

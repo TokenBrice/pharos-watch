@@ -17,14 +17,20 @@ describe("worker remote D1 script helpers", () => {
   });
 
   it("executes D1 queries without shell interpolation", () => {
+    const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue("/tmp/not-pharos/worker/scripts");
     const client = createRemoteD1Client("stablecoin-db");
     const rows = client.query("SELECT 1");
 
     expect(rows).toEqual([]);
+    cwdSpy.mockRestore();
     expect(execFileSyncMock).toHaveBeenCalledWith(
       "npx",
-      ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--json", "--command", "SELECT 1"],
-      expect.objectContaining({ encoding: "utf8", stdio: "pipe" }),
+      ["wrangler", "d1", "execute", "stablecoin-db", "--remote", "--command", "SELECT 1", "--json"],
+      expect.objectContaining({
+        cwd: expect.stringMatching(/\/worker$/),
+        encoding: "utf8",
+        stdio: "pipe",
+      }),
     );
   });
 
@@ -35,7 +41,7 @@ describe("worker remote D1 script helpers", () => {
 
     const call = execFileSyncMock.mock.calls[0] as unknown[] | undefined;
     const args = call?.[1] as string[] | undefined;
-    const fileArg = args?.[args.length - 1];
+    const fileArg = args?.[args.length - 2];
     expect(args).toBeDefined();
     expect(args).toEqual([
       "wrangler",
@@ -43,9 +49,9 @@ describe("worker remote D1 script helpers", () => {
       "execute",
       "stablecoin-db",
       "--remote",
-      "--json",
       "--file",
       expect.stringMatching(/worker-remote-d1-test-.+\/statements\.sql$/),
+      "--json",
     ]);
     expect(fileArg).toBeTypeOf("string");
     // Test-owned path captured from the mocked wrangler invocation.

@@ -1,6 +1,6 @@
 # Agent Task Router
 
-Fast path for agents to identify the smallest useful context set before editing. This complements, but does not replace, the verified docs index in [README.md](./README.md).
+Primary pre-edit routing guide for agents to identify the smallest useful context set before editing. This complements, but does not replace, the verified docs index in [README.md](./README.md).
 
 Use this order:
 

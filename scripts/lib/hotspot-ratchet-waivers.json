@@ -1,8 +1,4 @@
 {
-  "src/components/command-palette.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The command palette still combines indexing, keyboard handling, and rendering in one shell. Keep it waived until the navigation/search UI cleanup lane is scheduled."
-  },
   "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
     "disposition": "deferred",
     "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
@@ -79,10 +75,6 @@
     "disposition": "queued-p4",
     "notes": "DEWS source-state orchestration remains coupled with legacy compatibility and migration-aware fallback paths. Keep this file waived until the next tranche extracts source hydration and legacy bridge responsibilities into narrower helper modules."
   },
-  "worker/src/cron/telegram-pending-queue.ts": {
-    "disposition": "queued-p4",
-    "notes": "Pending delivery queue owns drain selection, TTL/dead-letter handling, rate-limit backoff, two-strike blocked handling, and priority enqueue semantics. Keep waived until the durable sender promotion; then split subscriber lifecycle, enqueue/dedupe, and drain execution helpers."
-  },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield page view-model still centralizes ranking filters, aggregate stats, source-board projection, and table shaping. It surfaced after the detail view-model split reduced other candidates; keep explicitly waived until a dedicated yield UI model decomposition pass."
@@ -90,5 +82,25 @@
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",
     "notes": "Pre-launch detail presentation combines readiness, launch metadata, links, and timeline copy for a narrow route surface. It surfaced after nearby complexity reductions; split data shaping from rendering in a later pre-launch UI cleanup rather than widening this tranche."
+  },
+  "worker/src/lib/telegram-usage-analytics.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after splitting Telegram pending queue and command palette hotspots. Usage analytics still centralizes dimension normalization, D1 rollups, and delivery outcome attribution; split aggregation and persistence in a dedicated Telegram analytics cleanup."
+  },
+  "worker/src/cron/yield-sync/publication.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after current frontend and Telegram reductions. Yield publication still coordinates ranking provenance, history rows, decisions, and atomic publication batches; split row builders from persistence in a dedicated yield publication pass."
+  },
+  "worker/src/api/telegram-webhook.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Telegram queue decomposition. Webhook ingress still combines update parsing, command dispatch, callback handling, and auth/error response glue; split command adapters after callback/store modules settle."
+  },
+  "worker/src/api/backfill-depegs.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after adjacent admin cleanup. Backfill depegs still mixes request parsing, historical replay setup, PSI side effects, and mutation orchestration; split planning from execution in a focused depeg admin pass."
+  },
+  "src/app/compare/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after command palette and portfolio model extraction. Compare client still owns URL state, selection, chart/table composition, and share actions; split route state from section rendering in a dedicated compare cleanup."
   }
 }

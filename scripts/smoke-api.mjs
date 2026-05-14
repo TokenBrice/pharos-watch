@@ -5,8 +5,13 @@ import { fileURLToPath } from "url";
 import {
   assert,
   formatError,
+  parseCliOptions,
   parseNonNegativeInt,
   parsePositiveInt,
+  readBooleanEnv,
+  readEnvFirst,
+  readNonNegativeIntEnv,
+  readPositiveIntEnv,
   sleep,
 } from "./lib/smoke-runtime.mjs";
 
@@ -29,38 +34,41 @@ const DEFAULT_RETRY_DELAY_MS = 1_500;
 
 function parseArgs(argv) {
   const args = {
-    baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "",
-    requireApiKey: parseBoolean(process.env.SMOKE_API_REQUIRE_KEY, process.env.CI === "true"),
-    timeoutMs: parsePositiveInt(process.env.SMOKE_API_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
-    retryCount: parseNonNegativeInt(process.env.SMOKE_API_RETRY_COUNT, DEFAULT_RETRY_COUNT),
-    retryDelayMs: parsePositiveInt(process.env.SMOKE_API_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS),
+    baseUrl: readEnvFirst(["SMOKE_API_BASE", "API_BASE_URL"]),
+    requireApiKey: readBooleanEnv("SMOKE_API_REQUIRE_KEY", process.env.CI === "true"),
+    timeoutMs: readPositiveIntEnv("SMOKE_API_TIMEOUT_MS", DEFAULT_TIMEOUT_MS),
+    retryCount: readNonNegativeIntEnv("SMOKE_API_RETRY_COUNT", DEFAULT_RETRY_COUNT),
+    retryDelayMs: readPositiveIntEnv("SMOKE_API_RETRY_DELAY_MS", DEFAULT_RETRY_DELAY_MS),
   };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--base-url" || arg === "--base") {
-      args.baseUrl = argv[i + 1] ?? "";
-      i += 1;
-    } else if (arg === "--timeout-ms") {
-      args.timeoutMs = parsePositiveInt(argv[i + 1], args.timeoutMs);
-      i += 1;
-    } else if (arg === "--retry-count") {
-      args.retryCount = parseNonNegativeInt(argv[i + 1], args.retryCount);
-      i += 1;
-    } else if (arg === "--retry-delay-ms") {
-      args.retryDelayMs = parsePositiveInt(argv[i + 1], args.retryDelayMs);
-      i += 1;
-    } else if (arg === "--require-api-key") {
+  parseCliOptions(argv, {
+    "--base-url": ({ readValue }) => {
+      args.baseUrl = readValue();
+      return "value";
+    },
+    "--base": ({ readValue }) => {
+      args.baseUrl = readValue();
+      return "value";
+    },
+    "--timeout-ms": ({ readValue }) => {
+      args.timeoutMs = parsePositiveInt(readValue(), args.timeoutMs);
+      return "value";
+    },
+    "--retry-count": ({ readValue }) => {
+      args.retryCount = parseNonNegativeInt(readValue(), args.retryCount);
+      return "value";
+    },
+    "--retry-delay-ms": ({ readValue }) => {
+      args.retryDelayMs = parsePositiveInt(readValue(), args.retryDelayMs);
+      return "value";
+    },
+    "--require-api-key": () => {
       args.requireApiKey = true;
-    } else if (arg === "--allow-unauthenticated") {
+    },
+    "--allow-unauthenticated": () => {
       args.requireApiKey = false;
-    }
-  }
+    },
+  });
   return args;
-}
-
-function parseBoolean(value, fallback) {
-  if (value == null || value.trim() === "") return fallback;
-  return /^(1|true|yes|on)$/i.test(value.trim());
 }
 
 function ensureBaseUrl(input) {
