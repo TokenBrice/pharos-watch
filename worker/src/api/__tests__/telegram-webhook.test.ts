@@ -2003,6 +2003,39 @@ describe("handleTelegramWebhook", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("reminds the initiating user when a pending selection reply is invalid", async () => {
+    const ambiguous = resolveTicker("USDF");
+    if (ambiguous.status !== "ambiguous") {
+      throw new Error("Expected USDF to be ambiguous for invalid selection reminder test");
+    }
+
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "subscribe",
+          action_payload: JSON.stringify({ alertTypes: ["dews"] }),
+          alert_types: JSON.stringify(["dews"]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "USDF",
+          candidates: JSON.stringify(ambiguous.matches),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "not a number"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_subscriptions"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+    expect(sentMessageBody().text).toContain("Reply with the number(s) you want");
+    expect(sentMessageBody().text).toContain("USDF");
+  });
+
   it("allows the initiating group member to complete a pending selection", async () => {
     const ambiguous = resolveTicker("USDF");
     if (ambiguous.status !== "ambiguous") {

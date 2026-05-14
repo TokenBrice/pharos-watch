@@ -31,6 +31,10 @@
     "disposition": "queued-p4",
     "notes": "Callback routing now owns setup, settings, status, discovery, watchlist management, snooze, and per-coin alert toggles. Keep it waived after the command dispatcher split; the next Telegram decomposition pass should extract action-specific callback handlers."
   },
+  "worker/src/api/telegram-webhook.ts": {
+    "disposition": "queued-p4",
+    "notes": "Webhook ingress still coordinates transport validation, pending-state dispatch, command routing, and update lifecycle marking. Keep explicitly waived for this remediation branch; the next Telegram decomposition pass should move the pending-owner command clearing branch into a narrower dispatcher helper."
+  },
   "src/app/pharoswatchbot/page.tsx": {
     "disposition": "queued-p4",
     "notes": "Static product landing page grew with the How-It-Works section, DEWS bands explainer, and JSON-LD block added in the 2026-04-17 telegram bot comprehensive audit. All content is intentionally colocated. Defer decomposition until another product-page cleanup pass."
@@ -74,10 +78,6 @@
   "worker/src/cron/dews/source-state.ts": {
     "disposition": "queued-p4",
     "notes": "DEWS source-state orchestration remains coupled with legacy compatibility and migration-aware fallback paths. Keep this file waived until the next tranche extracts source hydration and legacy bridge responsibilities into narrower helper modules."
-  },
-  "src/lib/yield-view-model.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield page view-model still centralizes ranking filters, aggregate stats, source-board projection, and table shaping. It surfaced after the detail view-model split reduced other candidates; keep explicitly waived until a dedicated yield UI model decomposition pass."
   },
   "src/components/pre-launch-detail.tsx": {
     "disposition": "queued-p4",

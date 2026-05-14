@@ -68,33 +68,30 @@ const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 type SubscriberQueueEntry = ReturnType<typeof buildSubscriberQueue>[number];
 
 function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
-  return sub.chunks.map((chunk, chunkIndex) =>
-    buildDedupeKey({
-      chatId: sub.chatId,
-      html: chunk,
-      canonicalHtml: sub.canonicalHtml,
-      disableNotification: sub.disableNotification,
-      chunkIndex,
-      alertType: sub.alertType,
-    })
-  );
+  return sub.chunks.map((chunk, chunkIndex) => buildDedupeKey({
+    chatId: sub.chatId,
+    html: chunk,
+    canonicalHtml: sub.canonicalHtml,
+    disableNotification: sub.disableNotification,
+    chunkIndex,
+    alertType: sub.alertType,
+  }));
 }
 
-async function filterAlreadyTerminalSubscribers(
+async function pruneAlreadyTerminalSubscribers(
   db: D1Database,
   subscriberQueue: SubscriberQueueEntry[],
-): Promise<{ subscriberQueue: SubscriberQueueEntry[]; terminalKeys: Set<string> }> {
+): Promise<Set<string>> {
   const targetKeys = subscriberQueue.flatMap(targetKeysForSubscriber);
-  if (targetKeys.length === 0) return { subscriberQueue, terminalKeys: new Set() };
+  if (targetKeys.length === 0) return new Set();
   const terminalKeys = await loadTerminalTelegramAlertTargetKeys(db, targetKeys);
-  if (terminalKeys.size === 0) return { subscriberQueue, terminalKeys };
-  return {
-    subscriberQueue: subscriberQueue.filter((sub) => {
-      const keys = targetKeysForSubscriber(sub);
-      return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
-    }),
-    terminalKeys,
-  };
+  if (terminalKeys.size === 0) return terminalKeys;
+  const filteredQueue = subscriberQueue.filter((sub) => {
+    const keys = targetKeysForSubscriber(sub);
+    return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
+  });
+  subscriberQueue.splice(0, subscriberQueue.length, ...filteredQueue);
+  return terminalKeys;
 }
 
 async function readPresetFailureCount(db: D1Database): Promise<number> {
@@ -281,7 +278,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       perCoinSnoozeMap,
     );
 
-    let subscriberQueue = buildSubscriberQueue(
+    const subscriberQueue = buildSubscriberQueue(
       alertsByChat,
       (entry) =>
         !hasEscalation(entry.alerts) ||
@@ -298,8 +295,6 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const freshCandidateChats = subscriberQueue.length;
     const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
     const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
-    const terminalFilter = await filterAlreadyTerminalSubscribers(db, subscriberQueue);
-    subscriberQueue = terminalFilter.subscriberQueue;
 
     const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
     const drainResult = await drainPendingQueue(
@@ -338,7 +333,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       chatsInBackoff,
       globalBackoffUntil,
       dispatchStartedAtMs,
-      terminalTargetKeys: terminalFilter.terminalKeys,
+      terminalTargetKeys: await pruneAlreadyTerminalSubscribers(db, subscriberQueue),
       signal,
     });
     await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);
