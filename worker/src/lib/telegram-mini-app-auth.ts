@@ -20,6 +20,7 @@ export interface TelegramMiniAppAuthContext {
   chatType: string | null;
   startParam: string | null;
   authDate: number;
+  initDataHash: string;
   canMutatePrivateChat: boolean;
 }
 
@@ -30,6 +31,9 @@ interface ValidateTelegramMiniAppInitDataOptions {
 }
 
 const encoder = new TextEncoder();
+const MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX = "telegram-mini-app:mutation-init:";
+const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "supergroup", "channel"]);
+const warnedNovelMiniAppChatTypes = new Set<string>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -78,6 +82,40 @@ function isPrivateUserLaunchChatType(chatType: string | null): boolean {
   return chatType === null || chatType === "private" || chatType === "sender";
 }
 
+export function resetTelegramMiniAppChatTypeWarningsForTests(): void {
+  warnedNovelMiniAppChatTypes.clear();
+}
+
+function warnNovelMiniAppChatType(chatType: string | null): void {
+  if (chatType == null || KNOWN_MINI_APP_CHAT_TYPES.has(chatType) || warnedNovelMiniAppChatTypes.has(chatType)) {
+    return;
+  }
+  warnedNovelMiniAppChatTypes.add(chatType);
+  console.warn(`[telegram-mini-app-auth] novel chat_type received: ${chatType}`);
+}
+
+function d1ChangeCount(result: D1Result<unknown>): number {
+  const changes = Number(result.meta?.changes ?? 0);
+  return Number.isFinite(changes) ? changes : 0;
+}
+
+export async function claimTelegramMiniAppMutationInitData(
+  db: D1Database,
+  auth: Pick<TelegramMiniAppAuthContext, "initDataHash" | "userId">,
+  nowSec: number,
+  ttlSec: number,
+): Promise<boolean> {
+  await db
+    .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
+    .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}%`, nowSec - ttlSec)
+    .run();
+  const result = await db
+    .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO NOTHING")
+    .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}${auth.initDataHash}`, auth.userId, nowSec)
+    .run();
+  return d1ChangeCount(result) > 0;
+}
+
 export async function validateTelegramMiniAppInitData(
   initData: string,
   botToken: string,
@@ -109,6 +147,7 @@ export async function validateTelegramMiniAppInitData(
 
   const user = parseUser(params.get("user"));
   const chatType = params.get("chat_type") || null;
+  warnNovelMiniAppChatType(chatType);
   const startParam = params.get("start_param") || options.startParamFallback || null;
 
   return {
@@ -118,6 +157,7 @@ export async function validateTelegramMiniAppInitData(
     chatType,
     startParam,
     authDate,
+    initDataHash: providedHash,
     canMutatePrivateChat: isPrivateUserLaunchChatType(chatType),
   };
 }

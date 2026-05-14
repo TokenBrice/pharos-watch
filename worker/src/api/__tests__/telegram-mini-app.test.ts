@@ -267,7 +267,7 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
   });
 
-  it("applies explicit coin alert patches sequentially", async () => {
+  it("does not re-enable an explicitly disabled coin alert family", async () => {
     const initData = await privateInitData();
     const db = mockD1(stateReadTables());
 
@@ -287,7 +287,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "alert_dews = excluded.alert_dews", ["42", "usdc-circle", 0, null])).toBe(true);
-    expect(historyHas(db, "alert_dews = excluded.alert_dews", ["42", "usdc-circle", 1, "WARNING"])).toBe(true);
+    expect(historyHas(db, "alert_dews = excluded.alert_dews", ["42", "usdc-circle", 1, "WARNING"])).toBe(false);
     expect(historyHas(db, "alert_safety = excluded.alert_safety", ["42", "usdc-circle", 1, "downgrade-only"])).toBe(true);
     expect(historyHas(db, "alert_launch = excluded.alert_launch", ["42", "usdc-circle", 1])).toBe(true);
   });
@@ -371,6 +371,39 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
+    expect(historyHas(db, "ON CONFLICT(key) DO NOTHING", [])).toBe(true);
+  });
+
+  it("rejects replayed mutation initData before applying the mutation", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([
+      {
+        match: "ON CONFLICT(key) DO UPDATE SET",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "DELETE FROM cache WHERE key LIKE ?",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "ON CONFLICT(key) DO NOTHING",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "clear-snooze" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(409);
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM cache WHERE key LIKE ?"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
   });
 
   it("rejects stale mutation auth", async () => {

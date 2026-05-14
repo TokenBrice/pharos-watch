@@ -104,16 +104,18 @@ async function setCoin(db: D1Database, chatId: string, username: string | null, 
       appliedCount += 1;
     }
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand")) {
+  const explicitlyDisabled = (alertType: "dews" | "depeg" | "safety" | "launch"): boolean =>
+    patch.alertTypes?.[alertType] === false;
+  if (Object.prototype.hasOwnProperty.call(patch, "dewsMinBand") && !explicitlyDisabled("dews")) {
     await apply("db", patch.dewsMinBand == null ? "0" : DEWS_BAND_TO_CODE[patch.dewsMinBand]);
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps")) {
+  if (Object.prototype.hasOwnProperty.call(patch, "depegStepBps") && !explicitlyDisabled("depeg")) {
     await apply("ds", patch.depegStepBps == null ? "0" : String(patch.depegStepBps));
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "safetyMode")) {
+  if (Object.prototype.hasOwnProperty.call(patch, "safetyMode") && !explicitlyDisabled("safety")) {
     await apply("sm", patch.safetyMode == null ? "0" : SAFETY_MODE_TO_CODE[patch.safetyMode]);
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "launch")) {
+  if (Object.prototype.hasOwnProperty.call(patch, "launch") && !explicitlyDisabled("launch")) {
     await apply("lc", patch.launch ? "1" : "0");
   }
   if (appliedCount === 0) throw new TelegramMiniAppMutationError("invalid-coin-patch");

@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { validateTelegramMiniAppInitData } from "../telegram-mini-app-auth";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  resetTelegramMiniAppChatTypeWarningsForTests,
+  validateTelegramMiniAppInitData,
+} from "../telegram-mini-app-auth";
 
 const BOT_TOKEN = "123456:test-token";
 const NOW_SEC = 1_800_000_000;
@@ -25,6 +28,11 @@ async function signedInitData(fields: Record<string, string>): Promise<string> {
   params.set("hash", hex(await hmacSha256(secret, check)));
   return params.toString();
 }
+
+afterEach(() => {
+  resetTelegramMiniAppChatTypeWarningsForTests();
+  vi.restoreAllMocks();
+});
 
 describe("validateTelegramMiniAppInitData", () => {
   it("accepts valid initData", async () => {
@@ -63,6 +71,30 @@ describe("validateTelegramMiniAppInitData", () => {
       chatType: "sender",
       canMutatePrivateChat: true,
     });
+  });
+
+  it("logs a one-shot warning for novel non-null chat types", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "business",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).resolves.toMatchObject({
+      chatType: "business",
+      canMutatePrivateChat: false,
+    });
+    await validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    });
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("[telegram-mini-app-auth] novel chat_type received: business");
   });
 
   it("rejects tampered fields", async () => {

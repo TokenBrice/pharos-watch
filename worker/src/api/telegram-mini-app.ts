@@ -1,5 +1,10 @@
 import { errorResponse, jsonResponse, parseRequestJsonWithSchema, withErrorHandler } from "../lib/api-utils";
-import { TelegramMiniAppAuthError, validateTelegramMiniAppInitData, type TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
+import {
+  TelegramMiniAppAuthError,
+  claimTelegramMiniAppMutationInitData,
+  validateTelegramMiniAppInitData,
+  type TelegramMiniAppAuthContext,
+} from "../lib/telegram-mini-app-auth";
 import { recordTelegramUsageEvent, type TelegramUsageEventType } from "../lib/telegram-usage-analytics";
 import { acquireTelegramCommandCooldown } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
@@ -127,6 +132,23 @@ export const handleTelegramMiniAppMutation = withErrorHandler(
       cooldownSec: MUTATION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) return errorResponse(429, "Mini App mutation rate limited", { noStore: true, retryAfterSec: cooldown.retryAfterSec });
+
+    const replayClaimed = await claimTelegramMiniAppMutationInitData(
+      db,
+      auth,
+      nowSec(),
+      TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+    );
+    if (!replayClaimed) {
+      await recordMiniAppEvent(db, {
+        eventType: "mini_app_mutation_denied",
+        auth,
+        actionDetail: mutationActionDetail(parsed.operation),
+        outcome: "denied",
+        failureClass: "replayed-auth",
+      });
+      return errorResponse(409, "Telegram Mini App mutation already used; relaunch the Mini App and try again", NO_STORE);
+    }
 
     try {
       await applyTelegramMiniAppMutation(db, auth, parsed.operation);
