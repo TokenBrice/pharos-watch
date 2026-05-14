@@ -78,6 +78,14 @@ function auditRow() {
   };
 }
 
+function deliveryDiagnosticsRow() {
+  return {
+    match: "INSERT INTO telegram_chat_delivery_diagnostics",
+    rows: [],
+    runMeta: { changes: 1 },
+  };
+}
+
 beforeEach(() => {
   fetchSpy.mockReset();
   fetchSpy.mockResolvedValue(
@@ -185,7 +193,7 @@ describe("handleAdminTelegramResend", () => {
   });
 
   it("sends a synthetic dews alert and audits the action", async () => {
-    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), auditRow()]);
+    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), deliveryDiagnosticsRow(), auditRow()]);
     const res = await handleAdminTelegramResend({
       db,
       request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
@@ -225,10 +233,12 @@ describe("handleAdminTelegramResend", () => {
     expect(audit).toBeDefined();
     expect(audit?.binds).toContain("admin-telegram-resend");
     expect(audit?.binds).toContain("12345");
+    const diagnostics = history.find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
+    expect(diagnostics?.binds).toEqual(["12345", expect.any(Number), expect.any(Number), null, expect.any(Number)]);
   });
 
   it("sends a depeg alert from depeg_events", async () => {
-    const db = mockD1([subscriberRows(), depegRow("usdc-circle"), auditRow()]);
+    const db = mockD1([subscriberRows(), depegRow("usdc-circle"), deliveryDiagnosticsRow(), auditRow()]);
     const res = await handleAdminTelegramResend({
       db,
       request: adminRequest({ chatId: "12345", alertType: "depeg", stablecoinId: "usdc-circle" }),
@@ -242,7 +252,7 @@ describe("handleAdminTelegramResend", () => {
   });
 
   it("sends a safety alert from safety_grade_history", async () => {
-    const db = mockD1([subscriberRows(), safetyRow(), auditRow()]);
+    const db = mockD1([subscriberRows(), safetyRow(), deliveryDiagnosticsRow(), auditRow()]);
     const res = await handleAdminTelegramResend({
       db,
       request: adminRequest({ chatId: "12345", alertType: "safety", stablecoinId: "usdc-circle" }),
@@ -256,7 +266,7 @@ describe("handleAdminTelegramResend", () => {
   });
 
   it("sends a launch alert built from tracked stablecoin metadata", async () => {
-    const db = mockD1([subscriberRows(), auditRow()]);
+    const db = mockD1([subscriberRows(), deliveryDiagnosticsRow(), auditRow()]);
     const res = await handleAdminTelegramResend({
       db,
       request: adminRequest({ chatId: "12345", alertType: "launch", stablecoinId: "usdc-circle" }),
@@ -277,7 +287,7 @@ describe("handleAdminTelegramResend", () => {
         headers: { "Retry-After": "30" },
       }),
     );
-    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), auditRow()]);
+    const db = mockD1([subscriberRows(), dewsRow("usdc-circle"), deliveryDiagnosticsRow(), auditRow()]);
     const res = await handleAdminTelegramResend({
       db,
       request: adminRequest({ chatId: "12345", alertType: "dews", stablecoinId: "usdc-circle" }),
@@ -296,5 +306,7 @@ describe("handleAdminTelegramResend", () => {
     expect(body.errorClass).toBe("rate_limit");
     expect(body.retryAfterSec).toBe(30);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const diagnostics = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO telegram_chat_delivery_diagnostics"));
+    expect(diagnostics?.binds).toEqual(["12345", null, expect.any(Number), "rate_limit", expect.any(Number)]);
   });
 });

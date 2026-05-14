@@ -65,6 +65,31 @@ describe("handleClearTelegramPending", () => {
     expect(audit).toBeDefined();
   });
 
+  it("previews a specific chat_id clear without mutating when dry_run is set", async () => {
+    const db = mockD1([
+      { match: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?", rows: [{ count: 3 }] },
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const url = new URL("https://ops-api.pharos.watch/api/telegram-pending?chat_id=42&dry_run=1");
+    const res = await handleClearTelegramPending({
+      db,
+      url,
+      request: adminRequest(url.toString()),
+      trustedAdmin: true,
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; dryRun: boolean; matched: number };
+    expect(body).toEqual({ ok: true, dryRun: true, matched: 3 });
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts"))).toBe(false);
+    expect(history.some((entry) => entry.sql.includes("INSERT INTO telegram_alert_dead_letters"))).toBe(false);
+    const audit = history.find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit).toBeDefined();
+    const details = JSON.parse(audit?.binds[6] as string) as Record<string, unknown>;
+    expect(details).toMatchObject({ chatId: "42", dryRun: true, matched: 3 });
+  });
+
   it("dead-letters and deletes pending rows older than the supplied window", async () => {
     const rows = [
       {
@@ -108,6 +133,28 @@ describe("handleClearTelegramPending", () => {
     expect(cutoff).toBeLessThanOrEqual(nowSec - 600 + 5);
     const del = history.find((entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts"));
     expect(del?.binds).toEqual([9]);
+  });
+
+  it("previews an older_than_sec clear without mutating when dryRun is set", async () => {
+    const db = mockD1([
+      { match: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE created_at < ?", rows: [{ count: "4" }] },
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const url = new URL("https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=600&dryRun=true");
+    const res = await handleClearTelegramPending({
+      db,
+      url,
+      request: adminRequest(url.toString()),
+      trustedAdmin: true,
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; dryRun: boolean; matched: number };
+    expect(body).toEqual({ ok: true, dryRun: true, matched: 4 });
+    const history = db.getHistory();
+    const count = history.find((entry) => entry.sql.includes("SELECT COUNT(*) AS count"));
+    expect(count?.sql).toContain("created_at < ?");
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts"))).toBe(false);
   });
 
   it("fails closed when pending rows cannot be dead-lettered before manual clear", async () => {

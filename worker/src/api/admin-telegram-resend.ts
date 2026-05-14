@@ -7,6 +7,7 @@ import {
 } from "../lib/route-wrappers";
 import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
+import { recordTelegramDeliveryOutcomes } from "../lib/telegram-usage-analytics";
 import { sendToChat, type SendToChatResult } from "../lib/telegram";
 import {
   buildAlertReplyMarkup,
@@ -263,6 +264,12 @@ export const handleAdminTelegramResend = makeIdempotentAdminRoute<ResendContext>
     if (!result) {
       return adminErrorResponse(500, "Could not render Telegram alert chunks");
     }
+    await recordTelegramDeliveryOutcomes(db, [{
+      chatId,
+      ok: result.ok,
+      errorClass: result.errorClass,
+      nowSec: Math.floor(Date.now() / 1000),
+    }]);
 
     const responseBody = {
       ok: result.ok,

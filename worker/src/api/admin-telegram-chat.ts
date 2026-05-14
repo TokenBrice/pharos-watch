@@ -1,4 +1,5 @@
 import { jsonResponse } from "../lib/api-utils";
+import { logAdminAction } from "../lib/admin-action-audit";
 import { runAdminRoute } from "../lib/route-wrappers";
 
 interface SubscriberRow {
@@ -89,6 +90,17 @@ export function handleAdminTelegramChat(
         .first<SubscriberRow>();
 
       if (!subscriber) {
+        await logAdminAction(
+          db,
+          {
+            action: "inspect-telegram-chat",
+            target: chatId,
+            result: "error",
+            httpStatus: 404,
+            details: { found: false },
+          },
+          request,
+        );
         return jsonResponse({ error: "Not found", chatId }, { status: 404, noStore: true });
       }
 
@@ -207,6 +219,23 @@ export function handleAdminTelegramChat(
         },
       };
 
+      await logAdminAction(
+        db,
+        {
+          action: "inspect-telegram-chat",
+          target: chatId,
+          result: "ok",
+          httpStatus: 200,
+          details: {
+            found: true,
+            subscriptionCount: subscriptionsResult.results?.length ?? 0,
+            presetCount: presetsResult.results?.length ?? 0,
+            hasPendingDisambiguation: pendingDisambiguation != null,
+            pendingAlertCount: pendingAlertsAggregate?.count ?? 0,
+          },
+        },
+        request,
+      );
       return jsonResponse(body, { noStore: true });
     },
   );

@@ -7,6 +7,27 @@ import {
 } from "./dead-letter";
 import type { DeadLetterPendingRow } from "./types";
 
+export async function countPendingAlertsForAdmin(
+  db: D1Database,
+  filter: { chatId: string } | { olderThanCutoffSec: number },
+): Promise<number> {
+  const query = "chatId" in filter
+    ? {
+        sql: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE chat_id = ?",
+        binds: [filter.chatId] as const,
+      }
+    : {
+        sql: "SELECT COUNT(*) AS count FROM telegram_pending_alerts WHERE created_at < ?",
+        binds: [filter.olderThanCutoffSec] as const,
+      };
+  const row = await db
+    .prepare(query.sql)
+    .bind(...query.binds)
+    .first<{ count: number | string | null }>();
+  const count = Number(row?.count ?? 0);
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+}
+
 export async function clearPendingAlertsForAdmin(
   db: D1Database,
   filter: { chatId: string } | { olderThanCutoffSec: number },

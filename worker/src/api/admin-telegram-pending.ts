@@ -2,10 +2,13 @@ import {
   adminErrorResponse,
   adminJsonResponse,
   type AdminUrlRouteContext,
-  makeIdempotentAdminRoute,
+  makeConditionalIdempotentAdminRoute,
 } from "../lib/route-wrappers";
 import { logAdminAction } from "../lib/admin-action-audit";
-import { clearPendingAlertsForAdmin } from "../cron/telegram-pending-queue";
+import {
+  clearPendingAlertsForAdmin,
+  countPendingAlertsForAdmin,
+} from "../cron/telegram-pending-queue";
 
 function parseOlderThanSec(raw: string | null): number | null {
   if (!raw) return null;
@@ -15,12 +18,28 @@ function parseOlderThanSec(raw: string | null): number | null {
   return n;
 }
 
-export const handleClearTelegramPending = makeIdempotentAdminRoute<AdminUrlRouteContext>(
+function parseDryRun(raw: string | null): boolean {
+  if (!raw) return false;
+  const value = raw.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function isDryRunRequest(url: URL): boolean {
+  return parseDryRun(
+    url.searchParams.get("dry_run")
+      ?? url.searchParams.get("dryRun")
+      ?? url.searchParams.get("dry-run"),
+  );
+}
+
+export const handleClearTelegramPending = makeConditionalIdempotentAdminRoute<AdminUrlRouteContext>(
   "route-clear-telegram-pending",
   "clear-telegram-pending",
+  ({ url }) => !isDryRunRequest(url),
   async ({ db, url, request }) => {
     const chatId = url.searchParams.get("chat_id")?.trim() || null;
     const olderThanSec = parseOlderThanSec(url.searchParams.get("older_than_sec"));
+    const dryRun = isDryRunRequest(url);
 
     if (!chatId && olderThanSec == null) {
       return adminErrorResponse(
@@ -36,12 +55,28 @@ export const handleClearTelegramPending = makeIdempotentAdminRoute<AdminUrlRoute
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
-    let deleted = 0;
-    if (chatId) {
-      deleted = await clearPendingAlertsForAdmin(db, { chatId }, nowSec);
-    } else if (olderThanSec != null) {
-      deleted = await clearPendingAlertsForAdmin(db, { olderThanCutoffSec: nowSec - olderThanSec }, nowSec);
+    const filter = chatId
+      ? { chatId }
+      : { olderThanCutoffSec: nowSec - olderThanSec! };
+
+    if (dryRun) {
+      const matched = await countPendingAlertsForAdmin(db, filter);
+      await logAdminAction(
+        db,
+        {
+          action: "clear-telegram-pending",
+          target: chatId ?? `older_than_sec=${olderThanSec}`,
+          result: "ok",
+          httpStatus: 200,
+          details: { chatId, olderThanSec, dryRun: true, matched },
+        },
+        request,
+      );
+      return adminJsonResponse({ ok: true, dryRun: true, matched }, { status: 200 });
     }
+
+    let deleted = 0;
+    deleted = await clearPendingAlertsForAdmin(db, filter, nowSec);
 
     await logAdminAction(
       db,
@@ -50,7 +85,7 @@ export const handleClearTelegramPending = makeIdempotentAdminRoute<AdminUrlRoute
         target: chatId ?? `older_than_sec=${olderThanSec}`,
         result: "ok",
         httpStatus: 200,
-        details: { chatId, olderThanSec, deleted },
+        details: { chatId, olderThanSec, dryRun: false, deleted },
       },
       request,
     );

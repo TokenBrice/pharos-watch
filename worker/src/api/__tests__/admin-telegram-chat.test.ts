@@ -56,6 +56,16 @@ describe("handleAdminTelegramChat", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     const body = (await res.json()) as { error: string; chatId: string };
     expect(body).toEqual({ error: "Not found", chatId: "12345" });
+    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit?.binds).toEqual([
+      expect.any(Number),
+      "internal",
+      "inspect-telegram-chat",
+      "12345",
+      "error",
+      404,
+      JSON.stringify({ found: false }),
+    ]);
   });
 
   it("returns full chat state payload for a known chat", async () => {
@@ -180,6 +190,23 @@ describe("handleAdminTelegramChat", () => {
       earliestNotBeforeAt: 1700000900,
       recentRetryErrorClass: "telegram-429",
     });
+    const audit = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO admin_action_audit"));
+    expect(audit).toBeDefined();
+    expect(audit?.binds.slice(2, 6)).toEqual([
+      "inspect-telegram-chat",
+      "12345",
+      "ok",
+      200,
+    ]);
+    const details = JSON.parse(audit?.binds[6] as string) as Record<string, unknown>;
+    expect(details).toEqual({
+      found: true,
+      subscriptionCount: 1,
+      presetCount: 1,
+      hasPendingDisambiguation: true,
+      pendingAlertCount: 3,
+    });
+    expect(audit?.binds.join(" ")).not.toContain("alice");
   });
 
   it("returns empty/zero defaults when subscriber has no subscriptions, presets, pending state", async () => {
