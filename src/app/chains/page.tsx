@@ -4,6 +4,7 @@ import { CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PA
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { safeJsonLd } from "@/lib/json-ld";
+import { buildChainDirectoryJsonLd } from "@/lib/chain-json-ld";
 import { buildFaqJsonLd, type FaqItem } from "@/lib/faq";
 import { FaqSection } from "@/components/faq-section";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
@@ -72,6 +73,7 @@ function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }
 
 export default function ChainsPage() {
   const chainEntries = getChainDirectoryEntries();
+  const chainDirectoryJsonLd = buildChainDirectoryJsonLd(chainEntries);
 
   return (
     <FeaturePageShell
@@ -86,7 +88,7 @@ export default function ChainsPage() {
       preface={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: safeJsonLd(CHAINS_FAQ_JSON_LD) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd([...chainDirectoryJsonLd, CHAINS_FAQ_JSON_LD]) }}
         />
       }
     >

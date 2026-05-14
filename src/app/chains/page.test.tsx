@@ -2,6 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import ChainsPage from "./page";
 
+function extractJsonLd(html: string) {
+  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
+    .map((match) => match[1])
+    .filter((json): json is string => Boolean(json))
+    .map((json) => JSON.parse(json));
+}
+
 vi.mock("./client", () => ({
   ChainsLeaderboardClient: () => <div data-testid="chains-client">chains client</div>,
 }));
@@ -21,5 +28,40 @@ describe("ChainsPage", () => {
 
     expect(html.indexOf("chains client")).toBeLessThan(html.indexOf("Chains FAQ"));
     expect(html.indexOf("Chains FAQ")).toBeLessThan(html.indexOf("Chain Profile Directory"));
+  });
+
+  it("emits CollectionPage and ItemList structured data for crawlable chain profiles", () => {
+    const html = renderToStaticMarkup(<ChainsPage />);
+    const jsonLd = extractJsonLd(html).flat();
+    const collection = jsonLd.find((node) => node["@type"] === "CollectionPage");
+    const itemList = jsonLd.find((node) => node["@type"] === "ItemList");
+
+    expect(collection).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "@id": "https://pharos.watch/chains/#collection",
+      url: "https://pharos.watch/chains/",
+      mainEntity: { "@id": "https://pharos.watch/chains/#itemlist" },
+      isPartOf: { "@id": "https://pharos.watch#website" },
+    });
+    expect(itemList).toMatchObject({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "@id": "https://pharos.watch/chains/#itemlist",
+    });
+    expect(itemList.itemListElement).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item: expect.objectContaining({
+            "@type": "WebPage",
+            "@id": "https://pharos.watch/chains/ethereum/#webpage",
+            url: "https://pharos.watch/chains/ethereum/",
+          }),
+        }),
+      ]),
+    );
+    expect(itemList.itemListElement.every((item: { item: { "@type": string } }) => item.item["@type"] === "WebPage")).toBe(true);
+    expect(JSON.stringify(jsonLd)).not.toContain("\"Product\"");
+    expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
 });

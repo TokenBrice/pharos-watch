@@ -34,6 +34,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - status badge `mature`
 - methodology pill wired from `CHAIN_HEALTH_METHODOLOGY_VERSION` and `CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH`
 - lead copy describing chain ranking by stablecoin supply and health
+- `CollectionPage` + `ItemList` JSON-LD over every crawlable `/chains/[chain]/` profile route, with each item typed as `WebPage`
 - FAQ structured data from the route-local `CHAINS_FAQ_JSON_LD`
 - a hidden SEO nav listing every generated `/chains/[chain]/` route
 
@@ -68,6 +69,7 @@ Default sort is `totalUsd desc`.
 - rejects unknown chain IDs with `notFound()`
 - statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
+- emits `CollectionPage` + `ItemList` JSON-LD for the visible static deployment list, with chain/deployment entities typed as `Thing` and no `Product` markup
 
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
+import { safeJsonLd } from "@/lib/json-ld";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ChainProfileClient } from "./client";
@@ -233,6 +235,7 @@ export default async function ChainProfilePage({
   const { chain } = await params;
   const meta = CHAIN_META[chain];
   if (!meta) notFound();
+  const deployments = getTrackedDeploymentsForChain(chain);
 
   return (
     <FeaturePageShell
@@ -245,6 +248,14 @@ export default async function ChainProfilePage({
         { name: meta.name, url: `/chains/${chain}/` },
       ]}
       title={`${meta.name} Stablecoins`}
+      preface={
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: safeJsonLd(buildChainProfileJsonLd({ chainId: chain, meta, deployments })),
+          }}
+        />
+      }
     >
       <ChainStaticProfile chainId={chain} meta={meta} />
       <ChainProfileClient chainId={chain} />
