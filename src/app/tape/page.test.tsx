@@ -14,13 +14,18 @@ vi.mock("@/app/tape/client", () => ({
 }));
 
 describe("TapePage", () => {
-  it("renders the page shell with title, breadcrumb, and CollectionPage JSON-LD", () => {
+  it("renders the page shell with title, breadcrumb, CollectionPage + ItemList JSON-LD", () => {
     const html = renderToStaticMarkup(<TapePage />);
 
     expect(html).toContain("The Tape");
     expect(html).toContain("CollectionPage");
+    expect(html).toContain("ItemList");
     // `safeJsonLd` escapes `/` as `/`; check the escaped path instead.
     expect(html).toContain("\\u002ftape\\u002f");
     expect(html).toContain("tape-client");
+    // ItemList enumerates all 12 class category links.
+    expect(html).toContain("Depegs");
+    expect(html).toContain("Freezes");
+    expect(html).toContain("Methodology");
   });
 });

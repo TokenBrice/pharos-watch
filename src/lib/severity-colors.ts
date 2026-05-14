@@ -166,3 +166,22 @@ export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThresho
   return "text-red-700 dark:text-red-400";
 }
 
+// ---------------------------------------------------------------------------
+// Tape event severity (5-level) — pure mapping. Mirrors the emerald/sky/amber/
+// orange/red ramp documented in docs/design-tokens.md so it stays in sync with
+// the rest of the severity system. Static class strings only.
+// ---------------------------------------------------------------------------
+
+const TAPE_SEVERITY_ACCENT: Record<string, string> = {
+  info: "border-l-emerald-500",
+  notice: "border-l-sky-500",
+  warning: "border-l-amber-500",
+  severe: "border-l-orange-500",
+  critical: "border-l-red-500",
+};
+
+/** Left-border accent class for a Tape event severity. */
+export function severityToAccent(severity: string): string {
+  return TAPE_SEVERITY_ACCENT[severity] ?? "border-l-border";
+}
+
