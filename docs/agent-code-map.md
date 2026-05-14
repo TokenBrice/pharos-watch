@@ -158,7 +158,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `src/lib/admin-access.ts` - AdminMutationOptions, AdminMutationResult, adminMutation, buildAdminApiPath, isOpsUiHost, postAdminJson
 - `src/lib/alt-peg-emblems.ts` - PEG_ANCHORS
-- `src/lib/alt-peg-geography.ts` - CountryFill, Iso2, PEG_COUNTRY_MAP, buildCountryColorMap
+- `src/app/alt-pegs/fiat-world-atlas/world-map.tsx` - world map SVG loader and map shell composition
+- `public/maps/world-countries.svg` - static country geometry used by `FiatWorldAtlas`
 - `src/lib/alt-peg-hero.ts` - HeroCoin, PegCluster, PegDiversityHero, PlacedCoin, SkyCohort, SkyCohortKind
 - `src/lib/alt-peg-market.ts` - AltPegDistributionRow, AltPegLinkHubGroup, AltPegLinkHubItem, AltPegRegion, AltPegSnapshot, AltPegTrendPoint
 - `src/lib/alt-peg-packing.ts` - PackedCoin, PackingInput, arrangeClusterCoins, resolvePackedCoinOverlaps

@@ -84,8 +84,8 @@
     "notes": "The chain detail route now has dedicated tests, but it still combines hero, health, composition, filtering, and table behavior in one client module. Continue splitting view-model and section concerns out of the route shell."
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 173,
-    "maxFunctionLines": 151,
+    "fileLines": 174,
+    "maxFunctionLines": 152,
     "branchCount": 8,
     "disposition": "stabilized",
     "targetBudget": {
@@ -252,9 +252,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 845,
+    "fileLines": 916,
     "maxFunctionLines": 318,
-    "branchCount": 60,
+    "branchCount": 61,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,
@@ -324,8 +324,8 @@
     "notes": "Digest generation, input shaping, and channel delivery now live below the cron shell. Keep new delivery/provider detail out of this entrypoint."
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 1031,
-    "maxFunctionLines": 458,
+    "fileLines": 1012,
+    "maxFunctionLines": 439,
     "branchCount": 59,
     "disposition": "deferred",
     "targetBudget": {

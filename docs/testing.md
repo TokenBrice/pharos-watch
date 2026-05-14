@@ -552,7 +552,6 @@ Current critical file set (`CRITICAL_FILES` in `scripts/lib/critical-coverage.mj
 - `worker/src/api/blacklist-summary.ts`
 - `worker/src/lib/blacklist-contracts.ts`
 - `worker/src/cron/sync-blacklist.ts`
-- `shared/lib/report-card-blacklist-authority.ts`
 - `shared/lib/report-card-blacklist-matchers.ts`
 - `shared/lib/blacklist-active-records.ts`
 
