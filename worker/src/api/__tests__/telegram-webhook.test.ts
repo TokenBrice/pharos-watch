@@ -41,6 +41,39 @@ function makeWebhookRequest(
   });
 }
 
+function makeMyChatMemberRequest(
+  options: {
+    chatId?: number;
+    chatType?: string;
+    oldStatus?: string;
+    newStatus?: string;
+    from?: { id?: number; username?: string; first_name?: string };
+    secret?: string;
+    updateId?: number;
+  } = {},
+): Request {
+  return new Request("https://x/api/telegram-webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Telegram-Bot-Api-Secret-Token": options.secret ?? "test-secret",
+    },
+    body: JSON.stringify({
+      ...(options.updateId != null ? { update_id: options.updateId } : {}),
+      my_chat_member: {
+        chat: {
+          id: options.chatId ?? -123,
+          type: options.chatType ?? "supergroup",
+          title: "Stablecoin desk",
+        },
+        from: options.from ?? { id: 999, username: "requester" },
+        old_chat_member: { status: options.oldStatus ?? "left" },
+        new_chat_member: { status: options.newStatus ?? "member" },
+      },
+    }),
+  });
+}
+
 function sentMessageBody(callIndex = 0): { text: string; reply_markup?: unknown } {
   const [, init] = fetchSpy.mock.calls[callIndex] ?? [];
   if (!init?.body || typeof init.body !== "string") {
@@ -163,6 +196,86 @@ describe("handleTelegramWebhook", () => {
     expect(
       db.getHistory().some((entry) => entry.sql.includes("FROM telegram_pending_disambiguation")),
     ).toBe(false);
+  });
+
+  it("welcomes a group when my_chat_member reports the bot was added", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const res = await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ from: { id: 999, username: "alice" } }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(res.status).toBe(200);
+    const body = sentMessageBody();
+    expect(body.text).toContain("Thanks for adding Pharos Watch");
+    expect(body.text).toContain("@alice");
+    const replyMarkup = body.reply_markup as { inline_keyboard?: Array<Array<{ url?: string }>> };
+    expect(replyMarkup.inline_keyboard?.flat().some((button) => button.url?.includes("/pharoswatchbot/"))).toBe(true);
+
+    const cacheWrite = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+    expect(cacheWrite).toBeDefined();
+    expect(cacheWrite!.binds[0]).toBe("telegram:group-welcome:-123");
+  });
+
+  it("suppresses duplicate group welcomes while the idempotency cache is fresh", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [],
+        first: {
+          key: "telegram:group-welcome:-123",
+          value: "1",
+          updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest(),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"))).toBe(false);
+  });
+
+  it("ignores private my_chat_member updates", async () => {
+    const db = mockD1([]);
+
+    await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ chatId: 123, chatType: "private" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("ignores my_chat_member status changes that are not bot-added transitions", async () => {
+    const db = mockD1([]);
+
+    await handleTelegramWebhook(
+      db,
+      makeMyChatMemberRequest({ oldStatus: "member", newStatus: "administrator" }),
+      "test-secret",
+      "bot-token",
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(db.getHistory()).toHaveLength(0);
   });
 
   it("returns a retryable status for duplicate update ids still in flight", async () => {
@@ -2702,6 +2815,32 @@ describe("handleTelegramWebhook", () => {
 
     const history = db.getHistory();
     expect(history.some((entry) => /UPDATE.*global_alert_/.test(entry.sql))).toBe(false);
+    expect(sentMessageBody().text).toContain("Tap Confirm or Cancel");
+  });
+
+  it("pending forget-confirm ignores plain text replies in private chats with a reminder", async () => {
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [],
+        first: {
+          action_type: "forget-confirm",
+          action_payload: "{}",
+          alert_types: JSON.stringify([]),
+          resolved_ids: JSON.stringify([]),
+          ambiguous_ticker: "",
+          candidates: JSON.stringify([]),
+          remaining_tickers: JSON.stringify([]),
+          expires_at: Math.floor(Date.now() / 1000) + 60,
+          initiator_user_id: "999",
+        },
+      },
+    ]);
+
+    await handleTelegramWebhook(db, makeWebhookRequest(123, "delete this"), "test-secret", "bot-token");
+
+    const history = db.getHistory();
+    expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
     expect(sentMessageBody().text).toContain("Tap Confirm or Cancel");
   });
 });

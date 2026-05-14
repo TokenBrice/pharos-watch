@@ -39,6 +39,24 @@ function pendingRowFromSetup(payload: {
   };
 }
 
+function pendingRowFromForget(options: {
+  initiator_user_id?: string | null;
+  expires_at?: number;
+  action_type?: string;
+} = {}): Record<string, unknown> {
+  return {
+    action_type: options.action_type ?? "forget-confirm",
+    action_payload: "{}",
+    alert_types: JSON.stringify([]),
+    resolved_ids: JSON.stringify([]),
+    ambiguous_ticker: "",
+    candidates: JSON.stringify([]),
+    remaining_tickers: JSON.stringify([]),
+    expires_at: options.expires_at ?? Math.floor(Date.now() / 1000) + 60,
+    initiator_user_id: options.initiator_user_id ?? null,
+  };
+}
+
 function makeCacheStablecoins(): string {
   return JSON.stringify({
     peggedAssets: [
@@ -47,6 +65,12 @@ function makeCacheStablecoins(): string {
       { id: "dai-makerdao", symbol: "DAI", circulating: { usd: 5_000_000_000 } },
     ],
   });
+}
+
+function lastAckBody(): { text?: string } {
+  const ackCall = [...fetchSpy.mock.calls].reverse().find((c) => String(c[0]).includes("answerCallbackQuery"));
+  if (!ackCall) throw new Error("No answerCallbackQuery call recorded");
+  return JSON.parse((ackCall[1] as RequestInit).body as string);
 }
 
 beforeEach(() => {
@@ -563,6 +587,128 @@ describe("handleCallbackQuery", () => {
     expect(ackCall).toBeDefined();
     const body = JSON.parse((ackCall?.[1] as RequestInit).body as string);
     expect(body.text).toMatch(/only the user who started/i);
+  });
+
+  describe("forget confirmation callbacks", () => {
+    it("confirm:forget deletes subscriber-owned Telegram rows and replies", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ initiator_user_id: "999" }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-confirm",
+        data: "confirm:forget",
+        from: { id: 999, username: "requester" },
+        message: { chat: { id: 123, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_preset_subscriptions"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_alerts"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(true);
+      expect(lastSentMessageBody().text).toContain("subscriber data has been deleted");
+      expect(lastAckBody().text).toBe("Deleted.");
+    });
+
+    it("cancel:forget clears only the pending confirmation and replies", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ initiator_user_id: "999" }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-cancel",
+        data: "cancel:forget",
+        from: { id: 999, username: "requester" },
+        message: { chat: { id: 123, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+      expect(lastSentMessageBody().text).toBe("Cancelled.");
+      expect(lastAckBody().text).toBe("Cancelled.");
+    });
+
+    it("confirm:forget refuses leaked group callbacks before reading D1", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-group",
+        data: "confirm:forget",
+        from: { id: 999, username: "requester" },
+        message: { chat: { id: -123, type: "supergroup" }, message_id: 1 },
+      });
+
+      expect(db.getHistory()).toHaveLength(0);
+      expect(lastAckBody().text).toContain("Open a private chat");
+    });
+
+    it("confirm:forget clears an expired pending row without deleting subscriber data", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ expires_at: Math.floor(Date.now() / 1000) - 1 }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-expired",
+        data: "confirm:forget",
+        from: { id: 999, username: "requester" },
+        message: { chat: { id: 123, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(true);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+      expect(lastAckBody().text).toContain("expired");
+    });
+
+    it("confirm:forget refuses non-initiators without deleting", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ initiator_user_id: "999" }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-other",
+        data: "confirm:forget",
+        from: { id: 7, username: "other" },
+        message: { chat: { id: 123, type: "private" }, message_id: 1 },
+      });
+
+      const history = db.getHistory();
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_pending_disambiguation"))).toBe(false);
+      expect(history.some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+      expect(lastAckBody().text).toMatch(/only the user who started/i);
+    });
+
+    it("confirm:forget rejects unrelated pending actions", async () => {
+      const db = mockD1([
+        {
+          match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+          rows: [],
+          first: pendingRowFromForget({ action_type: "confirm-bulk" }),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-forget-wrong-pending",
+        data: "confirm:forget",
+        from: { id: 999, username: "requester" },
+        message: { chat: { id: 123, type: "private" }, message_id: 1 },
+      });
+
+      expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM telegram_subscribers"))).toBe(false);
+      expect(lastAckBody().text).toBe("No forget confirmation is pending.");
+    });
   });
 
   describe("P1-U11 discoverability callbacks", () => {
