@@ -14,8 +14,8 @@
  *     directly with `tgWebAppStartParam`. Telegram practical cap is 512 chars,
  *     same charset.
  *
- * Keep both surfaces consistent: changes to the non-parametric token set must
- * be reflected in both the worker parser and the frontend mapping.
+ * Keep both surfaces consistent: changes to emitted tokens must be reflected
+ * in both the worker parser and the frontend mapping.
  */
 
 /**
@@ -66,31 +66,40 @@ export type MiniAppPayloadName =
 const PAYLOAD_NAME_VALUES = new Set<string>(Object.values(MINI_APP_PAYLOAD_NAMES));
 
 /**
- * Parametric `coin_<stablecoinId>` payload. Stablecoin IDs may contain hyphens
- * (e.g. `usdc-circle`, `isc-international-stable-currency`), which the shared
+ * Parametric payloads. Stablecoin IDs may contain hyphens (e.g.
+ * `usdc-circle`, `isc-international-stable-currency`), which the shared
  * charset permits.
  */
 const COIN_PAYLOAD_PREFIX = "coin_";
+const WHY_PAYLOAD_PREFIX = "why_";
+const COVERAGE_PAYLOAD_PREFIX = "coverage_";
 
 /** Discriminated union of all recognized Mini App payloads. */
 export type TelegramMiniAppPayload =
   | { kind: "named"; name: MiniAppPayloadName }
-  | { kind: "coin"; coinId: string };
+  | { kind: "coin"; coinId: string }
+  | { kind: "why"; coinId: string }
+  | { kind: "coverage"; coinId: string };
 
-/** Returns true if `payload` is the parametric coin form. */
-function isCoinPayload(payload: string): boolean {
-  return payload.startsWith(COIN_PAYLOAD_PREFIX) && payload.length > COIN_PAYLOAD_PREFIX.length;
-}
-
-/** Extracts the stablecoin id from a `coin_<id>` payload, or null. */
-function parseCoinPayload(payload: string): string | null {
-  if (!isCoinPayload(payload)) return null;
-  return payload.slice(COIN_PAYLOAD_PREFIX.length);
+/** Extracts the stablecoin id from a prefixed payload, or null. */
+function parsePrefixedPayload(payload: string, prefix: string): string | null {
+  if (!payload.startsWith(prefix) || payload.length <= prefix.length) return null;
+  return payload.slice(prefix.length);
 }
 
 /** Constructs a `coin_<id>` payload. Does not validate `coinId`. */
 export function formatCoinPayload(coinId: string): string {
   return `${COIN_PAYLOAD_PREFIX}${coinId}`;
+}
+
+/** Constructs a `why_<id>` payload. Does not validate `coinId`. */
+export function formatWhyPayload(coinId: string): string {
+  return `${WHY_PAYLOAD_PREFIX}${coinId}`;
+}
+
+/** Constructs a `coverage_<id>` payload. Does not validate `coinId`. */
+export function formatCoveragePayload(coinId: string): string {
+  return `${COVERAGE_PAYLOAD_PREFIX}${coinId}`;
 }
 
 /**
@@ -110,9 +119,17 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
   if (PAYLOAD_NAME_VALUES.has(lower)) {
     return { kind: "named", name: lower as MiniAppPayloadName };
   }
-  const coinId = parseCoinPayload(lower);
+  const coinId = parsePrefixedPayload(lower, COIN_PAYLOAD_PREFIX);
   if (coinId) {
     return { kind: "coin", coinId };
+  }
+  const whyCoinId = parsePrefixedPayload(lower, WHY_PAYLOAD_PREFIX);
+  if (whyCoinId) {
+    return { kind: "why", coinId: whyCoinId };
+  }
+  const coverageCoinId = parsePrefixedPayload(lower, COVERAGE_PAYLOAD_PREFIX);
+  if (coverageCoinId) {
+    return { kind: "coverage", coinId: coverageCoinId };
   }
   return null;
 }
@@ -131,11 +148,15 @@ export type TelegramMiniAppIntent =
   | "snooze"
   | "health"
   | "forget"
-  | "coin";
+  | "coin"
+  | "why"
+  | "coverage";
 
 /** Map a parsed payload to a worker-side intent label. */
 export function miniAppPayloadIntent(payload: TelegramMiniAppPayload): TelegramMiniAppIntent {
   if (payload.kind === "coin") return "coin";
+  if (payload.kind === "why") return "why";
+  if (payload.kind === "coverage") return "coverage";
   switch (payload.name) {
     case MINI_APP_PAYLOAD_NAMES.setupRecommended:
       // Legacy alias: setup_recommended is treated as a watchlist landing.

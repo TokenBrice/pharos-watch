@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { formatCoveragePayload, formatWhyPayload, miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramAlertType, TelegramCoinSnoozeDurationToken, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState, TelegramSnoozeDurationToken } from "./types";
 
@@ -36,6 +36,8 @@ const BOT_USERNAME = "PharosWatchBot";
 const PHAROS_COIN_PAGE_PREFIX = "https://pharos.watch/stablecoin/";
 
 type ViewKey = "home" | "watchlist" | "presets" | "settings";
+type CoinInsightKind = "why" | "coverage";
+type CoinInsightTarget = { kind: CoinInsightKind; coinId: string };
 
 const ORDERED_VIEWS: ViewKey[] = ["home", "watchlist", "presets", "settings"];
 
@@ -67,15 +69,22 @@ class MiniAppRequestError extends Error {
   }
 }
 
-function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null } {
+function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null; insight: CoinInsightTarget | null } {
   const payload = parseMiniAppPayload(startParam);
-  if (!payload) return { view: "home", coinId: null };
+  if (!payload) return { view: "home", coinId: null, insight: null };
   const intent = miniAppPayloadIntent(payload);
-  if (intent === "settings" || intent === "presets") return { view: intent, coinId: null };
-  if (intent === "quiet-hours" || intent === "forget") return { view: "settings", coinId: null };
-  if (intent === "coin") return { view: "watchlist", coinId: payload.kind === "coin" ? payload.coinId : null };
-  if (intent === "watchlist") return { view: "watchlist", coinId: null };
-  return { view: "home", coinId: null };
+  if (intent === "settings" || intent === "presets") return { view: intent, coinId: null, insight: null };
+  if (intent === "quiet-hours" || intent === "forget") return { view: "settings", coinId: null, insight: null };
+  if (intent === "coin") return { view: "watchlist", coinId: payload.kind === "coin" ? payload.coinId : null, insight: null };
+  if (intent === "why" || intent === "coverage") {
+    return {
+      view: "watchlist",
+      coinId: payload.kind === "why" || payload.kind === "coverage" ? payload.coinId : null,
+      insight: payload.kind === "why" || payload.kind === "coverage" ? { kind: payload.kind, coinId: payload.coinId } : null,
+    };
+  }
+  if (intent === "watchlist") return { view: "watchlist", coinId: null, insight: null };
+  return { view: "home", coinId: null, insight: null };
 }
 
 function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
@@ -699,13 +708,113 @@ const SAFETY_MODE_OPTIONS = [
 ] as const;
 
 type SubscribedCoin = TelegramMiniAppState["subscriptions"][number];
+type SearchableCoin = TelegramMiniAppState["catalog"]["searchableCoins"][number];
 
-function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, nowSec, highlighted }: {
+function formatAlertList(alertTypes: Record<TelegramAlertType, boolean>): string {
+  const enabled = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => alertTypes[type]);
+  if (enabled.length === 0) return "None";
+  return enabled.map((type) => ALERT_LABELS[type]).join(", ");
+}
+
+function findCoinContext(state: TelegramMiniAppState, coinId: string): { subscription: SubscribedCoin | null; catalog: SearchableCoin | null } {
+  return {
+    subscription: state.subscriptions.find((coin) => coin.stablecoinId === coinId) ?? null,
+    catalog: state.catalog.searchableCoins.find((coin) => coin.stablecoinId === coinId) ?? null,
+  };
+}
+
+function CoinInsightPanel({ state, target, webApp, onClose }: {
+  state: TelegramMiniAppState;
+  target: CoinInsightTarget;
+  webApp: TelegramWebAppSdk | null;
+  onClose: () => void;
+}) {
+  const { subscription, catalog } = findCoinContext(state, target.coinId);
+  const symbol = subscription?.symbol ?? catalog?.symbol ?? target.coinId;
+  const name = subscription?.name ?? catalog?.name ?? "Unknown or no longer tracked coin";
+  const botPayload = target.kind === "why" ? formatWhyPayload(target.coinId) : formatCoveragePayload(target.coinId);
+  const botUrl = `https://t.me/${BOT_USERNAME}?start=${botPayload}`;
+  const handleOpenTelegram = () => {
+    if (webApp?.openTelegramLink) webApp.openTelegramLink(botUrl);
+    else webApp?.openLink?.(botUrl);
+  };
+  const handleOpenPharos = () => {
+    webApp?.openLink?.(`${PHAROS_COIN_PAGE_PREFIX}${target.coinId}`);
+  };
+  const title = target.kind === "why" ? `Why ${symbol}` : `Coverage ${symbol}`;
+  const isKnown = subscription != null || catalog != null;
+  const alertSummary = subscription ? formatAlertList(subscription.alertTypes) : "Not in your explicit watchlist";
+
+  return (
+    <section className="rounded-2xl border border-sky-500/25 bg-sky-500/10 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="pharos-kicker">In-app {target.kind}</p>
+          <h2 className="mt-1 truncate text-base font-semibold text-foreground">{title}</h2>
+          <p className="mt-1 text-xs text-muted-foreground">{name}</p>
+        </div>
+        <MiniButton ariaLabel={`Close ${title}`} variant="secondary" onClick={onClose}>
+          Close
+        </MiniButton>
+      </div>
+
+      {target.kind === "why" ? (
+        <div className="mt-4 grid gap-2 text-sm">
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Watch context</p>
+            <p className="mt-1 text-foreground">{alertSummary}</p>
+          </div>
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Safety explainer</p>
+            <p className="mt-1 text-muted-foreground">Full Safety Score notes are still delivered by the bot reply.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Registry</p>
+            <p className="mt-1 text-foreground">{isKnown ? "Tracked by Pharos" : "No current catalog match"}</p>
+          </div>
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Peg</p>
+            <p className="mt-1 text-foreground">{catalog?.peg ?? "Not available in this launch"}</p>
+          </div>
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Status</p>
+            <p className="mt-1 text-foreground">{catalog?.status ?? "Not available in this launch"}</p>
+          </div>
+          <div className="rounded-lg border border-border/55 bg-background/55 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Alert coverage</p>
+            <p className="mt-1 text-foreground">{alertSummary}</p>
+          </div>
+        </div>
+      )}
+
+      {!isKnown ? (
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-muted-foreground">
+          This launch target is not in the current Mini App catalog. No settings were changed.
+        </p>
+      ) : null}
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <MiniButton variant="secondary" disabled={!webApp} onClick={handleOpenTelegram}>
+          <Info className="h-4 w-4" aria-hidden="true" /> Open bot reply
+        </MiniButton>
+        <MiniButton variant="secondary" disabled={!webApp} onClick={handleOpenPharos}>
+          <ExternalLink className="h-4 w-4" aria-hidden="true" /> View on Pharos
+        </MiniButton>
+      </div>
+    </section>
+  );
+}
+
+function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, onOpenInsight, webApp, nowSec, highlighted }: {
   coin: SubscribedCoin;
   canMutate: boolean;
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onRemove: (coin: SubscribedCoin) => void;
+  onOpenInsight: (target: CoinInsightTarget) => void;
   webApp: TelegramWebAppSdk | null;
   nowSec: number;
   highlighted: boolean;
@@ -713,10 +822,6 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled;
   const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
-  const handleOpenTelegram = (url: string) => {
-    if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
-    else webApp?.openLink?.(url);
-  };
   const handleOpenLink = (url: string) => {
     webApp?.openLink?.(url);
   };
@@ -766,16 +871,14 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
         <MiniButton
           ariaLabel={`Why ${coin.symbol}`}
           variant="secondary"
-          disabled={!bridgeReady}
-          onClick={() => handleOpenTelegram(`https://t.me/${BOT_USERNAME}?start=why_${coin.stablecoinId}`)}
+          onClick={() => onOpenInsight({ kind: "why", coinId: coin.stablecoinId })}
         >
           <Info className="h-4 w-4" aria-hidden="true" /> Why
         </MiniButton>
         <MiniButton
           ariaLabel={`Coverage ${coin.symbol}`}
           variant="secondary"
-          disabled={!bridgeReady}
-          onClick={() => handleOpenTelegram(`https://t.me/${BOT_USERNAME}?start=coverage_${coin.stablecoinId}`)}
+          onClick={() => onOpenInsight({ kind: "coverage", coinId: coin.stablecoinId })}
         >
           <Info className="h-4 w-4" aria-hidden="true" /> Coverage
         </MiniButton>
@@ -870,12 +973,13 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, now
   );
 }
 
-function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId }: {
+function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, onOpenInsight, pendingUndo, onUndo, webApp, nowSec, highlightedCoinId }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onRemove: (coin: SubscribedCoin) => void;
+  onOpenInsight: (target: CoinInsightTarget) => void;
   pendingUndo: SubscribedCoin | null;
   onUndo: () => void;
   webApp: TelegramWebAppSdk | null;
@@ -983,6 +1087,7 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pend
             isMutating={isMutating}
             onMutate={onMutate}
             onRemove={onRemove}
+            onOpenInsight={onOpenInsight}
             webApp={webApp}
             nowSec={nowSec}
             highlighted={highlightedCoinId === coin.stablecoinId}
@@ -1215,6 +1320,7 @@ export function PharosWatchBotMiniAppClient() {
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
   const [view, setView] = useState<ViewKey>("home");
   const [coinTarget, setCoinTarget] = useState<string | null>(null);
+  const [coinInsightTarget, setCoinInsightTarget] = useState<CoinInsightTarget | null>(null);
   const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
   const [status, setStatus] = useState<"preview" | "loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -1313,6 +1419,7 @@ export function PharosWatchBotMiniAppClient() {
       const initial = initialViewFromStartParam(launch.startParam);
       setView(initial.view);
       setCoinTarget(initial.coinId);
+      setCoinInsightTarget(initial.insight);
       setPreviewName(launch.previewName);
       applyTelegramTheme(launch.webApp);
       cleanup = bindTelegramViewportAndTheme(launch.webApp);
@@ -1566,18 +1673,24 @@ export function PharosWatchBotMiniAppClient() {
   useEffect(() => {
     const bb = webApp?.BackButton;
     if (!bb) return;
-    if (view === "home") {
+    if (view === "home" && !coinInsightTarget) {
       bb.hide?.();
       return;
     }
-    const handler = () => setView("home");
+    const handler = () => {
+      if (coinInsightTarget) {
+        setCoinInsightTarget(null);
+        return;
+      }
+      setView("home");
+    };
     bb.show?.();
     bb.onClick?.(handler);
     return () => {
       bb.offClick?.(handler);
       bb.hide?.();
     };
-  }, [view, webApp]);
+  }, [coinInsightTarget, view, webApp]);
 
   // Scroll-to-coin: when launched with `coin_<id>`, scroll the matching row
   // into view and apply a temporary highlight. Runs once per coin target.
@@ -1739,6 +1852,7 @@ export function PharosWatchBotMiniAppClient() {
                   tabIndex={view === key ? 0 : -1}
                   onClick={() => {
                     setView(key);
+                    if (key !== "watchlist") setCoinInsightTarget(null);
                     webApp?.HapticFeedback?.selectionChanged?.();
                   }}
                   className={cn(
@@ -1765,12 +1879,23 @@ export function PharosWatchBotMiniAppClient() {
             ) : null}
             {view === "watchlist" ? (
               <section role="tabpanel" id="pharos-mini-app-panel-watchlist" aria-labelledby="pharos-mini-app-tab-watchlist">
+                {coinInsightTarget ? (
+                  <div className="mb-4">
+                    <CoinInsightPanel
+                      state={optimisticState}
+                      target={coinInsightTarget}
+                      webApp={webApp}
+                      onClose={() => setCoinInsightTarget(null)}
+                    />
+                  </div>
+                ) : null}
                 <WatchlistPanel
                   state={optimisticState}
                   canMutate={canMutate}
                   isMutating={isMutating}
                   onMutate={mutate}
                   onRemove={handleRemoveCoin}
+                  onOpenInsight={setCoinInsightTarget}
                   pendingUndo={pendingUndo}
                   onUndo={handleUndoRemove}
                   webApp={webApp}

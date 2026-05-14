@@ -23,7 +23,7 @@ Launch paths:
 
 - Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
 - Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
-- Private command replies: `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, selected explainers, `/set`, `/timezone`, `/unsnooze`, and `/health` include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, or `coin_<stablecoinId>`) so the Mini App opens on the matching panel. Private `quicksub:<stablecoinId>` confirmations also include a `coin_<stablecoinId>` tuning button. Group and supergroup replies keep the existing command and callback keyboards.
+- Private command replies: `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, selected explainers, `/set`, `/timezone`, `/unsnooze`, and `/health` include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, `coin_<stablecoinId>`, `why_<stablecoinId>`, or `coverage_<stablecoinId>`) so the Mini App opens on the matching panel. Private `quicksub:<stablecoinId>` confirmations also include a `coin_<stablecoinId>` tuning button. Group and supergroup replies keep the existing command and callback keyboards.
 - Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
 
 Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a fresh admin verification path and group-scoped launch ownership model exist.
@@ -34,7 +34,7 @@ BotFather-owned release checklist:
 - Enable the profile launch surface in BotFather separately from the reconciled persistent menu button.
 - Upload current preview screenshots/video and confirm they match the private-chat control-panel flow.
 - Configure the Mini App loading-screen icon and color in BotFather.
-- Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, and `coin_usdc-circle` on Telegram mobile, desktop, and web.
+- Test direct links for `https://t.me/PharosWatchBot?startapp=settings`, `watchlist`, `coin_usdc-circle`, `why_usdc-circle`, and `coverage_usdc-circle` on Telegram mobile, desktop, and web.
 - Verify the page loads inside Telegram with the Telegram bridge script, signed `initData`, and no frame denial headers.
 
 ## Files

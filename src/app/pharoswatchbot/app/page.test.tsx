@@ -135,6 +135,44 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByText(/Launch intent:/)).toBeTruthy();
   });
 
+  it("routes why start params to an in-app insight view", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "why_usdc-circle", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Why USDC")).toBeTruthy();
+    expect(screen.getByText("Full Safety Score notes are still delivered by the bot reply.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open bot reply" })).toBeTruthy();
+  });
+
+  it("routes coverage start params to an in-app insight view", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coverage_usdc-circle", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Coverage USDC")).toBeTruthy();
+    expect(screen.getByText("Alert coverage")).toBeTruthy();
+    expect(screen.getByText("DEWS, Depeg")).toBeTruthy();
+  });
+
+  it("falls through safely for stale insight start params", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "why_old-coin", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Why old-coin")).toBeTruthy();
+    expect(screen.getByText("This launch target is not in the current Mini App catalog. No settings were changed.")).toBeTruthy();
+  });
+
   it("scrolls the targeted coin row into view when launched with coin_<id>", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdc-circle", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
@@ -489,7 +527,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByRole("button", { name: /Add to home screen/i })).toBeNull();
   });
 
-  it("opens Why / Coverage / View-on-Pharos links from a coin card", async () => {
+  it("opens in-app Why / Coverage views and keeps bot reply fallbacks", async () => {
     const openTelegramLink = vi.fn();
     const openLink = vi.fn();
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, openTelegramLink, openLink } };
@@ -500,9 +538,18 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
     fireEvent.click(screen.getByRole("button", { name: "Why USDC" }));
+    expect(screen.getByText("Why USDC")).toBeTruthy();
+    expect(openTelegramLink).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Open bot reply" }));
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=why_usdc-circle");
+    fireEvent.click(screen.getByRole("button", { name: "Close Why USDC" }));
+
     fireEvent.click(screen.getByRole("button", { name: "Coverage USDC" }));
+    expect(screen.getByText("Coverage USDC")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open bot reply" }));
     expect(openTelegramLink).toHaveBeenCalledWith("https://t.me/PharosWatchBot?start=coverage_usdc-circle");
+    fireEvent.click(screen.getByRole("button", { name: "Close Coverage USDC" }));
+
     fireEvent.click(screen.getByRole("button", { name: "View USDC on Pharos" }));
     expect(openLink).toHaveBeenCalledWith("https://pharos.watch/stablecoin/usdc-circle");
   });

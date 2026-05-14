@@ -1,3 +1,4 @@
+import { formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { buildWhyMessage } from "../telegram-webhook-insights";
 import { buildStatusDiscoveryKeyboard } from "../telegram-webhook-messages";
 import type { WebhookCommandHandler } from "./context";
@@ -9,7 +10,10 @@ export const handleWhy: WebhookCommandHandler = async (ctx, args) => {
   const message = await buildWhyMessage(ctx.db, coin.id);
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup(message, {
-      replyMarkup: buildStatusDiscoveryKeyboard(coin.id, { includeMiniAppButton: true }),
+      replyMarkup: buildStatusDiscoveryKeyboard(coin.id, {
+        includeMiniAppButton: true,
+        miniAppPayload: formatWhyPayload(coin.id),
+      }),
     });
     return;
   }

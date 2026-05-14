@@ -42,7 +42,9 @@ Recognized payloads:
 | `home` | Home panel | Default if no payload, or used by the `/start` skip branch. |
 | `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze; used by `/help` and `/settings`. |
 | `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls; used by `/list` and all-stablecoin `/set` confirmations. |
-| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/status`, `/why`, `/coverage`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. |
+| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/status`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. |
+| `why_<stablecoinId>` | Watchlist panel with an in-app why view | Used by `/why` launch contexts and Mini App coin cards. Shows available Mini App watch context and keeps the existing bot-DM `/why` deep link as the full explainer fallback. |
+| `coverage_<stablecoinId>` | Watchlist panel with an in-app coverage view | Used by `/coverage` launch contexts and Mini App coin cards. Shows available Mini App catalog/watch context and keeps the existing bot-DM `/coverage` deep link as the full coverage-card fallback. |
 | `presets` | Presets panel | Followed presets plus available ones; used by `/presets`. |
 | `quiet-hours` | Settings panel | Used by `/mute`, `/unmutehours`, and `/timezone` private replies. |
 | `snooze` | Home panel | Used by per-coin or chat snooze acknowledgements, including `/unsnooze`. |
@@ -50,7 +52,7 @@ Recognized payloads:
 | `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
 | `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
 
-Payload constraints (mirroring `?start=`): max 64 characters, charset `[A-Za-z0-9_-]`, no spaces, lowercase. Unknown payloads fall through to the home panel. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
+Payload constraints (mirroring `?start=`): max 64 characters, charset `[A-Za-z0-9_-]`, no spaces, lowercase. Unknown payloads fall through to the home panel. Parametric coin payloads whose id is no longer in the Mini App catalog render a read-only no-change fallback. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
 
 ## Seam Rules
 

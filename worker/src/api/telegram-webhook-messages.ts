@@ -1,3 +1,4 @@
+import { formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { escapeHtml } from "../lib/telegram";
 import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
@@ -370,7 +371,10 @@ function formatUsdCompact(value: number | null | undefined): string | null {
   return `$${value.toFixed(0)}`;
 }
 
-export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { includeMiniAppButton?: boolean } = {}): {
+export function buildStatusDiscoveryKeyboard(
+  stablecoinId: string,
+  options: { includeMiniAppButton?: boolean; miniAppPayload?: string } = {},
+): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
   const rows: InlineKeyboardButton[][] = [[
@@ -378,7 +382,9 @@ export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { in
     { text: "Coverage", callback_data: `coverage:${stablecoinId}` },
     { text: "Subscribe", callback_data: `quicksub:${stablecoinId}` },
   ]];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) } }]);
+  if (options.includeMiniAppButton) {
+    rows.push([{ text: "Open in app", web_app: { url: buildTelegramMiniAppUrl(options.miniAppPayload ?? formatCoinPayload(stablecoinId)) } }]);
+  }
   return { inline_keyboard: rows };
 }
 

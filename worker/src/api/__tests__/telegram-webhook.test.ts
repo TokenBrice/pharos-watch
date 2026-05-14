@@ -1208,6 +1208,7 @@ describe("handleTelegramWebhook", () => {
     expect(sentMessageBody(0).text).toContain("not found");
     expect(sentMessageBody(1).text).toContain("USDC coverage");
     expect(sentMessageBody(1).text).toContain("Open coin page");
+    expectMiniAppButton(sentMessageBody(1), "Open in app", "coverage_usdc-circle");
   });
 
   it("/start with an unknown payload falls back to the wizard intro", async () => {

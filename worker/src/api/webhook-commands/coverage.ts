@@ -1,3 +1,4 @@
+import { formatCoveragePayload } from "@shared/lib/telegram-mini-app-payloads";
 import { buildCoverageMessage } from "../telegram-webhook-insights";
 import { buildStatusDiscoveryKeyboard } from "../telegram-webhook-messages";
 import { loadStatusForCoin } from "../telegram-webhook-status";
@@ -11,7 +12,10 @@ export const handleCoverage: WebhookCommandHandler = async (ctx, args) => {
   const message = buildCoverageMessage(coin.symbol, status);
   if (ctx.chatType === "private") {
     await ctx.replyToChatWithMarkup(message, {
-      replyMarkup: buildStatusDiscoveryKeyboard(coin.id, { includeMiniAppButton: true }),
+      replyMarkup: buildStatusDiscoveryKeyboard(coin.id, {
+        includeMiniAppButton: true,
+        miniAppPayload: formatCoveragePayload(coin.id),
+      }),
     });
     return;
   }
