@@ -1,10 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
-import { handleBackfillSupplyHistory } from "../backfill-supply-history";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../backfill-fx";
 
 stubCryptoForAuth();
+
+const evmRpcMocks = vi.hoisted(() => ({
+  resolveClosestBlockAtOrBeforeTimestamp: vi.fn(),
+}));
+
+vi.mock("../../lib/evm-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/evm-rpc")>();
+  return {
+    ...actual,
+    resolveClosestBlockAtOrBeforeTimestamp: evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp,
+  };
+});
 
 vi.mock("../backfill-price-sources", () => ({
   fetchMarketBackfillPriceSeries: vi.fn(async () => ({
@@ -21,6 +33,8 @@ vi.mock("../backfill-price-sources", () => ({
     },
   })),
 }));
+
+import { handleBackfillSupplyHistory } from "../backfill-supply-history";
 
 vi.mock("../backfill-fx", async () => {
   const actual = await vi.importActual<typeof import("../backfill-fx")>("../backfill-fx");
@@ -59,6 +73,7 @@ function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []
 describe("handleBackfillSupplyHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockReset();
   });
 
   it("requires admin auth", async () => {
@@ -295,6 +310,104 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts[0].args[2] as number).toBeCloseTo(1_000_200, -1);
     expect(inserts[0].args[3] as number).toBeCloseTo(1.0002, 4);
     expect(inserts[1].args[2] as number).toBeCloseTo(1_001_100, -1);
+  });
+
+  it("backfills USG historical supply after subtracting PegKeeper balances", async () => {
+    const capturedStatements: Array<{ sql: string; args: unknown[] }> = [];
+    const snapshotDate = Math.floor(Date.UTC(2026, 4, 9) / 1000);
+    const blockNumber = 24_500_000;
+    const totalSupplyRaw = 40_020_000n * 10n ** 18n;
+    const keeperOneRaw = 19_686_793n * 10n ** 18n;
+    const keeperTwoRaw = 19_780_590n * 10n ** 18n;
+    const keeperOneCall = encodeBalanceOfCallData("0xf89615f75c8161dc185c03020240905f6b66bad9");
+    const keeperTwoCall = encodeBalanceOfCallData("0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e");
+
+    const uint256Hex = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}`;
+    evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp.mockResolvedValue(blockNumber);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as {
+        method?: string;
+        params?: Array<{ data?: string } | string>;
+      };
+      if (body.method !== "eth_call") {
+        throw new Error(`Unexpected RPC method: ${body.method}`);
+      }
+      const call = body.params?.[0];
+      const data = typeof call === "object" && call != null ? call.data?.toLowerCase() : undefined;
+      if (data === TOTAL_SUPPLY_SELECTOR) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(totalSupplyRaw) }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (data === keeperOneCall.toLowerCase()) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(keeperOneRaw) }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (data === keeperTwoCall.toLowerCase()) {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: uint256Hex(keeperTwoRaw) }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`Unexpected eth_call data: ${data}`);
+    });
+
+    const chainRpcs = new Map<string, ChainRpcConfig>([
+      [
+        "ethereum",
+        {
+          chainId: "ethereum",
+          chainName: "Ethereum",
+          type: "evm",
+          rpcUrl: "https://fake-eth-rpc.test",
+          explorerUrl: "https://etherscan.io",
+        },
+      ],
+    ]);
+
+    const res = await handleBackfillSupplyHistory(
+      makeDb(capturedStatements),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09"),
+      true,
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usg-tangent&startDay=2026-05-09&endDay=2026-05-09", {
+        adminKey: "secret",
+      }),
+      null,
+      chainRpcs,
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+      skipped?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(1);
+    expect(body.errors).toBeUndefined();
+    expect(body.skipped).toBeUndefined();
+
+    expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).toHaveBeenCalledWith(
+      "ethereum",
+      snapshotDate + 86_400 - 1,
+      expect.any(Object),
+      expect.objectContaining({ chainRpcs }),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    const insert = capturedStatements.find((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    expect(insert?.args).toEqual([
+      "usg-tangent",
+      snapshotDate,
+      552_617,
+      null,
+    ]);
   });
 
   it("returns a clear error when CG market caps are all zero and on-chain fallback is unavailable", async () => {

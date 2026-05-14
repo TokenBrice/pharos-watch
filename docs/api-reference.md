@@ -3818,6 +3818,8 @@ Backfills per-coin supply history snapshots. When historical market-price series
 | `batch`                         | `integer` | `0`     | Batch offset for chunked processing                                     |
 | `batchSize`                     | `integer` | `10`    | Coins per batch                                                         |
 | `allow-constant-price-fallback` | `"true"`  | —       | Allow current-price fallback when historical non-USD prices are missing |
+| `startDay`                      | `integer \| ISO date (YYYY-MM-DD)` | — | Lower bound for UTC daily rows written                                  |
+| `endDay`                        | `integer \| ISO date (YYYY-MM-DD)` | — | Upper bound for UTC daily rows written; future values clamp to the last completed UTC day |
 
 ### `POST /api/backfill-stability-index`
 

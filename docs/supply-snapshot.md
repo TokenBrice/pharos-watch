@@ -130,6 +130,8 @@ The snapshot cron records those repaired USD totals as-is.
 
 **Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through a single-deployment on-chain supply fallback. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
 
+Configured protocol-inventory exclusions also participate in admin historical repair. `POST /api/backfill-supply-history` can rebuild their daily `supply_history` rows from EVM `totalSupply()` minus the same holder `balanceOf()` exclusions at the closest block before each UTC day close. Tangent USG uses this path for PegKeeper balances; rows are written with `price = null` when no replay-safe historical market price exists.
+
 **Key gotcha:** The list endpoint returns `circulating` values already in USD for all peg types. Do **not** multiply by price --- that double-converts. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs, but the list endpoint is already converted.
 
 ### sumPegBuckets()
@@ -196,11 +198,12 @@ Admin endpoint (requires Access service-token headers). Backfills `supply_histor
 
 - **Commodity tokens:** CoinGecko `market_chart`
 - **CoinGecko-only and commodity detail providers:** CoinGecko `market_chart`
+- **Configured protocol-inventory on-chain assets:** historical EVM `totalSupply()` minus configured holder balances
 - **DefiLlama-backed regular coins:** DefiLlama detail API
 
 When a historical market-price series is available for a coin, the backfill also persists daily `supply_history.price` on restored rows, including regular USD stablecoins. Historical PSI replay relies on that field to prefer day-level deviation over blunt `peak_deviation_bps` fallback.
 
-The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`.
+The handler explicitly supports `detailProvider === "coingecko"` and `detailProvider === "commodity"` in addition to DefiLlama-backed assets. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`; optional `startDay` / `endDay` bounds limit the UTC daily rows written, with future `endDay` values clamped to the last completed UTC day.
 
 ---
 

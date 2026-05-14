@@ -162,6 +162,11 @@ describe("syncStablecoinCharts", () => {
             circulating_usd: 25,
           },
           {
+            stablecoin_id: "usg-tangent",
+            snapshot_date: nowSec - 30 * 86_400,
+            circulating_usd: 13,
+          },
+          {
             stablecoin_id: "paxg-paxos",
             snapshot_date: nowSec - 30 * 86_400,
             circulating_usd: 7,
@@ -186,11 +191,16 @@ describe("syncStablecoinCharts", () => {
     expect(Math.max(...supplyHistoryQueries.map((entry) => entry.binds.length))).toBeLessThanOrEqual(90);
 
     const insert = getCacheInsert(db as MockD1Database);
-    const cached = JSON.parse(String(insert?.binds[1])) as Array<{ totalCirculatingUSD: Record<string, number> }>;
+    const cached = JSON.parse(String(insert?.binds[1])) as Array<{
+      date: number;
+      totalCirculatingUSD: Record<string, number>;
+    }>;
     const recentPoint = cached.find((point) => point.totalCirculatingUSD.peggedGOLD === 7);
+    const targetPoint = cached.find((point) => point.date === nowSec - 30 * 86_400);
 
     expect(recentPoint?.totalCirculatingUSD.peggedUSD).toBeGreaterThan(25);
     expect(recentPoint?.totalCirculatingUSD.peggedGOLD).toBe(7);
+    expect(targetPoint?.totalCirculatingUSD.peggedUSD).toBe(1_090_038);
   });
 
   it("returns degraded status when DefiLlama API fails", async () => {

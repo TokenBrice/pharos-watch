@@ -13,6 +13,11 @@ import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import {
+  computeExcludedBalanceAdjustedSupplyRaw,
+  CURATED_ONCHAIN_SUPPLY_EXCLUSIONS,
+  type SupplementalOnChainSupplySource,
+} from "../../lib/onchain-supply-exclusions";
 import { fetchOnchainUint256, probeTrackedTokenSupply } from "../reserve-adapters/helpers";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
 import {
@@ -20,6 +25,8 @@ import {
   fetchZephyrProtocolStats,
   isZephyrScannerAssetId,
 } from "./zephyr-zsd";
+
+export { computeExcludedBalanceAdjustedSupplyRaw };
 
 const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
@@ -33,28 +40,6 @@ const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; rpcUrl?:
   // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
-};
-
-type SupplementalOnChainSupplySource = "onchain-total-supply" | "onchain-circulating-supply";
-
-interface OnChainSupplyExclusionConfig {
-  chain: string;
-  holderAddresses: string[];
-  supplySource: SupplementalOnChainSupplySource;
-}
-
-const CURATED_ONCHAIN_SUPPLY_EXCLUSIONS: Record<string, OnChainSupplyExclusionConfig> = {
-  // Tangent mints USG inventory to PegKeeper contracts that deposit/withdraw
-  // from protocol liquidity pools. Tangent's own UI excludes those live
-  // balances from circulating USG, so the fallback mirrors that on-chain rule.
-  "usg-tangent": {
-    chain: "ethereum",
-    holderAddresses: [
-      "0xf89615f75c8161dc185c03020240905f6b66bad9",
-      "0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e",
-    ],
-    supplySource: "onchain-circulating-supply",
-  },
 };
 
 function pegTypeKey(meta: StablecoinMeta): string {
@@ -437,22 +422,6 @@ export function selectSupplementalOnChainSupplyContract(
   }
 
   return selectSingleOnChainSupplyContract(meta);
-}
-
-export function computeExcludedBalanceAdjustedSupplyRaw(
-  totalSupplyRaw: bigint,
-  excludedBalancesRaw: readonly bigint[],
-): bigint | null {
-  if (totalSupplyRaw <= 0n) return null;
-
-  let excludedRaw = 0n;
-  for (const balanceRaw of excludedBalancesRaw) {
-    if (balanceRaw < 0n) return null;
-    excludedRaw += balanceRaw;
-  }
-
-  const adjustedRaw = totalSupplyRaw - excludedRaw;
-  return adjustedRaw > 0n ? adjustedRaw : null;
 }
 
 async function adjustOnChainSupplyForExcludedBalances(input: {

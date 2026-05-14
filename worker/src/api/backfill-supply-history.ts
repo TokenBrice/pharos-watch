@@ -12,10 +12,16 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { selectBackfillCoins } from "../lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse, runAdminJob } from "../lib/admin-job";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { fetchEvmUint256AtBlock } from "../lib/evm-rpc";
-import { TOTAL_SUPPLY_SELECTOR } from "../lib/evm-selectors";
+import { fetchEvmUint256AtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../lib/evm-rpc";
+import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../lib/evm-selectors";
+import {
+  computeExcludedBalanceAdjustedSupplyRaw,
+  getOnChainSupplyExclusionConfig,
+} from "../lib/onchain-supply-exclusions";
+import { getArchiveFallbackRpcUrls } from "../lib/public-rpc-registry";
 import { extractDefiLlamaCoinChartPrices } from "./stablecoin-detail/shared";
 import { fetchMarketBackfillPriceSeries } from "./backfill-price-sources";
+import { parseOptionalDayWindow } from "./backfill-depegs-window";
 import { interpolateRateAtTimestamp, type TimestampedRatePoint } from "@shared/lib/rate-series";
 import {
   fetchHistoricalFxRates,
@@ -35,6 +41,11 @@ interface TokenEntry {
 interface StablecoinDetail {
   price?: number;
   tokens?: TokenEntry[];
+}
+
+interface SupplyBackfillWindow {
+  startDay: number | null;
+  endDay: number | null;
 }
 
 function tokenHistoryDateRange(tokens: TokenEntry[]): { startDate: string; endDate: string } | null {
@@ -85,6 +96,16 @@ function firstEvmContract(contracts?: ContractDeployment[]): ContractDeployment 
   );
 }
 
+function isWithinBackfillWindow(snapshotDate: number, window?: SupplyBackfillWindow): boolean {
+  if (window?.startDay != null && snapshotDate < window.startDay) return false;
+  if (window?.endDay != null && snapshotDate > window.endDay) return false;
+  return true;
+}
+
+function getLastCompletedUtcDay(nowSec = Math.floor(Date.now() / 1000)): number {
+  return Math.floor((nowSec - DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+}
+
 async function fetchOnChainTotalSupply(
   contracts: ContractDeployment[] | undefined,
   chainRpcs: Map<string, ChainRpcConfig> | undefined,
@@ -116,6 +137,145 @@ async function fetchOnChainTotalSupply(
   }
 }
 
+function selectConfiguredHistoricalOnChainContract(
+  contracts: ContractDeployment[] | undefined,
+  chain: string,
+): ContractDeployment | null {
+  return contracts?.find((contract) => contract.chain === chain) ?? null;
+}
+
+function rawTokenAmountToNumber(raw: bigint, decimals: number): number | null {
+  const amount = Number(raw) / 10 ** decimals;
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+async function fetchHistoricalAdjustedSupplyRaw(input: {
+  contract: ContractDeployment;
+  holderAddresses: readonly string[];
+  blockNumber: number;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}): Promise<bigint | null> {
+  const rpcOptions = {
+    chainRpcs: input.chainRpcs,
+    extraRpcUrls: getArchiveFallbackRpcUrls(input.contract.chain),
+    timeoutMs: 15_000,
+  };
+  const totalSupplyRaw = await fetchEvmUint256AtBlock(
+    input.contract.chain,
+    input.contract.address,
+    TOTAL_SUPPLY_SELECTOR,
+    input.blockNumber,
+    rpcOptions,
+  );
+  if (totalSupplyRaw == null || totalSupplyRaw <= 0n) return null;
+
+  const excludedBalancesRaw: bigint[] = [];
+  for (const holderAddress of input.holderAddresses) {
+    const balanceRaw = await fetchEvmUint256AtBlock(
+      input.contract.chain,
+      input.contract.address,
+      encodeBalanceOfCallData(holderAddress),
+      input.blockNumber,
+      rpcOptions,
+    );
+    if (balanceRaw == null) return null;
+    excludedBalancesRaw.push(balanceRaw);
+  }
+
+  return computeExcludedBalanceAdjustedSupplyRaw(totalSupplyRaw, excludedBalancesRaw);
+}
+
+async function backfillHistoricalOnChainSupply(
+  db: D1Database,
+  meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
+  options: {
+    chainRpcs?: Map<string, ChainRpcConfig>;
+    window?: SupplyBackfillWindow;
+  },
+): Promise<{ rows: number; error?: string } | null> {
+  const exclusionConfig = getOnChainSupplyExclusionConfig(meta.id);
+  if (!exclusionConfig?.historicalBackfillStartDay) return null;
+  if (meta.flags.pegCurrency !== "USD") {
+    return { rows: 0, error: "historical on-chain supply backfill currently supports USD-pegged assets only" };
+  }
+
+  const contract = selectConfiguredHistoricalOnChainContract(meta.contracts, exclusionConfig.chain);
+  if (!contract || contract.chain === "solana" || contract.chain === "stellar" || contract.chain === "tron") {
+    return { rows: 0, error: `no supported ${exclusionConfig.chain} contract for historical on-chain supply backfill` };
+  }
+
+  const endDay = Math.min(options.window?.endDay ?? getLastCompletedUtcDay(), getLastCompletedUtcDay());
+  const startDay = Math.max(exclusionConfig.historicalBackfillStartDay, options.window?.startDay ?? 0);
+  if (startDay > endDay) {
+    return { rows: 0, error: "no completed UTC days in historical on-chain supply backfill window" };
+  }
+
+  const blockSearchCache: EvmBlockSearchCache = { blockTimestampByNumber: new Map() };
+  const stmts: D1PreparedStatement[] = [];
+  let blockMisses = 0;
+  let supplyMisses = 0;
+
+  for (let snapshotDate = startDay; snapshotDate <= endDay; snapshotDate += DAY_SECONDS) {
+    if (!isWithinBackfillWindow(snapshotDate, options.window)) continue;
+
+    const targetTimestamp = snapshotDate + DAY_SECONDS - 1;
+    const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(
+      contract.chain,
+      targetTimestamp,
+      blockSearchCache,
+      {
+        chainRpcs: options.chainRpcs,
+        extraRpcUrls: getArchiveFallbackRpcUrls(contract.chain),
+        timeoutMs: 15_000,
+      },
+    );
+    if (blockNumber == null) {
+      blockMisses += 1;
+      continue;
+    }
+
+    const adjustedRaw = await fetchHistoricalAdjustedSupplyRaw({
+      contract,
+      holderAddresses: exclusionConfig.holderAddresses,
+      blockNumber,
+      chainRpcs: options.chainRpcs,
+    });
+    if (adjustedRaw == null) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    const supply = rawTokenAmountToNumber(adjustedRaw, contract.decimals ?? 18);
+    if (supply == null) {
+      supplyMisses += 1;
+      continue;
+    }
+
+    stmts.push(
+      db
+        .prepare(
+          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+        )
+        .bind(meta.id, snapshotDate, supply, null),
+    );
+  }
+
+  if (stmts.length === 0) {
+    return {
+      rows: 0,
+      error: `historical on-chain supply backfill wrote 0 rows (blockMisses=${blockMisses}, supplyMisses=${supplyMisses})`,
+    };
+  }
+
+  await batchExecute(db, stmts);
+  if (blockMisses > 0 || supplyMisses > 0) {
+    console.warn(
+      `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s) and ${supplyMisses} supply read(s)`,
+    );
+  }
+  return { rows: stmts.length };
+}
+
 async function backfillCommodity(
   db: D1Database,
   id: string,
@@ -125,6 +285,7 @@ async function backfillCommodity(
     cgApiKey?: string | null;
     contracts?: ContractDeployment[];
     chainRpcs?: Map<string, ChainRpcConfig>;
+    window?: SupplyBackfillWindow;
   },
 ): Promise<{ rows: number; error?: string }> {
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
@@ -169,6 +330,7 @@ async function backfillCommodity(
       if (!Number.isFinite(price) || price <= 0) continue;
       const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
       if (seenSnapshotDates.has(snapshotDate)) continue;
+      if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
       const cgMcap = cgMcapByDate.get(new Date(ts).toISOString().slice(0, 10));
       const resolvedMcap = resolveMarketCap(cgMcap, effectiveSupply, price);
       if (!Number.isFinite(resolvedMcap) || resolvedMcap <= 0) continue;
@@ -243,6 +405,7 @@ async function backfillCommodity(
     if (mcap <= 0) continue;
     const snapshotDate = Math.floor(point.date / DAY_SECONDS) * DAY_SECONDS;
     const price = findPrice(point.date);
+    if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
     stmts.push(
       db
         .prepare(
@@ -270,6 +433,15 @@ export async function handleBackfillSupplyHistory(
     { request, trustedAdmin, url },
     async () => {
       const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
+      const dayWindow = parseOptionalDayWindow(url, {
+        maxEndDay: getLastCompletedUtcDay(),
+        invalidDayMessage: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
+      });
+      if (dayWindow instanceof Response) return dayWindow;
+      const supplyBackfillWindow: SupplyBackfillWindow = {
+        startDay: dayWindow.startDay,
+        endDay: dayWindow.endDay,
+      };
 
       const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
         defaultBatchSize: DEFAULT_BATCH_SIZE,
@@ -291,6 +463,19 @@ export async function handleBackfillSupplyHistory(
         meta: (typeof coins)[number],
         failureLabel: string,
       ): Promise<void> => {
+        const historicalOnChainResult = await backfillHistoricalOnChainSupply(db, meta, {
+          chainRpcs,
+          window: supplyBackfillWindow,
+        });
+        if (historicalOnChainResult) {
+          if (historicalOnChainResult.error) {
+            errors.push(`${meta.symbol}: ${historicalOnChainResult.error}`);
+          } else {
+            totalRows += historicalOnChainResult.rows;
+          }
+          return;
+        }
+
         if (!meta.geckoId) {
           skipped.push(meta.symbol);
           return;
@@ -303,6 +488,7 @@ export async function handleBackfillSupplyHistory(
             cgApiKey,
             contracts: meta.contracts,
             chainRpcs,
+            window: supplyBackfillWindow,
           });
           if (result.error) {
             errors.push(`${meta.symbol}: ${result.error}`);
@@ -428,6 +614,7 @@ export async function handleBackfillSupplyHistory(
 
           // Floor to UTC midnight
           const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
+          if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
           let marketCapUsd: number;
           let price = findHistoricalPrice(snapshotDate);
 
