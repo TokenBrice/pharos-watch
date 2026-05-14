@@ -14,16 +14,17 @@ import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
+import { getDewsAmplifiers, getTopDewsContributors, getDewsSignalLabel } from "@/lib/dews-signal-utils";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
-  supply: { name: "Supply Velocity", metricKey: "delta1d", metricLabel: "1d change" },
-  pool: { name: "Pool Balance Drift", metricKey: "balanceRatio", metricLabel: "balance ratio" },
-  liq: { name: "Liquidity Erosion", metricKey: "scoreDelta7d", metricLabel: "7d score \u0394" },
-  price: { name: "Price Confidence", metricKey: "confidence", metricLabel: "confidence" },
-  diverg: { name: "Price Divergence", metricKey: "spreadBps", metricLabel: "spread (bps)" },
-  black: { name: "Blacklist Activity", metricKey: "events24h", metricLabel: "24h events" },
-  flow: { name: "Mint/Burn Flow", metricKey: "burnSurge", metricLabel: "burn surge" },
-  yield: { name: "Yield Anomaly", metricKey: "warnings", metricLabel: "warnings" },
+  supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
+  pool: { name: getDewsSignalLabel("pool"), metricKey: "balanceRatio", metricLabel: "balance ratio" },
+  liq: { name: getDewsSignalLabel("liq"), metricKey: "scoreDelta7d", metricLabel: "7d score \u0394" },
+  price: { name: getDewsSignalLabel("price"), metricKey: "confidence", metricLabel: "confidence" },
+  diverg: { name: getDewsSignalLabel("diverg"), metricKey: "spreadBps", metricLabel: "spread (bps)" },
+  black: { name: getDewsSignalLabel("black"), metricKey: "events24h", metricLabel: "24h events" },
+  flow: { name: getDewsSignalLabel("flow"), metricKey: "burnSurge", metricLabel: "burn surge" },
+  yield: { name: getDewsSignalLabel("yield"), metricKey: "warnings", metricLabel: "warnings" },
 };
 
 /** Map a signal score to its severity color (per-signal, not composite band) */
@@ -89,7 +90,7 @@ export function DEWSFiringList({ signals }: { signals: Record<string, DEWSFiring
             data-testid="dews-firing-signal"
             className="flex items-center justify-between text-xs"
           >
-            <span className="font-mono text-foreground">{key}</span>
+            <span className="text-foreground">{getDewsSignalLabel(key)}</span>
             <span className="font-mono tabular-nums text-muted-foreground">
               {Math.round(s.value)}
             </span>
@@ -192,6 +193,8 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const bandColor = THREAT_BAND_COLORS[typedBand] ?? "";
   const bandHex = THREAT_BAND_HEX[typedBand] ?? THREAT_BAND_HEX.CALM;
   const availableCount = Object.values(signals).filter((s) => s.available).length;
+  const topContributors = getTopDewsContributors(signals, 2);
+  const amplifiers = getDewsAmplifiers(data.current);
 
   const unavailableSignalNames = Object.entries(SIGNAL_META)
     .filter(([key]) => signals[key] && !signals[key].available)
@@ -215,6 +218,27 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           <p className="text-xs text-muted-foreground">
             Limited data: only {availableCount} of 8 signals available. Score may be less reliable.
           </p>
+        )}
+
+        {(topContributors.length > 0 || amplifiers.length > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {topContributors.map((item) => (
+              <span
+                key={item.key}
+                className="rounded-sm border border-border/70 bg-muted px-2 py-1 text-xs text-muted-foreground"
+              >
+                {item.label} {Math.round(item.value)}/100
+              </span>
+            ))}
+            {amplifiers.map((amp) => (
+              <span
+                key={amp.key}
+                className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300"
+              >
+                {amp.label} {amp.value.toFixed(2)}x
+              </span>
+            ))}
+          </div>
         )}
 
         {/* Signal breakdown */}

@@ -2,6 +2,7 @@
 
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
+import { getTopDewsContributors } from "@/lib/dews-signal-utils";
 
 interface DEWSBadgeProps {
   score: number;
@@ -18,14 +19,11 @@ export function DEWSBadge({ score, band, prevScore, compact, signals }: DEWSBadg
   const arrow = prevScore !== undefined && score > prevScore ? " \u25B2" : "";
   const colorClasses = THREAT_BAND_COLORS[band] ?? "";
 
-  // Find the top contributing signal for tooltip
   let tooltip = `DEWS: ${score}/100`;
   if (signals) {
-    const sorted = Object.entries(signals)
-      .filter(([, s]) => s.available)
-      .sort(([, a], [, b]) => b.value - a.value);
-    if (sorted.length > 0) {
-      tooltip += ` | Top: ${sorted[0][0]} (${sorted[0][1].value}/100)`;
+    const top = getTopDewsContributors(signals, 2);
+    if (top.length > 0) {
+      tooltip += ` | Top: ${top.map((item) => `${item.label} (${Math.round(item.value)}/100)`).join(", ")}`;
     }
   }
 

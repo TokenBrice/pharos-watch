@@ -26,7 +26,7 @@ const FAQ_ITEMS = [
   {
     question: "What is the DEWS score?",
     answer:
-      "DEWS (Depeg Early Warning System) is a per-coin forward-looking stress score from 0 to 100, computed every 30 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to detect systemic stress before a depeg occurs, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI), plus a bounded same-peg contagion multiplier from current WARNING/DANGER peers (currently 1.08/1.15, capped at 1.2).",
+      "DEWS (Depeg Early Warning System) is a per-coin stress score from 0 to 100, computed every 30 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly. It is designed to surface pre-price and live-market stress signals, with scores amplified by up to 30% during periods of broader ecosystem instability (low PSI), plus a bounded same-peg contagion multiplier from current WARNING/DANGER peers (currently 1.08/1.15, capped at 1.2).",
   },
   {
     question: "How is the peg score calculated?",
@@ -54,8 +54,8 @@ export default createClientFeaturePage({
     },
     headerActions: <ShareButton ogPath="/api/og/depeg" />,
     leadParagraphs: [
-      "A forward-looking incident board — not just price deviations, but early warning signals before the depeg happens.",
-      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to flag stress before it hits the price. When systemic risk rises, the radar sweeps faster.`,
+      "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals.",
+      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to score pre-price and live-market stress signals. When systemic risk rises, the radar sweeps faster.`,
     ],
   },
   beforeClient: (

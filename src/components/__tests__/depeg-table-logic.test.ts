@@ -69,6 +69,17 @@ describe("rowAccentClass", () => {
     expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-orange-500");
   });
 
+  it("returns amber border for pending incidents", () => {
+    const row = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
+    row.pendingIncident = {
+      stablecoinId: "usdc",
+      symbol: "USDC",
+      direction: "below",
+      firstSeenAt: 1_700_000_000,
+    };
+    expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-amber-500");
+  });
+
   it("returns orange border for DANGER band", () => {
     const row = makeRow({ activeDepeg: false }, makeDews({ band: "DANGER" }));
     expect(rowAccentClass(row)).toBe("border-l-[3px] border-l-orange-500");
@@ -93,6 +104,19 @@ describe("compareDepegTrackerRows — __attention sort", () => {
     // attentionScore(activeRow) >> attentionScore(normalRow)
     // sort key __attention: returns attentionScore(b) - attentionScore(a)
     // a=activeRow has higher score → b - a < 0 → activeRow ranks first
+    expect(result).toBeLessThan(0);
+  });
+
+  it("places pending rows ahead of ordinary DEWS warning rows", () => {
+    const pending = makeRow({ activeDepeg: false }, makeDews({ band: "CALM" }));
+    pending.pendingIncident = {
+      stablecoinId: "usdc",
+      symbol: "USDC",
+      direction: "below",
+      firstSeenAt: 1_700_000_000,
+    };
+    const warning = makeRow({ activeDepeg: false }, makeDews({ band: "WARNING", score: 70 }));
+    const result = compareDepegTrackerRows(pending, warning, sort("__attention"));
     expect(result).toBeLessThan(0);
   });
 

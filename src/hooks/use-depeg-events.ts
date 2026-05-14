@@ -13,6 +13,8 @@ const DEPEG_EVENTS_PAGE_SIZE = 100;
 
 interface UseInfiniteDepegEventsOptions {
   stablecoinId?: string;
+  activeOnly?: boolean;
+  includePending?: boolean;
   enabled?: boolean;
   autoLoadAll?: boolean;
 }
@@ -20,20 +22,39 @@ interface UseInfiniteDepegEventsOptions {
 function buildDepegEventsPath({
   stablecoinId,
   limit,
-  offset,
+  cursor,
+  activeOnly,
+  includePending,
 }: {
   stablecoinId?: string;
   limit: number;
-  offset: number;
+  cursor?: string | null;
+  activeOnly?: boolean;
+  includePending?: boolean;
 }) {
-  return API_PATHS.depegEvents({ stablecoinId, limit, offset });
+  return API_PATHS.depegEvents({
+    stablecoinId,
+    limit,
+    cursor: cursor ?? undefined,
+    active: activeOnly || undefined,
+    includeTotal: false,
+    includePending: includePending || undefined,
+  });
 }
 
-export function depegEventsInfiniteQueryOptions(stablecoinId?: string) {
+export function depegEventsInfiniteQueryOptions(
+  stablecoinId?: string,
+  options: { activeOnly?: boolean; includePending?: boolean } = {},
+) {
   const { staleTime, refetchInterval } = getPollingWindow(CRON_15MIN);
   return infiniteQueryOptions({
-    queryKey: ["depeg-events", "infinite", stablecoinId ?? null] as const,
-    initialPageParam: 0,
+    queryKey: [
+      "depeg-events",
+      "infinite",
+      stablecoinId ?? null,
+      { activeOnly: options.activeOnly === true, includePending: options.includePending === true },
+    ] as const,
+    initialPageParam: null as string | null,
     staleTime,
     refetchInterval,
     retry: 2,
@@ -42,25 +63,26 @@ export function depegEventsInfiniteQueryOptions(stablecoinId?: string) {
         buildDepegEventsPath({
           stablecoinId,
           limit: DEPEG_EVENTS_PAGE_SIZE,
-          offset: pageParam,
+          cursor: pageParam,
+          activeOnly: options.activeOnly,
+          includePending: options.includePending,
         }),
         DepegEventsResponseSchema,
         { signal },
       ),
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.data.events.length, 0);
-      return loaded < lastPage.data.total ? loaded : undefined;
-    },
+    getNextPageParam: (lastPage) => lastPage.data.nextCursor ?? undefined,
   });
 }
 
 export function useInfiniteDepegEvents({
   stablecoinId,
+  activeOnly = false,
+  includePending = false,
   enabled = true,
   autoLoadAll = false,
 }: UseInfiniteDepegEventsOptions = {}) {
   const query = useInfiniteQuery({
-    ...depegEventsInfiniteQueryOptions(stablecoinId),
+    ...depegEventsInfiniteQueryOptions(stablecoinId, { activeOnly, includePending }),
     enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
@@ -88,13 +110,24 @@ export function useInfiniteDepegEvents({
 
   const events = query.data?.pages.flatMap((page) => page.data.events) ?? [];
   const total = query.data?.pages[0]?.data.total ?? 0;
+  const totalExact = query.data?.pages[0]?.data.totalExact ?? true;
+  const pages = query.data?.pages ?? [];
+  const nextCursor = pages[pages.length - 1]?.data.nextCursor ?? null;
+  const pending = query.data?.pages[0]?.data.pending ?? [];
   const meta = query.data?.pages[0]?.meta ?? null;
 
   return {
     ...query,
-    data: { events, total },
+    data: { events, total, totalExact, nextCursor, pending },
     loadedCount: events.length,
-    isFullyLoaded: total === 0 || events.length >= total,
+    isFullyLoaded: nextCursor == null && (!totalExact || total === 0 || events.length >= total),
     meta,
   };
+}
+
+export function useActiveDepegEvents(options: Omit<UseInfiniteDepegEventsOptions, "activeOnly"> = {}) {
+  return useInfiniteDepegEvents({
+    ...options,
+    activeOnly: true,
+  });
 }

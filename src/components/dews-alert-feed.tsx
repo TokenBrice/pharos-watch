@@ -9,6 +9,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { getDewsAmplifiers, getTopDewsContributors } from "@/lib/dews-signal-utils";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { StressSignalEntry } from "@shared/types";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
@@ -26,6 +27,7 @@ interface AlertCoin {
   name: string;
   score: number;
   band: ThreatBand;
+  entry: StressSignalEntry;
 }
 
 const PAGE_SIZE = 3;
@@ -50,6 +52,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
         name: meta?.name ?? id,
         score: entry.score,
         band: entry.band,
+        entry,
       });
     }
 
@@ -99,10 +102,13 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
       <CardContent className="grid grid-cols-1 gap-y-1.5" aria-live="polite">
         {alertCoins.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
-            All tracked stablecoins are below ALERT right now.
+            All coins with current DEWS coverage are below ALERT.
           </p>
         ) : (
-          pageCoins.map((coin) => (
+          pageCoins.map((coin) => {
+            const top = getTopDewsContributors(coin.entry.signals, 2);
+            const amplifiers = getDewsAmplifiers(coin.entry);
+            return (
             <Link
               key={coin.id}
               href={buildStablecoinUrl(coin.id)}
@@ -114,6 +120,10 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate group-hover:underline">{coin.symbol}</div>
                   <div className="text-xs text-muted-foreground truncate">{coin.name}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">
+                    {top.length > 0 ? top.map((item) => item.shortLabel).join(", ") : "no active drivers"}
+                    {amplifiers.length > 0 ? ` · ${amplifiers.map((amp) => `${amp.label} ${amp.value.toFixed(2)}x`).join(", ")}` : ""}
+                  </div>
                 </div>
               </div>
 
@@ -124,7 +134,8 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
                 </span>
               </div>
             </Link>
-          ))
+            );
+          })
         )}
       </CardContent>
       {totalPages > 1 && (

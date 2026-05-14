@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   TableCell,
 } from "@/components/ui/table";
@@ -15,6 +16,8 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { type DepegTrackerRow } from "@/lib/depeg-sort";
+import { getDewsAmplifiers, getDewsFreshness, getTopDewsContributors } from "@/lib/dews-signal-utils";
+import { CRON_30MIN } from "@/lib/cron-intervals";
 import type { ThreatBand } from "@shared/lib/classification";
 import { formatPercent, formatTrackingSpanDays } from "@shared/lib/format";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
@@ -36,6 +39,7 @@ interface DepegTrackerTableProps {
 const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "rank", label: <span aria-label="Rank">#</span>, className: "w-[50px] text-right" },
   { id: "name", label: "Name", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "status", label: "Status", className: "text-left" },
   { id: "pegScore", label: "Peg Score", headerAdornment: <MethodologyHint topic="pegScore" />, sortKey: "pegScore", className: "text-right" },
   { id: "dewsScore", label: "DEWS", headerAdornment: <MethodologyHint topic="dews" />, sortKey: "dewsScore", className: "text-right" },
   { id: "currentDeviationBps", label: "Deviation", sortKey: "currentDeviationBps", className: "text-right" },
@@ -46,7 +50,41 @@ const DEPEG_TRACKER_COLUMNS: readonly DataTableColumn<DepegTableSortKey>[] = [
   { id: "trackingSpanDays", label: "Tracking", sortKey: "trackingSpanDays", className: "text-right hidden xl:table-cell" },
 ] as const;
 
+const DEWS_STALE_AFTER_SECONDS = CRON_30MIN / 1000;
+
+function StatusBadge({ row }: { row: DepegTrackerRow }) {
+  if (row.coin.activeDepeg) {
+    return (
+      <span className="inline-flex items-center rounded-sm border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-red-700 dark:text-red-400">
+        LIVE
+      </span>
+    );
+  }
+  if (row.pendingIncident) {
+    return (
+      <span
+        className="inline-flex items-center rounded-sm border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-amber-700 dark:text-amber-300"
+        title="Awaiting secondary-source confirmation."
+      >
+        Pending
+      </span>
+    );
+  }
+  if (row.coin.depegEventCoverageLimited) {
+    return (
+      <span
+        className="inline-flex items-center rounded-sm border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-none text-sky-700 dark:text-sky-300"
+        title="Below the live depeg-event floor; price deviation is shown without opening live events."
+      >
+        Coverage-limited
+      </span>
+    );
+  }
+  return <span className="text-muted-foreground text-xs">—</span>;
+}
+
 export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTableProps) {
+  const [nowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const {
     sortKey,
     sortDirection,
@@ -137,6 +175,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="text-xs text-muted-foreground truncate hidden xl:inline">{coin.name}</span>
                   </div>
                 </TableCell>
+                <TableCell>
+                  <StatusBadge row={row} />
+                </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm">
                   {coin.pegScore !== null ? (
                     <span className={pegScoreColor(coin.pegScore)}>{coin.pegScore}</span>
@@ -146,11 +187,25 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-sm">
                   {dews ? (
-                    <div className="flex items-center justify-end gap-1.5">
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center justify-end gap-1.5">
                       <DEWSBadge score={dews.score} band={dews.band as ThreatBand} signals={dews.signals} />
                       <span className="text-xs font-mono tabular-nums text-muted-foreground w-5 text-right">
                         {dews.score}
                       </span>
+                      </div>
+                      {(() => {
+                        const top = getTopDewsContributors(dews.signals, 2);
+                        const amplifiers = getDewsAmplifiers(dews);
+                        const freshness = getDewsFreshness(dews.computedAt, nowSeconds, DEWS_STALE_AFTER_SECONDS);
+                        return (
+                          <div className="max-w-[160px] truncate text-[10px] text-muted-foreground">
+                            {top.length > 0 ? top.map((item) => item.shortLabel).join(", ") : "no active drivers"}
+                            {amplifiers.length > 0 ? ` · ${amplifiers.map((amp) => `${amp.label} ${amp.value.toFixed(2)}x`).join(", ")}` : ""}
+                            {freshness.label ? ` · ${freshness.stale ? "stale " : ""}${freshness.label}` : ""}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <span className="text-muted-foreground text-sm">—</span>
@@ -199,7 +254,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
       })}
       {paginated.length === 0 && (
         <DataTableEmptyRow colSpan={DEPEG_TRACKER_COLUMNS.length}>
-          No depeg events detected.
+          No stablecoins match these filters.
         </DataTableEmptyRow>
       )}
     </DataTableShell>

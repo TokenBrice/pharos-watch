@@ -26,7 +26,7 @@ describe("DEWSFiringList", () => {
     // The firing list sorts by value descending and excludes zero/unavailable.
     const items = screen.getAllByTestId("dews-firing-signal");
     expect(items.length).toBe(3);
-    expect(items[0].textContent).toMatch(/diverg/i);
+    expect(items[0].textContent).toMatch(/Cross-Source Divergence/i);
     expect(items[0].textContent).toMatch(/80/);
   });
 

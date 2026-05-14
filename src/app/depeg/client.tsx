@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,15 +19,19 @@ import { DEWSSummary } from "@/components/dews-summary";
 import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
+import { DepegPendingIncidents } from "@/components/depeg-pending-incidents";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, PEG_FILTER_OPTIONS, GOVERNANCE_FILTER_OPTIONS } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
 
 export function DepegClient() {
+  const [nowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   const {
     data: pegData,
     isLoading: isPegLoading,
@@ -52,7 +56,7 @@ export function DepegClient() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteDepegEvents();
+  } = useInfiniteDepegEvents({ includePending: true });
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -91,18 +95,45 @@ export function DepegClient() {
       }),
     [pegData, pegFilter, typeFilter, searchQuery],
   );
+  const pendingIncidents = useMemo(() => extractPendingDepegIncidents(eventsData), [eventsData]);
+  const pendingByCoin = useMemo(() => mapPendingIncidentsByCoin(pendingIncidents), [pendingIncidents]);
 
   // Merge peg coins with DEWS data for table rows
   const tableRows = useMemo((): DepegTrackerRow[] => {
     return filteredPegCoins.map((coin) => ({
       coin,
       dews: dewsData?.signals?.[coin.id] ?? null,
+      pendingIncident: pendingByCoin.get(coin.id) ?? null,
     }));
-  }, [filteredPegCoins, dewsData]);
+  }, [filteredPegCoins, dewsData, pendingByCoin]);
   const trackedIds = useMemo(
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
   );
+  const activeEvents = useMemo(
+    () => (eventsData?.events ?? []).filter((event) => event.endedAt === null),
+    [eventsData],
+  );
+  const recentClosedEvents = useMemo(
+    () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
+    [eventsData],
+  );
+  const reliability = useMemo(() => {
+    const signals = dewsData?.signals ? Object.values(dewsData.signals) : [];
+    const oldestComputedAt = dewsData?.oldestComputedAt ?? signals.reduce<number | null>((oldest, entry) => {
+      if (!entry.computedAt) return oldest;
+      return oldest == null ? entry.computedAt : Math.min(oldest, entry.computedAt);
+    }, null);
+    const oldestAgeSec = oldestComputedAt ? Math.max(0, nowSeconds - oldestComputedAt) : null;
+    return {
+      dewsCoverageCount: signals.length,
+      oldestAgeSec,
+      malformedRows: dewsData?.malformedRows ?? 0,
+      coverageLimitedCount: pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
+      activeCount: pegData?.summary?.activeDepegCount ?? activeEvents.length,
+      pendingCount: pendingIncidents.length,
+    };
+  }, [activeEvents.length, dewsData, nowSeconds, pegData, pendingIncidents.length]);
 
   const handleRowClick = useCallback((id: string) => {
     router.push(buildStablecoinUrl(id));
@@ -158,6 +189,39 @@ export function DepegClient() {
               <DepegTrackerStats stats={pegData.summary} />
             </SectionErrorBoundary>
           )}
+          <Card className="rounded-xl">
+            <CardHeader className="pb-2">
+              <h2 className="pharos-kicker">Coverage</h2>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.activeCount}</div>
+                <div className="text-xs text-muted-foreground">live confirmed</div>
+              </div>
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.pendingCount}</div>
+                <div className="text-xs text-muted-foreground">pending</div>
+              </div>
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.dewsCoverageCount}</div>
+                <div className="text-xs text-muted-foreground">DEWS current</div>
+              </div>
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">
+                  {reliability.oldestAgeSec != null ? formatElapsedSeconds(reliability.oldestAgeSec) : "—"}
+                </div>
+                <div className="text-xs text-muted-foreground">oldest DEWS</div>
+              </div>
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.coverageLimitedCount}</div>
+                <div className="text-xs text-muted-foreground">event floor</div>
+              </div>
+              <div>
+                <div className="font-mono text-lg font-semibold tabular-nums">{reliability.malformedRows}</div>
+                <div className="text-xs text-muted-foreground">malformed</div>
+              </div>
+            </CardContent>
+          </Card>
           <SectionErrorBoundary name="dews-alert-feed">
             <DEWSAlertFeed
               signals={dewsData?.signals}
@@ -173,7 +237,7 @@ export function DepegClient() {
       <SectionErrorBoundary name="depeg-table">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="pharos-kicker">Peg Leaderboard</h2>
+            <h2 className="pharos-kicker">Leaderboard and heatmap filters</h2>
             <div className="flex flex-wrap items-center gap-3">
               <ToggleGroup
                 type="single"
@@ -220,11 +284,25 @@ export function DepegClient() {
         </div>
       </SectionErrorBoundary>
 
+      <SectionErrorBoundary name="active-depeg-feed">
+        <DepegFeed
+          title="Active Incidents"
+          events={activeEvents}
+          logos={logos}
+          emptyMessage="No confirmed active depeg incidents."
+        />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="pending-depeg-feed">
+        <DepegPendingIncidents incidents={pendingIncidents} logos={logos} />
+      </SectionErrorBoundary>
+
       {/* Recent Depeg Events */}
       <SectionErrorBoundary name="depeg-feed">
         <DepegFeed
-          events={eventsData?.events ?? []}
+          events={recentClosedEvents}
           logos={logos}
+          emptyMessage="No confirmed depeg history in this view."
           hasMore={!!hasNextPage}
           isLoadingMore={isFetchingNextPage}
           onLoadMore={() => void fetchNextPage()}

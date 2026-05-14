@@ -16,6 +16,8 @@ import type { DepegEvent } from "@shared/types";
 interface DepegFeedProps {
   events: DepegEvent[];
   logos?: Record<string, string>;
+  title?: string;
+  emptyMessage?: string;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
@@ -24,7 +26,15 @@ interface DepegFeedProps {
 const MOBILE_PAGE_SIZE = 3;
 const DESKTOP_PAGE_SIZE = 6;
 
-export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = false, onLoadMore }: DepegFeedProps) {
+export function DepegFeed({
+  events,
+  logos,
+  title = "Recent Depeg Events",
+  emptyMessage = "No confirmed depeg events in this view.",
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+}: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
@@ -48,7 +58,11 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
   }, []);
 
   const sorted = useMemo(
-    () => [...events].sort((a, b) => b.startedAt - a.startedAt),
+    () => [...events].sort((a, b) => {
+      const activeDelta = Number(b.endedAt === null) - Number(a.endedAt === null);
+      if (activeDelta !== 0) return activeDelta;
+      return b.startedAt - a.startedAt;
+    }),
     [events],
   );
 
@@ -80,17 +94,19 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
     }
   }, [events]);
 
-  if (events.length === 0) return null;
-
   return (
     <Card className="rounded-xl flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle as="h2" className="pharos-kicker">
-          Recent Depeg Events
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
-        {visible.map((evt) => {
+        {events.length === 0 ? (
+          <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-sm text-emerald-700 dark:text-emerald-400 lg:col-span-3">
+            {emptyMessage}
+          </p>
+        ) : visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
           const newIndex = newIndexMap.get(evt.id);
           return (
@@ -121,6 +137,7 @@ export function DepegFeed({ events, logos, hasMore = false, isLoadingMore = fals
                     <DepegProvenanceBadges
                       pendingReason={evt.pendingReason}
                       confirmationSources={evt.confirmationSources}
+                      source={evt.source}
                     />
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">

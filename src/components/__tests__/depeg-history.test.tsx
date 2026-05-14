@@ -60,8 +60,9 @@ describe("DepegHistory provenance badges", () => {
 
     render(<DepegHistory stablecoinId="usdc-circle" />);
 
-    expect(screen.getByTestId("event-pending-reason").textContent).toContain("large-cap");
-    expect(screen.getByTestId("event-confirmed-by").textContent).toContain("DEX+CEX");
+    expect(screen.getByTestId("event-source").textContent).toContain("live");
+    expect(screen.getByTestId("event-pending-reason").textContent).toContain("large cap");
+    expect(screen.getByTestId("event-confirmed-by").textContent).toContain("DEX, CEX");
   });
 
   it("omits both badges for legacy events where provenance fields are null", () => {
@@ -75,6 +76,7 @@ describe("DepegHistory provenance badges", () => {
 
     render(<DepegHistory stablecoinId="usdc-circle" />);
 
+    expect(screen.getByTestId("event-source").textContent).toContain("live");
     expect(screen.queryByTestId("event-pending-reason")).toBeNull();
     expect(screen.queryByTestId("event-confirmed-by")).toBeNull();
   });

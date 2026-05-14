@@ -75,7 +75,7 @@ describe("DEWSBadge", () => {
       />,
     );
     const el = screen.getByText("Warning");
-    expect(el.getAttribute("title")).toContain("supply");
+    expect(el.getAttribute("title")).toContain("Supply Velocity");
   });
 
   it("ignores unavailable signals and picks from available ones", () => {

@@ -116,13 +116,13 @@ describe("query option builders", () => {
       signal: controller.signal,
       queryKey: options.queryKey,
       meta: undefined,
-      pageParam: 0,
+      pageParam: null,
       direction: "forward",
       client: null,
     } as never);
 
     expect(apiFetchWithMetaMock).toHaveBeenLastCalledWith(
-      "/api/depeg-events?stablecoin=usdc-circle&limit=100&offset=0",
+      "/api/depeg-events?stablecoin=usdc-circle&limit=100&includeTotal=false",
       expect.anything(),
       { signal: controller.signal },
     );

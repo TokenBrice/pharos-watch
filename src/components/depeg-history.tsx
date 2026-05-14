@@ -239,6 +239,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
         <DepegProvenanceBadges
           pendingReason={event.pendingReason}
           confirmationSources={event.confirmationSources}
+          source={event.source}
           reasonLeadingClass="ml-2"
         />
       </TableCell>
