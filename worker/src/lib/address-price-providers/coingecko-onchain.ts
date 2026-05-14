@@ -1,3 +1,6 @@
+import { cgUrl, cgHeaders } from "../coingecko";
+import { RATE_LIMITS } from "../rate-limit";
+import { sleepWithSignal } from "../abort";
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import {
   ADDRESS_PROVIDER_MIN_LIQUIDITY_USD,
@@ -10,10 +13,11 @@ import {
   parsePositiveNumber,
 } from "./shared";
 
-const GECKOTERMINAL_ADDRESS_MAX_REQUESTS = 5;
+const CG_ONCHAIN_ADDRESS_MAX_REQUESTS = 5;
 
-export async function runGeckoTerminalAddressProvider(
+export async function runCoingeckoOnchainAddressProvider(
   targets: AddressPriceTarget[],
+  apiKey: string | null,
   signal: AbortSignal | undefined,
   nowSec: number,
   deadlineMs: number,
@@ -27,55 +31,68 @@ export async function runGeckoTerminalAddressProvider(
   const grouped = groupTargetsByProviderChain(targets);
   for (const [providerChainId, chainTargets] of grouped) {
     for (const batch of chunk(chainTargets, 30)) {
-      if (attemptedRequests >= GECKOTERMINAL_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
+      if (attemptedRequests >= CG_ONCHAIN_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
+      if (attemptedRequests > 0) {
+        await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
+      }
       attemptedRequests += 1;
-      const url = `https://api.geckoterminal.com/api/v2/simple/networks/${providerChainId}/token_price/${batch.map((target) => target.address).join(",")}`;
+      const url = cgUrl(
+        `/onchain/networks/${providerChainId}/tokens/multi/${batch.map((target) => target.address).join(",")}`,
+        apiKey,
+      );
       const { json, diagnostic } = await fetchProviderJson({
-        provider: "geckoterminal-address",
+        provider: "coingecko-onchain-address",
         url,
         candidateCount: batch.length,
         signal,
+        init: { headers: cgHeaders({}, apiKey) },
       });
-      const attrs = isRecord(json) && isRecord(json.data) && isRecord(json.data.attributes)
-        ? json.data.attributes
-        : null;
-      const tokenPrices = attrs && isRecord(attrs.token_prices) ? attrs.token_prices : null;
-      if (tokenPrices) {
+      const data = isRecord(json) && Array.isArray(json.data) ? json.data : null;
+      if (data) {
+        const byAddress = new Map<string, Record<string, unknown>>();
+        for (const entry of data) {
+          if (!isRecord(entry) || !isRecord(entry.attributes)) continue;
+          const address = entry.attributes.address;
+          if (typeof address !== "string") continue;
+          byAddress.set(address.toLowerCase(), entry.attributes);
+        }
         for (const target of batch) {
-          const priceUsd = parsePositiveNumber(
-            tokenPrices[target.address] ?? tokenPrices[target.address.toLowerCase()],
-          );
+          const attrs = byAddress.get(target.address.toLowerCase());
+          if (!attrs) {
+            incrementReason(rejectedTargets, "missing-quote");
+            continue;
+          }
+          const priceUsd = parsePositiveNumber(attrs.price_usd);
           if (!priceUsd) {
             incrementReason(rejectedTargets, "missing-quote");
             continue;
           }
-          const reserveMap = isRecord(attrs?.total_reserve_in_usd) ? attrs.total_reserve_in_usd : {};
-          const volumeMap = isRecord(attrs?.h24_volume_usd) ? attrs.h24_volume_usd : {};
-          const liquidityUsd = parseNonNegativeNumber(reserveMap[target.address] ?? reserveMap[target.address.toLowerCase()]);
+          const liquidityUsd = parseNonNegativeNumber(attrs.total_reserve_in_usd);
           if (liquidityUsd != null && liquidityUsd < ADDRESS_PROVIDER_MIN_LIQUIDITY_USD) {
             incrementReason(rejectedTargets, "price-rejected");
             continue;
           }
+          const volume = isRecord(attrs.volume_usd) ? parseNonNegativeNumber(attrs.volume_usd.h24) : null;
           quotes.push({
             stablecoinId: target.stablecoinId,
-            source: "geckoterminal-address",
+            source: "coingecko-onchain-address",
             chain: target.chain,
             address: target.address,
             priceUsd,
             observedAt: nowSec,
             observedAtMode: "local_fetch",
             ...(liquidityUsd != null ? { liquidityUsd } : {}),
-            volume24hUsd: parseNonNegativeNumber(volumeMap[target.address] ?? volumeMap[target.address.toLowerCase()]) ?? undefined,
+            volume24hUsd: volume ?? undefined,
             metadata: { providerChainId },
           });
         }
-        diagnostic.responseRowCount = Object.keys(tokenPrices).length;
-        diagnostic.matchedCount = quotes.filter((quote) => quote.source === "geckoterminal-address").length;
+        diagnostic.responseRowCount = data.length;
+        diagnostic.matchedCount = quotes.filter((quote) => quote.source === "coingecko-onchain-address").length;
         diagnostic.success = true;
         successfulRequests += 1;
       } else if (json != null) {
         diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected GeckoTerminal simple token_price payload";
+        diagnostic.errorMessage = "Expected CoinGecko onchain tokens/multi payload";
         diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
       }
       diagnostics.push(diagnostic);
@@ -85,7 +102,7 @@ export async function runGeckoTerminalAddressProvider(
   return {
     quotes,
     diagnostics,
-    attemptedTargets: Math.min(targets.length, GECKOTERMINAL_ADDRESS_MAX_REQUESTS * 30),
+    attemptedTargets: Math.min(targets.length, CG_ONCHAIN_ADDRESS_MAX_REQUESTS * 30),
     matchedTargets: quotes.length,
     rejectedTargets,
     successfulRequests,

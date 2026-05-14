@@ -1,9 +1,9 @@
 import {
   ALCHEMY_CHAIN_MAP,
   BIRDEYE_CHAIN_MAP,
+  CG_CHAIN_MAP,
   DEXPAPRIKA_CHAIN_MAP,
   DS_CHAIN_MAP,
-  GT_CHAIN_MAP,
   MORALIS_CHAIN_MAP,
 } from "@shared/lib/chain-provider-registry";
 import { resolveChainId } from "@shared/lib/chains";
@@ -16,9 +16,9 @@ import {
 } from "../pricing-provider-lifecycle";
 import { runAlchemyAddressProvider } from "./alchemy";
 import { runBirdeyeAddressProvider } from "./birdeye";
+import { runCoingeckoOnchainAddressProvider } from "./coingecko-onchain";
 import { runDexPaprikaAddressProvider } from "./dexpaprika";
 import { runDexScreenerAddressProvider } from "./dexscreener";
-import { runGeckoTerminalAddressProvider } from "./geckoterminal";
 import { runMoralisAddressProvider } from "./moralis";
 import {
   ADDRESS_PROVIDER_RUN_BUDGET_MS,
@@ -48,7 +48,7 @@ export type {
 const ALL_ADDRESS_PROVIDERS: readonly AddressPriceProviderKey[] = [
   "dexscreener-address",
   "dexpaprika-address",
-  "geckoterminal-address",
+  "coingecko-onchain-address",
   "alchemy-address",
   "moralis-address",
   "birdeye-address",
@@ -57,7 +57,6 @@ const ALL_ADDRESS_PROVIDERS: readonly AddressPriceProviderKey[] = [
 const NO_KEY_ADDRESS_PROVIDERS = new Set<AddressPriceProviderKey>([
   "dexscreener-address",
   "dexpaprika-address",
-  "geckoterminal-address",
 ]);
 
 export const ADDRESS_PROVIDER_CIRCUIT_SOURCE: Record<AddressPriceProviderKey, string> = {
@@ -65,7 +64,7 @@ export const ADDRESS_PROVIDER_CIRCUIT_SOURCE: Record<AddressPriceProviderKey, st
   "moralis-address": CIRCUIT_SOURCE.MORALIS_PRICES,
   "dexscreener-address": CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES,
   "dexpaprika-address": CIRCUIT_SOURCE.DEXPAPRIKA_PRICES,
-  "geckoterminal-address": CIRCUIT_SOURCE.GECKO_TERMINAL_ADDRESS_PRICES,
+  "coingecko-onchain-address": CIRCUIT_SOURCE.CG_ONCHAIN,
   "birdeye-address": CIRCUIT_SOURCE.BIRDEYE_PRICES,
 };
 
@@ -74,7 +73,7 @@ const PROVIDER_CHAIN_MAPS: Record<AddressPriceProviderKey, Record<string, string
   "moralis-address": MORALIS_CHAIN_MAP,
   "dexscreener-address": DS_CHAIN_MAP,
   "dexpaprika-address": DEXPAPRIKA_CHAIN_MAP,
-  "geckoterminal-address": GT_CHAIN_MAP,
+  "coingecko-onchain-address": CG_CHAIN_MAP,
   "birdeye-address": BIRDEYE_CHAIN_MAP,
 };
 
@@ -86,6 +85,8 @@ function hasProviderCredential(provider: AddressPriceProviderKey, config: Addres
       return hasValue(config.moralisApiKey);
     case "birdeye-address":
       return hasValue(config.birdeyeApiKey);
+    case "coingecko-onchain-address":
+      return hasValue(config.cgApiKey);
     default:
       return true;
   }
@@ -109,6 +110,7 @@ export function resolveEnabledAddressPriceProviders(
     ? configured.split(",").map((part) => part.trim()).filter(Boolean)
     : [
         ...NO_KEY_ADDRESS_PROVIDERS,
+        ...(hasValue(config.cgApiKey) ? ["coingecko-onchain-address" as const] : []),
         ...(hasValue(config.alchemyApiKey) ? ["alchemy-address" as const] : []),
         ...(hasValue(config.moralisApiKey) ? ["moralis-address" as const] : []),
         ...(hasValue(config.birdeyeApiKey) ? ["birdeye-address" as const] : []),
@@ -265,8 +267,8 @@ async function runAddressProvider(params: {
       return runDexScreenerAddressProvider(params.targets, params.signal, params.nowSec, params.deadlineMs);
     case "dexpaprika-address":
       return runDexPaprikaAddressProvider(params.targets, params.signal, params.deadlineMs);
-    case "geckoterminal-address":
-      return runGeckoTerminalAddressProvider(params.targets, params.signal, params.nowSec, params.deadlineMs);
+    case "coingecko-onchain-address":
+      return runCoingeckoOnchainAddressProvider(params.targets, params.config.cgApiKey ?? null, params.signal, params.nowSec, params.deadlineMs);
     case "alchemy-address":
       return runAlchemyAddressProvider(params.targets, params.config, params.signal, params.deadlineMs);
     case "moralis-address":

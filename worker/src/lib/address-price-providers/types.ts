@@ -9,7 +9,7 @@ export type AddressPriceProviderKey =
   | "moralis-address"
   | "dexscreener-address"
   | "dexpaprika-address"
-  | "geckoterminal-address"
+  | "coingecko-onchain-address"
   | "birdeye-address";
 
 export interface AddressPriceProviderRuntimeConfig {
@@ -17,6 +17,7 @@ export interface AddressPriceProviderRuntimeConfig {
   alchemyApiKey?: string | null;
   moralisApiKey?: string | null;
   birdeyeApiKey?: string | null;
+  cgApiKey?: string | null;
 }
 
 export interface AddressPriceAssetLike {

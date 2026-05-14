@@ -7,12 +7,13 @@ import {
 describe("address price providers", () => {
   it("auto-enables no-key providers plus configured key-backed providers", () => {
     expect(resolveEnabledAddressPriceProviders({
+      cgApiKey: "cg",
       moralisApiKey: "moralis",
       birdeyeApiKey: "birdeye",
     })).toEqual([
       "dexscreener-address",
       "dexpaprika-address",
-      "geckoterminal-address",
+      "coingecko-onchain-address",
       "moralis-address",
       "birdeye-address",
     ]);

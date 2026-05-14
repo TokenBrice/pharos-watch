@@ -43,7 +43,7 @@ export type PriceSourceName =
   | "alchemy-address"
   | "moralis-address"
   | "birdeye-address"
-  | "geckoterminal-address"
+  | "coingecko-onchain-address"
   | "geckoterminal"
   | "pyth"
   | "redstone"

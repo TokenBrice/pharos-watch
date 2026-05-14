@@ -54,12 +54,12 @@ describe("pricing-source registry ↔ policy contract", () => {
     expect(fallbackEntries.map((entry) => entry.key).sort()).toEqual([
       "alchemy-address",
       "birdeye-address",
+      "coingecko-onchain-address",
       "coinmarketcap",
       "dexpaprika-address",
       "dexscreener-address",
       "dexscreener-exact",
       "dexscreener-search",
-      "geckoterminal-address",
       "jupiter",
       "moralis-address",
     ]);

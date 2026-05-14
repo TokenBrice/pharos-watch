@@ -58,7 +58,7 @@ describe("pricing source registry", () => {
       "alchemy-address",
       "moralis-address",
       "birdeye-address",
-      "geckoterminal-address",
+      "coingecko-onchain-address",
       "dexscreener-search",
       "defillama-contract",
       "protocol-redeem",
@@ -134,7 +134,7 @@ describe("pricing source registry", () => {
       "alchemy-address",
       "moralis-address",
       "birdeye-address",
-      "geckoterminal-address",
+      "coingecko-onchain-address",
     ]) {
       expect(getPricingSourceRegistryEntry(key)).toMatchObject({
         key,
