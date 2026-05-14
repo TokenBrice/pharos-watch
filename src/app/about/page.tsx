@@ -7,6 +7,7 @@ import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FaqSection } from "@/components/faq-section";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -480,6 +481,8 @@ export default function AboutPage() {
             </Link>
           </Button>
         </AboutSection>
+
+        <FaqSection items={faqItems} title="About Pharos FAQ" />
 
         <aside className="border-y border-border/60 py-5 text-xs leading-relaxed text-muted-foreground">
           <p>

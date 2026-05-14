@@ -89,6 +89,14 @@ async function writeSitemap(root: string, routes: string[]) {
   );
 }
 
+function collectFixtureSeoResult(root: string) {
+  return collectSeoStaticCheckResult({ outDir: root, enforceStructuredDataMatrix: false });
+}
+
+function jsonLdScript(data: unknown) {
+  return `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
+}
+
 async function writeBaselinePages(root: string, rootLinks: string[] = []) {
   await writePage(root, "/", { h1: "Home", links: ["/stability-index/", ...rootLinks] });
   await writePage(root, "/stability-index/", { h1: "Stability Index" });
@@ -105,7 +113,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: invalid JSON-LD block #1")]));
   });
@@ -127,7 +135,7 @@ describe("check-seo-static", () => {
     });
     await writeSitemap(root, ["/", "/stability-index/", "/stablecoin/usdt-tether/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -145,7 +153,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: missing og:type")]));
   });
@@ -161,7 +169,7 @@ describe("check-seo-static", () => {
     });
     await writeSitemap(root, ["/", "/stability-index/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors.some((error) => error.includes("/404/: missing canonical"))).toBe(false);
   });
@@ -176,7 +184,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -190,7 +198,7 @@ describe("check-seo-static", () => {
     await writeBaselinePages(root);
     await writeSitemap(root, ["/", "/stability-index/", "/missing/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -207,7 +215,7 @@ describe("check-seo-static", () => {
     await writePage(root, "/stability-index/", { h1: "Stability Index" });
     await writeSitemap(root, ["/", "/stability-index/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors.some((error) => error.includes("/stability-index/: indexable page is unreachable"))).toBe(false);
   });
@@ -221,7 +229,7 @@ describe("check-seo-static", () => {
     });
     await writeSitemap(root, ["/", "/stability-index/", "/chains/ethereum/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -253,7 +261,7 @@ describe("check-seo-static", () => {
       "/stablecoin/thin/",
     ]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
@@ -271,13 +279,88 @@ describe("check-seo-static", () => {
     });
     await writeSitemap(root, ["/", "/stability-index/", "/stablecoin/usdt-tether/"]);
 
-    const result = collectSeoStaticCheckResult({ outDir: root });
+    const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(
       expect.arrayContaining([
         expect.stringContaining(
           "/stablecoin/usdt-tether/: stablecoin detail static HTML is dominated by loading shell text",
         ),
+      ]),
+    );
+  });
+
+  it("asserts required structured-data fields for representative routes", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/about/api/"]);
+    await writePage(root, "/about/api/", {
+      h1: "API Reference",
+      extraHead: jsonLdScript({
+        "@context": "https://schema.org",
+        "@type": "DataCatalog",
+        name: "Pharos Public API Data Catalog",
+        url: "https://pharos.watch/about/api/",
+      }),
+    });
+    await writeSitemap(root, ["/", "/stability-index/", "/about/api/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      structuredDataRouteMatrix: [
+        {
+          label: "about API reference",
+          route: "/about/api/",
+          nodes: [{ type: "DataCatalog", requiredPaths: ["name", "url", "dataset.0.@id"] }],
+        },
+      ],
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/about/api/: about API reference DataCatalog structured data missing dataset.0.@id"),
+      ]),
+    );
+  });
+
+  it("fails /about/ FAQ structured data when the emitted Q&A is not visible", async () => {
+    const root = await makeOutDir();
+    await writeBaselinePages(root, ["/about/"]);
+    await writePage(root, "/about/", {
+      h1: "About Pharos",
+      mainText: "About Pharos overview without the structured question and answer.",
+      extraHead: jsonLdScript({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Why does Pharos exist?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Pharos makes stablecoin risk visible.",
+            },
+          },
+        ],
+      }),
+    });
+    await writeSitemap(root, ["/", "/stability-index/", "/about/"]);
+
+    const result = collectSeoStaticCheckResult({
+      outDir: root,
+      structuredDataRouteMatrix: [
+        {
+          label: "about FAQ",
+          route: "/about/",
+          nodes: [{ type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] }],
+          requireVisibleFaq: true,
+        },
+      ],
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/about/: FAQPage question is not visible in page content: Why does Pharos exist?"),
+        expect.stringContaining("/about/: FAQPage answer is not visible in page content for: Why does Pharos exist?"),
       ]),
     );
   });

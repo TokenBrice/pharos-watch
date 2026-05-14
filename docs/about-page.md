@@ -22,6 +22,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
 - `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with five reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/api/`, and `/changelog/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
+- the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
 
 ## Section Contract
 
@@ -36,8 +37,9 @@ The page is organized into these sections, in order:
 7. `Classification`
 8. `Data Pipeline`
 9. `Methodology`
-10. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
-11. `Get in Touch`
+10. `About Pharos FAQ`
+11. `Disclaimer` (rendered as an `<aside>`, not a titled `AboutSection`)
+12. `Get in Touch`
 
 ## Design And Interaction Rules
 

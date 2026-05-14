@@ -44,6 +44,119 @@ const LOADING_SHELL_PATTERN = /\b(?:loading|placeholder|skeleton|fetching|pendin
 const MAX_LOADING_WORD_RATIO = 0.15;
 const MAX_LOADING_WORD_COUNT = 4;
 
+// FAQ structured data is retained as semantic markup for visible Q&A content.
+// Google retired broad FAQ rich-result visibility, so this matrix treats FAQ as
+// a consistency guardrail rather than a rich-result growth target.
+const STRUCTURED_DATA_ROUTE_MATRIX = [
+  {
+    label: "home page",
+    route: "/",
+    nodes: [
+      { type: "WebSite", requiredPaths: ["name", "url"] },
+      { type: "Organization", requiredPaths: ["name", "url"] },
+      { type: "WebApplication", requiredPaths: ["name", "url", "applicationCategory"] },
+      { type: "CollectionPage", requiredPaths: ["name", "url", "mainEntity"] },
+      { type: "ItemList", requiredPaths: ["name", "itemListElement.0.item.name"] },
+    ],
+  },
+  {
+    label: "active stablecoin detail",
+    route: "/stablecoin/usdt-tether/",
+    nodes: [
+      { type: "Dataset", requiredPaths: ["name", "description", "url", "creator", "publisher", "variableMeasured.0.name"] },
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+    ],
+  },
+  {
+    label: "pre-launch stablecoin detail",
+    pattern: /^\/stablecoin\/[^/]+\/$/,
+    selectTypes: ["WebPage", "Thing"],
+    nodes: [
+      { type: "WebPage", requiredPaths: ["name", "description", "url", "about"] },
+      { type: "Thing", requiredPaths: ["name", "description"] },
+    ],
+  },
+  {
+    label: "cemetery",
+    route: "/cemetery/",
+    nodes: [
+      { type: "CollectionPage", requiredPaths: ["name", "description", "url", "mainEntity"] },
+      { type: "ItemList", requiredPaths: ["name", "numberOfItems", "itemListElement.0.item.name"] },
+      { type: "Dataset", requiredPaths: ["name", "description", "url", "distribution.0.contentUrl"] },
+      { type: "DataDownload", requiredPaths: ["contentUrl", "encodingFormat"] },
+    ],
+  },
+  {
+    label: "chain directory",
+    route: "/chains/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+    ],
+  },
+  {
+    label: "chain profile",
+    pattern: /^\/chains\/[^/]+\/$/,
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+    ],
+  },
+  {
+    label: "about API reference",
+    route: "/about/api/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "DataCatalog", requiredPaths: ["name", "url", "dataset.0.@id"] },
+      { type: "WebAPI", requiredPaths: ["name", "documentation", "endpointUrl"] },
+      { type: "CreativeWork", requiredPaths: ["name", "url", "encodingFormat"] },
+    ],
+  },
+  {
+    label: "methodology",
+    route: "/methodology/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+      { type: "TechArticle", requiredPaths: ["headline", "description", "mainEntityOfPage"] },
+    ],
+  },
+  {
+    label: "public docs detail",
+    pattern: /^\/docs\/[^/]+\/$/,
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "TechArticle", requiredPaths: ["headline", "description", "dateModified", "mainEntityOfPage"] },
+    ],
+  },
+  {
+    label: "digest detail",
+    pattern: /^\/digest\/[^/]+\/$/,
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "Article", requiredPaths: ["headline", "datePublished", "dateModified", "mainEntityOfPage"] },
+    ],
+  },
+  {
+    label: "PharosWatchBot",
+    route: "/pharoswatchbot/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "SoftwareApplication", requiredPaths: ["name", "operatingSystem", "applicationCategory"] },
+      { type: "HowTo", requiredPaths: ["name", "step.0.name"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+    ],
+  },
+  {
+    label: "about FAQ",
+    route: "/about/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
+    ],
+    requireVisibleFaq: true,
+  },
+];
+
 // Sitemap entries should resolve to exported HTML. Keep this list explicit if
 // a future sitemap intentionally points at a Pages Function or non-HTML asset.
 const SITEMAP_LOCAL_HTML_EXCEPTIONS = new Set([]);
@@ -244,6 +357,93 @@ function findStructuredDataSiteDataUrls(value, jsonPath = "$", results = []) {
   return results;
 }
 
+function collectStructuredDataNodes(value, nodes = []) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectStructuredDataNodes(item, nodes));
+    return nodes;
+  }
+
+  if (!value || typeof value !== "object") {
+    return nodes;
+  }
+
+  if (Object.hasOwn(value, "@type") || Object.hasOwn(value, "additionalType")) {
+    nodes.push(value);
+  }
+
+  for (const item of Object.values(value)) {
+    if (item && typeof item === "object") {
+      collectStructuredDataNodes(item, nodes);
+    }
+  }
+
+  return nodes;
+}
+
+function normalizeSchemaType(value) {
+  if (typeof value !== "string") return "";
+  return value.replace(/^https?:\/\/schema\.org\//, "");
+}
+
+function getSchemaTypes(node) {
+  const rawTypes = [node?.["@type"], node?.additionalType].flat();
+  return rawTypes.map(normalizeSchemaType).filter(Boolean);
+}
+
+function nodeHasSchemaType(node, type) {
+  return getSchemaTypes(node).includes(type);
+}
+
+function pageHasSchemaType(record, type) {
+  return record.structuredDataNodes.some((node) => nodeHasSchemaType(node, type));
+}
+
+function getPathValue(value, pathExpression) {
+  let current = value;
+  for (const segment of pathExpression.split(".")) {
+    if (current == null) return undefined;
+
+    if (Array.isArray(current)) {
+      if (/^\d+$/.test(segment)) {
+        current = current[Number(segment)];
+      } else {
+        current = current.map((item) => item?.[segment]).find((item) => item !== undefined && item !== null);
+      }
+      continue;
+    }
+
+    if (typeof current !== "object") return undefined;
+    current = current[segment];
+  }
+  return current;
+}
+
+function hasMeaningfulPathValue(value, pathExpression) {
+  const pathValue = getPathValue(value, pathExpression);
+  if (pathValue == null) return false;
+  if (typeof pathValue === "string") return pathValue.trim().length > 0;
+  if (Array.isArray(pathValue)) return pathValue.length > 0;
+  return true;
+}
+
+function normalizeTextForSearch(value) {
+  return decodeHtml(String(value ?? ""))
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function getFaqEntries(record) {
+  return record.structuredDataNodes
+    .filter((node) => nodeHasSchemaType(node, "FAQPage"))
+    .flatMap((node) => (Array.isArray(node.mainEntity) ? node.mainEntity : []))
+    .map((entry) => ({
+      question: entry?.name,
+      answer: entry?.acceptedAnswer?.text,
+    }))
+    .filter((entry) => typeof entry.question === "string" && typeof entry.answer === "string");
+}
+
 function getMainHtml(html) {
   const mainOpen = html.search(/<main\b/i);
   if (mainOpen === -1) return html;
@@ -330,6 +530,66 @@ function selectRichnessRecords(pageRecords, check) {
     .sort((a, b) => a.route.localeCompare(b.route));
 }
 
+function selectStructuredDataRouteRecord(pageRecords, expectation) {
+  const candidates = pageRecords
+    .filter((record) => {
+      if (!isIndexable(record.robotsTags)) return false;
+      if (expectation.route) return record.route === expectation.route;
+      return expectation.pattern?.test(record.route) ?? false;
+    })
+    .sort((a, b) => a.route.localeCompare(b.route));
+
+  if (!expectation.selectTypes?.length) {
+    return candidates[0] ?? null;
+  }
+
+  return candidates.find((record) => expectation.selectTypes.every((type) => pageHasSchemaType(record, type))) ?? null;
+}
+
+function validateStructuredDataRouteMatrix(pageRecords, errors, matrix) {
+  for (const expectation of matrix) {
+    const record = selectStructuredDataRouteRecord(pageRecords, expectation);
+    const selector = expectation.route ?? String(expectation.pattern);
+    if (!record) {
+      const typeHint = expectation.selectTypes?.length
+        ? ` with ${expectation.selectTypes.join(" + ")} structured data`
+        : "";
+      errors.push(`structured data route matrix missing ${expectation.label}: ${selector}${typeHint}`);
+      continue;
+    }
+
+    for (const nodeExpectation of expectation.nodes) {
+      const matchingNodes = record.structuredDataNodes.filter((node) => nodeHasSchemaType(node, nodeExpectation.type));
+      if (matchingNodes.length === 0) {
+        errors.push(`${record.route}: ${expectation.label} missing ${nodeExpectation.type} structured data`);
+        continue;
+      }
+
+      for (const pathExpression of nodeExpectation.requiredPaths) {
+        if (!matchingNodes.some((node) => hasMeaningfulPathValue(node, pathExpression))) {
+          errors.push(
+            `${record.route}: ${expectation.label} ${nodeExpectation.type} structured data missing ${pathExpression}`,
+          );
+        }
+      }
+    }
+
+    if (expectation.requireVisibleFaq) {
+      const visibleText = normalizeTextForSearch(extractVisibleText(record.html));
+      for (const entry of getFaqEntries(record)) {
+        const question = normalizeTextForSearch(entry.question);
+        const answer = normalizeTextForSearch(entry.answer);
+        if (question && !visibleText.includes(question)) {
+          errors.push(`${record.route}: FAQPage question is not visible in page content: ${entry.question}`);
+        }
+        if (answer && !visibleText.includes(answer)) {
+          errors.push(`${record.route}: FAQPage answer is not visible in page content for: ${entry.question}`);
+        }
+      }
+    }
+  }
+}
+
 function getAnchorHrefs(html) {
   const hrefs = [];
   const anchorPattern = /<a\b[^>]*>/gi;
@@ -365,7 +625,11 @@ function sitemapRouteFromPharosUrl(loc) {
   return { route };
 }
 
-export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
+export function collectSeoStaticCheckResult({
+  outDir = DEFAULT_OUT_DIR,
+  enforceStructuredDataMatrix = true,
+  structuredDataRouteMatrix = STRUCTURED_DATA_ROUTE_MATRIX,
+} = {}) {
   const errors = [];
   const warnings = [];
 
@@ -394,6 +658,8 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
       twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
       robotsTags,
       h1Count: (html.match(/<h1\b/gi) ?? []).length,
+      structuredData: [],
+      structuredDataNodes: [],
     };
   });
 
@@ -429,6 +695,9 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
         return;
       }
 
+      record.structuredData.push(parsed);
+      record.structuredDataNodes.push(...collectStructuredDataNodes(parsed));
+
       if (indexable) {
         const siteDataUrls = findStructuredDataSiteDataUrls(parsed);
         for (const entry of siteDataUrls.slice(0, 5)) {
@@ -445,6 +714,10 @@ export function collectSeoStaticCheckResult({ outDir = DEFAULT_OUT_DIR } = {}) {
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
     }
+  }
+
+  if (enforceStructuredDataMatrix) {
+    validateStructuredDataRouteMatrix(pageRecords, errors, structuredDataRouteMatrix);
   }
 
   const routeSet = new Set(pageRecords.map((p) => p.route));
