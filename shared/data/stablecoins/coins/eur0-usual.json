@@ -1,0 +1,67 @@
+{
+  "id": "eur0-usual",
+  "name": "Usual EUR",
+  "symbol": "EUR0",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module",
+  "pegMechanism": "Users mint EUR0 by depositing eligible euro RWA collateral such as Spiko EUTBL, or indirectly by depositing EURC while a collateral provider supplies the RWA; redemption swaps EUR0 back into the underlying euro collateral through Usual's dApp",
+  "detailProvider": "coingecko",
+  "geckoId": "usual-eur",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://usual.money/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/usualmoney"
+    },
+    {
+      "label": "Docs",
+      "url": "https://tech.usual.money/overview/features/eur0"
+    }
+  ],
+  "jurisdiction": {
+    "country": "France"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "EUR0 contract docs",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
+      },
+      {
+        "label": "Contract deployments",
+        "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+      }
+    ],
+    "evidence": "Usual's EUR0 token docs describe blacklist checks on transfers and admin-managed blacklist/unblacklist functions, so EUR0 has a direct holder-restriction surface.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  },
+  "reserves": [
+    {
+      "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "eutbl-spiko",
+      "depType": "collateral"
+    }
+  ]
+}

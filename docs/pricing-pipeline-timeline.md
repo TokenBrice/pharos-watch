@@ -1,6 +1,16 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.02` (2026-02-01 -> 2026-05-13).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.03` (2026-02-01 -> 2026-05-14).
+
+---
+
+## v6.03 - XOF secondary FX peg support (May 14, 2026)
+
+- West African CFA franc pegs now have explicit XOF metadata, secondary daily FX references, chart reconciliation, and deterministic validation bounds
+- `xofm-mento` can be tracked as an active XOF-pegged stablecoin instead of being forced into OTHER or rejected by peg metadata validation
+- `peggedXOF` uses the same dated `fawazahmed0/currency-api` secondary FX cadence as CNH, RUB, UAH, ARS, KGS, NGN, and VND for live sync, realtime fallbacks, and historical backfills
+- Price validation now classifies XOF as `fiat_fx` with explicit USD/XOF hardcoded bounds for no-reference guardrails
+- The CoinGecko native-peg lane remains disabled for XOF because CoinGecko does not currently expose a usable `xof` simple-price quote
 
 ---
 

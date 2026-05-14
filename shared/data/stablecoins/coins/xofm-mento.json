@@ -1,0 +1,76 @@
+{
+  "id": "xofm-mento",
+  "llamaId": "371",
+  "detailProvider": "defillama",
+  "name": "Mento West African CFA Franc",
+  "symbol": "XOFm",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "XOF",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
+  "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
+  "geckoId": "celo-west-african-cfa-franc",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://reserve.mento.org/",
+    "provider": "Mento Reserve dashboard"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.mento.org/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/MentoLabs"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+    },
+    {
+      "label": "Addresses",
+      "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "celo",
+      "address": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+      "decimals": 18
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "XOFm depends on USDm collateral; USDm's Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+    "reviewer": "Codex DefiLlama path addition",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "cusd-celo",
+      "depType": "collateral"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Live CDP reserve sync pending",
+      "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
+    }
+  ]
+}

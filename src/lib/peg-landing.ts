@@ -32,6 +32,7 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
   ARS: "ars",
   KGS: "kgs",
   NGN: "ngn",
+  XOF: "xof",
   IDR: "idr",
   INR: "inr",
   HKD: "hkd",
@@ -96,6 +97,8 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
   KGS: `Kyrgyz Som stablecoins provide on-chain KGS exposure for Central Asian payment, treasury, and remittance use cases. Pharos tracks peg performance and supply data for KGS-pegged tokens.`,
 
   NGN: `Nigerian Naira stablecoins provide on-chain NGN exposure for African payments, settlement, and remittance flows. Pharos tracks peg performance and supply data for NGN-pegged tokens.`,
+
+  XOF: `West African CFA franc stablecoins provide on-chain XOF exposure for West African payments, settlement, and remittance flows. Pharos tracks peg performance and supply data for XOF-pegged tokens.`,
 
   GOLD: `Gold-pegged stablecoins tokenize physical gold, with each token typically backed by one troy ounce of London Good Delivery gold held in insured vaults. PAXG and XAUT are the largest, both regulated and fully reserved. Unlike fiat pegs, gold stablecoin prices track the spot gold market, making them a hedge against both crypto volatility and fiat inflation. Pharos monitors their peg accuracy against live gold prices, supply changes, and safety grades.`,
 

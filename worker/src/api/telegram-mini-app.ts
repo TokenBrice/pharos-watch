@@ -1,5 +1,6 @@
-import { errorResponse, jsonResponse, parseRequestJsonWithSchema, withErrorHandler } from "../lib/api-utils";
+import { errorResponse, jsonResponse, parseRequestJsonWithSchema } from "../lib/api-utils";
 import {
+  MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX,
   TelegramMiniAppAuthError,
   claimTelegramMiniAppMutationInitData,
   validateTelegramMiniAppInitData,
@@ -12,10 +13,37 @@ import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationAct
 import { loadTelegramMiniAppState } from "./telegram-mini-app-state";
 
 export const TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC = 24 * 60 * 60;
-export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 15 * 60;
+// 5-min mutation window per community consensus; 24h session window preserved for reads.
+export const TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC = 5 * 60;
 const SESSION_COOLDOWN_SEC = 2;
-const MUTATION_COOLDOWN_SEC = 1;
+const MUTATION_COOLDOWN_SEC = 5;
+const MUTATION_COOLDOWN_KEY = "mini-app:mutation:any";
+const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 const NO_STORE = { noStore: true };
+
+type MiniAppHandler<T extends unknown[]> = (...args: T) => Promise<Response>;
+
+function miniAppErrorHandler<T extends unknown[]>(endpoint: string, handler: MiniAppHandler<T>): MiniAppHandler<T> {
+  return async (...args: T): Promise<Response> => {
+    try {
+      return await handler(...args);
+    } catch (err) {
+      console.error(`[api] Error in ${endpoint}:`, err);
+      return errorResponse(500, "Internal Server Error", NO_STORE);
+    }
+  };
+}
+
+function rejectOversizedBody(request: Request): Response | null {
+  const header = request.headers.get("content-length");
+  if (header == null) return null;
+  const length = Number(header);
+  if (!Number.isFinite(length)) return null;
+  if (length > MAX_REQUEST_BODY_BYTES) {
+    return errorResponse(413, "Request body too large", NO_STORE);
+  }
+  return null;
+}
 
 function nowSec(): number {
   return Math.floor(Date.now() / 1000);
@@ -49,13 +77,16 @@ function authResponse(err: TelegramMiniAppAuthError): Response {
 async function validateOrResponse(
   initData: string,
   botToken: string,
-  options: { maxAgeSec: number; startParam?: string | null },
+  options: { maxAgeSec: number },
+  botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
-    return await validateTelegramMiniAppInitData(initData, botToken, {
-      maxAgeSec: options.maxAgeSec,
-      startParamFallback: options.startParam,
-    });
+    return await validateTelegramMiniAppInitData(
+      initData,
+      botToken,
+      { maxAgeSec: options.maxAgeSec },
+      botTokenPrevious,
+    );
   } catch (err) {
     if (err instanceof TelegramMiniAppAuthError) {
       return authResponse(err);
@@ -81,17 +112,18 @@ function mutationErrorMessage(err: TelegramMiniAppMutationError): string {
   return "Invalid Mini App mutation";
 }
 
-export const handleTelegramMiniAppSession = withErrorHandler(
+export const handleTelegramMiniAppSession = miniAppErrorHandler(
   "telegram-mini-app-session",
-  async (db: D1Database, request: Request, botToken: string | undefined): Promise<Response> => {
+  async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
     if (!botToken?.trim()) return errorResponse(503, "Telegram Mini App auth is not configured", NO_STORE);
+    const oversize = rejectOversizedBody(request);
+    if (oversize) return oversize;
     const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppSessionRequestSchema, { responseOptions: NO_STORE });
     if (parsed instanceof Response) return parsed;
 
     const auth = await validateOrResponse(parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
-      startParam: parsed.startParam,
-    });
+    }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
     const cooldown = await acquireTelegramCommandCooldown(db, {
@@ -113,21 +145,23 @@ export const handleTelegramMiniAppSession = withErrorHandler(
   },
 );
 
-export const handleTelegramMiniAppMutation = withErrorHandler(
+export const handleTelegramMiniAppMutation = miniAppErrorHandler(
   "telegram-mini-app-mutation",
-  async (db: D1Database, request: Request, botToken: string | undefined): Promise<Response> => {
+  async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
     if (!botToken?.trim()) return errorResponse(503, "Telegram Mini App auth is not configured", NO_STORE);
+    const oversize = rejectOversizedBody(request);
+    if (oversize) return oversize;
     const parsed = await parseRequestJsonWithSchema(request, TelegramMiniAppMutationRequestSchema, { responseOptions: NO_STORE });
     if (parsed instanceof Response) return parsed;
 
     const auth = await validateOrResponse(parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
-    });
+    }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
     const cooldown = await acquireTelegramCommandCooldown(db, {
       chatId: auth.userId,
-      commandKey: `mini-app:${parsed.operation.kind}`,
+      commandKey: MUTATION_COOLDOWN_KEY,
       nowSec: nowSec(),
       cooldownSec: MUTATION_COOLDOWN_SEC,
     });
@@ -163,6 +197,14 @@ export const handleTelegramMiniAppMutation = withErrorHandler(
         });
         return errorResponse(err.status, mutationErrorMessage(err), NO_STORE);
       }
+      // Non-domain failure: roll back the replay claim so the user can retry with the same initData.
+      await db
+        .prepare("DELETE FROM cache WHERE key = ?")
+        .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}${auth.initDataHash}`)
+        .run()
+        .catch((deleteErr) => {
+          console.error("[api] Error in telegram-mini-app-mutation replay-claim rollback:", deleteErr);
+        });
       throw err;
     }
 

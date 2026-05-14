@@ -32,6 +32,7 @@ const CALENDAR_DAILY_PEGS = [
   "peggedARS",
   "peggedKGS",
   "peggedNGN",
+  "peggedXOF",
   "peggedVND",
 ];
 

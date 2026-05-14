@@ -21,6 +21,7 @@ export const PEG_ANCHORS: Record<string, { x: number; y: number }> = {
   BRL: { x: 35, y: 64 },
   ARS: { x: 33, y: 80 },
   NGN: { x: 52, y: 51 },
+  XOF: { x: 48, y: 51 },
   CAD: { x: 28, y: 20 },
   MXN: { x: 22, y: 42 },
   ZAR: { x: 57, y: 76 },

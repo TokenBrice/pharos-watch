@@ -124,6 +124,7 @@ function getFiatPegRegion(peg: PegCurrency): AltPegRegion {
       return "Americas";
     case "ZAR":
     case "NGN":
+    case "XOF":
       return "Africa";
     case "AUD":
       return "Oceania";

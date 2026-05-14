@@ -45,10 +45,34 @@ The current policy copy covers:
 6. support contact via `@PharosWatch` and the About page
 7. optional Telegram/X handles submitted through the feedback form appear publicly on the GitHub issue created for your submission
 8. Telegram alert subscriptions store chat ID, optional username, followed coins, alert settings, quiet hours, snooze state, and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state and no Telegram activity for 180 days are automatically purged on a weekly cleanup
-9. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
-10. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
+9. the full enumeration of Telegram-owned D1 tables and their retention windows (see below)
+10. the Mini App auth note: `initData` is never persisted; only its hash is recorded for one-shot replay protection within the 5-minute mutation window, alongside a 24-hour read-only session window
+11. self-serve API key requests store verified email plus optional requester/project/use-case metadata for private operator review; request throttling stores salted hashes of IP address and user-agent data
+12. Resend sends API verification emails and necessarily receives the one-time verification URL in the email body; optional GitHub issuance notifications deliberately exclude requester details and plaintext tokens
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
+
+### Telegram D1 Tables
+
+The visible policy must enumerate every Telegram-owned D1 table, its purpose, and its retention. Canonical schema descriptions live in [`telegram-alerts.md` § D1 Schema](./telegram-alerts.md#d1-schema); retention sources are `worker/src/cron/telegram-retention-cleanup.ts`, `worker/src/cron/telegram-inactive-cleanup.ts`, `worker/src/lib/telegram-constants.ts`, and `worker/src/api/telegram-webhook-store.ts`.
+
+| Table | Purpose | Retention |
+|-------|---------|-----------|
+| `telegram_subscribers` | Per-chat state (chat ID, optional username, default flags, quiet hours, snooze, `last_active_at`) | 180-day inactive prune via daily `telegram-inactive-cleanup` |
+| `telegram_subscriptions` | Per-chat per-coin alert preferences | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
+| `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch | Kept while subscriber exists; cleared by `/unsubscribe all` or inactivity prune |
+| `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies, setup wizard, bulk confirms | 5-minute TTL (`DISAMBIGUATION_TTL_SEC`); swept ≥10 min after expiry |
+| `telegram_pending_alerts` | Overflow and retry delivery queue | Severity-based TTL: 1 h for depeg/dews/safety/legacy, 30 min for launch and admin broadcasts |
+| `telegram_alert_jobs` / `telegram_alert_job_targets` | Durable discovery manifests and per-target delivery audit | 90-day audit retention |
+| `telegram_alert_dead_letters` | Expired or permanently failed pending-send audit trail | 90-day audit retention |
+| `telegram_processed_updates` | Retry-safe webhook idempotency claims (`update_id`, status, error class) | 7-day prune |
+| `telegram_usage_daily` | Privacy-preserving daily command/setup/action aggregates; no `chat_id` is stored | 400-day aggregate retention |
+| `telegram_watcher_lifecycle_daily` | Daily active-watcher snapshots for public pulse history | Aggregate (no per-chat detail); not pruned automatically |
+| `telegram_chat_delivery_diagnostics` | Per-chat delivery diagnostics used by `/health` | Kept while subscriber exists; 90-day stale prune |
+
+### Mini App `initData`
+
+The `POST /api/telegram-mini-app/session` and `POST /api/telegram-mini-app/mutate` endpoints validate signed Telegram `initData` but never persist its body. Only the `initData` hash is recorded once per mutation in the shared `cache` table under prefix `telegram-mini-app:mutation-init:` for one-shot replay protection, and is swept by the same write that performs the mutation claim. The mutation freshness window is 5 minutes (`TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC`); session reads accept `auth_date` within the last 24 hours (`TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC`).
 
 ### Telemetry Contract
 

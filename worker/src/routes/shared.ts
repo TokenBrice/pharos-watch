@@ -28,6 +28,7 @@ export interface TelegramRouteFields {
   telegramWebhookSecret: string | undefined;
   telegramWebhookSecretPrevious: string | undefined;
   telegramBotToken: string | undefined;
+  telegramBotTokenPrevious: string | undefined;
   telegramCreds: TelegramCreds | null;
 }
 

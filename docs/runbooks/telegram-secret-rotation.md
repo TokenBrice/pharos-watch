@@ -1,6 +1,6 @@
 # Telegram Secret Rotation
 
-Rotate Telegram secrets one at a time. The webhook secret supports a short overlap window; the bot token does not, because Telegram Mini App `initData` HMACs and outbound Bot API sends use only the current token.
+Rotate Telegram secrets one at a time. The webhook secret supports a short overlap window; the bot token supports a constant-time overlap window for Mini App `initData` only — outbound Bot API sends always use the current token.
 
 ## Webhook Secret
 
@@ -36,3 +36,9 @@ Rotate Telegram secrets one at a time. The webhook secret supports a short overl
 ## Rollback
 
 If sends, registration, or Mini App auth fail after token rotation, restore the previous `TELEGRAM_BOT_TOKEN` and redeploy. Existing Mini App sessions signed by the failed new token will become invalid after rollback; ask operators to relaunch the Mini App for validation.
+
+## Mini App impact
+
+- `validateTelegramMiniAppInitData` tries `TELEGRAM_BOT_TOKEN` first, then `TELEGRAM_BOT_TOKEN_PREVIOUS` when configured. Both branches compare with the same constant-time routine.
+- Keep `TELEGRAM_BOT_TOKEN_PREVIOUS` set until the session window expires for users still on the old token (24h). Mutation auth resets every 5 minutes regardless, so live mutations migrate quickly.
+- Remove `TELEGRAM_BOT_TOKEN_PREVIOUS` after at least 24h to fail closed for stale leaked tokens. Outbound Bot API sends never use the previous token.

@@ -48,6 +48,7 @@ export const SECONDARY_PEG_TO_FX: Record<string, string> = {
   ARS: "ARS",
   KGS: "KGS",
   NGN: "NGN",
+  XOF: "XOF",
   VND: "VND",
 };
 

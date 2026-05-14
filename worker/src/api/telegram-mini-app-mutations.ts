@@ -5,12 +5,11 @@ import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/tele
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { clearSnoozeViaSettings, prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import {
+  prepareRemovePresetSubscriptionStatements,
+  prepareRemoveSubscriptionStatements,
+  prepareSubscriberAndPresetStatements,
   prepareSubscriberAndSubscriptionStatements,
-  removePresetSubscriptions,
-  removeSubscriptions,
   setGlobalDepegWorseningStep,
-  upsertPresetSubscriptions,
-  upsertSubscriberAndSubscriptions,
   upsertSubscriberRow,
   unixNow,
   type UpsertSubscriberInput,
@@ -148,8 +147,10 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
     case "recommended-setup": {
       const coins = await presetCoins(db, operation.presetId);
       const alertTypes = alertTypeSet(operation.alertTypes);
-      await upsertSubscriberAndSubscriptions(db, chatId, username, alertTypes, coins);
-      await upsertPresetSubscriptions(db, chatId, [operation.presetId], alertTypes);
+      await batchExecute(
+        db,
+        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], coins, alertTypes),
+      );
       return;
     }
     case "set-global":
@@ -169,20 +170,24 @@ export async function applyTelegramMiniAppMutation(db: D1Database, auth: Telegra
       return;
     case "remove-coin":
       assertCoin(operation.stablecoinId);
-      await removeSubscriptions(db, chatId, [operation.stablecoinId]);
+      await batchExecute(db, prepareRemoveSubscriptionStatements(db, chatId, [operation.stablecoinId]));
       return;
     case "follow-preset": {
       const coins = await presetCoins(db, operation.presetId);
       const alertTypes = alertTypesFromPatch(operation.alertTypes);
       const options = operation.alertTypes.depeg && "depegStepBps" in operation ? { depegWorseningBpsStep: operation.depegStepBps ?? null } : undefined;
-      await upsertSubscriberAndSubscriptions(db, chatId, username, alertTypes, coins, options);
-      await upsertPresetSubscriptions(db, chatId, [operation.presetId], alertTypes, options);
+      await batchExecute(
+        db,
+        prepareSubscriberAndPresetStatements(db, chatId, username, [operation.presetId], coins, alertTypes, options),
+      );
       return;
     }
     case "unfollow-preset": {
       const coins = await presetCoins(db, operation.presetId);
-      await removeSubscriptions(db, chatId, coins);
-      await removePresetSubscriptions(db, chatId, [operation.presetId]);
+      await batchExecute(db, [
+        ...prepareRemoveSubscriptionStatements(db, chatId, coins),
+        ...prepareRemovePresetSubscriptionStatements(db, chatId, [operation.presetId]),
+      ]);
       return;
     }
   }

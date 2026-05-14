@@ -1899,6 +1899,56 @@
     "text": "GBPSAFO extends Spiko Smart Cash coverage to a sterling-denominated share class. The reserve description follows the same fully collateralized overnight total-return swap structure as the USD and EUR SAFO classes, so the risk model is medium rather than pure cash. The token is best understood as a permissioned NAV share, not a retail GBP stablecoin.",
     "updatedAt": "2026-05-14"
   },
+  "eur0-usual": {
+    "title": "Usual's Euro Treasury Wrapper",
+    "text": "EUR0 is Usual's euro-denominated stable asset, admitted through CoinGecko market data and an Ethereum contract. The reserve thesis points to Spiko's euTBL tokenized Treasury exposure rather than a simple euro bank-deposit account, so Pharos should read it as an RWA-backed dependency token with centralized issuer rails. The supply is still small, but it gives the dashboard a useful euro reference from the Usual ecosystem. Redemption and backstop quality remain intentionally conservative until Usual-specific terms are reviewed.",
+    "updatedAt": "2026-05-14"
+  },
+  "emxn-telcoin": {
+    "title": "Telcoin's Mexican Peso Cash Token",
+    "text": "eMXN extends Telcoin's Digital Cash model from eUSD into Mexican peso settlement. CoinGecko supplies the runtime price and market-cap path, and the Polygon deployment gives Pharos a straightforward contract anchor. The issuer framing is bank-style payment infrastructure rather than a permissionless CDP, so reserve confidence depends on Telcoin's off-chain controls and reporting. No public per-token reserve feed was found during the candidate pass.",
+    "updatedAt": "2026-05-14"
+  },
+  "hchf-hedera-swiss-franc": {
+    "title": "Hedera's Small CHF Experiment",
+    "text": "HCHF is a Swiss-franc stable asset on Hedera with CoinGecko price and market-cap coverage, while DefiLlama's row is not usable for live supply today. The candidate evidence is enough for static frontend metadata, but the collateral, governance, and redemption model still need a single-coin review before stronger report-card claims. Pharos should treat the entry as high-uncertainty CHF coverage rather than comparable to regulated fiat-backed franc issuers.",
+    "updatedAt": "2026-05-14"
+  },
+  "eurot-token-teknoloji": {
+    "title": "Token Teknoloji's Euro Token",
+    "text": "EUROT is Token Teknoloji's euro-backed reserve token with Avalanche and Polygon contract coverage through CoinGecko. The issuer describes a 1:1 euro reserve model and publishes official token materials, but the candidate pass did not prove a machine-readable reserve or attestation feed. That makes EUROT useful for long-tail euro coverage while keeping reserve confidence below larger MiCA-era issuers with recurring attestations.",
+    "updatedAt": "2026-05-14"
+  },
+  "mxne-real-mxn": {
+    "title": "Brale and Etherfuse's MXN Rail",
+    "text": "MXNe is a Mexican peso token associated with Brale and Etherfuse, with CoinGecko runtime coverage and deployments on Base, Solana, and Stellar. The public description points to 1:1 MXN backing and issuer redemption, so the model is closer to a fiat-reserve payment token than a crypto CDP. The main caveat is control risk: the Base contract has proxy-owner concerns in CoinGecko's token-risk metadata, and no live reserve feed was proven in this pass.",
+    "updatedAt": "2026-05-14"
+  },
+  "wmxn-ripio": {
+    "title": "Ripio's Missing MXN Wrapper",
+    "text": "wMXN completes the tracked Ripio wFIAT set with a Mexican peso asset deployed across the same EVM footprint as WBRL, WCLP, WCOP, and WPEN. DefiLlama provides the live price and circulating-supply path, while Ripio's official local-stablecoin page describes 1:1 local-currency backing and on/off-ramp redemption. As with the rest of the Ripio suite, the weak point is reserve transparency: public materials describe the backing model but do not expose a reliable per-token attestation feed.",
+    "updatedAt": "2026-05-14"
+  },
+  "jpyt-dephaser": {
+    "title": "A High-Risk Yen Synthetic",
+    "text": "JPYT is Dephaser's yen-pegged token on Base and Optimism. CoinGecko describes the design as an algorithmic JPY stablecoin backed by locked USDT, so Pharos should treat the reserves as high-risk dependency collateral rather than a cash yen reserve. The runtime price and market-cap path are present, but the supply is small and the peg depends on Dephaser's mechanism, USDT collateral quality, and thin secondary liquidity.",
+    "updatedAt": "2026-05-14"
+  },
+  "euro3-3a-dao": {
+    "title": "A Tiny Overcollateralized Euro CDP",
+    "text": "EURO3 is a 3A DAO euro stablecoin created through overcollateralized vault borrowing and burned when users repay or redeem against collateral. DefiLlama supplies the runtime price and circulating balance, with current activity split across Linea and Polygon, but there is no CoinGecko geckoId and supply is very small. The design gives Pharos a crypto-backed euro reference, while liquidity, oracle depth, and governance details remain the practical risk areas.",
+    "updatedAt": "2026-05-14"
+  },
+  "krwo-gimswap": {
+    "title": "GimSwap's KRW Voucher Token",
+    "text": "KRWO is a Korean-won stable asset linked to GimSwap and Open Voucher, with CoinGecko coverage on Kaia and BNB Chain. The candidate pass points to KRW-backed issuance, but reserve and redemption evidence is still thinner than for regulated fiat issuers. CoinGecko's token-risk metadata flags unrestricted minting risk on BNB Chain, so Pharos should keep the control profile conservative until admin permissions and dilution controls are reviewed.",
+    "updatedAt": "2026-05-14"
+  },
+  "xofm-mento": {
+    "title": "Mento's CFA Franc CDP",
+    "text": "XOFm brings Mento's local-currency CDP model to the West African CFA franc on Celo. DefiLlama shows a live price and circulating supply, and the protocol description is clear: users deposit USDm into Mento troves and borrow XOFm against it. Pharos now treats XOF as a first-class peg with a secondary daily FX reference, while reserve modeling stays conservative because the live Mento CDP adapter does not expose XOFm-specific trove rows yet.",
+    "updatedAt": "2026-05-14"
+  },
   "xnk-kinka": {
     "title": "Japanese Gold Bullion Token",
     "text": "XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Kinka's issuer and storage arrangements. The Cardano deployment is recorded alongside Ethereum, and the reserve model treats the backing as physical gold with centralized custody and issuer-controlled exchange terms. Redemption into physical bars is possible only through the documented KYC process and size thresholds.",

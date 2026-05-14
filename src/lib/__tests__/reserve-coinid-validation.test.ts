@@ -65,6 +65,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "XMD's reserve slice aggregates a multi-stablecoin Paxos-dollar basket, so no single tracked stablecoin coinId is representative.",
   ],
   [
+    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDC",
+    "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
+  ],
+  [
+    "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDT",
+    "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
+  ],
+  [
     "frax-frax::Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)::FRAX",
     "FRAX's intra-protocol slice is a mixed self/protocol-owned bucket, not an upstream reserve asset that should inherit a single coinId.",
   ],

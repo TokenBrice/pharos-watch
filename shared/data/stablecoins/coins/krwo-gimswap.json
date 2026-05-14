@@ -1,0 +1,80 @@
+{
+  "id": "krwo-gimswap",
+  "name": "KRWO",
+  "symbol": "KRWO",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "KRW",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
+  "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
+  "detailProvider": "coingecko",
+  "geckoId": "krwo",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://gimswap.com"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gimswap"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/gimswap"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "klaytn",
+      "address": "0x7fc692699f2216647a0e06225d8bdf8cdee40e7f",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "BscScan contract source",
+    "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "BscScan contract source",
+        "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+      }
+    ],
+    "evidence": "Explicit Dilutable review: the verified BSC FiatToken source exposes a privileged MINTER_ADDRESS and mint(address,uint256) guarded by onlyMinter; on-chain reads show nonzero minter addresses on both the BSC and Kaia KRWO deployments. No direct holder freeze or blacklist function was identified in the reviewed BSC token source.",
+    "reviewer": "Codex Worker C",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Open Voucher KRW vouchers / OV tokens",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

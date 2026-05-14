@@ -1,0 +1,98 @@
+{
+  "id": "wmxn-ripio",
+  "llamaId": "383",
+  "detailProvider": "defillama",
+  "name": "Ripio wMXN",
+  "symbol": "WMXN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
+  "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "geckoId": "mexican-peso",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+    },
+    {
+      "label": "Product",
+      "url": "https://www.ripio.com/en/cryptocurrencies/wmxn"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/ripioapp"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Mexico"
+  },
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+      "decimals": 18
+    }
+  ],
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "evidence": "Ripio wMXN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+    "reviewer": "Codex DefiLlama path addition",
+    "reviewedAt": "2026-05-14"
+  },
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "rwa",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Mexican-peso cash and local-currency liquid instruments",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "No per-token attestation located",
+      "message": "Ripio describes wFIAT local-currency backing and DefiLlama cites periodic attestations, but no reliable public per-token reserve attestation was found for WMXN during this addition. Curated reserves remain conservative until source coverage improves."
+    }
+  ]
+}

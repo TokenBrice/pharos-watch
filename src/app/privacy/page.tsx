@@ -53,6 +53,60 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">Telegram Data and Retention</h2>
+          <p>
+            PharosWatchBot stores only what is required to deliver alerts and keep the bot reliable. The full list of
+            Telegram-owned tables and how long each one is retained:
+          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              <strong>Subscribers</strong> (chat ID, optional username, default alert flags, quiet hours, snooze state,
+              last-active timestamp): auto-purged after 180 days of inactivity once no follows or pending state remain.
+            </li>
+            <li>
+              <strong>Per-coin and preset subscriptions</strong>: kept while the subscriber exists, cleared by{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or the inactivity prune.
+            </li>
+            <li>
+              <strong>Pending disambiguation</strong> (ambiguous ticker prompts, setup wizard state, bulk-action
+              confirmations): 5-minute TTL.
+            </li>
+            <li>
+              <strong>Pending alerts</strong> (overflow and retry queue for delivery): 1-hour TTL for depeg, DEWS, and
+              safety; 30-minute TTL for launch and admin broadcasts.
+            </li>
+            <li>
+              <strong>Alert job manifests and per-target audit</strong>: 90-day retention.
+            </li>
+            <li>
+              <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention.
+            </li>
+            <li>
+              <strong>Processed-update idempotency claims</strong>: 7-day prune.
+            </li>
+            <li>
+              <strong>Daily usage aggregates</strong>: privacy-preserving counters only; no chat ID is stored. 400-day
+              retention.
+            </li>
+            <li>
+              <strong>Daily watcher lifecycle snapshots</strong>: aggregate-only public pulse history.
+            </li>
+            <li>
+              <strong>Per-chat delivery diagnostics</strong> used by{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">/health</code>: kept while the subscriber exists,
+              with a 90-day stale prune.
+            </li>
+          </ul>
+          <p>
+            For the PharosWatchBot Mini App, the signed Telegram{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. Only its
+            hash is recorded once per mutation for one-shot replay protection within the 5-minute mutation window.
+            Read-only session launches accept a Telegram-signed launch up to 24 hours old so an open panel stays usable
+            across the day.
+          </p>
+        </section>
+
+        <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">No Accounts or Wallet Connections</h2>
           <p>
             Pharos does not require user accounts, logins, or wallet connections for the website. Optional feedback

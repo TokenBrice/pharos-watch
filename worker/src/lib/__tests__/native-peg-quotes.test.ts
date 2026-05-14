@@ -37,6 +37,7 @@ describe("native-peg-quotes", () => {
     expect(getPreferredNativePegQueryCurrency("BRL")).toBe("brl");
     expect(getPreferredNativePegQueryCurrency("KGS")).toBeNull();
     expect(getPreferredNativePegQueryCurrency("NGN")).toBe("ngn");
+    expect(getPreferredNativePegQueryCurrency("XOF")).toBeNull();
   });
 
   it("fetches direct native quotes for supported non-USD fiat pegs", async () => {

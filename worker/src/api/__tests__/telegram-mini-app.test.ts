@@ -210,6 +210,58 @@ describe("handleTelegramMiniAppSession", () => {
     expect(await response.json()).toMatchObject({ error: "Mini App session rate limited" });
   });
 
+  it("rejects oversized session bodies with 413 before parsing JSON", async () => {
+    const db = mockD1();
+    const req = new Request("https://api.pharos.watch/api/telegram-mini-app/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": String(20 * 1024) },
+      body: JSON.stringify({ initData: "x" }),
+    });
+
+    const response = await handleTelegramMiniAppSession(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects malformed hash with 401 without HMAC compute", async () => {
+    const initData = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      hash: "0".repeat(63),
+      user: JSON.stringify({ id: 42 }),
+    }).toString();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+
+    expect(response.status).toBe(401);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects oversized initData via schema before HMAC compute", async () => {
+    const initData = "auth_date=1&hash=" + "a".repeat(64) + "&user=" + encodeURIComponent(JSON.stringify({ id: 42 }));
+    const padded = initData + "&padding=" + "x".repeat(8 * 1024);
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData: padded }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects an unsigned start_param body override", async () => {
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", {
+      initData,
+      startParam: "evil",
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+  });
+
   it("does not write analytics or cooldown rows for invalid auth", async () => {
     const initData = new URLSearchParams({
       auth_date: String(NOW_SEC - 60),
@@ -428,9 +480,9 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
   });
 
-  it("rejects stale mutation auth", async () => {
+  it("rejects stale mutation auth at the 5-minute boundary", async () => {
     const initData = await signedInitData({
-      auth_date: String(NOW_SEC - 901),
+      auth_date: String(NOW_SEC - 301),
       chat_type: "private",
       user: JSON.stringify({ id: 42 }),
     });
@@ -439,5 +491,138 @@ describe("handleTelegramMiniAppMutation", () => {
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
     expect(response.status).toBe(401);
+  });
+
+  it("shares the mutation cooldown across operation kinds", async () => {
+    const initData = await privateInitData();
+    const cooldownKey = "telegram:command-cooldown:42:mini-app:mutation:any";
+    const db = mockD1([
+      {
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 5],
+        rows: [],
+        runMeta: { changes: 0 },
+      },
+      {
+        match: "SELECT updated_at FROM cache WHERE key = ?",
+        matchBinds: [cooldownKey],
+        rows: [{ updated_at: NOW_SEC - 1 }],
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(429);
+  });
+
+  it("rejects oversized mutation bodies with 413 before parsing JSON", async () => {
+    const req = new Request("https://api.pharos.watch/api/telegram-mini-app/mutate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": String(20 * 1024) },
+      body: JSON.stringify({ initData: "x", operation: { kind: "clear-snooze" } }),
+    });
+
+    const db = mockD1();
+    const response = await handleTelegramMiniAppMutation(db, req, BOT_TOKEN);
+
+    expect(response.status).toBe(413);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
+  it("rejects strict-schema violations on mutation payloads", async () => {
+    const initData = await privateInitData();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "clear-snooze", evil: 1 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects empty set-coin patches", async () => {
+    const initData = await privateInitData();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-coin", stablecoinId: "usdc-circle", patch: {} },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects set-quiet-hours with equal start and end hours", async () => {
+    const initData = await privateInitData();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-quiet-hours", enabled: true, startHourUtc: 3, endHourUtc: 3 },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects non-canonical recommended-setup payloads", async () => {
+    const initData = await privateInitData();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "recommended-setup", presetId: "usd-top10", alertTypes: ["dews", "depeg"] },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns no-store on internal server errors", async () => {
+    const initData = await privateInitData();
+    const db = mockD1();
+    (db as { batch: D1Database["batch"] }).batch = async () => {
+      throw new Error("transient D1 failure");
+    };
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "remove-coin", stablecoinId: "usdc-circle" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    const deleteAttempts = db.getHistory().filter((entry) =>
+      entry.sql.includes("DELETE FROM cache WHERE key = ?")
+      && entry.binds.some((bind) => typeof bind === "string" && bind.startsWith("telegram-mini-app:mutation-init:")));
+    expect(deleteAttempts.length).toBeGreaterThan(0);
+  });
+
+  it("validates initData with the previous bot token when current rejects", async () => {
+    const PREVIOUS_TOKEN = "previous-bot-token";
+    const params = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const check = [...params.entries()]
+      .map(([key, value]) => `${key}=${value}`)
+      .sort()
+      .join("\n");
+    const secret = await hmacSha256(encoder.encode("WebAppData"), PREVIOUS_TOKEN);
+    params.set("hash", hex(await hmacSha256(secret, check)));
+    const initData = params.toString();
+
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "clear-snooze" },
+    }), BOT_TOKEN, PREVIOUS_TOKEN);
+
+    expect(response.status).toBe(200);
   });
 });

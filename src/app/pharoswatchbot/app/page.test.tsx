@@ -105,7 +105,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     expect(ready).toHaveBeenCalled();
-    expect(expand).not.toHaveBeenCalled();
+    expect(expand).toHaveBeenCalled();
     expect(screen.getByText("Global alerts")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
@@ -159,7 +159,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     render(<PharosWatchBotMiniAppPage />);
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
     fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
@@ -185,7 +185,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
     render(<PharosWatchBotMiniAppPage />);
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "settings" }));
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
     fireEvent.click(screen.getByRole("button", { name: "Set global depeg step to 500 bps" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));

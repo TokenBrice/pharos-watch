@@ -1,0 +1,69 @@
+{
+  "id": "mxne-real-mxn",
+  "name": "Real MXN",
+  "symbol": "MXNe",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": true,
+    "navToken": false
+  },
+  "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
+  "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
+  "detailProvider": "coingecko",
+  "geckoId": "real-mxn",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://brale.xyz/stablecoins/MXNe"
+    },
+    {
+      "label": "Brale announcement",
+      "url": "https://brale.xyz/blog/introducing-mxne"
+    },
+    {
+      "label": "Etherfuse announcement",
+      "url": "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN / state money transmitter regulators",
+    "license": "Money Services Business / Money Transmitter, NMLS ID #2376957"
+  },
+  "contracts": [
+    {
+      "chain": "base",
+      "address": "0x269cae7dc59803e5c596c95756faeebb6030e0af",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa",
+      "decimals": 9
+    },
+    {
+      "chain": "stellar",
+      "address": "MXNe-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+      "decimals": 7
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: MXNe resolves to Yes because existing metadata classifies the asset as centrally issued by Brale and no manual override narrows that status.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "native-multichain",
+  "reserves": [
+    {
+      "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

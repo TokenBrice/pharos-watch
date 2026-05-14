@@ -20,6 +20,7 @@ describe("PEG_ANCHORS", () => {
       "BRL",
       "ARS",
       "NGN",
+      "XOF",
       "CAD",
       "MXN",
       "ZAR",

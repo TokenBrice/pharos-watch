@@ -12,6 +12,8 @@ const TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_MENU_RECONCILE_TTL_SEC = 15 * 60;
+const TELEGRAM_RATE_LIMIT_CACHE_KEY_PREFIX = "telegram:reconcile:429:";
+const TELEGRAM_RATE_LIMIT_DEFAULT_RETRY_AFTER_SEC = 60;
 const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
 const TELEGRAM_COMMANDS_CACHE_VERSION = 5;
@@ -77,6 +79,8 @@ const TELEGRAM_GROUP_COMMAND_SCOPE = { type: "all_group_chats" } as const;
 interface TelegramApiResponse {
   ok?: boolean;
   description?: string;
+  error_code?: number;
+  parameters?: { retry_after?: number };
 }
 
 interface TelegramChatMenuButtonResponse extends TelegramApiResponse {
@@ -86,26 +90,26 @@ interface TelegramChatMenuButtonResponse extends TelegramApiResponse {
 export interface ReconcileTelegramWebhookResult {
   attempted: boolean;
   skipped: boolean;
-  reason?: "missing-bot-token" | "missing-webhook-secret" | "fresh-cache";
+  reason?: "missing-bot-token" | "missing-webhook-secret" | "fresh-cache" | "rate-limited";
   expectedUrl: string | null;
 }
 
 export interface ReconcileTelegramCommandResult {
   attempted: boolean;
   skipped: boolean;
-  reason?: "missing-bot-token" | "fresh-cache";
+  reason?: "missing-bot-token" | "fresh-cache" | "rate-limited";
 }
 
 export interface ReconcileTelegramProfileResult {
   attempted: boolean;
   skipped: boolean;
-  reason?: "missing-bot-token" | "fresh-cache";
+  reason?: "missing-bot-token" | "fresh-cache" | "rate-limited";
 }
 
 export interface ReconcileTelegramMenuButtonResult {
   attempted: boolean;
   skipped: boolean;
-  reason?: "missing-bot-token" | "fresh-cache" | "already-current";
+  reason?: "missing-bot-token" | "fresh-cache" | "already-current" | "rate-limited";
   miniAppUrl: string;
 }
 
@@ -203,6 +207,41 @@ async function shouldSkipFreshMatchingMenuCache(db: D1Database, expectedValue: s
   return cached.value === expectedValue;
 }
 
+function rateLimitCacheKey(endpoint: string): string {
+  return `${TELEGRAM_RATE_LIMIT_CACHE_KEY_PREFIX}${endpoint}`;
+}
+
+async function isRateLimited(db: D1Database, endpoint: string): Promise<boolean> {
+  const cached = await getCache(db, rateLimitCacheKey(endpoint));
+  if (!cached) return false;
+  const retryAfter = Number.parseInt(cached.value, 10);
+  if (!Number.isFinite(retryAfter) || retryAfter <= 0) return false;
+  const ageSec = Date.now() / 1000 - cached.updatedAt;
+  return ageSec < retryAfter;
+}
+
+async function recordRateLimit(db: D1Database, endpoint: string, retryAfter: number): Promise<void> {
+  const seconds = Number.isFinite(retryAfter) && retryAfter > 0
+    ? Math.ceil(retryAfter)
+    : TELEGRAM_RATE_LIMIT_DEFAULT_RETRY_AFTER_SEC;
+  await setCache(db, rateLimitCacheKey(endpoint), String(seconds));
+  console.warn(
+    `[telegram-reconcile] ${endpoint} rate-limited by Bot API; backing off for ${seconds}s`,
+  );
+}
+
+function extractRetryAfter(
+  response: Response,
+  parsed: TelegramApiResponse | null,
+): number | null {
+  if (response.status === 429 || parsed?.error_code === 429) {
+    const value = parsed?.parameters?.retry_after;
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+    return TELEGRAM_RATE_LIMIT_DEFAULT_RETRY_AFTER_SEC;
+  }
+  return null;
+}
+
 // Telegram returns 400 "Bad Request: <field> is not modified" when the
 // submitted value matches the current value. That's the documented idempotent
 // success path; treat it like ok=true so we still update the cache marker.
@@ -212,10 +251,15 @@ function isNotModifiedDescription(description: string | null | undefined): boole
 }
 
 async function applyProfileField(
+  db: D1Database,
   botToken: string,
   method: "setMyName" | "setMyDescription" | "setMyShortDescription",
   payload: Record<string, string>,
-): Promise<void> {
+): Promise<{ throttled: boolean }> {
+  if (await isRateLimited(db, method)) {
+    return { throttled: true };
+  }
+
   const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -231,8 +275,14 @@ async function applyProfileField(
     parsed = null;
   }
 
-  if (parsed?.ok === true) return;
-  if (isNotModifiedDescription(parsed?.description)) return;
+  const retryAfter = extractRetryAfter(response, parsed);
+  if (retryAfter !== null) {
+    await recordRateLimit(db, method, retryAfter);
+    return { throttled: true };
+  }
+
+  if (parsed?.ok === true) return { throttled: false };
+  if (isNotModifiedDescription(parsed?.description)) return { throttled: false };
 
   if (!response.ok) {
     throw new Error(`Telegram ${method} HTTP ${response.status}: ${responseText.slice(0, 300)}`);
@@ -291,6 +341,10 @@ export async function reconcileTelegramWebhookRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache", expectedUrl };
   }
 
+  if (await isRateLimited(db, "setWebhook")) {
+    return { attempted: false, skipped: true, reason: "rate-limited", expectedUrl };
+  }
+
   const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -303,15 +357,21 @@ export async function reconcileTelegramWebhookRegistration(
   });
 
   const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Telegram setWebhook HTTP ${response.status}: ${responseText.slice(0, 300)}`);
-  }
-
   let parsed: TelegramApiResponse | null = null;
   try {
     parsed = JSON.parse(responseText) as TelegramApiResponse;
   } catch {
     parsed = null;
+  }
+
+  const retryAfter = extractRetryAfter(response, parsed);
+  if (retryAfter !== null) {
+    await recordRateLimit(db, "setWebhook", retryAfter);
+    return { attempted: false, skipped: true, reason: "rate-limited", expectedUrl };
+  }
+
+  if (!response.ok) {
+    throw new Error(`Telegram setWebhook HTTP ${response.status}: ${responseText.slice(0, 300)}`);
   }
 
   if (parsed?.ok !== true) {
@@ -323,10 +383,16 @@ export async function reconcileTelegramWebhookRegistration(
 }
 
 async function setMyCommandsForScope(
+  db: D1Database,
   botToken: string,
   commands: ReadonlyArray<{ command: string; description: string }>,
   scope: { type: string },
-): Promise<void> {
+): Promise<{ throttled: boolean }> {
+  const endpoint = `setMyCommands:${scope.type}`;
+  if (await isRateLimited(db, endpoint)) {
+    return { throttled: true };
+  }
+
   const response = await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -335,12 +401,6 @@ async function setMyCommandsForScope(
   });
 
   const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(
-      `Telegram setMyCommands HTTP ${response.status} (scope=${scope.type}): ${responseText.slice(0, 300)}`,
-    );
-  }
-
   let parsed: TelegramApiResponse | null = null;
   try {
     parsed = JSON.parse(responseText) as TelegramApiResponse;
@@ -348,11 +408,24 @@ async function setMyCommandsForScope(
     parsed = null;
   }
 
+  const retryAfter = extractRetryAfter(response, parsed);
+  if (retryAfter !== null) {
+    await recordRateLimit(db, endpoint, retryAfter);
+    return { throttled: true };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Telegram setMyCommands HTTP ${response.status} (scope=${scope.type}): ${responseText.slice(0, 300)}`,
+    );
+  }
+
   if (parsed?.ok !== true) {
     throw new Error(
       `Telegram setMyCommands rejected registration (scope=${scope.type}): ${(parsed?.description ?? responseText).slice(0, 300)}`,
     );
   }
+  return { throttled: false };
 }
 
 export async function reconcileTelegramCommandRegistration(
@@ -371,8 +444,22 @@ export async function reconcileTelegramCommandRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
-  await setMyCommandsForScope(botToken, TELEGRAM_BOT_COMMANDS, TELEGRAM_PRIVATE_COMMAND_SCOPE);
-  await setMyCommandsForScope(botToken, TELEGRAM_BOT_GROUP_COMMANDS, TELEGRAM_GROUP_COMMAND_SCOPE);
+  const privateResult = await setMyCommandsForScope(
+    db,
+    botToken,
+    TELEGRAM_BOT_COMMANDS,
+    TELEGRAM_PRIVATE_COMMAND_SCOPE,
+  );
+  const groupResult = await setMyCommandsForScope(
+    db,
+    botToken,
+    TELEGRAM_BOT_GROUP_COMMANDS,
+    TELEGRAM_GROUP_COMMAND_SCOPE,
+  );
+
+  if (privateResult.throttled || groupResult.throttled) {
+    return { attempted: false, skipped: true, reason: "rate-limited" };
+  }
 
   await setCache(db, TELEGRAM_COMMANDS_RECONCILED_CACHE_KEY, expectedCacheValue);
   return { attempted: true, skipped: false };
@@ -394,11 +481,17 @@ export async function reconcileTelegramProfileRegistration(
     return { attempted: false, skipped: true, reason: "fresh-cache" };
   }
 
-  await applyProfileField(botToken, "setMyName", { name: TELEGRAM_BOT_NAME });
-  await applyProfileField(botToken, "setMyShortDescription", {
+  const nameResult = await applyProfileField(db, botToken, "setMyName", { name: TELEGRAM_BOT_NAME });
+  const shortResult = await applyProfileField(db, botToken, "setMyShortDescription", {
     short_description: TELEGRAM_BOT_SHORT_DESCRIPTION,
   });
-  await applyProfileField(botToken, "setMyDescription", { description: TELEGRAM_BOT_DESCRIPTION });
+  const descResult = await applyProfileField(db, botToken, "setMyDescription", {
+    description: TELEGRAM_BOT_DESCRIPTION,
+  });
+
+  if (nameResult.throttled || shortResult.throttled || descResult.throttled) {
+    return { attempted: false, skipped: true, reason: "rate-limited" };
+  }
 
   await setCache(db, TELEGRAM_PROFILE_RECONCILED_CACHE_KEY, expectedCacheValue);
   return { attempted: true, skipped: false };
@@ -428,6 +521,10 @@ export async function reconcileTelegramMenuButton(
     return { attempted: false, skipped: true, reason: "already-current", miniAppUrl };
   }
 
+  if (await isRateLimited(db, "setChatMenuButton")) {
+    return { attempted: false, skipped: true, reason: "rate-limited", miniAppUrl };
+  }
+
   const response = await fetch(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -440,6 +537,11 @@ export async function reconcileTelegramMenuButton(
     parsed = JSON.parse(responseText) as TelegramApiResponse;
   } catch {
     parsed = null;
+  }
+  const retryAfter = extractRetryAfter(response, parsed);
+  if (retryAfter !== null) {
+    await recordRateLimit(db, "setChatMenuButton", retryAfter);
+    return { attempted: false, skipped: true, reason: "rate-limited", miniAppUrl };
   }
   if (parsed?.ok !== true) {
     if (!response.ok) throw new Error(`Telegram setChatMenuButton HTTP ${response.status}: ${responseText.slice(0, 300)}`);

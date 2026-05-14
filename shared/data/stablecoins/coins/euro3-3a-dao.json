@@ -1,0 +1,72 @@
+{
+  "id": "euro3-3a-dao",
+  "llamaId": "170",
+  "detailProvider": "defillama",
+  "name": "EURO3",
+  "symbol": "EURO3",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
+  "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://3adao.org/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/3aaaDAO"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+    },
+    {
+      "label": "Audit",
+      "url": "https://docs.3adao.org/3a-protocol/technical-documentation/audit-report"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
+      "decimals": 18
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "EURO3 can be minted against supported stablecoin collateral such as USDC.e and USDT, so upstream freeze exposure is possible even though no direct holder blacklist override was authored for the EURO3 token.",
+    "reviewer": "Codex DefiLlama path addition",
+    "reviewedAt": "2026-05-14"
+  },
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "dao-governance",
+  "reserves": [
+    {
+      "name": "Whitelisted vault crypto and stablecoin collateral",
+      "pct": 100,
+      "risk": "high"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Live collateral mix not modeled",
+      "message": "3A documents the approved vault collateral set and redemption mechanics, but no Pharos-supported live adapter or stable public mainnet collateral-composition feed was found during this addition."
+    }
+  ]
+}

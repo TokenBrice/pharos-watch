@@ -44,6 +44,7 @@ const PEG_ORDER = [
   "ARS",
   "KGS",
   "NGN",
+  "XOF",
   "IDR",
   "INR",
   "HKD",

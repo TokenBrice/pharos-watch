@@ -149,12 +149,92 @@ describe("validateTelegramMiniAppInitData", () => {
     })).rejects.toMatchObject({ code: "invalid-auth" });
   });
 
-  it("rejects unequal-length hashes without parsing user JSON", async () => {
+  it("rejects malformed hash without HMAC compute", async () => {
     const initData = new URLSearchParams({
       auth_date: String(NOW_SEC - 60),
       hash: "abc",
       user: "{bad-json",
     }).toString();
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects non-hex hashes of the correct length", async () => {
+    const initData = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      hash: "z".repeat(64),
+      user: JSON.stringify({ id: 42 }),
+    }).toString();
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects future-dated auth_date as clock-skew guard", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC + 120),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42 }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects start_param with non-allowed charset", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      start_param: "bad value!",
+      user: JSON.stringify({ id: 42 }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("rejects start_param longer than 64 chars", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      start_param: "a".repeat(65),
+      user: JSON.stringify({ id: 42 }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-auth" });
+  });
+
+  it("accepts initData signed by previous bot token when supplied", async () => {
+    const PREVIOUS_TOKEN = "previous-bot-token";
+    const params = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42 }),
+    });
+    const check = [...params.entries()]
+      .map(([key, value]) => `${key}=${value}`)
+      .sort()
+      .join("\n");
+    const secret = await hmacSha256(encoder.encode("WebAppData"), PREVIOUS_TOKEN);
+    params.set("hash", hex(await hmacSha256(secret, check)));
+    const initData = params.toString();
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    }, PREVIOUS_TOKEN)).resolves.toMatchObject({ userId: "42" });
 
     await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
       maxAgeSec: 86_400,

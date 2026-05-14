@@ -57,5 +57,6 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.telegramWebhookSecret = env.TELEGRAM_WEBHOOK_SECRET;
     routeCtx.telegramWebhookSecretPrevious = env.TELEGRAM_WEBHOOK_SECRET_PREVIOUS;
     routeCtx.telegramBotToken = env.TELEGRAM_BOT_TOKEN;
+    routeCtx.telegramBotTokenPrevious = env.TELEGRAM_BOT_TOKEN_PREVIOUS;
   },
 } satisfies Record<EndpointDependency, RouteDependencyHydrator>;

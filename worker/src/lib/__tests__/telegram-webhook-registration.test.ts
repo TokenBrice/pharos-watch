@@ -34,7 +34,7 @@ async function expectedWebhookCacheValue(
   return JSON.stringify({
     version: 2,
     url,
-    allowed_updates: ["message", "callback_query"],
+    allowed_updates: ["message", "callback_query", "my_chat_member"],
     secret_token: {
       present: true,
       marker: await secretTokenMarker(secret),
@@ -132,6 +132,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
         first: null,
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -155,7 +160,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     expect(body).toEqual({
       url: "https://api.pharos.watch/api/telegram-webhook",
       secret_token: "secret-token",
-      allowed_updates: ["message", "callback_query"],
+      allowed_updates: ["message", "callback_query", "my_chat_member"],
     });
     const writes = db.getHistory().filter((entry) =>
       entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
@@ -186,6 +191,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
         }],
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -205,7 +215,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string);
-    expect(body.allowed_updates).toEqual(["message", "callback_query"]);
+    expect(body.allowed_updates).toEqual(["message", "callback_query", "my_chat_member"]);
   });
 
   it("re-registers when the cached secret marker belongs to a previous secret", async () => {
@@ -215,6 +225,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:webhook-reconciled"],
         rows: [{ value: await expectedWebhookCacheValue(undefined, "old-secret-token"), updated_at: nowSec }],
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
       },
       {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
@@ -246,6 +261,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
         rows: [{ value: await expectedWebhookCacheValue(), updated_at: staleUpdatedAtSec }],
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -275,6 +295,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
         first: null,
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -296,6 +321,11 @@ describe("reconcileTelegramWebhookRegistration", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:webhook-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [],
         first: null,
       },
@@ -324,6 +354,11 @@ describe("reconcileTelegramMenuButton", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:menu-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [],
         first: null,
       },
@@ -425,6 +460,11 @@ describe("reconcileTelegramCommandRegistration", () => {
         first: null,
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -452,6 +492,7 @@ describe("reconcileTelegramCommandRegistration", () => {
     expect(privateBody.commands.map((entry: { command: string }) => entry.command)).toEqual([
       "start",
       "help",
+      "sample",
       "status",
       "brief",
       "top",
@@ -503,6 +544,11 @@ describe("reconcileTelegramCommandRegistration", () => {
         rows: [],
         first: null,
       },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
     ], { requireMatch: true });
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, description: "Bad Request: command is invalid" }), { status: 200 }),
@@ -521,6 +567,11 @@ describe("reconcileTelegramCommandRegistration", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["telegram:commands-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [],
         first: null,
       },
@@ -575,6 +626,11 @@ describe("reconcileTelegramProfileRegistration", () => {
         first: null,
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -615,6 +671,11 @@ describe("reconcileTelegramProfileRegistration", () => {
         first: null,
       },
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
         rows: [],
       },
@@ -646,6 +707,11 @@ describe("reconcileTelegramProfileRegistration", () => {
         rows: [],
         first: null,
       },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
     ], { requireMatch: true });
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: false, description: "Bad Request: NAME_TOO_LONG" }), { status: 400 }),
@@ -663,5 +729,201 @@ describe("reconcileTelegramProfileRegistration", () => {
     const result = await reconcileTelegramProfileRegistration(db, { botToken: "" });
     expect(result).toEqual({ attempted: false, skipped: true, reason: "missing-bot-token" });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("records a 429 backoff and returns rate-limited without throwing when setMyName is throttled", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyName"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyShortDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error_code: 429,
+            description: "Too Many Requests",
+            parameters: { retry_after: 120 },
+          }),
+          { status: 429 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramProfileRegistration(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({ attempted: false, skipped: true, reason: "rate-limited" });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+
+    const writes = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)"),
+    );
+    // The success marker is NOT written; only the 429 backoff row for setMyName is.
+    expect(writes.some((w) => w.binds[0] === "telegram:profile-reconciled")).toBe(false);
+    const backoffWrite = writes.find((w) => w.binds[0] === "telegram:reconcile:429:setMyName");
+    expect(backoffWrite).toBeDefined();
+    expect(backoffWrite?.binds[1]).toBe("120");
+  });
+
+  it("skips the throttled endpoint silently while the backoff window is active", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        // Backoff written 10s ago with retry_after=120; still active.
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyName"],
+        rows: [{ value: "120", updated_at: nowSec - 10 }],
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyShortDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramProfileRegistration(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({ attempted: false, skipped: true, reason: "rate-limited" });
+    // setMyName is skipped — only setMyShortDescription + setMyDescription fetch.
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyShortDescription");
+    expect(fetchSpy.mock.calls[1]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyDescription");
+  });
+
+  it("retries the throttled endpoint after the backoff window elapses", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        // Backoff was retry_after=30 but row is 60s old — window has elapsed.
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyName"],
+        rows: [{ value: "30", updated_at: nowSec - 60 }],
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyShortDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy.mockImplementation(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramProfileRegistration(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({ attempted: true, skipped: false });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-token/setMyName");
+  });
+
+  it("defaults retry_after to 60s when Telegram omits the parameters field", async () => {
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:profile-reconciled"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyName"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyShortDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["telegram:reconcile:429:setMyDescription"],
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        rows: [],
+      },
+    ], { requireMatch: true });
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ ok: false, error_code: 429, description: "Too Many Requests" }), {
+          status: 429,
+        }),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+
+    const result = await reconcileTelegramProfileRegistration(db, { botToken: "bot-token" });
+
+    expect(result).toEqual({ attempted: false, skipped: true, reason: "rate-limited" });
+    const backoffWrite = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR REPLACE INTO cache") && entry.binds[0] === "telegram:reconcile:429:setMyName",
+    );
+    expect(backoffWrite?.binds[1]).toBe("60");
   });
 });

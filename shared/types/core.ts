@@ -42,6 +42,7 @@ export const PEG_CURRENCY_VALUES = [
   "ARS",
   "KGS",
   "NGN",
+  "XOF",
   "GOLD",
   "SILVER",
   "VAR",
@@ -331,6 +332,7 @@ export type FilterTag =
   | "ars-peg"
   | "kgs-peg"
   | "ngn-peg"
+  | "xof-peg"
   | "silver-peg"
   | "var-peg"
   | "other-peg"

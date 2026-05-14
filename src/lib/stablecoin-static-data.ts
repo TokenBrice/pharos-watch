@@ -2,26 +2,26 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 381;
-export const ACTIVE_STABLECOIN_COUNT = 353;
+export const TRACKED_STABLECOIN_COUNT = 391;
+export const ACTIVE_STABLECOIN_COUNT = 363;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 25;
 export const FROZEN_STABLECOIN_COUNT = 3;
 export const DEAD_STABLECOIN_COUNT = 91;
 
 export const ACTIVE_STABLECOIN_GOVERNANCE_COUNTS = {
-  centralized: 176,
-  "centralized-dependent": 148,
-  decentralized: 29,
+  centralized: 181,
+  "centralized-dependent": 152,
+  decentralized: 30,
 } as const;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
   USD: 260,
-  EUR: 19,
+  EUR: 22,
   GBP: 6,
-  CHF: 4,
+  CHF: 5,
   BRL: 6,
-  JPY: 5,
-  KRW: 1,
+  JPY: 6,
+  KRW: 2,
   SGD: 1,
   MYR: 1,
   TRY: 2,
@@ -31,11 +31,12 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   PHP: 2,
   RUB: 1,
   CNH: 1,
-  MXN: 3,
+  MXN: 6,
   VND: 1,
   ARS: 1,
   KGS: 1,
   NGN: 1,
+  XOF: 1,
   IDR: 2,
   GOLD: 12,
   SILVER: 3,
@@ -65,6 +66,7 @@ export const ACTIVE_PEG_CURRENCIES = [
   "ARS",
   "KGS",
   "NGN",
+  "XOF",
   "IDR",
   "GOLD",
   "SILVER",
@@ -426,6 +428,16 @@ export const TRACKED_STABLECOIN_IDS = [
   "myrc-blox",
   "vndc-jade-labs",
   "krwq-iq",
+  "eur0-usual",
+  "emxn-telcoin",
+  "hchf-hedera-swiss-franc",
+  "eurot-token-teknoloji",
+  "mxne-real-mxn",
+  "jpyt-dephaser",
+  "wmxn-ripio",
+  "xofm-mento",
+  "euro3-3a-dao",
+  "krwo-gimswap",
   "usdb-bridge",
   "hkdap-anchorpoint",
   "hkd-hsbc",

@@ -29,6 +29,7 @@ const TEST_COUNTS: Record<PegCurrency, number> = {
   VND: 0,
   UAH: 0,
   ARS: 0,
+  XOF: 0,
   IDR: 0,
   GOLD: 8,
   SILVER: 1,

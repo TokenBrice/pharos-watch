@@ -1,9 +1,25 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const pricing = createMethodologyVersion({
-  currentVersion: "6.02",
+  currentVersion: "6.03",
   changelogPath: "/methodology/pricing-pipeline-changelog/",
   changelog: [
+    {
+      version: "6.03",
+      title: "XOF secondary FX peg support",
+      date: "2026-05-14",
+      effectiveAt: 1778769294,
+      summary:
+        "West African CFA franc pegs now have explicit XOF metadata, secondary daily FX references, chart reconciliation, and deterministic validation bounds.",
+      impact: [
+        "`xofm-mento` can be tracked as an active XOF-pegged stablecoin instead of being forced into OTHER or rejected by peg metadata validation",
+        "`peggedXOF` uses the same dated `fawazahmed0/currency-api` secondary FX cadence as CNH, RUB, UAH, ARS, KGS, NGN, and VND for live sync, realtime fallbacks, and historical backfills",
+        "Price validation now classifies XOF as `fiat_fx` with explicit USD/XOF hardcoded bounds for no-reference guardrails",
+        "The CoinGecko native-peg lane remains disabled for XOF because CoinGecko does not currently expose a usable `xof` simple-price quote",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "6.02",
       title: "Derivative and redemption-par gap closure",

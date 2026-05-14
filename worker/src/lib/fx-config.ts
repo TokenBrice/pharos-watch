@@ -43,6 +43,7 @@ export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
   ars: "peggedARS",
   kgs: "peggedKGS",
   ngn: "peggedNGN",
+  xof: "peggedXOF",
   vnd: "peggedVND",
 };
 
@@ -54,6 +55,7 @@ export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
   ARS: "peggedARS",
   KGS: "peggedKGS",
   NGN: "peggedNGN",
+  XOF: "peggedXOF",
   VND: "peggedVND",
 };
 
@@ -85,6 +87,7 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedARS: [0.0001, 0.01],
   peggedKGS: [0.005, 0.05],
   peggedNGN: [0.0002, 0.005],
+  peggedXOF: [0.001, 0.005],
   peggedVND: [0.00002, 0.00006],
   peggedSILVER: [5, 500],
   peggedGOLD: [500, 10000],

@@ -31,8 +31,8 @@ import {
  * Format matches FALLBACK_RATES in peg-rates.ts: { peggedEUR: 1.08, ... }
  * where the value is "USD per 1 unit of the currency".
  *
- * CNH, RUB, UAH, and ARS are sourced from a secondary currency API because
- * Frankfurter/ECB does not publish them all directly.
+ * CNH, RUB, UAH, ARS, KGS, NGN, XOF, and VND are sourced from a secondary
+ * currency API because Frankfurter/ECB does not publish them all directly.
  * Supported Chainlink feeds overlay the reference cache for a curated subset
  * of fiat and commodity pegs when the on-chain quotes are fresh and plausible.
  * Triggered every 15 minutes, with an internal 30-minute write/fetch cooldown.
@@ -149,7 +149,7 @@ export async function syncFxRates(
               : "partial";
           }
         } catch (e) {
-          console.warn("[sync-fx-rates] Secondary FX API (CNH/RUB/UAH/ARS) failed:", e);
+          console.warn("[sync-fx-rates] Secondary FX API failed:", e);
         }
       } else if (frankfurterResult.kind === "invalid-payload") {
         const cachedRateCount = Object.keys(syncState.prevRates).length;

@@ -88,17 +88,25 @@ function presetLabel(row: PresetSubscriptionRow): Pick<TelegramPresetDefinition,
   };
 }
 
-function searchableCoins(): Array<{ stablecoinId: string; symbol: string; name: string; peg: string; status: string }> {
-  return TRACKED_STABLECOINS
+const SEARCHABLE_COINS: ReadonlyArray<{ stablecoinId: string; symbol: string; name: string; peg: string; status: string }> = Object.freeze(
+  TRACKED_STABLECOINS
     .filter((coin) => (coin.status ?? "active") !== "frozen")
-    .map((coin) => ({
+    .map((coin) => Object.freeze({
       stablecoinId: coin.id,
       symbol: coin.symbol,
       name: coin.name,
       peg: coin.flags.pegCurrency,
       status: coin.status ?? "active",
-    }));
-}
+    })),
+);
+
+const RECOMMENDED_PRESETS: ReadonlyArray<Pick<TelegramPresetDefinition, "id" | "label" | "description">> = Object.freeze(
+  listTelegramPresets().map((preset) => Object.freeze({
+    id: preset.id,
+    label: preset.label,
+    description: preset.description,
+  })),
+);
 
 export async function loadTelegramMiniAppState(
   db: D1Database,
@@ -204,12 +212,8 @@ export async function loadTelegramMiniAppState(
       };
     }),
     catalog: {
-      recommendedPresets: listTelegramPresets().map((preset) => ({
-        id: preset.id,
-        label: preset.label,
-        description: preset.description,
-      })),
-      searchableCoins: searchableCoins(),
+      recommendedPresets: RECOMMENDED_PRESETS,
+      searchableCoins: SEARCHABLE_COINS,
     },
     health: {
       lastSuccessfulDeliveryAt: health?.lastSuccessfulDeliveryAt ?? null,

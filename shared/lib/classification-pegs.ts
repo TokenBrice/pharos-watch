@@ -333,6 +333,17 @@ export const PEG_METADATA = {
     },
     chart: { label: "NGN", textColor: "text-green-700 dark:text-green-400", bgColor: "bg-green-600", hex: "#16a34a" },
   },
+  XOF: {
+    label: "the West African CFA Franc",
+    shortLabel: "West African CFA Franc",
+    filterTag: "xof-peg",
+    filterLabel: "XOF",
+    badge: {
+      label: "XOF Peg",
+      cls: "bg-teal-600/10 text-teal-700 dark:text-teal-400 border-teal-600/20",
+    },
+    chart: { label: "XOF", textColor: "text-teal-700 dark:text-teal-400", bgColor: "bg-teal-600", hex: "#0d9488" },
+  },
   GOLD: {
     label: "Gold",
     shortLabel: "Gold",

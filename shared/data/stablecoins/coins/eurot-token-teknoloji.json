@@ -1,0 +1,68 @@
+{
+  "id": "eurot-token-teknoloji",
+  "name": "Euro Token",
+  "symbol": "EUROT",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "EUR",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
+  "pegMechanism": "Issuer-managed mint and burn process intended to keep each EUROT matched 1:1 with euro reserves; holders can trade EUROT through Bitlo, but no Pharos-reviewed direct redemption backstop is modeled",
+  "detailProvider": "coingecko",
+  "geckoId": "token-teknoloji-a-s-euro",
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.token.com.tr/en/proof-of-reserves/",
+    "provider": "Token Teknoloji reserve proof page"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/tokenteknoloji"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://www.token.com.tr/en/proof-of-reserves/"
+    }
+  ],
+  "jurisdiction": {
+    "country": "Turkey"
+  },
+  "contracts": [
+    {
+      "chain": "avalanche",
+      "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+      "decimals": 18
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EUROT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "mature-alt-l1",
+  "deploymentModel": "native-multichain",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Euro bank reserves at Ziraat Participation Bank and Akbank",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

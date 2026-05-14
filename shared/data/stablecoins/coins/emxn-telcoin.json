@@ -1,0 +1,54 @@
+{
+  "id": "emxn-telcoin",
+  "name": "Telcoin MXN",
+  "symbol": "eMXN",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "MXN",
+    "governance": "centralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
+  "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
+  "detailProvider": "coingecko",
+  "geckoId": "telcoin-mxn",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.telco.in/en/digital-cash"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/telcoin"
+    },
+    {
+      "label": "Telcoin Bank",
+      "url": "https://bank.telco.in/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "polygon",
+      "address": "0x68727e573d21a49c767c3c86a92d9f24bd933c99",
+      "decimals": 6
+    }
+  ],
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: eMXN resolves to Yes because the asset is centrally issued by Telcoin and no manual override narrows that status.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "stage1-l2",
+  "custodyModel": "institutional-unregulated",
+  "reserves": [
+    {
+      "name": "Mexican peso fiat reserves for Telcoin Digital Cash",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "id": "hchf-hedera-swiss-franc",
+  "name": "Hedera Swiss Franc",
+  "symbol": "HCHF",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "CHF",
+    "governance": "decentralized",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "infrastructures": [
+    "liquity-v1"
+  ],
+  "collateral": "HBAR locked in overcollateralized HLiquity Troves on Hedera, with a 110% minimum collateral ratio and Stability Pool liquidations",
+  "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
+  "detailProvider": "coingecko",
+  "geckoId": "hedera-swiss-franc",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://hliquity.org/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.hliquity.org/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/SwisscoastAG/HLiquity"
+    },
+    {
+      "label": "Audit",
+      "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "hedera",
+      "address": "0.0.6070123",
+      "decimals": 8
+    }
+  ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Hedera Mirror Node token metadata",
+    "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Hedera Mirror Node token metadata",
+        "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hliquity.org/overview/overview"
+      }
+    ],
+    "evidence": "Conservative Dilutable review: Hedera token metadata has no admin, freeze, wipe, or pause key, but it exposes a non-null supply_key with INFINITE supply. HLiquity docs describe protocol minting against HBAR collateral rather than a holder-balance freeze path, so the explicit override is limited to dilution risk.",
+    "reviewer": "Codex Worker C",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "established-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "onchain",
+  "governanceQuality": "immutable-code",
+  "reserves": [
+    {
+      "name": "HBAR overcollateralized Troves",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

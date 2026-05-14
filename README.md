@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 381 stablecoins in repo metadata: 353 active assets on public data surfaces, 25 pre-launch entries, 3 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 391 stablecoins in repo metadata: 363 active assets on public data surfaces, 25 pre-launch entries, 3 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -19,7 +19,7 @@ Public-facing analytics dashboard tracking 381 stablecoins in repo metadata: 353
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, KRW, IDR, SGD, TRY, AUD, ZAR, CAD, CNH, PHP, MXN, MYR, UAH, ARS, KGS, NGN, XOF, gold, silver, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — 15-minute peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **FreezeWatch** — primary surface for issuer control over stablecoin balances, with a Freezable Supply Meter, Intervention Seismograph, and Sovereignty Lattice on top of 6-hourly on-chain tracking of 35 stablecoins (full list in `docs/blacklist-tracker.md`; examples: USDC, USDT, PAXG, XAUT, PYUSD, USD1, USDG, RLUSD, …) freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, and pair diversity

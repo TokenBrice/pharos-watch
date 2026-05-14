@@ -7570,6 +7570,60 @@
     }
   },
   {
+    "id": "emxn-telcoin",
+    "detailProvider": "coingecko",
+    "name": "Telcoin MXN",
+    "symbol": "eMXN",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "MXN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
+    "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
+    "geckoId": "telcoin-mxn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/telcoin"
+      },
+      {
+        "label": "Telcoin Bank",
+        "url": "https://bank.telco.in/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0x68727e573d21a49c767c3c86a92d9f24bd933c99",
+        "decimals": 6
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: eMXN resolves to Yes because the asset is centrally issued by Telcoin and no manual override narrows that status.",
+      "reviewer": "Codex Worker B metadata pass",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Mexican peso fiat reserves for Telcoin Digital Cash",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ]
+  },
+  {
     "id": "eur-qivalis",
     "detailProvider": "defillama",
     "name": "Qivalis Euro",
@@ -7682,6 +7736,73 @@
         "title": "Second wave of banks join: Sabadell, Bankinter, Abanca, Kutxabank, Cecabank — consortium now 17 members",
         "description": "Five Spanish and European banks expand the consortium beyond the original 12 founding members.",
         "sourceUrl": "https://www.banklesstimes.com/articles/2026/05/05/sabadell-bankinter-join-qivalis-euro-stablecoin-push-in-2026/"
+      }
+    ]
+  },
+  {
+    "id": "eur0-usual",
+    "detailProvider": "coingecko",
+    "name": "Usual EUR",
+    "symbol": "EUR0",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Euro-denominated collateral tokens, primarily Spiko EUTBL tokenized Eurozone Treasury-bill fund shares, held through Usual's EUR0 collateral module",
+    "pegMechanism": "Users mint EUR0 by depositing eligible euro RWA collateral such as Spiko EUTBL, or indirectly by depositing EURC while a collateral provider supplies the RWA; redemption swaps EUR0 back into the underlying euro collateral through Usual's dApp",
+    "geckoId": "usual-eur",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://usual.money/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/usualmoney"
+      },
+      {
+        "label": "Docs",
+        "url": "https://tech.usual.money/overview/features/eur0"
+      }
+    ],
+    "jurisdiction": {
+      "country": "France"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": true,
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sources": [
+        {
+          "label": "EUR0 contract docs",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
+        },
+        {
+          "label": "Contract deployments",
+          "url": "https://tech.usual.money/smart-contracts/contract-deployments"
+        }
+      ],
+      "evidence": "Usual's EUR0 token docs describe blacklist checks on transfers and admin-managed blacklist/unblacklist functions, so EUR0 has a direct holder-restriction surface.",
+      "reviewer": "Codex Worker B metadata pass",
+      "reviewedAt": "2026-05-14"
+    },
+    "reserves": [
+      {
+        "name": "Spiko EUTBL tokenized Eurozone Treasury-bill fund shares",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "eutbl-spiko",
+        "depType": "collateral"
       }
     ]
   },
@@ -8221,6 +8342,78 @@
     }
   },
   {
+    "id": "euro3-3a-dao",
+    "llamaId": "170",
+    "detailProvider": "defillama",
+    "name": "EURO3",
+    "symbol": "EURO3",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
+    "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://3adao.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/3aaaDAO"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      },
+      {
+        "label": "Audit",
+        "url": "https://docs.3adao.org/3a-protocol/technical-documentation/audit-report"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "polygon",
+        "address": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "EURO3 can be minted against supported stablecoin collateral such as USDC.e and USDT, so upstream freeze exposure is possible even though no direct holder blacklist override was authored for the EURO3 token.",
+      "reviewer": "Codex DefiLlama path addition",
+      "reviewedAt": "2026-05-14"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "Whitelisted vault crypto and stablecoin collateral",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Live collateral mix not modeled",
+        "message": "3A documents the approved vault collateral set and redemption mechanics, but no Pharos-supported live adapter or stable public mainnet collateral-composition feed was found during this addition."
+      }
+    ]
+  },
+  {
     "id": "euroe-membrane",
     "llamaId": "98",
     "detailProvider": "defillama",
@@ -8432,6 +8625,74 @@
         }
       }
     }
+  },
+  {
+    "id": "eurot-token-teknoloji",
+    "detailProvider": "coingecko",
+    "name": "Euro Token",
+    "symbol": "EUROT",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "EUR",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
+    "pegMechanism": "Issuer-managed mint and burn process intended to keep each EUROT matched 1:1 with euro reserves; holders can trade EUROT through Bitlo, but no Pharos-reviewed direct redemption backstop is modeled",
+    "geckoId": "token-teknoloji-a-s-euro",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://www.token.com.tr/en/proof-of-reserves/",
+      "provider": "Token Teknoloji reserve proof page"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/tokenteknoloji"
+      },
+      {
+        "label": "Proof of Reserve",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Turkey"
+    },
+    "contracts": [
+      {
+        "chain": "avalanche",
+        "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: EUROT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+      "reviewer": "Codex Worker B metadata pass",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "native-multichain",
+    "custodyModel": "institutional-unregulated",
+    "reserves": [
+      {
+        "name": "Euro bank reserves at Ziraat Participation Bank and Akbank",
+        "pct": 100,
+        "risk": "very-low"
+      }
+    ]
   },
   {
     "id": "eurq-quantoz",
@@ -12234,6 +12495,84 @@
     }
   },
   {
+    "id": "hchf-hedera-swiss-franc",
+    "detailProvider": "coingecko",
+    "name": "Hedera Swiss Franc",
+    "symbol": "HCHF",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "CHF",
+      "governance": "decentralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "HBAR locked in overcollateralized HLiquity Troves on Hedera, with a 110% minimum collateral ratio and Stability Pool liquidations",
+    "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
+    "geckoId": "hedera-swiss-franc",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://hliquity.org/"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.hliquity.org/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/SwisscoastAG/HLiquity"
+      },
+      {
+        "label": "Audit",
+        "url": "https://omniscia.io/reports/swisscoast-hliquity-implementation-6617b5f16434ec0018fdb844/"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "hedera",
+        "address": "0.0.6070123",
+        "decimals": 8
+      }
+    ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Hedera Mirror Node token metadata",
+      "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": "dilutable",
+      "sources": [
+        {
+          "label": "Hedera Mirror Node token metadata",
+          "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.hliquity.org/overview/overview"
+        }
+      ],
+      "evidence": "Conservative Dilutable review: Hedera token metadata has no admin, freeze, wipe, or pause key, but it exposes a non-null supply_key with INFINITE supply. HLiquity docs describe protocol minting against HBAR collateral rather than a holder-balance freeze path, so the explicit override is limited to dilution risk.",
+      "reviewer": "Codex Worker C",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "immutable-code",
+    "infrastructures": [
+      "liquity-v1"
+    ],
+    "reserves": [
+      {
+        "name": "HBAR overcollateralized Troves",
+        "pct": 100,
+        "risk": "high"
+      }
+    ]
+  },
+  {
     "id": "hkd-hsbc",
     "detailProvider": "defillama",
     "name": "HSBC HKD Stablecoin",
@@ -14321,6 +14660,87 @@
     ]
   },
   {
+    "id": "jpyt-dephaser",
+    "detailProvider": "coingecko",
+    "name": "Dephaser JPY",
+    "symbol": "JPYT",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "JPY",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
+    "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
+    "geckoId": "dephaser-jpy",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://dephaser.com/"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/DePhaser_JPYT"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.dephaser.com/"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/0xDephaser"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "optimism",
+        "address": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify Optimism contract source",
+      "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": "dilutable",
+      "sources": [
+        {
+          "label": "Sourcify Optimism contract source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+        }
+      ],
+      "evidence": "Explicit Dilutable review: the verified JPYT source exposes MINTER_ROLE and BURNER_ROLE, with mint(address,uint256) gated by MINTER_ROLE and role administration held by DEFAULT_ADMIN_ROLE. No holder freeze or blacklist function was identified in the reviewed token source.",
+      "reviewer": "Codex Worker C",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "stage1-l2",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Locked USDT on Optimism and USDC on Base",
+        "pct": 100,
+        "risk": "low",
+        "blacklistable": true
+      }
+    ]
+  },
+  {
     "id": "jtrsy-anemoy",
     "detailProvider": "coingecko",
     "name": "Janus Henderson Anemoy Treasury Fund",
@@ -15327,6 +15747,86 @@
         "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
         "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
         "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
+      }
+    ]
+  },
+  {
+    "id": "krwo-gimswap",
+    "detailProvider": "coingecko",
+    "name": "KRWO",
+    "symbol": "KRWO",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "KRW",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
+    "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
+    "geckoId": "krwo",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://gimswap.com"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+      },
+      {
+        "label": "Twitter",
+        "url": "https://x.com/gimswap"
+      },
+      {
+        "label": "Telegram",
+        "url": "https://t.me/gimswap"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "klaytn",
+        "address": "0x7fc692699f2216647a0e06225d8bdf8cdee40e7f",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1",
+        "decimals": 6
+      }
+    ],
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "BscScan contract source",
+      "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+    },
+    "blacklistabilityReview": {
+      "reviewedStatus": "dilutable",
+      "sources": [
+        {
+          "label": "BscScan contract source",
+          "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.gimswap.com/gimswap-guide/what-is-krwo"
+        }
+      ],
+      "evidence": "Explicit Dilutable review: the verified BSC FiatToken source exposes a privileged MINTER_ADDRESS and mint(address,uint256) guarded by onlyMinter; on-chain reads show nonzero minter addresses on both the BSC and Kaia KRWO deployments. No direct holder freeze or blacklist function was identified in the reviewed BSC token source.",
+      "reviewer": "Codex Worker C",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Open Voucher KRW vouchers / OV tokens",
+        "pct": 100,
+        "risk": "high"
       }
     ]
   },
@@ -17941,6 +18441,75 @@
     "reserves": [
       {
         "name": "MXN fiat reserves and cash-equivalents at Mexican financial institutions",
+        "pct": 100,
+        "risk": "low"
+      }
+    ]
+  },
+  {
+    "id": "mxne-real-mxn",
+    "detailProvider": "coingecko",
+    "name": "Real MXN",
+    "symbol": "MXNe",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "MXN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
+    "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
+    "geckoId": "real-mxn",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://brale.xyz/stablecoins/MXNe"
+      },
+      {
+        "label": "Brale announcement",
+        "url": "https://brale.xyz/blog/introducing-mxne"
+      },
+      {
+        "label": "Etherfuse announcement",
+        "url": "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar"
+      }
+    ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "FinCEN / state money transmitter regulators",
+      "license": "Money Services Business / Money Transmitter, NMLS ID #2376957"
+    },
+    "contracts": [
+      {
+        "chain": "base",
+        "address": "0x269cae7dc59803e5c596c95756faeebb6030e0af",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "6zYgzrT7X2wi9a9NeMtUvUWLLmf2a8vBsbYkocYdB9wa",
+        "decimals": 9
+      },
+      {
+        "chain": "stellar",
+        "address": "MXNe-GCQCNWT22JDLENQAVIE6DRJGHWAQ6EX2H5ABGPV55EJUPPZM5UA7KHZR",
+        "decimals": 7
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": true,
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+      "evidence": "Inferred review retained: MXNe resolves to Yes because existing metadata classifies the asset as centrally issued by Brale and no manual override narrows that status.",
+      "reviewer": "Codex Worker B metadata pass",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "mature-alt-l1",
+    "deploymentModel": "native-multichain",
+    "reserves": [
+      {
+        "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
         "pct": 100,
         "risk": "low"
       }
@@ -36250,6 +36819,104 @@
     }
   },
   {
+    "id": "wmxn-ripio",
+    "llamaId": "383",
+    "detailProvider": "defillama",
+    "name": "Ripio wMXN",
+    "symbol": "WMXN",
+    "flags": {
+      "backing": "rwa-backed",
+      "pegCurrency": "MXN",
+      "governance": "centralized",
+      "yieldBearing": false,
+      "rwa": true,
+      "navToken": false
+    },
+    "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
+    "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+    "geckoId": "mexican-peso",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Product",
+        "url": "https://www.ripio.com/en/cryptocurrencies/wmxn"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/ripioapp"
+      }
+    ],
+    "jurisdiction": {
+      "country": "Mexico"
+    },
+    "contracts": [
+      {
+        "chain": "ethereum",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "decimals": 18
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Website",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        }
+      ],
+      "evidence": "Ripio wMXN is centrally issued across multiple EVM chains; the public source confirms issuer-managed wFIAT mechanics but does not prove a holder-level blacklist path.",
+      "reviewer": "Codex DefiLlama path addition",
+      "reviewedAt": "2026-05-14"
+    },
+    "deploymentModel": "native-multichain",
+    "collateralQuality": "rwa",
+    "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
+    "reserves": [
+      {
+        "name": "Mexican-peso cash and local-currency liquid instruments",
+        "pct": 100,
+        "risk": "high"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "No per-token attestation located",
+        "message": "Ripio describes wFIAT local-currency backing and DefiLlama cites periodic attestations, but no reliable public per-token reserve attestation was found for WMXN during this addition. Curated reserves remain conservative until source coverage improves."
+      }
+    ]
+  },
+  {
     "id": "wpen-ripio",
     "llamaId": "384",
     "detailProvider": "defillama",
@@ -37481,6 +38148,82 @@
         }
       }
     }
+  },
+  {
+    "id": "xofm-mento",
+    "llamaId": "371",
+    "detailProvider": "defillama",
+    "name": "Mento West African CFA Franc",
+    "symbol": "XOFm",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "XOF",
+      "governance": "centralized-dependent",
+      "yieldBearing": false,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
+    "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
+    "geckoId": "celo-west-african-cfa-franc",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://reserve.mento.org/",
+      "provider": "Mento Reserve dashboard"
+    },
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/MentoLabs"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Addresses",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      }
+    ],
+    "contracts": [
+      {
+        "chain": "celo",
+        "address": "0x73f93dcc49cb8a239e2032663e9475dd5ef29a08",
+        "decimals": 18
+      }
+    ],
+    "blacklistabilityReview": {
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+      "evidence": "XOFm depends on USDm collateral; USDm's Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC.",
+      "reviewer": "Codex DefiLlama path addition",
+      "reviewedAt": "2026-05-14"
+    },
+    "chainTier": "established-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "alt-lst-bridged-or-mixed",
+    "custodyModel": "onchain",
+    "governanceQuality": "dao-governance",
+    "reserves": [
+      {
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
+        "risk": "low",
+        "coinId": "cusd-celo",
+        "depType": "collateral"
+      }
+    ],
+    "notices": [
+      {
+        "type": "info",
+        "title": "Live CDP reserve sync pending",
+        "message": "XOFm follows Mento's CDP-backed stablecoin model, but Pharos does not yet publish XOFm-specific live CDP reserve rows. Curated reserves use the documented USDm collateral path meanwhile."
+      }
+    ]
   },
   {
     "id": "xsgd-straitsx",

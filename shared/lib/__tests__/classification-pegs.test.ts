@@ -12,7 +12,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 const KNOWN_PEG_KEYS: PegCurrency[] = [
   "USD", "EUR", "GBP", "CHF", "BRL", "RUB", "JPY", "KRW", "IDR", "INR",
   "MYR", "SGD", "HKD", "TRY", "AUD", "ZAR", "CAD", "CNY", "CNH", "PHP",
-  "MXN", "VND", "UAH", "ARS", "KGS", "NGN", "GOLD", "SILVER", "VAR", "OTHER",
+  "MXN", "VND", "UAH", "ARS", "KGS", "NGN", "XOF", "GOLD", "SILVER", "VAR", "OTHER",
 ];
 
 describe("classification-pegs", () => {

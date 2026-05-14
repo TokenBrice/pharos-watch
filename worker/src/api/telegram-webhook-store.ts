@@ -837,17 +837,17 @@ export async function clearAlertSnooze(
     .run();
 }
 
-export async function upsertPresetSubscriptions(
+export function preparePresetSubscriptionStatements(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],
   alertTypes: Set<string>,
   options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
-): Promise<void> {
+): D1PreparedStatement[] {
   const uniquePresetIds = Array.from(new Set(presetIds));
-  if (uniquePresetIds.length === 0) return;
+  if (uniquePresetIds.length === 0) return [];
   const now = unixNow();
-  const statements = uniquePresetIds.map((presetId) => {
+  return uniquePresetIds.map((presetId) => {
     const depegStepUpdate =
       options?.depegWorseningBpsStep === undefined
         ? "depeg_worsening_bps_step = telegram_preset_subscriptions.depeg_worsening_bps_step"
@@ -881,7 +881,47 @@ export async function upsertPresetSubscriptions(
       now,
     );
   });
+}
+
+export async function upsertPresetSubscriptions(
+  db: D1Database,
+  chatId: string,
+  presetIds: readonly string[],
+  alertTypes: Set<string>,
+  options?: { depegWorseningBpsStep?: 100 | 250 | 500 | null },
+): Promise<void> {
+  const statements = preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options);
+  if (statements.length === 0) return;
   await batchExecute(db, statements);
+}
+
+export function prepareSubscriberAndPresetStatements(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  presetIds: readonly string[],
+  stablecoinIds: string[],
+  alertTypes: Set<string>,
+  options?: { clearPending?: boolean; depegWorseningBpsStep?: 100 | 250 | 500 | null },
+): D1PreparedStatement[] {
+  return [
+    ...prepareSubscriberAndSubscriptionStatements(db, chatId, username, alertTypes, stablecoinIds, options),
+    ...preparePresetSubscriptionStatements(db, chatId, presetIds, alertTypes, options),
+  ];
+}
+
+export function prepareRemovePresetSubscriptionStatements(
+  db: D1Database,
+  chatId: string,
+  presetIds: readonly string[],
+): D1PreparedStatement[] {
+  const uniquePresetIds = Array.from(new Set(presetIds));
+  if (uniquePresetIds.length === 0) return [];
+  const placeholders = uniquePresetIds.map(() => "?").join(", ");
+  return [
+    db.prepare(`DELETE FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id IN (${placeholders})`)
+      .bind(chatId, ...uniquePresetIds),
+  ];
 }
 
 export async function removePresetSubscriptions(
@@ -889,13 +929,9 @@ export async function removePresetSubscriptions(
   chatId: string,
   presetIds: readonly string[],
 ): Promise<void> {
-  const uniquePresetIds = Array.from(new Set(presetIds));
-  if (uniquePresetIds.length === 0) return;
-  const placeholders = uniquePresetIds.map(() => "?").join(", ");
-  await db
-    .prepare(`DELETE FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id IN (${placeholders})`)
-    .bind(chatId, ...uniquePresetIds)
-    .run();
+  const statements = prepareRemovePresetSubscriptionStatements(db, chatId, presetIds);
+  if (statements.length === 0) return;
+  await statements[0].run();
 }
 
 export async function loadPresetSubscriptions(
@@ -914,22 +950,32 @@ export async function loadPresetSubscriptions(
   return result.results ?? [];
 }
 
+export function prepareRemoveSubscriptionStatements(
+  db: D1Database,
+  chatId: string,
+  stablecoinIds: string[],
+): D1PreparedStatement[] {
+  const uniqueIds = Array.from(new Set(stablecoinIds));
+  if (uniqueIds.length === 0) return [];
+
+  const now = unixNow();
+  const placeholders = uniqueIds.map(() => "?").join(", ");
+  return [
+    db.prepare(
+      `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
+    ).bind(chatId, ...uniqueIds),
+    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
+  ];
+}
+
 export async function removeSubscriptions(
   db: D1Database,
   chatId: string,
   stablecoinIds: string[],
 ): Promise<void> {
-  const uniqueIds = Array.from(new Set(stablecoinIds));
-  if (uniqueIds.length === 0) return;
-
-  const now = unixNow();
-  const placeholders = uniqueIds.map(() => "?").join(", ");
-  await db.batch([
-    db.prepare(
-      `DELETE FROM telegram_subscriptions WHERE chat_id = ? AND stablecoin_id IN (${placeholders})`,
-    ).bind(chatId, ...uniqueIds),
-    db.prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?").bind(now, chatId),
-  ]);
+  const statements = prepareRemoveSubscriptionStatements(db, chatId, stablecoinIds);
+  if (statements.length === 0) return;
+  await db.batch(statements);
 }
 
 export async function clearPendingDisambiguation(

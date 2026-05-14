@@ -27,11 +27,12 @@ export interface TelegramMiniAppAuthContext {
 interface ValidateTelegramMiniAppInitDataOptions {
   maxAgeSec: number;
   nowSec?: number;
-  startParamFallback?: string | null;
 }
 
 const encoder = new TextEncoder();
-const MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX = "telegram-mini-app:mutation-init:";
+const START_PARAM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/i;
+export const MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX = "telegram-mini-app:mutation-init:";
 const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "supergroup", "channel"]);
 const warnedNovelMiniAppChatTypes = new Set<string>();
 
@@ -120,19 +121,32 @@ export async function validateTelegramMiniAppInitData(
   initData: string,
   botToken: string,
   options: ValidateTelegramMiniAppInitDataOptions,
+  botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext> {
   const params = new URLSearchParams(initData);
   const providedHash = params.get("hash");
   if (!providedHash) throw new TelegramMiniAppAuthError("invalid-auth");
+  if (providedHash.length !== 64 || !HASH_HEX_PATTERN.test(providedHash)) {
+    throw new TelegramMiniAppAuthError("invalid-auth");
+  }
 
   const dataCheckString = [...params.entries()]
     .filter(([key]) => key !== "hash")
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join("\n");
-  const secret = await hmacSha256(encoder.encode("WebAppData"), botToken);
-  const expectedHash = hex(await hmacSha256(secret, dataCheckString));
-  if (!constantTimeEqual(expectedHash, providedHash)) {
+  const candidateTokens = [botToken, botTokenPrevious?.trim() ? botTokenPrevious : undefined]
+    .filter((token): token is string => Boolean(token));
+  let signatureValid = false;
+  for (const token of candidateTokens) {
+    const secret = await hmacSha256(encoder.encode("WebAppData"), token);
+    const expectedHash = hex(await hmacSha256(secret, dataCheckString));
+    if (constantTimeEqual(expectedHash, providedHash)) {
+      signatureValid = true;
+      break;
+    }
+  }
+  if (!signatureValid) {
     throw new TelegramMiniAppAuthError("invalid-signature");
   }
 
@@ -141,6 +155,9 @@ export async function validateTelegramMiniAppInitData(
     throw new TelegramMiniAppAuthError("invalid-auth");
   }
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
+  if (authDate > nowSec + 60) {
+    throw new TelegramMiniAppAuthError("invalid-auth");
+  }
   if (nowSec - authDate > options.maxAgeSec) {
     throw new TelegramMiniAppAuthError("stale-auth");
   }
@@ -148,7 +165,11 @@ export async function validateTelegramMiniAppInitData(
   const user = parseUser(params.get("user"));
   const chatType = params.get("chat_type") || null;
   warnNovelMiniAppChatType(chatType);
-  const startParam = params.get("start_param") || options.startParamFallback || null;
+  const rawStartParam = params.get("start_param");
+  const startParam = rawStartParam === null || rawStartParam === "" ? null : rawStartParam;
+  if (startParam !== null && !START_PARAM_PATTERN.test(startParam)) {
+    throw new TelegramMiniAppAuthError("invalid-auth");
+  }
 
   return {
     userId: user.id,

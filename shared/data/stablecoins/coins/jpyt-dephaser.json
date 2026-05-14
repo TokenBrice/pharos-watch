@@ -1,0 +1,81 @@
+{
+  "id": "jpyt-dephaser",
+  "name": "Dephaser JPY",
+  "symbol": "JPYT",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "JPY",
+    "governance": "centralized-dependent",
+    "yieldBearing": false,
+    "rwa": false,
+    "navToken": false
+  },
+  "collateral": "USDT locked on Optimism and USDC locked on Base through the DePhaser platform to mint JPYT",
+  "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
+  "detailProvider": "coingecko",
+  "geckoId": "dephaser-jpy",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://dephaser.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/DePhaser_JPYT"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.dephaser.com/"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/0xDephaser"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "optimism",
+      "address": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+      "decimals": 6
+    }
+  ],
+  "canBeBlacklisted": "dilutable",
+  "canBeBlacklistedSource": {
+    "label": "Sourcify Optimism contract source",
+    "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+  },
+  "blacklistabilityReview": {
+    "reviewedStatus": "dilutable",
+    "sources": [
+      {
+        "label": "Sourcify Optimism contract source",
+        "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+      }
+    ],
+    "evidence": "Explicit Dilutable review: the verified JPYT source exposes MINTER_ROLE and BURNER_ROLE, with mint(address,uint256) gated by MINTER_ROLE and role administration held by DEFAULT_ADMIN_ROLE. No holder freeze or blacklist function was identified in the reviewed token source.",
+    "reviewer": "Codex Worker C",
+    "reviewedAt": "2026-05-14"
+  },
+  "chainTier": "stage1-l2",
+  "deploymentModel": "native-multichain",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
+  "reserves": [
+    {
+      "name": "Locked USDT on Optimism and USDC on Base",
+      "pct": 100,
+      "risk": "low",
+      "blacklistable": true
+    }
+  ]
+}
