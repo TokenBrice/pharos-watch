@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterSearchInput } from "@/components/filter-search-input";
@@ -204,6 +205,15 @@ export default function FreezeWatchClient() {
             noun="events"
           />
         )}
+
+        <div className="flex justify-end">
+          <Link
+            href="/tape/?type=freeze.*"
+            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+          >
+            See all freeze events on the Tape →
+          </Link>
+        </div>
       </FreezeWatchSection>
 
       <FreezeWatchSection

@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
-import { useRecentEvents } from "@/hooks/api-hooks";
+import { useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
-import type { RecentEvent, RecentEventSeverity } from "@shared/types/tape";
+import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
-const SEVERITY_DOT_CLASS: Record<RecentEventSeverity, string> = {
+const SEVERITY_DOT_CLASS: Record<TapeEventSeverity, string> = {
   info: "bg-emerald-500",
   notice: "bg-sky-500",
   warning: "bg-amber-500",
@@ -17,7 +16,7 @@ const SEVERITY_DOT_CLASS: Record<RecentEventSeverity, string> = {
   critical: "bg-red-500",
 };
 
-const SEVERITY_LABEL: Record<RecentEventSeverity, string> = {
+const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
   info: "Info",
   notice: "Notice",
   warning: "Warning",
@@ -25,26 +24,33 @@ const SEVERITY_LABEL: Record<RecentEventSeverity, string> = {
   critical: "Critical",
 };
 
-// Per-event-type background tint. Hues are picked to be distinct from the
-// severity ramp (emerald/sky/amber/orange/red) so type and severity stay
-// readable independently. Tailwind classes are static strings as required.
-const EVENT_TYPE_BG: Record<RecentEvent["type"], string> = {
-  "depeg.opened": "bg-rose-500/10",
-  "depeg.resolved": "bg-rose-500/10",
-  "freeze.blocked": "bg-cyan-500/10",
-  "freeze.unblocked": "bg-cyan-500/10",
-  "freeze.destroyed": "bg-cyan-500/10",
-  "score.upgraded": "bg-indigo-500/10",
-  "score.downgraded": "bg-indigo-500/10",
-  "score.regrade.bulk": "bg-violet-500/10",
+// Per-class background tint. Hues are picked to be distinct from the severity
+// ramp (emerald/sky/amber/orange/red) so type and severity stay readable
+// independently. Tailwind classes are static strings as required.
+const CLASS_BG: Record<string, string> = {
+  depeg: "bg-rose-500/10",
+  freeze: "bg-cyan-500/10",
+  score: "bg-indigo-500/10",
+  dews: "bg-fuchsia-500/10",
+  psi: "bg-sky-500/10",
+  mint_burn: "bg-orange-500/10",
+  reserve: "bg-emerald-500/10",
+  redemption: "bg-teal-500/10",
+  yield: "bg-lime-500/10",
+  liquidity: "bg-blue-500/10",
+  methodology: "bg-violet-500/10",
+  lifecycle: "bg-amber-500/10",
+  cemetery: "bg-zinc-500/10",
 };
 
-function eventTypeBg(type: RecentEvent["type"]): string {
-  return EVENT_TYPE_BG[type] ?? "";
+function eventTypeClass(type: string): string {
+  const dot = type.indexOf(".");
+  const cls = dot === -1 ? type : type.slice(0, dot);
+  return CLASS_BG[cls] ?? "";
 }
 
-function formatRelativeTime(tsSec: number): string {
-  const ageSec = Math.max(1, Math.floor(Date.now() / 1000) - tsSec);
+function formatRelativeTime(tsMs: number): string {
+  const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
   if (ageSec < 60) return `${ageSec}s ago`;
   if (ageSec < 3600) return `${Math.round(ageSec / 60)}m ago`;
   if (ageSec < 86_400) return `${Math.round(ageSec / 3600)}h ago`;
@@ -58,11 +64,11 @@ function durationFromCount(count: number): string {
 }
 
 interface TapeItemProps {
-  event: RecentEvent;
+  event: TapeEvent;
   logoSrc: string | undefined;
 }
 
-const EMPTY_EVENTS: ReadonlyArray<RecentEvent> = [];
+const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
 type HomepageTapePlacement = "inline" | "top";
 
 const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
@@ -70,38 +76,26 @@ const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 md:ml-[var(--pharos-homepage-tape-offset)] md:w-[calc(100%-var(--pharos-homepage-tape-offset))]",
 };
 
-function buildUniqueActiveIdBySymbol(): ReadonlyMap<string, string> {
-  const counts = new Map<string, number>();
-  const ids = new Map<string, string>();
-
-  for (const coin of COMMAND_PALETTE_STABLECOINS) {
-    const [id, , rawSymbol] = coin;
-    const symbol = rawSymbol.toUpperCase();
-    counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
-    ids.set(symbol, id);
-  }
-
-  return new Map([...ids].filter(([symbol]) => counts.get(symbol) === 1));
+function resolveEventLogoId(event: TapeEvent): string | null {
+  // Wire schema exposes a canonical `coinId`; symbol-only fallback is no
+  // longer needed.
+  return event.coinId ?? null;
 }
 
-const UNIQUE_ACTIVE_ID_BY_SYMBOL = buildUniqueActiveIdBySymbol();
-
-function resolveEventLogoId(event: RecentEvent): string | null {
-  if (event.stablecoinId) return event.stablecoinId;
-  if (!event.symbol) return null;
-  return UNIQUE_ACTIVE_ID_BY_SYMBOL.get(event.symbol.toUpperCase()) ?? null;
+function resolveEventHref(event: TapeEvent): string {
+  return event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
 }
 
 function TapeItem({ event, logoSrc }: TapeItemProps) {
-  const logoName = event.symbol ?? event.title;
-  const bgClass = eventTypeBg(event.type);
+  const bgClass = eventTypeClass(event.type);
+  const logoName = event.coinId ?? event.title;
 
   return (
     <Link
-      href={event.href}
+      href={resolveEventHref(event)}
       className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
     >
-      {event.symbol ? (
+      {event.coinId ? (
         <StablecoinLogo src={logoSrc} name={logoName} size={22} />
       ) : (
         <span
@@ -128,7 +122,7 @@ function TapeTerminator() {
 }
 
 export function HomepageTape({ placement = "inline" }: { placement?: HomepageTapePlacement }) {
-  const { data, isLoading, error } = useRecentEvents(20);
+  const { data, isLoading, error } = useLatestEvents({ limit: 20 });
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
   const duplicated = useMemo(() => events.concat(events), [events]);
@@ -174,3 +168,4 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     </section>
   );
 }
+

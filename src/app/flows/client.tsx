@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -193,6 +194,15 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         </div>
         <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" />
       </section>
+
+      <div className="flex justify-end">
+        <Link
+          href="/tape/?type=mint_burn.*"
+          className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+        >
+          See all mint/burn events on the Tape →
+        </Link>
+      </div>
     </FeaturePageShell>
   );
 }

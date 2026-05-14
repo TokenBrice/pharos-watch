@@ -2,18 +2,23 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import type { RecentEvent, RecentEventsResponse } from "@shared/types/tape";
+import type { TapeEvent } from "@shared/types/tape-event";
 
-type UseRecentEventsResult = {
-  data: RecentEventsResponse | undefined;
+type LatestEventsResult = {
+  data: { events: TapeEvent[]; nextCursor: string | null; total: number | null; totalExact: boolean } | undefined;
   isLoading: boolean;
   error: Error | null;
+  meta: null;
 };
 
-const useRecentEventsMock = vi.fn<() => UseRecentEventsResult>();
+const useLatestEventsMock = vi.fn<() => LatestEventsResult>();
 
-vi.mock("@/hooks/api-hooks", () => ({
-  useRecentEvents: () => useRecentEventsMock(),
+vi.mock("@/hooks/use-events", () => ({
+  useLatestEvents: () => useLatestEventsMock(),
+}));
+
+vi.mock("@/hooks/use-logos", () => ({
+  useLogos: () => ({ data: {} }),
 }));
 
 import { HomepageTape } from "@/components/homepage-tape";
@@ -24,29 +29,39 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  useRecentEventsMock.mockReset();
-  mockRecentEvents();
+  useLatestEventsMock.mockReset();
+  mockLatestEvents();
 });
 
-function makeRecentEvent(overrides: Partial<RecentEvent> = {}): RecentEvent {
+function makeTapeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
   return {
-    id: "depeg.opened:1",
+    id: "1747200000000-depeg-abc12345",
     type: "depeg.opened",
     severity: "warning",
-    ts: Math.floor(Date.now() / 1000) - 120,
-    stablecoinId: "usdc-circle",
-    symbol: "USDC",
+    ts: Date.now() - 120_000,
+    endsAt: null,
+    coinId: "usdc-circle",
+    issuerId: null,
+    pegCurrency: "USD",
+    chain: null,
     title: "USDC depeg opened (-500 bps)",
-    href: "/stablecoin/usdc-circle/#peg-history",
+    summary: "USDC drifted to -500 bps versus its USD peg.",
+    payload: {},
+    sourceTable: "depeg_events",
+    sourceRowId: "1",
+    transition: "opened",
+    sourceUrl: "/stablecoin/usdc-circle/#peg-history",
+    methodologyVersion: null,
     ...overrides,
   };
 }
 
-function mockRecentEvents(overrides: Partial<UseRecentEventsResult> = {}) {
-  useRecentEventsMock.mockReturnValue({
-    data: { events: [] },
+function mockLatestEvents(overrides: Partial<LatestEventsResult> = {}) {
+  useLatestEventsMock.mockReturnValue({
+    data: { events: [], nextCursor: null, total: null, totalExact: false },
     isLoading: false,
     error: null,
+    meta: null,
     ...overrides,
   });
 }
@@ -58,7 +73,7 @@ describe("HomepageTape", () => {
   });
 
   it("renders nothing on endpoint error", () => {
-    mockRecentEvents({
+    mockLatestEvents({
       data: undefined,
       isLoading: false,
       error: new Error("fetch failed"),
@@ -68,7 +83,7 @@ describe("HomepageTape", () => {
   });
 
   it("renders a loading state when the hook is loading", () => {
-    mockRecentEvents({
+    mockLatestEvents({
       data: undefined,
       isLoading: true,
       error: null,
@@ -78,37 +93,40 @@ describe("HomepageTape", () => {
   });
 
   it("renders depeg, freeze, and score events with links and stablecoin logos", () => {
-    mockRecentEvents({
+    mockLatestEvents({
       data: {
         events: [
-          makeRecentEvent({
-            id: "depeg.opened:1",
+          makeTapeEvent({
+            id: "1747200000000-depeg-aaa11111",
             type: "depeg.opened",
             severity: "severe",
             title: "USDC depeg opened (-1200 bps)",
-            href: "/stablecoin/usdc-circle/#peg-history",
+            sourceUrl: "/stablecoin/usdc-circle/#peg-history",
+            coinId: "usdc-circle",
           }),
-          makeRecentEvent({
-            id: "freeze.destroyed:eth-0xabc",
-            type: "freeze.destroyed",
+          makeTapeEvent({
+            id: "1747200000000-freeze-bbb22222",
+            type: "freeze.funds.destroyed",
             severity: "critical",
-            ts: Math.floor(Date.now() / 1000) - 3600,
-            stablecoinId: null,
-            symbol: "USDT",
+            ts: Date.now() - 3_600_000,
+            coinId: "usdt-tether",
+            chain: "ethereum",
             title: "USDT $150.0M destroyed · Ethereum",
-            href: "/freezewatch/",
+            sourceUrl: "/freezewatch/",
           }),
-          makeRecentEvent({
-            id: "score.downgraded:usdt-tether:1747400000",
-            type: "score.downgraded",
+          makeTapeEvent({
+            id: "1747200000000-score-ccc33333",
+            type: "score.grade.downgraded",
             severity: "warning",
-            ts: Math.floor(Date.now() / 1000) - 7200,
-            stablecoinId: "usdt-tether",
-            symbol: "USDT",
+            ts: Date.now() - 7_200_000,
+            coinId: "usdt-tether",
             title: "USDT grade A -> B+",
-            href: "/stablecoin/usdt-tether/#report-card",
+            sourceUrl: "/stablecoin/usdt-tether/#report-card",
           }),
         ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
       },
     });
 
@@ -118,9 +136,11 @@ describe("HomepageTape", () => {
     expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
     expect(screen.getAllByText("USDT grade A -> B+")).toHaveLength(2);
-    // Events use stablecoin logos, including freeze events that resolve a logo from a unique symbol.
-    expect(screen.getAllByAltText("USDC logo")).toHaveLength(2);
-    expect(screen.getAllByAltText("USDT logo")).toHaveLength(4);
+    // Events use stablecoin logos when `coinId` is set. Logos resolve to a
+    // letter-fallback (aria-label) when no image src is provided by the
+    // mocked useLogos hook.
+    expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
+    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(4);
     // Source links are present.
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
@@ -130,17 +150,19 @@ describe("HomepageTape", () => {
   });
 
   it("keeps a severity dot fallback when an event is not tied to a stablecoin", () => {
-    mockRecentEvents({
+    mockLatestEvents({
       data: {
         events: [
-          makeRecentEvent({
-            stablecoinId: null,
-            symbol: null,
+          makeTapeEvent({
+            coinId: null,
             severity: "notice",
             title: "General market event",
-            href: "/",
+            sourceUrl: "/",
           }),
         ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
       },
     });
 
@@ -150,7 +172,9 @@ describe("HomepageTape", () => {
   });
 
   it("labels the strip as Events", () => {
-    mockRecentEvents({ data: { events: [makeRecentEvent()] } });
+    mockLatestEvents({
+      data: { events: [makeTapeEvent()], nextCursor: null, total: null, totalExact: false },
+    });
 
     render(<HomepageTape />);
 
@@ -159,7 +183,9 @@ describe("HomepageTape", () => {
   });
 
   it("applies the pause-on-hover shell class on the outer wrapper", () => {
-    mockRecentEvents({ data: { events: [makeRecentEvent()] } });
+    mockLatestEvents({
+      data: { events: [makeTapeEvent()], nextCursor: null, total: null, totalExact: false },
+    });
 
     const { container } = render(<HomepageTape />);
     const root = container.querySelector(".pharos-tape-shell");
@@ -168,7 +194,9 @@ describe("HomepageTape", () => {
   });
 
   it("can render as the full-width top strip", () => {
-    mockRecentEvents({ data: { events: [makeRecentEvent()] } });
+    mockLatestEvents({
+      data: { events: [makeTapeEvent()], nextCursor: null, total: null, totalExact: false },
+    });
 
     const { container } = render(<HomepageTape placement="top" />);
     const root = container.querySelector(".pharos-tape-shell");
@@ -179,12 +207,19 @@ describe("HomepageTape", () => {
   });
 
   it("appends a single non-duplicated 'View all events' terminator linking to /tape/", () => {
-    mockRecentEvents({
+    mockLatestEvents({
       data: {
         events: [
-          makeRecentEvent({ id: "depeg.opened:1", title: "USDC depeg opened (-500 bps)" }),
-          makeRecentEvent({ id: "freeze.blocked:1", type: "freeze.blocked", title: "USDT freeze blocked" }),
+          makeTapeEvent({ id: "1747200000000-depeg-eee55555", title: "USDC depeg opened (-500 bps)" }),
+          makeTapeEvent({
+            id: "1747200000000-freeze-fff66666",
+            type: "freeze.address.blocked",
+            title: "USDT freeze blocked",
+          }),
         ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
       },
     });
 
@@ -196,5 +231,4 @@ describe("HomepageTape", () => {
     // Next.js Link may normalize trailing slash; accept either.
     expect(tapeLink?.getAttribute("href")).toMatch(/^\/tape\/?$/);
   });
-
 });

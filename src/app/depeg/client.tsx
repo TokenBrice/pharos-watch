@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -307,6 +308,14 @@ export function DepegClient() {
           isLoadingMore={isFetchingNextPage}
           onLoadMore={() => void fetchNextPage()}
         />
+        <div className="mt-2 flex justify-end">
+          <Link
+            href="/tape/?type=depeg.*"
+            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+          >
+            See all depeg events on the Tape →
+          </Link>
+        </div>
       </SectionErrorBoundary>
 
       {/* Peg Heatmap (moved from homepage) — shares filter state */}
