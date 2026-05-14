@@ -5,12 +5,14 @@
 The dependency map (`/dependency-map`) renders an interactive collateral graph for **up to 50 non-defunct stablecoins by market cap that have at least one live dependency edge (incoming or outgoing)**.
 
 Primary files:
+
 - `src/app/dependency-map/page.tsx`
 - `src/app/dependency-map/client.tsx`
 - `src/app/dependency-map/dependency-hubs-model.ts` — shared pure model for desktop and mobile hub summaries
 - `src/app/dependency-map/dependency-hubs-board.tsx` — desktop exact-value dependency hub board
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
 - `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
+- `src/components/contagion-graph/contagion-graph-insights.tsx` — graph-side selection and systemic-hub inspection rail
 - `src/components/dependency-map-mobile-summary.tsx` — mobile quick-summary companion card
 
 ## Data Inputs
@@ -37,6 +39,7 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
 
 Edges are derived from the report-card edge set:
+
 - Each dependency edge is included only if both coins are in the selected top-50 set.
 - Edge `type` defaults to `"collateral"` when not explicitly provided.
 
@@ -75,6 +78,7 @@ To improve readability in dense graphs, the map computes supernodes dynamically 
   - `0.50*inWeight + 0.25*inDegree + 0.15*totalDegree + 0.10*mcap`
 
 Tiering (with hysteresis):
+
 - Tier 1 (core hubs): enter at P90 + `inDegree >= 2`, stay until below P80.
 - Tier 2 (secondary hubs): enter at P75 + (`inDegree >= 1` or `inWeight >= 0.10`), stay until below P65.
 - Clamps:
@@ -83,21 +87,32 @@ Tiering (with hysteresis):
 - Sparse fallback: if edge count < 12, use top 2 by score as Tier 1.
 
 Rendering behavior:
+
 - Layout anchors Tier 1 near center, Tier 2 on an inner ring, remaining nodes on outer rings.
 - Edges touching hubs are emphasized; non-hub-to-non-hub edges are dimmed.
 - Hub symbols are always labeled for quick orientation.
 
-## Readability Controls
+## Graph Workspace And Readability Controls
 
-The graph header exposes one runtime control group plus a conditional picker:
+The graph renders as a compact workspace inspired by terminal-style dependency explorers: a metric strip, visible focus controls, dependency-type tabs, a trace picker, the SVG viewport, and a graph-side inspection rail. The full exact-value Dependency Hubs Board remains below the graph for deeper review.
+
+The graph header exposes one runtime control group plus an always-visible trace picker:
 
 - **Focus mode**:
   - `All`: full graph
   - `Hub dependencies`: only edges touching Tier 1/Tier 2 hubs
-  - `Selected neighborhood`: only edges adjacent to a selected coin (picker shown inline)
-- **Neighborhood coin picker**:
-  - Only appears in `Selected neighborhood` mode.
-  - Lets the user set the neighborhood focus explicitly; clicking a node in the graph updates the same selection.
+  - `Selected neighborhood`: only edges adjacent to the selected trace coin
+- **Trace coin picker**:
+  - Always visible.
+  - Selecting a coin sets the neighborhood root and switches to `Selected neighborhood`.
+  - Clicking a node pins the same trace target without changing the current focus mode unless the user selects from the picker or the rail action.
+- **Dependency type filter**:
+  - `All`: no type filter.
+  - `Collateral`, `Mechanism`, and `Wrapper`: show only visible edges of that dependency type while preserving the active focus mode.
+- **Inspection rail**:
+  - Shows the currently hovered, focused, or pinned node.
+  - Surfaces direct dependent count, upstream link count, summed visible dependent/upstream weights, and examples from the currently visible graph.
+  - Lists the top direct systemic hubs from the same `buildDependencyHubsModel()` output used by the desktop board, with row actions that jump into that hub's selected neighborhood.
 
 The current UI does not expose a separate weak-edge compression or `Min edge` threshold control.
 
@@ -117,11 +132,13 @@ This keeps layout stable and prevents node clipping at the frame boundary.
 ## Visual Encoding
 
 Node encoding:
+
 - Outer ring color = report-card grade band (`GRADE_RADAR_COLORS` + `gradeRange()`).
 - Node area = relative market cap (via radius scaling).
 - Logo is clipped to inner circle; text fallback uses symbol initials when logo is missing.
 
 Edge encoding:
+
 - Width and opacity scale with dependency weight and are boosted for edges touching supernodes.
 - Non-hub-to-non-hub edges are intentionally dimmed to reduce clutter.
 - Type color/dash:
@@ -134,12 +151,13 @@ Edge encoding:
 - **Drag**: nodes are draggable and clamped within padded bounds.
 - **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap).
 - **Hover edge**: shows tooltip with dependency pair + percentage weight + dependency type.
-- **Click node**: in `Selected neighborhood` focus mode, sets the neighborhood root to that node.
+- **Click node**: pins the node in the inspection rail and sets it as the pending trace target. In `Selected neighborhood` mode this also retargets the visible neighborhood.
+- **Trace picker / rail action**: switches to `Selected neighborhood` and shows the selected coin's direct graph neighborhood.
 
 ## Mobile Layout
 
 - The interactive graph now renders on all screen sizes, including phones.
-- On small screens, the `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
+- On small screens, the graph workspace stacks controls, SVG viewport, and inspection rail vertically. The `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
 - Graph controls stack vertically on narrow widths while the SVG scales responsively through its `viewBox`.
 
 ### Contagion Ripple

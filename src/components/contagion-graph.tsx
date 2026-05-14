@@ -1,9 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { ContagionGraphControls } from "@/components/contagion-graph/contagion-graph-controls";
-import { ContagionGraphLegend } from "@/components/contagion-graph/contagion-graph-legend";
-import { ContagionGraphSvg } from "@/components/contagion-graph/contagion-graph-svg";
+import { ContagionGraphHeader } from "@/components/contagion-graph/contagion-graph-header";
+import { ContagionGraphInsights } from "@/components/contagion-graph/contagion-graph-insights";
+import { ContagionGraphStage } from "@/components/contagion-graph/contagion-graph-stage";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import {
   buildEdgeTooltipElement,
@@ -18,9 +18,17 @@ interface ContagionGraphProps {
   dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
+  dependencyHubs?: readonly {
+    id: string;
+    label: string;
+    symbol: string;
+    dependentCount: number;
+    summedDirectDependencyWeight: number;
+    uniqueDependentMcapUsd: number;
+  }[];
 }
 
-export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: ContagionGraphProps) {
+export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, dependencyHubs }: ContagionGraphProps) {
   const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap });
 
   if (graph.nodes.length === 0) return null;
@@ -39,59 +47,27 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
   const tooltipAnnouncement = buildTooltipAnnouncement(tooltipContext);
   const nodeTooltipEl = buildNodeTooltipElement(tooltipContext);
   const edgeTooltipEl = buildEdgeTooltipElement(tooltipContext);
+  const inspectedNode = graph.nodeMap.get(graph.effectiveInspectedId ?? "") ?? null;
 
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <p className="text-xs text-muted-foreground">
-          Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with {graph.visibleLinks.length} visible edges.
-          Adaptive supernode emphasis keeps key hubs centered and their links visually prioritized.
+    <Card className="overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none">
+      <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
+        <p className="sr-only">
+          Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
+          {graph.visibleLinks.length} visible edges.
         </p>
-        <ContagionGraphControls
-          focusMode={graph.focusMode}
-          nodeSelectOptions={graph.nodeSelectOptions}
-          selectedNeighborhoodId={graph.effectiveSelectedNeighborhoodId}
-          onFocusModeChange={graph.setFocusMode}
-          onSelectedNeighborhoodChange={graph.setSelectedNeighborhoodId}
-        />
-        <ContagionGraphLegend />
+        <ContagionGraphHeader graph={graph} dependencyHubCount={dependencyHubs?.length} />
       </CardHeader>
-      <CardContent>
-        <div
-          className="w-full overflow-hidden rounded-lg border bg-background/50"
-          role="figure"
-          aria-label={`Dependency graph showing ${graph.visibleNodeIds.size} visible stablecoins and ${graph.visibleLinks.length} visible dependency connections`}
-        >
-          <ContagionGraphSvg
-            svgRef={graph.svgRef}
-            nodes={graph.nodes}
+      <CardContent className="p-3 sm:p-4">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <ContagionGraphStage graph={graph} logos={logos} nodeTooltipEl={nodeTooltipEl} edgeTooltipEl={edgeTooltipEl} />
+          <ContagionGraphInsights
+            inspectedNode={inspectedNode}
             visibleLinks={graph.visibleLinks}
-            visibleNodeIds={graph.visibleNodeIds}
-            positions={graph.positions}
-            dragId={graph.dragId}
-            focusMode={graph.focusMode}
-            supernodeState={graph.supernodeState}
+            nodeMap={graph.nodeMap}
+            hubs={dependencyHubs}
             logos={logos}
-            activeHoveredId={graph.activeHoveredId}
-            activeHoveredEdge={graph.activeHoveredEdge}
-            focusedId={graph.focusedId}
-            connectedNodes={graph.connectedNodes}
-            connectedEdges={graph.connectedEdges}
-            nodeDistance={graph.nodeDistance}
-            edgeDistance={graph.edgeDistance}
-            nodeTooltipEl={nodeTooltipEl}
-            edgeTooltipEl={edgeTooltipEl}
-            onPointerMove={graph.handlePointerMove}
-            onPointerUp={graph.handlePointerUp}
-            onNodePointerDown={graph.handlePointerDown}
-            onNodeKeyDown={graph.handleNodeKeyDown}
-            onNodeMouseEnter={graph.handleNodeMouseEnter}
-            onNodeMouseLeave={graph.handleNodeMouseLeave}
-            onNodeFocus={graph.handleNodeFocus}
-            onNodeBlur={graph.handleNodeBlur}
-            onNodeClick={graph.handleNodeClick}
-            onEdgeMouseEnter={graph.handleEdgeMouseEnter}
-            onEdgeMouseLeave={graph.handleEdgeMouseLeave}
+            onTraceNode={graph.handleTraceNodeChange}
           />
         </div>
         <div className="sr-only" aria-live="polite" aria-atomic="true">

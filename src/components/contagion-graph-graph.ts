@@ -12,6 +12,7 @@ export interface ResolvedLink {
 }
 
 export type FocusMode = "all" | "hub" | "neighborhood";
+export type EdgeTypeFilter = "all" | DependencyType;
 
 export interface RippleState {
   connectedNodes: Set<string>;
@@ -26,10 +27,7 @@ function resolveLinkNodeId(node: GraphNode | string | number): string {
   return typeof node === "object" ? node.id : String(node);
 }
 
-export function resolveGraphLinks(
-  links: readonly GraphLink[],
-  tierById: ReadonlyMap<string, HubTier>,
-): ResolvedLink[] {
+export function resolveGraphLinks(links: readonly GraphLink[], tierById: ReadonlyMap<string, HubTier>): ResolvedLink[] {
   return links.map((link, index) => {
     const srcId = resolveLinkNodeId(link.source);
     const tgtId = resolveLinkNodeId(link.target);
@@ -48,6 +46,7 @@ export function resolveGraphLinks(
 export function computeVisibleGraph(params: {
   resolvedLinks: readonly ResolvedLink[];
   focusMode: FocusMode;
+  edgeTypeFilter: EdgeTypeFilter;
   neighborhoodFocusId: string | null;
   nodes: readonly Pick<GraphNode, "id">[];
   hubIdsByScore: readonly string[];
@@ -61,13 +60,16 @@ export function computeVisibleGraph(params: {
   const visibleIndices = new Set<number>();
 
   for (const link of params.resolvedLinks) {
-    const inScope = params.focusMode === "all"
-      ? true
-      : params.focusMode === "hub"
-        ? (link.srcTier > 0 || link.tgtTier > 0)
-        : params.neighborhoodFocusId !== null
-          ? (link.srcId === params.neighborhoodFocusId || link.tgtId === params.neighborhoodFocusId)
-          : false;
+    if (params.edgeTypeFilter !== "all" && link.type !== params.edgeTypeFilter) continue;
+
+    const inScope =
+      params.focusMode === "all"
+        ? true
+        : params.focusMode === "hub"
+          ? link.srcTier > 0 || link.tgtTier > 0
+          : params.neighborhoodFocusId !== null
+            ? link.srcId === params.neighborhoodFocusId || link.tgtId === params.neighborhoodFocusId
+            : false;
     if (!inScope) continue;
 
     scopeNodeIds.add(link.srcId);

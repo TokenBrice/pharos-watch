@@ -40,7 +40,7 @@ describe("DependencyHubsBoard", () => {
     render(<DependencyHubsBoard model={MODEL} />);
 
     expect(screen.getAllByText("Upstream hubs").length).toBeGreaterThan(0);
-    expect(screen.getByText("Direct dependency hubs")).toBeTruthy();
+    expect(screen.getAllByText("Direct dependency hubs").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Direct dependents").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Summed direct dependency weight").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Modeled dependent market-cap context").length).toBeGreaterThan(0);
@@ -48,7 +48,7 @@ describe("DependencyHubsBoard", () => {
     expect(screen.getAllByText("2").length).toBeGreaterThan(0);
     expect(screen.getAllByText("0.90").length).toBeGreaterThan(0);
     expect(screen.getAllByText("$7.0B").length).toBeGreaterThan(0);
-    expect(screen.getByText("$100.0B")).toBeTruthy();
+    expect(screen.getByText(/Hub own market cap \$100\.0B/)).toBeTruthy();
     expect(screen.getByText(/Example direct dependents:/)).toBeTruthy();
     expect(screen.getByText("DAI, FRAX")).toBeTruthy();
     expect(screen.getByText("Collateral")).toBeTruthy();

@@ -1,52 +1,82 @@
 "use client";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { FocusMode } from "@/components/contagion-graph-graph";
+import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
+
+const TYPE_FILTERS: readonly { value: EdgeTypeFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "collateral", label: "Collateral" },
+  { value: "mechanism", label: "Mechanism" },
+  { value: "wrapper", label: "Wrapper" },
+];
 
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
+  edgeTypeFilter: EdgeTypeFilter;
   nodeSelectOptions: ContagionGraphNodeSelectOption[];
   selectedNeighborhoodId: string | null;
   onFocusModeChange: (focusMode: FocusMode) => void;
-  onSelectedNeighborhoodChange: (nodeId: string | null) => void;
+  onEdgeTypeFilterChange: (edgeTypeFilter: EdgeTypeFilter) => void;
+  onTraceNodeChange: (nodeId: string | null) => void;
 }
 
 export function ContagionGraphControls({
   focusMode,
+  edgeTypeFilter,
   nodeSelectOptions,
   selectedNeighborhoodId,
   onFocusModeChange,
-  onSelectedNeighborhoodChange,
+  onEdgeTypeFilterChange,
+  onTraceNodeChange,
 }: ContagionGraphControlsProps) {
   return (
-    <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
-      <div className="flex w-full items-center gap-2 sm:w-auto">
-        <span className="shrink-0 text-[10px] text-muted-foreground">Focus</span>
-        <div className="w-0 min-w-0 flex-1 overflow-x-auto sm:w-auto sm:flex-none">
-          <ToggleGroup
-            type="single"
-            value={focusMode}
-            onValueChange={(value) => { if (value) onFocusModeChange(value as FocusMode); }}
-            variant="outline"
-            size="sm"
-            className="inline-flex h-9 min-w-max md:h-7"
-          >
-            <ToggleGroupItem value="all" className="text-[10px]">All</ToggleGroupItem>
-            <ToggleGroupItem value="hub" className="text-[10px]">Hub dependencies</ToggleGroupItem>
-            <ToggleGroupItem value="neighborhood" className="text-[10px]">Selected neighborhood</ToggleGroupItem>
-          </ToggleGroup>
+    <div className="grid gap-3 pt-1">
+      <div className="flex flex-col gap-2 2xl:flex-row 2xl:flex-wrap 2xl:items-center 2xl:justify-between">
+        <div className="flex w-full items-center gap-2 2xl:w-auto">
+          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            Focus
+          </span>
+          <div className="w-0 min-w-0 flex-1 overflow-x-auto 2xl:w-auto 2xl:flex-none">
+            <ToggleGroup
+              type="single"
+              value={focusMode}
+              aria-label="Graph focus mode"
+              onValueChange={(value) => {
+                if (value) onFocusModeChange(value as FocusMode);
+              }}
+              variant="outline"
+              size="sm"
+              className="inline-flex h-9 min-w-max rounded-md md:h-7"
+            >
+              <ToggleGroupItem value="all" className="font-mono text-[10px] uppercase tracking-[0.08em]">
+                All
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="hub"
+                aria-label="Hub dependencies"
+                className="font-mono text-[10px] uppercase tracking-[0.08em]"
+              >
+                Hubs
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="neighborhood"
+                aria-label="Selected neighborhood"
+                className="font-mono text-[10px] uppercase tracking-[0.08em]"
+              >
+                Neighborhood
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
-      </div>
 
-      {focusMode === "neighborhood" && (
-        <div className="flex w-full flex-col gap-1 sm:ml-auto sm:w-auto sm:items-end">
-          <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            Coin
+        <div className="flex w-full flex-col gap-1 2xl:ml-auto 2xl:w-auto 2xl:items-end">
+          <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            Trace coin
             <select
-              className="h-9 max-w-full rounded-md border bg-background px-2 text-[11px] text-foreground md:h-7"
+              className="h-9 max-w-full rounded-md border bg-background px-2 font-mono text-[11px] text-foreground md:h-7 2xl:w-[11rem]"
               value={selectedNeighborhoodId ?? ""}
-              onChange={(event) => onSelectedNeighborhoodChange(event.target.value || null)}
+              onChange={(event) => onTraceNodeChange(event.target.value || null)}
             >
               {nodeSelectOptions.map((node) => (
                 <option key={node.id} value={node.id}>
@@ -55,9 +85,38 @@ export function ContagionGraphControls({
               ))}
             </select>
           </label>
-          <span className="text-[10px] text-muted-foreground">Click any node to set neighborhood</span>
+          <span className="text-[10px] text-muted-foreground">
+            Selecting a coin opens its neighborhood; clicking a node pins this target.
+          </span>
         </div>
-      )}
+      </div>
+
+      <div className="flex w-full items-center gap-2">
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Type</span>
+        <div className="w-0 min-w-0 flex-1 overflow-x-auto">
+          <ToggleGroup
+            type="single"
+            value={edgeTypeFilter}
+            aria-label="Dependency type filter"
+            onValueChange={(value) => {
+              if (value) onEdgeTypeFilterChange(value as EdgeTypeFilter);
+            }}
+            variant="outline"
+            size="sm"
+            className="inline-flex h-9 min-w-max rounded-md md:h-7"
+          >
+            {TYPE_FILTERS.map((filter) => (
+              <ToggleGroupItem
+                key={filter.value}
+                value={filter.value}
+                className="font-mono text-[10px] uppercase tracking-[0.08em]"
+              >
+                {filter.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      </div>
     </div>
   );
 }

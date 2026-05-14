@@ -23,12 +23,15 @@ const LINKS: GraphLink[] = [
 ];
 
 function makeResolvedLinks(): ResolvedLink[] {
-  return resolveGraphLinks(LINKS, new Map([
-    ["usdc", 2],
-    ["usdt", 1],
-    ["usde", 0],
-    ["susde", 0],
-  ]));
+  return resolveGraphLinks(
+    LINKS,
+    new Map([
+      ["usdc", 2],
+      ["usdt", 1],
+      ["usde", 0],
+      ["susde", 0],
+    ]),
+  );
 }
 
 describe("contagion graph helpers", () => {
@@ -68,6 +71,7 @@ describe("contagion graph helpers", () => {
     const result = computeVisibleGraph({
       resolvedLinks: makeResolvedLinks(),
       focusMode: "hub",
+      edgeTypeFilter: "all",
       neighborhoodFocusId: null,
       nodes: NODES,
       hubIdsByScore: ["usdc", "usdt"],
@@ -78,20 +82,39 @@ describe("contagion graph helpers", () => {
     expect(result.visibleLinkIndices).toEqual(new Set([0, 1]));
   });
 
+  it("filters visible links by dependency type", () => {
+    const result = computeVisibleGraph({
+      resolvedLinks: makeResolvedLinks(),
+      focusMode: "all",
+      edgeTypeFilter: "wrapper",
+      neighborhoodFocusId: null,
+      nodes: NODES,
+      hubIdsByScore: ["usdc", "usdt"],
+    });
+
+    expect(result.visibleLinks.map((link) => link.index)).toEqual([2]);
+    expect(result.visibleLinkIndices).toEqual(new Set([2]));
+    expect(result.visibleNodeIds).toEqual(new Set(["usdc", "usdt", "usde", "susde"]));
+  });
+
   it("builds multi-hop downstream ripple state from the hovered node", () => {
     const result = computeRippleState("usdc", makeResolvedLinks());
 
-    expect(result.nodeDistance).toEqual(new Map([
-      ["usdc", 0],
-      ["usdt", 1],
-      ["usde", 2],
-      ["susde", 3],
-    ]));
-    expect(result.edgeDistance).toEqual(new Map([
-      [0, 1],
-      [1, 2],
-      [2, 3],
-    ]));
+    expect(result.nodeDistance).toEqual(
+      new Map([
+        ["usdc", 0],
+        ["usdt", 1],
+        ["usde", 2],
+        ["susde", 3],
+      ]),
+    );
+    expect(result.edgeDistance).toEqual(
+      new Map([
+        [0, 1],
+        [1, 2],
+        [2, 3],
+      ]),
+    );
   });
 
   it("finds the best connected node in the requested arrow direction", () => {

@@ -86,6 +86,7 @@ export function DependencyMapClient() {
         dependencyEdges={reportData.dependencyGraph?.edges}
         mcapMap={mcapMap}
         logos={logos}
+        dependencyHubs={dependencyHubsModel.hubs}
       />
       <DependencyHubsBoard model={dependencyHubsModel} logos={logos} />
       <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} />

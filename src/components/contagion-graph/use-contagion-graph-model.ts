@@ -6,6 +6,7 @@ import {
   computeVisibleGraph,
   findDirectionalNeighbor,
   resolveGraphLinks,
+  type EdgeTypeFilter,
   type FocusMode,
   type ResolvedLink,
 } from "@/components/contagion-graph-graph";
@@ -32,10 +33,7 @@ export interface ContagionGraphNodeSelectOption {
   mcap: number;
 }
 
-function buildHubIdsByScore(
-  nodes: readonly GraphNode[],
-  supernodeState: SupernodeState,
-): string[] {
+function buildHubIdsByScore(nodes: readonly GraphNode[], supernodeState: SupernodeState): string[] {
   return [...nodes]
     .filter((node) => (supernodeState.tierById.get(node.id) ?? 0) > 0)
     .sort((a, b) => (supernodeState.scoreById.get(b.id) ?? 0) - (supernodeState.scoreById.get(a.id) ?? 0))
@@ -72,11 +70,7 @@ function buildSimulationKey(
   ].join("::");
 }
 
-export function useContagionGraphModel({
-  cards,
-  dependencyEdges,
-  mcapMap,
-}: UseContagionGraphModelOptions) {
+export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseContagionGraphModelOptions) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
@@ -96,15 +90,14 @@ export function useContagionGraphModel({
   }, [supernodeState.tierById]);
 
   const [focusMode, setFocusMode] = useState<FocusMode>("all");
+  const [edgeTypeFilter, setEdgeTypeFilter] = useState<EdgeTypeFilter>("all");
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
+  const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
 
-  const hubIdsByScore = useMemo(
-    () => buildHubIdsByScore(nodes, supernodeState),
-    [nodes, supernodeState],
-  );
+  const hubIdsByScore = useMemo(() => buildHubIdsByScore(nodes, supernodeState), [nodes, supernodeState]);
   const nodeSelectOptions = useMemo(() => buildNodeSelectOptions(nodes), [nodes]);
   const effectiveSelectedNeighborhoodId = useMemo(
     () => resolveSelectedNeighborhoodId({ nodes, hubIdsByScore, selectedNeighborhoodId }),
@@ -112,7 +105,8 @@ export function useContagionGraphModel({
   );
   const nodeMap = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const basePositions = useMemo(
-    () => (nodes.length === 0 ? new Map<string, { x: number; y: number }>() : runSimulation(nodes, links, supernodeState)),
+    () =>
+      nodes.length === 0 ? new Map<string, { x: number; y: number }>() : runSimulation(nodes, links, supernodeState),
     [links, nodes, supernodeState],
   );
   const simulationKey = useMemo(
@@ -124,56 +118,73 @@ export function useContagionGraphModel({
     () => resolveGraphLinks(links, supernodeState.tierById),
     [links, supernodeState.tierById],
   );
-  const neighborhoodFocusId = focusMode === "neighborhood"
-    ? effectiveSelectedNeighborhoodId
-    : null;
+  const neighborhoodFocusId = focusMode === "neighborhood" ? effectiveSelectedNeighborhoodId : null;
   const resolvedLinkByIndex = useMemo(
     () => new Map<number, ResolvedLink>(resolvedLinks.map((link) => [link.index, link])),
     [resolvedLinks],
   );
   const { visibleLinks, visibleLinkIndices, visibleNodeIds } = useMemo(
-    () => computeVisibleGraph({ resolvedLinks, focusMode, neighborhoodFocusId, nodes, hubIdsByScore }),
-    [focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks],
+    () =>
+      computeVisibleGraph({
+        resolvedLinks,
+        focusMode,
+        edgeTypeFilter,
+        neighborhoodFocusId,
+        nodes,
+        hubIdsByScore,
+      }),
+    [edgeTypeFilter, focusMode, hubIdsByScore, neighborhoodFocusId, nodes, resolvedLinks],
   );
-  const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge)
-    ? hoveredEdge
-    : null;
-  const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId)
-    ? hoveredId
-    : null;
-  const rippleState = useMemo(
-    () => computeRippleState(activeHoveredId, visibleLinks),
-    [activeHoveredId, visibleLinks],
-  );
+  const activeHoveredEdge = hoveredEdge !== null && visibleLinkIndices.has(hoveredEdge) ? hoveredEdge : null;
+  const activeHoveredId = hoveredId !== null && visibleNodeIds.has(hoveredId) ? hoveredId : null;
+  const effectiveInspectedId = useMemo(() => {
+    const fallbackId = effectiveSelectedNeighborhoodId ?? hubIdsByScore[0] ?? nodes[0]?.id ?? null;
+    const candidateId = activeHoveredId ?? inspectedId ?? fallbackId;
+    if (candidateId && visibleNodeIds.has(candidateId)) return candidateId;
+    return visibleNodeIds.values().next().value ?? null;
+  }, [activeHoveredId, effectiveSelectedNeighborhoodId, hubIdsByScore, inspectedId, nodes, visibleNodeIds]);
+  const rippleState = useMemo(() => computeRippleState(activeHoveredId, visibleLinks), [activeHoveredId, visibleLinks]);
 
-  const handleNodeKeyDown = useCallback((event: React.KeyboardEvent, nodeId: string) => {
-    if (event.key === "Enter" || event.key === " ") {
+  const handleTraceNodeChange = useCallback((nodeId: string | null) => {
+    setSelectedNeighborhoodId(nodeId);
+    setInspectedId(nodeId);
+    if (nodeId) setFocusMode("neighborhood");
+  }, []);
+
+  const handleNodeKeyDown = useCallback(
+    (event: React.KeyboardEvent, nodeId: string) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        setSelectedNeighborhoodId(nodeId);
+        setInspectedId(nodeId);
+        setHoveredId((previous) => (previous === nodeId ? null : nodeId));
+        return;
+      }
+
+      if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
       event.preventDefault();
-      if (focusMode === "neighborhood") setSelectedNeighborhoodId(nodeId);
-      setHoveredId((previous) => (previous === nodeId ? null : nodeId));
-      return;
-    }
-
-    if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
-    event.preventDefault();
-    const bestId = findDirectionalNeighbor({
-      nodeId,
-      direction: event.key as "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
-      links: resolvedLinks,
-      positions: drag.positions,
-    });
-    const target = bestId
-      ? svgRef.current?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null
-      : null;
-    target?.focus();
-  }, [drag.positions, focusMode, resolvedLinks]);
+      const bestId = findDirectionalNeighbor({
+        nodeId,
+        direction: event.key as "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+        links: resolvedLinks,
+        positions: drag.positions,
+      });
+      const target = bestId
+        ? (svgRef.current?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null)
+        : null;
+      target?.focus();
+    },
+    [drag.positions, resolvedLinks],
+  );
 
   const handleNodeMouseEnter = useCallback((nodeId: string) => {
+    setInspectedId(nodeId);
     setHoveredId(nodeId);
     setHoveredEdge(null);
   }, []);
   const handleNodeMouseLeave = useCallback(() => setHoveredId(null), []);
   const handleNodeFocus = useCallback((nodeId: string) => {
+    setInspectedId(nodeId);
     setHoveredId(nodeId);
     setFocusedId(nodeId);
     setHoveredEdge(null);
@@ -182,10 +193,14 @@ export function useContagionGraphModel({
     setHoveredId(null);
     setFocusedId(null);
   }, []);
-  const handleNodeClick = useCallback((nodeId: string) => {
-    if (drag.dragId) return;
-    if (focusMode === "neighborhood") setSelectedNeighborhoodId(nodeId);
-  }, [drag.dragId, focusMode]);
+  const handleNodeClick = useCallback(
+    (nodeId: string) => {
+      if (drag.dragId) return;
+      setInspectedId(nodeId);
+      setSelectedNeighborhoodId(nodeId);
+    },
+    [drag.dragId],
+  );
   const handleEdgeMouseEnter = useCallback((edgeIndex: number) => setHoveredEdge(edgeIndex), []);
   const handleEdgeMouseLeave = useCallback(() => setHoveredEdge(null), []);
 
@@ -195,9 +210,14 @@ export function useContagionGraphModel({
     supernodeState,
     focusMode,
     setFocusMode,
+    edgeTypeFilter,
+    setEdgeTypeFilter,
     nodeSelectOptions,
     effectiveSelectedNeighborhoodId,
     setSelectedNeighborhoodId,
+    handleTraceNodeChange,
+    effectiveInspectedId,
+    setInspectedId,
     nodeMap,
     resolvedLinkByIndex,
     visibleLinks,

@@ -155,7 +155,7 @@ describe("ContagionGraph", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
 
-    const nodePicker = screen.getByLabelText("Coin") as HTMLSelectElement;
+    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
     const usdcNode = screen.getByRole("button", { name: /USDC/i });
     usdcNode.focus();
 
@@ -171,7 +171,7 @@ describe("ContagionGraph", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
 
-    const nodePicker = screen.getByLabelText("Coin") as HTMLSelectElement;
+    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
     fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
 
     expect(nodePicker.value).toBe("usde-ethena");
@@ -191,6 +191,24 @@ describe("ContagionGraph", () => {
       expect(container.textContent).toContain("USDTB");
       expect(container.textContent).toContain("wrapper dependency");
     });
+  });
+
+  it("uses the trace picker to open a selected neighborhood", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+
+    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    fireEvent.change(nodePicker, { target: { value: "usdc-circle" } });
+
+    expect(nodePicker.value).toBe("usdc-circle");
+    expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
+  });
+
+  it("filters visible edges by dependency type", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Wrapper" }));
+
+    expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 1 visible edges\./)).toBeTruthy();
   });
 
   it("reduces visible nodes in neighborhood mode for connected subsets", () => {
