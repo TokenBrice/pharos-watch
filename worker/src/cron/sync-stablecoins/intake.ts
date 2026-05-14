@@ -21,7 +21,10 @@ import {
   fetchSupplementalTrackedTokens,
   type CoinGeckoMcapData,
 } from "./supplemental-assets";
-import { reconcileTrackedSupplyGaps } from "./supply-gap-reconciliation";
+import {
+  reconcileTrackedSupplyGaps,
+  type SupplyGapReconciliationResult,
+} from "./supply-gap-reconciliation";
 import {
   hydrateGeckoIdAliases,
   loadPreviousStablecoinsById,
@@ -38,6 +41,7 @@ interface StablecoinsIntakeMainResult {
   fxFallbackRates?: Record<string, number>;
   previousAssetsById: Map<string, PeggedAsset>;
   cgData: CoinGeckoMcapData;
+  supplyGapReconciliation: SupplyGapReconciliationResult;
 }
 
 interface StablecoinsIntakeFallbackResult {
@@ -80,6 +84,7 @@ async function fetchDefillamaStablecoinsPayload(
       signal ? { signal } : undefined,
     );
     if (!res?.ok) {
+      await cancelResponseBodyQuietly(res);
       lastError = "fetch-failed";
       lastHttpStatus = res?.status ?? null;
       break;
@@ -334,5 +339,6 @@ export async function loadStablecoinsIntake(
     fxFallbackRates: llamaData.fxFallbackRates,
     previousAssetsById,
     cgData,
+    supplyGapReconciliation,
   };
 }

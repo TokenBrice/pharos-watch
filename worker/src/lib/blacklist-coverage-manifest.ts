@@ -1,4 +1,4 @@
-import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-authority";
+import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
 import {
   type BlacklistStablecoin,
 } from "@shared/types/market";

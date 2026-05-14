@@ -14,6 +14,7 @@ import {
   isProviderCircuitAllowed,
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, dsRateLimit } from "../../lib/dexscreener";
 import {
   applyResolvedPrice,
@@ -409,6 +410,7 @@ export async function runDexScreenerPass(
         try {
           data = (await res.json()) as { pairs?: unknown };
         } catch (error) {
+          await cancelResponseBodyQuietly(res);
           diagnostics.push(applyJsonParseFailureDiagnostic(searchDiagnostic, error));
           console.warn(`[enrich] DexScreener returned malformed JSON for ${entry.asset.symbol}`);
           continue;

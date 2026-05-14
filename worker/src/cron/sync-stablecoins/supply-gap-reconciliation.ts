@@ -42,9 +42,23 @@ interface ZeroSupplyCollapseCandidate {
   pegKey: string;
 }
 
+export type SupplyGapReconciliationReason =
+  | "defillama-history-gap-fill"
+  | "coingecko-gap-fill";
+
+export interface SupplyGapReconciliationAsset {
+  id: string;
+  reason: SupplyGapReconciliationReason;
+  fromSource: string | null;
+  toValue: number;
+}
+
 export interface SupplyGapReconciliationResult {
   reconciledCount: number;
   reconciledIds: string[];
+  totalReconciled: number;
+  byReason: Record<SupplyGapReconciliationReason, number>;
+  assets: SupplyGapReconciliationAsset[];
 }
 
 type SupplyGapCandidate = MissingChainSupplyGapCandidate | ZeroSupplyCollapseCandidate;
@@ -155,6 +169,7 @@ async function fetchCurrentCoinGeckoMarketCaps(
   try {
     return (await response.json()) as Record<string, CoinGeckoCurrentMcapRow>;
   } catch (error) {
+    await cancelResponseBodyQuietly(response);
     console.warn("[sync-stablecoins] CoinGecko current market-cap payload parse failed:", error);
     return {};
   }
@@ -188,6 +203,7 @@ async function fetchRecentCoinGeckoMarketCaps(
     const payload = (await response.json()) as CoinGeckoRecentMarketChart;
     return Array.isArray(payload.market_caps) ? payload.market_caps : [];
   } catch (error) {
+    await cancelResponseBodyQuietly(response);
     console.warn(`[sync-stablecoins] CoinGecko market chart payload parse failed for ${geckoId}:`, error);
     return [];
   }
@@ -225,6 +241,7 @@ async function fetchRecentDefiLlamaMarketCaps(
       return timestampMs != null && marketCap != null ? [[timestampMs, marketCap] as [number, number]] : [];
     });
   } catch (error) {
+    await cancelResponseBodyQuietly(response);
     console.warn(`[sync-stablecoins] DefiLlama chart payload parse failed for ${llamaId}:`, error);
     return [];
   }
@@ -351,11 +368,22 @@ export async function reconcileTrackedSupplyGaps(
   const currentMarketCaps = await fetchCurrentCoinGeckoMarketCaps(candidateGeckoIds, signal, coingeckoApiKey);
   const candidates = buildSupplyGapCandidates(assets, currentMarketCaps);
   if (candidates.length === 0) {
-    return { reconciledCount: 0, reconciledIds: [] };
+    return {
+      reconciledCount: 0,
+      reconciledIds: [],
+      totalReconciled: 0,
+      byReason: { "defillama-history-gap-fill": 0, "coingecko-gap-fill": 0 },
+      assets: [],
+    };
   }
 
   const nowMs = Date.now();
   const reconciledIds: string[] = [];
+  const reconciledAssets: SupplyGapReconciliationAsset[] = [];
+  const byReason: Record<SupplyGapReconciliationReason, number> = {
+    "defillama-history-gap-fill": 0,
+    "coingecko-gap-fill": 0,
+  };
 
   for (const candidate of candidates) {
     const marketCaps = candidate.kind === "zero-supply-collapse"
@@ -382,23 +410,35 @@ export async function reconcileTrackedSupplyGaps(
       month,
     };
 
+    const fromSource = candidate.asset.supplySource ?? null;
+    const reason: SupplyGapReconciliationReason = candidate.kind === "zero-supply-collapse"
+      ? "defillama-history-gap-fill"
+      : "coingecko-gap-fill";
     candidate.asset.circulating = { [candidate.pegKey]: totals.current };
     candidate.asset.circulatingPrevDay = { [candidate.pegKey]: totals.day };
     candidate.asset.circulatingPrevWeek = { [candidate.pegKey]: totals.week };
     candidate.asset.circulatingPrevMonth = { [candidate.pegKey]: totals.month };
-    candidate.asset.supplySource = candidate.kind === "zero-supply-collapse"
-      ? "defillama-history-gap-fill"
-      : "coingecko-gap-fill";
+    candidate.asset.supplySource = reason;
     candidate.asset.chains = buildKnownDisplayChains(candidate.asset.id, candidate.asset.chains);
 
     if (candidate.kind === "missing-chain") {
       applySingleMissingChainRemainder(candidate, totals);
     }
     reconciledIds.push(candidate.asset.id);
+    reconciledAssets.push({
+      id: candidate.asset.id,
+      reason,
+      fromSource,
+      toValue: totals.current,
+    });
+    byReason[reason] += 1;
   }
 
   return {
     reconciledCount: reconciledIds.length,
     reconciledIds,
+    totalReconciled: reconciledIds.length,
+    byReason,
+    assets: reconciledAssets,
   };
 }

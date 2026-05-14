@@ -2,6 +2,7 @@ import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth } from "./shared";
 import type { CacheValidationResult } from "./cache-publication";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
+import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
 import {
   createEmptyPriceSourceHealthDistribution,
@@ -147,6 +148,7 @@ export function buildStablecoinsSyncResult(input: {
   nativePegFillCount?: number;
   stalenessWarning: boolean;
   stalenessSummary?: { compared: number; identical: number; identicalRatio: number } | null;
+  supplyGapReconciliation?: SupplyGapReconciliationResult | null;
   gtProbe: { updatedCount: number; stats: GtProbeStats };
   depegErrorCount: number;
   depegErrors: string[];
@@ -194,6 +196,13 @@ export function buildStablecoinsSyncResult(input: {
   };
   if (input.stalenessWarning) metadata.stalenessWarning = true;
   if (input.stalenessSummary) metadata.priceStaleness = input.stalenessSummary;
+  if (input.supplyGapReconciliation && input.supplyGapReconciliation.totalReconciled > 0) {
+    metadata.supplyGapReconciliation = {
+      totalReconciled: input.supplyGapReconciliation.totalReconciled,
+      byReason: input.supplyGapReconciliation.byReason,
+      assets: input.supplyGapReconciliation.assets,
+    };
+  }
   if (input.depegErrorCount > 0) {
     metadata.depegErrorCount = input.depegErrorCount;
     metadata.depegErrors = input.depegErrors;

@@ -4,6 +4,7 @@ import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { DLPriceResponseSchema } from "../../lib/schemas";
 import {
   applyResolvedPrice,
@@ -88,6 +89,7 @@ async function fetchPriceMapByIds(
     signal ? { signal } : undefined,
   );
   if (!res?.ok) {
+    await cancelResponseBodyQuietly(res);
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
     }
@@ -101,6 +103,7 @@ async function fetchPriceMapByIds(
     }
     return prices;
   } catch {
+    await cancelResponseBodyQuietly(res);
     console.error(`[enrich-prices] Failed to parse JSON from ${source}: ${res.status}`);
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);

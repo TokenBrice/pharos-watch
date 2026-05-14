@@ -38,6 +38,7 @@ import {
   runSharedPriceCompletion,
 } from "./post-enrichment";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
+import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronStageContext } from "../shared/stage-contracts";
 
@@ -68,6 +69,7 @@ export type StablecoinsIntakeStageResult =
       canonicalDeduplication: CanonicalDeduplicationResult;
       previousAssetsById: Map<string, PeggedAsset>;
       cgData: CoinGeckoMcapData;
+      supplyGapReconciliation: SupplyGapReconciliationResult;
     };
 
 export async function runStablecoinsIntakeStage(
@@ -131,6 +133,7 @@ export async function runStablecoinsIntakeStage(
     cgData: intake.cgData,
     fxFallbackRates,
     validationReferences,
+    supplyGapReconciliation: intake.supplyGapReconciliation,
   };
 }
 

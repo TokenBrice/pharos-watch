@@ -2,6 +2,7 @@ import { CIRCUIT_SOURCE, USER_AGENT } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import { DISCOVERY_MIN_MCAP } from "@shared/lib/status-thresholds";
@@ -165,6 +166,7 @@ export async function runDiscoveryScan(
         cgFetched = true;
         await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, true);
       } else {
+        await cancelResponseBodyQuietly(res);
         console.warn(`[discovery] CG category fetch returned ${res?.status ?? "no response"}`);
         await recordOutcome(db, CIRCUIT_SOURCE.CG_DISCOVERY, false);
       }

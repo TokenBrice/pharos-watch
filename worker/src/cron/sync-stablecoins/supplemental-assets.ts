@@ -178,13 +178,21 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   );
 
   if (!cgMarketsRes?.ok) {
+    await cancelResponseBodyQuietly(cgMarketsRes);
     console.warn(
       `[${logPrefix}] CG markets fetch failed (${cgMarketsRes?.status ?? "no response"}), falling back to cgData mcap`,
     );
     return new Map();
   }
 
-  const cgMarketsRaw = await cgMarketsRes.json();
+  let cgMarketsRaw: unknown;
+  try {
+    cgMarketsRaw = await cgMarketsRes.json();
+  } catch (err) {
+    await cancelResponseBodyQuietly(cgMarketsRes);
+    console.warn(`[${logPrefix}] CG markets payload parse failed:`, err);
+    return new Map();
+  }
   if (!Array.isArray(cgMarketsRaw)) {
     console.warn(`[${logPrefix}] CG markets returned unexpected shape, falling back to cgData mcap`);
     return new Map();
@@ -601,6 +609,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
   );
 
   if (!res || !res.ok) {
+    await cancelResponseBodyQuietly(res);
     console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
     return {};
@@ -611,6 +620,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, true);
     return data;
   } catch (err) {
+    await cancelResponseBodyQuietly(res);
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.error("[sync-stablecoins] CoinGecko batch mcap payload parse failed:", err);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
@@ -630,11 +640,15 @@ export async function fetchSupplementalTrackedTokens(
   fiatCgTokens: PeggedAsset[];
 }> {
   throwIfAborted(signal);
-  const [goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
+  // Two-phase fan-out so gold's own batched protocol fetches plus silver's
+  // CG calls don't pile on top of fiat-cg simultaneously and exhaust the
+  // Cloudflare 6-connection pool. Sockets opened in the first phase are
+  // reclaimed before fiat-cg starts.
+  const [goldTokens, silverTokens] = await Promise.all([
     fetchGoldTokens(cgData, signal),
     fetchSilverTokens(cgData, signal, coingeckoApiKey),
-    fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates),
   ]);
+  const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates);
 
   return { goldTokens, silverTokens, fiatCgTokens };
 }

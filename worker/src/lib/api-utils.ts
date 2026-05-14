@@ -15,6 +15,7 @@ export {
   errorResponse,
   jsonFreshResponse,
   jsonResponse,
+  respondWithFreshSnapshot,
   validatePayloadWithSchema,
   withErrorHandler,
 } from "./api-response";

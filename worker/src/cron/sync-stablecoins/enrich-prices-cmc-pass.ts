@@ -12,6 +12,7 @@ import {
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import { CmcCategoryResponseSchema } from "../../lib/schemas";
 import {
   endpointLabel,
@@ -134,6 +135,7 @@ export async function runCmcPass(
         try {
           cmcJson = await cmcRes.json();
         } catch (error) {
+          await cancelResponseBodyQuietly(cmcRes);
           diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, error));
           await recordProviderOutcomeSafe({
             db,

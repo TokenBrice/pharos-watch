@@ -2,6 +2,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
+import { cancelResponseBodyQuietly } from "../../lib/response-body";
 import type { PeggedAsset } from "./enrich-prices";
 
 export const ZEPHYR_ZSD_ASSET_ID = "zsd-zephyr-protocol";
@@ -221,6 +222,7 @@ export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<Ze
   );
 
   if (!res?.ok) {
+    await cancelResponseBodyQuietly(res);
     console.warn(`[zephyr-scanner] Live stats fetch failed (${res?.status ?? "no response"})`);
     return null;
   }
@@ -232,6 +234,7 @@ export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<Ze
     if (stats && !stats.zys) console.warn("[zephyr-scanner] Live stats payload missing positive ZYS circulation or price");
     return stats;
   } catch (err) {
+    await cancelResponseBodyQuietly(res);
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[zephyr-scanner] Live stats payload parse failed:", err);
     return null;

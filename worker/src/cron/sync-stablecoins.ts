@@ -51,7 +51,7 @@ export async function syncStablecoins(
     }
     throw new Error(intake.errorMessage);
   }
-  const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication } = intake;
+  const { assets, rawAssetCount, droppedMalformedAssets, canonicalDeduplication, supplyGapReconciliation } = intake;
   const pricingStage = await runStablecoinsPricingStage({
     db,
     assets,
@@ -151,6 +151,7 @@ export async function syncStablecoins(
     nativePegFillCount,
     stalenessWarning,
     stalenessSummary,
+    supplyGapReconciliation,
     gtProbe,
     depegErrorCount,
     depegErrors,
