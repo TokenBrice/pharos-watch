@@ -231,6 +231,7 @@ export interface TelegramPendingDeliveryBacklog {
   due: number;
   deferred: number;
   expired: number;
+  nearTtl?: number;
 }
 
 export interface TelegramWatcherLifecycleSnapshot {
@@ -275,6 +276,8 @@ export interface TelegramBotStats {
   alertTypeChats: TelegramAlertTypeChats;
   topStablecoins: TelegramBotTopStablecoin[];
   oldestPendingDeliveryAgeSec?: number | null;
+  oldestDuePendingAgeSec?: number | null;
+  estimatedDrainTimeSec?: number;
   retryErrorClassCounts?: Record<string, number>;
   pendingDeliveryBacklog?: TelegramPendingDeliveryBacklog;
   presetQueryFailures?: number;

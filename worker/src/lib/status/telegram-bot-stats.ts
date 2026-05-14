@@ -5,6 +5,12 @@ import {
   refreshTelegramLifecycleSnapshotIfStale,
   type TelegramCurrentLifecycleSnapshot,
 } from "../telegram-usage-analytics";
+import {
+  PENDING_NEAR_TTL_WINDOW_SEC,
+  PENDING_TTL_SEC,
+  TELEGRAM_DISPATCH_INTERVAL_SEC,
+  TELEGRAM_PENDING_DRAIN_BUDGET,
+} from "../telegram-constants";
 
 interface TelegramBotAggregateRow {
   total_chats: number | string | null;
@@ -33,9 +39,11 @@ interface TelegramBotPendingRow {
 interface TelegramBotPendingDeliveryTelemetryRow {
   pending_count: number | string | null;
   oldest_created_at: number | string | null;
+  oldest_due_created_at: number | string | null;
   due_count: number | string | null;
   deferred_count: number | string | null;
   expired_count: number | string | null;
+  near_ttl_count: number | string | null;
 }
 
 interface TelegramBotRetryErrorClassRow {
@@ -55,7 +63,6 @@ interface OptionalTelegramTelemetry<T> {
   error?: string;
 }
 
-const TELEGRAM_PENDING_ALERT_TTL_SEC = 3600;
 const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
 const INACTIVE_CLEANUP_JOB = "telegram-inactive-cleanup";
@@ -183,20 +190,41 @@ const TELEGRAM_PENDING_DELIVERIES_SQL =
   "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts";
 const TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL = `SELECT
   COUNT(*) AS pending_count,
-  MIN(created_at) AS oldest_created_at,
-  SUM(CASE WHEN created_at < ? THEN 1 ELSE 0 END) AS expired_count,
+  MIN(
+    CASE
+      WHEN COALESCE(expires_at, created_at + ?) > ?
+      THEN created_at
+    END
+  ) AS oldest_created_at,
+  MIN(
+    CASE
+      WHEN COALESCE(expires_at, created_at + ?) > ?
+       AND (not_before_at IS NULL OR not_before_at <= ?)
+      THEN created_at
+    END
+  ) AS oldest_due_created_at,
+  SUM(CASE WHEN COALESCE(expires_at, created_at + ?) <= ? THEN 1 ELSE 0 END) AS expired_count,
   SUM(
     CASE
-      WHEN created_at >= ? AND (not_before_at IS NULL OR not_before_at <= ?)
+      WHEN COALESCE(expires_at, created_at + ?) > ?
+       AND (not_before_at IS NULL OR not_before_at <= ?)
       THEN 1 ELSE 0
     END
   ) AS due_count,
   SUM(
     CASE
-      WHEN created_at >= ? AND not_before_at > ?
+      WHEN COALESCE(expires_at, created_at + ?) > ?
+       AND not_before_at > ?
       THEN 1 ELSE 0
     END
-  ) AS deferred_count
+  ) AS deferred_count,
+  SUM(
+    CASE
+      WHEN COALESCE(expires_at, created_at + ?) > ?
+       AND COALESCE(expires_at, created_at + ?) <= ?
+      THEN 1 ELSE 0
+    END
+  ) AS near_ttl_count
  FROM telegram_pending_alerts`;
 const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class, COUNT(*) AS pending_count
   FROM telegram_pending_alerts
@@ -221,6 +249,12 @@ function roundMetric(value: unknown, digits = 2): number {
   if (!Number.isFinite(parsed)) return 0;
   const factor = 10 ** digits;
   return Math.round(parsed * factor) / factor;
+}
+
+function estimateDrainTimeSec(messageCount: number): number {
+  if (!Number.isFinite(messageCount) || messageCount <= 0) return 0;
+  const budget = Math.max(1, TELEGRAM_PENDING_DRAIN_BUDGET);
+  return Math.ceil(messageCount / budget) * TELEGRAM_DISPATCH_INTERVAL_SEC;
 }
 
 function formatTelemetryError(error: unknown): string {
@@ -255,10 +289,16 @@ async function loadTelegramPendingDeliveryTelemetry(
   db: D1Database,
   now: number,
 ): Promise<TelegramBotPendingDeliveryTelemetryRow | null> {
-  const cutoff = now - TELEGRAM_PENDING_ALERT_TTL_SEC;
   return db
     .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
-    .bind(cutoff, cutoff, now, cutoff, now)
+    .bind(
+      PENDING_TTL_SEC, now,
+      PENDING_TTL_SEC, now, now,
+      PENDING_TTL_SEC, now,
+      PENDING_TTL_SEC, now, now,
+      PENDING_TTL_SEC, now, now,
+      PENDING_TTL_SEC, now, PENDING_TTL_SEC, now + PENDING_NEAR_TTL_WINDOW_SEC,
+    )
     .first<TelegramBotPendingDeliveryTelemetryRow>();
 }
 
@@ -334,6 +374,7 @@ export function mapTelegramBotStats(input: {
 
   const pendingCount = coerceCount(pendingDeliveries?.pending_count ?? pendingDeliveryTelemetry?.pending_count);
   const oldestCreatedAt = coerceNullableTimestamp(pendingDeliveryTelemetry?.oldest_created_at);
+  const oldestDueCreatedAt = coerceNullableTimestamp(pendingDeliveryTelemetry?.oldest_due_created_at);
   const retryErrorClassCounts = retryErrorClasses?.reduce<Record<string, number>>((acc, row) => {
     const errorClass = row.error_class?.trim();
     if (errorClass) {
@@ -400,10 +441,16 @@ export function mapTelegramBotStats(input: {
   if (pendingDeliveryTelemetry) {
     stats.oldestPendingDeliveryAgeSec =
       pendingCount > 0 && oldestCreatedAt != null ? Math.max(0, now - oldestCreatedAt) : null;
+    stats.oldestDuePendingAgeSec =
+      oldestDueCreatedAt != null ? Math.max(0, now - oldestDueCreatedAt) : null;
+    stats.estimatedDrainTimeSec = estimateDrainTimeSec(
+      Math.max(0, pendingCount - coerceCount(pendingDeliveryTelemetry.expired_count)),
+    );
     stats.pendingDeliveryBacklog = {
       due: coerceCount(pendingDeliveryTelemetry.due_count),
       deferred: coerceCount(pendingDeliveryTelemetry.deferred_count),
       expired: coerceCount(pendingDeliveryTelemetry.expired_count),
+      nearTtl: coerceCount(pendingDeliveryTelemetry.near_ttl_count),
     };
   }
 

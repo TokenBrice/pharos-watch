@@ -30,9 +30,11 @@ describe("mapTelegramBotStats", () => {
       pendingDeliveryTelemetry: {
         pending_count: "12",
         oldest_created_at: "1710000040",
+        oldest_due_created_at: "1710000070",
         due_count: "8",
         deferred_count: "3",
         expired_count: "1",
+        near_ttl_count: "2",
       },
       retryErrorClasses: [
         { error_class: "rate_limit", pending_count: "4" },
@@ -134,6 +136,8 @@ describe("mapTelegramBotStats", () => {
         pendingDeliveries: 12,
       },
       oldestPendingDeliveryAgeSec: 60,
+      oldestDuePendingAgeSec: 30,
+      estimatedDrainTimeSec: 300,
       retryErrorClassCounts: {
         rate_limit: 4,
         server_error: 2,
@@ -142,6 +146,7 @@ describe("mapTelegramBotStats", () => {
         due: 8,
         deferred: 3,
         expired: 1,
+        nearTtl: 2,
       },
     });
   });
@@ -240,13 +245,15 @@ describe("getTelegramBotStats", () => {
       },
       { match: "FROM telegram_pending_disambiguation", first: { pending_count: 1 }, rows: [] },
       {
-        match: "MIN(created_at) AS oldest_created_at",
+        match: "oldest_due_created_at",
         first: {
           pending_count: 2,
           oldest_created_at: 1_710_000_040,
+          oldest_due_created_at: 1_710_000_070,
           due_count: 1,
           deferred_count: 1,
           expired_count: 0,
+          near_ttl_count: 0,
         },
         rows: [],
       },
@@ -273,7 +280,9 @@ describe("getTelegramBotStats", () => {
     expect(topCoinsQuery?.sql).toContain("alert_launch = 1");
     expect(result.alertTypeChats.launch).toBe(1);
     expect(result.oldestPendingDeliveryAgeSec).toBe(60);
-    expect(result.pendingDeliveryBacklog).toEqual({ due: 1, deferred: 1, expired: 0 });
+    expect(result.oldestDuePendingAgeSec).toBe(30);
+    expect(result.estimatedDrainTimeSec).toBe(300);
+    expect(result.pendingDeliveryBacklog).toEqual({ due: 1, deferred: 1, expired: 0, nearTtl: 0 });
     expect(result.retryErrorClassCounts).toEqual({ rate_limit: 1 });
     expect(result.topStablecoins[0]).toEqual({
       stablecoinId: "usdpt-western-union",
