@@ -80,6 +80,19 @@ export function severityForScoreDowngrade(prevGrade: string, newGrade: string): 
   return "notice";
 }
 
+/**
+ * Methodology bumps: major X.0 → warning; everything else (X.Y, X.YZ, ...) → info.
+ * "Major" is defined as a single-segment version (e.g. "6") or a version whose
+ * non-leading segments are all zero (e.g. "6.0", "6.0.0").
+ */
+export function severityForMethodologyBump(version: string): TapeEventSeverity {
+  const segments = version.split(".");
+  if (segments.length <= 1) return "warning";
+  const trailing = segments.slice(1);
+  const allZero = trailing.every((segment) => segment === "0");
+  return allZero ? "warning" : "info";
+}
+
 // --- Row → wire -------------------------------------------------------------
 
 function parsePayload(payloadJson: string): Record<string, unknown> {

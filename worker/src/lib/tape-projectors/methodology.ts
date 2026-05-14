@@ -1,0 +1,187 @@
+/**
+ * methodology.bumped:<domain> projectors.
+ *
+ * Source: the `*-version.ts` constants in `shared/lib/`. Each domain exposes a
+ * changelog of `{ version, title, date, effectiveAt, summary, ... }` entries.
+ *
+ * Pattern: first-observation. For each domain we read the set of versions
+ * already projected (one SELECT per domain) and emit a tape event for every
+ * changelog entry whose version is not yet present. Re-running the projector
+ * after the initial backfill is a near-no-op (one indexed SELECT per domain
+ * plus zero writes when nothing has been published).
+ *
+ * The event type slug is `methodology.bumped:<domain>` per the wire grammar
+ * in §3.3 of the implementation plan; `<domain>` is a short lowercase tag.
+ */
+import { BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG } from "@shared/lib/blacklist-tracker-version";
+import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG } from "@shared/lib/chain-health-version";
+import { DEPEG_DEWS_METHODOLOGY_CHANGELOG } from "@shared/lib/depeg-dews-version";
+import { LIQUIDITY_METHODOLOGY_CHANGELOG } from "@shared/lib/liquidity-score-version";
+import { MINT_BURN_FLOW_METHODOLOGY_CHANGELOG } from "@shared/lib/mint-burn-flow-version";
+import { PRICING_PIPELINE_CHANGELOG } from "@shared/lib/pricing-pipeline-version";
+import { PSI_METHODOLOGY_CHANGELOG } from "@shared/lib/stability-index-version";
+import { REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG } from "@shared/lib/redemption-backstop-version";
+import { SAFETY_SCORE_CHANGELOG } from "@shared/lib/safety-score-version";
+import { YIELD_METHODOLOGY_CHANGELOG } from "@shared/lib/yield-methodology-version";
+import type { MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+
+import {
+  buildTapeEventId,
+  severityForMethodologyBump,
+} from "../tape-event-helpers";
+import { insertTapeEvents } from "../tape-event-store";
+import type { TapeEventInsert } from "../tape-event-types";
+import type { ProjectorOptions, ProjectorResult } from "./types";
+
+interface MethodologyDomain {
+  /** Short lowercase tag used in the wire slug `methodology.bumped:<domain>`. */
+  domain: string;
+  /** Display label inside the event title. */
+  label: string;
+  /** Public changelog route (relative path). */
+  href: string;
+  changelog: readonly MethodologyChangelogEntry[];
+}
+
+const METHODOLOGY_DOMAINS: readonly MethodologyDomain[] = [
+  {
+    domain: "blacklist-tracker",
+    label: "Blacklist Tracker",
+    href: "/methodology/blacklist-tracker-changelog/",
+    changelog: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "chain-health",
+    label: "Chain Health",
+    href: "/methodology/chain-health-changelog/",
+    changelog: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "depeg-dews",
+    label: "Depeg & DEWS",
+    href: "/methodology/depeg-changelog/",
+    changelog: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "liquidity-score",
+    label: "Liquidity Score",
+    href: "/methodology/liquidity-changelog/",
+    changelog: LIQUIDITY_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "mint-burn-flow",
+    label: "Mint/Burn Flow",
+    href: "/methodology/mint-burn-flow-changelog/",
+    changelog: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "pricing-pipeline",
+    label: "Pricing Pipeline",
+    href: "/methodology/pricing-pipeline-changelog/",
+    changelog: PRICING_PIPELINE_CHANGELOG,
+  },
+  {
+    domain: "redemption-backstop",
+    label: "Redemption Backstop",
+    href: "/methodology/#safety-scores-methodology",
+    changelog: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "safety-score",
+    label: "Safety Score",
+    href: "/methodology/scoring-changelog/",
+    changelog: SAFETY_SCORE_CHANGELOG,
+  },
+  {
+    domain: "stability-index",
+    label: "Pharos Stability Index",
+    href: "/methodology/psi-changelog/",
+    changelog: PSI_METHODOLOGY_CHANGELOG,
+  },
+  {
+    domain: "yield",
+    label: "Yield Intelligence",
+    href: "/methodology/yield-changelog/",
+    changelog: YIELD_METHODOLOGY_CHANGELOG,
+  },
+];
+
+async function loadObservedVersions(db: D1Database, type: string): Promise<Set<string>> {
+  const result = await db
+    .prepare(`SELECT source_row_id FROM tape_events WHERE type = ?`)
+    .bind(type)
+    .all<{ source_row_id: string }>();
+  const seen = new Set<string>();
+  for (const row of result.results ?? []) seen.add(row.source_row_id);
+  return seen;
+}
+
+async function projectOneDomain(
+  db: D1Database,
+  spec: MethodologyDomain,
+  dryRun: boolean,
+): Promise<number> {
+  const type = `methodology.bumped:${spec.domain}`;
+  const observed = await loadObservedVersions(db, type);
+  const events: TapeEventInsert[] = [];
+
+  for (const entry of spec.changelog) {
+    if (observed.has(entry.version)) continue;
+    const tsSec = Number.isFinite(entry.effectiveAt) && entry.effectiveAt > 0
+      ? entry.effectiveAt
+      : Math.floor(Date.now() / 1000);
+    const tsMs = tsSec * 1000;
+    const sourceRowId = entry.version;
+    const transition = "updated";
+    const severity = severityForMethodologyBump(entry.version);
+
+    events.push({
+      eventId: buildTapeEventId({
+        tsMs,
+        type,
+        sourceTable: `methodology:${spec.domain}`,
+        sourceRowId,
+        transition,
+      }),
+      type,
+      severity,
+      ts: tsMs,
+      endsAt: null,
+      coinId: null,
+      issuerId: null,
+      pegCurrency: null,
+      chain: null,
+      title: `${spec.label} v${entry.version}: ${entry.title}`,
+      summary: entry.summary.length > 180 ? `${entry.summary.slice(0, 177)}…` : entry.summary,
+      payload: {
+        domain: spec.domain,
+        version: entry.version,
+        title: entry.title,
+        date: entry.date,
+        effectiveAt: entry.effectiveAt,
+        impact: entry.impact,
+      },
+      sourceTable: `methodology:${spec.domain}`,
+      sourceRowId,
+      transition,
+      sourceUrl: spec.href,
+      methodologyVersion: entry.version,
+    });
+  }
+
+  if (events.length === 0) return 0;
+  if (!dryRun) await insertTapeEvents(db, events);
+  return events.length;
+}
+
+export async function projectMethodologyBumps(
+  db: D1Database,
+  options?: ProjectorOptions,
+): Promise<ProjectorResult> {
+  const dryRun = options?.dryRun === true;
+  let total = 0;
+  for (const spec of METHODOLOGY_DOMAINS) {
+    total += await projectOneDomain(db, spec, dryRun);
+  }
+  return { projected: total, advanced: null };
+}

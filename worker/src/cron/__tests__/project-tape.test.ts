@@ -11,7 +11,18 @@ function extractInsertBinds(db: MockD1Database): unknown[][] {
     .map((entry) => entry.binds);
 }
 
+/**
+ * Pull only the inserts emitted for one event-type slug. The static
+ * first-observation projectors (methodology / cemetery / lifecycle) run on
+ * every cron tick and will emit on an empty in-memory mock; filtering by type
+ * keeps each test focused on the projector under exam.
+ */
+function extractInsertBindsForType(db: MockD1Database, type: string): unknown[][] {
+  return extractInsertBinds(db).filter((binds) => binds[1] === type);
+}
+
 // Match substrings deliberately tolerate the SQL's line-wrapped formatting.
+const MATCH_DEPEG_OPEN_PEAK = "ended_at IS NULL";
 const MATCH_DEPEG_OPENED = "started_at > ?";
 const MATCH_DEPEG_RESOLVED = "ended_at IS NOT NULL AND ended_at > ?";
 const MATCH_BLACKLIST = "FROM blacklist_events";
@@ -20,6 +31,7 @@ const MATCH_SAFETY = "FROM safety_grade_history";
 function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
+    { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
     { match: MATCH_BLACKLIST, rows: [] },
@@ -71,15 +83,11 @@ describe("projectTape", () => {
       ],
     });
 
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(2);
-
-    const inserts = extractInsertBinds(db);
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "depeg.opened");
     expect(inserts).toHaveLength(2);
     // bind order: eventId, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency, ...
-    expect(inserts[0]![1]).toBe("depeg.opened");
     expect(inserts[0]![2]).toBe("critical");
-    expect(inserts[1]![1]).toBe("depeg.opened");
     expect(inserts[1]![2]).toBe("notice");
     // Stable event ids (deterministic hash) so a second run is a no-op.
     expect(typeof inserts[0]![0]).toBe("string");
@@ -104,11 +112,73 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(1);
-    const inserts = extractInsertBinds(db);
-    expect(inserts[0]![1]).toBe("depeg.resolved");
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "depeg.resolved");
+    expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("info");
+  });
+
+  it("emits depeg.peak_worsened when an open row's magnitude exceeds the last-seen peak", async () => {
+    // First run: open row at -1500 bps; seen-map is empty so it becomes the
+    // baseline observation and no event is emitted.
+    const dbBaseline = dbWithOverride({
+      match: MATCH_DEPEG_OPEN_PEAK,
+      rows: [
+        {
+          id: 7,
+          stablecoin_id: "usdc-circle",
+          symbol: "USDC",
+          peg_type: "peggedUSD",
+          direction: "below",
+          peak_deviation_bps: -1500,
+          started_at: SEC,
+          ended_at: null,
+          peg_reference: 1,
+          source: "live",
+          methodology_version: "5.0",
+        },
+      ],
+    });
+    await projectTape(dbBaseline);
+    expect(extractInsertBindsForType(dbBaseline, "depeg.peak_worsened")).toHaveLength(0);
+
+    // Second run: same row now reports a larger magnitude AND the cache holds
+    // the prior baseline. A `depeg.peak_worsened` event should fire.
+    const dbWorsened = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "tape-projector:peak-worsened-seen", value: JSON.stringify({ "7": 1500 }) },
+        ],
+      },
+      {
+        match: MATCH_DEPEG_OPEN_PEAK,
+        rows: [
+          {
+            id: 7,
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -2700,  // grew past 1500 → critical (>=2500)
+            started_at: SEC,
+            ended_at: null,
+            peg_reference: 1,
+            source: "live",
+            methodology_version: "5.0",
+          },
+        ],
+      },
+      { match: MATCH_DEPEG_OPENED, rows: [] },
+      { match: MATCH_DEPEG_RESOLVED, rows: [] },
+      { match: MATCH_BLACKLIST, rows: [] },
+      { match: MATCH_SAFETY, rows: [] },
+    ]) as MockD1Database;
+    await projectTape(dbWorsened);
+    const worsened = extractInsertBindsForType(dbWorsened, "depeg.peak_worsened");
+    expect(worsened).toHaveLength(1);
+    // severity for 2700 bps abs → critical
+    expect(worsened[0]![2]).toBe("critical");
   });
 
   it("projects freeze.destroyed with severity scaled by USD amount", async () => {
@@ -129,10 +199,9 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(1);
-    const inserts = extractInsertBinds(db);
-    expect(inserts[0]![1]).toBe("freeze.destroyed");
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "freeze.destroyed");
+    expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("critical");
   });
 
@@ -154,10 +223,9 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(1);
-    const inserts = extractInsertBinds(db);
-    expect(inserts[0]![1]).toBe("freeze.unblocked");
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "freeze.unblocked");
+    expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("info");
   });
 
@@ -177,10 +245,9 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(1);
-    const inserts = extractInsertBinds(db);
-    expect(inserts[0]![1]).toBe("score.downgraded");
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "score.downgraded");
+    expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("critical");
   });
 
@@ -200,10 +267,9 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(1);
-    const inserts = extractInsertBinds(db);
-    expect(inserts[0]![1]).toBe("score.upgraded");
+    await projectTape(db);
+    const inserts = extractInsertBindsForType(db, "score.upgraded");
+    expect(inserts).toHaveLength(1);
     expect(inserts[0]![2]).toBe("info");
   });
 
@@ -228,17 +294,25 @@ describe("projectTape", () => {
     });
 
     await projectTape(db);
-    const inserts = extractInsertBinds(db);
+    const inserts = extractInsertBindsForType(db, "depeg.opened");
     expect(inserts.length).toBeGreaterThan(0);
     const firstInsertSql = db.getHistory().find((e) => e.sql.includes("tape_events"))?.sql ?? "";
     expect(firstInsertSql).toContain("INSERT OR REPLACE INTO tape_events");
   });
 
-  it("returns empty result when no source rows are new", async () => {
+  it("emits no relational-class events when the source tables are empty", async () => {
     const db = mockD1(baseTables()) as MockD1Database;
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(0);
-    expect(extractInsertBinds(db)).toHaveLength(0);
+    await projectTape(db);
+    // Static first-observation projectors still fire on a fresh mock; only
+    // assert that the watermark-driven relational projectors emitted nothing.
+    expect(extractInsertBindsForType(db, "depeg.opened")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "depeg.resolved")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "depeg.peak_worsened")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "freeze.blocked")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "freeze.unblocked")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "freeze.destroyed")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "score.upgraded")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "score.downgraded")).toHaveLength(0);
   });
 
   it("filters out same-grade rows from score history", async () => {
@@ -257,7 +331,32 @@ describe("projectTape", () => {
         },
       ],
     });
-    const result = await projectTape(db);
-    expect(result.itemCount).toBe(0);
+    await projectTape(db);
+    expect(extractInsertBindsForType(db, "score.upgraded")).toHaveLength(0);
+    expect(extractInsertBindsForType(db, "score.downgraded")).toHaveLength(0);
+  });
+
+  it("emits methodology.bumped:<domain> for changelog versions not yet observed", async () => {
+    // No tape_events rows for any methodology type → projector should emit at
+    // least one event per domain (10 domains in v1).
+    const db = mockD1(baseTables()) as MockD1Database;
+    await projectTape(db);
+    // Each domain emits ≥ 1 entry on a fresh DB.
+    const inserts = extractInsertBinds(db).filter((binds) =>
+      typeof binds[1] === "string" && (binds[1] as string).startsWith("methodology.bumped:"),
+    );
+    expect(inserts.length).toBeGreaterThan(0);
+  });
+
+  it("emits cemetery.entry.added on first observation", async () => {
+    const db = mockD1(baseTables()) as MockD1Database;
+    await projectTape(db);
+    expect(extractInsertBindsForType(db, "cemetery.entry.added").length).toBeGreaterThan(0);
+  });
+
+  it("emits lifecycle.tracked.frozen on first observation", async () => {
+    const db = mockD1(baseTables()) as MockD1Database;
+    await projectTape(db);
+    expect(extractInsertBindsForType(db, "lifecycle.tracked.frozen").length).toBeGreaterThan(0);
   });
 });

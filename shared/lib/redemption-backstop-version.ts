@@ -778,3 +778,6 @@ export const getRedemptionBackstopVersionAt = redemptionBackstop.getVersionAt;
 
 /** Display-ready label for a historical Redemption Backstop methodology version. */
 export const toRedemptionBackstopVersionLabel = toMethodologyVersionLabel;
+
+/** Reconstructed changelog data. */
+export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG = redemptionBackstop.changelog;

@@ -6,6 +6,7 @@ import { handleAuditDepegHistory } from "../api/audit-depeg-history";
 import { handleBackfillCgPrices } from "../api/backfill-cg-prices";
 import { handleBackfillMintBurnPrices } from "../api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "../api/backfill-mint-burn";
+import { handleBackfillTape } from "../api/backfill-tape";
 import { handleReclassifyAtomicRoundtripsTrusted } from "../api/reclassify-atomic-roundtrips";
 import { handleBackfillDEWS } from "../api/backfill-dews";
 import { handleRemediateBlacklistAmountGapsTrusted } from "../api/remediate-blacklist-amount-gaps";
@@ -66,6 +67,11 @@ export const ADMIN_STATIC_ROUTES = [
     "backfill-mint-burn",
     ({ db, url, trustedAdmin, request, alchemyApiKey }) =>
       handleBackfillMintBurn(db, url, trustedAdmin, request, alchemyApiKey ?? null),
+  )),
+  defineStaticRoute("backfill-tape", makeIdempotentAdminRoute(
+    "backfill-tape",
+    "backfill-tape",
+    ({ db, url, trustedAdmin, request }) => handleBackfillTape(db, url, trustedAdmin, request),
   )),
   defineStaticRoute("reclassify-atomic-roundtrips", makeIdempotentAdminRoute(
     "reclassify-atomic-roundtrips",
