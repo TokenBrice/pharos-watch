@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "./helpers/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 function adminRequest(body: unknown, opts: { admin?: boolean } = {}): Request {
   const headers = new Headers();
@@ -185,6 +186,77 @@ describe("handleAdminTelegramBroadcast", () => {
     const select = db.getHistory().find((entry) => entry.sql.includes("FROM telegram_subscribers"));
     expect(select?.sql).toContain("FROM telegram_subscriptions ts");
     expect(select?.sql).toContain("FROM telegram_preset_subscriptions ps");
+  });
+
+  it("deliverable-watchers scope query runs against the real telegram_preset_subscriptions schema", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      // Mirrors migrations 0000_baseline.sql (telegram_subscribers + telegram_subscriptions),
+      // 0072_telegram_launch_alerts.sql (adds alert_launch / global_alert_launch to those two
+      // tables only), and 0114_telegram_dynamic_presets.sql (telegram_preset_subscriptions has
+      // NO alert_launch column — that is the bug guarded here).
+      sqlite.exec(`
+        CREATE TABLE telegram_subscribers (
+          chat_id TEXT PRIMARY KEY,
+          alert_dews INTEGER NOT NULL DEFAULT 0,
+          alert_depeg INTEGER NOT NULL DEFAULT 0,
+          alert_safety INTEGER NOT NULL DEFAULT 0,
+          alert_launch INTEGER NOT NULL DEFAULT 0,
+          global_alert_dews INTEGER NOT NULL DEFAULT 0,
+          global_alert_depeg INTEGER NOT NULL DEFAULT 0,
+          global_alert_safety INTEGER NOT NULL DEFAULT 0,
+          global_alert_launch INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE telegram_subscriptions (
+          chat_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          alert_dews INTEGER NOT NULL DEFAULT 0,
+          alert_depeg INTEGER NOT NULL DEFAULT 0,
+          alert_safety INTEGER NOT NULL DEFAULT 0,
+          alert_launch INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (chat_id, stablecoin_id)
+        );
+        CREATE TABLE telegram_preset_subscriptions (
+          chat_id TEXT NOT NULL,
+          preset_id TEXT NOT NULL,
+          alert_dews INTEGER NOT NULL DEFAULT 0,
+          alert_depeg INTEGER NOT NULL DEFAULT 0,
+          alert_safety INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (chat_id, preset_id)
+        );
+        CREATE TABLE telegram_pending_alerts (
+          chat_id TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          expires_at INTEGER,
+          not_before_at INTEGER
+        );
+      `);
+      sqlite.prepare(
+        `INSERT INTO telegram_subscribers (chat_id, global_alert_dews) VALUES (?, 1)`,
+      ).run("global-1");
+      sqlite.prepare(
+        `INSERT INTO telegram_subscribers (chat_id) VALUES (?)`,
+      ).run("preset-only-1");
+      sqlite.prepare(
+        `INSERT INTO telegram_preset_subscriptions (chat_id, preset_id, alert_dews) VALUES (?, ?, 1)`,
+      ).run("preset-only-1", "usd-top25");
+
+      const res = await handleAdminTelegramBroadcast({
+        db: createSqliteD1(sqlite),
+        request: adminRequest({ messageHtml: "<b>x</b>", scope: "deliverable-watchers", dryRun: true }),
+        trustedAdmin: true,
+      });
+
+      // Without the fix this returns 500 because the preset-subscription EXISTS clause
+      // references `ps.alert_launch`, which does not exist on telegram_preset_subscriptions.
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { targetChatCount: number; sample: string[] };
+      expect(body.targetChatCount).toBe(2);
+      expect(body.sample).toEqual(["global-1", "preset-only-1"]);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("live mode enqueues one pending row per chat and audits the action", async () => {

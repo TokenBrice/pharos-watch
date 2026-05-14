@@ -74,7 +74,7 @@ async function loadTargetChatIds(db: D1Database, scope: BroadcastScope): Promise
              OR EXISTS (
                SELECT 1 FROM telegram_preset_subscriptions ps
                 WHERE ps.chat_id = s.chat_id
-                  AND (ps.alert_dews = 1 OR ps.alert_depeg = 1 OR ps.alert_safety = 1 OR ps.alert_launch = 1)
+                  AND (ps.alert_dews = 1 OR ps.alert_depeg = 1 OR ps.alert_safety = 1)
              )
           ORDER BY s.chat_id`
     : `SELECT chat_id FROM telegram_subscribers ORDER BY chat_id`;
