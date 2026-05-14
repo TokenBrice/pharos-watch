@@ -2,31 +2,18 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import type { BlacklistEvent, DepegEvent } from "@shared/types";
+import type { RecentEvent, RecentEventsResponse } from "@shared/types/tape";
 
-type UseInfiniteDepegEventsResult = {
-  data: { events: DepegEvent[] };
+type UseRecentEventsResult = {
+  data: RecentEventsResponse | undefined;
   isLoading: boolean;
-  isSuccess: boolean;
   error: Error | null;
 };
 
-type UseBlacklistEventsPageResult = {
-  data: { events: BlacklistEvent[]; total: number } | undefined;
-  isLoading: boolean;
-  isSuccess: boolean;
-  error: Error | null;
-};
+const useRecentEventsMock = vi.fn<() => UseRecentEventsResult>();
 
-const useInfiniteDepegEventsMock = vi.fn<() => UseInfiniteDepegEventsResult>();
-const useBlacklistEventsPageMock = vi.fn<() => UseBlacklistEventsPageResult>();
-
-vi.mock("@/hooks/use-depeg-events", () => ({
-  useInfiniteDepegEvents: () => useInfiniteDepegEventsMock(),
-}));
-
-vi.mock("@/hooks/use-blacklist-events", () => ({
-  useBlacklistEventsPage: () => useBlacklistEventsPageMock(),
+vi.mock("@/hooks/api-hooks", () => ({
+  useRecentEvents: () => useRecentEventsMock(),
 }));
 
 import { HomepageTape } from "@/components/homepage-tape";
@@ -37,76 +24,28 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  useInfiniteDepegEventsMock.mockReset();
-  useBlacklistEventsPageMock.mockReset();
-  mockDepegs();
-  mockFreezes();
+  useRecentEventsMock.mockReset();
+  mockRecentEvents();
 });
 
-function makeDepegEvent(overrides: Partial<DepegEvent> = {}): DepegEvent {
+function makeRecentEvent(overrides: Partial<RecentEvent> = {}): RecentEvent {
   return {
-    id: 1,
+    id: "depeg.opened:1",
+    type: "depeg.opened",
+    severity: "warning",
+    ts: Math.floor(Date.now() / 1000) - 120,
     stablecoinId: "usdc-circle",
     symbol: "USDC",
-    pegType: "peggedUSD",
-    direction: "below",
-    peakDeviationBps: -500,
-    startedAt: Math.floor(Date.now() / 1000) - 120,
-    endedAt: null,
-    startPrice: 0.95,
-    peakPrice: 0.95,
-    recoveryPrice: null,
-    pegReference: 1,
-    source: "live",
-    confirmationSources: null,
-    pendingReason: null,
-    provenance: null,
+    title: "USDC depeg opened (-500 bps)",
+    href: "/stablecoin/usdc-circle/#peg-history",
     ...overrides,
   };
 }
 
-function makeFreezeEvent(overrides: Partial<BlacklistEvent> = {}): BlacklistEvent {
-  return {
-    id: "eth-0xabc",
-    stablecoin: "USDT",
-    chainId: "ethereum",
-    chainName: "Ethereum",
-    eventType: "destroy",
-    address: "0x0000000000000000000000000000000000000001",
-    amountNative: 15_000_000,
-    amountUsdAtEvent: 15_000_000,
-    amountSource: "event",
-    amountStatus: "resolved",
-    txHash: "0xabc",
-    blockNumber: 1,
-    timestamp: Math.floor(Date.now() / 1000) - 3600,
-    methodologyVersion: "3.0",
-    contractAddress: null,
-    configKey: null,
-    eventSignature: null,
-    eventTopic0: null,
-    suppressionReason: null,
-    explorerTxUrl: "https://etherscan.io/tx/0xabc",
-    explorerAddressUrl: "https://etherscan.io/address/0x1",
-    ...overrides,
-  };
-}
-
-function mockDepegs(overrides: Partial<UseInfiniteDepegEventsResult> = {}) {
-  useInfiniteDepegEventsMock.mockReturnValue({
+function mockRecentEvents(overrides: Partial<UseRecentEventsResult> = {}) {
+  useRecentEventsMock.mockReturnValue({
     data: { events: [] },
     isLoading: false,
-    isSuccess: true,
-    error: null,
-    ...overrides,
-  });
-}
-
-function mockFreezes(overrides: Partial<UseBlacklistEventsPageResult> = {}) {
-  useBlacklistEventsPageMock.mockReturnValue({
-    data: { events: [], total: 0 },
-    isLoading: false,
-    isSuccess: true,
     error: null,
     ...overrides,
   });
@@ -118,15 +57,9 @@ describe("HomepageTape", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders nothing when every source errors", () => {
-    mockDepegs({
-      isSuccess: false,
-      isLoading: false,
-      error: new Error("fetch failed"),
-    });
-    mockFreezes({
+  it("renders nothing on endpoint error", () => {
+    mockRecentEvents({
       data: undefined,
-      isSuccess: false,
       isLoading: false,
       error: new Error("fetch failed"),
     });
@@ -135,14 +68,8 @@ describe("HomepageTape", () => {
   });
 
   it("renders a loading state when the hook is loading", () => {
-    mockDepegs({
-      isSuccess: false,
-      isLoading: true,
-      error: null,
-    });
-    mockFreezes({
+    mockRecentEvents({
       data: undefined,
-      isSuccess: false,
       isLoading: true,
       error: null,
     });
@@ -150,44 +77,61 @@ describe("HomepageTape", () => {
     expect(screen.getByText(/loading recent events/i)).toBeTruthy();
   });
 
-  it("renders depeg and freeze events with links to their source surfaces and severity labels", () => {
-    mockDepegs({ data: { events: [makeDepegEvent({ peakDeviationBps: -1200 })] } });
-    mockFreezes({
+  it("renders depeg, freeze, and score events with links to their source surfaces and severity labels", () => {
+    mockRecentEvents({
       data: {
-        events: [makeFreezeEvent({ amountNative: 150_000_000, amountUsdAtEvent: 150_000_000 })],
-        total: 1,
+        events: [
+          makeRecentEvent({
+            id: "depeg.opened:1",
+            type: "depeg.opened",
+            severity: "severe",
+            title: "USDC depeg opened (-1200 bps)",
+            href: "/stablecoin/usdc-circle/#peg-history",
+          }),
+          makeRecentEvent({
+            id: "freeze.destroyed:eth-0xabc",
+            type: "freeze.destroyed",
+            severity: "critical",
+            ts: Math.floor(Date.now() / 1000) - 3600,
+            stablecoinId: null,
+            symbol: "USDT",
+            title: "USDT $150.0M destroyed · Ethereum",
+            href: "/freezewatch/",
+          }),
+          makeRecentEvent({
+            id: "score.downgraded:usdt-tether:1747400000",
+            type: "score.downgraded",
+            severity: "warning",
+            ts: Math.floor(Date.now() / 1000) - 7200,
+            stablecoinId: "usdt-tether",
+            symbol: "USDT",
+            title: "USDT grade A -> B+",
+            href: "/stablecoin/usdt-tether/#report-card",
+          }),
+        ],
       },
     });
 
     render(<HomepageTape />);
 
     // Items are duplicated for the scrolling loop; expect 2 occurrences per event.
-    expect(screen.getAllByText("USDC depeg opened (−1200 bps)")).toHaveLength(2);
+    expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
+    expect(screen.getAllByText("USDT grade A -> B+")).toHaveLength(2);
     // Severity dots carry an accessible label for each tier.
     expect(screen.getAllByLabelText("Severe").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText("Critical").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Warning").length).toBeGreaterThan(0);
     // Source links are present.
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
-  });
-
-  it("renders available events when one source errors", () => {
-    mockDepegs({
-      isSuccess: false,
-      error: new Error("depegs failed"),
-    });
-    mockFreezes({ data: { events: [makeFreezeEvent({ eventType: "blacklist", amountUsdAtEvent: 40_000 })], total: 1 } });
-
-    render(<HomepageTape />);
-
-    expect(screen.getAllByText(/USDT freeze \$40k · Ethereum/)).toHaveLength(2);
+    expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether"))).toBe(true);
   });
 
   it("applies the pause-on-hover shell class on the outer wrapper", () => {
-    mockDepegs({ data: { events: [makeDepegEvent()] } });
+    mockRecentEvents({ data: { events: [makeRecentEvent()] } });
 
     const { container } = render(<HomepageTape />);
     const root = container.querySelector(".pharos-tape-shell");

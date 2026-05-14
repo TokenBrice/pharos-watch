@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
-import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
-import type { BlacklistEvent, DepegEvent } from "@shared/types";
+import { useRecentEvents } from "@/hooks/api-hooks";
 import type { RecentEvent, RecentEventSeverity } from "@shared/types/tape";
 
 const SEVERITY_DOT_CLASS: Record<RecentEventSeverity, string> = {
@@ -31,118 +29,6 @@ function formatRelativeTime(tsSec: number): string {
   return `${Math.round(ageSec / 86_400)}d ago`;
 }
 
-function formatUsdShort(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(value / 1_000)}k`;
-  return `$${Math.round(value)}`;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h`;
-  return `${Math.round(seconds / 86_400)}d`;
-}
-
-function formatSignedBps(event: DepegEvent): string {
-  const magnitude = Math.abs(event.peakDeviationBps);
-  const sign = event.peakDeviationBps < 0 || event.direction === "below" ? "−" : "+";
-  return `${sign}${magnitude} bps`;
-}
-
-function depegOpenedSeverity(bps: number): RecentEventSeverity {
-  const absBps = Math.abs(bps);
-  if (absBps >= 2500) return "critical";
-  if (absBps >= 1000) return "severe";
-  if (absBps >= 300) return "warning";
-  return "notice";
-}
-
-function freezeSeverity(eventType: BlacklistEvent["eventType"], amountUsd: number | null): RecentEventSeverity {
-  if (eventType === "unblacklist") return "info";
-  if (eventType === "destroy") {
-    if ((amountUsd ?? 0) >= 100_000_000) return "critical";
-    if ((amountUsd ?? 0) >= 10_000_000) return "severe";
-    return "warning";
-  }
-  if ((amountUsd ?? 0) >= 10_000_000) return "severe";
-  if ((amountUsd ?? 0) >= 1_000_000) return "warning";
-  return "notice";
-}
-
-function mapDepegEvent(event: DepegEvent): RecentEvent | null {
-  if (event.source !== "live") return null;
-  if (event.endedAt == null) {
-    return {
-      id: `depeg.opened:${event.id}`,
-      type: "depeg.opened",
-      severity: depegOpenedSeverity(event.peakDeviationBps),
-      ts: event.startedAt,
-      stablecoinId: event.stablecoinId,
-      symbol: event.symbol,
-      title: `${event.symbol} depeg opened (${formatSignedBps(event)})`,
-      href: `/stablecoin/${encodeURIComponent(event.stablecoinId)}/#peg-history`,
-    };
-  }
-
-  return {
-    id: `depeg.resolved:${event.id}`,
-    type: "depeg.resolved",
-    severity: "info",
-    ts: event.endedAt,
-    stablecoinId: event.stablecoinId,
-    symbol: event.symbol,
-    title: `${event.symbol} depeg resolved (lasted ${formatDuration(event.endedAt - event.startedAt)})`,
-    href: `/stablecoin/${encodeURIComponent(event.stablecoinId)}/#peg-history`,
-  };
-}
-
-function mapFreezeEvent(event: BlacklistEvent): RecentEvent {
-  const amount = event.amountUsdAtEvent != null && event.amountUsdAtEvent > 0
-    ? formatUsdShort(event.amountUsdAtEvent)
-    : null;
-  if (event.eventType === "destroy") {
-    return {
-      id: `freeze.destroyed:${event.id}`,
-      type: "freeze.destroyed",
-      severity: freezeSeverity("destroy", event.amountUsdAtEvent),
-      ts: event.timestamp,
-      stablecoinId: null,
-      symbol: event.stablecoin,
-      title: amount
-        ? `${event.stablecoin} ${amount} destroyed · ${event.chainName}`
-        : `${event.stablecoin} funds destroyed · ${event.chainName}`,
-      href: "/freezewatch/",
-    };
-  }
-  if (event.eventType === "unblacklist") {
-    return {
-      id: `freeze.unblocked:${event.id}`,
-      type: "freeze.unblocked",
-      severity: "info",
-      ts: event.timestamp,
-      stablecoinId: null,
-      symbol: event.stablecoin,
-      title: `${event.stablecoin} address unfrozen · ${event.chainName}`,
-      href: "/freezewatch/",
-    };
-  }
-  return {
-    id: `freeze.blocked:${event.id}`,
-    type: "freeze.blocked",
-    severity: freezeSeverity("blacklist", event.amountUsdAtEvent),
-    ts: event.timestamp,
-    stablecoinId: null,
-    symbol: event.stablecoin,
-    title: amount
-      ? `${event.stablecoin} freeze ${amount} · ${event.chainName}`
-      : `${event.stablecoin} address frozen · ${event.chainName}`,
-    href: "/freezewatch/",
-  };
-}
-
 function durationFromCount(count: number): string {
   // ~4.5 seconds per item — slow news ticker pace
   const seconds = Math.max(45, count * 4.5);
@@ -153,6 +39,8 @@ interface TapeItemProps {
   event: RecentEvent;
   prefixDivider: boolean;
 }
+
+const EMPTY_EVENTS: ReadonlyArray<RecentEvent> = [];
 
 function TapeItem({ event, prefixDivider }: TapeItemProps) {
   return (
@@ -176,28 +64,11 @@ function TapeItem({ event, prefixDivider }: TapeItemProps) {
 }
 
 export function HomepageTape() {
-  const depegs = useInfiniteDepegEvents({ includePending: false });
-  const freezes = useBlacklistEventsPage({ limit: 20, sortBy: "date", sortDirection: "desc" });
-
-  const events = useMemo(() => {
-    const depegEvents = depegs.data.events
-      .map(mapDepegEvent)
-      .filter((event): event is RecentEvent => event != null);
-    const freezeEvents = (freezes.data?.events ?? []).map(mapFreezeEvent);
-    return [...depegEvents, ...freezeEvents]
-      .sort((a, b) => b.ts - a.ts)
-      .slice(0, 20);
-  }, [depegs.data.events, freezes.data?.events]);
-
+  const { data, isLoading, error } = useRecentEvents(20);
+  const events = data?.events ?? EMPTY_EVENTS;
   const duplicated = useMemo(() => events.concat(events), [events]);
-  const isLoading = (depegs.isLoading || freezes.isLoading) && events.length === 0;
-  const hasLoaded = !depegs.isLoading && !freezes.isLoading;
-  const hasAnySuccess = depegs.isSuccess || freezes.isSuccess;
 
-  if (
-    (!isLoading && events.length === 0 && (hasLoaded || hasAnySuccess))
-    || (!hasAnySuccess && depegs.error && freezes.error)
-  ) {
+  if (error || (!isLoading && events.length === 0)) {
     return null;
   }
 
