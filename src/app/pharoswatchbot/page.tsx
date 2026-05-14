@@ -58,57 +58,17 @@ const MINI_APP_HOME_DEEP_LINK = `${BOT_URL}?startapp=home`;
 const MINI_APP_WATCHLIST_DEEP_LINK = `${BOT_URL}?startapp=watchlist`;
 
 const MINI_APP_FEATURES = [
-  {
-    title: "Watchlist",
-    detail: "Followed coins, alert toggles, live risk context.",
-    icon: Bell,
-  },
-  {
-    title: "Global alerts",
-    detail: "DEWS, depeg, safety, and launches in one panel.",
-    icon: SlidersHorizontal,
-  },
-  {
-    title: "Per-coin tuning",
-    detail: "DEWS bands, depeg steps, safety modes.",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Presets",
-    detail: "One-tap cohorts like USD Top 25.",
-    icon: Radio,
-  },
-  {
-    title: "Quiet hours",
-    detail: "Mute nights, snooze bursts, resume cleanly.",
-    icon: Clock3,
-  },
-  {
-    title: "Delivery health",
-    detail: "See whether Telegram can still reach you.",
-    icon: Zap,
-  },
-  {
-    title: "Coin search",
-    detail: "Find and add stablecoins fast.",
-    icon: Terminal,
-  },
-  {
-    title: "Bot sync",
-    detail: "Commands and app share one alert state.",
-    icon: Bot,
-  },
-  {
-    title: "Deep links",
-    detail: "Jump straight to settings, presets, or a coin.",
-    icon: ExternalLink,
-  },
-  {
-    title: "Launch alerts",
-    detail: "Catch tracked pre-launch assets going live.",
-    icon: Megaphone,
-  },
-] as const satisfies readonly { title: string; detail: string; icon: LucideIcon }[];
+  { title: "Watchlist", detail: "Followed coins, alert toggles, live risk context." },
+  { title: "Global alerts", detail: "DEWS, depeg, safety, and launches in one panel." },
+  { title: "Per-coin tuning", detail: "DEWS bands, depeg steps, safety modes." },
+  { title: "Presets", detail: "One-tap cohorts like USD Top 25." },
+  { title: "Quiet hours", detail: "Mute nights, snooze bursts, resume cleanly." },
+  { title: "Delivery health", detail: "See whether Telegram can still reach you." },
+  { title: "Coin search", detail: "Find and add stablecoins fast." },
+  { title: "Bot sync", detail: "Commands and app share one alert state." },
+  { title: "Deep links", detail: "Jump straight to settings, presets, or a coin." },
+  { title: "Launch alerts", detail: "Catch tracked pre-launch assets going live." },
+] as const satisfies readonly { title: string; detail: string }[];
 
 const MINI_APP_SCREENSHOTS = [
   {
@@ -561,36 +521,44 @@ export default function PharosWatchBotPage() {
 
         <section className="space-y-4" id="mini-app" aria-labelledby="mini-app-title">
           <div className="pharos-card-shell overflow-hidden border-frost-blue/30 bg-frost-blue/8 dark:bg-frost-blue/6">
-            <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(320px,0.9fr)]">
+            <div className="grid grid-cols-1 gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)]">
               <div className="border-b border-border/55 p-5 lg:border-b-0 lg:border-r lg:p-7">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-frost-blue/30 bg-background/55 text-sky-700 dark:text-sky-300">
-                    <Smartphone className="h-5 w-5" aria-hidden="true" />
+                <div className="flex items-baseline justify-between gap-3 border-b border-border/45 pb-3">
+                  <p className="pharos-kicker flex items-baseline gap-2 text-sky-700 dark:text-sky-300">
+                    <span>Mini App</span>
+                    <span aria-hidden="true" className="text-border">/</span>
+                    <span className="text-muted-foreground">Telegram</span>
+                  </p>
+                  <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground tabular-nums">
+                    10 controls
                   </span>
-                  <p className="pharos-kicker text-sky-700 dark:text-sky-300">Mini App</p>
                 </div>
-                <h2 id="mini-app-title" className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+
+                <h2 id="mini-app-title" className="mt-5 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.7rem]">
                   Control every alert from the Mini App.
                 </h2>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground">
                   Open it from Telegram to follow coins, tune thresholds, and pause noise without typing commands.
                 </p>
-                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {MINI_APP_FEATURES.map((feature) => (
-                    <li key={feature.title} className="rounded-xl border border-border/60 bg-background/55 p-3.5">
-                      <div className="flex items-start gap-3">
-                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-frost-blue/25 bg-frost-blue/10 text-sky-700 dark:text-sky-300">
-                          <feature.icon className="h-3.5 w-3.5" aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">{feature.title}</p>
-                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.detail}</p>
-                        </div>
+
+                <ol className="mt-7 grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+                  {MINI_APP_FEATURES.map((feature, index) => (
+                    <li key={feature.title} className="flex gap-3 border-t border-border/40 py-3">
+                      <span
+                        aria-hidden="true"
+                        className="mt-[2px] shrink-0 font-mono text-[11px] font-semibold tabular-nums tracking-[0.08em] text-sky-700/85 dark:text-sky-300/90"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-snug text-foreground">{feature.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.detail}</p>
                       </div>
                     </li>
                   ))}
-                </ul>
-                <div className="mt-5 flex flex-wrap gap-2.5">
+                </ol>
+
+                <div className="mt-7 flex flex-wrap items-center gap-2.5 border-t border-border/40 pt-5">
                   <Button asChild size="sm" className="gap-2">
                     <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                       <Smartphone className="h-4 w-4" aria-hidden="true" />
@@ -606,37 +574,44 @@ export default function PharosWatchBotPage() {
                 </div>
               </div>
               <div className="flex min-h-[560px] flex-col p-5 lg:min-h-0 lg:p-7">
-                <div
-                  className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65 bg-background/70 shadow-sm"
-                  aria-label="Mini App screenshots"
-                >
-                  <div className="telegram-mini-app-carousel-track flex h-full w-full">
-                    {MINI_APP_SCREENSHOTS.map((screenshot) => (
-                      <figure
-                        key={screenshot.title}
-                        className="flex min-w-full flex-col"
-                      >
-                        <div className="min-h-0 flex-1 bg-[#111820] p-3">
-                          <Image
-                            src={screenshot.src}
-                            alt={screenshot.alt}
-                            width={screenshot.width}
-                            height={screenshot.height}
-                            loading={screenshot.title === "Watchlist" ? "eager" : "lazy"}
-                            sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
-                            className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain"
-                          />
-                        </div>
-                        <figcaption className="border-t border-border/55 px-3 py-2 text-center text-[11px] font-semibold text-muted-foreground">
-                          {screenshot.title}
-                        </figcaption>
-                      </figure>
-                    ))}
+                <div className="telegram-mini-app-stage flex flex-1 flex-col gap-3">
+                  <div
+                    className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65 shadow-[0_18px_42px_oklch(0_0_0_/0.24)]"
+                    aria-label="Mini App screenshots"
+                  >
+                    <div className="telegram-mini-app-carousel-track flex h-full w-full">
+                      {MINI_APP_SCREENSHOTS.map((screenshot, idx) => (
+                        <figure
+                          key={screenshot.title}
+                          className="flex min-w-full flex-col bg-[oklch(0.16_0.02_248)]"
+                        >
+                          <div className="min-h-0 flex-1 p-3">
+                            <Image
+                              src={screenshot.src}
+                              alt={screenshot.alt}
+                              width={screenshot.width}
+                              height={screenshot.height}
+                              loading={screenshot.title === "Watchlist" ? "eager" : "lazy"}
+                              sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
+                              className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain"
+                            />
+                          </div>
+                          <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-white/65">
+                            <span className="tabular-nums text-sky-300">{String(idx + 1).padStart(2, "0")}</span>
+                            <span aria-hidden="true" className="text-white/25">·</span>
+                            <span>{screenshot.title}</span>
+                          </figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2" aria-hidden="true">
+                    <span className="telegram-mini-app-dot telegram-mini-app-dot-1 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
+                    <span className="telegram-mini-app-dot telegram-mini-app-dot-2 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
+                    <span className="telegram-mini-app-dot telegram-mini-app-dot-3 h-[3px] w-7 rounded-full bg-muted-foreground/30" />
                   </div>
                 </div>
-                <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground/80">
-                  Mini App preview &middot; watchlist, presets, and settings.
-                </p>
                 <style>
                   {`
                     @keyframes telegramMiniAppCarousel {
@@ -645,19 +620,34 @@ export default function PharosWatchBotPage() {
                       66%, 93% { transform: translateX(-200%); }
                       100% { transform: translateX(0); }
                     }
+                    @keyframes telegramMiniAppDotA { 0%, 27% { opacity: 1; } 33%, 93% { opacity: 0.32; } 100% { opacity: 1; } }
+                    @keyframes telegramMiniAppDotB { 0%, 27% { opacity: 0.32; } 33%, 60% { opacity: 1; } 66%, 100% { opacity: 0.32; } }
+                    @keyframes telegramMiniAppDotC { 0%, 60% { opacity: 0.32; } 66%, 93% { opacity: 1; } 100% { opacity: 0.32; } }
 
                     .telegram-mini-app-carousel-track {
-                      animation: telegramMiniAppCarousel 15s ease-in-out infinite;
+                      animation: telegramMiniAppCarousel 15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
                     }
+                    .telegram-mini-app-dot {
+                      animation-duration: 15s;
+                      animation-iteration-count: infinite;
+                      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+                      opacity: 0.32;
+                    }
+                    .telegram-mini-app-dot-1 { animation-name: telegramMiniAppDotA; background: oklch(0.72 0.14 248 / 0.85); }
+                    .telegram-mini-app-dot-2 { animation-name: telegramMiniAppDotB; background: oklch(0.72 0.14 248 / 0.85); }
+                    .telegram-mini-app-dot-3 { animation-name: telegramMiniAppDotC; background: oklch(0.72 0.14 248 / 0.85); }
 
-                    .telegram-mini-app-carousel:hover .telegram-mini-app-carousel-track {
+                    .telegram-mini-app-stage:hover .telegram-mini-app-carousel-track,
+                    .telegram-mini-app-stage:hover .telegram-mini-app-dot {
                       animation-play-state: paused;
                     }
 
                     @media (prefers-reduced-motion: reduce) {
-                      .telegram-mini-app-carousel-track {
+                      .telegram-mini-app-carousel-track,
+                      .telegram-mini-app-dot {
                         animation: none;
                       }
+                      .telegram-mini-app-dot-1 { opacity: 1; }
                     }
                   `}
                 </style>
