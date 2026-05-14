@@ -14,11 +14,6 @@ interface UseContagionGraphDragOptions {
   simulationKey: string;
 }
 
-interface DragState {
-  baseKey: string;
-  positions: Map<string, { x: number; y: number }>;
-}
-
 function projectClientPoint(
   svg: SVGSVGElement | null,
   clientX: number,
@@ -37,26 +32,21 @@ export function useContagionGraphDrag({
   svgRef,
   nodeMap,
   basePositions,
-  simulationKey,
+  simulationKey: _simulationKey,
 }: UseContagionGraphDragOptions) {
-  const [draggedPositions, setDraggedPositions] = useState<DragState>({
-    baseKey: "",
-    positions: new Map(),
-  });
+  const [pinnedPositions, setPinnedPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [dragId, setDragId] = useState<string | null>(null);
+  const dragMoved = useRef(false);
   const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
 
   const positions = useMemo(() => {
-    if (draggedPositions.baseKey !== simulationKey || draggedPositions.positions.size === 0) {
-      return basePositions;
-    }
-
+    if (pinnedPositions.size === 0) return basePositions;
     const next = new Map(basePositions);
-    for (const [id, position] of draggedPositions.positions) {
+    for (const [id, position] of pinnedPositions) {
       if (next.has(id)) next.set(id, position);
     }
     return next;
-  }, [basePositions, draggedPositions, simulationKey]);
+  }, [basePositions, pinnedPositions]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent, nodeId: string) => {
     if (event.isPrimary === false) return;
@@ -68,6 +58,7 @@ export function useContagionGraphDrag({
 
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDragId(nodeId);
+    dragMoved.current = false;
     dragStart.current = {
       mx: svgPoint.x,
       my: svgPoint.y,
@@ -83,33 +74,46 @@ export function useContagionGraphDrag({
 
     const dx = svgPoint.x - dragStart.current.mx;
     const dy = svgPoint.y - dragStart.current.my;
+    if (Math.abs(dx) + Math.abs(dy) > 1) dragMoved.current = true;
 
-    setDraggedPositions((previous) => {
-      const next = previous.baseKey === simulationKey
-        ? new Map(previous.positions)
-        : new Map<string, { x: number; y: number }>();
+    setPinnedPositions((previous) => {
+      const next = new Map(previous);
       const radius = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
       const start = dragStart.current;
       if (start) {
         next.set(dragId, clampGraphPosition(start.nx + dx, start.ny + dy, radius));
       }
-      return {
-        baseKey: simulationKey,
-        positions: next,
-      };
+      return next;
     });
-  }, [dragId, nodeMap, simulationKey, svgRef]);
+  }, [dragId, nodeMap, svgRef]);
 
   const handlePointerUp = useCallback(() => {
     setDragId(null);
     dragStart.current = null;
   }, []);
 
+  const unpinNode = useCallback((nodeId: string) => {
+    setPinnedPositions((previous) => {
+      if (!previous.has(nodeId)) return previous;
+      const next = new Map(previous);
+      next.delete(nodeId);
+      return next;
+    });
+  }, []);
+
+  const unpinAll = useCallback(() => setPinnedPositions(new Map()), []);
+
+  const pinnedNodeIds = useMemo<ReadonlySet<string>>(() => new Set(pinnedPositions.keys()), [pinnedPositions]);
+
   return {
     dragId,
     positions,
+    pinnedPositions,
+    pinnedNodeIds,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    unpinNode,
+    unpinAll,
   };
 }

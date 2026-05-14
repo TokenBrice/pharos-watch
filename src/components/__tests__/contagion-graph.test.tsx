@@ -219,4 +219,57 @@ describe("ContagionGraph", () => {
 
     expect(screen.getByText(/Showing 3 of 4 dependency-linked stablecoins with 2 visible edges\./)).toBeTruthy();
   });
+
+  it("updates visible counts when focus mode changes", () => {
+    render(<ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />);
+
+    expect(screen.getByText(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+
+    const sr = screen.getByText(/Showing \d+ of \d+ dependency-linked stablecoins with \d+ visible edges\./);
+    expect(sr.textContent).not.toMatch(/Showing 4 of 4 dependency-linked stablecoins with 3 visible edges\./);
+  });
+
+  it("clears the pinned selection when Escape is pressed", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+    expect(container.querySelector('circle[stroke="var(--p-frost-blue)"]')).not.toBeNull();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(container.querySelector('circle[stroke="var(--p-frost-blue)"]')).toBeNull();
+  });
+
+  it("never mounts a modal dialog when a node is clicked", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /USDe/i }));
+
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("double-clicking a pinned node unpins it", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    const usdeNode = screen.getByRole("button", { name: /USDe/i });
+    // Simulate a drag to pin the node.
+    fireEvent.pointerDown(usdeNode, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
+    const svg = container.querySelector("svg");
+    fireEvent.pointerMove(svg!, { clientX: 260, clientY: 320, pointerId: 1 });
+    fireEvent.pointerUp(svg!, { pointerId: 1 });
+
+    expect(container.querySelector('[data-pinned="true"]')).not.toBeNull();
+
+    fireEvent.doubleClick(usdeNode);
+
+    expect(container.querySelector('[data-pinned="true"]')).toBeNull();
+  });
 });

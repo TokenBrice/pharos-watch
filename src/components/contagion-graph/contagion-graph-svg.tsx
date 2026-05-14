@@ -1,8 +1,17 @@
 "use client";
 
-import type { KeyboardEvent, PointerEvent, ReactNode, RefObject } from "react";
+import type { KeyboardEvent, MouseEvent as ReactMouseEvent, PointerEvent, ReactNode, RefObject } from "react";
 import { gradeColor, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { FocusMode, ResolvedLink } from "@/components/contagion-graph-graph";
+import {
+  GRAPH_DIM_EDGE_OPACITY,
+  GRAPH_DIM_NODE_OPACITY,
+  GRAPH_EDGE_HOVER_OPACITY,
+  GRAPH_EDGE_HOVER_STROKE_WIDTH,
+  GRAPH_RIPPLE_HOP_4_EDGE_OPACITY,
+  GRAPH_RIPPLE_HOP_4_OPACITY,
+  GRAPH_RIPPLE_HOP_DELAY_MS,
+} from "@/components/contagion-graph/contagion-graph-tokens";
 import {
   HEIGHT,
   HUB_LABEL_FONT_SIZE,
@@ -14,8 +23,6 @@ import {
   type SupernodeState,
 } from "@/lib/contagion-layout";
 import { formatCurrency } from "@shared/lib/format";
-
-const RIPPLE_HOP_DELAY_MS = 100;
 
 type PositionMap = ReadonlyMap<string, { x: number; y: number }>;
 
@@ -32,6 +39,8 @@ interface ContagionGraphSvgProps {
   activeHoveredId: string | null;
   activeHoveredEdge: number | null;
   focusedId: string | null;
+  pinnedSelectionId: string | null;
+  pinnedNodeIds: ReadonlySet<string>;
   connectedNodes: Set<string>;
   connectedEdges: Set<number>;
   nodeDistance: Map<string, number>;
@@ -47,8 +56,10 @@ interface ContagionGraphSvgProps {
   onNodeFocus: (nodeId: string) => void;
   onNodeBlur: () => void;
   onNodeClick: (nodeId: string) => void;
+  onNodeDoubleClick: (nodeId: string) => void;
   onEdgeMouseEnter: (edgeIndex: number) => void;
   onEdgeMouseLeave: () => void;
+  onCanvasClick: () => void;
 }
 
 interface EdgeRenderProps {
@@ -69,6 +80,8 @@ interface NodeRenderProps {
   logos?: Record<string, string>;
   activeHoveredId: string | null;
   focusedId: string | null;
+  pinnedSelectionId: string | null;
+  isPinnedPosition: boolean;
   connectedNodes: Set<string>;
   nodeDistance: Map<string, number>;
   tierById: ReadonlyMap<string, HubTier>;
@@ -79,6 +92,7 @@ interface NodeRenderProps {
   onFocus: (nodeId: string) => void;
   onBlur: () => void;
   onClick: (nodeId: string) => void;
+  onDoubleClick: (nodeId: string) => void;
 }
 
 function ContagionGraphClipPaths({
@@ -122,21 +136,29 @@ function getEdgePresentation({
   const so = isCoreHubEdge ? Math.min(0.92, soBase + 0.14) : soBase;
   const defaultOpacity = isCoreHubEdge ? so : isHubEdge ? so * 0.82 : so * 0.46;
   const edgeHopDist = edgeDistance.get(link.index);
+  const isHop4 = edgeHopDist === 4;
+  const connectedRippleOpacity = isHop4
+    ? GRAPH_RIPPLE_HOP_4_EDGE_OPACITY
+    : Math.max(0.3, defaultOpacity * (1 - (edgeHopDist ?? 1) * 0.12));
   const edgeOpacity = isNodeHovered && !isConnected && !isEdgeDirectHovered
-    ? 0.05
+    ? GRAPH_DIM_EDGE_OPACITY
     : isEdgeDirectHovered
-      ? 0.9
+      ? GRAPH_EDGE_HOVER_OPACITY
       : isConnected
-        ? Math.max(0.3, defaultOpacity * (1 - (edgeHopDist ?? 1) * 0.12))
+        ? connectedRippleOpacity
         : defaultOpacity;
   const edgeDelay = isNodeHovered && isConnected && edgeHopDist != null
-    ? edgeHopDist * RIPPLE_HOP_DELAY_MS
+    ? edgeHopDist * GRAPH_RIPPLE_HOP_DELAY_MS
     : 0;
+  const useHoverStroke = isEdgeDirectHovered || (isNodeHovered && isConnected && !isHop4);
+  const strokeWidth = useHoverStroke ? GRAPH_EDGE_HOVER_STROKE_WIDTH : sw;
+  const strokeColor = useHoverStroke ? "var(--p-frost-blue)" : TYPE_COLORS[link.type];
 
   return {
     edgeOpacity,
     edgeDelay,
-    strokeWidth: isEdgeDirectHovered ? sw + 1 : sw,
+    strokeWidth,
+    strokeColor,
   };
 }
 
@@ -154,7 +176,7 @@ function ContagionGraphEdge({
   const posB = positions.get(link.tgtId);
   if (!posA || !posB) return null;
 
-  const { edgeOpacity, edgeDelay, strokeWidth } = getEdgePresentation({
+  const { edgeOpacity, edgeDelay, strokeWidth, strokeColor } = getEdgePresentation({
     link,
     activeHoveredId,
     activeHoveredEdge,
@@ -173,13 +195,13 @@ function ContagionGraphEdge({
       />
       <line
         x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
-        stroke={TYPE_COLORS[link.type]}
+        stroke={strokeColor}
         strokeWidth={strokeWidth}
         opacity={edgeOpacity}
         strokeDasharray={TYPE_DASH[link.type]}
         pointerEvents="none"
         style={{
-          transition: `opacity 200ms var(--motion-ease-standard) ${edgeDelay}ms, stroke-width 160ms var(--motion-ease-standard)`,
+          transition: `opacity 200ms var(--motion-ease-standard) ${edgeDelay}ms, stroke-width 160ms var(--motion-ease-standard), stroke 200ms var(--motion-ease-standard)`,
         }}
       />
     </g>
@@ -203,13 +225,17 @@ function getNodePresentation({
   const hubLabelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + node.r + (isCoreHub ? 12 : 10)));
   const hopDist = nodeDistance.get(node.id);
   const isInRipple = activeHoveredId !== null && hopDist != null && hopDist > 0;
-  const nodeDelay = isInRipple ? hopDist * RIPPLE_HOP_DELAY_MS : 0;
+  const nodeDelay = isInRipple && hopDist != null ? hopDist * GRAPH_RIPPLE_HOP_DELAY_MS : 0;
+  const isHop4 = hopDist === 4;
+  const rippleOpacity = isHop4
+    ? GRAPH_RIPPLE_HOP_4_OPACITY
+    : Math.max(0.6, 0.95 - ((hopDist ?? 1) - 1) * 0.08);
   const nodeOpacity = isNodeDimmed
-    ? 0.4
+    ? GRAPH_DIM_NODE_OPACITY
     : isHovered
       ? 1
       : isInRipple
-        ? Math.max(0.6, 0.95 - (hopDist - 1) * 0.08)
+        ? rippleOpacity
         : 0.85;
 
   return { isHovered, isHub, isCoreHub, color, hubLabelY, nodeDelay, nodeOpacity };
@@ -222,6 +248,8 @@ function ContagionGraphNode({
   logos,
   activeHoveredId,
   focusedId,
+  pinnedSelectionId,
+  isPinnedPosition,
   connectedNodes,
   nodeDistance,
   tierById,
@@ -232,6 +260,7 @@ function ContagionGraphNode({
   onFocus,
   onBlur,
   onClick,
+  onDoubleClick,
 }: NodeRenderProps) {
   const logoUrl = logos?.[node.id];
   const innerR = node.r - RING_WIDTH;
@@ -244,14 +273,16 @@ function ContagionGraphNode({
     tierById,
   });
 
+  const nodeCursor = isPinnedPosition ? "default" : focusMode === "neighborhood" ? "pointer" : "grab";
   return (
     <g
       key={node.id}
       tabIndex={0}
       data-node-id={node.id}
+      data-pinned={isPinnedPosition ? "true" : undefined}
       role="button"
-      aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}`}
-      style={{ cursor: focusMode === "neighborhood" ? "pointer" : "grab" }}
+      aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}${isPinnedPosition ? " (pinned)" : ""}`}
+      style={{ cursor: nodeCursor }}
       onPointerDown={(event) => onPointerDown(event, node.id)}
       onMouseEnter={() => onMouseEnter(node.id)}
       onMouseLeave={onMouseLeave}
@@ -259,6 +290,7 @@ function ContagionGraphNode({
       onBlur={onBlur}
       onKeyDown={(event) => onKeyDown(event, node.id)}
       onClick={() => onClick(node.id)}
+      onDoubleClick={() => onDoubleClick(node.id)}
     >
       <circle
         cx={position.x}
@@ -286,6 +318,20 @@ function ContagionGraphNode({
         />
       )}
 
+      {isPinnedPosition && (
+        <circle
+          cx={position.x}
+          cy={position.y}
+          r={Math.max(node.r - RING_WIDTH - 2, 3)}
+          fill="none"
+          stroke="var(--p-frost-blue)"
+          strokeWidth={0.9}
+          strokeDasharray="2 2"
+          opacity={0.75}
+          pointerEvents="none"
+        />
+      )}
+
       {logoUrl ? (
         <image
           href={logoUrl}
@@ -305,7 +351,7 @@ function ContagionGraphNode({
             textAnchor="middle"
             dominantBaseline="central"
             fill="currentColor"
-            fontSize={Math.min(10, node.r * 0.65)}
+            fontSize={Math.max(10, Math.min(11, node.r * 0.65))}
             fontWeight={600}
             pointerEvents="none"
           >
@@ -314,16 +360,22 @@ function ContagionGraphNode({
         )
       )}
 
-      {(isHovered || focusedId === node.id) && (
+      {(isHovered || focusedId === node.id || pinnedSelectionId === node.id) && (
         <circle
           cx={position.x}
           cy={position.y}
           r={node.r + (focusedId === node.id ? 3 : 2)}
           fill="none"
-          stroke={focusedId === node.id ? "var(--color-ring)" : "currentColor"}
+          stroke={
+            focusedId === node.id
+              ? "var(--color-ring)"
+              : pinnedSelectionId === node.id && !isHovered
+                ? "var(--p-frost-blue)"
+                : "currentColor"
+          }
           strokeWidth={focusedId === node.id ? 2 : 1.5}
           strokeDasharray={focusedId === node.id ? "4 2" : undefined}
-          opacity={0.6}
+          opacity={focusedId === node.id ? 0.6 : pinnedSelectionId === node.id && !isHovered ? 0.85 : 0.6}
         />
       )}
 
@@ -360,6 +412,8 @@ export function ContagionGraphSvg({
   activeHoveredId,
   activeHoveredEdge,
   focusedId,
+  pinnedSelectionId,
+  pinnedNodeIds,
   connectedNodes,
   connectedEdges,
   nodeDistance,
@@ -375,9 +429,14 @@ export function ContagionGraphSvg({
   onNodeFocus,
   onNodeBlur,
   onNodeClick,
+  onNodeDoubleClick,
   onEdgeMouseEnter,
   onEdgeMouseLeave,
+  onCanvasClick,
 }: ContagionGraphSvgProps) {
+  const handleSvgClick = (event: ReactMouseEvent<SVGSVGElement>) => {
+    if (event.target === event.currentTarget) onCanvasClick();
+  };
   return (
     <svg
       ref={svgRef}
@@ -387,6 +446,7 @@ export function ContagionGraphSvg({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
+      onClick={handleSvgClick}
     >
       <ContagionGraphClipPaths nodes={nodes} positions={positions} />
 
@@ -416,6 +476,8 @@ export function ContagionGraphSvg({
             logos={logos}
             activeHoveredId={activeHoveredId}
             focusedId={focusedId}
+            pinnedSelectionId={pinnedSelectionId}
+            isPinnedPosition={pinnedNodeIds.has(node.id)}
             connectedNodes={connectedNodes}
             nodeDistance={nodeDistance}
             tierById={supernodeState.tierById}
@@ -426,6 +488,7 @@ export function ContagionGraphSvg({
             onFocus={onNodeFocus}
             onBlur={onNodeBlur}
             onClick={onNodeClick}
+            onDoubleClick={onNodeDoubleClick}
           />
         );
       })}

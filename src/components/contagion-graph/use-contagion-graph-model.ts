@@ -14,9 +14,11 @@ import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 import {
   buildGraphData,
   buildSupernodeState,
+  DEFAULT_NODE_LIMIT,
   runSimulation,
   type GraphNode,
   type HubTier,
+  type NodeLimitOption,
   type SupernodeState,
 } from "@/lib/contagion-layout";
 import type { ReportCard, ReportCardsResponse } from "@shared/types";
@@ -74,9 +76,11 @@ export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseC
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
+  const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
+
   const { nodes, links } = useMemo(
-    () => buildGraphData(cards, mcapMap, dependencyEdges),
-    [cards, dependencyEdges, mcapMap],
+    () => buildGraphData(cards, mcapMap, dependencyEdges, nodeLimit),
+    [cards, dependencyEdges, mcapMap, nodeLimit],
   );
 
   const supernodeState = useMemo<SupernodeState>(
@@ -193,16 +197,47 @@ export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseC
     setHoveredId(null);
     setFocusedId(null);
   }, []);
+  const dragMoveSuppressClick = useRef(false);
   const handleNodeClick = useCallback(
     (nodeId: string) => {
       if (drag.dragId) return;
+      if (dragMoveSuppressClick.current) {
+        dragMoveSuppressClick.current = false;
+        return;
+      }
       setInspectedId(nodeId);
       setSelectedNeighborhoodId(nodeId);
     },
     [drag.dragId],
   );
+  const handleNodeDoubleClick = useCallback(
+    (nodeId: string) => {
+      drag.unpinNode(nodeId);
+    },
+    [drag],
+  );
   const handleEdgeMouseEnter = useCallback((edgeIndex: number) => setHoveredEdge(edgeIndex), []);
   const handleEdgeMouseLeave = useCallback(() => setHoveredEdge(null), []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedNeighborhoodId(null);
+    setInspectedId(null);
+    setHoveredId(null);
+    setHoveredEdge(null);
+    setFocusedId(null);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      handleClearSelection();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [handleClearSelection]);
 
   return {
     svgRef,
@@ -212,8 +247,11 @@ export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseC
     setFocusMode,
     edgeTypeFilter,
     setEdgeTypeFilter,
+    nodeLimit,
+    setNodeLimit,
     nodeSelectOptions,
     effectiveSelectedNeighborhoodId,
+    pinnedSelectionId: selectedNeighborhoodId,
     setSelectedNeighborhoodId,
     handleTraceNodeChange,
     effectiveInspectedId,
@@ -233,7 +271,9 @@ export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseC
     handleNodeFocus,
     handleNodeBlur,
     handleNodeClick,
+    handleNodeDoubleClick,
     handleEdgeMouseEnter,
     handleEdgeMouseLeave,
+    handleClearSelection,
   };
 }

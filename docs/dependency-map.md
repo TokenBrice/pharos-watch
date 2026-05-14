@@ -2,7 +2,7 @@
 
 ## Overview
 
-The dependency map (`/dependency-map`) renders an interactive collateral graph for **up to 50 non-defunct stablecoins by market cap that have at least one live dependency edge (incoming or outgoing)**.
+The dependency map (`/dependency-map`) renders an interactive collateral graph for non-defunct stablecoins by market cap that have at least one live dependency edge. The visible node count is user-selectable at **50, 100, or 200** via the in-header Limit toggle; default is 50.
 
 Primary files:
 
@@ -12,7 +12,7 @@ Primary files:
 - `src/app/dependency-map/dependency-hubs-board.tsx` — desktop exact-value dependency hub board
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout logic
 - `src/components/contagion-graph.tsx` — SVG rendering, interaction handlers
-- `src/components/contagion-graph/contagion-graph-insights.tsx` — graph-side selection and systemic-hub inspection rail
+- `src/components/contagion-graph/contagion-graph-insights.tsx` — Selection overlay rendered on top of the SVG stage
 - `src/components/dependency-map-mobile-summary.tsx` — mobile quick-summary companion card
 
 ## Data Inputs
@@ -35,7 +35,7 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 - The mobile hub summary is built from `reportData.dependencyGraph?.edges ?? []` and does not use the static fallback.
 - Removes coins with no incoming and no outgoing live dependency edges.
 - Sorts remaining coins by market cap descending.
-- Takes top `MAX_NODES = 50`, then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
+- Takes the top N coins where N comes from the runtime Limit toggle (50 / 100 / 200; default `DEFAULT_NODE_LIMIT = 50`), then iteratively prunes coins that are isolated inside the displayed subset and backfills from lower-ranked candidates.
 - Node radius uses square-root scaling between `MIN_RADIUS = 10` and `MAX_RADIUS = 34`.
 
 Edges are derived from the report-card edge set:
@@ -94,9 +94,9 @@ Rendering behavior:
 
 ## Graph Workspace And Readability Controls
 
-The graph renders as a compact workspace inspired by terminal-style dependency explorers: a metric strip, visible focus controls, dependency-type tabs, a trace picker, the SVG viewport, and a graph-side inspection rail. The full exact-value Dependency Hubs Board remains below the graph for deeper review.
+The graph renders as a compact full-width workspace inspired by terminal-style dependency explorers: a metric strip, focus / type / limit controls, a trace picker, and the SVG viewport. A floating Selection overlay sits on top of the SVG stage when a node is hovered or pinned. The full exact-value Dependency Hubs Board remains below the graph for deeper review.
 
-The graph header exposes one runtime control group plus an always-visible trace picker:
+The graph header exposes:
 
 - **Focus mode**:
   - `All`: full graph
@@ -105,14 +105,17 @@ The graph header exposes one runtime control group plus an always-visible trace 
 - **Trace coin picker**:
   - Always visible.
   - Selecting a coin sets the neighborhood root and switches to `Selected neighborhood`.
-  - Clicking a node pins the same trace target without changing the current focus mode unless the user selects from the picker or the rail action.
+  - Clicking a node pins the same trace target without changing the current focus mode unless the user selects from the picker or the overlay action.
 - **Dependency type filter**:
   - `All`: no type filter.
   - `Collateral`, `Mechanism`, and `Wrapper`: show only visible edges of that dependency type while preserving the active focus mode.
-- **Inspection rail**:
-  - Shows the currently hovered, focused, or pinned node.
-  - Surfaces direct dependent count, upstream link count, summed visible dependent/upstream weights, and examples from the currently visible graph.
-  - Lists the top direct systemic hubs from the same `buildDependencyHubsModel()` output used by the desktop board, with row actions that jump into that hub's selected neighborhood.
+- **Node limit toggle**:
+  - `50` (default), `100`, or `200` top-mcap coins enter the map before isolated-node pruning.
+- **Selection overlay**:
+  - Renders only when a node is actively hovered or pinned (clicked).
+  - Sits in the top-right corner of the SVG stage with the HUD chrome (`--graph-panel-bg`, hairline border in `--graph-grid-line`).
+  - Surfaces direct dependent count, upstream link count, summed visible dependent/upstream weights, examples, and a "Trace neighborhood" action.
+  - The Selection overlay no longer lists Systemic Hubs — that surface is exclusive to the Dependency Hubs Board below the graph.
 
 The current UI does not expose a separate weak-edge compression or `Min edge` threshold control.
 
@@ -131,11 +134,19 @@ This keeps layout stable and prevents node clipping at the frame boundary.
 
 ## Visual Encoding
 
+Workspace canvas:
+
+- The SVG stage is a graph-local HUD surface with its own visual tokens: `--graph-canvas-bg`, `--graph-panel-bg`, and `--graph-grid-line`. The tokens live in `src/app/globals.css` and are scoped to the dependency-map workspace — they are not part of the global semantic layer.
+- Background uses a 24px CSS gradient grid in `--graph-grid-line`. Border is a 1px hairline in the same color with a 2px radius. No shadow.
+- Inner chrome (legend pill, SYSTEMIC/LEAF indicator) sits on `--graph-panel-bg` with the same hairline border and 2px radius.
+- The outer workspace card and the Dependency Hubs Board below it keep the warm system surface ramp; the cold HUD treatment is scoped to the SVG stage only.
+
 Node encoding:
 
 - Outer ring color = report-card grade band (`GRADE_RADAR_COLORS` + `gradeRange()`).
 - Node area = relative market cap (via radius scaling).
 - Logo is clipped to inner circle; text fallback uses symbol initials when logo is missing.
+- In-circle symbol labels use a 10–11px floor when rendered (small labels still respect node radius but never drop below 10px).
 
 Edge encoding:
 
@@ -148,32 +159,38 @@ Edge encoding:
 
 ## Interaction Model
 
-- **Drag**: nodes are draggable and clamped within padded bounds.
-- **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap).
+- **Drag**: nodes are draggable and clamped within padded bounds. Drop position pins the node permanently for the current session; pinned positions survive focus-mode and edge-type filter changes, and are decorated with a dashed inner ring + `(pinned)` accessibility label. Pinned nodes are session-only — never persisted to URL or `localStorage`.
+- **Double-click pinned node**: unpins it.
+- **`Pinned · N` chip** in the header strip: appears whenever any node is pinned; clicking it unpins all.
+- **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap). Connected edges restyle to the brand-blue highlight color (`--p-frost-blue`) at `0.9` opacity and `1.2px` stroke; non-connected nodes dim to `0.25`, non-connected edges to `0.1`.
 - **Hover edge**: shows tooltip with dependency pair + percentage weight + dependency type.
-- **Click node**: pins the node in the inspection rail and sets it as the pending trace target. In `Selected neighborhood` mode this also retargets the visible neighborhood.
+- **Click node**: surfaces the node in the Selection overlay and sets it as the pending trace target. In `Selected neighborhood` mode this also retargets the visible neighborhood. A persistent brand-blue halo marks the pinned node when not currently hovered.
+- **Click empty canvas**: clears the pinned selection, hover state, and ripple. The Selection overlay hides until the next hover or click.
+- **Escape**: clears the pinned selection, hover state, and ripple. Skipped while a text input is focused.
 - **Trace picker / rail action**: switches to `Selected neighborhood` and shows the selected coin's direct graph neighborhood.
 
 ## Mobile Layout
 
-- The interactive graph now renders on all screen sizes, including phones.
-- On small screens, the graph workspace stacks controls, SVG viewport, and inspection rail vertically. The `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
-- Graph controls stack vertically on narrow widths while the SVG scales responsively through its `viewBox`.
+- The interactive graph renders on all screen sizes, including phones.
+- The SVG viewport takes the full width of the workspace at every breakpoint. The Selection overlay floats over the top-right corner of the SVG when active; on narrow viewports it falls back to a 260px width and respects a `max-w-[calc(100%-1rem)]` clamp.
+- The `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
+- Graph controls stack vertically on narrow widths.
 
 ### Contagion Ripple
 
 When a node is hovered, the graph visualizes how stress could propagate through the dependency chain:
 
 - **Direct neighbors** (both upstream collateral and downstream dependents) highlight at distance 1.
-- **Downstream contagion** (nodes that depend on the hovered node, transitively) ripples outward up to 4 hops (`maxRippleHops` default in `buildRippleContext`) via BFS following dependency direction (`tgtId` → `srcId`).
-- **Staggered timing**: each hop adds `100ms` of transition delay, creating a visible wave of emphasis radiating from the hovered node.
-- **Distance-based fade**: multi-hop nodes and edges receive slightly reduced opacity further from the source, reinforcing the sense of attenuation.
-- All non-connected nodes dim to `0.4` opacity; non-connected edges dim to `0.05`.
-- CSS transitions (`opacity 200ms`, `stroke-width 160ms`) use `--motion-ease-standard` for smooth, consistent motion.
+- **Downstream contagion** (nodes that depend on the hovered node, transitively) ripples outward up to 4 hops (`maxRippleHops` default in `computeRippleState`) via BFS following dependency direction (`tgtId` → `srcId`).
+- **Staggered timing**: each hop adds `60ms` of transition delay, creating a visible wave of emphasis radiating from the hovered node.
+- **Distance-based fade**: multi-hop nodes and edges receive reduced opacity further from the source. Hop 4 attenuates to `0.55` node opacity and `0.45` edge opacity to keep second-order contagion visible without overwhelming the canvas.
+- All non-connected nodes dim to `0.25` opacity; non-connected edges dim to `0.1`.
+- Connected edges restyle to the brand-blue highlight color (`--p-frost-blue`) at `0.9` opacity and `1.2px` stroke (hop-4 edges keep their type color so they fade with the ripple tail).
+- CSS transitions (`opacity 200ms`, `stroke-width 160ms`, `stroke 200ms`) use `--motion-ease-standard` for smooth, consistent motion.
 
 ## Scope and Limits
 
-- The map is intentionally scoped to the largest 50 live dependency-linked coins for readability.
+- The map starts at the largest 50 live dependency-linked coins for readability; the in-header Limit toggle lets users expand to 100 or 200 when broader exposure context is needed. The d3-force overlap and post-pass collision passes scale O(n²) and remain interactive at 200 nodes.
 - Dependencies are snapshot-derived from the same effective dependency resolver used by report-card scoring: score-grade live reserve slices with tracked `coinId` links can replace curated reserve links for that snapshot, unmapped live reserve share remains implicit self-backed / non-stablecoin exposure, and synthetic tracked-variant `wrapper` edges remain dominant where applicable. The map still does not perform live on-chain graph discovery.
 - Live reserve sync still affects the map only through the report-card snapshot; detail-only, stale, degraded, or non-score-grade reserve feeds do not create graph edges.
 - Defunct coins are excluded from the graph.

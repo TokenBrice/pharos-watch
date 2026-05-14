@@ -78,6 +78,11 @@
   --surface-raised: var(--p-neutral-100);
   --page-glow-top: radial-gradient(95rem 48rem at 9% -14%, oklch(0.78 0.08 248 / 18%), transparent 56%);
   --page-glow-bottom: radial-gradient(84rem 36rem at 92% 114%, oklch(0.86 0.05 200 / 12%), transparent 62%);
+
+  /* Graph workspace HUD tokens — scoped to /dependency-map SVG stage. */
+  --graph-canvas-bg: oklch(0.985 0 0);
+  --graph-panel-bg: oklch(1 0 0);
+  --graph-grid-line: oklch(0.92 0 0);
 }
 
 .dark {
@@ -108,6 +113,11 @@
   --chart-5: oklch(0.645 0.246 16.439);
   --page-glow-top: radial-gradient(95rem 48rem at 8% -12%, oklch(0.54 0.16 264 / 19%), transparent 56%);
   --page-glow-bottom: radial-gradient(88rem 38rem at 90% 112%, oklch(0.47 0.13 185 / 14%), transparent 64%);
+
+  /* Graph workspace HUD tokens — scoped to /dependency-map SVG stage. */
+  --graph-canvas-bg: oklch(0.145 0 0);
+  --graph-panel-bg: oklch(0.18 0 0);
+  --graph-grid-line: oklch(0.26 0 0);
 }
 
 @layer base {

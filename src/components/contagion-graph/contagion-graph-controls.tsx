@@ -3,6 +3,7 @@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { EdgeTypeFilter, FocusMode } from "@/components/contagion-graph-graph";
 import type { ContagionGraphNodeSelectOption } from "@/components/contagion-graph/use-contagion-graph-model";
+import { NODE_LIMIT_OPTIONS, type NodeLimitOption } from "@/lib/contagion-layout";
 
 const TYPE_FILTERS: readonly { value: EdgeTypeFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -14,20 +15,24 @@ const TYPE_FILTERS: readonly { value: EdgeTypeFilter; label: string }[] = [
 interface ContagionGraphControlsProps {
   focusMode: FocusMode;
   edgeTypeFilter: EdgeTypeFilter;
+  nodeLimit: NodeLimitOption;
   nodeSelectOptions: ContagionGraphNodeSelectOption[];
   selectedNeighborhoodId: string | null;
   onFocusModeChange: (focusMode: FocusMode) => void;
   onEdgeTypeFilterChange: (edgeTypeFilter: EdgeTypeFilter) => void;
+  onNodeLimitChange: (limit: NodeLimitOption) => void;
   onTraceNodeChange: (nodeId: string | null) => void;
 }
 
 export function ContagionGraphControls({
   focusMode,
   edgeTypeFilter,
+  nodeLimit,
   nodeSelectOptions,
   selectedNeighborhoodId,
   onFocusModeChange,
   onEdgeTypeFilterChange,
+  onNodeLimitChange,
   onTraceNodeChange,
 }: ContagionGraphControlsProps) {
   return (
@@ -117,6 +122,37 @@ export function ContagionGraphControls({
           </ToggleGroup>
         </div>
       </div>
+
+      <div className="flex w-full items-center gap-2">
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Limit</span>
+        <div className="w-0 min-w-0 flex-1 overflow-x-auto">
+          <ToggleGroup
+            type="single"
+            value={String(nodeLimit)}
+            aria-label="Maximum nodes shown"
+            onValueChange={(value) => {
+              if (value) onNodeLimitChange(Number(value) as NodeLimitOption);
+            }}
+            variant="outline"
+            size="sm"
+            className="inline-flex h-9 min-w-max rounded-md md:h-7"
+          >
+            {NODE_LIMIT_OPTIONS.map((limit) => (
+              <ToggleGroupItem
+                key={limit}
+                value={String(limit)}
+                className="font-mono text-[10px] uppercase tracking-[0.08em]"
+              >
+                {limit}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+      </div>
+
+      <p className="text-[10px] leading-relaxed text-muted-foreground">
+        Focus narrows the visible subgraph; type filters which dependency edges are drawn; limit caps how many top-mcap coins enter the map.
+      </p>
     </div>
   );
 }

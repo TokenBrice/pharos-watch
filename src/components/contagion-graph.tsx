@@ -18,17 +18,9 @@ interface ContagionGraphProps {
   dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
-  dependencyHubs?: readonly {
-    id: string;
-    label: string;
-    symbol: string;
-    dependentCount: number;
-    summedDirectDependencyWeight: number;
-    uniqueDependentMcapUsd: number;
-  }[];
 }
 
-export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, dependencyHubs }: ContagionGraphProps) {
+export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: ContagionGraphProps) {
   const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap });
 
   if (graph.nodes.length === 0) return null;
@@ -47,7 +39,8 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, depende
   const tooltipAnnouncement = buildTooltipAnnouncement(tooltipContext);
   const nodeTooltipEl = buildNodeTooltipElement(tooltipContext);
   const edgeTooltipEl = buildEdgeTooltipElement(tooltipContext);
-  const inspectedNode = graph.nodeMap.get(graph.effectiveInspectedId ?? "") ?? null;
+  const overlayInspectedId = graph.activeHoveredId ?? graph.pinnedSelectionId ?? null;
+  const inspectedNode = overlayInspectedId ? graph.nodeMap.get(overlayInspectedId) ?? null : null;
 
   return (
     <Card className="overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none">
@@ -56,20 +49,24 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, depende
           Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
           {graph.visibleLinks.length} visible edges.
         </p>
-        <ContagionGraphHeader graph={graph} dependencyHubCount={dependencyHubs?.length} />
+        <ContagionGraphHeader graph={graph} />
       </CardHeader>
       <CardContent className="p-3 sm:p-4">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <ContagionGraphStage graph={graph} logos={logos} nodeTooltipEl={nodeTooltipEl} edgeTooltipEl={edgeTooltipEl} />
-          <ContagionGraphInsights
-            inspectedNode={inspectedNode}
-            visibleLinks={graph.visibleLinks}
-            nodeMap={graph.nodeMap}
-            hubs={dependencyHubs}
-            logos={logos}
-            onTraceNode={graph.handleTraceNodeChange}
-          />
-        </div>
+        <ContagionGraphStage
+          graph={graph}
+          logos={logos}
+          nodeTooltipEl={nodeTooltipEl}
+          edgeTooltipEl={edgeTooltipEl}
+          overlay={
+            <ContagionGraphInsights
+              inspectedNode={inspectedNode}
+              visibleLinks={graph.visibleLinks}
+              nodeMap={graph.nodeMap}
+              logos={logos}
+              onTraceNode={graph.handleTraceNodeChange}
+            />
+          }
+        />
         <div className="sr-only" aria-live="polite" aria-atomic="true">
           {tooltipAnnouncement}
         </div>
