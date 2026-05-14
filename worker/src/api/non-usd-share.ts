@@ -1,6 +1,5 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../lib/db";
 import {
   addFreshnessHeaders,
   jsonResponse,
@@ -28,14 +27,11 @@ const FIAT_NON_USD_IDS = ACTIVE_STABLECOINS
 interface AggRow {
   snapshot_date: number;
   total: number;
+  commodity: number;
+  fiat_non_usd: number;
 }
 
-interface CategoryAggRow {
-  snapshot_date: number;
-  amount: number;
-}
-
-async function readTotalRows(
+async function readRows(
   db: D1Database,
   cutoff: number,
   latestSnapshotFilter: string,
@@ -43,50 +39,23 @@ async function readTotalRows(
 ): Promise<AggRow[]> {
   const result = await db
     .prepare(
-      `SELECT
+      `WITH
+         commodity_ids(id) AS (SELECT value FROM json_each(?)),
+         fiat_non_usd_ids(id) AS (SELECT value FROM json_each(?))
+       SELECT
          snapshot_date,
-         ROUND(SUM(circulating_usd), 2) AS total
+         ROUND(SUM(circulating_usd), 2) AS total,
+         ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM commodity_ids) THEN circulating_usd ELSE 0 END), 2) AS commodity,
+         ROUND(SUM(CASE WHEN stablecoin_id IN (SELECT id FROM fiat_non_usd_ids) THEN circulating_usd ELSE 0 END), 2) AS fiat_non_usd
        FROM supply_history
        WHERE snapshot_date >= ?${latestSnapshotFilter}
        GROUP BY snapshot_date
        ORDER BY snapshot_date ASC`,
     )
-    .bind(cutoff, ...latestSnapshotBinds)
+    .bind(JSON.stringify(COMMODITY_IDS), JSON.stringify(FIAT_NON_USD_IDS), cutoff, ...latestSnapshotBinds)
     .all<AggRow>();
 
   return result.results ?? [];
-}
-
-async function readCategoryTotalsByDate(
-  db: D1Database,
-  ids: readonly string[],
-  cutoff: number,
-  latestSnapshotFilter: string,
-  latestSnapshotBinds: readonly unknown[],
-): Promise<Map<number, number>> {
-  const totals = new Map<number, number>();
-
-  for (const idChunk of chunkArray(ids, D1_SAFE_IN_CLAUSE_BIND_LIMIT)) {
-    const inClause = buildInClause(idChunk);
-    const result = await db
-      .prepare(
-        `SELECT
-           snapshot_date,
-           ROUND(SUM(circulating_usd), 2) AS amount
-         FROM supply_history
-         WHERE snapshot_date >= ?${latestSnapshotFilter}
-           AND stablecoin_id IN (${inClause.sql})
-         GROUP BY snapshot_date`,
-      )
-      .bind(cutoff, ...latestSnapshotBinds, ...inClause.binds)
-      .all<CategoryAggRow>();
-
-    for (const row of result.results ?? []) {
-      totals.set(row.snapshot_date, (totals.get(row.snapshot_date) ?? 0) + row.amount);
-    }
-  }
-
-  return totals;
 }
 
 export const handleNonUsdShare = withErrorHandler(
@@ -101,11 +70,7 @@ export const handleNonUsdShare = withErrorHandler(
     const latestSnapshotFilter = completedSnapshot == null ? "" : " AND snapshot_date <= ?";
     const latestSnapshotBinds = completedSnapshot == null ? [] : [completedSnapshot.snapshotDate];
 
-    const [rows, commodityByDate, fiatNonUsdByDate] = await Promise.all([
-      readTotalRows(db, cutoff, latestSnapshotFilter, latestSnapshotBinds),
-      readCategoryTotalsByDate(db, COMMODITY_IDS, cutoff, latestSnapshotFilter, latestSnapshotBinds),
-      readCategoryTotalsByDate(db, FIAT_NON_USD_IDS, cutoff, latestSnapshotFilter, latestSnapshotBinds),
-    ]);
+    const rows = await readRows(db, cutoff, latestSnapshotFilter, latestSnapshotBinds);
 
     // Downsample: daily for last 90d, weekly for last 2y, monthly beyond
     const nowSec = Math.floor(Date.now() / 1000);
@@ -135,14 +100,12 @@ export const handleNonUsdShare = withErrorHandler(
       }
 
       if (row.snapshot_date - lastKeptDate >= interval) {
-        const commodity = commodityByDate.get(row.snapshot_date) ?? 0;
-        const fiatNonUsd = fiatNonUsdByDate.get(row.snapshot_date) ?? 0;
         points.push({
           date: row.snapshot_date,
-          commodityShare: Math.round(((commodity / row.total) * 100) * 10000) / 10000,
-          fiatNonUsdShare: Math.round(((fiatNonUsd / row.total) * 100) * 10000) / 10000,
-          commodity,
-          fiatNonUsd,
+          commodityShare: Math.round(((row.commodity / row.total) * 100) * 10000) / 10000,
+          fiatNonUsdShare: Math.round(((row.fiat_non_usd / row.total) * 100) * 10000) / 10000,
+          commodity: row.commodity,
+          fiatNonUsd: row.fiat_non_usd,
           total: row.total,
         });
         lastKeptDate = row.snapshot_date;
