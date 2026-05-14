@@ -80,6 +80,19 @@ describe("mockD1 helper", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
+  it("supports strict mode as exact SQL plus required match shorthand", async () => {
+    const db = mockD1([
+      { match: "SELECT value FROM sample WHERE id = ?", rows: [{ value: "one" }] },
+    ], { strict: true });
+
+    const result = await db.prepare("SELECT   value   FROM   sample WHERE id = ?").bind(1).all<{ value: string }>();
+    expect(result.results).toEqual([{ value: "one" }]);
+
+    await expect(
+      db.prepare("SELECT value FROM sample WHERE id = ? ORDER BY value").bind(1).all(),
+    ).rejects.toThrow("mockD1: no match for SQL: SELECT value FROM sample WHERE id = ? ORDER BY value");
+  });
+
   it("throws when requireMatch is enabled and no configured SQL matches", async () => {
     const db = mockD1([], { requireMatch: true });
 

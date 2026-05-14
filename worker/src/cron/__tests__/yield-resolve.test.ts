@@ -159,6 +159,8 @@ vi.mock("@shared/lib/stablecoins", () => {
   FROZEN_IDS: new Set<string>(),
   FROZEN_META_BY_ID: new Map<string, never>(),
   FROZEN_STABLECOINS: [],
+  ACTIVE_IDS: new Set(stablecoins.map((s) => s.id)),
+  ACTIVE_META_BY_ID: new Map(stablecoins.map((s) => [s.id, s])),
   READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
   READABLE_STABLECOINS: stablecoins,
   READABLE_META_BY_ID: new Map(stablecoins.map((s) => [s.id, s])),

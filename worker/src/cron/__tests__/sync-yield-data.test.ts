@@ -64,8 +64,10 @@ vi.mock("@shared/lib/stablecoins", () => {
       contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
     },
   ];
+  const metaById = new Map(stablecoins.map((stablecoin) => [stablecoin.id, stablecoin]));
   return {
   TRACKED_STABLECOINS: stablecoins,
+  ACTIVE_IDS: new Set(stablecoins.map((s) => s.id)),
   ACTIVE_STABLECOINS: stablecoins,
   TRACKED_META_BY_ID: new Map([
     ["100", {
@@ -131,7 +133,8 @@ vi.mock("@shared/lib/stablecoins", () => {
   FROZEN_STABLECOINS: [],
   READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
   READABLE_STABLECOINS: stablecoins,
-  READABLE_META_BY_ID: new Map(stablecoins.map((s) => [s.id, s])),
+  ACTIVE_META_BY_ID: metaById,
+  READABLE_META_BY_ID: metaById,
   };
 });
 

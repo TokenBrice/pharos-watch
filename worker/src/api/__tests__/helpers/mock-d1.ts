@@ -31,6 +31,8 @@ export interface MockD1Database extends D1Database {
 }
 
 export interface MockD1Options {
+  /** Shorthand for requireMatch + strictSql. */
+  strict?: boolean;
   /** Require every executed statement to match a configured table entry. */
   requireMatch?: boolean;
   /** Match normalized SQL exactly instead of substring search. */
@@ -66,12 +68,14 @@ function isCacheKeyLookup(sql: string): boolean {
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   const matchHits = new Map<MockTableConfig, number>();
+  const requireMatch = options.strict === true || options.requireMatch === true;
+  const strictSql = options.strict === true || options.strictSql === true;
 
   function findTable(sql: string, boundValues: unknown[]): MockTableConfig | undefined {
     const normalizedSql = normalizeSql(sql);
     const sqlMatches = (table: MockTableConfig) => {
-      const candidate = options.strictSql ? normalizeSql(table.match) : table.match;
-      return options.strictSql ? normalizedSql === candidate : sql.includes(candidate);
+      const candidate = strictSql ? normalizeSql(table.match) : table.match;
+      return strictSql ? normalizedSql === candidate : sql.includes(candidate);
     };
 
     const exactBindMatch = tables.find(
@@ -95,7 +99,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
     const executeAll = async <T>() => {
       history.push({ sql, binds: [...boundValues] });
       const table = findTable(sql, boundValues);
-      if (!table && options.requireMatch) {
+      if (!table && requireMatch) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -110,7 +114,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
     const executeFirst = async <T>() => {
       history.push({ sql, binds: [...boundValues] });
       const table = findTable(sql, boundValues);
-      if (!table && options.requireMatch) {
+      if (!table && requireMatch) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
@@ -129,7 +133,7 @@ export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = 
     const executeRun = async () => {
       history.push({ sql, binds: [...boundValues] });
       const table = findTable(sql, boundValues);
-      if (!table && options.requireMatch) {
+      if (!table && requireMatch) {
         throw new Error(`mockD1: no match for SQL: ${normalizeSql(sql)}`);
       }
       if (table?.throwError != null) throw toError(table.throwError);
