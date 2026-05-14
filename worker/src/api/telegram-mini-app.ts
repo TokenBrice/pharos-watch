@@ -7,7 +7,11 @@ import {
   validateTelegramMiniAppInitData,
   type TelegramMiniAppAuthContext,
 } from "../lib/telegram-mini-app-auth";
-import { recordTelegramUsageEvent, type TelegramUsageEventType } from "../lib/telegram-usage-analytics";
+import {
+  bucketTelegramCommandLatency,
+  recordTelegramUsageEvent,
+  type TelegramUsageEventType,
+} from "../lib/telegram-usage-analytics";
 import { acquireTelegramCommandCooldown } from "./telegram-webhook-store";
 import { TelegramMiniAppMutationRequestSchema, TelegramMiniAppSessionRequestSchema, type TelegramMiniAppOperation } from "./telegram-mini-app-schemas";
 import { TelegramMiniAppMutationError, applyTelegramMiniAppMutation, mutationActionDetail } from "./telegram-mini-app-mutations";
@@ -91,6 +95,7 @@ async function recordMiniAppEvent(db: D1Database, input: {
   actionDetail?: string | null;
   outcome?: string | null;
   failureClass?: string | null;
+  latencyMs?: number | null;
 }): Promise<void> {
   await recordTelegramUsageEvent(db, {
     eventType: input.eventType,
@@ -98,6 +103,7 @@ async function recordMiniAppEvent(db: D1Database, input: {
     actionDetail: input.actionDetail,
     outcome: input.outcome,
     failureClass: input.failureClass,
+    latencyBucket: bucketTelegramCommandLatency(input.latencyMs ?? null),
   });
 }
 
@@ -109,9 +115,10 @@ function authResponse(err: TelegramMiniAppAuthError): Response {
 }
 
 async function validateOrResponse(
+  db: D1Database,
   initData: string,
   botToken: string,
-  options: { maxAgeSec: number },
+  options: { maxAgeSec: number; start: number },
   botTokenPrevious?: string,
 ): Promise<TelegramMiniAppAuthContext | Response> {
   try {
@@ -123,6 +130,18 @@ async function validateOrResponse(
     );
   } catch (err) {
     if (err instanceof TelegramMiniAppAuthError) {
+      if (err.code === "stale-auth") {
+        // Stale-auth requires the HMAC signature to have already validated; emit
+        // a usage event so operators can distinguish expired sessions from
+        // invalid-signature / invalid-auth (which stay silent to avoid an
+        // unauthenticated-write gate). See backend audit F5 / T-63.
+        await recordMiniAppEvent(db, {
+          eventType: "mini_app_session_invalid",
+          outcome: err.code,
+          failureClass: err.code,
+          latencyMs: Date.now() - options.start,
+        });
+      }
       return authResponse(err);
     }
     throw err;
@@ -160,6 +179,7 @@ function mutationErrorResponseCode(code: TelegramMiniAppMutationError["code"]): 
 export const handleTelegramMiniAppSession = miniAppErrorHandler(
   "telegram-mini-app-session",
   async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
+    const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const oversize = rejectOversizedBody(request);
     if (oversize) return oversize;
@@ -170,8 +190,9 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       return miniAppError(400, "validation-error", "Invalid Mini App session payload");
     }
 
-    const auth = await validateOrResponse(parsed.initData, botToken, {
+    const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_SESSION_AUTH_MAX_AGE_SEC,
+      start,
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
@@ -187,9 +208,9 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       });
     }
 
-    await recordMiniAppEvent(db, { eventType: "mini_app_open", auth, outcome: "success" });
-    await recordMiniAppEvent(db, { eventType: "mini_app_session_valid", auth, outcome: "success" });
-    if (!auth.canMutatePrivateChat) await recordMiniAppEvent(db, { eventType: "mini_app_group_readonly", auth, outcome: "readonly" });
+    await recordMiniAppEvent(db, { eventType: "mini_app_open", auth, outcome: "success", latencyMs: Date.now() - start });
+    await recordMiniAppEvent(db, { eventType: "mini_app_session_valid", auth, outcome: "success", latencyMs: Date.now() - start });
+    if (!auth.canMutatePrivateChat) await recordMiniAppEvent(db, { eventType: "mini_app_group_readonly", auth, outcome: "readonly", latencyMs: Date.now() - start });
 
     return jsonResponse(await loadTelegramMiniAppState(db, auth, {
       nowSec: nowSec(),
@@ -201,6 +222,7 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
 export const handleTelegramMiniAppMutation = miniAppErrorHandler(
   "telegram-mini-app-mutation",
   async (db: D1Database, request: Request, botToken: string | undefined, botTokenPrevious?: string | undefined): Promise<Response> => {
+    const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const oversize = rejectOversizedBody(request);
     if (oversize) return oversize;
@@ -211,8 +233,9 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       return miniAppError(400, "validation-error", "Invalid Mini App mutation payload");
     }
 
-    const auth = await validateOrResponse(parsed.initData, botToken, {
+    const auth = await validateOrResponse(db, parsed.initData, botToken, {
       maxAgeSec: TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
+      start,
     }, botTokenPrevious);
     if (auth instanceof Response) return auth;
 
@@ -241,6 +264,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         actionDetail: mutationActionDetail(parsed.operation),
         outcome: "denied",
         failureClass: "replayed-auth",
+        latencyMs: Date.now() - start,
       });
       return miniAppError(
         409,
@@ -259,6 +283,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
           actionDetail: mutationActionDetail(parsed.operation),
           outcome: err.code === "not-private" ? "denied" : "validation_error",
           failureClass: err.code,
+          latencyMs: Date.now() - start,
         });
         return miniAppError(err.status, mutationErrorResponseCode(err.code), mutationErrorMessage(err));
       }
@@ -278,6 +303,7 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       auth,
       actionDetail: mutationActionDetail(parsed.operation),
       outcome: "success",
+      latencyMs: Date.now() - start,
     });
     return jsonResponse(await loadTelegramMiniAppState(db, auth, {
       nowSec: nowSec(),

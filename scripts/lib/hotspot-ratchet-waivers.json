@@ -51,10 +51,6 @@
     "disposition": "queued-p4",
     "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
   },
-  "worker/src/cron/yield-sync/cache.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after merging the local yield coverage and publication-health tranche. Yield cache validation now covers rankings publication state, benchmark caches, supplemental source caches, and deterministic on-chain health; split schema parsing by cache family in a dedicated yield cleanup pass."
-  },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
     "notes": "Yield leaderboard row rendering now owns rank, source, APY, score, warning, and expanded source-risk tooltip details. Keep waived for the v8 rollout; split score tooltip and mobile row content into focused helpers in the next yield UI cleanup pass."
@@ -62,10 +58,6 @@
   "src/components/homepage-client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface."
-  },
-  "shared/lib/redemption-backstop-configs/validation.ts": {
-    "disposition": "queued-p4",
-    "notes": "Redemption registry validation currently centralizes schema checks, source-module AST auditing, documentation support ratchets, policy rows, and coverage summaries. Keep waived for the v4 validation tranche; split source-module AST scanning and policy validation into helper modules in the next redemption-maintenance pass."
   },
   "worker/src/lib/redemption-backstop-capacity.ts": {
     "disposition": "queued-p4",
@@ -87,16 +79,12 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after adjacent admin cleanup. Backfill depegs still mixes request parsing, historical replay setup, PSI side effects, and mutation orchestration; split planning from execution in a focused depeg admin pass."
   },
-  "worker/src/lib/telegram-usage-analytics.ts": {
-    "disposition": "queued-p4",
-    "notes": "Telegram Mini App usage events widened the existing analytics module. Usage analytics still centralizes dimension normalization, D1 rollups, Mini App events, and delivery outcome attribution; split aggregation and persistence in a dedicated Telegram analytics cleanup."
-  },
   "worker/src/lib/dews.ts": {
     "disposition": "queued-p4",
     "notes": "Phase 2 DEWS hardening added evidence classification, source-quality scoring, expanded explainability metadata, and compatibility gates in the core scoring module. Keep the logic colocated for the v6.0 rollout; split signal families and evidence policy into focused helpers in the next DEWS cleanup pass."
   },
-  "src/app/compare/client.tsx": {
+  "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Surfaced after command palette and portfolio model extraction. Compare client still owns URL state, selection, chart/table composition, and share actions; split route state from section rendering in a dedicated compare cleanup."
+    "notes": "Mini App client now owns tab routing, Telegram bridge affordances, optimistic mutations, snooze/timezone/danger-zone controls, and per-coin quick links. Keep waived for this Mini App controls tranche; split Telegram bridge effects, mutation handlers, and panel components into focused modules before adding more client-side behavior."
   }
 }

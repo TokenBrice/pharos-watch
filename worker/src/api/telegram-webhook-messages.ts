@@ -1,4 +1,5 @@
 import { escapeHtml } from "../lib/telegram";
+import { MANAGE_PAGE_SIZE } from "../lib/telegram-constants";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import type {
@@ -9,6 +10,9 @@ import { isQuietHoursActive } from "../cron/telegram-quiet-hours";
 import type { PresetSubscriptionRow, SubscriberRow, SubscriptionRow } from "./telegram-webhook-shared";
 import { STABLECOIN_BY_ID } from "./telegram-webhook-shared";
 import type { StatusForCoin } from "./telegram-webhook-status";
+
+// Re-export so existing callers importing this constant from this module keep working.
+export { MANAGE_PAGE_SIZE };
 
 const GLOBAL_SAFETY_LABEL = "Safety (downgrades; 3-point drop when scored)";
 
@@ -377,9 +381,6 @@ export function buildStatusDiscoveryKeyboard(stablecoinId: string, options: { in
   if (options.includeMiniAppButton) rows.push([{ text: "Tune alerts", web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) } }]);
   return { inline_keyboard: rows };
 }
-
-/** Page size for the /list `[ Manage ]` keyboard. */
-export const MANAGE_PAGE_SIZE = 5;
 
 /** Inline keyboard with a single `[ Manage ]` entry button, attached to /list. */
 export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boolean } = {}): {

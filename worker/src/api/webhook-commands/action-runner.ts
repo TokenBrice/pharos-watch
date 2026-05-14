@@ -41,6 +41,10 @@ import {
 } from "../telegram-webhook-shared";
 import { dedupeCoins } from "../telegram-webhook-parsing";
 import { sendAuditedTelegramReply } from "../telegram-webhook-replies";
+import {
+  BULK_CONFIRM_COIN_THRESHOLD,
+  BULK_CONFIRM_PREVIEW_LIMIT,
+} from "../../lib/telegram-constants";
 
 export interface TelegramActionContext {
   db: D1Database;
@@ -58,14 +62,6 @@ export type ActionPayloadMap = {
 const TELEGRAM_PRESET_LABEL_BY_ID = new Map(
   listTelegramPresets().map((definition) => [definition.id, definition.label] as const),
 );
-
-/**
- * Bulk subscribe/unsubscribe commands are gated behind an inline Confirm/Cancel
- * keyboard when the resolved coin set exceeds this threshold OR the literal
- * `all` token was used. See P0-C1 in `agents/pharoswatchbot-reliability-and-ux-plan-2026-05-11.md`.
- */
-const BULK_CONFIRM_COIN_THRESHOLD = 10;
-const BULK_CONFIRM_PREVIEW_LIMIT = 5;
 
 const SUBSCRIBABLE_COIN_COUNT = TRACKED_STABLECOINS.filter((coin) => !FROZEN_IDS.has(coin.id)).length;
 

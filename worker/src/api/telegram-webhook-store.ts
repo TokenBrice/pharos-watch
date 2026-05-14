@@ -10,14 +10,15 @@ import type {
 } from "./telegram-webhook-shared";
 import { DISAMBIGUATION_TTL_SEC } from "./telegram-webhook-shared";
 import { dedupeCoins } from "./telegram-webhook-parsing";
+import {
+  TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC,
+  TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC,
+  TELEGRAM_PROCESSING_STALE_SEC,
+} from "../lib/telegram-constants";
 
 export function unixNow(): number {
   return Math.floor(Date.now() / 1000);
 }
-
-const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
-const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
-const TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC = 6 * 60 * 60;
 
 export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
   "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
@@ -970,7 +971,7 @@ export async function clearAlertSnooze(
     .run();
 }
 
-export function preparePresetSubscriptionStatements(
+function preparePresetSubscriptionStatements(
   db: D1Database,
   chatId: string,
   presetIds: readonly string[],

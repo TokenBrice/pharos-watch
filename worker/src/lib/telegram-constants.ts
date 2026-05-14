@@ -124,3 +124,31 @@ export const TELEGRAM_PENDING_PRIORITY = {
 
 /** TTL for pending ticker-disambiguation rows (5 minutes). */
 export const DISAMBIGUATION_TTL_SEC = 5 * 60;
+
+// ---------- Processed-updates retention ----------
+
+/** Retain processed `telegram_processed_updates` rows for 7 days for replay-ack idempotency. */
+export const TELEGRAM_PROCESSED_UPDATE_RETENTION_SEC = 7 * 24 * 60 * 60;
+
+/** A `processing` claim older than this is considered stale and can be reclaimed by another worker. */
+export const TELEGRAM_PROCESSING_STALE_SEC = 5 * 60;
+
+/** Minimum interval between processed-updates retention prune passes. */
+export const TELEGRAM_PROCESSED_UPDATE_PRUNE_INTERVAL_SEC = 6 * 60 * 60;
+
+// ---------- Bulk subscribe/unsubscribe confirmation gate ----------
+
+/**
+ * Bulk subscribe/unsubscribe commands are gated behind an inline Confirm/Cancel
+ * keyboard when the resolved coin set exceeds this threshold OR the literal
+ * `all` token was used.
+ */
+export const BULK_CONFIRM_COIN_THRESHOLD = 10;
+
+/** Maximum number of coin symbols to inline in the bulk-confirm preview line. */
+export const BULK_CONFIRM_PREVIEW_LIMIT = 5;
+
+// ---------- /list manage keyboard ----------
+
+/** Page size for the /list `[ Manage ]` keyboard. */
+export const MANAGE_PAGE_SIZE = 5;

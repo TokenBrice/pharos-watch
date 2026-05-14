@@ -32,7 +32,7 @@ export const TELEGRAM_START_PAYLOAD_MAX_LENGTH = 64;
  * every payload we issue fits well under the `?start=` cap so this is only a
  * defensive ceiling for inbound parsing.
  */
-export const TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH = 512;
+const TELEGRAM_STARTAPP_PAYLOAD_MAX_LENGTH = 512;
 
 /**
  * Allowed payload charset for both surfaces. Matches the `?start=` regex
@@ -71,7 +71,7 @@ const PAYLOAD_NAME_VALUES = new Set<string>(Object.values(MINI_APP_PAYLOAD_NAMES
  * (e.g. `usdc-circle`, `isc-international-stable-currency`), which the shared
  * charset permits.
  */
-export const COIN_PAYLOAD_PREFIX = "coin_";
+const COIN_PAYLOAD_PREFIX = "coin_";
 
 /** Discriminated union of all recognized Mini App payloads. */
 export type TelegramMiniAppPayload =
@@ -79,12 +79,12 @@ export type TelegramMiniAppPayload =
   | { kind: "coin"; coinId: string };
 
 /** Returns true if `payload` is the parametric coin form. */
-export function isCoinPayload(payload: string): boolean {
+function isCoinPayload(payload: string): boolean {
   return payload.startsWith(COIN_PAYLOAD_PREFIX) && payload.length > COIN_PAYLOAD_PREFIX.length;
 }
 
 /** Extracts the stablecoin id from a `coin_<id>` payload, or null. */
-export function parseCoinPayload(payload: string): string | null {
+function parseCoinPayload(payload: string): string | null {
   if (!isCoinPayload(payload)) return null;
   return payload.slice(COIN_PAYLOAD_PREFIX.length);
 }
@@ -111,8 +111,9 @@ export function parseMiniAppPayload(raw: string | null | undefined): TelegramMin
   if (PAYLOAD_NAME_VALUES.has(lower)) {
     return { kind: "named", name: lower as MiniAppPayloadName };
   }
-  if (isCoinPayload(lower)) {
-    return { kind: "coin", coinId: lower.slice(COIN_PAYLOAD_PREFIX.length) };
+  const coinId = parseCoinPayload(lower);
+  if (coinId) {
+    return { kind: "coin", coinId };
   }
   return null;
 }

@@ -1,5 +1,6 @@
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
+import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,
@@ -585,7 +586,7 @@ export function buildAlertReplyMarkup(
           [
             {
               text: "Open Watchlist",
-              web_app: { url: buildTelegramMiniAppUrl("watchlist") },
+              web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
             },
           ],
         ],
@@ -621,7 +622,7 @@ export function buildAlertReplyMarkup(
     baseRows.push([
       {
         text: "Tune in app",
-        web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) },
+        web_app: { url: buildTelegramMiniAppUrl(formatCoinPayload(stablecoinId)) },
       },
     ]);
   }

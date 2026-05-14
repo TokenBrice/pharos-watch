@@ -275,6 +275,72 @@ describe("handleTelegramMiniAppSession", () => {
     expect(response.status).toBe(401);
     expect(db.getHistory()).toHaveLength(0);
   });
+
+  it("emits mini_app_session_invalid on stale auth but not on invalid signature", async () => {
+    // T-63: stale-auth has already passed the HMAC check, so emitting a
+    // usage event does not create an unauthenticated-write gate. Invalid
+    // signature stays silent.
+    // 24h session window + 1s gives stale-auth from the session handler.
+    const staleInitData = await signedInitData({
+      auth_date: String(NOW_SEC - 24 * 60 * 60 - 1),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const staleDb = mockD1();
+    const staleResponse = await handleTelegramMiniAppSession(
+      staleDb,
+      request("/api/telegram-mini-app/session", { initData: staleInitData }),
+      BOT_TOKEN,
+    );
+    expect(staleResponse.status).toBe(401);
+    const staleInvalidRows = staleDb
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("INSERT INTO telegram_usage_daily")
+        && entry.binds.includes("mini_app_session_invalid"),
+      );
+    expect(staleInvalidRows).toHaveLength(1);
+    expect(staleInvalidRows[0].binds).toContain("stale-auth");
+
+    // Invalid signature: zero-byte hash. Must not write any analytics row.
+    const invalidInitData = new URLSearchParams({
+      auth_date: String(NOW_SEC - 60),
+      hash: "0".repeat(64),
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    }).toString();
+    const invalidDb = mockD1();
+    const invalidResponse = await handleTelegramMiniAppSession(
+      invalidDb,
+      request("/api/telegram-mini-app/session", { initData: invalidInitData }),
+      BOT_TOKEN,
+    );
+    expect(invalidResponse.status).toBe(401);
+    expect(invalidDb.getHistory()).toHaveLength(0);
+  });
+
+  it("attaches a non-null latencyBucket to successful session analytics rows", async () => {
+    // T-64: every recordMiniAppEvent call carries latency telemetry. With fake
+    // timers `Date.now() - start === 0`, which buckets to "lt_250ms".
+    const initData = await privateInitData();
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(
+      db,
+      request("/api/telegram-mini-app/session", { initData }),
+      BOT_TOKEN,
+    );
+
+    expect(response.status).toBe(200);
+    const sessionValidRows = db
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("INSERT INTO telegram_usage_daily")
+        && entry.binds.includes("mini_app_session_valid"),
+      );
+    expect(sessionValidRows).toHaveLength(1);
+    // latency_bucket is the sixth bind in the INSERT (see telegram-usage-analytics.ts).
+    expect(sessionValidRows[0].binds[5]).toBe("lt_250ms");
+  });
 });
 
 describe("handleTelegramMiniAppMutation", () => {
@@ -794,6 +860,28 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(429);
     expect(await response.json()).toMatchObject({ code: "rate-limited" });
+  });
+
+  it("attaches a non-null latencyBucket to failed mutation analytics rows", async () => {
+    // T-64: failed mutations also carry latency telemetry. With fake timers
+    // `Date.now() - start === 0`, which buckets to "lt_250ms".
+    const initData = await privateInitData();
+    const db = mockD1();
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-coin-snooze", stablecoinId: "not-a-coin", durationToken: "1h" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(400);
+    const deniedRows = db
+      .getHistory()
+      .filter((entry) =>
+        entry.sql.includes("INSERT INTO telegram_usage_daily")
+        && entry.binds.includes("mini_app_mutation_denied"),
+      );
+    expect(deniedRows).toHaveLength(1);
+    expect(deniedRows[0].binds[5]).toBe("lt_250ms");
   });
 
   it("attaches stable error codes to each known-error response", async () => {

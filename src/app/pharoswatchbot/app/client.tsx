@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Bell, Bot, Check, Clock3, ExternalLink, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2 } from "lucide-react";
+import { Bell, Bot, Check, Clock3, ExternalLink, Home, Info, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
-import type { TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
+import type { TelegramAlertType, TelegramCoinSnoozeDurationToken, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState, TelegramSnoozeDurationToken } from "./types";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
@@ -29,26 +30,67 @@ const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
 const TELEGRAM_LAUNCH_RETRY_MS = 50;
 const UNDO_WINDOW_MS = 5_000;
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
+const SNOOZE_DURATION_TOKENS = ["1h", "4h", "24h"] as const satisfies readonly TelegramSnoozeDurationToken[];
+const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
+const BOT_USERNAME = "PharosWatchBot";
+const PHAROS_COIN_PAGE_PREFIX = "https://pharos.watch/stablecoin/";
 
 type ViewKey = "home" | "watchlist" | "presets" | "settings";
 
 const ORDERED_VIEWS: ViewKey[] = ["home", "watchlist", "presets", "settings"];
 
+type MiniAppErrorCode =
+  | "stale-auth"
+  | "replay-claimed"
+  | "not-private"
+  | "rate-limited"
+  | "validation-error"
+  | "body-too-large"
+  | "internal"
+  | "not-configured"
+  | "preset-unavailable"
+  | "unknown-coin"
+  | "unknown-preset"
+  | "invalid-coin-patch"
+  | "invalid-alert-types"
+  | "invalid-timezone";
+
 class MiniAppRequestError extends Error {
   readonly status: number;
+  readonly code: MiniAppErrorCode | null;
 
-  constructor(status: number) {
+  constructor(status: number, code: MiniAppErrorCode | null = null) {
     super(`Request failed with ${status}`);
     this.name = "MiniAppRequestError";
     this.status = status;
+    this.code = code;
   }
 }
 
 function initialViewFromStartParam(startParam: string | null): ViewKey {
-  if (startParam === "settings") return "settings";
-  if (startParam === "presets") return "presets";
-  if (startParam === "watchlist" || startParam?.startsWith("coin_")) return "watchlist";
+  const payload = parseMiniAppPayload(startParam);
+  if (!payload) return "home";
+  const intent = miniAppPayloadIntent(payload);
+  if (intent === "settings" || intent === "presets") return intent;
+  if (intent === "watchlist" || intent === "coin") return "watchlist";
   return "home";
+}
+
+function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
+  return value === "stale-auth"
+    || value === "replay-claimed"
+    || value === "not-private"
+    || value === "rate-limited"
+    || value === "validation-error"
+    || value === "body-too-large"
+    || value === "internal"
+    || value === "not-configured"
+    || value === "preset-unavailable"
+    || value === "unknown-coin"
+    || value === "unknown-preset"
+    || value === "invalid-coin-patch"
+    || value === "invalid-alert-types"
+    || value === "invalid-timezone";
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T> {
@@ -57,17 +99,80 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new MiniAppRequestError(response.status);
+  if (!response.ok) {
+    let code: MiniAppErrorCode | null = null;
+    try {
+      const payload = await response.json() as { code?: unknown };
+      if (isMiniAppErrorCode(payload?.code)) code = payload.code;
+    } catch {
+      // body wasn't JSON or was empty — leave code null
+    }
+    throw new MiniAppRequestError(response.status, code);
+  }
   return await response.json() as T;
 }
 
 function sessionErrorMessage(err: unknown): string {
   if (err instanceof MiniAppRequestError) {
+    if (err.code === "stale-auth") return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
     if (err.status === 401) return "Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.";
     if (err.status === 429) return "Telegram is still opening your session. Wait a moment, then retry.";
     if (err.status === 503) return "Telegram Mini App auth is temporarily unavailable. Try again shortly.";
   }
   return "Could not load Mini App settings. Reopen from Telegram or try again.";
+}
+
+function mutationErrorMessage(err: unknown): string {
+  if (err instanceof MiniAppRequestError) {
+    switch (err.code) {
+      case "stale-auth":
+        return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
+      case "replay-claimed":
+        return "This Telegram launch was already used. Reopen the Mini App to continue.";
+      case "rate-limited":
+        return "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
+      case "not-private":
+        return "This Mini App can only edit personal alerts. Use the bot commands in groups.";
+      case "validation-error":
+      case "unknown-coin":
+      case "unknown-preset":
+      case "invalid-coin-patch":
+      case "invalid-alert-types":
+      case "invalid-timezone":
+        return "Change was rejected by the server.";
+      case "body-too-large":
+        return "Request was too large to send.";
+      case "not-configured":
+      case "preset-unavailable":
+        return "Mini App backend is temporarily unavailable. Try again shortly.";
+      case "internal":
+        return "Something went wrong. Try again or reopen Telegram.";
+      default:
+        break;
+    }
+    if (err.status >= 500) return "Something went wrong. Try again or reopen Telegram.";
+  }
+  return "Change was not saved. Reopen from Telegram if authorization expired.";
+}
+
+function formatSnoozePill(snoozeUntilTs: number): string {
+  const date = new Date(snoozeUntilTs * 1000);
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm} UTC`;
+}
+
+function availableTimezones(): readonly string[] {
+  const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
+  if (typeof intl.supportedValuesOf === "function") {
+    try {
+      const values = intl.supportedValuesOf("timeZone");
+      if (Array.isArray(values) && values.length > 0) return values;
+    } catch {
+      // fall through to curated list
+    }
+  }
+  return FALLBACK_TIMEZONES;
 }
 
 function formatTime(ts: number | null): string {
@@ -124,6 +229,27 @@ function TogglePill({ label, enabled, disabled, onToggle, ariaLabel }: { label: 
   );
 }
 
+function ForgottenView({ onClose }: { onClose: () => void }) {
+  return (
+    <section className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
+      <section role="status" className="rounded-2xl border border-border/70 bg-card/90 p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+            <Trash2 className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">Your data has been deleted</h1>
+            <p className="mt-1 text-xs text-muted-foreground">Every alert and preference tied to your chat has been removed.</p>
+          </div>
+        </div>
+        <div className="mt-5">
+          <MiniButton onClick={onClose} ariaLabel="Close Mini App">Close</MiniButton>
+        </div>
+      </section>
+    </section>
+  );
+}
+
 function PreviewState({ previewName }: { previewName: string | null }) {
   return (
     <section className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
@@ -164,12 +290,14 @@ function HomeSkeleton() {
   );
 }
 
-function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHeadline }: {
+function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   optimisticHomeHeadline: string;
+  homeScreenStatus: string | null;
+  onAddToHomeScreen: () => void;
 }) {
   const readOnlyCopy = state.viewer.mutationBlockReason === "stale-auth"
     ? {
@@ -180,6 +308,8 @@ function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHea
       title: "Group settings are command-only for now",
       body: "Use /settings@PharosWatchBot in the group. Only group admins can change alert settings.",
     };
+  const snoozeUntil = state.subscriber.snoozeUntilTs;
+  const snoozeActive = snoozeUntil != null;
 
   return (
     <div className="space-y-4">
@@ -205,9 +335,42 @@ function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHea
           <MiniButton disabled={!canMutate || isMutating} onClick={() => onMutate(RECOMMENDED_OPERATION)}>
             <Check className="h-4 w-4" aria-hidden="true" /> Use recommended setup
           </MiniButton>
-          <MiniButton variant="secondary" disabled={!canMutate || isMutating || state.subscriber.snoozeUntilTs == null} onClick={() => onMutate({ kind: "clear-snooze" })}>
-            <Clock3 className="h-4 w-4" aria-hidden="true" /> Clear snooze
-          </MiniButton>
+          {homeScreenStatus === "missed" ? (
+            <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={onAddToHomeScreen}>
+              <Home className="h-4 w-4" aria-hidden="true" /> Add to home screen
+            </MiniButton>
+          ) : null}
+        </div>
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="pharos-kicker">Snooze alerts</p>
+            {snoozeActive ? (
+              <span className="shrink-0 rounded-md border border-sky-500/35 bg-sky-500/10 px-2 py-1 text-[11px] font-semibold text-sky-800 dark:text-sky-200">
+                Quiet until {formatSnoozePill(snoozeUntil)}
+              </span>
+            ) : null}
+          </div>
+          {snoozeActive ? (
+            <div className="mt-3">
+              <MiniButton variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate({ kind: "clear-snooze" })}>
+                <Clock3 className="h-4 w-4" aria-hidden="true" /> Clear snooze
+              </MiniButton>
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label="Snooze alerts">
+              {SNOOZE_DURATION_TOKENS.map((token) => (
+                <MiniButton
+                  key={token}
+                  ariaLabel={`Snooze alerts for ${token}`}
+                  variant="secondary"
+                  disabled={!canMutate || isMutating}
+                  onClick={() => onMutate({ kind: "set-snooze", durationToken: token })}
+                >
+                  {token}
+                </MiniButton>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -323,12 +486,104 @@ function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {
   );
 }
 
-function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGlobalAlerts }: {
+function TimezonePicker({ state, canMutate, isMutating, onMutate }: {
+  state: TelegramMiniAppState;
+  canMutate: boolean;
+  isMutating: boolean;
+  onMutate: (operation: TelegramMiniAppOperation) => void;
+}) {
+  const current = state.subscriber.quietHours.timezone ?? "UTC";
+  const options = useMemo(() => availableTimezones(), []);
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-foreground">Timezone</h2>
+        <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+          {current}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">Used to convert quiet hours to your local time.</p>
+      <label className="sr-only" htmlFor="telegram-mini-app-timezone">Timezone</label>
+      <select
+        id="telegram-mini-app-timezone"
+        className="pharos-focus-ring mt-3 h-11 w-full rounded-lg border border-border/65 bg-background/70 px-3 text-sm text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        value={current}
+        disabled={!canMutate || isMutating}
+        onChange={(event) => onMutate({ kind: "set-timezone", timezone: event.target.value })}
+      >
+        {options.map((zone) => (
+          <option key={zone} value={zone}>{zone}</option>
+        ))}
+      </select>
+      <div className="mt-3">
+        <MiniButton
+          variant="secondary"
+          disabled={!canMutate || isMutating || current === "UTC"}
+          onClick={() => onMutate({ kind: "set-timezone", timezone: null })}
+        >
+          Use UTC (clear)
+        </MiniButton>
+      </div>
+    </section>
+  );
+}
+
+function DangerZoneSection({ canMutate, isMutating, onUnsubscribeAll, onForgetMe, hasShowConfirm }: {
+  canMutate: boolean;
+  isMutating: boolean;
+  onUnsubscribeAll: () => void;
+  onForgetMe: () => void;
+  hasShowConfirm: boolean;
+}) {
+  // When the bridge can drive two native confirmations, tap once and let the
+  // bridge escalate. Otherwise fall back to an in-page two-tap armed state.
+  const [forgetArmed, setForgetArmed] = useState(false);
+  const requiresArming = !hasShowConfirm;
+
+  return (
+    <section className="rounded-2xl border border-border/70 bg-card/90 p-4">
+      <h2 className="text-sm font-semibold text-foreground">Danger zone</h2>
+      <p className="mt-1 text-xs text-muted-foreground">These actions can&apos;t be undone.</p>
+      <div className="mt-3 grid gap-2">
+        <MiniButton variant="danger" disabled={!canMutate || isMutating} onClick={onUnsubscribeAll}>
+          Unsubscribe from all
+        </MiniButton>
+        <button
+          type="button"
+          disabled={!canMutate || isMutating}
+          aria-label="Delete all my data"
+          onClick={() => {
+            if (requiresArming && !forgetArmed) {
+              setForgetArmed(true);
+              return;
+            }
+            onForgetMe();
+          }}
+          onBlur={() => setForgetArmed(false)}
+          className={cn(
+            "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            forgetArmed
+              ? "border-red-600/80 bg-red-600 text-white hover:bg-red-700"
+              : "border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300",
+          )}
+        >
+          {forgetArmed ? "Tap again to confirm forever" : "Delete all my data"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGlobalAlerts, onUnsubscribeAll, onForgetMe, hasShowConfirm }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   optimisticGlobalAlerts: Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
+  onUnsubscribeAll: () => void;
+  onForgetMe: () => void;
+  hasShowConfirm: boolean;
 }) {
   const currentDepegStep = optimisticGlobalAlerts.depegStepBps;
 
@@ -385,6 +640,14 @@ function SettingsPanel({ state, canMutate, isMutating, onMutate, optimisticGloba
         </div>
       </section>
       <QuietHoursPicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
+      <TimezonePicker state={state} canMutate={canMutate} isMutating={isMutating} onMutate={onMutate} />
+      <DangerZoneSection
+        canMutate={canMutate}
+        isMutating={isMutating}
+        onUnsubscribeAll={onUnsubscribeAll}
+        onForgetMe={onForgetMe}
+        hasShowConfirm={hasShowConfirm}
+      />
     </div>
   );
 }
@@ -435,15 +698,31 @@ const SAFETY_MODE_OPTIONS = [
 
 type SubscribedCoin = TelegramMiniAppState["subscriptions"][number];
 
-function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove }: {
+function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove, webApp, nowSec }: {
   coin: SubscribedCoin;
   canMutate: boolean;
   isMutating: boolean;
   onMutate: (operation: TelegramMiniAppOperation) => void;
   onRemove: (coin: SubscribedCoin) => void;
+  webApp: TelegramWebAppSdk | null;
+  nowSec: number;
 }) {
   const { dews: dewsEnabled, depeg: depegEnabled, safety: safetyEnabled } = coin.alertTypes;
   const showTune = dewsEnabled || depegEnabled || safetyEnabled;
+  const coinSnoozeActive = coin.snoozeUntilTs != null && coin.snoozeUntilTs > nowSec;
+  const handleOpenTelegram = (url: string) => {
+    if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+    else webApp?.openLink?.(url);
+  };
+  const handleOpenLink = (url: string) => {
+    webApp?.openLink?.(url);
+  };
+  const bridgeReady = Boolean(webApp);
+  const snoozeOperation = (token: TelegramCoinSnoozeDurationToken): TelegramMiniAppOperation => ({
+    kind: "set-coin-snooze",
+    stablecoinId: coin.stablecoinId,
+    durationToken: token,
+  });
 
   return (
     <article className="rounded-2xl border border-border/70 bg-card/90 p-4">
@@ -472,6 +751,59 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove }: {
           />
         ))}
       </div>
+      <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label={`${coin.symbol} links`}>
+        <MiniButton
+          ariaLabel={`Why ${coin.symbol}`}
+          variant="secondary"
+          disabled={!bridgeReady}
+          onClick={() => handleOpenTelegram(`https://t.me/${BOT_USERNAME}?start=why_${coin.stablecoinId}`)}
+        >
+          <Info className="h-4 w-4" aria-hidden="true" /> Why
+        </MiniButton>
+        <MiniButton
+          ariaLabel={`Coverage ${coin.symbol}`}
+          variant="secondary"
+          disabled={!bridgeReady}
+          onClick={() => handleOpenTelegram(`https://t.me/${BOT_USERNAME}?start=coverage_${coin.stablecoinId}`)}
+        >
+          <Info className="h-4 w-4" aria-hidden="true" /> Coverage
+        </MiniButton>
+        <MiniButton
+          ariaLabel={`View ${coin.symbol} on Pharos`}
+          variant="secondary"
+          disabled={!bridgeReady}
+          onClick={() => handleOpenLink(`${PHAROS_COIN_PAGE_PREFIX}${coin.stablecoinId}`)}
+        >
+          <ExternalLink className="h-4 w-4" aria-hidden="true" /> View on Pharos
+        </MiniButton>
+      </div>
+      <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3 py-2">
+        <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
+          Snooze {coin.symbol}
+          {coinSnoozeActive && coin.snoozeUntilTs != null ? ` · until ${formatSnoozePill(coin.snoozeUntilTs)}` : ""}
+        </summary>
+        <div className="mt-3 space-y-2">
+          {coinSnoozeActive ? (
+            <MiniButton ariaLabel={`Clear ${coin.symbol} snooze`} variant="secondary" disabled={!canMutate || isMutating} onClick={() => onMutate(snoozeOperation("clear"))}>
+              Clear snooze
+            </MiniButton>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {SNOOZE_DURATION_TOKENS.map((token) => (
+                <MiniButton
+                  key={token}
+                  ariaLabel={`Snooze ${coin.symbol} for ${token}`}
+                  variant="secondary"
+                  disabled={!canMutate || isMutating}
+                  onClick={() => onMutate(snoozeOperation(token))}
+                >
+                  {token}
+                </MiniButton>
+              ))}
+            </div>
+          )}
+        </div>
+      </details>
       {showTune ? (
         <details className="mt-3 rounded-lg border border-border/55 bg-background/40 px-3 py-2">
           <summary className="cursor-pointer list-none text-xs font-semibold text-muted-foreground">
@@ -527,7 +859,7 @@ function CoinCard({ coin, canMutate, isMutating, onMutate, onRemove }: {
   );
 }
 
-function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pendingUndo, onUndo }: {
+function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pendingUndo, onUndo, webApp, nowSec }: {
   state: TelegramMiniAppState;
   canMutate: boolean;
   isMutating: boolean;
@@ -535,6 +867,8 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pend
   onRemove: (coin: SubscribedCoin) => void;
   pendingUndo: SubscribedCoin | null;
   onUndo: () => void;
+  webApp: TelegramWebAppSdk | null;
+  nowSec: number;
 }) {
   const [query, setQuery] = useState("");
   const subscribed = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
@@ -637,6 +971,8 @@ function WatchlistPanel({ state, canMutate, isMutating, onMutate, onRemove, pend
             isMutating={isMutating}
             onMutate={onMutate}
             onRemove={onRemove}
+            webApp={webApp}
+            nowSec={nowSec}
           />
         )) : (
           <section className="rounded-2xl border border-border/70 bg-card/90 p-4 text-sm text-muted-foreground">No explicit coin follows yet.</section>
@@ -870,8 +1206,13 @@ export function PharosWatchBotMiniAppClient() {
   const [isMutating, setIsMutating] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [pendingUndo, setPendingUndo] = useState<SubscribedCoin | null>(null);
+  const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
+  const [forgottenView, setForgottenView] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
+  const hasRequestedWriteAccessRef = useRef(false);
+  const hasMutatedThisSessionRef = useRef(false);
+  const hasProbedHomeScreenRef = useRef(false);
   const [, startTransition] = useTransition();
 
   const loadSession = useCallback(async (nextInitData: string, nextStartParam: string | null) => {
@@ -1025,10 +1366,21 @@ export function PharosWatchBotMiniAppClient() {
 
   const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppState | null> => {
     if (!initData || state?.viewer.canMutate !== true) return null;
+    // Capture pre-mutation snapshot for engagement gating (T-57).
+    const preSubscriberExists = state?.subscriber.exists ?? false;
+    const preChatType = state?.viewer.chatType ?? null;
     setIsMutating(true);
     webApp?.enableClosingConfirmation?.();
     try {
       const next = await postJson<TelegramMiniAppState>(MUTATE_ENDPOINT, { initData, operation });
+      if (operation.kind === "forget-me") {
+        // Render the terminal screen instead of swapping state.
+        setForgottenView(true);
+        setMessage(null);
+        setAnnouncement(mutationSuccessAnnouncement(operation, next));
+        webApp?.HapticFeedback?.notificationOccurred?.("success");
+        return next;
+      }
       setState(next);
       setMessage(null);
       setAnnouncement(mutationSuccessAnnouncement(operation, next));
@@ -1038,16 +1390,43 @@ export function PharosWatchBotMiniAppClient() {
       } else {
         haptics?.impactOccurred?.("light");
       }
+      // T-57: requestWriteAccess once, after the first successful recommended-setup
+      // for sender-launched users who had no subscriber row before.
+      if (
+        operation.kind === "recommended-setup"
+        && !hasRequestedWriteAccessRef.current
+        && !preSubscriberExists
+        && preChatType === "sender"
+        && webApp?.isVersionAtLeast?.("6.9")
+        && typeof webApp.requestWriteAccess === "function"
+      ) {
+        hasRequestedWriteAccessRef.current = true;
+        webApp.requestWriteAccess();
+      }
+      // T-58: probe home-screen status once after the first successful mutation.
+      if (!hasMutatedThisSessionRef.current) {
+        hasMutatedThisSessionRef.current = true;
+        if (
+          !hasProbedHomeScreenRef.current
+          && webApp?.isVersionAtLeast?.("8.0")
+          && typeof webApp.checkHomeScreenStatus === "function"
+        ) {
+          hasProbedHomeScreenRef.current = true;
+          webApp.checkHomeScreenStatus((nextStatus) => {
+            setHomeScreenStatus(nextStatus);
+          });
+        }
+      }
       return next;
-    } catch {
-      setMessage("Change was not saved. Reopen from Telegram if authorization expired.");
+    } catch (err) {
+      setMessage(mutationErrorMessage(err));
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       return null;
     } finally {
       setIsMutating(false);
       webApp?.disableClosingConfirmation?.();
     }
-  }, [initData, state?.viewer.canMutate, webApp]);
+  }, [initData, state?.subscriber.exists, state?.viewer.canMutate, state?.viewer.chatType, webApp]);
 
   const mutate = useCallback((operation: TelegramMiniAppOperation) => {
     startTransition(() => {
@@ -1105,6 +1484,37 @@ export function PharosWatchBotMiniAppClient() {
     void performMutation({ kind: "unfollow-preset", presetId: preset.id });
   }, [performMutation, webApp?.showConfirm]);
 
+  const handleUnsubscribeAll = useCallback(() => {
+    const confirmFn = webApp?.showConfirm;
+    const fire = () => mutate({ kind: "unsubscribe-all" });
+    if (confirmFn) {
+      confirmFn("Unsubscribe from all alerts? This clears every coin, preset, and global toggle.", (ok) => {
+        if (ok) fire();
+      });
+      return;
+    }
+    fire();
+  }, [mutate, webApp?.showConfirm]);
+
+  const handleForgetMe = useCallback(() => {
+    const confirmFn = webApp?.showConfirm;
+    const fire = () => mutate({ kind: "forget-me" });
+    if (confirmFn) {
+      confirmFn("Delete all your Pharos alert data? This cannot be undone.", (ok) => {
+        if (!ok) return;
+        confirmFn("Are you absolutely sure? Your subscriber row will be deleted.", (confirmed) => {
+          if (confirmed) fire();
+        });
+      });
+      return;
+    }
+    fire();
+  }, [mutate, webApp?.showConfirm]);
+
+  const handleClose = useCallback(() => {
+    webApp?.close?.();
+  }, [webApp]);
+
   // BackButton
   useEffect(() => {
     const bb = webApp?.BackButton;
@@ -1133,6 +1543,14 @@ export function PharosWatchBotMiniAppClient() {
       sb.offClick?.(handler);
       sb.hide?.();
     };
+  }, [webApp]);
+
+  const handleAddToHomeScreen = useCallback(() => {
+    webApp?.addToHomeScreen?.();
+    webApp?.HapticFeedback?.impactOccurred?.("light");
+    webApp?.checkHomeScreenStatus?.((nextStatus) => {
+      setHomeScreenStatus(nextStatus);
+    });
   }, [webApp]);
 
   // MainButton
@@ -1172,9 +1590,11 @@ export function PharosWatchBotMiniAppClient() {
   }, []);
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
+  if (forgottenView) return <ForgottenView onClose={handleClose} />;
 
   const heading = state?.viewer.username ? `@${state.viewer.username}` : state?.viewer.chatId ? `Chat ${state.viewer.chatId}` : "PharosWatchBot";
   const canMutate = Boolean(initData && state?.viewer.canMutate);
+  const nowSec = Math.floor(Date.now() / 1000);
 
   const openPrivacy = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (webApp?.openLink) {
@@ -1245,7 +1665,15 @@ export function PharosWatchBotMiniAppClient() {
             </nav>
             {view === "home" ? (
               <section role="tabpanel" id="pharos-mini-app-panel-home" aria-labelledby="pharos-mini-app-tab-home">
-                <StatusPanel state={optimisticState} canMutate={canMutate} isMutating={isMutating} onMutate={mutate} optimisticHomeHeadline={headline} />
+                <StatusPanel
+                  state={optimisticState}
+                  canMutate={canMutate}
+                  isMutating={isMutating}
+                  onMutate={mutate}
+                  optimisticHomeHeadline={headline}
+                  homeScreenStatus={homeScreenStatus}
+                  onAddToHomeScreen={handleAddToHomeScreen}
+                />
               </section>
             ) : null}
             {view === "watchlist" ? (
@@ -1258,6 +1686,8 @@ export function PharosWatchBotMiniAppClient() {
                   onRemove={handleRemoveCoin}
                   pendingUndo={pendingUndo}
                   onUndo={handleUndoRemove}
+                  webApp={webApp}
+                  nowSec={nowSec}
                 />
               </section>
             ) : null}
@@ -1274,7 +1704,16 @@ export function PharosWatchBotMiniAppClient() {
             ) : null}
             {view === "settings" ? (
               <section role="tabpanel" id="pharos-mini-app-panel-settings" aria-labelledby="pharos-mini-app-tab-settings">
-                <SettingsPanel state={optimisticState} canMutate={canMutate} isMutating={isMutating} onMutate={mutate} optimisticGlobalAlerts={optimisticGlobals} />
+                <SettingsPanel
+                  state={optimisticState}
+                  canMutate={canMutate}
+                  isMutating={isMutating}
+                  onMutate={mutate}
+                  optimisticGlobalAlerts={optimisticGlobals}
+                  onUnsubscribeAll={handleUnsubscribeAll}
+                  onForgetMe={handleForgetMe}
+                  hasShowConfirm={Boolean(webApp?.showConfirm)}
+                />
               </section>
             ) : null}
 

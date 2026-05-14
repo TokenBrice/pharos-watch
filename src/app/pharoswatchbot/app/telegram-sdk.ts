@@ -75,6 +75,11 @@ export interface TelegramWebAppSdk {
   isVersionAtLeast?: (version: string) => boolean;
   showConfirm?: (message: string, callback: (confirmed: boolean) => void) => void;
   openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
+  openTelegramLink?: (url: string) => void;
+  requestWriteAccess?: (callback?: (allowed: boolean) => void) => void;
+  addToHomeScreen?: () => void;
+  checkHomeScreenStatus?: (callback: (status: string) => void) => void;
+  close?: () => void;
   HapticFeedback?: {
     impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
     notificationOccurred?: (type: "success" | "error" | "warning") => void;
