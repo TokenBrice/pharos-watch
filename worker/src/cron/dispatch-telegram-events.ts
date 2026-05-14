@@ -1,0 +1,234 @@
+import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { throwIfAborted } from "../lib/abort";
+import { readCachedJson } from "../lib/api-utils";
+import { getCache } from "../lib/db-cache";
+import { buildInClause, chunkArray } from "../lib/db";
+import {
+  isDewsAlertable,
+  type DepegAlertPayload,
+  type DepegResolved,
+  type DepegWorsening,
+} from "../lib/telegram-alerts";
+import { buildAlertContextLines } from "../api/telegram-webhook-insights";
+import { SNAPSHOT_KEYS } from "./telegram-alert-snapshots";
+import {
+  buildDewsChanges,
+  buildLaunchPromotions,
+  buildSafetyChanges,
+} from "./telegram-alert-changes";
+import type {
+  buildDispatchSnapshotState,
+  loadDispatchSourceData,
+} from "./dispatch-telegram-state";
+
+type DispatchSourceData = Awaited<ReturnType<typeof loadDispatchSourceData>>;
+type DispatchSnapshotState = ReturnType<typeof buildDispatchSnapshotState>;
+
+export interface TelegramDispatchEvents {
+  dewsChanges: ReturnType<typeof buildDewsChanges>;
+  depegTriggered: DepegAlertPayload[];
+  depegResolved: DepegResolved[];
+  depegWorsening: DepegWorsening[];
+  safetyChanges: ReturnType<typeof buildSafetyChanges>["changes"];
+  launchPromoted: ReturnType<typeof buildLaunchPromotions>;
+  suppressedMethodologyChanges: number;
+  suppressedSafetyChangesAtSeed: number;
+  dewsIds: string[];
+  depegIds: string[];
+  safetyIds: string[];
+  launchIds: string[];
+}
+
+export function countSuppressedSafetyChangesAtSeed(
+  snapshotState: DispatchSnapshotState,
+  getSymbol: (stablecoinId: string, fallback?: string) => string,
+): number {
+  return snapshotState.safetySnapshotNeedsSeed
+    ? buildSafetyChanges(
+        snapshotState.currentSafetySnapshot,
+        snapshotState.previousSafetySnapshot ?? {},
+        getSymbol,
+      ).changes.length
+    : 0;
+}
+
+export async function buildTelegramDispatchEvents(
+  db: D1Database,
+  sourceData: DispatchSourceData,
+  snapshotState: DispatchSnapshotState,
+  getSymbol: (stablecoinId: string, fallback?: string) => string,
+  signal?: AbortSignal,
+): Promise<TelegramDispatchEvents> {
+  const {
+    dewsRows,
+    activeDepegRows,
+  } = sourceData;
+  const {
+    currentSafetySnapshot,
+    currentSnapshots,
+    safeDepegSnapshot,
+    safeDewsAlertable,
+    safeDewsSnapshot,
+    safeSafetySnapshot,
+    safetySnapshotNeedsSeed,
+  } = snapshotState;
+
+  // When the Telegram lane has to reseed its safety snapshot (e.g. methodology
+  // version flip changed the source generation), real downgrades against the
+  // last seen snapshot would silently disappear. Count them against the prior
+  // snapshot purely for operator visibility; they are not fanned out.
+  const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
+
+  const dewsChanges = buildDewsChanges(
+    dewsRows.filter((row) => isDewsAlertable(row.band)),
+    safeDewsAlertable,
+    safeDewsSnapshot,
+    getSymbol,
+  );
+
+  const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
+  const currentActiveIds = new Set(Object.keys(currentSnapshots.depeg));
+
+  const depegTriggered: DepegAlertPayload[] = activeDepegRows
+    .filter((row) => !previousActiveIds.has(row.stablecoin_id))
+    .map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      symbol: row.symbol,
+      direction: row.direction,
+      deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
+      price: Number(row.start_price ?? 0),
+      pegReference: Number(row.peg_reference ?? 1),
+    }));
+
+  const depegWorsening: DepegWorsening[] = activeDepegRows
+    .flatMap((row) => {
+      const previous = safeDepegSnapshot[row.stablecoin_id];
+      const currentDeviationBps = Math.abs(Number(row.peak_deviation_bps ?? 0));
+      if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
+        return [];
+      }
+      return [{
+        stablecoinId: row.stablecoin_id,
+        symbol: row.symbol,
+        direction: row.direction,
+        previousDeviationBps: previous.deviationBps,
+        currentDeviationBps,
+        price: Number(row.start_price ?? 0),
+        pegReference: Number(row.peg_reference ?? 1),
+      }];
+    });
+
+  const depegResolved: DepegResolved[] = [];
+  const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => !currentActiveIds.has(stablecoinId));
+  if (resolvedCandidateIds.length > 0) {
+    throwIfAborted(signal);
+    const resolvedRows: Array<{
+      stablecoin_id: string;
+      symbol: string;
+      peak_deviation_bps: number;
+      started_at: number;
+      ended_at: number;
+      recovery_price: number | null;
+    }> = [];
+    for (const idChunk of chunkArray(resolvedCandidateIds)) {
+      const inClause = buildInClause(idChunk);
+      const chunkRows = await db
+        .prepare(
+          `SELECT event.stablecoin_id, event.symbol, event.peak_deviation_bps, event.started_at, event.ended_at, event.recovery_price
+             FROM depeg_events event
+             JOIN (
+               SELECT stablecoin_id, MAX(ended_at) as ended_at
+                 FROM depeg_events
+                WHERE ended_at IS NOT NULL
+                  AND stablecoin_id IN (${inClause.sql})
+                GROUP BY stablecoin_id
+             ) latest
+               ON latest.stablecoin_id = event.stablecoin_id
+              AND latest.ended_at = event.ended_at`,
+        )
+        .bind(...inClause.binds)
+        .all<{
+          stablecoin_id: string;
+          symbol: string;
+          peak_deviation_bps: number;
+          started_at: number;
+          ended_at: number;
+          recovery_price: number | null;
+        }>();
+      resolvedRows.push(...(chunkRows.results ?? []));
+    }
+    const resolvedByStablecoinId = new Map(
+      resolvedRows.map((row) => [row.stablecoin_id, row] as const),
+    );
+
+    for (const stablecoinId of resolvedCandidateIds) {
+      throwIfAborted(signal);
+      const resolved = resolvedByStablecoinId.get(stablecoinId);
+      if (!resolved || resolved.ended_at == null || resolved.started_at == null) continue;
+
+      const durationSeconds = Math.max(0, resolved.ended_at - resolved.started_at);
+      const previous = safeDepegSnapshot[stablecoinId];
+      depegResolved.push({
+        stablecoinId,
+        symbol: resolved.symbol ?? previous?.symbol ?? getSymbol(stablecoinId),
+        durationMinutes: Math.max(1, Math.round(durationSeconds / 60)),
+        peakDeviationBps: Math.abs(Number(resolved.peak_deviation_bps ?? 0)),
+        recoveryPrice: resolved.recovery_price ?? previous?.price ?? previous?.pegReference ?? 1,
+      });
+    }
+  }
+
+  const { changes: safetyChanges, suppressedMethodologyChanges } = !safetySnapshotNeedsSeed
+    ? buildSafetyChanges(currentSafetySnapshot, safeSafetySnapshot, getSymbol)
+    : { changes: [], suppressedMethodologyChanges: 0 };
+
+  const previousLaunchSnapshot = readCachedJson<string[]>(
+    "dispatch-telegram-alerts",
+    SNAPSHOT_KEYS.launch,
+    await getCache(db, SNAPSHOT_KEYS.launch),
+  );
+  const prevLaunchIds = previousLaunchSnapshot.status === "ok" && Array.isArray(previousLaunchSnapshot.data)
+    ? new Set<string>(previousLaunchSnapshot.data)
+    : new Set<string>();
+  const currentLaunchIds = new Set(PRE_LAUNCH_STABLECOINS.map((c) => c.id));
+
+  const launchPromoted = buildLaunchPromotions(prevLaunchIds, currentLaunchIds, ACTIVE_IDS, TRACKED_META_BY_ID);
+
+  const dewsIds = dewsChanges.map((c) => c.stablecoinId);
+  const depegIds = [
+    ...depegTriggered.map((e) => e.stablecoinId),
+    ...depegResolved.map((e) => e.stablecoinId),
+    ...depegWorsening.map((e) => e.stablecoinId),
+  ];
+  const safetyIds = safetyChanges.map((c) => c.stablecoinId);
+  const launchIds = launchPromoted.map((e) => e.stablecoinId);
+
+  const contextLines = await buildAlertContextLines(db, [...dewsIds, ...depegIds, ...safetyIds, ...launchIds]);
+  for (const event of [
+    ...dewsChanges,
+    ...depegTriggered,
+    ...depegResolved,
+    ...depegWorsening,
+    ...safetyChanges,
+  ]) {
+    const contextLine = contextLines.get(event.stablecoinId);
+    if (contextLine) {
+      event.contextLine = contextLine;
+    }
+  }
+
+  return {
+    dewsChanges,
+    depegTriggered,
+    depegResolved,
+    depegWorsening,
+    safetyChanges,
+    launchPromoted,
+    suppressedMethodologyChanges,
+    suppressedSafetyChangesAtSeed,
+    dewsIds,
+    depegIds,
+    safetyIds,
+    launchIds,
+  };
+}

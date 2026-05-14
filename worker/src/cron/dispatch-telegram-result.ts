@@ -1,0 +1,134 @@
+import type { TelegramDispatchCronResult } from "@shared/types";
+import { TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending-queue";
+import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
+import type { TelegramAlertType } from "@shared/types/status";
+import type { readPendingCapacitySnapshot } from "./telegram-pending-queue";
+
+export type PerAlertTypeTargets = Record<TelegramAlertType, { chats: number; chunks: number }>;
+
+export interface DispatchCapacityMetadata {
+  freshCandidateChats: number;
+  freshCandidateCount: number;
+  freshOverflow: number;
+  pendingSent: number;
+  pendingTotal: number;
+  pendingDue: number;
+  pendingDeferredCount: number;
+  pendingExpiredCount: number;
+  pendingNearTtlCount: number;
+  oldestPendingAgeSec: number | null;
+  oldestDuePendingAgeSec: number | null;
+  estimatedDrainTimeSec: number;
+  pendingDrainBudgetPerRun: number;
+  pendingCapacityBefore: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  pendingCapacityAfter: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  perAlertTypeTargets: PerAlertTypeTargets;
+  fanoutQueryMs: number;
+  fanoutBuildMs: number;
+  fanoutTotalMs: number;
+}
+
+export type DispatchResult = TelegramDispatchCronResult & DispatchCapacityMetadata;
+
+function emptyPerAlertTypeTargets(): PerAlertTypeTargets {
+  return {
+    dews: { chats: 0, chunks: 0 },
+    depeg: { chats: 0, chunks: 0 },
+    safety: { chats: 0, chunks: 0 },
+    launch: { chats: 0, chunks: 0 },
+  };
+}
+
+export function buildPerAlertTypeTargets(
+  subscriberQueue: Array<{ alertType: TelegramAlertType; chunks: string[] }>,
+): PerAlertTypeTargets {
+  const targets = emptyPerAlertTypeTargets();
+  for (const sub of subscriberQueue) {
+    targets[sub.alertType].chats += 1;
+    targets[sub.alertType].chunks += sub.chunks.length;
+  }
+  return targets;
+}
+
+function emptyPendingCapacity() {
+  return {
+    total: 0,
+    active: 0,
+    due: 0,
+    deferred: 0,
+    expired: 0,
+    nearTtl: 0,
+    oldestPendingAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    dispatchIntervalSec: 5 * 60,
+  } satisfies Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+}
+
+export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
+  return {
+    eventsDetected: {
+      dews: 0,
+      depeg: 0,
+      depegTriggered: 0,
+      depegResolved: 0,
+      depegWorsening: 0,
+      safety: 0,
+      launch: 0,
+      suppressedMethodologyChanges: 0,
+    },
+    subscribersNotified: 0,
+    messagesSent: 0,
+    blockedUsersCleanedUp: 0,
+    blockedUsersCleanupFailed: 0,
+    cappedAtLimit: false,
+    snapshotSeeded,
+    pendingAttempted: 0,
+    pendingDrained: 0,
+    pendingRetryQueued: 0,
+    pendingDropped: 0,
+    pendingDroppedTtlExpired: 0,
+    pendingDroppedPermanentFailure: 0,
+    pendingDroppedMaxAttemptsFallback: 0,
+    pendingDeferred: 0,
+    pendingRateLimited: false,
+    pendingRetryAfterSec: null,
+    pendingEnqueued: 0,
+    pendingExpired: 0,
+    pendingSent: 0,
+    pendingTotal: 0,
+    pendingDue: 0,
+    pendingDeferredCount: 0,
+    pendingExpiredCount: 0,
+    pendingNearTtlCount: 0,
+    oldestPendingAgeSec: null,
+    oldestDuePendingAgeSec: null,
+    estimatedDrainTimeSec: 0,
+    pendingDrainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
+    pendingCapacityBefore: emptyPendingCapacity(),
+    pendingCapacityAfter: emptyPendingCapacity(),
+    freshAttempted: 0,
+    freshSent: 0,
+    freshRetryQueued: 0,
+    freshPermanentFailures: 0,
+    freshDeferredPerChat: 0,
+    freshCandidateChats: 0,
+    freshCandidateCount: 0,
+    freshOverflow: 0,
+    chatsWithActiveSnooze,
+    safetyAlertSourceState: "missing",
+    safetyAlertSourceAgeSeconds: null,
+    safetyAlertsSuppressed: true,
+    safetyAlertSourceGeneration: null,
+    presetQueryFailures: 0,
+    presetResolutionFailures: 0,
+    presetFailure: false,
+    perAlertType: emptyPerAlertTypeDelivery(),
+    perAlertTypeTargets: emptyPerAlertTypeTargets(),
+    fanoutQueryMs: 0,
+    fanoutBuildMs: 0,
+    fanoutTotalMs: 0,
+    suppressedSafetyChangesAtSeed: 0,
+  };
+}

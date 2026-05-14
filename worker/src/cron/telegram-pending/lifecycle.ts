@@ -1,0 +1,124 @@
+import { BLOCK_STRIKE_WINDOW_SEC } from "../../lib/telegram-constants";
+import { logTelegramEvent } from "../../lib/telegram-log";
+
+/**
+ * Two-strike gate for 403 responses. Increments the per-subscriber consecutive
+ * block counter and reports whether the aggressive cascade should run.
+ *
+ * Rules:
+ * - First strike: record `consecutive_block_first_at = nowSec`, count = 1, return false.
+ * - Subsequent strike within `BLOCK_STRIKE_WINDOW_SEC` of first strike: count >= 2, return true.
+ * - Stale first strike (older than window): reset to fresh first strike, return false.
+ *
+ * On D1 error this returns false so we never call `disableBlockedSubscriber`
+ * with stale strike state.
+ */
+export async function registerSubscriberBlockAndShouldDisable(
+  db: D1Database,
+  chatId: string,
+  nowSec: number,
+): Promise<boolean> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT consecutive_block_count, consecutive_block_first_at
+           FROM telegram_subscribers
+          WHERE chat_id = ?`,
+      )
+      .bind(chatId)
+      .first<{ consecutive_block_count: number | null; consecutive_block_first_at: number | null }>();
+    const priorCount = row?.consecutive_block_count ?? 0;
+    const priorFirstAt = row?.consecutive_block_first_at ?? null;
+    const withinWindow = priorFirstAt != null && nowSec - priorFirstAt <= BLOCK_STRIKE_WINDOW_SEC;
+    const nextCount = withinWindow ? priorCount + 1 : 1;
+    const nextFirstAt = withinWindow ? priorFirstAt : nowSec;
+    await db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET consecutive_block_count = ?,
+                consecutive_block_first_at = ?
+          WHERE chat_id = ?`,
+      )
+      .bind(nextCount, nextFirstAt, chatId)
+      .run();
+    return nextCount >= 2;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      message: `Failed to register block strike: ${message}`,
+      chatId,
+      action: "register-block-strike",
+      module: "telegram-pending-lifecycle",
+    });
+    return false;
+  }
+}
+
+/** Reset the consecutive-block counter on any successful send. */
+export async function resetSubscriberBlockCount(db: D1Database, chatId: string): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `UPDATE telegram_subscribers
+            SET consecutive_block_count = 0,
+                consecutive_block_first_at = NULL
+          WHERE chat_id = ?
+            AND (consecutive_block_count <> 0 OR consecutive_block_first_at IS NOT NULL)`,
+      )
+      .bind(chatId)
+      .run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      message: `Failed to reset block count: ${message}`,
+      chatId,
+      action: "reset-block-count",
+      module: "telegram-pending-lifecycle",
+    });
+  }
+}
+
+export async function disableBlockedSubscriber(db: D1Database, chatId: string): Promise<boolean> {
+  try {
+    await db.batch([
+      db
+        .prepare(
+          `UPDATE telegram_subscribers
+              SET alert_dews=0,
+                  alert_depeg=0,
+                  alert_safety=0,
+                  alert_launch=0,
+                  global_alert_dews=0,
+                  global_alert_depeg=0,
+                  global_alert_safety=0,
+                  global_alert_launch=0,
+                  global_depeg_worsening_bps_step=NULL
+            WHERE chat_id=?`,
+        )
+        .bind(chatId),
+      db
+        .prepare(
+          `UPDATE telegram_subscriptions
+              SET alert_dews=0,
+                  alert_depeg=0,
+                  alert_safety=0,
+                  alert_launch=0
+            WHERE chat_id=?`,
+        )
+        .bind(chatId),
+      db
+        .prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id=?")
+        .bind(chatId),
+    ]);
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logTelegramEvent({
+      message: `Failed to disable blocked subscriber: ${message}`,
+      chatId,
+      action: "disable-blocked-subscriber",
+      module: "telegram-pending-lifecycle",
+    });
+    return false;
+  }
+}
