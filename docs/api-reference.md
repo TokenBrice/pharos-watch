@@ -3025,7 +3025,7 @@ Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `4
 
 Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
 
-**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`).
+**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). Each mutation consumes the signed `initData` hash once inside the 15-minute mutation window; replaying the same mutation auth returns `409`.
 
 **Site-data lane:** denied.
 
@@ -3056,7 +3056,7 @@ Supported `operation.kind` values:
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `409` replayed mutation `initData`; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
 
 ### `POST /api/telegram-webhook`
 
@@ -4311,7 +4311,7 @@ Bulk-dismisses discovery candidates. Requires either `?all=true` or `?ids=<csv>`
 
 ### `POST /api/telegram-pending`
 
-Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Returns the count of rows deleted; the action is recorded in `admin_action_audit`.
+Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered requests. Operators must supply exactly one of `?chat_id=<id>` (drop all pending alerts for a specific subscriber) or `?older_than_sec=<positive-integer>` (drop alerts older than the supplied window). Add `?dry_run=1` or `?dryRun=true` to preview the matching row count without dead-lettering or deleting rows. Live clears return the count of rows deleted; dry-runs return the count matched. Both paths are recorded in `admin_action_audit`.
 
 **Authentication:** admin (`X-Pharos-Admin: 1` header required for mutations).
 
@@ -4319,6 +4319,12 @@ Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered 
 
 ```json
 { "ok": true, "deleted": 3 }
+```
+
+**Dry-run response**
+
+```json
+{ "ok": true, "dryRun": true, "matched": 3 }
 ```
 
 **Error responses:** `400` when neither filter is supplied, when both are supplied, or when `older_than_sec` is not a positive integer.
@@ -4419,7 +4425,7 @@ Malformed `limit` defaults to `50`; out-of-range `limit` is clamped to `1..200`.
 
 ### `GET /api/admin-telegram-chat/:chatId`
 
-Returns the consolidated state PharosWatchBot holds for a single Telegram chat: subscriber row, per-coin and preset subscriptions, any pending ticker disambiguation, pending-alert queue aggregates plus the most recent retry error class, and the quiet-hours / snooze state. Used for incident triage and `/forgetme`-style audits.
+Returns the consolidated state PharosWatchBot holds for a single Telegram chat: subscriber row, per-coin and preset subscriptions, any pending ticker disambiguation, pending-alert queue aggregates plus the most recent retry error class, and the quiet-hours / snooze state. Used for incident triage and `/forgetme`-style audits. Each inspection writes a non-PII summary to `admin_action_audit`.
 
 **Authentication:** admin. **Path param:** `:chatId` (signed integer; negative for groups/supergroups).
 

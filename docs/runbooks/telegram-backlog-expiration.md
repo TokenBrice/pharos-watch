@@ -37,7 +37,17 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
 
 1. **Pause low-priority sends.** Do not run admin broadcasts, broad manual resends, or non-urgent operator notices while risk-alert rows are close to expiry.
 2. **Let healthy drain continue.** If `pendingDeliveries` is decreasing and no rows are expired, wait one or two cycles. Opening the Telegram circuit breaker stops drain too, so avoid it unless Telegram is actively rejecting most sends.
-3. **Clear expired rows.**
+3. **Preview expired-row cleanup.**
+
+   ```bash
+   curl -X POST \
+        -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        -H "X-Pharos-Admin: 1" \
+        "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600&dry_run=1"
+   ```
+
+4. **Clear expired rows.**
 
    ```bash
    curl -X POST \
@@ -48,9 +58,9 @@ The script reports estimated drain time and D1 operation counts for 500, 1,000, 
         "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600"
    ```
 
-4. **Clear one abusive chat if needed.** If one chat dominates pending rows and is not a high-priority risk recipient, clear only that chat with `?chat_id=<chatId>`. Filtered manual clears copy rows to `telegram_alert_dead_letters` with `reason = 'manual_clear'` before deleting the live queue rows.
-5. **Do not rewrite `created_at` to extend TTL.** Extending alert life by mutating D1 rows makes latency and audit data dishonest. TTL changes should ship as a reviewed sender change with explicit severity policy.
-6. **After recovery, run a dry-run broadcast only if needed.** Follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md).
+5. **Clear one abusive chat if needed.** If one chat dominates pending rows and is not a high-priority risk recipient, preview with `?chat_id=<chatId>&dry_run=1`, then clear only that chat with `?chat_id=<chatId>`. Filtered manual clears copy rows to `telegram_alert_dead_letters` with `reason = 'manual_clear'` before deleting the live queue rows.
+6. **Do not rewrite `created_at` to extend TTL.** Extending alert life by mutating D1 rows makes latency and audit data dishonest. TTL changes should ship as a reviewed sender change with explicit severity policy.
+7. **After recovery, run a dry-run broadcast only if needed.** Follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md).
 
 ## Cross-References
 

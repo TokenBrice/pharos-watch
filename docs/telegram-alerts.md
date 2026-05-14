@@ -157,6 +157,8 @@ The same lane also reconciles bot commands, profile metadata, and the default ch
 
 ### Webhook Secret Rotation
 
+Operator steps for webhook-secret and bot-token rotations live in
+[`docs/runbooks/telegram-secret-rotation.md`](./runbooks/telegram-secret-rotation.md).
 Telegram secret rotation uses a short overlap window:
 
 1. Set the new `TELEGRAM_WEBHOOK_SECRET`.
@@ -495,8 +497,9 @@ The TTL — not a per-row attempts cap — bounds how long the queue keeps retry
 Each drain re-selects unexpired rows whose `not_before_at` has elapsed; rows that age
 past their TTL are copied into `telegram_alert_dead_letters` and then deleted at the end
 of the run.
-Operator clears through `POST /api/telegram-pending` use the same audit path with
-`reason = 'manual_clear'` before deleting filtered live rows.
+Operator clears through `POST /api/telegram-pending` should be previewed with
+`?dry_run=1` first. Dry-runs write only the matched count to admin audit; live clears
+use the same audit path with `reason = 'manual_clear'` before deleting filtered live rows.
 
 Within the TTL window, retryable sends are re-queued with an exponential backoff
 (`60s → 120s → 240s → 480s → 600s`, capped at 600s) indexed by prior attempts. Telegram's

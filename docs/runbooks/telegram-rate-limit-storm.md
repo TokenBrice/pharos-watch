@@ -38,12 +38,32 @@ Detection signals:
         -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
         -H "X-Pharos-Admin: 1" \
+        "https://ops-api.pharos.watch/api/telegram-pending?chat_id=<chatId>&dry_run=1"
+   ```
+
+   Then clear the chat if the preview count matches the intended target:
+
+   ```bash
+   curl -X POST \
+        -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        -H "X-Pharos-Admin: 1" \
         -H "Idempotency-Key: clear-telegram-pending-<chatId>-$(date +%s)" \
         "https://ops-api.pharos.watch/api/telegram-pending?chat_id=<chatId>"
    ```
 
    Expected response: `{ "ok": true, "deleted": <number> }`. Repeating the same filtered clear after rows are gone is safe and returns `deleted: 0`. The endpoint dead-letters cleared rows with `reason = 'manual_clear'` before deleting them.
 3. **Clear stale rows past TTL.** Filtered by age. Expired rows are copied to `telegram_alert_dead_letters` by either the scheduled dispatcher cleanup (`reason = 'ttl_expired'`) or this manual endpoint (`reason = 'manual_clear'`) before deletion.
+
+   ```bash
+   curl -X POST \
+        -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        -H "X-Pharos-Admin: 1" \
+        "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600&dry_run=1"
+   ```
+
+   Then clear if the previewed count is expected:
 
    ```bash
    curl -X POST \
