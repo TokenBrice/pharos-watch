@@ -16,13 +16,13 @@
   "geckoId": "spiko-uk-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.spiko.io/spiko-treasury-bills-dollar",
+    "url": "https://www.spiko.io/spiko-treasury-bills-pound",
     "provider": "Spiko fund NAV and holdings disclosures"
   },
   "links": [
     {
       "label": "Website",
-      "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+      "url": "https://www.spiko.io/spiko-treasury-bills-pound"
     },
     {
       "label": "CoinGecko",
@@ -76,8 +76,8 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Spiko Treasury Bills",
-        "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
+        "label": "Spiko Treasury Bills Pound",
+        "url": "https://www.spiko.io/spiko-treasury-bills-pound"
       },
       {
         "label": "Spiko smart contracts",

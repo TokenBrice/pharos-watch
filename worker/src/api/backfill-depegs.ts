@@ -305,8 +305,14 @@ export async function handleBackfillDepegs(
           ? fetchHistoricalSecondaryFxRates(db, [...neededSecondaryFxCurrencies], historicalFxStartDate, endDate)
           : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
+      const commodityRange = replayWindow
+        ? {
+            startSec: replayWindow.replayStartSec,
+            endSec: replayWindow.replayEndSec,
+          }
+        : undefined;
       const commodityPromise = needsCommodities
-        ? buildCommodityMedianSeriesFromCg()
+        ? buildCommodityMedianSeriesFromCg(commodityRange, coingeckoApiKey ?? null)
         : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
       const [fxSeriesPrimary, fxSeriesSecondary, commoditySeries] = await Promise.all([

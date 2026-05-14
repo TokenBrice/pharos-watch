@@ -14,6 +14,7 @@
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
   "detailProvider": "coingecko",
   "geckoId": "na-post-settlement-legal-financing-receivables",
+  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",

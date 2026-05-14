@@ -51,6 +51,7 @@ vi.mock("../backfill-fx", async (importOriginal) => {
 
 import { handleBackfillDepegs } from "../backfill-depegs";
 import { fetchMarketBackfillPriceSeries } from "../backfill-price-sources";
+import { buildCommodityMedianSeriesFromCg } from "../backfill-fx";
 
 stubCryptoForAuth();
 
@@ -477,5 +478,34 @@ describe("handleBackfillDepegs replay windows", () => {
     const history = db.getHistory();
     expect(history.some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("INSERT INTO depeg_events"))).toBe(false);
+  });
+
+  it("limits commodity median price history to the replay window", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
+        matchBinds: ["xnk-kinka"],
+        rows: [],
+      },
+    ]);
+    const startDay = Math.floor(Date.UTC(2026, 4, 1) / 1000);
+    const req = makeApiRequest(
+      "/api/backfill-depegs?stablecoin=xnk-kinka&dry-run=true&startDay=2026-05-01&endDay=2026-05-01&contextDays=1",
+      {
+        adminKey: "secret",
+        method: "POST",
+      },
+    );
+
+    const res = await handleBackfillDepegs(db, makeApiUrl(req.url), true, req, "cg-test-key");
+    expect(res.status).toBe(200);
+
+    expect(buildCommodityMedianSeriesFromCg).toHaveBeenCalledWith(
+      {
+        startSec: startDay - 86_400,
+        endSec: startDay + 86_399 + 86_400,
+      },
+      "cg-test-key",
+    );
   });
 });

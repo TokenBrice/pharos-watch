@@ -13,7 +13,7 @@ import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { getCache, setCache } from "../lib/db-cache";
 import { FrankfurterTimeSeriesSchema } from "../lib/external-api-schemas";
 import type { D1Database } from "@cloudflare/workers-types";
-import { fetchCgPriceHistoryHourly } from "./backfill-price-sources";
+import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./backfill-price-sources";
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 
@@ -232,7 +232,10 @@ export async function fetchHistoricalSecondaryFxRates(
  * prices can diverge from CG market prices by 3–5% on days with large intraday moves,
  * causing false depeg events for every gold token simultaneously.
  */
-export async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTimeSeries[]>> {
+export async function buildCommodityMedianSeriesFromCg(
+  range?: HistoricalMarketBackfillRange,
+  coingeckoApiKey: string | null = null,
+): Promise<Record<string, FxTimeSeries[]>> {
   const allCommodityCoins = ACTIVE_STABLECOINS.filter(
     (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
       && !COMMODITY_MEDIAN_EXCLUDES.has(m.id),
@@ -246,7 +249,7 @@ export async function buildCommodityMedianSeriesFromCg(): Promise<Record<string,
   for (const meta of allCommodityCoins) {
     const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
     if (!geckoId) continue;
-    const prices = await fetchCgPriceHistoryHourly(geckoId);
+    const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
     if (prices.length === 0) continue;
     sources.push({
       peg: meta.flags.pegCurrency as "GOLD" | "SILVER",
