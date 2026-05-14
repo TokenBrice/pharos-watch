@@ -90,6 +90,23 @@ function getTodayMidnightUtcSec(now = new Date()): number {
   return Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000);
 }
 
+function buildStressSignalsEnvelope(result: DewsComputedRow): string {
+  return JSON.stringify({
+    signals: result.signals,
+    amplifiers: result.amplifiers,
+    baseScore: result.baseScore,
+    finalScore: result.finalScore,
+    availableWeight: result.availableWeight,
+    effectiveWeights: result.effectiveWeights,
+    evidenceKinds: result.evidenceKinds,
+    insufficientEvidenceReason: result.insufficientEvidenceReason,
+    dataQualityScore: result.dataQualityScore,
+    topContributors: result.topContributors,
+    ...(result.sourceAges ? { sourceAges: result.sourceAges } : {}),
+    ...(result.staleFlags ? { staleFlags: result.staleFlags } : {}),
+  });
+}
+
 export async function persistDewsResults(params: {
   db: D1Database;
   results: DewsComputedRow[];
@@ -108,7 +125,7 @@ export async function persistDewsResults(params: {
           params.nowSec,
           result.score,
           result.band,
-          JSON.stringify({ signals: result.signals, amplifiers: result.amplifiers }),
+          buildStressSignalsEnvelope(result),
         ),
     );
     await batchExecute(params.db, stmts);
@@ -141,7 +158,7 @@ export async function persistDewsResults(params: {
           todayMidnight,
           result.score,
           result.band,
-          JSON.stringify({ signals: result.signals, amplifiers: result.amplifiers }),
+          buildStressSignalsEnvelope(result),
         ),
     );
     await batchExecute(params.db, histStmts);
@@ -158,9 +175,7 @@ export async function persistDewsResults(params: {
 
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
-    frozenIdsList.length > 0
-      ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})`
-      : "";
+    frozenIdsList.length > 0 ? `AND stablecoin_id NOT IN (${frozenIdsList.map(() => "?").join(",")})` : "";
 
   const oldSignals = await runWithOverloadRetry(() =>
     params.db

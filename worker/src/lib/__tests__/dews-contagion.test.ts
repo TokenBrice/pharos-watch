@@ -56,6 +56,8 @@ describe("DEWS contagion amplifier", () => {
           circulatingCurrent: 4.5e9,
           circulatingPrevDay: 5e9,
           circulatingPrevWeek: 5e9,
+          price: 0.99,
+          dexPriceUsd: 0.99,
           psiScore: 50,
           contagionAmplifier,
         }),

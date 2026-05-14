@@ -5,24 +5,18 @@ import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { computeDEWS } from "../../lib/dews";
 import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
-import type {
-  ContagionAmplifiers,
-  DewsScoringResult,
-  DewsScoringState,
-  PersistedJsonDecodeReason,
-} from "./contracts";
+import { isAuthoritativeDepegPegReference } from "../../lib/depeg-trust-policy";
+import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
 import { decodeJsonString } from "../../lib/cache-json";
-import {
-  CONTAGION_BUMP_DANGER,
-  CONTAGION_BUMP_WARNING,
-  CONTAGION_AMPLIFIER_CAP,
-} from "../../lib/constants";
+import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../../lib/constants";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),
-  extra: z.object({
-    balanceRatio: z.number(),
-  }).optional(),
+  extra: z
+    .object({
+      balanceRatio: z.number(),
+    })
+    .optional(),
 });
 
 const BLACKLIST_SYMBOL_SET = new Set<string>(BLACKLIST_STABLECOINS);
@@ -57,9 +51,8 @@ function buildTopPools(
     updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => Array.isArray(parsed)
-      ? { ok: true, payload: parsed }
-      : { ok: false, reason: "invalid-shape" as const },
+    normalize: (parsed) =>
+      Array.isArray(parsed) ? { ok: true, payload: parsed } : { ok: false, reason: "invalid-shape" as const },
   });
 
   if (!decoded.ok) {
@@ -84,13 +77,21 @@ function buildTopPools(
 }
 
 export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): DewsScoringResult {
-  const { assetById, pegRates, registerMalformedPersistedInput, sourceState } = options;
+  const {
+    assetById,
+    pegRates,
+    pegRateContributorCounts = {},
+    pegRateSources = {},
+    registerMalformedPersistedInput,
+    sourceState,
+  } = options;
   const results: DewsScoringResult["results"] = [];
   let liqHistCoverageCount = 0;
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  const scored: Array<{ meta: typeof PSI_ELIGIBLE_STABLECOINS[number]; input: DEWSInput; firstPass: DEWSResult }> = [];
+  const scored: Array<{ meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
+    [];
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     if (meta.flags?.navToken) continue;
 
@@ -110,7 +111,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     const dexPrice = sourceState.dexPriceMap.get(meta.id);
     const liqHist = sourceState.liqHist7dMap.get(meta.id);
     if (liqHist) liqHistCoverageCount++;
-    const prev = sourceState.prevSignals.get(meta.id);
+    const prevSnapshot = sourceState.prevSignals.get(meta.id);
+    const prev = prevSnapshot?.signals;
     const mintBurn = sourceState.mintBurnMap.get(meta.id);
 
     const blacklistSymbol = BLACKLIST_ID_TO_SYMBOL.get(meta.id);
@@ -123,11 +125,28 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       registerMalformedPersistedInput,
     );
 
-    const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
+    const pegType = asset.pegType ?? "peggedUSD";
+    const hasPegReference = pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType);
+    const pegRateSource = pegRateSources[pegType] ?? null;
+    const pegRateContributorCount = pegRateContributorCounts[pegType] ?? null;
+    const pegReferenceTrusted =
+      hasPegReference &&
+      isAuthoritativeDepegPegReference({
+        pegCurrency: meta.flags?.pegCurrency ?? null,
+        pegType,
+        pegRateSource,
+        pegRateContributorCount,
+      });
+    const pegRef = pegReferenceTrusted ? getPegReference(pegType, pegRates, meta.commodityOunces) : 0;
+    const pegReferenceUnavailableReason = !hasPegReference
+      ? "peg-reference-missing"
+      : pegReferenceTrusted
+        ? null
+        : "peg-reference-untrusted";
     const input: DEWSInput = {
       stablecoinId: meta.id,
       mcapUsd: current,
-      pegType: asset.pegType ?? "peggedUSD",
+      pegType,
       circulatingCurrent: current,
       circulatingPrevDay: prevDay || current,
       circulatingPrevWeek: prevWeek || current,
@@ -141,7 +160,11 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       priceConfidence: asset.priceConfidence ?? null,
       prevPriceConfidence: (prev?.price as { confidence?: string })?.confidence ?? null,
       price: asset.price ?? null,
-      pegRef: pegRef ?? 1.0,
+      pegRef,
+      pegReferenceAvailable: pegReferenceTrusted,
+      pegReferenceUnavailableReason,
+      pegRateSource,
+      pegRateContributorCount,
       dexPriceUsd: dexPrice?.dexPriceUsd ?? null,
       blacklistEvents24h: blacklistCounts?.count24h ?? 0,
       blacklistEvents7d: blacklistCounts?.count7d ?? 0,
@@ -150,6 +173,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       mintVolume24hUsd: mintBurn?.mint24h ?? null,
       burnBaseline30dUsd: mintBurn?.burnBaseline ?? null,
       flowDataAgeDays: mintBurn?.dataAgeDays ?? 0,
+      flowBaselineDays: mintBurn?.baselineDays ?? null,
       yieldWarnings: sourceState.yieldWarnings.get(meta.id) ?? [],
       yieldSourceRisk: sourceState.yieldSourceRisk.get(meta.id) ?? null,
       yieldRankChangeAttribution: sourceState.yieldRankChangeAttribution.get(meta.id) ?? null,
@@ -157,6 +181,17 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       prevPoolValue: (prev?.pool as { value?: number })?.value,
       prevDivergValue: (prev?.diverg as { value?: number })?.value,
       contagionAmplifier: 1,
+      sourceAges: {
+        dexLiquidity: sourceState.dexLiqAgeSecById.get(meta.id) ?? null,
+        dexPrice: sourceState.dexPriceAgeSecById.get(meta.id) ?? null,
+        previousSignals: prevSnapshot?.ageSec ?? null,
+      },
+      staleFlags: {
+        dexLiquidity: sourceState.dexLiqStaleIds.has(meta.id),
+        dexPrice: sourceState.dexPriceStaleIds.has(meta.id),
+        previousSignals: sourceState.prevSignalStaleIds.has(meta.id),
+        pegReference: !pegReferenceTrusted,
+      },
     };
 
     const firstPass = computeDEWS(input);
@@ -170,9 +205,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   const amplifiers: ContagionAmplifiers = { byPegType: {}, triggeringIds: [] };
   for (const { input, firstPass } of scored) {
     const bump =
-      firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER :
-      firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING :
-      1;
+      firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER : firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING : 1;
     if (bump <= 1) continue;
     const current = amplifiers.byPegType[input.pegType] ?? 1;
     if (bump > current) {
@@ -186,9 +219,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   for (const { meta, input, firstPass } of scored) {
     const contagion = amplifiers.byPegType[input.pegType] ?? 1;
     const applicable = contagion > 1 && firstPass.band !== "DANGER" && firstPass.band !== "WARNING";
-    const finalResult = applicable
-      ? computeDEWS({ ...input, contagionAmplifier: contagion })
-      : firstPass;
+    const finalResult = applicable ? computeDEWS({ ...input, contagionAmplifier: contagion }) : firstPass;
     if (!finalResult) {
       insufficientDataCount++;
       continue;
@@ -199,6 +230,16 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       band: finalResult.band,
       signals: finalResult.signals,
       amplifiers: finalResult.amplifiers,
+      baseScore: finalResult.baseScore,
+      finalScore: finalResult.finalScore,
+      availableWeight: finalResult.availableWeight,
+      effectiveWeights: finalResult.effectiveWeights,
+      evidenceKinds: finalResult.evidenceKinds,
+      insufficientEvidenceReason: finalResult.insufficientEvidenceReason,
+      dataQualityScore: finalResult.dataQualityScore,
+      topContributors: finalResult.topContributors,
+      ...(finalResult.sourceAges ? { sourceAges: finalResult.sourceAges } : {}),
+      ...(finalResult.staleFlags ? { staleFlags: finalResult.staleFlags } : {}),
     });
   }
 

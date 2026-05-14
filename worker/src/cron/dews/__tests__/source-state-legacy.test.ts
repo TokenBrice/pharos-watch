@@ -71,8 +71,9 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     // Legacy rows surface as the flat signals map (no `.signals` wrapper key).
     const prev = sourceState.prevSignals.get("usdt-tether");
     expect(prev).toBeDefined();
-    expect(prev?.supply).toEqual({ value: 5, available: true });
-    expect(prev?.pool).toEqual({ value: 12, available: true });
+    expect(prev?.signals.supply).toEqual({ value: 5, available: true });
+    expect(prev?.signals.pool).toEqual({ value: 12, available: true });
+    expect(prev?.ageSec).toBe(600);
   });
 
   it("hydrates a new wrapped-shape signals_json row by unwrapping .signals", async () => {
@@ -103,10 +104,10 @@ describe("loadDewsSourceState legacy signals_json hydration", () => {
     // existing smoothing read path.
     const prev = sourceState.prevSignals.get("usdt-tether");
     expect(prev).toBeDefined();
-    expect(prev?.supply).toEqual({ value: 8, available: true });
+    expect(prev?.signals.supply).toEqual({ value: 8, available: true });
     // The amplifiers envelope is stripped — downstream hydration defaults it
     // to { psi: 1, contagion: 1 } when re-scoring.
-    expect((prev as Record<string, unknown>).amplifiers).toBeUndefined();
+    expect((prev?.signals as Record<string, unknown>).amplifiers).toBeUndefined();
   });
 
   it("hydrates structured yield source-risk and rank attribution from rankings cache", async () => {

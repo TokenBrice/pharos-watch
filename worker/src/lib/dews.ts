@@ -10,13 +10,12 @@
 import type { ThreatBand } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
 import {
+  DEWS_SIGNAL_LABELS,
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
+  type DewsSignalKey,
 } from "@shared/lib/dews-config";
-import type {
-  YieldRankChangeAttribution,
-  YieldSourceRisk,
-} from "@shared/types/yield";
+import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 
 // ---------------------------------------------------------------------------
@@ -24,6 +23,21 @@ import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 // ---------------------------------------------------------------------------
 
 export type { ThreatBand };
+
+export type DEWSEvidenceKind = "market-price" | "dex-liquidity" | "flow" | "issuer-control" | "yield" | "systemic";
+
+export type DewsInsufficientEvidenceReason =
+  | "total_weight_below_minimum"
+  | "data_quality_only"
+  | "missing_market_or_liquidity_evidence";
+
+export interface DewsTopContributor {
+  key: DewsSignalKey;
+  label: string;
+  value: number;
+  effectiveWeight: number;
+  contribution: number;
+}
 
 export interface PoolEntry {
   tvlUsd: number;
@@ -52,7 +66,9 @@ export interface SignalResult {
   burnSurge?: number;
   burnToMintRatio?: number;
   net24hUsd?: number;
+  baselineDays?: number;
   warnings?: string[];
+  unavailableReason?: string;
 }
 
 export interface DEWSInput {
@@ -78,6 +94,10 @@ export interface DEWSInput {
   price: number | null;
   // Cross-source divergence
   pegRef: number;
+  pegReferenceAvailable?: boolean;
+  pegReferenceUnavailableReason?: string | null;
+  pegRateSource?: string | null;
+  pegRateContributorCount?: number | null;
   dexPriceUsd: number | null;
   // Blacklist activity
   blacklistEvents24h: number;
@@ -88,6 +108,7 @@ export interface DEWSInput {
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;
   flowDataAgeDays: number;
+  flowBaselineDays?: number | null;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];
   // Structured yield-risk evidence. Nullable, omitted, or neutral rows remain
@@ -105,6 +126,8 @@ export interface DEWSInput {
    * clamp to [1.0, 1.2]; computeDEWS also clamps defensively.
    */
   contagionAmplifier?: number;
+  sourceAges?: Record<string, number | null>;
+  staleFlags?: Record<string, boolean>;
 }
 
 export interface DEWSResult {
@@ -112,6 +135,16 @@ export interface DEWSResult {
   band: ThreatBand;
   signals: Record<string, SignalResult>;
   amplifiers: { psi: number; contagion: number };
+  baseScore: number;
+  finalScore: number;
+  availableWeight: number;
+  effectiveWeights: Partial<Record<DewsSignalKey, number>>;
+  evidenceKinds: DEWSEvidenceKind[];
+  insufficientEvidenceReason: DewsInsufficientEvidenceReason | null;
+  dataQualityScore: number;
+  topContributors: DewsTopContributor[];
+  sourceAges?: Record<string, number | null>;
+  staleFlags?: Record<string, boolean>;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,6 +158,11 @@ const CONFIDENCE_SCORES: Record<string, number> = {
   fallback: 80,
 };
 
+const MIN_AVAILABLE_WEIGHT = 0.3;
+const EVIDENCE_STRESS_THRESHOLD = 10;
+const SEVERE_ISSUER_CONTROL_THRESHOLD = 55;
+const WATCH_MAX_SCORE = 35;
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
@@ -134,13 +172,9 @@ const CONFIDENCE_SCORES: Record<string, number> = {
  * Anchors must be sorted by x ascending. Values below first anchor return
  * first y; values above last anchor return last y.
  */
-export function piecewiseLinear(
-  x: number,
-  anchors: [number, number][],
-): number {
+export function piecewiseLinear(x: number, anchors: [number, number][]): number {
   if (anchors.length === 0) return 0;
-  if (!Number.isFinite(x))
-    return x !== x ? 0 : x > 0 ? anchors[anchors.length - 1][1] : anchors[0][1];
+  if (!Number.isFinite(x)) return x !== x ? 0 : x > 0 ? anchors[anchors.length - 1][1] : anchors[0][1];
   if (x <= anchors[0][0]) return anchors[0][1];
   if (x >= anchors[anchors.length - 1][0]) return anchors[anchors.length - 1][1];
 
@@ -166,26 +200,62 @@ export function getThreatBand(score: number): ThreatBand {
   return "DANGER";
 }
 
+function hasStressEvidence(signal: SignalResult): boolean {
+  return signal.available && signal.value >= EVIDENCE_STRESS_THRESHOLD;
+}
+
+function classifyEvidenceKinds(
+  signals: Record<DewsSignalKey, SignalResult>,
+  input: DEWSInput,
+  psiAmplifier: number,
+): DEWSEvidenceKind[] {
+  const kinds = new Set<DEWSEvidenceKind>();
+
+  if (hasStressEvidence(signals.diverg) && input.price !== null && Number.isFinite(input.price)) {
+    kinds.add("market-price");
+  }
+
+  if (hasStressEvidence(signals.pool) || hasStressEvidence(signals.liq)) {
+    kinds.add("dex-liquidity");
+  }
+
+  if (hasStressEvidence(signals.flow)) {
+    kinds.add("flow");
+  }
+
+  if (hasStressEvidence(signals.black)) {
+    kinds.add("issuer-control");
+  }
+
+  if (hasStressEvidence(signals.yield)) {
+    kinds.add("yield");
+  }
+
+  if (psiAmplifier > 1) {
+    kinds.add("systemic");
+  }
+
+  return [...kinds];
+}
+
+function roundMetric(value: number, decimals = 2): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-signal implementations
 // ---------------------------------------------------------------------------
 
 function computeSupplySignal(input: DEWSInput): SignalResult {
-  const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } =
-    input;
+  const { circulatingCurrent, circulatingPrevDay, circulatingPrevWeek, mcapUsd } = input;
 
   if (circulatingPrevDay <= 0 && circulatingPrevWeek <= 0) {
     return { value: 0, available: true, delta1d: 0, delta7d: 0 };
   }
 
-  const delta1d =
-    circulatingPrevDay > 0
-      ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay
-      : 0;
-  const delta7d =
-    circulatingPrevWeek > 0
-      ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek
-      : 0;
+  const delta1d = circulatingPrevDay > 0 ? (circulatingCurrent - circulatingPrevDay) / circulatingPrevDay : 0;
+  const delta7d = circulatingPrevWeek > 0 ? (circulatingCurrent - circulatingPrevWeek) / circulatingPrevWeek : 0;
 
   // Only contraction contributes stress
   const norm1d =
@@ -224,10 +294,7 @@ function computeSupplySignal(input: DEWSInput): SignalResult {
   const rawVelocity = 0.6 * norm1d + 0.4 * norm7d;
 
   // Size-adjusted dampening: small coins (<$50M) have naturally volatile supply
-  const sizeFactor = Math.min(
-    1,
-    Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3,
-  );
+  const sizeFactor = Math.min(1, Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3);
 
   const value = clamp(rawVelocity * sizeFactor, 0, 100);
 
@@ -293,12 +360,8 @@ function computePoolSignal(input: DEWSInput): SignalResult {
 function computeLiquiditySignal(input: DEWSInput): SignalResult {
   const { liquidityScore, liquidityScore7dAgo, tvlCurrent, tvl7dAgo } = input;
 
-  const scoreDeltaComputable =
-    liquidityScore !== null &&
-    liquidityScore7dAgo !== null &&
-    liquidityScore7dAgo > 0;
-  const tvlDeltaComputable =
-    tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0;
+  const scoreDeltaComputable = liquidityScore !== null && liquidityScore7dAgo !== null && liquidityScore7dAgo > 0;
+  const tvlDeltaComputable = tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0;
 
   if (liquidityScore === null || (!scoreDeltaComputable && !tvlDeltaComputable)) {
     return { value: 0, available: false };
@@ -307,9 +370,7 @@ function computeLiquiditySignal(input: DEWSInput): SignalResult {
   // Score erosion
   let scoreErosion = 0;
   if (liquidityScore7dAgo !== null && liquidityScore7dAgo > 0) {
-    const scoreDelta =
-      (liquidityScore - liquidityScore7dAgo) /
-      Math.max(liquidityScore7dAgo, 1);
+    const scoreDelta = (liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1);
     if (scoreDelta < 0) {
       scoreErosion = piecewiseLinear(Math.abs(scoreDelta) * 100, [
         // Liquidity score erosion curve.
@@ -351,11 +412,7 @@ function computeLiquiditySignal(input: DEWSInput): SignalResult {
     available: true,
     scoreDelta7d:
       liquidityScore7dAgo !== null
-        ? Math.round(
-            ((liquidityScore - liquidityScore7dAgo) /
-              Math.max(liquidityScore7dAgo, 1)) *
-              10000,
-          ) / 100
+        ? Math.round(((liquidityScore - liquidityScore7dAgo) / Math.max(liquidityScore7dAgo, 1)) * 10000) / 100
         : null,
     tvlDelta7d:
       tvlCurrent !== null && tvl7dAgo !== null && tvl7dAgo > 0
@@ -395,7 +452,15 @@ function computeDivergSignal(input: DEWSInput): SignalResult {
   const { price, dexPriceUsd, pegRef, pegType } = input;
 
   // Need at least primary price to compute any divergence
-  if (price === null || !Number.isFinite(price) || pegRef <= 0) {
+  if (input.pegReferenceAvailable === false || pegRef <= 0) {
+    return {
+      value: 0,
+      available: false,
+      unavailableReason: input.pegReferenceUnavailableReason ?? "peg-reference-unavailable",
+    };
+  }
+
+  if (price === null || !Number.isFinite(price)) {
     return { value: 0, available: false };
   }
 
@@ -403,16 +468,10 @@ function computeDivergSignal(input: DEWSInput): SignalResult {
   const primaryDevBps = Math.abs((price / pegRef - 1) * 10000);
 
   // DEX deviation from peg (bps)
-  const dexDevBps =
-    dexPriceUsd !== null
-      ? Math.abs((dexPriceUsd / pegRef - 1) * 10000)
-      : 0;
+  const dexDevBps = dexPriceUsd !== null ? Math.abs((dexPriceUsd / pegRef - 1) * 10000) : 0;
 
   // Cross-source spread (bps)
-  const crossSpreadBps =
-    dexPriceUsd !== null && price > 0
-      ? Math.abs((price / dexPriceUsd - 1) * 10000)
-      : 0;
+  const crossSpreadBps = dexPriceUsd !== null && price > 0 ? Math.abs((price / dexPriceUsd - 1) * 10000) : 0;
 
   const worstBps = Math.max(primaryDevBps, dexDevBps, crossSpreadBps);
 
@@ -459,8 +518,7 @@ function computeBlacklistSignal(input: DEWSInput): SignalResult {
   const dailyRate7d = blacklistEvents7d / 7;
 
   // Spike detection
-  const spikeRatio =
-    dailyRate7d > 0 ? blacklistEvents24h / dailyRate7d : blacklistEvents24h;
+  const spikeRatio = dailyRate7d > 0 ? blacklistEvents24h / dailyRate7d : blacklistEvents24h;
 
   const rawCount = piecewiseLinear(blacklistEvents24h, [
     // Blacklist event count curve (24h).
@@ -520,11 +578,7 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
 
   // Mint/burn ratio collapse: when burns >> mints
   const ratio =
-    input.mintVolume24hUsd > 0
-      ? input.burnVolume24hUsd / input.mintVolume24hUsd
-      : input.burnVolume24hUsd > 0
-        ? 10
-        : 0;
+    input.mintVolume24hUsd > 0 ? input.burnVolume24hUsd / input.mintVolume24hUsd : input.burnVolume24hUsd > 0 ? 10 : 0;
 
   const surgeScore = piecewiseLinear(burnSurge, [
     // Burn surge curve: 24h burn volume vs 30d daily average.
@@ -561,6 +615,7 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
     burnSurge: Math.round(burnSurge * 100) / 100,
     burnToMintRatio: Math.round(ratio * 100) / 100,
     net24hUsd: net24h,
+    baselineDays: input.flowBaselineDays ?? input.flowDataAgeDays,
   };
 }
 
@@ -626,10 +681,7 @@ function computeYieldSignal(input: DEWSInput): SignalResult {
     return { value: 0, available: false };
   }
 
-  const warningSum = input.yieldWarnings.reduce(
-    (acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0),
-    0,
-  );
+  const warningSum = input.yieldWarnings.reduce((acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0), 0);
   const value = clamp(warningSum + (structuredSignal?.value ?? 0), 0, 100);
 
   return {
@@ -644,7 +696,7 @@ function computeYieldSignal(input: DEWSInput): SignalResult {
 // ---------------------------------------------------------------------------
 
 export function computeDEWS(input: DEWSInput): DEWSResult | null {
-  const signals: Record<keyof typeof DEWS_SIGNAL_WEIGHTS, SignalResult> = {
+  const signals: Record<DewsSignalKey, SignalResult> = {
     supply: computeSupplySignal(input),
     pool: computePoolSignal(input),
     liq: computeLiquiditySignal(input),
@@ -658,8 +710,10 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   // Weighted average with redistribution for missing signals
   let totalWeight = 0;
   let weightedSum = 0;
+  const effectiveWeights: Partial<Record<DewsSignalKey, number>> = {};
+  const weightedContributions: DewsTopContributor[] = [];
 
-  for (const [key, signal] of Object.entries(signals) as Array<[keyof typeof signals, SignalResult]>) {
+  for (const [key, signal] of Object.entries(signals) as Array<[DewsSignalKey, SignalResult]>) {
     if (signal.available) {
       totalWeight += DEWS_SIGNAL_WEIGHTS[key];
       weightedSum += DEWS_SIGNAL_WEIGHTS[key] * signal.value;
@@ -667,19 +721,49 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
   }
 
   // Require at least 2 available signals (weight >= 0.30) for a score
-  if (totalWeight < 0.3) {
+  if (totalWeight < MIN_AVAILABLE_WEIGHT) {
     return null;
   }
 
   // Systemic backdrop: amplify individual stress when market is under pressure.
   // PSI < 75 (below STEADY) = market stress.
   // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
-  const psiAmplifier = input.psiScore !== null && input.psiScore < 75
-    ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3
-    : 1;
+  const psiAmplifier =
+    input.psiScore !== null && input.psiScore < 75 ? 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3 : 1;
   const contagionAmplifier = clamp(input.contagionAmplifier ?? 1, 1, CONTAGION_AMPLIFIER_CAP);
-  const amplifiedScore = (weightedSum / totalWeight) * psiAmplifier * contagionAmplifier;
-  const score = Math.round(clamp(amplifiedScore, 0, 100));
+  const baseScore = weightedSum / totalWeight;
+  for (const [key, signal] of Object.entries(signals) as Array<[DewsSignalKey, SignalResult]>) {
+    if (!signal.available) continue;
+    const effectiveWeight = DEWS_SIGNAL_WEIGHTS[key] / totalWeight;
+    effectiveWeights[key] = effectiveWeight;
+    weightedContributions.push({
+      key,
+      label: DEWS_SIGNAL_LABELS[key],
+      value: roundMetric(signal.value),
+      effectiveWeight: roundMetric(effectiveWeight, 4),
+      contribution: roundMetric(effectiveWeight * signal.value),
+    });
+  }
+
+  const evidenceKinds = classifyEvidenceKinds(signals, input, psiAmplifier);
+  const hasMarketOrLiquidityEvidence =
+    evidenceKinds.includes("market-price") || evidenceKinds.includes("dex-liquidity");
+  const hasSevereIssuerControlEvidence =
+    signals.black.available && signals.black.value >= SEVERE_ISSUER_CONTROL_THRESHOLD;
+  const dataQualityScore = signals.price.available ? signals.price.value : 0;
+
+  const amplifiedScore = baseScore * psiAmplifier * contagionAmplifier;
+  const preliminaryScore = Math.round(clamp(amplifiedScore, 0, 100));
+  let score = preliminaryScore;
+  let insufficientEvidenceReason: DewsInsufficientEvidenceReason | null = null;
+  if (preliminaryScore > WATCH_MAX_SCORE && !hasMarketOrLiquidityEvidence && !hasSevereIssuerControlEvidence) {
+    score = WATCH_MAX_SCORE;
+    const nonSystemicEvidenceKinds = evidenceKinds.filter((kind) => kind !== "systemic");
+    insufficientEvidenceReason =
+      dataQualityScore >= 50 && nonSystemicEvidenceKinds.length === 0
+        ? "data_quality_only"
+        : "missing_market_or_liquidity_evidence";
+  }
   const band = getThreatBand(score);
 
   return {
@@ -687,5 +771,18 @@ export function computeDEWS(input: DEWSInput): DEWSResult | null {
     band,
     signals,
     amplifiers: { psi: psiAmplifier, contagion: contagionAmplifier },
+    baseScore: roundMetric(baseScore),
+    finalScore: score,
+    availableWeight: roundMetric(totalWeight, 4),
+    effectiveWeights,
+    evidenceKinds,
+    insufficientEvidenceReason,
+    dataQualityScore: roundMetric(dataQualityScore),
+    topContributors: weightedContributions
+      .filter((contributor) => contributor.contribution > 0)
+      .sort((a, b) => b.contribution - a.contribution)
+      .slice(0, 3),
+    ...(input.sourceAges ? { sourceAges: input.sourceAges } : {}),
+    ...(input.staleFlags ? { staleFlags: input.staleFlags } : {}),
   };
 }

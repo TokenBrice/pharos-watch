@@ -161,8 +161,11 @@ describe("computeDEWS", () => {
     // Supply always available (from cache), price always available
     const result = computeDews(baseInput({ price: null, priceConfidence: null }));
     // S_price = 100 for null price, S_supply = 0 (no change)
-    // 2 signals available => score should be >0
+    // Data-quality-only stress is capped at WATCH without market/liquidity evidence.
     expect(result.score).toBeGreaterThan(0);
+    expect(result.band).toBe("WATCH");
+    expect(result.insufficientEvidenceReason).toBe("data_quality_only");
+    expect(result.dataQualityScore).toBe(100);
   });
 
   it("detects supply velocity stress", () => {
@@ -175,6 +178,8 @@ describe("computeDEWS", () => {
     );
     expect(result.signals.supply.value).toBeGreaterThan(50);
     expect(result.band).not.toBe("CALM");
+    expect(result.score).toBeLessThanOrEqual(35);
+    expect(result.insufficientEvidenceReason).toBe("missing_market_or_liquidity_evidence");
   });
 
   it("dampens supply velocity for small coins", () => {
@@ -249,6 +254,7 @@ describe("computeDEWS", () => {
     );
     expect(result.signals.diverg.available).toBe(true);
     expect(result.signals.diverg.value).toBeGreaterThan(25);
+    expect(result.evidenceKinds).toContain("market-price");
   });
 
   it("dampens S_diverg for non-USD pegs", () => {
@@ -297,6 +303,7 @@ describe("computeDEWS", () => {
     );
     expect(result.signals.flow.available).toBe(true);
     expect(result.signals.flow.value).toBeGreaterThan(40);
+    expect(result.signals.flow.baselineDays).toBe(14);
   });
 
   it("marks flow unavailable when no mint/burn data", () => {
@@ -378,13 +385,15 @@ describe("computeDEWS", () => {
 
     expect(structured.signals.yield.available).toBe(true);
     expect(structured.signals.yield.value).toBe(100);
-    expect(structured.signals.yield.warnings).toEqual(expect.arrayContaining([
-      "structured-reward-heavy",
-      "structured-stale-source",
-      "structured-source-risk-penalty",
-      "structured-high-risk-venue",
-      "structured-rank-source-risk",
-    ]));
+    expect(structured.signals.yield.warnings).toEqual(
+      expect.arrayContaining([
+        "structured-reward-heavy",
+        "structured-stale-source",
+        "structured-source-risk-penalty",
+        "structured-high-risk-venue",
+        "structured-rank-source-risk",
+      ]),
+    );
     expect(structured.score).toBeGreaterThan(legacy.score);
   });
 
@@ -393,6 +402,8 @@ describe("computeDEWS", () => {
       baseInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
+        price: 0.99,
+        dexPriceUsd: 0.99,
         psiScore: 90,
       }),
     );
@@ -400,6 +411,8 @@ describe("computeDEWS", () => {
       baseInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
+        price: 0.99,
+        dexPriceUsd: 0.99,
         psiScore: 40,
       }),
     );
@@ -560,5 +573,95 @@ describe("DEWS scoring boundaries", () => {
     expect(result?.signals.black.available).toBe(true);
     expect(Number.isFinite(result?.signals.black.value ?? NaN)).toBe(true);
     expect(result?.signals.black.spikeRatio).toBe(3); // falls back to raw 24h count
+  });
+
+  it("caps supply plus null-price data quality at WATCH without market evidence", () => {
+    const result = computeDEWS(
+      baseInput({
+        circulatingCurrent: 4e9,
+        circulatingPrevDay: 5e9,
+        circulatingPrevWeek: 5.5e9,
+        price: null,
+        priceConfidence: null,
+      }),
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.band).toBe("WATCH");
+    expect(result!.score).toBe(35);
+    expect(result!.evidenceKinds).not.toContain("market-price");
+    expect(result!.evidenceKinds).not.toContain("dex-liquidity");
+    expect(result!.dataQualityScore).toBe(100);
+  });
+
+  it("allows supply contraction plus market divergence to produce elevated risk", () => {
+    const result = computeDEWS(
+      baseInput({
+        circulatingCurrent: 4e9,
+        circulatingPrevDay: 5e9,
+        circulatingPrevWeek: 5.5e9,
+        price: 0.94,
+        dexPriceUsd: 0.94,
+      }),
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.score).toBeGreaterThan(35);
+    expect(result!.evidenceKinds).toContain("market-price");
+    expect(result!.insufficientEvidenceReason).toBeNull();
+  });
+
+  it("allows severe issuer-control evidence to elevate even when market data is sparse", () => {
+    const result = computeDEWS(
+      baseInput({
+        price: null,
+        priceConfidence: null,
+        hasBlacklistTracking: true,
+        blacklistEvents24h: 20,
+        blacklistEvents7d: 20,
+      }),
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.score).toBeGreaterThan(35);
+    expect(result!.evidenceKinds).toContain("issuer-control");
+    expect(result!.insufficientEvidenceReason).toBeNull();
+  });
+
+  it("marks divergence unavailable when the peg reference is not trusted", () => {
+    const result = computeDEWS(
+      baseInput({
+        pegType: "peggedEUR",
+        pegRef: 0,
+        pegReferenceAvailable: false,
+        pegReferenceUnavailableReason: "peg-reference-untrusted",
+        price: 1.05,
+        dexPriceUsd: 1.04,
+      }),
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.signals.diverg.available).toBe(false);
+    expect(result!.signals.diverg.unavailableReason).toBe("peg-reference-untrusted");
+    expect(result!.evidenceKinds).not.toContain("market-price");
+  });
+
+  it("surfaces available weight, effective weights, and top contributors", () => {
+    const result = computeDEWS(
+      baseInput({
+        price: 0.94,
+        dexPriceUsd: 0.94,
+      }),
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.availableWeight).toBeGreaterThan(0);
+    expect(result!.effectiveWeights.supply).toBeGreaterThan(0);
+    expect(result!.topContributors[0]).toEqual(
+      expect.objectContaining({
+        key: "diverg",
+        label: "Cross-Source Divergence",
+      }),
+    );
   });
 });

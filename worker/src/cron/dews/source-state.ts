@@ -1,18 +1,14 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import { decodeJsonString } from "../../lib/cache-json";
-import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
+import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../lib/mint-burn-canonical-chain";
-import type {
-  DewsSourceState,
-  PersistedJsonDecodeReason,
-} from "./contracts";
-import type {
-  YieldRankChangeAttribution,
-  YieldSourceRisk,
-} from "@shared/types/yield";
+import type { DewsSourceState, PersistedJsonDecodeReason } from "./contracts";
+import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 
 const DEWS_STALE_DEX_LIQUIDITY_SEC = 2 * 3600;
+const DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC = 2 * 3600;
+const DEWS_DEX_PRICE_TRUST_POLICY = getDexTrustPolicy("depeg");
 const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
   "dex-prices",
   "dex-liquidity-history",
@@ -26,11 +22,7 @@ interface LoadDewsSourceStateOptions {
   db: D1Database;
   nowSec: number;
   bootstrapPending: boolean;
-  registerSourceFailure: (
-    source: string,
-    error: unknown,
-    options?: { bootstrapAllowed?: boolean },
-  ) => void;
+  registerSourceFailure: (source: string, error: unknown, options?: { bootstrapAllowed?: boolean }) => void;
   registerMalformedPersistedInput: (options: {
     source: string;
     context: string;
@@ -50,9 +42,7 @@ function isBootstrapAllowedMissingTableSource(source: string): boolean {
 }
 
 function getObject(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
 function getNumber(value: unknown): number | null {
@@ -61,6 +51,10 @@ function getNumber(value: unknown): number | null {
 
 function getString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function getRowAgeSec(updatedAt: number | null | undefined, nowSec: number): number | null {
+  return typeof updatedAt === "number" && Number.isFinite(updatedAt) ? Math.max(0, nowSec - updatedAt) : null;
 }
 
 function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
@@ -91,10 +85,7 @@ function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
     venueProtocol: getString(row.venueProtocol),
     venueChain: getString(row.venueChain),
     venueRiskTier:
-      venueRiskTier === "low" ||
-      venueRiskTier === "medium" ||
-      venueRiskTier === "high" ||
-      venueRiskTier === "unknown"
+      venueRiskTier === "low" || venueRiskTier === "medium" || venueRiskTier === "high" || venueRiskTier === "unknown"
         ? venueRiskTier
         : null,
     investabilityFlags: Array.isArray(row.investabilityFlags)
@@ -143,14 +134,28 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     options.registerSourceFailure("dex-liquidity", error);
   }
   sourceCoverage.dexLiquidity = dexLiqRows.results.length;
-  const dexLiqMap = new Map(dexLiqRows.results.map((row) => [row.stablecoin_id, row]));
+  const dexLiqMap = new Map<string, DewsSourceState["dexLiqRows"]["results"][number]>();
+  const dexLiqAgeSecById = new Map<string, number>();
+  const dexLiqStaleIds = new Set<string>();
+  for (const row of dexLiqRows.results) {
+    const ageSec = getRowAgeSec(row.updated_at, options.nowSec);
+    if (ageSec != null) {
+      dexLiqAgeSecById.set(row.stablecoin_id, ageSec);
+    }
+    if (ageSec == null || ageSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
+      dexLiqStaleIds.add(row.stablecoin_id);
+      continue;
+    }
+    dexLiqMap.set(row.stablecoin_id, row);
+  }
+  sourceCoverage.dexLiquidityFreshRows = dexLiqMap.size;
+  sourceCoverage.dexLiquidityStaleRows = dexLiqStaleIds.size;
   const dexLiquidityUpdatedAt = dexLiqRows.results.reduce<number | null>((latest, row) => {
     if (row.updated_at == null || !Number.isFinite(row.updated_at)) return latest;
     if (latest == null || row.updated_at > latest) return row.updated_at;
     return latest;
   }, null);
-  const dexLiquidityAgeSec =
-    dexLiquidityUpdatedAt != null ? Math.max(0, options.nowSec - dexLiquidityUpdatedAt) : null;
+  const dexLiquidityAgeSec = dexLiquidityUpdatedAt != null ? Math.max(0, options.nowSec - dexLiquidityUpdatedAt) : null;
   if (dexLiquidityAgeSec != null) {
     sourceCoverage.dexLiquidityAgeSec = dexLiquidityAgeSec;
     if (dexLiquidityAgeSec > DEWS_STALE_DEX_LIQUIDITY_SEC) {
@@ -162,26 +167,38 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   }
 
   let dexPriceMap = new Map<string, DewsSourceState["dexPriceMap"] extends Map<string, infer T> ? T : never>();
+  const dexPriceAgeSecById = new Map<string, number>();
+  const dexPriceStaleIds = new Set<string>();
   try {
     const dexPriceRows = await options.db
       .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number }>();
-    dexPriceMap = new Map(
-      (dexPriceRows.results ?? [])
-        .filter((row) => isTrustedDexPriceRow(row, options.nowSec, "depeg"))
-        .map((row) => [row.stablecoin_id, {
+    const trustedDexPriceEntries: Array<
+      [string, DewsSourceState["dexPriceMap"] extends Map<string, infer T> ? T : never]
+    > = [];
+    for (const row of dexPriceRows.results ?? []) {
+      const ageSec = getRowAgeSec(row.updated_at, options.nowSec);
+      if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
+      if (ageSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
+        dexPriceStaleIds.add(row.stablecoin_id);
+      }
+      if (!isTrustedDexPriceRow(row, options.nowSec, "depeg")) continue;
+      trustedDexPriceEntries.push([
+        row.stablecoin_id,
+        {
           dexPriceUsd: row.dex_price_usd,
           sourceTotalTvl: row.source_total_tvl,
           updatedAt: row.updated_at,
-        }]),
-    );
+        },
+      ]);
+    }
+    dexPriceMap = new Map(trustedDexPriceEntries);
     sourceCoverage.dexPrices = dexPriceMap.size;
+    sourceCoverage.dexPricesStaleRows = dexPriceStaleIds.size;
   } catch (error) {
     options.registerSourceFailure("dex-prices", error, {
       bootstrapAllowed:
-        options.bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("dex-prices"),
+        options.bootstrapPending && isMissingTableError(error) && isBootstrapAllowedMissingTableSource("dex-prices"),
     });
     sourceCoverage.dexPrices = 0;
   }
@@ -256,7 +273,11 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   }
   sourceCoverage.blacklistEvents = blacklistRowsRead;
 
-  const prevSignals = new Map<string, Record<string, { value: number }>>();
+  const prevSignals = new Map<
+    string,
+    { signals: Record<string, { value: number }>; computedAt: number; ageSec: number }
+  >();
+  const prevSignalStaleIds = new Set<string>();
   let prevSignalRowsRead = 0;
   try {
     const prevRows = await options.db
@@ -271,6 +292,11 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
       .all<{ stablecoin_id: string; signals_json: string; band: string; computed_at: number }>();
     prevSignalRowsRead = prevRows.results.length;
     for (const row of prevRows.results) {
+      const ageSec = getRowAgeSec(row.computed_at, options.nowSec);
+      if (ageSec == null || ageSec > DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC) {
+        prevSignalStaleIds.add(row.stablecoin_id);
+        continue;
+      }
       const decoded = decodeJsonString<Record<string, unknown>, PersistedJsonDecodeReason>(row.signals_json, {
         mode: "degraded",
         updatedAt: row.computed_at,
@@ -295,14 +321,30 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
         });
         continue;
       }
-      prevSignals.set(row.stablecoin_id, decoded.payload as Record<string, { value: number }>);
+      prevSignals.set(row.stablecoin_id, {
+        signals: decoded.payload as Record<string, { value: number }>,
+        computedAt: row.computed_at,
+        ageSec,
+      });
     }
   } catch (error) {
     options.registerSourceFailure("stress-signals", error);
   }
   sourceCoverage.previousStressSignals = prevSignalRowsRead;
+  sourceCoverage.previousStressSignalsFreshRows = prevSignals.size;
+  sourceCoverage.previousStressSignalsStaleRows = prevSignalStaleIds.size;
 
-  const mintBurnMap = new Map<string, { burn24h: number; mint24h: number; burnBaseline: number; mintBaseline: number; dataAgeDays: number }>();
+  const mintBurnMap = new Map<
+    string,
+    {
+      burn24h: number;
+      mint24h: number;
+      burnBaseline: number;
+      mintBaseline: number;
+      dataAgeDays: number;
+      baselineDays: number;
+    }
+  >();
   let mintBurnRowsRead = 0;
   try {
     const mb24h = await options.db
@@ -318,13 +360,19 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     const mb30d = await options.db
       .prepare(
         `SELECT stablecoin_id, chain_id,
-                SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) / 30.0 as avg_burn,
-                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) / 30.0 as avg_mint,
+                SUM(CASE WHEN burn_volume_usd IS NOT NULL THEN burn_volume_usd ELSE 0 END) as total_burn,
+                SUM(CASE WHEN mint_volume_usd IS NOT NULL THEN mint_volume_usd ELSE 0 END) as total_mint,
                 COUNT(DISTINCT date(hour_ts, 'unixepoch')) as days_with_data
          FROM mint_burn_hourly WHERE hour_ts >= ? GROUP BY stablecoin_id, chain_id`,
       )
       .bind(options.nowSec - 30 * DAY_SECONDS)
-      .all<{ stablecoin_id: string; chain_id: string; avg_burn: number; avg_mint: number; days_with_data: number }>();
+      .all<{
+        stablecoin_id: string;
+        chain_id: string;
+        total_burn: number;
+        total_mint: number;
+        days_with_data: number;
+      }>();
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
     const mb24hMap = new Map<string, { total_burn: number; total_mint: number }>();
@@ -339,9 +387,10 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
     for (const row of mb30d.results) {
       if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
       const aggregate = mb30dMap.get(row.stablecoin_id) ?? { avg_burn: 0, avg_mint: 0, days_with_data: 0 };
-      aggregate.avg_burn += row.avg_burn;
-      aggregate.avg_mint += row.avg_mint;
-      aggregate.days_with_data = Math.max(aggregate.days_with_data, row.days_with_data);
+      const observedDays = Math.max(0, row.days_with_data);
+      aggregate.avg_burn += observedDays > 0 ? row.total_burn / observedDays : 0;
+      aggregate.avg_mint += observedDays > 0 ? row.total_mint / observedDays : 0;
+      aggregate.days_with_data = Math.max(aggregate.days_with_data, observedDays);
       mb30dMap.set(row.stablecoin_id, aggregate);
     }
     const mintBurnIds = new Set([...mb24hMap.keys(), ...mb30dMap.keys()]);
@@ -355,6 +404,7 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
         burnBaseline: baseline?.avg_burn ?? 0,
         mintBaseline: baseline?.avg_mint ?? 0,
         dataAgeDays: baseline?.days_with_data ?? 0,
+        baselineDays: baseline?.days_with_data ?? 0,
       });
     }
   } catch (error) {
@@ -408,9 +458,7 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   } catch (error) {
     options.registerSourceFailure("yield-data", error, {
       bootstrapAllowed:
-        options.bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("yield-data"),
+        options.bootstrapPending && isMissingTableError(error) && isBootstrapAllowedMissingTableSource("yield-data"),
     });
   }
   sourceCoverage.yieldWarnings = yieldWarningRowsRead;
@@ -459,9 +507,7 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   } catch (error) {
     options.registerSourceFailure("yield-rankings", error, {
       bootstrapAllowed:
-        options.bootstrapPending &&
-        isMissingTableError(error) &&
-        isBootstrapAllowedMissingTableSource("yield-data"),
+        options.bootstrapPending && isMissingTableError(error) && isBootstrapAllowedMissingTableSource("yield-data"),
     });
   }
   sourceCoverage.yieldStructuredRows = yieldSourceRisk.size;
@@ -484,11 +530,16 @@ export async function loadDewsSourceState(options: LoadDewsSourceStateOptions): 
   return {
     dexLiqRows,
     dexLiqMap,
+    dexLiqAgeSecById,
+    dexLiqStaleIds,
     dexPriceMap,
+    dexPriceAgeSecById,
+    dexPriceStaleIds,
     liqHist7dMap,
     liqHistRowsRead,
     blacklistCounts,
     prevSignals,
+    prevSignalStaleIds,
     mintBurnMap,
     yieldWarnings,
     yieldSourceRisk,

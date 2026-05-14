@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@shared/lib/stablecoins", async () => {
-  const actual = await vi.importActual<typeof import("@shared/lib/stablecoins")>(
-    "@shared/lib/stablecoins",
-  );
+  const actual = await vi.importActual<typeof import("@shared/lib/stablecoins")>("@shared/lib/stablecoins");
   return { ...actual, FROZEN_IDS: new Set<string>() };
 });
 
@@ -12,17 +10,22 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     {
       id: "usdt-tether",
       symbol: "USDT",
-      flags: { navToken: false },
+      flags: { navToken: false, pegCurrency: "USD" },
     },
     {
       id: "pyusd-paypal",
       symbol: "PYUSD",
-      flags: { navToken: false },
+      flags: { navToken: false, pegCurrency: "USD" },
     },
     {
       id: "usd1-world-liberty-financial",
       symbol: "USD1",
-      flags: { navToken: false },
+      flags: { navToken: false, pegCurrency: "USD" },
+    },
+    {
+      id: "eurc-euro-coin",
+      symbol: "EURC",
+      flags: { navToken: false, pegCurrency: "EUR" },
     },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
@@ -31,7 +34,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
       {
         id: "usdt-tether",
         symbol: "USDT",
-        flags: { navToken: false },
+        flags: { navToken: false, pegCurrency: "USD" },
       },
     ],
     [
@@ -39,7 +42,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
       {
         id: "pyusd-paypal",
         symbol: "PYUSD",
-        flags: { navToken: false },
+        flags: { navToken: false, pegCurrency: "USD" },
       },
     ],
     [
@@ -47,15 +50,27 @@ vi.mock("@shared/lib/psi-eligible", () => ({
       {
         id: "usd1-world-liberty-financial",
         symbol: "USD1",
-        flags: { navToken: false },
+        flags: { navToken: false, pegCurrency: "USD" },
+      },
+    ],
+    [
+      "eurc-euro-coin",
+      {
+        id: "eurc-euro-coin",
+        symbol: "EURC",
+        flags: { navToken: false, pegCurrency: "EUR" },
       },
     ],
   ]),
 }));
 
 vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1 } })),
-  getPegReference: vi.fn(() => 1),
+  derivePegRates: vi.fn(() => ({
+    rates: { peggedUSD: 1 },
+    sources: { peggedUSD: "median" },
+    counts: { peggedUSD: 1 },
+  })),
+  getPegReference: vi.fn((pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1),
 }));
 
 vi.mock("../../lib/db", async (importOriginal) => {
@@ -111,12 +126,21 @@ interface MakeDbOptions {
     source_total_tvl?: number;
     updated_at: number;
   }>;
+  dexLiqRows?: Array<{
+    stablecoin_id: string;
+    weighted_balance_ratio: number | null;
+    avg_pool_stress: number | null;
+    top_pools_json?: string | null;
+    liquidity_score: number | null;
+    total_tvl_usd: number | null;
+    updated_at?: number | null;
+  }>;
   mintBurn24hRows?: Array<{ stablecoin_id: string; chain_id?: string; total_burn: number; total_mint: number }>;
   mintBurn30dRows?: Array<{
     stablecoin_id: string;
     chain_id?: string;
-    avg_burn: number;
-    avg_mint: number;
+    total_burn: number;
+    total_mint: number;
     days_with_data: number;
   }>;
   blacklist24hRows?: Array<{ stablecoin: string; cnt: number }>;
@@ -159,7 +183,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           throw new Error("dex-liquidity unavailable");
         }
         return {
-          results: [
+          results: (opts.dexLiqRows ?? [
             {
               stablecoin_id: "usdt-tether",
               weighted_balance_ratio: 0.95,
@@ -167,8 +191,9 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
               top_pools_json: "[]",
               liquidity_score: 80,
               total_tvl_usd: 1_500_000,
+              updated_at: Math.floor(Date.now() / 1000),
             },
-          ] as T[],
+          ]) as T[],
         };
       }
       if (sql.includes("FROM dex_prices")) {
@@ -211,7 +236,9 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           : rows;
         if (sql.includes("publication_state")) {
           return {
-            results: bestRows.filter((row) => row.publication_state == null || row.publication_state === "published") as T[],
+            results: bestRows.filter(
+              (row) => row.publication_state == null || row.publication_state === "published",
+            ) as T[],
           };
         }
         return { results: bestRows as T[] };
@@ -323,11 +350,7 @@ describe("computeAndStoreDEWS", () => {
 
     await computeAndStoreDEWS(db);
 
-    expect(derivePegRates).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.any(Map),
-      { peggedEUR: 1.08 },
-    );
+    expect(derivePegRates).toHaveBeenCalledWith(expect.any(Array), expect.any(Map), { peggedEUR: 1.08 });
   });
 
   it("keeps a mature mint/burn baseline when the latest 24h window is quiet", async () => {
@@ -336,8 +359,8 @@ describe("computeAndStoreDEWS", () => {
       mintBurn30dRows: [
         {
           stablecoin_id: "usdt-tether",
-          avg_burn: 250_000,
-          avg_mint: 150_000,
+          total_burn: 3_500_000,
+          total_mint: 2_100_000,
           days_with_data: 14,
         },
       ],
@@ -352,6 +375,7 @@ describe("computeAndStoreDEWS", () => {
         mintVolume24hUsd: 0,
         burnBaseline30dUsd: 250_000,
         flowDataAgeDays: 14,
+        flowBaselineDays: 14,
       }),
     );
   });
@@ -408,7 +432,7 @@ describe("computeAndStoreDEWS", () => {
       yieldWarningRows: [
         {
           stablecoin_id: "usdt-tether",
-          warning_signals: "{\"not\":\"an-array\"}",
+          warning_signals: '{"not":"an-array"}',
         },
       ],
     });
@@ -457,7 +481,9 @@ describe("computeAndStoreDEWS", () => {
 
     await computeAndStoreDEWS(db);
 
-    expect(sqlSeen.some((sql) => sql.includes("publication_state IS NULL OR publication_state = 'published'"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("publication_state IS NULL OR publication_state = 'published'"))).toBe(
+      true,
+    );
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
@@ -573,9 +599,7 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
     };
     expect(metadata.bootstrapPending).toBe(false);
-    expect(
-      metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed,
-    ).toBe(false);
+    expect(metadata.sourceFailures.find((failure) => failure.source === "dex-prices")?.bootstrapAllowed).toBe(false);
   });
 
   it("ignores stale dex price rows when building the DEWS divergence input", async () => {
@@ -622,6 +646,221 @@ describe("computeAndStoreDEWS", () => {
       expect.objectContaining({
         stablecoinId: "usdt-tether",
         dexPriceUsd: null,
+      }),
+    );
+  });
+
+  it("does not feed stale per-coin dex_liquidity rows into DEWS pool or liquidity inputs", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      dexLiqRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          weighted_balance_ratio: 0.4,
+          avg_pool_stress: 90,
+          top_pools_json: "[]",
+          liquidity_score: 25,
+          total_tvl_usd: 1_000_000,
+          updated_at: nowSec - 3 * 3600,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        weightedBalanceRatio: null,
+        avgPoolStress: null,
+        liquidityScore: null,
+        tvlCurrent: null,
+        staleFlags: expect.objectContaining({ dexLiquidity: true }),
+      }),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage: Record<string, number>;
+    };
+    expect(metadata.sourceCoverage.dexLiquidityStaleRows).toBe(1);
+    expect(metadata.sourceCoverage.dexLiquidityFreshRows).toBe(0);
+  });
+
+  it("does not smooth with stale previous stress-signal rows", async () => {
+    const sqlSeen: string[] = [];
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeDb(sqlSeen, {
+      prevSignalRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          signals_json: JSON.stringify({
+            signals: {
+              pool: { value: 90, available: true },
+              diverg: { value: 80, available: true },
+            },
+            amplifiers: { psi: 1, contagion: 1 },
+          }),
+          band: "WARNING",
+          computed_at: nowSec - 3 * 3600,
+        },
+      ],
+    });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        prevPoolValue: undefined,
+        prevDivergValue: undefined,
+        staleFlags: expect.objectContaining({ previousSignals: true }),
+      }),
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceCoverage: Record<string, number>;
+    };
+    expect(metadata.sourceCoverage.previousStressSignalsStaleRows).toBe(1);
+  });
+
+  it("scales partial mint/burn baseline by observed baseline days", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      mintBurn24hRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 250_000,
+          total_mint: 0,
+        },
+      ],
+      mintBurn30dRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 700_000,
+          total_mint: 70_000,
+          days_with_data: 7,
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        burnBaseline30dUsd: 100_000,
+        flowDataAgeDays: 7,
+        flowBaselineDays: 7,
+      }),
+    );
+  });
+
+  it("leaves complete 30-day mint/burn baselines unchanged", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, {
+      mintBurn30dRows: [
+        {
+          stablecoin_id: "usdt-tether",
+          total_burn: 3_000_000,
+          total_mint: 1_500_000,
+          days_with_data: 30,
+        },
+      ],
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        burnBaseline30dUsd: 100_000,
+        flowDataAgeDays: 30,
+        flowBaselineDays: 30,
+      }),
+    );
+  });
+
+  it("marks thin non-USD peg references unavailable for DEWS divergence", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "eurc-euro-coin",
+              symbol: "EURC",
+              pegType: "peggedEUR",
+              price: 1.05,
+              priceConfidence: "high",
+              circulating: { peggedEUR: 100_000_000 },
+              circulatingPrevDay: { peggedEUR: 100_000_000 },
+              circulatingPrevWeek: { peggedEUR: 100_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    vi.mocked(derivePegRates).mockReturnValueOnce({
+      rates: { peggedUSD: 1, peggedEUR: 1.08 },
+      sources: { peggedUSD: "median", peggedEUR: "median" },
+      counts: { peggedUSD: 1, peggedEUR: 1 },
+    });
+    const sqlSeen: string[] = [];
+
+    await computeAndStoreDEWS(makeDb(sqlSeen, { dexLiqRows: [] }));
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "eurc-euro-coin",
+        pegType: "peggedEUR",
+        pegRef: 0,
+        pegReferenceAvailable: false,
+        pegReferenceUnavailableReason: "peg-reference-untrusted",
+        pegRateSource: "median",
+        pegRateContributorCount: 1,
+      }),
+    );
+  });
+
+  it("keeps trusted fallback non-USD peg references available", async () => {
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dews:bootstrap-complete") return null;
+      return {
+        value: JSON.stringify({
+          peggedAssets: [
+            {
+              id: "eurc-euro-coin",
+              symbol: "EURC",
+              pegType: "peggedEUR",
+              price: 1.05,
+              priceConfidence: "high",
+              circulating: { peggedEUR: 100_000_000 },
+              circulatingPrevDay: { peggedEUR: 100_000_000 },
+              circulatingPrevWeek: { peggedEUR: 100_000_000 },
+            },
+          ],
+        }),
+        updatedAt: Math.floor(Date.now() / 1000),
+      } as never;
+    });
+    vi.mocked(derivePegRates).mockReturnValueOnce({
+      rates: { peggedUSD: 1, peggedEUR: 1.08 },
+      sources: { peggedUSD: "median", peggedEUR: "fallback" },
+      counts: { peggedUSD: 1, peggedEUR: 1 },
+    });
+    const sqlSeen: string[] = [];
+
+    await computeAndStoreDEWS(makeDb(sqlSeen, { dexLiqRows: [] }));
+
+    expect(computeDEWS).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stablecoinId: "eurc-euro-coin",
+        pegType: "peggedEUR",
+        pegRef: 1.08,
+        pegReferenceAvailable: true,
+        pegReferenceUnavailableReason: null,
+        pegRateSource: "fallback",
+        pegRateContributorCount: 1,
       }),
     );
   });
@@ -698,21 +937,11 @@ describe("computeAndStoreDEWS", () => {
 
     await computeAndStoreDEWS(db);
 
-    expect(
-      sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")),
-    ).toBe(true);
-    expect(
-      sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")),
-    ).toBe(true);
-    expect(
-      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")),
-    ).toBe(true);
-    expect(
-      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")),
-    ).toBe(true);
-    expect(
-      sqlSeen.some((sql) => sql.includes("NOT IN")),
-    ).toBe(false);
+    expect(sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN"))).toBe(true);
+    expect(sqlSeen.some((sql) => sql.includes("NOT IN"))).toBe(false);
   });
 
   it("retires current stress rows for eligible assets with no current supply", async () => {
@@ -763,9 +992,7 @@ describe("computeAndStoreDEWS", () => {
     expect(computeDEWS).toHaveBeenCalledTimes(1);
     expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ stablecoinId: "usdt-tether" }));
     expect(currentRetireBinds).toContainEqual(["pyusd-paypal"]);
-    expect(
-      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")),
-    ).toBe(false);
+    expect(sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN"))).toBe(false);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       rowsRetiredCurrent: number;
       rowsSkippedNoCurrentSupply: number;
@@ -785,8 +1012,8 @@ describe("computeAndStoreDEWS", () => {
       historyIds: ["usdt-tether", ...orphanIds],
       onBind: (sql, args) => {
         if (
-          sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")
-          || sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")
+          sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN") ||
+          sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")
         ) {
           deleteBindCounts.push(args.length);
         }

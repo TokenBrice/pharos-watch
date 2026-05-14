@@ -159,7 +159,11 @@ export async function computeAndStoreDEWS(
   };
 
   // Derive peg rates for non-USD reference prices
-  const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
+  const {
+    rates: pegRates,
+    sources: pegRateSources,
+    counts: pegRateContributorCounts,
+  } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
   const sourceState = await runWithAbort(signal, () =>
     loadDewsSourceState({
@@ -175,6 +179,8 @@ export async function computeAndStoreDEWS(
   const { results, liqHistCoverageCount, insufficientDataCount, noCurrentSupplyIds } = buildDewsScoringResult({
     assetById,
     pegRates,
+    pegRateSources,
+    pegRateContributorCounts,
     sourceState,
     registerMalformedPersistedInput,
   });
