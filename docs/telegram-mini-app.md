@@ -8,7 +8,7 @@ For the broader Telegram subsystem behavior (commands, alert pipelines, schema),
 
 The Mini App is the Telegram-native control panel for managing PharosWatchBot subscriptions, quiet hours, snooze state, and delivery health. It is served as a static Next.js route under `/pharoswatchbot/app/` and hosted at `https://pharos.watch/pharoswatchbot/app/`. The route is `noindex`-marked because it is an embedded tool, not SEO content.
 
-Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a safe numeric `chat_id` mapping and fresh admin verification path exist.
+Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a fresh admin verification path and group-scoped launch ownership model exist.
 
 Owned files:
 
@@ -28,7 +28,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 - **Persistent menu button.** The five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/` via `setChatMenuButton`. The cache TTL is 15 minutes, so drift heals within one cache cycle.
 - **Bot profile Main Mini App.** Configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code. See [`runbooks/telegram-mini-app-botfather.md`](./runbooks/telegram-mini-app-botfather.md) for the operator-owned state.
-- **Private command replies.** `/start`, `/settings`, `/list`, and `/status <ticker>` attach Web App buttons in private chats. Group and supergroup replies keep their existing command and callback keyboards.
+- **Private command replies.** `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, `/why <ticker>`, `/coverage <ticker>`, `/set`, `/timezone`, `/unsnooze`, and `/health` attach Web App buttons where the reply can open a matching panel. Quick-subscribe confirmations in private chats also attach a per-coin tuning button. Group and supergroup replies keep their existing command and callback keyboards.
 - **Direct deep links.** `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
 
 ## Payload Scheme
@@ -39,13 +39,13 @@ Recognized payloads:
 
 | Payload | Routes to | Notes |
 |---|---|---|
-| `home` | Home panel | Default if no payload, or used by `/help` and the `/start` skip branch. |
-| `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze. |
-| `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls. |
-| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/why`, `/coverage`, alert keyboards. |
-| `presets` | Presets panel | Followed presets plus available ones. |
-| `quiet-hours` | Settings panel | Used by `/mute`, `/unmutehours` private replies. |
-| `snooze` | Home panel | Used by per-coin or chat snooze ack. |
+| `home` | Home panel | Default if no payload, or used by the `/start` skip branch. |
+| `settings` | Settings panel | Global alert toggles, depeg step, quiet hours, clear snooze; used by `/help` and `/settings`. |
+| `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls; used by `/list` and all-stablecoin `/set` confirmations. |
+| `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/status`, `/why`, `/coverage`, quick-subscribe confirmations, alert keyboards, and per-coin `/set` confirmations. |
+| `presets` | Presets panel | Followed presets plus available ones; used by `/presets`. |
+| `quiet-hours` | Settings panel | Used by `/mute`, `/unmutehours`, and `/timezone` private replies. |
+| `snooze` | Home panel | Used by per-coin or chat snooze acknowledgements, including `/unsnooze`. |
 | `health` | Home panel | Used by `/health` private reply. |
 | `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
 | `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
@@ -59,7 +59,7 @@ The Mini App is its own seam in the Telegram architecture; full definition and `
 The load-bearing rules:
 
 - Do not duplicate per-coin or preset write SQL outside the existing State / persistence helpers. If a callback-shaped helper is too narrow, extract the shared D1 mutation into `worker/src/api/telegram-webhook-store.ts` (or the matching settings-mutation layer) and have both callbacks and Mini App call it.
-- Do not mutate group, supergroup, or channel chat rows until a safe numeric `chat_id` mapping and fresh admin verification path exists. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
+- Do not mutate group, supergroup, or channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
 - Do not write analytics or cooldown rows before signed `initData` validation succeeds.
 - Do not accept mutation auth older than the 5-minute mutation window.
 - Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
@@ -83,6 +83,8 @@ Freshness windows:
 - **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Stale-auth rejections emit a `mini_app_session_invalid` usage event; the client should call the session endpoint to obtain a fresh launch and prompt the user to retry.
 
 Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
+
+Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, or usage/cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies.
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 

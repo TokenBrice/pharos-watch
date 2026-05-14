@@ -23,10 +23,10 @@ Launch paths:
 
 - Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
 - Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
-- Private command replies: `/start`, `/settings`, `/list`, `/status <ticker>`, plus selected explainers and settings commands include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, or `coin_<stablecoinId>`) so the Mini App opens on the matching panel. Group and supergroup replies keep the existing command and callback keyboards.
+- Private command replies: `/start`, `/help`, `/presets`, `/settings`, `/list`, `/status <ticker>`, selected explainers, `/set`, `/timezone`, `/unsnooze`, and `/health` include Web App buttons in private chats. These buttons attach `startapp` context (`home`, `settings`, `watchlist`, `presets`, `quiet-hours`, `snooze`, `health`, `forget`, or `coin_<stablecoinId>`) so the Mini App opens on the matching panel. Private `quicksub:<stablecoinId>` confirmations also include a `coin_<stablecoinId>` tuning button. Group and supergroup replies keep the existing command and callback keyboards.
 - Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
 
-Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a safe numeric group `chat_id` mapping and admin verification path exists.
+Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a fresh admin verification path and group-scoped launch ownership model exist.
 
 BotFather-owned release checklist:
 
@@ -126,6 +126,8 @@ Pending disambiguation rows expire with their command TTL. Pending alert rows le
 
 The webhook claims individual Telegram update IDs in `telegram_processed_updates` before command handling and only marks rows processed after successful or terminal handled completion. Retried failed updates can be processed again without a high-watermark drop.
 
+When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_chat_id` and `migrate_from_chat_id` service messages before command parsing. The migration helper merges the old numeric chat ID into the new one across subscriber state, per-coin subscriptions, preset follows, pending selections, pending/dead-letter delivery rows, alert job targets, delivery diagnostics, processed-update chat references, and known exact D1 cache keys such as `telegram:chat-admins:<chat_id>` and `telegram:group-welcome:<chat_id>`. The helper is idempotent because Telegram can deliver either service message first.
+
 ## Secrets and Bindings
 
 | Binding | Required | Used by |
@@ -188,7 +190,7 @@ Current actions:
 - `safetydown:<stablecoinId>`
 - `why:<stablecoinId>` (re-sends the `/why` explainer)
 - `coverage:<stablecoinId>` (re-sends the `/coverage` card)
-- `quicksub:<stablecoinId>` (enables DEWS + depeg for that one coin; group chats require admin)
+- `quicksub:<stablecoinId>` (enables DEWS + depeg for that one coin; private chats receive an audited confirmation with a Mini App tuning button; group chats require admin and keep the callback toast only)
 - `manage:page:<N>` (paginates the `/list` `[ Manage ]` keyboard, edits the message in place)
 - `unsub:<stablecoinId>` (removes one coin from the chat's subscriptions; group chats require admin, gated identically to `/unsubscribe`)
 - `settings:home` — re-render the chat-level settings view
@@ -208,7 +210,7 @@ Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
 
 Registration script `scripts/register-telegram-webhook.sh` declares
-`allowed_updates = ["message", "callback_query"]` so Telegram forwards only
+`allowed_updates = ["message", "callback_query", "my_chat_member"]` so Telegram forwards only
 update types the bot handles.
 
 ## Webhook Command Flow
@@ -244,8 +246,8 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | Command | Behavior |
 |---------|----------|
 | `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
-| `/help` | Sends command reference |
-| `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples |
+| `/help` | Sends command reference; private replies include a Mini App settings button |
+| `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples; private replies include a Mini App presets button |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat. When the chat has at least one explicit coin subscription the reply carries a `[ Manage ]` inline button that opens a paginated keyboard (5 coins per page) where each row is a one-tap `[ ❌ <SYMBOL> ]` removal. The keyboard edits the same message in place via `editMessageText`. Group chats apply the same admin gate as `/unsubscribe`. |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
 | `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated alias kept for one release cycle and shares the same cooldown bucket. |
@@ -260,13 +262,13 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/unsubscribe all` | Clears all per-coin subscriptions, disables every current alert flag including launch, and clears the global depeg worsening step (always gated; see below) |
 
 Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm ] [ Cancel ]` keyboard when the resolved coin set exceeds 10 coins or the literal `all` token is used. The deferred command is stored in `telegram_pending_disambiguation` with `action_type = 'confirm-bulk'` and inherits the standard 5-minute TTL. Tapping Confirm executes the original command; Cancel (or `/cancel`) clears the pending state without side effects. Confirmation is initiator-locked: only the user who started the bulk command may complete or cancel it.
-| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg severity and worsening step |
-| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg severity and worsening-step threshold |
+| `/set <ticker> <setting> <value>` | Tunes per-coin settings such as DEWS floor, safety direction mode, launch on/off, or depeg severity and worsening step. Private success replies include a per-coin Mini App tuning button. |
+| `/set all <setting> <value>` | Enables or disables global all-stablecoin alert types (`dews`, `depeg`, `safety`, `launch`) or sets the global depeg severity and worsening-step threshold. Private success replies include a Mini App watchlist button. |
 | `/settings` | Opens an inline-keyboard view of chat-level settings: quiet hours toggle, snooze clear, and global alert toggles for DEWS / depeg / safety / launch. Each tap edits the message in place via `editMessageText` so the user sees a single self-updating panel. |
 | `/settings <ticker>` | Opens a per-coin inline keyboard with DEWS min band (`ALERT/WARNING/DANGER/off`), safety mode (`all/downgrade-only/upgrade-only/off`), depeg severity and worsening step (`100/250/500/off`), and launch on/off rows. A `← Back to chat settings` button returns to the chat-level view. |
 | `/mute <start>-<end>` | Enables quiet hours interpreted in the chat's `/timezone` (defaults to UTC; messages still deliver, notifications are silenced) |
-| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone and an inline keyboard of common zones. NULL = UTC, the historical behavior. |
-| `/unsnooze` | Clears active alert snooze immediately |
+| `/timezone <IANA-zone>` | Sets the chat's IANA timezone for resolving quiet hours locally (e.g. `Europe/Paris`). Sending `/timezone` with no argument shows the current zone and an inline keyboard of common zones. Private replies include a Mini App quiet-hours button. NULL = UTC, the historical behavior. |
+| `/unsnooze` | Clears active alert snooze immediately; private replies include a Mini App snooze button |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
 

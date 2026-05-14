@@ -44,7 +44,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 1. Ingress
 
-**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query) or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, group-admin gate, and per-command cooldown. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
+**Responsibility.** Receive `POST /api/telegram-webhook` requests. Validate the shared secret (with rotation overlap). Claim the `update_id` in `telegram_processed_updates` for idempotency. Route the parsed update to either Callback routing (callback_query), chat-migration handling (`migrate_to_chat_id` / `migrate_from_chat_id` service messages), or Command parsing → Action handlers (message). Hold the dedupe, pending-disambiguation gate, group-admin gate, and per-command cooldown. Always return `200 ok` on terminal handled outcomes, `503` only on in-flight duplicates.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook.ts` (entrypoint and dispatcher loop)
@@ -180,7 +180,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 7. State / persistence
 
-**Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload and the setup-wizard state), the processed-update idempotency claim, the command-cooldown gate, and the chat-delivery diagnostics.
+**Responsibility.** Authoritative read/write helpers for Telegram D1 tables. Encodes the "upsert subscriber and subscriptions in one batch" pattern, the pending-disambiguation lifecycle (including the bulk-confirm payload and the setup-wizard state), the processed-update idempotency claim, the command-cooldown gate, group-to-supergroup chat-ID migration merges, and the chat-delivery diagnostics.
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (the bulk of subscription/disambiguation writes and reads)
@@ -199,7 +199,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
   - `telegram_usage_daily` — privacy-preserving aggregates (Action handlers + Dispatch)
   - `telegram_watcher_lifecycle_daily` — daily lifecycle snapshots
   - `telegram_chat_delivery_diagnostics` — per-chat diagnostics (Outbound + Dispatch)
-- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:safety-source-cache`, `telegram:global-send-backoff-until`, `telegram:chat-admins:<chat_id>`, `telegram:processed-updates:prune:last-run`, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
+- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:safety-source-cache`, `telegram:global-send-backoff-until`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, `telegram:processed-updates:prune:last-run`, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
 
 **Allowed inbound dependencies.** Every other seam may read/write through these helpers.
 
@@ -252,7 +252,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Must NOT.**
 - Accept mutation auth older than the 5-minute mutation window.
-- Mutate group/supergroup/channel chat rows until a numeric group `chat_id` mapping and fresh admin verification path exists.
+- Mutate group/supergroup/channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist.
 - Write analytics or cooldown rows before signed `initData` validation succeeds.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
 - Use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
