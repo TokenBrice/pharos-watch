@@ -39,8 +39,8 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: Conta
   const tooltipAnnouncement = buildTooltipAnnouncement(tooltipContext);
   const nodeTooltipEl = buildNodeTooltipElement(tooltipContext);
   const edgeTooltipEl = buildEdgeTooltipElement(tooltipContext);
-  const overlayInspectedId = graph.activeHoveredId ?? graph.pinnedSelectionId ?? null;
-  const inspectedNode = overlayInspectedId ? graph.nodeMap.get(overlayInspectedId) ?? null : null;
+  const overlayInspectedId = graph.activeHoveredId ?? graph.pinnedSelectionId;
+  const inspectedNode = graph.nodeMap.get(overlayInspectedId ?? "") ?? null;
 
   return (
     <Card className="overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none">
