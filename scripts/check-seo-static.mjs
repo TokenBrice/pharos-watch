@@ -91,6 +91,8 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     route: "/chains/",
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "CollectionPage", requiredPaths: ["name", "url", "mainEntity"] },
+      { type: "ItemList", requiredPaths: ["name", "numberOfItems", "itemListElement.0.item.url"] },
       { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
   },
@@ -99,6 +101,17 @@ const STRUCTURED_DATA_ROUTE_MATRIX = [
     pattern: /^\/chains\/[^/]+\/$/,
     nodes: [
       { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "CollectionPage", requiredPaths: ["name", "url", "mainEntity"] },
+      { type: "ItemList", requiredPaths: ["name", "numberOfItems", "itemListElement.0.item.url"] },
+    ],
+  },
+  {
+    label: "coverage matrix",
+    route: "/coverage/",
+    nodes: [
+      { type: "BreadcrumbList", requiredPaths: ["itemListElement.0.name", "itemListElement.0.item"] },
+      { type: "Dataset", requiredPaths: ["name", "description", "url", "variableMeasured.0.name"] },
+      { type: "FAQPage", requiredPaths: ["mainEntity.0.name", "mainEntity.0.acceptedAnswer.text"] },
     ],
   },
   {
