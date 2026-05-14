@@ -385,10 +385,37 @@
             }
           },
           {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque keyset cursor returned as nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "active",
             "in": "query",
             "required": false,
             "description": "When true, returns active depeg events only.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When false, skips the exact total count.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includePending",
+            "in": "query",
+            "required": false,
+            "description": "When true, includes pending incidents awaiting confirmation.",
             "schema": {
               "type": "boolean"
             }

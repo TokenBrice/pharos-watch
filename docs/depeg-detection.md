@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.99`
+- **Current methodology version:** `v6.0`
 - **Runtime/version source:** `shared/lib/depeg-dews-version.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Version timeline:** [depeg-dews-timeline.md](./depeg-dews-timeline.md)
@@ -87,6 +87,16 @@ CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
 One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation. Migration `0061` adds the `reason` column so operators can distinguish large-cap confirmations from ambiguous-price and extreme-move confirmations. Migration `0091` adds last-seen and peak-seen tracking columns so pending rows preserve current and worst observed evidence while they await promotion or expiry. Migration `0105` adds `confirmation_sources` and `pending_reason` to promoted `depeg_events` rows for ex-post provenance.
+
+### depeg_event_provenance (migration 0127)
+
+Side-table provenance for depeg rows. Legacy `depeg_events` rows remain valid when no provenance row exists. The public API reads through `depeg_events_with_provenance`, which projects a compact `provenance` object without exposing raw diagnostics.
+
+Stored fields include source kind, replay run ID/version, source price providers, quote mode, peg-reference source, supply source, confirmation policy, confirmation point count, market diagnostics, policy adjustments, confidence tier, audit verdict, and created/updated timestamps.
+
+### depeg_backfill_runs (migration 0128)
+
+Backfill replay manifest table. Each mutating replay records stablecoin/window, source type, expected event count, expected fingerprint, removed/added/inserted counts, status (`started`, `complete`, or `incomplete`), timestamps, and any failure message. Chunked insert failures mark the run `incomplete` so operators can repair or re-run instead of assuming the historical slice is complete.
 
 ### Migration 0016
 
@@ -255,6 +265,8 @@ Historical backfills in `worker/src/api/backfill-depegs.ts` do **not** reuse the
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
+Mutating backfills now persist replay-run status and event provenance. Backfilled rows receive replay version, provider roster, quote mode, peg-reference source, supply source, confirmation policy, confidence tier, and compact public provenance. Existing rows without provenance are still accepted by API mappers and PegScore.
+
 When DefiLlama historical supply is absent, replay applies the live `$1M` event floor using the current stablecoins-cache supply for that asset. If neither historical nor current supply is available, the backfill preserves existing rows instead of silently replaying market prices without a supply floor. The same fallback supply also controls large-cap confirmation behavior for absent-history assets.
 
 Supported non-USD fiat backfills now prefer direct CoinGecko native-fiat history first and compare that series against the native `1.0` peg. In that native-fiat mode, replay uses daily points plus a two-point confirmation window across 36 hours before opening a normal event, while still preserving extreme single-point crashes of `>= 5000 bps`. Only when that native history is unavailable does the replay fall back to USD-denominated CoinGecko/DefiLlama history plus the historical FX reference.
@@ -366,6 +378,8 @@ Response:
 }
 ```
 
+Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
+
 Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the latest successful `sync-stablecoins` timestamp, falling back to the latest event `startedAt` when cron history is unavailable; TTL remains 900s.
 
 ## Frontend
@@ -423,6 +437,8 @@ activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
 
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
 ```
+
+v6.0 quality gate: events with provenance `auditVerdict` of `false_positive` or `disputed` are excluded from PegScore inputs. Included events with `confidenceTier = "low"` retain time-at-peg impact but receive a 0.5 severity/spread weight. The result includes quality counters so consumers can tell when provenance changed the score inputs.
 
 **Tracking window**: `coinTrackingStart()` prefers a curated launch date when one is available and otherwise falls back to the coin's earliest `supply_history` snapshot
 (queried via `getFirstSeenDates()`) so young coins aren't diluted across a phantom 4-year window.

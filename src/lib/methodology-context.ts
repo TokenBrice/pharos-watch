@@ -105,7 +105,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   psiStressBreadth: {
     title: "Stress Breadth",
-    summary: "Early-warning breadth from DEWS stress signals before those coins become full depegs.",
+    summary: "Early-warning breadth from DEWS pre-price and live-market stress signals.",
     methodologyPath: "/methodology/#stability-index-methodology",
     versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
     changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
@@ -263,7 +263,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   dewsBand: {
     title: "DEWS Band",
     summary:
-      "DEWS (Depeg Early Warning System) band. The numeric value is the normalized stress score; the band labels the zone (Calm < Watch < Alert < Warning < Danger).",
+      "DEWS (Depeg Early Warning System) band. The numeric value is a normalized stress score, not a calibrated probability; the band labels the zone (Calm < Watch < Alert < Warning < Danger).",
     methodologyPath: "/methodology/#pegscore-dews-methodology",
     versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

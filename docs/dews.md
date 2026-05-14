@@ -1,12 +1,12 @@
 # Depeg Early Warning Score (DEWS)
 
-Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 30 minutes from 8 sub-signals.
+Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a calibrated probability. Computed every 30 minutes from 8 sub-signals.
 
 ## Methodology Versioning
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are tracked together in `shared/lib/depeg-dews-version.ts`.
 
-- **Current methodology version:** `v5.99`
+- **Current methodology version:** `v6.0`
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
@@ -58,7 +58,7 @@ Weights sum to 1.15 but only available signals participate, so redistribution no
 | 16-35  | **WATCH**   | `#14b8a6` | Mild stress on 1-2 indicators          |
 | 36-55  | **ALERT**   | `#eab308` | Multiple indicators elevated           |
 | 56-75  | **WARNING** | `#f97316` | Strong stress signals, depeg plausible |
-| 76-100 | **DANGER**  | `#ef4444` | All precursors firing                  |
+| 76-100 | **DANGER**  | `#ef4444` | Severe stress across available weighted signals |
 
 ---
 
@@ -215,7 +215,7 @@ When a coin has insufficient data in a cycle (`computeDEWS() === null`), that ru
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
-  "methodology": { "version": "5.99", "versionLabel": "...", "currentVersion": "5.99", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.0", "versionLabel": "...", "currentVersion": "6.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -233,7 +233,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
     ...
   ],
   "malformedRows": 0,
-  "methodology": { "version": "5.99", "versionLabel": "...", "currentVersion": "5.99", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
+  "methodology": { "version": "6.0", "versionLabel": "...", "currentVersion": "6.0", "currentVersionLabel": "...", "changelogPath": "/methodology/depeg-changelog/", "asOf": 1740000000 }
 }
 ```
 
@@ -241,7 +241,7 @@ Unknown IDs return `404` with `Unknown stablecoin`; tracked-but-non-active IDs r
 
 ### `GET /api/backfill-dews` (admin)
 
-Validates DEWS against historical depeg events. Reports TP rate and lead time.
+Validates DEWS against historical depeg events. The primary calibration path uses stored `stress_signal_history` rows plus curated anchors and reports precision, recall, false-positive days, false-negative incidents, lead-time P50/P90, alert churn, band-transition stability, and cohort metrics. The older supply/liquidity reconstruction remains a diagnostic path because it cannot replay every live signal or source-trust gate.
 
 ### `GET /api/backfill-dews?repair=...&dry-run=true` / `POST /api/backfill-dews?repair=...` (admin)
 

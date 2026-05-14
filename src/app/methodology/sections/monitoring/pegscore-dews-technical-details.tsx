@@ -19,7 +19,7 @@ const DEWS_THREAT_BAND_DESCRIPTIONS: Record<ThreatBand, string> = {
   WATCH: "mild stress on 1-2 indicators",
   ALERT: "multiple indicators elevated",
   WARNING: "strong stress signals, depeg plausible",
-  DANGER: "all precursors firing",
+  DANGER: "severe stress across available weighted signals",
 };
 
 function formatDewsWeight(key: DewsSignalKey): string {
@@ -206,7 +206,8 @@ function DewsTechnicalDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">DEWS</h3>
         <p>
-          DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability. It is
+          DEWS is a per-coin, forward-looking stress score (0&ndash;100) for depeg stress. It is not a
+          calibrated probability. It is
           computed every 30 minutes from 8 sub-signals. Only signals with available data participate; weights are
           redistributed proportionally across available signals.
         </p>
@@ -300,7 +301,7 @@ function DewsTechnicalDetails() {
           <li>NAV tokens are excluded entirely (price appreciates, not pegged)</li>
           <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
           <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
-          <li>Missing DEX data stays unavailable; zero-current rows retire; aggregate freshness uses the oldest current row</li>
+          <li>Missing DEX data stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>
         </ul>
       </div>
     </>

@@ -7,7 +7,7 @@ import {
 export function PegScoreDewsOverview() {
   return (
     <>
-      <p>PegScore observes the past and present by scoring realized peg behavior, while DEWS is forward-looking and tries to anticipate future depeg risk before it fully manifests.</p>
+      <p>PegScore observes the past and present by scoring realized peg behavior, while DEWS is forward-looking and scores pre-price and live-market depeg stress signals.</p>
       <p>
         Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
         low-confidence primary prices, and extreme moves, plus a per-coin peg score that penalizes time off peg,
@@ -66,7 +66,7 @@ export function PegScoreDewsOverview() {
       <MethodologyFacts
         facts={[
           { label: "PegScore focus", value: "History: realized peg behavior" },
-          { label: "DEWS focus", value: "Forward stress probability" },
+          { label: "DEWS focus", value: "Forward stress score" },
           { label: "Refresh", value: "Peg 15m / DEWS 30m" },
         ]}
       />

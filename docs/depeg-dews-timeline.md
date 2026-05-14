@@ -1,8 +1,17 @@
 # Depeg Tracker + DEWS Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers `v1.0` through `v5.99` (2026-02-18 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers `v1.0` through `v6.0` (2026-02-18 -> 2026-05-14).
 
 ---
+
+## v6.0 — Historical provenance, quality-aware PegScore, and calibration metrics (May 14, 2026)
+
+- Depeg backfills now persist replay-run manifests with status, counts, fingerprints, source type, and incomplete-run diagnostics for chunked writes
+- Depeg events can carry durable public provenance from the side table: replay version, provider roster, quote mode, peg-reference source, supply source, confirmation policy, confidence tier, and audit verdict
+- Audit verdicts are direction-aware and persist `confirmed`, `disputed`, `false_positive`, `no_data`, and repaired-style outcomes without deleting rows solely because audit evidence is weak or absent
+- PegScore excludes `false_positive`/`disputed` events and downweights low-confidence rows while returning quality-adjustment counters
+- DEWS calibration metrics now use stored `stress_signal_history` as the primary source and report precision, recall, false-positive days, false-negative incidents, lead-time percentiles, churn, and cohorts
+- DEWS wording is tightened: the score is depeg stress, not a calibrated probability
 
 ## v5.99 — Structured Yield Source-Risk DEWS Input (May 13, 2026)
 
