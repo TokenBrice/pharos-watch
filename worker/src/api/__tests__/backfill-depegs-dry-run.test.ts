@@ -506,6 +506,7 @@ describe("handleBackfillDepegs replay windows", () => {
         endSec: startDay + 86_399 + 86_400,
       },
       "cg-test-key",
+      ["GOLD"],
     );
   });
 });

@@ -16,6 +16,7 @@ import type { D1Database } from "@cloudflare/workers-types";
 import { fetchCgPriceHistoryHourly, type HistoricalMarketBackfillRange } from "./backfill-price-sources";
 
 const SECONDARY_FX_FETCH_CONCURRENCY = 8;
+const COMMODITY_MEDIAN_FETCH_CONCURRENCY = 6;
 
 // ── Historical FX rate support ──────────────────────────────────────
 
@@ -61,6 +62,7 @@ export const OTHER_COIN_FX: Record<string, string> = {
 export const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
 export type FxTimeSeries = TimestampedRatePoint;
+export type CommodityPeg = "GOLD" | "SILVER";
 
 interface SecondaryFxResponse {
   date?: string;
@@ -235,28 +237,36 @@ export async function fetchHistoricalSecondaryFxRates(
 export async function buildCommodityMedianSeriesFromCg(
   range?: HistoricalMarketBackfillRange,
   coingeckoApiKey: string | null = null,
+  pegs: readonly CommodityPeg[] = ["GOLD", "SILVER"],
 ): Promise<Record<string, FxTimeSeries[]>> {
+  const pegSet = new Set<string>(pegs);
   const allCommodityCoins = ACTIVE_STABLECOINS.filter(
-    (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
+    (m) => pegSet.has(m.flags.pegCurrency) && COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
       && !COMMODITY_MEDIAN_EXCLUDES.has(m.id),
   );
   const sources: Array<{
-    peg: "GOLD" | "SILVER";
+    peg: CommodityPeg;
     commodityOunces?: number | null;
     prices: { timestamp: number; price: number }[];
   }> = [];
 
-  for (const meta of allCommodityCoins) {
-    const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
-    if (!geckoId) continue;
-    const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
-    if (prices.length === 0) continue;
-    sources.push({
-      peg: meta.flags.pegCurrency as "GOLD" | "SILVER",
-      commodityOunces: meta.commodityOunces,
-      prices,
-    });
-  }
+  let nextIndex = 0;
+  const workerCount = Math.min(COMMODITY_MEDIAN_FETCH_CONCURRENCY, allCommodityCoins.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < allCommodityCoins.length) {
+      const meta = allCommodityCoins[nextIndex++];
+      if (!meta) continue;
+      const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+      if (!geckoId) continue;
+      const prices = await fetchCgPriceHistoryHourly(geckoId, range, "usd", coingeckoApiKey);
+      if (prices.length === 0) continue;
+      sources.push({
+        peg: meta.flags.pegCurrency as CommodityPeg,
+        commodityOunces: meta.commodityOunces,
+        prices,
+      });
+    }
+  }));
 
   const result = buildCommodityPeerMedianSeries(sources);
   for (const peg of ["GOLD", "SILVER"] as const) {

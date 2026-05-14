@@ -29,6 +29,7 @@ import {
   fetchHistoricalSecondaryFxRates,
   buildCommodityMedianSeriesFromCg,
   buildFxLookup,
+  type CommodityPeg,
 } from "./backfill-fx";
 
 import {
@@ -186,7 +187,7 @@ export async function handleBackfillDepegs(
       // Collect coin details and historical FX currencies needed by this batch
       const neededFxCurrencies = new Set<string>();
       const neededSecondaryFxCurrencies = new Set<string>();
-      let needsCommodities = false;
+      const neededCommodityPegs = new Set<CommodityPeg>();
       const preparedCoins: PreparedBackfillCoin[] = [];
 
       // Fetch historical FX rates only as far back as the oldest supply snapshot in this batch.
@@ -277,7 +278,7 @@ export async function handleBackfillDepegs(
         }
 
         if (COMMODITY_PEGS.has(peg)) {
-          needsCommodities = true;
+          neededCommodityPegs.add(peg as CommodityPeg);
         } else {
           const secondaryFx = SECONDARY_PEG_TO_FX[peg];
           if (secondaryFx) {
@@ -311,8 +312,9 @@ export async function handleBackfillDepegs(
             endSec: replayWindow.replayEndSec,
           }
         : undefined;
-      const commodityPromise = needsCommodities
-        ? buildCommodityMedianSeriesFromCg(commodityRange, coingeckoApiKey ?? null)
+      const commodityPegs = [...neededCommodityPegs].sort();
+      const commodityPromise = commodityPegs.length > 0
+        ? buildCommodityMedianSeriesFromCg(commodityRange, coingeckoApiKey ?? null, commodityPegs)
         : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
       const [fxSeriesPrimary, fxSeriesSecondary, commoditySeries] = await Promise.all([
@@ -433,7 +435,7 @@ export async function handleBackfillDepegs(
           previews,
           skipped,
           errors,
-          commodities: needsCommodities
+          commodities: commodityPegs.length > 0
             ? {
                 goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
                 silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
@@ -447,7 +449,7 @@ export async function handleBackfillDepegs(
         eventsCreated: totalEvents,
         skipped,
         errors,
-        commodities: needsCommodities
+        commodities: commodityPegs.length > 0
           ? {
               goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
               silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
