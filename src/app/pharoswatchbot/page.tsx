@@ -319,7 +319,7 @@ function SetupCard({ setup, index }: { setup: (typeof RECOMMENDED_SETUPS)[number
 
   return (
     <div
-      className="rounded-xl border border-border/65 bg-card/78 p-4"
+      className="min-w-0 rounded-xl border border-border/65 bg-card/78 p-4"
       style={{ "--stagger-index": index } as CSSProperties}
     >
       <div className="flex items-center gap-2.5">

@@ -62,7 +62,7 @@ The load-bearing rules:
 
 - Do not duplicate per-coin or preset write SQL outside the existing State / persistence helpers. If a callback-shaped helper is too narrow, extract the shared D1 mutation into `worker/src/api/telegram-webhook-store.ts` (or the matching settings-mutation layer) and have both callbacks and Mini App call it.
 - Do not mutate group, supergroup, or channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist. Direct-link `chat_type="sender"` launches are the user's *private* alert context, not a group surface.
-- Do not write analytics or cooldown rows before signed `initData` validation succeeds.
+- Do not write user-scoped analytics or cooldown rows before signed `initData` validation succeeds. Aggregate abuse/validation counters for body-too-large, malformed JSON, and schema-denied requests are the sole pre-auth exception and must not include Telegram user or chat identifiers.
 - Do not accept mutation auth older than the 5-minute mutation window.
 - Do not use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
@@ -74,7 +74,7 @@ HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
 
 - Parse `URLSearchParams` from raw `initData`.
 - Require `hash`, `auth_date`, and `user` for mutations.
-- Build the bot-token HMAC data-check string from all fields except `hash`, sorted alphabetically, joined by `\n`. Keep Telegram's `signature` field in this bot-token HMAC path; only the third-party Ed25519 validation path excludes both `hash` and `signature`.
+- Build the bot-token HMAC data-check string from all fields except `hash` and Telegram's third-party `signature` field, sorted alphabetically, joined by `\n`.
 - Derive the secret key with `HMAC-SHA-256(key="WebAppData", message=TELEGRAM_BOT_TOKEN)`.
 - Compare the computed hex HMAC with `hash` using timing-safe comparison.
 - Try `TELEGRAM_BOT_TOKEN` first and fall back to `TELEGRAM_BOT_TOKEN_PREVIOUS` when configured, so `initData` signed by either token validates during a bot-token rotation overlap. See [`runbooks/telegram-secret-rotation.md`](./runbooks/telegram-secret-rotation.md) for the rotation contract.
@@ -86,7 +86,7 @@ Freshness windows:
 
 Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
 
-Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, or usage/cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies.
+Both Mini App API endpoints reject request bodies above 16 KiB before JSON parsing, schema validation, HMAC validation, user-scoped analytics, or cooldown writes. The limit is enforced with `Content-Length` when present and with a bounded stream reader for chunked or incorrect-length bodies. Body-cap, JSON-parse, and schema failures can increment aggregate abuse/validation counters before auth; those counters intentionally carry no user or chat identity.
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 

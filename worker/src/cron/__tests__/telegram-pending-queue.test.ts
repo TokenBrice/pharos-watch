@@ -1747,15 +1747,13 @@ describe("enqueuePendingAlerts", () => {
 
   it("resets not_before_at on the stale-row re-enqueue path", async () => {
     // P1.6 regression: a stale row whose prior life ended in a rate-limit
-    // defer should not stay held back after a fresh start. The upsert must
-    // copy excluded.not_before_at when telegram_pending_alerts.created_at
-    // is older than the stale cutoff, alongside the other stale-reset fields.
+    // defer should not stay held back after a fresh start. The upsert refresh
+    // predicate must also cover rows whose source-specific TTL already expired.
     const db = mockD1([
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
     ]);
 
     const nowSec = 10_000;
-    const staleCutoff = nowSec - PENDING_TTL_SEC;
 
     await enqueuePendingAlerts(
       db,
@@ -1768,12 +1766,72 @@ describe("enqueuePendingAlerts", () => {
     // The new CASE branch must come first so it takes precedence over the
     // existing MAX/COALESCE logic when the prior row is stale.
     expect(insert!.sql).toMatch(
-      /not_before_at = CASE\s+WHEN telegram_pending_alerts\.created_at < \? THEN excluded\.not_before_at/,
+      /not_before_at = CASE\s+WHEN COALESCE\(telegram_pending_alerts\.expires_at, telegram_pending_alerts\.created_at \+ \?\) <= excluded\.created_at\s+OR telegram_pending_alerts\.created_at < excluded\.created_at - \? THEN excluded\.not_before_at/,
     );
-    // Seven staleCutoff binds: created_at, attempts, not_before_at,
-    // expires_at, processing_owner, processing_started_at, processing_expires_at.
-    const staleBindCount = insert!.binds.filter((bind) => bind === staleCutoff).length;
-    expect(staleBindCount).toBe(7);
+    // Seven refresh predicates, each binding the default TTL twice.
+    const ttlBindCount = insert!.binds.filter((bind) => bind === PENDING_TTL_SEC).length;
+    expect(ttlBindCount).toBe(14);
+  });
+
+  it("refreshes expired short-TTL rows on re-enqueue before the one-hour stale cutoff", async () => {
+    const { sqlite, db } = setupTelegramPendingSqlite();
+    try {
+      const msg = { chatId: "admin-chat", html: "<b>Broadcast</b>", disableNotification: false };
+      await enqueuePendingAlerts(db, [msg], 1_000, {
+        sourceType: "admin_broadcast",
+        priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
+        ttlSec: 30 * 60,
+      });
+      const dedupeKey = buildDedupeKey(msg);
+      sqlite
+        .prepare(
+          `UPDATE telegram_pending_alerts
+              SET attempts = 5,
+                  not_before_at = 5000,
+                  last_error_class = 'rate_limit',
+                  retry_after_sec = 300,
+                  processing_owner = 'old-owner',
+                  processing_started_at = 1100,
+                  processing_expires_at = 5100
+            WHERE dedupe_key = ?`,
+        )
+        .run(dedupeKey);
+
+      await enqueuePendingAlerts(db, [msg], 2_900, {
+        sourceType: "admin_broadcast",
+        priority: TELEGRAM_PENDING_PRIORITY.adminBroadcast,
+        ttlSec: 30 * 60,
+      });
+
+      const row = sqlite
+        .prepare(
+          `SELECT created_at, attempts, not_before_at, expires_at, processing_owner,
+                  processing_started_at, processing_expires_at
+             FROM telegram_pending_alerts
+            WHERE dedupe_key = ?`,
+        )
+        .get(dedupeKey) as {
+          created_at: number;
+          attempts: number;
+          not_before_at: number | null;
+          expires_at: number | null;
+          processing_owner: string | null;
+          processing_started_at: number | null;
+          processing_expires_at: number | null;
+        };
+
+      expect(row).toEqual({
+        created_at: 2_900,
+        attempts: 0,
+        not_before_at: null,
+        expires_at: 4_700,
+        processing_owner: null,
+        processing_started_at: null,
+        processing_expires_at: null,
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

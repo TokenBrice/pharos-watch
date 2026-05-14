@@ -1816,6 +1816,11 @@ Direct `https://api.pharos.watch/api/telegram-pulse` access is protected and req
   "historySource": "snapshot",
   "pendingDeliveries": 3,
   "quietHoursEnabledChats": 42,
+  "miniAppSessionsToday": 88,
+  "miniAppMutationsToday": 31,
+  "miniAppDeniedToday": 2,
+  "miniAppReplayClaimsToday": 1,
+  "miniAppOpenToFirstMutationP50Sec": null,
   "alertTypeChats": {
     "dews": 1701,
     "depeg": 1644,
@@ -1871,6 +1876,11 @@ Direct `https://api.pharos.watch/api/telegram-pulse` access is protected and req
 | `historySource`                  | `"snapshot" \| "live-fallback"` | `snapshot` when the response is only fixed `telegram_watcher_lifecycle_daily` rows, or when no live fallback rows are available; `live-fallback` when subscriber-created-at aggregation supplies older active-chat cohort points ahead of the fixed snapshot rows                                                                                                           |
 | `pendingDeliveries`              | `number \| null`                | Count of queued Telegram alert deliveries; `null` when unavailable or suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                       |
 | `quietHoursEnabledChats`         | `number \| null`                | Aggregate count of chats with quiet hours enabled; `null` when suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                              |
+| `miniAppSessionsToday`           | `number \| null`                | Valid Mini App session launches today; `null` when unavailable or suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                           |
+| `miniAppMutationsToday`          | `number \| null`                | Successful Mini App mutations today; `null` when unavailable or suppressed by low-cardinality privacy filtering                                                                                                                                                                                                                                                             |
+| `miniAppDeniedToday`             | `number \| null`                | Mini App denial count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                                           |
+| `miniAppReplayClaimsToday`       | `number \| null`                | Mini App replay-protection claim count for abuse/health monitoring. This field is not suppressed by the low-cardinality privacy rule because it is an operational counter, not an adoption signal.                                                                                                                                                                          |
+| `miniAppOpenToFirstMutationP50Sec` | `number \| null`              | Reserved Mini App session-to-first-mutation latency metric; currently `null` until bucketed latency is wired through `telegram_usage_daily`                                                                                                                                                                                                                                 |
 | `alertTypeChats`                 | `object`                        | Aggregate chat counts with DEWS, depeg, safety, launch, and all-four alert coverage                                                                                                                                                                                                                                                                                         |
 | `currentSnapshotAt`              | `number`                        | Unix seconds when the current aggregate pulse snapshot was measured                                                                                                                                                                                                                                                                                                         |
 | `lifecycleHistoryUpdatedAt`      | `number \| null`                | Unix seconds of the latest daily lifecycle snapshot when any snapshot row exists; can be non-null while `historySource="live-fallback"` when subscriber-created-at aggregation yields older chart points; `null` when no snapshot history exists                                                                                                                            |
@@ -1882,7 +1892,7 @@ Direct `https://api.pharos.watch/api/telegram-pulse` access is protected and req
 | `topCoins`                       | `string[]`                      | Up to five most subscribed coin tickers, ordered by subscription count                                                                                                                                                                                                                                                                                                      |
 | `watcherHistory`                 | `array`                         | UTC day buckets. Snapshot-backed points preserve historical active counts and include `snapshotAt`; daily delta fields can be `null` when suppressed. During bootstrap, fallback prefix points use current active watcher created-at aggregation and cumulative active watchers so the public chart keeps all available historical points before fixed snapshots take over. |
 
-Low-cardinality privacy rule: nonzero values below `privacy.lowCardinalityThreshold` are hidden for public daily deltas, pending deliveries, quiet-hours chats, and lifecycle-history delta fields. Consumers should treat `null` as "not publicly shown", not as zero.
+Low-cardinality privacy rule: nonzero values below `privacy.lowCardinalityThreshold` are hidden for public daily deltas, pending deliveries, quiet-hours chats, Mini App session/mutation adoption counts, and lifecycle-history delta fields. Consumers should treat `null` as "not publicly shown", not as zero. Mini App denied/replay counters are an explicit exception because they are abuse/health counters; they remain visible when available and are not listed in `privacy.suppressedFields`.
 
 ---
 
@@ -2989,7 +2999,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Returns the current private-chat Mini App control-panel state for a Telegram user.
 
-**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` field from the HMAC data-check string, includes the optional `signature` field when Telegram sends it, rejects missing/invalid hashes, and accepts sessions up to 24 hours old for read-only state loading.
+**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` field and optional third-party `signature` field from the HMAC data-check string, rejects missing/invalid hashes, and accepts sessions up to 24 hours old for read-only state loading.
 
 **Site-data lane:** denied. The frontend calls the public API host through `src/lib/api.ts`; `/_site-data/*` never proxies this route.
 
@@ -3001,14 +3011,13 @@ Returns the current private-chat Mini App control-panel state for a Telegram use
 
 ```json
 {
-  "initData": "query-string-from-Telegram.WebApp.initData",
-  "startParam": "settings"
+  "initData": "query-string-from-Telegram.WebApp.initData"
 }
 ```
 
-`startParam` is optional and is used only as a fallback when Telegram did not include `start_param` inside `initData`.
+The request schema is strict. Launch context such as `start_param` must come from signed Telegram `initData`.
 
-**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 15-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
+**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 5-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
 
 Key fields:
 
@@ -3025,11 +3034,11 @@ Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `4
 
 Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
 
-**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). Each mutation consumes the signed `initData` hash once inside the 15-minute mutation window; replaying the same mutation auth returns `409`.
+**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 5 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`). The same fresh launch can perform multiple mutations inside that 5-minute window; stale auth returns `401`.
 
 **Site-data lane:** denied.
 
-**Rate limiting:** cache-backed cooldown per Telegram user and operation kind (`mini-app:<operation>`, 1 second).
+**Rate limiting:** cache-backed cooldown per Telegram user across all mutation kinds (`mini-app:mutation:any`, 5 seconds).
 
 **Cache:** no-store.
 
@@ -3053,11 +3062,16 @@ Supported `operation.kind` values:
 - `set-global-depeg-step` — set or clear the global depeg severity and worsening-step threshold (`100`, `250`, `500`, or `null`).
 - `set-quiet-hours` — enable or disable UTC quiet hours.
 - `clear-snooze` — clear chat-level snooze.
+- `set-snooze` — set chat-level snooze for `1h`, `4h`, or `24h`.
+- `set-coin-snooze` — set or clear one explicit coin subscription's snooze.
+- `set-timezone` — set the chat timezone used for quiet-hours display.
+- `unsubscribe-all` — clear all global, per-coin, and preset alert settings.
+- `forget-me` — delete the private subscriber row and mutable alert settings.
 - `set-coin` — add or tune one explicit coin subscription.
 - `remove-coin` — remove one explicit coin subscription.
 - `follow-preset` / `unfollow-preset` — add or remove a dynamic preset watchlist.
 
-Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `409` replayed mutation `initData`; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
+Errors: `400` invalid operation, unknown coin/preset, or empty alert type selection; `401` invalid or stale Telegram session; `403` group mutation attempt; `429` cooldown; `503` preset cache unavailable or missing bot-token configuration.
 
 ### `POST /api/telegram-webhook`
 

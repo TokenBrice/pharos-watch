@@ -225,7 +225,7 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`. The `tz:<zone>` callback handler enforces the same admin check before persisting.
 
-- **Hard gate (current default):** non-admin invocations receive a refusal reply that names the current administrators ("Only group admins can change alert settings (/subscribe). Admins here: @Alice, Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, which is already visible to every member through the Telegram group member list.
+- **Hard gate (current default):** non-admin invocations receive a short command-specific refusal reply ("Only group admins can /subscribe. Ask @Alice or Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, capped to three names plus an overflow phrase, and are already visible to every member through the Telegram group member list.
 - **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
 
 Mutating group authorization uses a fresh `getChatMember` check on every command or callback, so a demoted admin loses mutation access on the next webhook delivery and a newly promoted admin can act immediately. The five-minute `telegram:chat-member:<chat_id>:<user_id>` cache remains available for non-authorization diagnostics, and `telegram:chat-admins:<chat_id>` still caches the administrator list for denial copy. If Telegram's fresh member lookup fails, hard-gated mutations fail closed. Private chats remain open to every chat member.
@@ -236,7 +236,7 @@ Mutating group authorization uses a fresh `getChatMember` check on every command
 
 - `setup:branch:recommended` — confirms `dews,depeg` alerts for the `usd-top25` preset.
 - `setup:branch:custom` — toggles alert types (`setup:type-toggle:<type>`), then `setup:next` to pick a target (`setup:target:<preset|all|type>`), then `setup:confirm`.
-- `setup:branch:skip` — clears wizard state and returns the long-form `START_MESSAGE` for users who prefer typing commands.
+- `setup:branch:skip` — clears wizard state and returns a slim command-reference reply with a `/help` affordance for users who prefer typing commands.
 - `setup:target:type` — opens a `force_reply` prompt so the user can type a ticker; the next inbound message is resolved via `resolveTicker` and lands on the confirm step.
 
 Wizard state is persisted as a row in `telegram_pending_disambiguation` with `action_type = "setup-step"` and an `action_payload` JSON of `{ step, alertTypes, target }`. TTL is 5 min, shared with the disambiguation cleanup cron. When wizard state is active and a fresh slash command arrives, the wizard row is cleared so the command runs unmodified.
@@ -271,7 +271,7 @@ Bulk `/subscribe` and `/unsubscribe` calls are gated behind an inline `[ Confirm
 | `/unsnooze` | Clears active alert snooze immediately; private replies include a Mini App snooze button |
 | `/unmutehours` | Disables quiet hours |
 | `/cancel` | Cancels a pending disambiguation flow |
-| `/forget` | Two-step inline-confirmed deletion of the caller's subscriber data (per-coin and preset subscriptions, global toggles, quiet hours, snooze, delivery diagnostics, pending alerts). Private chats only. Retained idempotency rows in `telegram_processed_updates` are not removed. |
+| `/forget` | Two-step inline-confirmed deletion of the caller's subscriber data (per-coin and preset subscriptions, global toggles, quiet hours, snooze, delivery diagnostics, pending alerts). Private chats only. Retained idempotency rows in `telegram_processed_updates` plus alert-job, target, and dead-letter delivery-audit rows are not removed. |
 
 ### /start Deep-Link Payloads
 
@@ -401,7 +401,7 @@ This prevents a cold start from blasting subscribers with every current conditio
 
 ### Failure Modes
 
-If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, the dispatch run **aborts** rather than producing a falsely-empty preset-subscriber list. The metadata flags the abort via `presetFailure: true`, increments `presetQueryFailures` or `presetResolutionFailures`, and no snapshots are written. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
+If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `resolveTelegramPresetTargets()` cannot read the stablecoins cache, preset-backed delivery is marked degraded rather than treated as an empty subscriber list. Direct and global subscribers continue when they can be resolved safely, snapshot writes still proceed for the current run, and structured metadata/logging records whether the failure was query or resolution related. A persistent `telegram:preset-query-failure-count` cache counter accumulates across consecutive failed preset-resolution runs and resets on the next successful run; the current value is exposed as `presetQueryFailures` in the Telegram bot status metrics.
 
 ### Alert Detection Rules
 

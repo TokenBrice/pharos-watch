@@ -197,6 +197,38 @@ describe("PharosWatchBotMiniAppPage", () => {
     }
   });
 
+  it("renders and scrolls a catalog launch target that is not yet followed", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_usdt-tether", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      render(<PharosWatchBotMiniAppPage />);
+
+      await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+      await waitFor(() => expect(document.getElementById("coin-row-usdt-tether")).toBeTruthy());
+      expect(screen.getByText("Not in your explicit watchlist.")).toBeTruthy();
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+      expect(scrollIntoView.mock.instances.at(-1)).toBe(document.getElementById("coin-row-usdt-tether"));
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
+  it("renders a no-change fallback for stale coin launch targets", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "coin_old-coin", user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("This launch target is not in the current Mini App catalog. No settings were changed.")).toBeTruthy();
+  });
+
   it("routes quiet-hours start params to settings", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "quiet-hours", user: { username: "watcher" } }, ready: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-05-13",
+  "generatedAt": "2026-05-14",
   "files": {
     "src/lib/api.ts": 92.7,
     "worker/src/lib/api-cache-read.ts": 94.5,
@@ -31,6 +31,11 @@
     "worker/src/api/status.ts": 100,
     "worker/src/api/telegram-webhook.ts": 81.8,
     "worker/src/api/telegram-webhook-callbacks.ts": 70.7,
+    "worker/src/api/telegram-mini-app.ts": 96,
+    "worker/src/api/telegram-mini-app-state.ts": 83.3,
+    "worker/src/api/telegram-mini-app-mutations.ts": 92.9,
+    "worker/src/api/telegram-mini-app-schemas.ts": 100,
+    "worker/src/lib/telegram-mini-app-auth.ts": 97,
     "worker/src/lib/alerts.ts": 90,
     "worker/src/api/stablecoin-detail.ts": 96.8,
     "worker/src/cron/dex-liquidity/orchestrator.ts": 92.2,

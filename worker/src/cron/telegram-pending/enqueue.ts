@@ -44,7 +44,11 @@ export async function enqueuePendingAlerts(
 ): Promise<void> {
   if (messages.length === 0) return;
 
-  const staleCutoff = nowSec - PENDING_TTL_SEC;
+  const shouldRefreshExistingRow = [
+    "COALESCE(telegram_pending_alerts.expires_at, telegram_pending_alerts.created_at + ?) <= excluded.created_at",
+    "telegram_pending_alerts.created_at < excluded.created_at - ?",
+  ].join(" OR ");
+  const refreshPredicateBinds = () => [PENDING_TTL_SEC, PENDING_TTL_SEC] as const;
   const sourceType = resolvePendingSourceType(options);
   const stmts = messages.map((msg) => {
     const expiresAt = nowSec + resolvePendingTtlSec(msg, options);
@@ -60,15 +64,15 @@ export async function enqueuePendingAlerts(
            message_html = excluded.message_html,
            disable_notification = excluded.disable_notification,
            created_at = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN excluded.created_at
+             WHEN ${shouldRefreshExistingRow} THEN excluded.created_at
              ELSE telegram_pending_alerts.created_at
            END,
            attempts = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN 0
+             WHEN ${shouldRefreshExistingRow} THEN 0
              ELSE telegram_pending_alerts.attempts
            END,
            not_before_at = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN excluded.not_before_at
+             WHEN ${shouldRefreshExistingRow} THEN excluded.not_before_at
              WHEN excluded.not_before_at IS NULL THEN telegram_pending_alerts.not_before_at
              WHEN telegram_pending_alerts.not_before_at IS NULL THEN excluded.not_before_at
              ELSE MAX(telegram_pending_alerts.not_before_at, excluded.not_before_at)
@@ -85,19 +89,19 @@ export async function enqueuePendingAlerts(
            END,
            alert_type = COALESCE(excluded.alert_type, telegram_pending_alerts.alert_type),
            expires_at = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN excluded.expires_at
+             WHEN ${shouldRefreshExistingRow} THEN excluded.expires_at
              ELSE COALESCE(telegram_pending_alerts.expires_at, excluded.expires_at)
            END,
            processing_owner = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN NULL
+             WHEN ${shouldRefreshExistingRow} THEN NULL
              ELSE telegram_pending_alerts.processing_owner
            END,
            processing_started_at = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN NULL
+             WHEN ${shouldRefreshExistingRow} THEN NULL
              ELSE telegram_pending_alerts.processing_started_at
            END,
            processing_expires_at = CASE
-             WHEN telegram_pending_alerts.created_at < ? THEN NULL
+             WHEN ${shouldRefreshExistingRow} THEN NULL
              ELSE telegram_pending_alerts.processing_expires_at
            END`,
       )
@@ -116,13 +120,13 @@ export async function enqueuePendingAlerts(
         sourceType,
         msg.alertType ?? null,
         expiresAt,
-        staleCutoff,
-        staleCutoff,
-        staleCutoff,
-        staleCutoff,
-        staleCutoff,
-        staleCutoff,
-        staleCutoff,
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
+        ...refreshPredicateBinds(),
       );
   });
   await batchExecute(db, stmts);

@@ -164,7 +164,8 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Responsibility.** Own the `telegram_pending_alerts` row lifecycle: claim, drain, retry-with-backoff, dead-letter, expire. Hold per-chat and global backoff (`not_before_at`, `telegram:global-send-backoff-until`). Enforce the 2-strike rule for blocked subscribers. Provide a dedupe key so duplicate chunks never queue.
 
 **Owned files.**
-- `worker/src/cron/telegram-pending-queue.ts` (single module — 1,277 lines but deliberately kept together because the lifecycle is one state machine)
+- `worker/src/cron/telegram-pending-queue.ts` (compatibility barrel for existing imports)
+- `worker/src/cron/telegram-pending/*` (enqueue, claim/drain, backoff, capacity, cleanup, dead-letter, dedupe, lifecycle helpers)
 - The pending-queue-related constants in `worker/src/lib/telegram-constants.ts` (`PENDING_TTL_SEC`, `PENDING_BACKOFF_SCHEDULE_SEC`, `PENDING_MAX_ATTEMPTS`, `SEND_BATCH_SIZE`, `TELEGRAM_PENDING_DRAIN_BUDGET`, `TELEGRAM_PENDING_PRIORITY`, `TELEGRAM_ALERT_TTL_SEC`, `TELEGRAM_DISPATCH_INTERVAL_SEC`, `BLOCK_STRIKE_WINDOW_SEC`, `PENDING_NEAR_TTL_WINDOW_SEC`)
 
 **Allowed inbound dependencies.** Dispatch (the only legitimate enqueuer for alerts), Admin Telegram routes (`admin-telegram-broadcast.ts`, `admin-telegram-resend.ts`, `admin-telegram-pending.ts`), Callback routing only via `SNOOZE_REPLY_MARKUP` re-export (the `lib/telegram-alerts.ts` keyboard).
@@ -253,7 +254,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Must NOT.**
 - Accept mutation auth older than the 5-minute mutation window.
 - Mutate group/supergroup/channel chat rows until a fresh admin verification path and group-scoped launch ownership model exist.
-- Write analytics or cooldown rows before signed `initData` validation succeeds.
+- Write user-scoped analytics or cooldown rows before signed `initData` validation succeeds. The only pre-auth exception is aggregate abuse/validation counters for body-too-large, malformed JSON, and schema-denied Mini App requests; those counters must not include Telegram user or chat identifiers.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
 - Use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.
 
@@ -264,7 +265,9 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 Files any seam may import:
 
 - `worker/src/lib/telegram-constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, all queue tuning, disambiguation TTL).
-- `worker/src/lib/telegram-alerts.ts` — alert formatting, ticker resolution, `splitMessage`, `SNOOZE_REPLY_MARKUP`. (Mixed concerns — flagged below.)
+- `worker/src/lib/telegram-alerts.ts` — compatibility barrel for alert parsing and formatting exports.
+- `worker/src/lib/telegram-alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
+- `worker/src/lib/telegram-alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
 - `worker/src/lib/telegram-presets.ts` — preset definitions and resolution.
 - `worker/src/lib/telegram-digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
 - `worker/src/lib/telegram-log.ts` — structured logging.
@@ -279,7 +282,9 @@ Three commits decomposed Telegram code in 30 days. Knowing which seam each touch
 
 - **2026-05-11 — `P1-M1: decompose telegram-webhook.ts dispatch into per-command modules` (58695ef1e)** — created the **Action handlers** seam. Cut `telegram-webhook.ts` from ~1,034 lines to ~426, moved each `/command` into `worker/src/api/webhook-commands/<command>.ts`, replaced two parallel switch statements (the pending-active branch and the fresh-command branch) with one `COMMAND_HANDLERS` table plus explicit pending passthrough/clear sets. Extracted the shared subscribe/unsubscribe/set machinery into `webhook-commands/action-runner.ts`. Behavior and exports unchanged.
 
-- **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `telegram-pending-queue.ts` to absorb claim-based draining. This commit is the most recent reorganization and the immediate motivation for this doc.
+- **2026-05-14 — `refactor(telegram): extract callback and queue helpers` (d6f4fec8e)** — split **Dispatch / fan-out** further (`dispatch-telegram-alerts-fanout.ts`), restructured `telegram-webhook-callbacks.ts` for explicit per-action handlers, and grew `telegram-pending-queue.ts` to absorb claim-based draining. This commit was the immediate motivation for this doc.
+
+- **2026-05-14 — PharosWatchBot audit closeout** — the P0/P1/P2 remediation pass and implemented P3 closeout became the current frozen baseline: callback write paths were aligned with store/settings helpers, `loadPendingDisambiguation()` replaced duplicate SELECTs, `telegram-alerts.ts` became a parser/formatter compatibility barrel, registration/chat-member Bot API calls were centralized through outbound transport, `why_`/`coverage_` Mini App payloads gained in-app views, read-only command handler tests were added, and `telegram-pending-queue.ts` became a compatibility barrel over `worker/src/cron/telegram-pending/*`.
 
 Several `harden` and `fix` commits between those reshaped behavior inside the seams (group-admin hard gate, per-coin snooze, dedupe-key stability, two-strike block rule, claim-based pending drain). Behavioral changes inside an existing seam are not seam changes — they should not move files.
 
@@ -288,6 +293,8 @@ Several `harden` and `fix` commits between those reshaped behavior inside the se
 ## Freeze period
 
 **Until 2026-06-13** (30 days from 2026-05-14), the Telegram code is **frozen for internal reorganization**.
+
+The implemented PharosWatchBot audit closeout on 2026-05-14 is treated as the frozen baseline. Do not use those already-landed refactors as precedent for more file moves, helper extraction, or seam changes during the freeze.
 
 Allowed during the freeze:
 - Bug fixes that change behavior.
@@ -321,9 +328,9 @@ If two or more of these happen, re-evaluate the seams (revise this doc, then ref
 
 ## Architectural tension flagged but not prescribed
 
-- **`worker/src/lib/telegram-alerts.ts` is 760 lines and straddles Command parsing (ticker resolution, arg parsing) and alert message formatting (DEWS/depeg/safety/launch HTML, `splitMessage`, the `SNOOZE_REPLY_MARKUP` keyboard).** It is imported by every seam. A future split would have a clean parsing-only half (`resolveTicker`, `parseSubscribeArgs`, `parseDisambiguationReply`, `suggestClosestToken`) and an alert-formatting half (`formatConsolidatedMessage`, `buildAlertReplyMarkup`, `splitMessage`, depeg/dews/safety/launch builders). Not prescribed because the freeze blocks it; revisit after 2026-06-13.
+- **`worker/src/lib/telegram-alerts.ts` remains the stable import path for Common alert helpers, but implementation now lives in parser and formatter modules.** Keep the barrel so existing imports stay stable; do not create additional Common submodules during the freeze without a bug-driven reason.
 
-- **Callback routing inlines a few mutating SQL writes (`snooze`, `coinsnooze`, `depegstep`, `safetydown`) that pre-date the store-helper convention.** They are functionally correct; they just bypass `telegram-webhook-store.ts`. Future rule: new mutating callbacks call store helpers, but do not retro-fit the existing ones during the freeze.
+- **Callback routing now routes mutating callback writes through `telegram-webhook-store.ts` or `telegram-webhook-settings-mutations.ts`.** New mutating callbacks should continue using those persistence helpers rather than adding inline SQL back into `telegram-webhook-callbacks.ts`.
 
 - **Setup wizard state lives in `telegram_pending_disambiguation` with `action_type = "setup-step"`.** Sharing the TTL and cleanup cron with disambiguation was deliberate, but Ingress now branches on `isSetupPending` before any other pending-state logic — that branch will keep growing if more wizards arrive. Watch for a third pending-action-type before deciding whether wizards need their own row type.
 
