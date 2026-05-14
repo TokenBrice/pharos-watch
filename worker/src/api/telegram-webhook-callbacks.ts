@@ -488,11 +488,14 @@ async function handleStatusCallback(
   const meta = TRACKED_META_BY_ID.get(arg);
   const status = await loadStatusForCoin(db, arg);
   const isPrivateChat = callbackChatType(cb) === "private";
-  await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
-    replyMarkup: buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: isPrivateChat }),
-    actionDetail: "callback_status",
-  });
-  await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+  try {
+    await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
+      replyMarkup: buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: isPrivateChat }),
+      actionDetail: "callback_status",
+    });
+  } finally {
+    await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
+  }
 }
 
 async function handleWhyCallback(
@@ -509,11 +512,14 @@ async function handleWhyCallback(
   }
   const message = await buildWhyMessage(db, arg);
   const isPrivateChat = callbackChatType(cb) === "private";
-  await sendAuditedTelegramReply(db, chatId, message, botToken, {
-    replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
-    actionDetail: "callback_why",
-  });
-  await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
+  try {
+    await sendAuditedTelegramReply(db, chatId, message, botToken, {
+      replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
+      actionDetail: "callback_why",
+    });
+  } finally {
+    await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
+  }
 }
 
 async function handleCoverageCallback(
@@ -531,11 +537,14 @@ async function handleCoverageCallback(
   const meta = TRACKED_META_BY_ID.get(arg);
   const status = await loadStatusForCoin(db, arg);
   const isPrivateChat = callbackChatType(cb) === "private";
-  await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
-    replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
-    actionDetail: "callback_coverage",
-  });
-  await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
+  try {
+    await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
+      replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
+      actionDetail: "callback_coverage",
+    });
+  } finally {
+    await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
+  }
 }
 
 async function handleQuickSubCallback(
@@ -587,21 +596,24 @@ async function handleQuickSubCallback(
     });
     return;
   }
-  if (chatType === "private") {
-    await sendAuditedTelegramReply(
-      db,
-      chatId,
-      `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
-      botToken,
-      {
-        actionDetail: "callback_quicksub",
-        replyMarkup: buildMiniAppOnlyKeyboard("Tune in app", `coin_${arg}`),
-      },
-    );
+  try {
+    if (chatType === "private") {
+      await sendAuditedTelegramReply(
+        db,
+        chatId,
+        `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
+        botToken,
+        {
+          actionDetail: "callback_quicksub",
+          replyMarkup: buildMiniAppOnlyKeyboard("Tune in app", `coin_${arg}`),
+        },
+      );
+    }
+  } finally {
+    await answerCallbackQuery(cb.id, botToken, {
+      text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
+    });
   }
-  await answerCallbackQuery(cb.id, botToken, {
-    text: `Subscribed to DEWS + depeg for ${meta?.symbol ?? arg}.`,
-  });
 }
 
 async function handleDepegStepCallback(
@@ -638,6 +650,11 @@ async function handleDepegStepCallback(
       .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
       .bind(now, chatId)
       .run();
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "depegstep",
+      outcome: "success",
+    });
     await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
   } catch (err) {
     logTelegramEvent({
@@ -646,6 +663,12 @@ async function handleDepegStepCallback(
       userId: cb.from?.id ?? null,
       action: "depegstep",
       err: err instanceof Error ? err.message : String(err),
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "depegstep",
+      outcome: "failure",
+      failureClass: "d1_write_failed",
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save setting. Please try again.",
@@ -686,6 +709,11 @@ async function handleSafetyDownCallback(
       .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
       .bind(now, chatId)
       .run();
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "safetydown",
+      outcome: "success",
+    });
     await answerCallbackQuery(cb.id, botToken, { text: "Safety alerts set to downgrades only." });
   } catch (err) {
     logTelegramEvent({
@@ -694,6 +722,12 @@ async function handleSafetyDownCallback(
       userId: cb.from?.id ?? null,
       action: "safetydown",
       err: err instanceof Error ? err.message : String(err),
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "subscribe",
+      actionDetail: "safetydown",
+      outcome: "failure",
+      failureClass: "d1_write_failed",
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not save setting. Please try again.",
@@ -914,6 +948,11 @@ async function handleManageUnsub(
 
   try {
     await removeSubscriptions(db, chatId, [stablecoinId]);
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "callback_unsub",
+      outcome: "success",
+    });
   } catch (err) {
     logTelegramEvent({
       message: "unsub callback write failed",
@@ -921,6 +960,12 @@ async function handleManageUnsub(
       userId: cb.from?.id ?? null,
       action: "unsub",
       err: err instanceof Error ? err.message : String(err),
+    });
+    await recordTelegramUsageEvent(db, {
+      eventType: "unsubscribe",
+      actionDetail: "callback_unsub",
+      outcome: "failure",
+      failureClass: "d1_write_failed",
     });
     await answerCallbackQuery(cb.id, botToken, {
       text: "Could not remove subscription. Please try again.",

@@ -14,7 +14,21 @@ vi.mock("../telegram-webhook-insights", async (importOriginal) => {
   };
 });
 
+// Indirect spy on sendAuditedTelegramReply so individual P1.16 tests can force
+// the reply to throw and assert the answer-callback still fires. The default
+// implementation defers to the real send path so all other tests keep working.
+vi.mock("../telegram-webhook-replies", async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...original,
+    sendAuditedTelegramReply: vi.fn(
+      original.sendAuditedTelegramReply as (...args: unknown[]) => Promise<void>,
+    ),
+  };
+});
+
 const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
+const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);
@@ -81,6 +95,9 @@ function lastAckBody(): { text?: string } {
 beforeEach(() => {
   fetchSpy.mockReset();
   fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+  // mockRejectedValueOnce expires after a single call so subsequent tests reuse
+  // the original sendAuditedTelegramReply impl bound at vi.mock construction.
+  vi.mocked(sendAuditedTelegramReply).mockClear();
 });
 
 describe("handleCallbackQuery", () => {
@@ -875,6 +892,69 @@ describe("handleCallbackQuery", () => {
       const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Action not recognized.");
     });
+
+    it("status:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
+      const db = mockD1([]);
+      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-status-fail",
+        data: "status:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      }).catch(() => {
+        // P1.16 fix wraps the reply in try/finally; the rethrown error is
+        // expected — what matters is that the ack still fired below.
+      });
+
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(ack).toBeDefined();
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Status sent.");
+    });
+
+    it("why:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
+      const db = mockD1([]);
+      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-why-fail",
+        data: "why:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      }).catch(() => undefined);
+
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(ack).toBeDefined();
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Why sent.");
+    });
+
+    it("coverage:<id> still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
+      const db = mockD1([]);
+      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-cov-fail",
+        data: "coverage:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      }).catch(() => undefined);
+
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(ack).toBeDefined();
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
+    });
+
+    it("quicksub:<id> private-chat branch still acks when sendAuditedTelegramReply throws (P1.16)", async () => {
+      const db = mockD1([]);
+      vi.mocked(sendAuditedTelegramReply).mockRejectedValueOnce(new Error("api fail"));
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-qs-fail",
+        data: "quicksub:usdc-circle",
+        from: { id: 999, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      }).catch(() => undefined);
+
+      const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
+      expect(ack).toBeDefined();
+      expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Subscribed/);
+    });
   });
 
   describe("watchlist manage (P1-U8)", () => {
@@ -1214,6 +1294,107 @@ describe("handleCallbackQuery", () => {
     expect(history.some((h) => /INSERT INTO telegram_subscriptions/.test(h.sql))).toBe(false);
     const ack = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
     expect(JSON.parse((ack?.[1] as RequestInit).body as string).text).toMatch(/Only group admins/i);
+  });
+
+  describe("P1.17 mutating callbacks emit usage analytics", () => {
+    it("depegstep:<id>:250 success records a subscribe usage event", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-depegstep-ok",
+        data: "depegstep:usdc-circle:250",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const usageRows = db
+        .getHistory()
+        .filter((entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds.includes("subscribe") &&
+          entry.binds.includes("depegstep"),
+        );
+      expect(usageRows).toHaveLength(1);
+      // eventType=subscribe, actionDetail=depegstep, outcome=success
+      expect(usageRows[0].binds[1]).toBe("subscribe");
+      expect(usageRows[0].binds[3]).toBe("depegstep");
+      expect(usageRows[0].binds[4]).toBe("success");
+    });
+
+    it("safetydown:<id> success records a subscribe usage event", async () => {
+      const db = mockD1([]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-safetydown-ok",
+        data: "safetydown:usdc-circle",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const usageRows = db
+        .getHistory()
+        .filter((entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds.includes("subscribe") &&
+          entry.binds.includes("safetydown"),
+        );
+      expect(usageRows).toHaveLength(1);
+      expect(usageRows[0].binds[1]).toBe("subscribe");
+      expect(usageRows[0].binds[3]).toBe("safetydown");
+      expect(usageRows[0].binds[4]).toBe("success");
+    });
+
+    it("unsub:<id> success records an unsubscribe usage event", async () => {
+      const db = mockD1([
+        { match: "FROM telegram_subscriptions", rows: [] },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-unsub-ok",
+        data: "unsub:usdc-circle",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 100 },
+      });
+
+      const usageRows = db
+        .getHistory()
+        .filter((entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds.includes("unsubscribe") &&
+          entry.binds.includes("callback_unsub"),
+        );
+      expect(usageRows).toHaveLength(1);
+      expect(usageRows[0].binds[1]).toBe("unsubscribe");
+      expect(usageRows[0].binds[3]).toBe("callback_unsub");
+      expect(usageRows[0].binds[4]).toBe("success");
+    });
+
+    it("depegstep:<id>:250 D1 failure records a failure usage event", async () => {
+      const db = mockD1([
+        {
+          match: "INSERT INTO telegram_subscriptions",
+          rows: [],
+          throwError: new Error("d1 boom"),
+        },
+      ]);
+      await handleCallbackQuery(db, "fake-token", {
+        id: "cb-depegstep-fail",
+        data: "depegstep:usdc-circle:250",
+        from: { id: 1, username: "alice" },
+        message: { chat: { id: 42, type: "private" }, message_id: 1 },
+      });
+
+      const usageRows = db
+        .getHistory()
+        .filter((entry) =>
+          entry.sql.includes("INSERT INTO telegram_usage_daily") &&
+          entry.binds.includes("subscribe") &&
+          entry.binds.includes("depegstep") &&
+          entry.binds.includes("failure"),
+        );
+      expect(usageRows).toHaveLength(1);
+      expect(usageRows[0].binds[1]).toBe("subscribe");
+      expect(usageRows[0].binds[3]).toBe("depegstep");
+      expect(usageRows[0].binds[4]).toBe("failure");
+      expect(usageRows[0].binds[6]).toBe("d1_write_failed");
+    });
   });
 
   it("setup confirm in a group refuses non-admins before loading setup state", async () => {
