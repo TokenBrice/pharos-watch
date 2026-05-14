@@ -790,26 +790,22 @@ Each `history` row includes:
 1. `QueryErrorNotice` when the rankings query fails
 2. Stale data banner (tracks the hourly core publish lane and warns when rankings are delayed or stale)
 3. Snapshot count text, optional `Data Provenance`, and peg filter controls
-4. Yield Sources board for the active peg-filtered ranking scope
+4. Yield leaderboard table
 5. Yield vs Safety scatter card with the summary metrics integrated into the card header
-6. Yield leaderboard table
+6. Yield Sources board for the active peg-filtered ranking scope
 7. Disclaimer
 
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 
-Compact provenance board rendered before the scatter on `/yield`. It consumes the pure `buildYieldSourceBoardModel(rankings, options)` output from `src/app/yield/source-board-model.ts` and stays scoped to the currently visible, peg-filtered rankings.
+Compact source-mix board rendered after the scatter on `/yield`. It consumes the pure `buildYieldSourceBoardModel(rankings, options)` output from `src/app/yield/source-board-model.ts` and stays scoped to the currently visible, peg-filtered rankings.
 
-The model derives only from published selected rows and retained `altSources[]` in the current rankings payload:
+The board renders a minimal surface focused on which data families back the visible rows:
 
-- chosen source count, retained alternate count, represented source-observation count, and represented data-family count
-- source lanes grouped by `yieldType` and `dataSource`, with chosen count, retained alternate count, observation APY min/median/max, and source labels
-- chosen-source confidence counts from `YieldRanking.provenance.confidenceTier` only; retained alternates do not carry or display confidence tiers
-- chosen-source source-changed count and chosen-source anomaly count from row provenance
-- observation APY min/median/max across chosen plus retained alternate source observations in the current view
-- benchmark labels present in the chosen rows, falling back to the response benchmark registry when row-level labels are absent
-- depth-lens counts for selected rows: `deep`, `moderate`, `thin`, and `unknown`
+- header: kicker, "Source mix in the current view" heading, and a one-line helper noting the board counts every chosen source plus retained alternates
+- chips: chosen-source source-changed count and chosen-source anomaly count from row provenance, each with a tooltip explaining the meaning
+- source lanes grouped by `yieldType` and `dataSource`, each row showing the yield-type badge, data-family label, total observation count (chosen + retained alternates), and up to three of the most-represented source labels with the long tail summarised as "+N more"
 
-The visible board labels APY as observation APY context. The header helper reads: "Counts every chosen source plus retained alternates for the rows currently visible. This is provenance coverage, not a recommendation ranking." Depth is venue-depth context, not guaranteed executable capacity. Observation APY is not an asset median, market median, investability rating, safety signal, or methodology input. Mobile stacks source lanes as readable rows with the same counts and APY values visible without hover.
+The shared `buildYieldSourceBoardModel` continues to expose additional fields (APY min/median/max, confidence tiers, depth lens, benchmark labels) for any future consumer, but the visible board no longer renders them — those signals already live in per-row source sheets and the collapsed `Data Provenance` details below the leaderboard.
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 

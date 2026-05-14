@@ -24,7 +24,7 @@ describe("YieldSourceBoard", () => {
     cleanup();
   });
 
-  it("renders exact source counts, selected-source confidence, observation APY, and caveat text", () => {
+  it("renders the source-mix heading, anomaly chips, and per-lane observation counts", () => {
     const model = buildYieldSourceBoardModel([
       makeBoardRanking(),
       makeBoardRanking({
@@ -46,24 +46,20 @@ describe("YieldSourceBoard", () => {
 
     render(<YieldSourceBoard model={model} />);
 
-    expect(screen.getByRole("heading", { name: "Source provenance in the current view" })).toBeTruthy();
-    expect(screen.getByText(/This is provenance coverage, not a recommendation ranking/i)).toBeTruthy();
-    expect(screen.getByText("Chosen-source confidence")).toBeTruthy();
-    expect(screen.queryByText(/alternate-source confidence/i)).toBeNull();
-
-    const sourceCounts = screen.getByText("Source observations").closest("dl");
-    expect(sourceCounts ? within(sourceCounts).getByText("Chosen sources") : null).toBeTruthy();
-    expect(sourceCounts ? within(sourceCounts).getByText("2") : null).toBeTruthy();
-    expect(sourceCounts ? within(sourceCounts).getByText("Retained alternates") : null).toBeTruthy();
-    expect(sourceCounts ? within(sourceCounts).getByText("1") : null).toBeTruthy();
-    expect(sourceCounts ? within(sourceCounts).getByText("3") : null).toBeTruthy();
-
+    expect(screen.getByRole("heading", { name: "Source mix in the current view" })).toBeTruthy();
+    expect(screen.getByText(/Counts every chosen source plus retained alternates/i)).toBeTruthy();
     expect(screen.getByText("1 source changed")).toBeTruthy();
     expect(screen.getByText("1 chosen source with anomalies")).toBeTruthy();
-    expect(screen.getAllByText("Observation APY").length).toBeGreaterThan(1);
-    expect(screen.getByText("4.00% / 4.00% / 4.00%")).toBeTruthy();
-    expect(screen.getByText("USD 3M T-Bill")).toBeTruthy();
-    expect(screen.getByText(/not guaranteed executable capacity/i)).toBeTruthy();
+
+    const laneList = screen.getByRole("list", { name: "Yield source lanes" });
+    expect(within(laneList).getAllByRole("listitem").length).toBe(model.groups.length);
+    expect(within(laneList).getAllByText(/observation/).length).toBe(model.groups.length);
+
+    expect(screen.queryByText(/Chosen-source confidence/i)).toBeNull();
+    expect(screen.queryByText(/Observation APY/i)).toBeNull();
+    expect(screen.queryByText(/Depth lens/i)).toBeNull();
+    expect(screen.queryByText(/Benchmarks in view/i)).toBeNull();
+    expect(screen.queryByText(/not guaranteed executable capacity/i)).toBeNull();
   });
 
   it("does not render an empty board", () => {

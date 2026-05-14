@@ -292,8 +292,6 @@ export function YieldClient() {
             </div>
           ) : null}
 
-          {visibleRows.length > 0 ? <YieldSourceBoard model={sourceBoardModel} /> : null}
-
           {data?.provenance ? (
             <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
@@ -394,6 +392,9 @@ export function YieldClient() {
                 headingId="scatter-heading"
                 onDotClick={handleNavigate}
               />
+            </section>
+            <section className="order-6" aria-label="Yield sources">
+              <YieldSourceBoard model={sourceBoardModel} />
             </section>
           </>
         ) : null}
