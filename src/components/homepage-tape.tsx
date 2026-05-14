@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { useRecentEvents } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -24,6 +25,24 @@ const SEVERITY_LABEL: Record<RecentEventSeverity, string> = {
   critical: "Critical",
 };
 
+// Per-event-type background tint. Hues are picked to be distinct from the
+// severity ramp (emerald/sky/amber/orange/red) so type and severity stay
+// readable independently. Tailwind classes are static strings as required.
+const EVENT_TYPE_BG: Record<RecentEvent["type"], string> = {
+  "depeg.opened": "bg-rose-500/10",
+  "depeg.resolved": "bg-rose-500/10",
+  "freeze.blocked": "bg-cyan-500/10",
+  "freeze.unblocked": "bg-cyan-500/10",
+  "freeze.destroyed": "bg-cyan-500/10",
+  "score.upgraded": "bg-indigo-500/10",
+  "score.downgraded": "bg-indigo-500/10",
+  "score.regrade.bulk": "bg-violet-500/10",
+};
+
+function eventTypeBg(type: RecentEvent["type"]): string {
+  return EVENT_TYPE_BG[type] ?? "";
+}
+
 function formatRelativeTime(tsSec: number): string {
   const ageSec = Math.max(1, Math.floor(Date.now() / 1000) - tsSec);
   if (ageSec < 60) return `${ageSec}s ago`;
@@ -41,7 +60,6 @@ function durationFromCount(count: number): string {
 interface TapeItemProps {
   event: RecentEvent;
   logoSrc: string | undefined;
-  prefixDivider: boolean;
 }
 
 const EMPTY_EVENTS: ReadonlyArray<RecentEvent> = [];
@@ -74,30 +92,38 @@ function resolveEventLogoId(event: RecentEvent): string | null {
   return UNIQUE_ACTIVE_ID_BY_SYMBOL.get(event.symbol.toUpperCase()) ?? null;
 }
 
-function TapeItem({ event, logoSrc, prefixDivider }: TapeItemProps) {
+function TapeItem({ event, logoSrc }: TapeItemProps) {
   const logoName = event.symbol ?? event.title;
+  const bgClass = eventTypeBg(event.type);
 
   return (
-    <>
-      {prefixDivider && (
-        <span aria-hidden="true" className="select-none text-border">|</span>
+    <Link
+      href={event.href}
+      className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
+    >
+      {event.symbol ? (
+        <StablecoinLogo src={logoSrc} name={logoName} size={22} />
+      ) : (
+        <span
+          aria-label={SEVERITY_LABEL[event.severity]}
+          className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
+        />
       )}
-      <Link
-        href={event.href}
-        className="pharos-focus-ring inline-flex items-center gap-2 rounded-sm whitespace-nowrap text-sm hover:text-foreground"
-      >
-        {event.symbol ? (
-          <StablecoinLogo src={logoSrc} name={logoName} size={22} />
-        ) : (
-          <span
-            aria-label={SEVERITY_LABEL[event.severity]}
-            className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
-          />
-        )}
-        <span className="text-foreground">{event.title}</span>
-        <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
-      </Link>
-    </>
+      <span className="text-foreground">{event.title}</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
+    </Link>
+  );
+}
+
+function TapeTerminator() {
+  return (
+    <Link
+      href="/tape/"
+      className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground"
+    >
+      <span>View all events</span>
+      <ChevronRight aria-hidden="true" className="h-3 w-3" />
+    </Link>
   );
 }
 
@@ -128,15 +154,15 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
               Loading recent events…
             </div>
           ) : (
-            <div className="pharos-tape-track flex w-max items-center gap-4 px-3 py-2" aria-live="off">
+            <div className="pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5" aria-live="off">
               {duplicated.map((event, idx) => (
                 <TapeItem
                   key={`${event.id}-${idx}`}
                   event={event}
                   logoSrc={logos[resolveEventLogoId(event) ?? ""]}
-                  prefixDivider={idx > 0}
                 />
               ))}
+              <TapeTerminator />
             </div>
           )}
           <div

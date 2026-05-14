@@ -76,6 +76,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX depth, durability, and market support" },
       { href: "/depeg", label: "Depeg", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
+      { href: "/tape", label: "The Tape", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],

@@ -621,6 +621,26 @@ export const ENDPOINT_ASSERTIONS = {
     }
     return `${body.events.length} events`;
   },
+  "/api/events": (result) => {
+    assert(result.status === 200, `/api/events returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.events), "/api/events missing events[]");
+    assert(body.total === null || isFiniteNumber(body.total), "/api/events total is invalid");
+    assert(typeof body.totalExact === "boolean", "/api/events totalExact is invalid");
+    assert(
+      body.nextCursor === null || (typeof body.nextCursor === "string" && body.nextCursor.length > 0),
+      "/api/events nextCursor is invalid",
+    );
+    for (const event of body.events) {
+      assert(typeof event.id === "string" && event.id.length > 0, "/api/events event.id invalid");
+      assert(typeof event.type === "string" && event.type.includes("."), "/api/events event.type invalid");
+      assert(typeof event.severity === "string", "/api/events event.severity invalid");
+      assert(isFiniteNumber(event.ts) && event.ts > 0, "/api/events event.ts invalid");
+      assert(typeof event.title === "string" && event.title.length > 0, "/api/events event.title invalid");
+      assert(typeof event.transition === "string", "/api/events event.transition invalid");
+    }
+    return `${body.events.length} events`;
+  },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);
     const body = stripMeta(result.body);

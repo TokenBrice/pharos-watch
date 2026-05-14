@@ -275,6 +275,31 @@
           "response": []
         },
         {
+          "name": "Tape events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/events?limit=50",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination."
+          },
+          "response": []
+        },
+        {
           "name": "USDS freeze status",
           "request": {
             "method": "GET",

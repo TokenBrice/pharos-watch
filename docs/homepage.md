@@ -100,6 +100,8 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 The live tape reads `useRecentEvents(20)`, which resolves to `GET /api/recent-events?limit=20` and is delivered to browsers through same-origin `/_site-data/recent-events?limit=20` on production Pages hosts. `HomepageTopTape` mounts it only on `/`, directly under the global PSI regime bar. On desktop it starts at the active sidebar width so it does not cover the main navigation; on mobile it spans the full viewport. The component renders nothing on endpoint errors or a valid empty event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
+Each item carries a per-class lucide icon (depeg/freeze/score) plus a 2px severity-tinted left accent sourced from `severityToAccent(...)` in `src/lib/severity-colors.ts`. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/tape/`, the longer-form route covering the same event feed.
+
 ---
 
 ## URL Filter Contract

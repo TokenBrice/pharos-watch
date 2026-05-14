@@ -1,0 +1,203 @@
+import {
+  errorResponse,
+  getLatestSuccessfulCronTimestamp,
+  jsonFreshResponse,
+  withErrorHandler,
+  buildFreshnessMeta,
+} from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
+import {
+  queryTapeEvents,
+  type TapeEventQueryFilters,
+} from "../lib/tape-event-store";
+import { rowToTapeEvent } from "../lib/tape-event-helpers";
+import {
+  SEVERITY_RANK,
+  TAPE_EVENT_SEVERITY_VALUES,
+  type TapeEvent,
+  type TapeEventSeverity,
+} from "@shared/types/tape-event";
+
+const DEFAULT_LIMIT = 50;
+const MIN_LIMIT = 1;
+const MAX_LIMIT = 500;
+// `/api/events` advertises a 10-minute freshness budget; the projector lane
+// runs every 30 minutes, so `Warning: 110` fires after ~80 min absent.
+const FRESHNESS_MAX_AGE_SEC = 600;
+
+const SEVERITY_SET = new Set<string>(TAPE_EVENT_SEVERITY_VALUES);
+
+function isPrefixWildcard(value: string): boolean {
+  return value.endsWith(".*");
+}
+
+function isValidSlug(value: string): boolean {
+  if (value === "") return false;
+  const body = value.endsWith(".*") ? value.slice(0, -2) : value;
+  if (body === "") return false;
+  for (const segment of body.split(".")) {
+    if (!/^[a-z0-9_]+$/.test(segment)) return false;
+  }
+  return true;
+}
+
+function parseIntOrNull(value: string | null): number | null | "invalid" {
+  if (value == null || value === "") return null;
+  if (!/^-?\d+$/.test(value)) return "invalid";
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : "invalid";
+}
+
+interface CursorPayload {
+  ts: number;
+  id: number;
+}
+
+function encodeCursor(payload: CursorPayload): string {
+  const json = JSON.stringify({ v: 1, ts: payload.ts, id: payload.id });
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeCursor(value: string | null): CursorPayload | null | "invalid" {
+  if (!value) return null;
+  try {
+    const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as { v?: number; ts?: number; id?: number };
+    if (parsed.v !== 1 || typeof parsed.ts !== "number" || typeof parsed.id !== "number") return "invalid";
+    if (!Number.isFinite(parsed.ts) || !Number.isFinite(parsed.id)) return "invalid";
+    return { ts: parsed.ts, id: parsed.id };
+  } catch {
+    return "invalid";
+  }
+}
+
+function expandTypeFilters(searchParams: URLSearchParams): { exact: string[]; prefixes: string[] } | Response {
+  const exact: string[] = [];
+  const prefixes: string[] = [];
+
+  for (const raw of searchParams.getAll("type")) {
+    const value = raw.trim();
+    if (!value) continue;
+    if (!isValidSlug(value)) return errorResponse(400, `Invalid type: ${raw}`);
+    if (isPrefixWildcard(value)) prefixes.push(value.slice(0, -2));
+    else exact.push(value);
+  }
+
+  for (const raw of searchParams.getAll("class")) {
+    const value = raw.trim();
+    if (!value) continue;
+    if (!isValidSlug(value)) return errorResponse(400, `Invalid class: ${raw}`);
+    // `class` is a shortcut for `type=<class>.*`.
+    prefixes.push(value);
+  }
+
+  return { exact, prefixes };
+}
+
+function expandSeverityFloor(value: string | null): string[] | Response {
+  if (!value) return [];
+  if (!SEVERITY_SET.has(value)) {
+    return errorResponse(400, `Invalid severityFloor: must be one of ${TAPE_EVENT_SEVERITY_VALUES.join(", ")}`);
+  }
+  const floorRank = SEVERITY_RANK[value as TapeEventSeverity];
+  return TAPE_EVENT_SEVERITY_VALUES.filter((sev) => SEVERITY_RANK[sev] >= floorRank);
+}
+
+export const handleEvents = withErrorHandler(
+  "events",
+  async (db: D1Database, url: URL): Promise<Response> => {
+    const params = url.searchParams;
+
+    const typeFilters = expandTypeFilters(params);
+    if (typeFilters instanceof Response) return typeFilters;
+
+    const severitiesAllowed = expandSeverityFloor(params.get("severityFloor"));
+    if (severitiesAllowed instanceof Response) return severitiesAllowed;
+
+    const since = parseIntOrNull(params.get("since"));
+    if (since === "invalid") return errorResponse(400, "Invalid since: must be epoch ms");
+    const until = parseIntOrNull(params.get("until"));
+    if (until === "invalid") return errorResponse(400, "Invalid until: must be epoch ms");
+
+    const limitRaw = params.get("limit");
+    let limit = DEFAULT_LIMIT;
+    if (limitRaw != null && limitRaw !== "") {
+      if (!/^\d+$/.test(limitRaw)) return errorResponse(400, "Invalid limit: must be a number");
+      limit = Number(limitRaw);
+      if (limit < MIN_LIMIT || limit > MAX_LIMIT) {
+        return errorResponse(400, `Invalid limit: must be between ${MIN_LIMIT} and ${MAX_LIMIT}`);
+      }
+    }
+
+    const includeTotalRaw = params.get("includeTotal");
+    let includeTotal = false;
+    if (includeTotalRaw != null && includeTotalRaw !== "") {
+      if (includeTotalRaw === "true" || includeTotalRaw === "1") includeTotal = true;
+      else if (includeTotalRaw === "false" || includeTotalRaw === "0") includeTotal = false;
+      else return errorResponse(400, "Invalid includeTotal: must be true or false");
+    }
+
+    const cursor = decodeCursor(params.get("cursor"));
+    if (cursor === "invalid") return errorResponse(400, "Invalid cursor: malformed cursor");
+
+    const coinIds = params.getAll("coin").map((raw) => raw.trim()).filter(Boolean);
+    const pegCurrency = params.get("pegCurrency");
+    const chain = params.get("chain");
+
+    const filters: TapeEventQueryFilters = {
+      typeExact: typeFilters.exact,
+      typePrefixes: typeFilters.prefixes,
+      coinIds,
+      pegCurrency: pegCurrency && pegCurrency.length > 0 ? pegCurrency : null,
+      chain: chain && chain.length > 0 ? chain : null,
+      severitiesAllowed,
+      since,
+      until,
+    };
+
+    const { rows, hasMore, total } = await queryTapeEvents(db, {
+      filters,
+      limit,
+      cursor,
+      includeTotal,
+    });
+
+    const events: TapeEvent[] = rows.map(rowToTapeEvent);
+
+    let nextCursor: string | null = null;
+    if (hasMore && rows.length > 0) {
+      const last = rows[rows.length - 1]!;
+      nextCursor = encodeCursor({ ts: last.ts, id: last.id });
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const fallbackTs = events.length > 0 ? Math.floor(events[0]!.ts / 1000) : nowSec;
+    const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "project-tape", fallbackTs);
+    const meta = buildFreshnessMeta(freshnessTs, FRESHNESS_MAX_AGE_SEC);
+
+    return jsonFreshResponse(
+      {
+        events,
+        nextCursor,
+        total: includeTotal ? total : null,
+        totalExact: includeTotal,
+        _meta: {
+          updatedAt: meta.updatedAt,
+          ageSeconds: meta.ageSeconds,
+          status: meta.status,
+        },
+      },
+      {
+        cacheControl: CACHE_PROFILES.realtime,
+        updatedAt: freshnessTs,
+        maxAgeSec: FRESHNESS_MAX_AGE_SEC,
+      },
+    );
+  },
+);

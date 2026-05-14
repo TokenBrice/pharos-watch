@@ -165,3 +165,4 @@ export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThresho
   if (ratio >= midThreshold) return "text-amber-700 dark:text-amber-400";
   return "text-red-700 dark:text-red-400";
 }
+

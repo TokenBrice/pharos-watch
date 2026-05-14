@@ -38,6 +38,7 @@ describe("nav-config", () => {
       "Liquidity",
       "Depeg",
       "Mint/Burn Flows",
+      "The Tape",
       "Chains",
       "Cemetery",
     ]);

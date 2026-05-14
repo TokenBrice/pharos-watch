@@ -177,4 +177,24 @@ describe("HomepageTape", () => {
     expect(root?.className).toContain("md:ml-[var(--pharos-homepage-tape-offset)]");
     expect(root?.className).not.toContain("-mx-3");
   });
+
+  it("appends a single non-duplicated 'View all events' terminator linking to /tape/", () => {
+    mockRecentEvents({
+      data: {
+        events: [
+          makeRecentEvent({ id: "depeg.opened:1", title: "USDC depeg opened (-500 bps)" }),
+          makeRecentEvent({ id: "freeze.blocked:1", type: "freeze.blocked", title: "USDT freeze blocked" }),
+        ],
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // Terminator renders once even though items are duplicated.
+    expect(screen.getAllByText("View all events")).toHaveLength(1);
+    const tapeLink = screen.getByText("View all events").closest("a");
+    // Next.js Link may normalize trailing slash; accept either.
+    expect(tapeLink?.getAttribute("href")).toMatch(/^\/tape\/?$/);
+  });
+
 });

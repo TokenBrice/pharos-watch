@@ -13,6 +13,9 @@ import type { RecentEvent, RecentEventSeverity } from "@shared/types/tape";
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const PER_SOURCE_FACTOR = 2;
+const MAX_EVENT_AGE_SEC = 86_400;
+const BULK_REGRADE_WINDOW_SEC = 60;
+const BULK_REGRADE_MIN_COUNT = 3;
 
 interface DepegOpenRow {
   id: number;
@@ -106,15 +109,18 @@ function gradeSeverity(grade: string, prevGrade: string): RecentEventSeverity {
 }
 
 function mapDepegOpen(row: DepegOpenRow): RecentEvent {
+  // peak_deviation_bps is stored signed repo-wide (see psi-recompute.ts:42).
+  // Use magnitude for display + severity; sign comes from direction.
+  const magnitudeBps = Math.abs(row.peak_deviation_bps);
   const sign = row.direction === "below" ? "−" : "+";
   return {
     id: `depeg.opened:${row.id}`,
     type: "depeg.opened",
-    severity: depegOpenedSeverity(row.peak_deviation_bps),
+    severity: depegOpenedSeverity(magnitudeBps),
     ts: row.started_at,
     stablecoinId: row.stablecoin_id,
     symbol: row.symbol,
-    title: `${row.symbol} depeg opened (${sign}${row.peak_deviation_bps} bps)`,
+    title: `${row.symbol} depeg opened (${sign}${magnitudeBps} bps)`,
     href: `/stablecoin/${encodeURIComponent(row.stablecoin_id)}/#peg-history`,
   };
 }
@@ -177,6 +183,59 @@ function mapFreeze(row: FreezeRow): RecentEvent {
     title,
     href: "/freezewatch/",
   };
+}
+
+/**
+ * Collapse clusters of ≥3 same-transition grade rows within a 60-second window
+ * into one synthetic `score.regrade.bulk` event; emit the rest via `mapGrade`.
+ * Single-row transitions fall through unchanged.
+ */
+function buildGradeEvents(rows: GradeRow[]): RecentEvent[] {
+  // Sort ascending by recorded_at so we can sweep a sliding window.
+  const sorted = [...rows].sort((a, b) => a.recorded_at - b.recorded_at);
+  const events: RecentEvent[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    const head = sorted[i]!;
+    const prev = head.prev_grade;
+    const curr = head.grade;
+    let j = i;
+    // Grow the cluster while the next row shares the same transition and falls
+    // within BULK_REGRADE_WINDOW_SEC of the cluster's first row.
+    while (
+      j + 1 < sorted.length &&
+      sorted[j + 1]!.prev_grade === prev &&
+      sorted[j + 1]!.grade === curr &&
+      sorted[j + 1]!.recorded_at - head.recorded_at <= BULK_REGRADE_WINDOW_SEC
+    ) {
+      j += 1;
+    }
+    const cluster = sorted.slice(i, j + 1);
+    if (cluster.length >= BULK_REGRADE_MIN_COUNT && prev) {
+      const minTs = cluster[0]!.recorded_at;
+      const maxTs = cluster[cluster.length - 1]!.recorded_at;
+      const prevRank = GRADE_ORDER[prev] ?? 0;
+      const newRank = GRADE_ORDER[curr] ?? 0;
+      const upgraded = newRank > prevRank;
+      events.push({
+        id: `score.regrade.bulk:${prev}_to_${curr}:${minTs}`,
+        type: "score.regrade.bulk",
+        severity: upgraded ? "info" : gradeSeverity(curr, prev),
+        ts: maxTs,
+        stablecoinId: null,
+        symbol: null,
+        title: `${cluster.length} stablecoins ${upgraded ? "upgraded" : "downgraded"} ${prev} → ${curr}`,
+        href: "/methodology",
+      });
+    } else {
+      for (const row of cluster) {
+        const ev = mapGrade(row);
+        if (ev) events.push(ev);
+      }
+    }
+    i = j + 1;
+  }
+  return events;
 }
 
 function mapGrade(row: GradeRow): RecentEvent | null {
@@ -253,19 +312,21 @@ export const handleRecentEvents = withErrorHandler(
         .all<GradeRow>(),
     ]);
 
+    const nowSec = Math.floor(Date.now() / 1000);
     const events: RecentEvent[] = [];
     for (const row of openDepegs.results ?? []) events.push(mapDepegOpen(row));
     for (const row of resolvedDepegs.results ?? []) events.push(mapDepegResolved(row));
     for (const row of freezes.results ?? []) events.push(mapFreeze(row));
-    for (const row of grades.results ?? []) {
-      const event = mapGrade(row);
-      if (event) events.push(event);
-    }
+    for (const event of buildGradeEvents(grades.results ?? [])) events.push(event);
 
-    events.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
-    const top = events.slice(0, limit);
+    // Drop events older than 24h so the tape doesn't pad with stale rows in
+    // quiet periods (the pulsing live-dot otherwise reads as a live event).
+    const cutoff = nowSec - MAX_EVENT_AGE_SEC;
+    const fresh = events.filter((e) => e.ts >= cutoff);
 
-    const nowSec = Math.floor(Date.now() / 1000);
+    fresh.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
+    const top = fresh.slice(0, limit);
+
     const latestTs = top.length > 0 ? top[0]!.ts : nowSec;
     const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-stablecoins", latestTs);
 

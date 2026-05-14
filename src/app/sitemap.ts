@@ -147,6 +147,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${SITE_URL}/tape/`,
+      lastModified: now,
+      changeFrequency: "hourly",
+      priority: 0.75,
+    },
+    {
       url: `${SITE_URL}/pharoswatchbot/`,
       lastModified: lastEdited("/pharoswatchbot/"),
       changeFrequency: "weekly",

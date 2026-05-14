@@ -494,6 +494,150 @@
         }
       }
     },
+    "/api/events": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "Tape events",
+        "description": "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination.",
+        "operationId": "events",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Repeatable: exact event slug (e.g. depeg.opened) or prefix wildcard (depeg.*).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "class",
+            "in": "query",
+            "required": false,
+            "description": "Shortcut for type=<class>.* (e.g. class=depeg).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "coin",
+            "in": "query",
+            "required": false,
+            "description": "Repeatable canonical stablecoin id filter.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pegCurrency",
+            "in": "query",
+            "required": false,
+            "description": "Filter to events for a specific peg currency.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chain",
+            "in": "query",
+            "required": false,
+            "description": "Filter to events on a specific chain.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "severityFloor",
+            "in": "query",
+            "required": false,
+            "description": "Drop events below this severity.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "notice",
+                "warning",
+                "severe",
+                "critical"
+              ]
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "Lower bound on ts (epoch ms, inclusive).",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "description": "Upper bound on ts (epoch ms, inclusive).",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque keyset cursor returned as nextCursor.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Default 50, max 500.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When true, computes the exact total count.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/usds-status": {
       "get": {
         "tags": [

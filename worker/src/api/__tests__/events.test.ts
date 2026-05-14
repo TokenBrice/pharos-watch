@@ -1,0 +1,162 @@
+import { describe, it, expect } from "vitest";
+import { mockD1, type MockD1Database } from "./helpers/mock-d1";
+import { handleEvents } from "../events";
+import { TapeEventsResponseSchema } from "@shared/types/tape-event";
+
+const SEC = 1_700_000_000;
+
+function makeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    event_id: `${SEC * 1000}-depeg.opened-aaaaaaaa`,
+    type: "depeg.opened",
+    severity: "warning",
+    ts: SEC * 1000,
+    ends_at: null,
+    coin_id: "usdt-tether",
+    issuer_id: "tether",
+    peg_currency: "peggedUSD",
+    chain: null,
+    title: "USDT depeg opened (−500 bps)",
+    summary: "USDT crossed peg threshold.",
+    payload_json: JSON.stringify({ direction: "below", absDeviationBps: 500 }),
+    source_table: "depeg_events",
+    source_row_id: "1",
+    transition: "opened",
+    source_url: "/stablecoin/usdt-tether/#peg-history",
+    methodology_version: "5.0",
+    created_at: SEC,
+    ...overrides,
+  };
+}
+
+describe("handleEvents", () => {
+  it("returns 200 with mapped events and freshness meta", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [makeRow()] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+    const res = await handleEvents(db, new URL("https://x/api/events"));
+    expect(res.status).toBe(200);
+    const body = TapeEventsResponseSchema.parse(await res.json());
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0]!.type).toBe("depeg.opened");
+    expect(body.events[0]!.severity).toBe("warning");
+    expect(body._meta.status).toBeDefined();
+    expect(body.totalExact).toBe(false);
+  });
+
+  it("emits and accepts a cursor for pagination", async () => {
+    const row1 = makeRow({ id: 2, ts: SEC * 1000 + 1000 });
+    const row2 = makeRow({ id: 1, ts: SEC * 1000 });
+    const firstDb = mockD1([
+      { match: "FROM tape_events", rows: [row1, row2] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+
+    const firstRes = await handleEvents(firstDb, new URL("https://x/api/events?limit=1"));
+    const firstBody = TapeEventsResponseSchema.parse(await firstRes.json());
+    expect(firstBody.events).toHaveLength(1);
+    expect(firstBody.nextCursor).toBeTypeOf("string");
+
+    const secondDb = mockD1([
+      { match: "FROM tape_events", rows: [row2] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const url = new URL(`https://x/api/events?limit=1&cursor=${firstBody.nextCursor}`);
+    const secondRes = await handleEvents(secondDb, url);
+    expect(secondRes.status).toBe(200);
+    const dataQuery = secondDb.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    // (ts < ? OR (ts = ? AND id < ?)) — keyset clause emitted.
+    expect(dataQuery?.sql).toContain("ts < ?");
+    expect(dataQuery?.sql).toContain("id < ?");
+  });
+
+  it("rejects a malformed cursor with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleEvents(db, new URL("https://x/api/events?cursor=!!!notbase64!!!"));
+    expect(res.status).toBe(400);
+  });
+
+  it("applies severity floor by including all higher tiers", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [makeRow({ severity: "severe" })] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?severityFloor=warning"));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    // warning + severe + critical filter — 3 severity = ? predicates.
+    const matches = (dataQuery?.sql.match(/severity = \?/g) ?? []).length;
+    expect(matches).toBe(3);
+  });
+
+  it("rejects invalid severity floor with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleEvents(db, new URL("https://x/api/events?severityFloor=panic"));
+    expect(res.status).toBe(400);
+  });
+
+  it("expands type wildcards to LIKE prefix filters", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?type=depeg.*"));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.sql).toContain("type LIKE ?");
+    expect(dataQuery?.binds).toContain("depeg.%");
+  });
+
+  it("treats `class=foo` as a shortcut for type=foo.*", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?class=freeze"));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.binds).toContain("freeze.%");
+  });
+
+  it("clamps since and until into the SQL ts bounds", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?since=1000&until=2000"));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.sql).toContain("ts >= ?");
+    expect(dataQuery?.sql).toContain("ts <= ?");
+    expect(dataQuery?.binds).toContain(1000);
+    expect(dataQuery?.binds).toContain(2000);
+  });
+
+  it("includes total only when includeTotal=true", async () => {
+    const dbWith = mockD1([
+      { match: "COUNT(*)", rows: [{ total: 42 }] },
+      { match: "FROM tape_events", rows: [makeRow()] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+    const resWith = await handleEvents(dbWith, new URL("https://x/api/events?includeTotal=true"));
+    const bodyWith = TapeEventsResponseSchema.parse(await resWith.json());
+    expect(bodyWith.total).toBe(42);
+    expect(bodyWith.totalExact).toBe(true);
+
+    const dbWithout = mockD1([
+      { match: "FROM tape_events", rows: [makeRow()] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]);
+    const resWithout = await handleEvents(dbWithout, new URL("https://x/api/events"));
+    const bodyWithout = TapeEventsResponseSchema.parse(await resWithout.json());
+    expect(bodyWithout.total).toBeNull();
+    expect(bodyWithout.totalExact).toBe(false);
+  });
+
+  it("rejects oversized limits with 400", async () => {
+    const res = await handleEvents(mockD1([]), new URL("https://x/api/events?limit=501"));
+    expect(res.status).toBe(400);
+  });
+});

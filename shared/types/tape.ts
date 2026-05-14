@@ -16,6 +16,7 @@ const RECENT_EVENT_TYPE_VALUES = [
   "freeze.destroyed",
   "score.upgraded",
   "score.downgraded",
+  "score.regrade.bulk",
 ] as const;
 
 const RecentEventSeveritySchema = z.enum(RECENT_EVENT_SEVERITY_VALUES);

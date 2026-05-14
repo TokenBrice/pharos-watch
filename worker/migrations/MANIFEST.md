@@ -72,6 +72,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0126     | `0126_depeg_pending_lifecycle_outcomes.sql`              | Add durable pending-depeg lifecycle outcome rows for promoted, rejected, expired, recovered, and superseded candidates                          |
 | 0127     | `0127_depeg_event_provenance_side_table.sql`             | Add side-table depeg event provenance and a JSON-projection view for historical/live event audit metadata                                       |
 | 0128     | `0128_depeg_backfill_runs.sql`                           | Add durable depeg backfill run manifests with status, counts, and replay fingerprints                                                           |
+| 0129     | `0129_tape_events.sql`                                   | Add materialized `tape_events` stream projected from existing producer tables, idempotent on `(source_table, source_row_id, transition)`         |
 
 ## Retired Individual Migrations
 

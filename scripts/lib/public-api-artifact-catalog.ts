@@ -338,6 +338,86 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
+    key: "events",
+    path: API_PATHS.events(),
+    summary: "Tape events",
+    description:
+      "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination.",
+    tags: ["Risk"],
+    parameters: [
+      {
+        name: "type",
+        in: "query",
+        schema: { type: "string" },
+        description: "Repeatable: exact event slug (e.g. depeg.opened) or prefix wildcard (depeg.*).",
+      },
+      {
+        name: "class",
+        in: "query",
+        schema: { type: "string" },
+        description: "Shortcut for type=<class>.* (e.g. class=depeg).",
+      },
+      {
+        name: "coin",
+        in: "query",
+        schema: { type: "string" },
+        description: "Repeatable canonical stablecoin id filter.",
+      },
+      {
+        name: "pegCurrency",
+        in: "query",
+        schema: { type: "string" },
+        description: "Filter to events for a specific peg currency.",
+      },
+      {
+        name: "chain",
+        in: "query",
+        schema: { type: "string" },
+        description: "Filter to events on a specific chain.",
+      },
+      {
+        name: "severityFloor",
+        in: "query",
+        schema: { type: "string", enum: ["info", "notice", "warning", "severe", "critical"] },
+        description: "Drop events below this severity.",
+      },
+      {
+        name: "since",
+        in: "query",
+        schema: { type: "integer" },
+        description: "Lower bound on ts (epoch ms, inclusive).",
+      },
+      {
+        name: "until",
+        in: "query",
+        schema: { type: "integer" },
+        description: "Upper bound on ts (epoch ms, inclusive).",
+      },
+      {
+        name: "cursor",
+        in: "query",
+        schema: { type: "string" },
+        description: "Opaque keyset cursor returned as nextCursor.",
+      },
+      {
+        name: "limit",
+        in: "query",
+        schema: { type: "integer", minimum: 1, maximum: 500 },
+        description: "Default 50, max 500.",
+      },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When true, computes the exact total count.",
+      },
+    ],
+    postman: {
+      folder: "Risk and market structure",
+      query: { limit: "50" },
+    },
+  },
+  {
     key: "usds-status",
     path: API_PATHS.usdsStatus(),
     summary: "USDS freeze status",

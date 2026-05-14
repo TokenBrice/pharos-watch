@@ -209,6 +209,16 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   },
   {
+    key: "events",
+    path: API_PATHS.events(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    strictContract: true,
+    probeGroup: "public",
+  },
+  {
     key: "usds-status",
     path: API_PATHS.usdsStatus(),
     methods: ["GET"],

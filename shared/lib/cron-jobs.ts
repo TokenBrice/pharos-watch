@@ -217,6 +217,16 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     connectionGroup: "dews-psi-chain",
   },
   {
+    job: "project-tape",
+    label: "Tape projector",
+    group: "half-hourly",
+    intervalSec: 1800,
+    scheduleKey: "dewsPsiOffset",
+    triggerMode: "shared",
+    maxConnections: 0, // Pure D1 projection from existing source tables
+    connectionGroup: "dews-psi-chain",
+  },
+  {
     job: "status-self-check",
     label: "Status self-check",
     group: "quarter-hourly",

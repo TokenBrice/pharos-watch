@@ -41,6 +41,7 @@ export const API_PATHS = {
     }),
   recentEvents: (params?: { limit?: number }) =>
     buildQueryPath("/api/recent-events", { limit: params?.limit }),
+  events: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/events", params),
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",
   dexLiquidity: () => "/api/dex-liquidity",
