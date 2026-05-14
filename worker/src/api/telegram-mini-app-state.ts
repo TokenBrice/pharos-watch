@@ -165,7 +165,6 @@ export async function loadTelegramMiniAppState(
       startParam: auth.startParam,
       canMutate,
       mutationBlockReason,
-      mutationAuthExpiresAt: auth.authDate + options.mutationMaxAgeSec,
     },
     subscriber: {
       exists: subscriber != null,
@@ -220,7 +219,6 @@ export async function loadTelegramMiniAppState(
       lastSuccessfulReplyAt: health?.lastSuccessfulReplyAt ?? null,
       recentFailureClass: health?.recentFailureClass ?? null,
       queuedAlerts: Number(pending?.queued_alerts ?? 0),
-      asOf: options.nowSec,
     },
   };
 }

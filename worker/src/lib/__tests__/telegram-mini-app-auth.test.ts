@@ -29,6 +29,25 @@ async function signedInitData(fields: Record<string, string>): Promise<string> {
   return params.toString();
 }
 
+async function signedInitDataWithSignature(
+  fields: Record<string, string>,
+  signature: string,
+): Promise<string> {
+  // Telegram's Ed25519 third-party `signature` is excluded from the bot-token
+  // HMAC data-check. Build the data-check string without `signature`, sign it,
+  // then append `signature` to the URL params after `hash` is computed.
+  const params = new URLSearchParams(fields);
+  const check = [...params.entries()]
+    .filter(([key]) => key !== "hash")
+    .map(([key, value]) => `${key}=${value}`)
+    .sort()
+    .join("\n");
+  const secret = await hmacSha256(encoder.encode("WebAppData"), BOT_TOKEN);
+  params.set("hash", hex(await hmacSha256(secret, check)));
+  params.set("signature", signature);
+  return params.toString();
+}
+
 afterEach(() => {
   resetTelegramMiniAppChatTypeWarningsForTests();
   vi.restoreAllMocks();
@@ -108,12 +127,18 @@ describe("validateTelegramMiniAppInitData", () => {
     })).rejects.toMatchObject({ code: "invalid-signature" });
   });
 
-  it("includes Telegram signature in the HMAC data check", async () => {
-    const initData = await signedInitData({
-      auth_date: String(NOW_SEC - 60),
-      signature: "telegram-ed25519-signature",
-      user: JSON.stringify({ id: 42, username: "alice" }),
-    });
+  it("excludes Telegram `signature` from the bot HMAC data check", async () => {
+    // Telegram's third-party Ed25519 `signature` is excluded from the
+    // bot-token HMAC data-check string (Telegram signs that field with its
+    // own Ed25519 key, not the bot token). The bot HMAC must therefore
+    // remain valid when `signature` is mutated.
+    const initData = await signedInitDataWithSignature(
+      {
+        auth_date: String(NOW_SEC - 60),
+        user: JSON.stringify({ id: 42, username: "alice" }),
+      },
+      "telegram-ed25519-signature",
+    );
     const changedSignature = initData.replace("telegram-ed25519-signature", "changed-transport-signature");
 
     await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
@@ -123,7 +148,7 @@ describe("validateTelegramMiniAppInitData", () => {
     await expect(validateTelegramMiniAppInitData(changedSignature, BOT_TOKEN, {
       maxAgeSec: 86_400,
       nowSec: NOW_SEC,
-    })).rejects.toMatchObject({ code: "invalid-signature" });
+    })).resolves.toMatchObject({ userId: "42", username: "alice" });
   });
 
   it("rejects missing hash", async () => {

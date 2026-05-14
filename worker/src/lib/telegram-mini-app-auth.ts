@@ -108,7 +108,7 @@ export async function validateTelegramMiniAppInitData(
   }
 
   const dataCheckString = [...params.entries()]
-    .filter(([key]) => key !== "hash")
+    .filter(([key]) => key !== "hash" && key !== "signature")
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join("\n");

@@ -79,6 +79,26 @@ function rejectOversizedBody(request: Request): Response | null {
   return null;
 }
 
+type PreAuthDenialReason = "body-too-large" | "validation-error";
+
+async function recordPreAuthDenial(
+  db: D1Database,
+  deniedEventType: TelegramUsageEventType,
+  failureClass: PreAuthDenialReason,
+  latencyMs: number,
+): Promise<void> {
+  // Body-cap / JSON-parse denials fire BEFORE HMAC validation, so no auth
+  // context is available. recordTelegramUsageEvent aggregates by event_type /
+  // source / outcome / failure_class only (no chat_id key), so we can still
+  // emit a count for abuse-signal visibility.
+  await recordMiniAppEvent(db, {
+    eventType: deniedEventType,
+    outcome: "rejected",
+    failureClass,
+    latencyMs,
+  });
+}
+
 async function readBoundedRequestText(request: Request): Promise<string | Response> {
   const headerRejection = rejectOversizedBody(request);
   if (headerRejection) return headerRejection;
@@ -113,22 +133,33 @@ async function readBoundedRequestText(request: Request): Promise<string | Respon
 }
 
 async function parseMiniAppRequestJson<T>(
+  db: D1Database,
   request: Request,
   schema: ZodType<T>,
   invalidPayloadMessage: string,
+  deniedEventType: TelegramUsageEventType,
+  start: number,
 ): Promise<T | Response> {
   const text = await readBoundedRequestText(request);
-  if (text instanceof Response) return text;
+  if (text instanceof Response) {
+    // 413 body-too-large or read-error path. Surface as an abuse signal so
+    // operators see body-cap rejections; emission is keyed on event_type only.
+    const failureClass: PreAuthDenialReason = text.status === 413 ? "body-too-large" : "validation-error";
+    await recordPreAuthDenial(db, deniedEventType, failureClass, Date.now() - start);
+    return text;
+  }
 
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
+    await recordPreAuthDenial(db, deniedEventType, "validation-error", Date.now() - start);
     return miniAppError(400, "validation-error", invalidPayloadMessage);
   }
 
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
+    await recordPreAuthDenial(db, deniedEventType, "validation-error", Date.now() - start);
     return miniAppError(400, "validation-error", invalidPayloadMessage);
   }
   return parsed.data;
@@ -236,9 +267,12 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const parsed = await parseMiniAppRequestJson(
+      db,
       request,
       TelegramMiniAppSessionRequestSchema,
       "Invalid Mini App session payload",
+      "mini_app_session_invalid",
+      start,
     );
     if (parsed instanceof Response) {
       return parsed;
@@ -257,6 +291,13 @@ export const handleTelegramMiniAppSession = miniAppErrorHandler(
       cooldownSec: SESSION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
+      await recordMiniAppEvent(db, {
+        eventType: "mini_app_session_invalid",
+        auth,
+        outcome: "rate_limited",
+        failureClass: "rate_limited",
+        latencyMs: Date.now() - start,
+      });
       return miniAppError(429, "rate-limited", "Mini App session rate limited", {
         retryAfterSec: cooldown.retryAfterSec,
       });
@@ -279,9 +320,12 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
     const start = Date.now();
     if (!botToken?.trim()) return miniAppError(503, "not-configured", "Telegram Mini App auth is not configured");
     const parsed = await parseMiniAppRequestJson(
+      db,
       request,
       TelegramMiniAppMutationRequestSchema,
       "Invalid Mini App mutation payload",
+      "mini_app_mutation_denied",
+      start,
     );
     if (parsed instanceof Response) {
       return parsed;
@@ -300,6 +344,14 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       cooldownSec: MUTATION_COOLDOWN_SEC,
     });
     if (!cooldown.allowed) {
+      await recordMiniAppEvent(db, {
+        eventType: "mini_app_mutation_denied",
+        auth,
+        actionDetail: mutationActionDetail(parsed.operation),
+        outcome: "rate_limited",
+        failureClass: "rate_limited",
+        latencyMs: Date.now() - start,
+      });
       return miniAppError(429, "rate-limited", "Mini App mutation rate limited", {
         retryAfterSec: cooldown.retryAfterSec,
       });
