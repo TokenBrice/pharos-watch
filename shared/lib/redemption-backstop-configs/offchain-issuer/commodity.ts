@@ -27,6 +27,29 @@ export const COMMODITY_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopConfig
       "Physical gold through TG Commodities; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
     ),
   },
+  "xnk-kinka": {
+    ...commodityIssuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    costModel: documentedVariableFee(
+      "Kinka terms require AML/KYC and issuer approval for exchange; whitepaper describes physical exchange from 321.5 XNK / ten 1 kg bars; public docs reviewed do not publish one fixed redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Kinka terms",
+        "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Kinka whitepaper",
+        "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
+        ["route", "capacity", "access"],
+      ),
+    ],
+    notes: [
+      "Modeled route is issuer/GM LLC exchange for physical gold through storage-company desks, not ordinary secondary-market liquidity.",
+      "Reserve coverage remains self-reported plus a weak-live-probe total-supply check unless a public independent attestation feed is found.",
+    ],
+  },
   "xaum-matrixdock": {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,

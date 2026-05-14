@@ -141,6 +141,124 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "mRe7YIELD is a NAV-accreting strategy token, so the route is modeled as issuer/platform NAV redemption rather than same-day stablecoin par liquidity.",
     ],
   },
+  "mf-one-midas": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mF-ONE redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mF-ONE", "https://midas.app/mfone", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "mF-ONE is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
+    ],
+  },
+  "mglobal-midas-fasanara": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mGLOBAL redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mGLOBAL", "https://midas.app/mglobal", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "mGLOBAL is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
+    ],
+  },
+  "mhyper-midas": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mHYPER redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mHYPER", "https://midas.app/mhyper", ["route", "capacity", "fees", "access", "settlement"]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "mHYPER is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
+    ],
+  },
+  "mmev-midas": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mMEV redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mMEV", "https://docs.midas.app/tokens/mmev", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "mMEV is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
+    ],
+  },
+  "mapollo-midas": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-05-14"),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Midas token docs describe primary-market redemption through Midas rails; public materials reviewed do not publish one fixed mAPOLLO redemption fee",
+    ),
+    docs: [
+      sourceRef("Midas mAPOLLO", "https://midas.app/mapollo", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Midas token docs", "https://docs.midas.app/liquid-yield-token", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "mAPOLLO is a NAV-accreting Midas strategy token, so the route is modeled as issuer/platform NAV redemption rather than stablecoin par liquidity.",
+    ],
+  },
   "benji-franklin-templeton": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),

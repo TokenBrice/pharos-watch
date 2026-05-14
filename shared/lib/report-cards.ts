@@ -44,4 +44,4 @@ export {
   resolveBlacklistStatus,
   resolveBlacklistStatuses,
   type BlacklistStatus,
-} from "./report-card-blacklist-risk";
+} from "./report-card-blacklist-matchers";

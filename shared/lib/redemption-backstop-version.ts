@@ -1,9 +1,25 @@
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./methodology-version";
 
 const redemptionBackstop = createMethodologyVersion({
-  currentVersion: "4.02",
+  currentVersion: "4.03",
   changelogPath: "/methodology/#safety-scores-methodology",
   changelog: [
+    {
+      version: "4.03",
+      title: "RWA NAV route source review",
+      date: "2026-05-14",
+      effectiveAt: 1778760000,
+      summary:
+        "Source-reviewed coverage adds documented NAV, wrapper, and commodity redemption routes for the latest RWA expansion batch while leaving unsupported private-credit direct deals unmodeled.",
+      impact: [
+        "JAAA, ACRDX, STAC, HLSCOPE, SAFO, EURSAFO, GBPSAFO, UKTBL, SPKCC, EURSPKCC, mF-ONE, mGLOBAL, mHYPER, mMEV, and mAPOLLO now carry documented-bound offchain issuer redemption routes at NAV",
+        "asUSDF now carries a queued wrapper exit back into USDF, XNK now carries a commodity issuer exchange route for physical gold, and USDF's Aster redemption config reflects the reviewed fee and settlement terms",
+        "Tradable private-credit direct-deal tokens remain intentionally unmodeled until a public issuer redemption route can be verified",
+        "Coverage rises to 297 configured redemption routes, with route-family totals now at 142 offchain-issuer, 60 stablecoin-redeem, 41 collateral-redeem, 36 queue-redeem, 10 psm-swap, and 8 basket-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "4.02",
       title: "Follow-up redemption coverage expansion",

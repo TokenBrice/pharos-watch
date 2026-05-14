@@ -172,8 +172,8 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("usdf-astherus")).toMatchObject({
       routeFamily: "stablecoin-redeem",
       capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
-      costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-03-23",
+      costModel: { kind: "fee-bps", feeBps: 10 },
+      reviewedAt: "2026-05-14",
     });
 
     expect(getRedemptionBackstopConfig("dusd-standx")).toMatchObject({

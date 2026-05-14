@@ -23,7 +23,7 @@ import {
   collateralScoreLabel,
   inferResilienceDefaults,
 } from "./report-card-policy";
-import { getBlacklistStatusLabel, type BlacklistStatus } from "./report-card-blacklist-risk";
+import { getBlacklistStatusLabel, type BlacklistStatus } from "./report-card-blacklist-matchers";
 
 export { inferResilienceDefaults } from "./report-card-policy";
 

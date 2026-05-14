@@ -1,6 +1,14 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.11` (2026-03-01 -> 2026-05-13).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.12` (2026-03-01 -> 2026-05-14).
+
+---
+
+## v8.12 - Tradable Private-Credit Yield Gaps (May 14, 2026)
+
+- `pc0000031-tradable`, `pc0000033-tradable`, `pc0000089-tradable`, and `pc0000101-tradable` are inventoried as explicit intentional yield gaps
+- The four notes stay marked yield-bearing because they are private-credit instruments, but Pharos does not synthesize APY rows from contract-priced or zero-volume metadata
+- Runtime rankings will include them only after a reliable public APY, NAV-change, or cashflow source is wired
 
 ---
 

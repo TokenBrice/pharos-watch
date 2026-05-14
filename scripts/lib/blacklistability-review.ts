@@ -1,5 +1,5 @@
 import type { StablecoinMeta } from "../../shared/types";
-import { resolveBlacklistStatuses } from "../../shared/lib/report-card-blacklist-authority";
+import { resolveBlacklistStatuses } from "../../shared/lib/report-card-blacklist-matchers";
 
 export interface BlacklistabilityReviewIssue {
   id: string;

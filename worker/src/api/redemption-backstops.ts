@@ -1,4 +1,4 @@
-import { withErrorHandler, errorResponse, jsonFreshResponse } from "../lib/api-utils";
+import { withErrorHandler, respondWithFreshSnapshot } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
@@ -8,24 +8,12 @@ import {
 
 export const handleRedemptionBackstops = withErrorHandler(
   "redemption-backstops",
-  async (db: D1Database): Promise<Response> => {
-    let snapshot;
-    try {
-      snapshot = await buildRedemptionBackstopsSnapshot(db);
-    } catch (error) {
-      if (error instanceof RedemptionBackstopSnapshotUnavailableError) {
-        return errorResponse(503, "Redemption backstop snapshot unavailable");
-      }
-      throw error;
-    }
-    if (snapshot.updatedAt === 0) {
-      return errorResponse(503, "Data not yet available");
-    }
-
-    return jsonFreshResponse(snapshot, {
+  (db: D1Database): Promise<Response> =>
+    respondWithFreshSnapshot({
+      load: () => buildRedemptionBackstopsSnapshot(db),
       cacheControl: CACHE_PROFILES.standard,
-      updatedAt: snapshot.updatedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops,
-    });
-  },
+      unavailableError: RedemptionBackstopSnapshotUnavailableError,
+      unavailableMessage: "Redemption backstop snapshot unavailable",
+    }),
 );

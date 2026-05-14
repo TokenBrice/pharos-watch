@@ -3,9 +3,24 @@ import {
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
-  currentVersion: "8.11",
+  currentVersion: "8.12",
   changelogPath: "/methodology/yield-changelog/",
   changelog: [
+  {
+    version: "8.12",
+    title: "Tradable Private-Credit Yield Gaps",
+    date: "2026-05-14",
+    effectiveAt: 1778760000,
+    summary:
+      "Tradable private-credit note additions are inventoried as explicit yield intentional gaps until a reliable public APY or cashflow source is wired.",
+    impact: [
+      "`pc0000031-tradable`, `pc0000033-tradable`, `pc0000089-tradable`, and `pc0000101-tradable` stay yield-bearing but do not publish synthetic runtime APY rows",
+      "The yield manifest reports the four Tradable notes as intentional gaps instead of silently dropping them from coverage accounting",
+      "Contract-priced zero-volume private-credit notes stay out of live rankings until a trustworthy source can measure realized yield",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "8.11",
     title: "Yield Coverage Expansion and Rate-Derived Fund Sources",

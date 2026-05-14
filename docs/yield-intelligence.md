@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.11`
+- **Current methodology version:** `v8.12`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -37,7 +37,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
 - published `lending-opportunity` suggestions now require observable venue TVL and a size floor of `max(existing absolute floor, 0.1% of the tracked stablecoin supply)`, so tiny markets do not surface as the live recommendation for large base assets
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
-- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, and `trusd-tori`
+- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and the four Tradable private-credit notes
 - `usg-tangent` is not marked `yieldBearing`: USG is the borrowable stablecoin, while sUSG is the separate savings wrapper that accrues protocol revenue
 - Zephyr yield is attributed to `zys-zephyr-protocol`, the tracked ZYS yield-share NAV wrapper. Base `zsd-zephyr-protocol` stays non-yield-bearing.
 - explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
@@ -722,8 +722,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.11",
-    "currentVersion": "8.11",
+    "version": "8.12",
+    "currentVersion": "8.12",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

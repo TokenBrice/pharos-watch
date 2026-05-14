@@ -243,10 +243,18 @@ export const STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
   "usdf-astherus": {
     ...stablecoinRedeemBase,
     capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound" },
-    costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
-    reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(10, "Aster FAQ states Aster USDF redemption charges 0.1%; PancakeSwap swap fees apply separately"),
+    reviewedAt: "2026-05-14",
     docs: [
-      sourceRef("Aster docs", "https://docs.asterdex.com/", ["route", "capacity"]),
+      sourceRef("Aster USDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Aster USDF page", "https://www.asterdex.com/en/usdf", ["route"]),
     ],
     notes: [

@@ -174,6 +174,28 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Issuer docs describe a limited instant-liquidity buffer, but Pharos does not assign a numeric immediate-capacity bound until a trustworthy public figure exists",
     ],
   },
+  "asusdf-astherus": {
+    ...queueRedeemBase,
+    capacityModel: { kind: "supply-ratio", ratio: 0.5, confidence: "documented-bound", basis: "strategy-buffer" },
+    reviewedAt: "2026-05-14",
+    settlementModel: "same-day",
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(0, "Aster FAQ says there are no fees to mint or withdraw asUSDF"),
+    docs: [
+      sourceRef("Aster asUSDF FAQ", "https://docs.asterdex.com/usdf-stablecoin/overview/faqs", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Aster Earn asUSDF", "https://docs.asterdex.com/product/aster-earn/mint-asusdf", ["route"]),
+    ],
+    notes: [
+      "asUSDF is the yield-bearing asToken wrapper over USDF; withdrawals return USDF after the documented T+1 hour / two-hour waiting period.",
+      "Downstream par-exit quality then depends on USDF's own USDT redemption route.",
+    ],
+  },
   "susde-ethena": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
