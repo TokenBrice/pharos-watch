@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TelegramPulseBoard, TelegramPulseStrip } from "./telegram-pulse-strip";
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
@@ -102,39 +102,58 @@ describe("TelegramPulseStrip", () => {
 });
 
 describe("TelegramPulseBoard", () => {
-  it("renders all public aggregate pulse fields intentionally", () => {
+  it("keeps the main pulse summary visible and folds deeper telemetry below the lifecycle chart", () => {
     mockUseTelegramPulse.mockReturnValue({ data: pulse, isLoading: false, isError: false } as ReturnType<
       typeof useTelegramPulse
     >);
 
     render(<TelegramPulseBoard />);
 
-    expect(screen.getByText("Active / estimated capacity")).toBeTruthy();
+    const capacity = screen.getByText("Active / estimated capacity");
+    const alertFollows = screen.getByText("Alert follows");
+    const topFollowed = screen.getByText("Most followed");
+    expect(capacity).toBeTruthy();
     expect(screen.getByText(/37% used/i)).toBeTruthy();
-    expect(screen.getByText("Alert follows")).toBeTruthy();
-    expect(screen.getByText("Most followed")).toBeTruthy();
-    expect(screen.getByText("Follow composition")).toBeTruthy();
-    expect(screen.getByText("Explicit coin follows")).toBeTruthy();
-    expect(screen.getByText("Preset-implied follows")).toBeTruthy();
-    expect(screen.getByText("Chats using presets")).toBeTruthy();
-    expect(screen.getByText("Daily lifecycle")).toBeTruthy();
-    expect(screen.getByText("New today")).toBeTruthy();
-    expect(screen.getByText("Reactivated today")).toBeTruthy();
-    expect(screen.getByText("Churned today")).toBeTruthy();
-    expect(screen.getByText("Alert coverage")).toBeTruthy();
-    expect(screen.getByText("DEWS chats")).toBeTruthy();
-    expect(screen.getByText("Depeg chats")).toBeTruthy();
-    expect(screen.getByText("Safety chats")).toBeTruthy();
-    expect(screen.getByText("Launch chats")).toBeTruthy();
-    expect(screen.getByText("All four families")).toBeTruthy();
-    expect(screen.getByText("Delivery controls")).toBeTruthy();
-    expect(screen.getByText("Quiet-hours chats")).toBeTruthy();
-    expect(screen.getByText("1,701")).toBeTruthy();
-    expect(screen.getByText("42")).toBeTruthy();
-    expect(screen.getByText("Telegram chat lifecycle")).toBeTruthy();
+    expect(alertFollows).toBeTruthy();
+    expect(topFollowed).toBeTruthy();
+    const lifecycle = screen.getByText("Telegram chat lifecycle");
+    expect(lifecycle).toBeTruthy();
     expect(screen.getByRole("figure", { name: /chat lifecycle chart/i })).toBeTruthy();
     expect(screen.queryByText(/Historical watcher points will appear/i)).toBeNull();
     expect(screen.queryByText(/Low-cardinality deltas below 5/i)).toBeNull();
+    const summary = screen.getByText("More information").closest("summary") as HTMLElement | null;
+    expect(summary).toBeTruthy();
+    const details = summary?.closest("details") as HTMLDetailsElement | null;
+    expect(details).toBeTruthy();
+    expect(details?.open).toBe(false);
+    expect(Boolean(capacity.compareDocumentPosition(lifecycle) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(lifecycle.compareDocumentPosition(summary as HTMLElement) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    fireEvent.click(summary as HTMLElement);
+
+    expect(details?.open).toBe(true);
+    const pulseDetails = screen.getByLabelText("Additional Telegram pulse details");
+    expect(within(pulseDetails).queryByText("Active / estimated capacity")).toBeNull();
+    expect(within(pulseDetails).queryByText("Alert follows")).toBeNull();
+    expect(within(pulseDetails).queryByText("Most followed")).toBeNull();
+    expect(within(pulseDetails).getByText("Follow composition")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Explicit coin follows")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Preset-implied follows")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Chats using presets")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Daily lifecycle")).toBeTruthy();
+    expect(within(pulseDetails).getByText("New today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Reactivated today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Churned today")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Alert coverage")).toBeTruthy();
+    expect(within(pulseDetails).getByText("DEWS chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Depeg chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Safety chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Launch chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("All four families")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Delivery controls")).toBeTruthy();
+    expect(within(pulseDetails).getByText("Quiet-hours chats")).toBeTruthy();
+    expect(within(pulseDetails).getByText("1,701")).toBeTruthy();
+    expect(within(pulseDetails).getByText("42")).toBeTruthy();
     const telemetry = screen.getByLabelText("Telegram aggregate alert telemetry");
     expect(within(telemetry).queryByText("Queued deliveries")).toBeNull();
   });

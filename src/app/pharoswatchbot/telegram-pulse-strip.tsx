@@ -1,6 +1,7 @@
 "use client";
 
 import { Area, AreaChart } from "recharts";
+import { ChevronDown } from "lucide-react";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useTelegramPulse } from "@/hooks/use-telegram-pulse";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -405,14 +406,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
-        <PulseStatGroup title="Follow composition" items={followStats} />
-        <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
-        <PulseStatGroup title="Alert coverage" items={alertCoverageStats} />
-        <PulseStatGroup title="Delivery controls" items={deliveryStats} />
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-border/60 bg-background/46 px-4 py-4 sm:px-5">
+      <div className="mt-6 rounded-2xl border border-border/60 bg-background/46 px-4 py-4 sm:px-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-mono text-[10px] uppercase leading-tight tracking-[0.2em] text-muted-foreground sm:text-[11px]">
@@ -435,6 +429,26 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
           </div>
         )}
       </div>
+
+      <details className="group mt-5 overflow-hidden rounded-2xl border border-border/60 bg-background/36">
+        <summary className="pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted/30 [&::-webkit-details-marker]:hidden sm:px-5">
+          <span className="min-w-0">
+            <span className="block">More information</span>
+            <span className="mt-0.5 block text-xs font-normal leading-snug text-muted-foreground">
+              Follow composition, lifecycle deltas, alert coverage, and delivery controls
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="border-t border-border/60 px-4 py-4 sm:px-5 sm:py-5" aria-label="Additional Telegram pulse details">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Telegram aggregate alert telemetry">
+            <PulseStatGroup title="Follow composition" items={followStats} />
+            <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
+            <PulseStatGroup title="Alert coverage" items={alertCoverageStats} />
+            <PulseStatGroup title="Delivery controls" items={deliveryStats} />
+          </div>
+        </div>
+      </details>
     </section>
   );
 }
