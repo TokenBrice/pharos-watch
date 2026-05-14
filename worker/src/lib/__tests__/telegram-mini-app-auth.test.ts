@@ -17,7 +17,7 @@ function hex(bytes: Uint8Array): string {
 async function signedInitData(fields: Record<string, string>): Promise<string> {
   const params = new URLSearchParams(fields);
   const check = [...params.entries()]
-    .filter(([key]) => key !== "hash" && key !== "signature")
+    .filter(([key]) => key !== "hash")
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join("\n");
@@ -76,7 +76,7 @@ describe("validateTelegramMiniAppInitData", () => {
     })).rejects.toMatchObject({ code: "invalid-signature" });
   });
 
-  it("excludes Telegram signature from the HMAC data check", async () => {
+  it("includes Telegram signature in the HMAC data check", async () => {
     const initData = await signedInitData({
       auth_date: String(NOW_SEC - 60),
       signature: "telegram-ed25519-signature",
@@ -84,10 +84,14 @@ describe("validateTelegramMiniAppInitData", () => {
     });
     const changedSignature = initData.replace("telegram-ed25519-signature", "changed-transport-signature");
 
-    await expect(validateTelegramMiniAppInitData(changedSignature, BOT_TOKEN, {
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
       maxAgeSec: 86_400,
       nowSec: NOW_SEC,
     })).resolves.toMatchObject({ userId: "42", username: "alice" });
+    await expect(validateTelegramMiniAppInitData(changedSignature, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).rejects.toMatchObject({ code: "invalid-signature" });
   });
 
   it("rejects missing hash", async () => {

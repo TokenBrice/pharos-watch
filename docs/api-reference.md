@@ -2989,7 +2989,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 Returns the current private-chat Mini App control-panel state for a Telegram user.
 
-**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` and `signature` fields from the HMAC data-check string, rejects missing/invalid signatures, and accepts sessions up to 24 hours old for read-only state loading.
+**Authentication:** exempt from `X-API-Key`; requires Telegram Mini App `initData` signed with the bot token. The worker excludes Telegram's transport `hash` field from the HMAC data-check string, includes the optional `signature` field when Telegram sends it, rejects missing/invalid hashes, and accepts sessions up to 24 hours old for read-only state loading.
 
 **Site-data lane:** denied. The frontend calls the public API host through `src/lib/api.ts`; `/_site-data/*` never proxies this route.
 

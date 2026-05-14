@@ -19,7 +19,7 @@ function hex(bytes: Uint8Array): string {
 async function signedInitData(fields: Record<string, string>): Promise<string> {
   const params = new URLSearchParams(fields);
   const check = [...params.entries()]
-    .filter(([key]) => key !== "hash" && key !== "signature")
+    .filter(([key]) => key !== "hash")
     .map(([key, value]) => `${key}=${value}`)
     .sort()
     .join("\n");
