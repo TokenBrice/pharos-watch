@@ -3,7 +3,12 @@ import { getLatestSuccessfulCronTimestamp } from "./api-freshness";
 import { parseQueryParams, type ParamSpec } from "./api-params";
 import { errorResponse, jsonFreshResponse } from "./api-response";
 
-const PAGINATED_TABLES = new Set(["blacklist_events", "mint_burn_events", "depeg_events"]);
+const PAGINATED_TABLES = new Set([
+  "blacklist_events",
+  "mint_burn_events",
+  "depeg_events",
+  "depeg_events_with_provenance",
+]);
 
 const PAGINATED_ORDER_COLS = new Set([
   "timestamp",

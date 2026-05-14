@@ -288,10 +288,28 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         description: "Pagination offset.",
       },
       {
+        name: "cursor",
+        in: "query",
+        schema: { type: "string" },
+        description: "Opaque keyset cursor returned as nextCursor.",
+      },
+      {
         name: "active",
         in: "query",
         schema: { type: "boolean" },
         description: "When true, returns active depeg events only.",
+      },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When false, skips the exact total count.",
+      },
+      {
+        name: "includePending",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When true, includes pending incidents awaiting confirmation.",
       },
     ],
     postman: {

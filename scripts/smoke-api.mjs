@@ -24,6 +24,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/redemption-backstops",
   "/api/blacklist",
   "/api/blacklist-summary",
+  "/api/depeg-events",
   "/api/mint-burn-flows",
   "/api/stress-signals",
 ];
@@ -581,6 +582,29 @@ export const ENDPOINT_ASSERTIONS = {
       );
     }
     return `${body.totalEvents} events, ${body.chains.length} chains`;
+  },
+  "/api/depeg-events": (result) => {
+    assert(result.status === 200, `/api/depeg-events returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && Array.isArray(body.events), "/api/depeg-events missing events[]");
+    assert(isFiniteNumber(body.total) && body.total >= 0, "/api/depeg-events total is invalid");
+    if ("totalExact" in body) {
+      assert(typeof body.totalExact === "boolean", "/api/depeg-events totalExact is invalid");
+    }
+    if ("nextCursor" in body) {
+      assert(
+        body.nextCursor === null || typeof body.nextCursor === "string",
+        "/api/depeg-events nextCursor is invalid",
+      );
+    }
+    if (body.pending !== undefined) {
+      assert(Array.isArray(body.pending), "/api/depeg-events pending is invalid");
+    }
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "/api/depeg-events missing methodology.version",
+    );
+    return `${body.events.length}/${body.total} events`;
   },
   "/api/stress-signals": (result) => {
     assert(result.status === 200, `/api/stress-signals returned ${result.status}`);

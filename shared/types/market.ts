@@ -331,6 +331,37 @@ export interface DepegEvent {
   source: "live" | "backfill";
   confirmationSources: string | null;
   pendingReason: string | null;
+  provenance?: {
+    sourceKind?: string | null;
+    replayRunId?: string | null;
+    replayVersion?: string | null;
+    sourcePriceProviders?: string[] | null;
+    quoteMode?: string | null;
+    pegReferenceSource?: string | null;
+    supplySource?: string | null;
+    confirmationPolicy?: string | null;
+    confirmationPointCount?: number | null;
+    confidenceTier?: string | null;
+    auditVerdict?: string | null;
+    pegScoreEligible?: boolean | null;
+    updatedAt?: number | null;
+  } | null;
+}
+
+export interface DepegPendingIncident {
+  stablecoinId: string;
+  symbol: string;
+  direction: "above" | "below";
+  firstSeenAt: number;
+  lastSeenAt: number;
+  firstSeenBps: number;
+  lastSeenBps: number;
+  peakSeenBps: number;
+  reason: string;
+  ageSec: number;
+  expiresAt: number;
+  availableConfirmationCategories: string[];
+  missingConfirmationCategories: string[];
 }
 
 const DepegEventSchema = z.object({
@@ -349,11 +380,49 @@ const DepegEventSchema = z.object({
   source: z.enum(["live", "backfill"]),
   confirmationSources: z.string().nullable().optional().default(null),
   pendingReason: z.string().nullable().optional().default(null),
+  provenance: z
+    .object({
+      sourceKind: z.string().nullable().optional(),
+      replayRunId: z.string().nullable().optional(),
+      replayVersion: z.string().nullable().optional(),
+      sourcePriceProviders: z.array(z.string()).nullable().optional(),
+      quoteMode: z.string().nullable().optional(),
+      pegReferenceSource: z.string().nullable().optional(),
+      supplySource: z.string().nullable().optional(),
+      confirmationPolicy: z.string().nullable().optional(),
+      confirmationPointCount: z.number().nullable().optional(),
+      confidenceTier: z.string().nullable().optional(),
+      auditVerdict: z.string().nullable().optional(),
+      pegScoreEligible: z.boolean().nullable().optional(),
+      updatedAt: z.number().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .default(null),
+});
+
+export const DepegPendingIncidentSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  direction: z.enum(["above", "below"]),
+  firstSeenAt: z.number(),
+  lastSeenAt: z.number(),
+  firstSeenBps: z.number(),
+  lastSeenBps: z.number(),
+  peakSeenBps: z.number(),
+  reason: z.string(),
+  ageSec: z.number(),
+  expiresAt: z.number(),
+  availableConfirmationCategories: z.array(z.string()),
+  missingConfirmationCategories: z.array(z.string()),
 });
 
 export const DepegEventsResponseSchema = z.object({
   events: z.array(DepegEventSchema),
   total: z.number(),
+  totalExact: z.boolean().optional(),
+  nextCursor: z.string().nullable().optional(),
+  pending: z.array(DepegPendingIncidentSchema).optional(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });
 export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
@@ -699,6 +768,28 @@ const AmplifiersSchema = z.object({
   contagion: z.number(),
 });
 
+export const StressSignalAgeClassificationSchema = z.enum([
+  "fresh",
+  "lagging",
+  "stale",
+  "retainedLastValid",
+]);
+export type StressSignalAgeClassification = z.infer<typeof StressSignalAgeClassificationSchema>;
+
+export const StressSignalDataStatusSchema = z.enum(["ok", "degraded", "unavailable"]);
+export type StressSignalDataStatus = z.infer<typeof StressSignalDataStatusSchema>;
+
+export const StressSignalDataReasonSchema = z.enum([
+  "no-current-rows",
+  "no-readable-current-rows",
+  "all-current-rows-malformed",
+  "single-coin-current-row-missing",
+  "current-row-malformed",
+  "computed-count-zero",
+  "partial-coverage",
+]);
+export type StressSignalDataReason = z.infer<typeof StressSignalDataReasonSchema>;
+
 export const StressSignalEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
@@ -706,6 +797,7 @@ export const StressSignalEntrySchema = z.object({
   amplifiers: AmplifiersSchema.optional(),
   computedAt: z.number(),
   methodologyVersion: z.string(),
+  ageClassification: StressSignalAgeClassificationSchema.optional(),
 });
 
 export interface StressSignalEntry {
@@ -715,21 +807,34 @@ export interface StressSignalEntry {
   amplifiers?: { psi: number; contagion: number };
   computedAt: number;
   methodologyVersion: string;
+  ageClassification?: StressSignalAgeClassification;
 }
 
 export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
   updatedAt: z.number(),
+  eligibleCount: z.number().int().nonnegative().optional(),
+  computedCount: z.number().int().nonnegative().optional(),
+  missingCount: z.number().int().nonnegative().optional(),
   oldestComputedAt: z.number().optional(),
+  coverageRatio: z.number().min(0).max(1).optional(),
   malformedRows: z.number().optional(),
+  coverageStatus: StressSignalDataStatusSchema.optional(),
+  coverageReasons: z.array(StressSignalDataReasonSchema).optional(),
   methodology: MethodologyEnvelopeSchema,
 });
 
 export interface StressSignalsAllResponse {
   signals: Record<string, StressSignalEntry>;
   updatedAt: number;
+  eligibleCount?: number;
+  computedCount?: number;
+  missingCount?: number;
   oldestComputedAt?: number;
+  coverageRatio?: number;
   malformedRows?: number;
+  coverageStatus?: StressSignalDataStatus;
+  coverageReasons?: StressSignalDataReason[];
   methodology: DepegDewsMethodology;
 }
 
@@ -746,6 +851,8 @@ export const StressSignalDetailResponseSchema = z.object({
   current: StressSignalEntrySchema.nullable(),
   history: z.array(StressSignalHistoryEntrySchema),
   malformedRows: z.number().optional(),
+  currentStatus: StressSignalDataStatusSchema.optional(),
+  currentReasons: z.array(StressSignalDataReasonSchema).optional(),
   methodology: MethodologyEnvelopeSchema,
 });
 
@@ -759,5 +866,8 @@ export interface StressSignalDetailResponse {
     amplifiers?: { psi: number; contagion: number };
     methodologyVersion: string;
   }[];
+  malformedRows?: number;
+  currentStatus?: StressSignalDataStatus;
+  currentReasons?: StressSignalDataReason[];
   methodology: DepegDewsMethodology;
 }

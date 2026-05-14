@@ -21,11 +21,23 @@ export const API_PATHS = {
   health: () => "/api/health",
   blacklist: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/blacklist", params),
   blacklistSummary: () => "/api/blacklist-summary",
-  depegEvents: (params?: { stablecoinId?: string; limit?: number; offset?: number }) =>
+  depegEvents: (params?: {
+    stablecoinId?: string;
+    limit?: number;
+    offset?: number;
+    active?: boolean;
+    cursor?: string;
+    includeTotal?: boolean;
+    includePending?: boolean;
+  }) =>
     buildQueryPath("/api/depeg-events", {
       stablecoin: params?.stablecoinId,
       limit: params?.limit,
       offset: params?.offset,
+      active: params?.active,
+      cursor: params?.cursor,
+      includeTotal: params?.includeTotal,
+      includePending: params?.includePending,
     }),
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",

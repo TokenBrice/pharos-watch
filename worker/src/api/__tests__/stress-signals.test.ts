@@ -83,8 +83,17 @@ describe("handleStressSignals contract tests", () => {
     const body = parsed.data;
     expect(body).toHaveProperty("signals");
     expect(body).toHaveProperty("updatedAt");
+    expect(body).toHaveProperty("eligibleCount");
+    expect(body).toHaveProperty("computedCount");
+    expect(body).toHaveProperty("missingCount");
+    expect(body).toHaveProperty("coverageRatio");
+    expect(body).toHaveProperty("coverageStatus");
+    expect(body).toHaveProperty("coverageReasons");
     expect(body).toHaveProperty("methodology");
+    expect(body.computedCount).toBe(1);
+    expect(body.eligibleCount ?? 0).toBeGreaterThanOrEqual(body.computedCount ?? 0);
     expect(body.signals["usdt-tether"]).toHaveProperty("methodologyVersion");
+    expect(body.signals["usdt-tether"]).toHaveProperty("ageClassification");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
@@ -121,7 +130,9 @@ describe("handleStressSignals contract tests", () => {
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
     expect(body).toHaveProperty("methodology");
+    expect(body.currentStatus).toBe("ok");
     expect(body.current).toHaveProperty("methodologyVersion");
+    expect(body.current).toHaveProperty("ageClassification");
     expect(body.history[0]).toHaveProperty("methodologyVersion");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
@@ -305,7 +316,7 @@ describe("handleStressSignals contract tests", () => {
     expect(body.history[1].amplifiers).toEqual({ psi: 1.05, contagion: 1.2 });
   });
 
-  it("uses the latest aggregate publication for freshness headers while exposing the oldest row", async () => {
+  it("uses the oldest returned aggregate row for freshness headers while exposing newest and oldest body timestamps", async () => {
     const requestNowSec = Math.floor(Date.now() / 1000);
     const freshComputedAt = requestNowSec - 60;
     const staleComputedAt = requestNowSec - 15_000;
@@ -332,11 +343,14 @@ describe("handleStressSignals contract tests", () => {
     const body = (await res.json()) as {
       updatedAt: number;
       oldestComputedAt?: number;
+      signals: Record<string, { ageClassification?: string }>;
     };
     expect(body.updatedAt).toBe(freshComputedAt);
     expect(body.oldestComputedAt).toBe(staleComputedAt);
-    expect(Number(res.headers.get("X-Data-Age"))).toBeLessThan(120);
-    expect(res.headers.get("Warning")).toBeNull();
+    expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(15_000);
+    expect(res.headers.get("Warning")).toContain("Response is stale");
+    expect(body.signals["usdt-tether"].ageClassification).toBe("fresh");
+    expect(body.signals["usdc-circle"].ageClassification).toBe("retainedLastValid");
   });
 
   it("does not warn on DEWS aggregate data that is inside the 30-minute cadence runway", async () => {
@@ -355,7 +369,95 @@ describe("handleStressSignals contract tests", () => {
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
     expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, { ageClassification?: string }>;
+    };
     expect(Number(res.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(7_400);
     expect(res.headers.get("Warning")).toBeNull();
+    expect(body.signals["usdt-tether"].ageClassification).toBe("lagging");
+  });
+
+  it("marks an empty aggregate as unavailable without synthesizing a fresh data-age header", async () => {
+    const db = makeStrictAggregateDb([]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      computedCount: number;
+      coverageStatus: string;
+      coverageReasons: string[];
+      updatedAt: number;
+    };
+    expect(body.updatedAt).toBe(0);
+    expect(body.computedCount).toBe(0);
+    expect(body.coverageStatus).toBe("unavailable");
+    expect(body.coverageReasons).toContain("no-current-rows");
+    expect(body.coverageReasons).toContain("computed-count-zero");
+    expect(res.headers.get("X-Data-Age")).toBeNull();
+    expect(res.headers.get("Warning")).toContain("DEWS current rows unavailable");
+  });
+
+  it("marks all-malformed aggregate rows unavailable without reporting X-Data-Age: 0", async () => {
+    const db = makeStrictAggregateDb([
+      {
+        stablecoin_id: "usdt-tether",
+        score: 12,
+        band: "CALM",
+        signals_json: "{invalid-json",
+        computed_at: nowSec,
+      },
+      {
+        stablecoin_id: "usdc-circle",
+        score: 40,
+        band: "WATCH",
+        signals_json: "{also-invalid-json",
+        computed_at: nowSec,
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, unknown>;
+      computedCount: number;
+      malformedRows: number;
+      coverageStatus: string;
+      coverageReasons: string[];
+    };
+    expect(body.signals).toEqual({});
+    expect(body.computedCount).toBe(0);
+    expect(body.malformedRows).toBe(2);
+    expect(body.coverageStatus).toBe("unavailable");
+    expect(body.coverageReasons).toContain("all-current-rows-malformed");
+    expect(body.coverageReasons).toContain("computed-count-zero");
+    expect(res.headers.get("X-Data-Age")).toBeNull();
+    expect(res.headers.get("X-Data-Age")).not.toBe("0");
+  });
+
+  it("marks a readable single coin with no current row unavailable without synthetic freshness", async () => {
+    const db = makeStrictSingleCoinDb(null);
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: unknown;
+      currentStatus: string;
+      currentReasons: string[];
+      malformedRows: number;
+    };
+    expect(body.current).toBeNull();
+    expect(body.currentStatus).toBe("unavailable");
+    expect(body.currentReasons).toContain("single-coin-current-row-missing");
+    expect(body.currentReasons).toContain("computed-count-zero");
+    expect(body.malformedRows).toBe(0);
+    expect(res.headers.get("X-Data-Age")).toBeNull();
+    expect(res.headers.get("Warning")).toContain("DEWS current row unavailable");
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 });

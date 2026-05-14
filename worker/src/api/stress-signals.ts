@@ -21,9 +21,86 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { READABLE_IDS } from "@shared/lib/stablecoins";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
+type StressSignalAgeClassification = "fresh" | "lagging" | "stale" | "retainedLastValid";
+type StressSignalDataStatus = "ok" | "degraded" | "unavailable";
+type StressSignalDataReason =
+  | "no-current-rows"
+  | "no-readable-current-rows"
+  | "all-current-rows-malformed"
+  | "single-coin-current-row-missing"
+  | "current-row-malformed"
+  | "computed-count-zero"
+  | "partial-coverage";
+
+interface AggregateCoverage {
+  status: StressSignalDataStatus;
+  reasons: StressSignalDataReason[];
+}
+
+const STRESS_SIGNALS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
+
+function classifyStressSignalAge(
+  computedAt: number,
+  nowSec: number,
+  newestReturnedComputedAt?: number | null,
+): StressSignalAgeClassification {
+  // The current table stores only the last valid row for each coin. It does not
+  // retain a per-cycle "skipped due insufficient data" marker, so aggregate rows
+  // older than the newest returned row are the best available retained-last-valid
+  // signal. Single-coin mode can only classify by wall-clock age.
+  if (newestReturnedComputedAt != null && computedAt < newestReturnedComputedAt) {
+    return "retainedLastValid";
+  }
+
+  const ageSec = Math.max(0, nowSec - computedAt);
+  if (ageSec <= STRESS_SIGNALS_MAX_AGE_SEC) return "fresh";
+  if (ageSec <= STRESS_SIGNALS_MAX_AGE_SEC * 8) return "lagging";
+  return "stale";
+}
+
+function buildUnavailableHeaders(warning: string): Record<string, string> {
+  return {
+    "Cache-Control": "no-store",
+    Warning: `199 - "${warning}"`,
+  };
+}
+
+function buildAggregateCoverage(input: {
+  rawRows: number;
+  readableRows: number;
+  computedCount: number;
+  missingCount: number;
+  malformedRows: number;
+}): AggregateCoverage {
+  const reasons: StressSignalDataReason[] = [];
+
+  if (input.rawRows === 0) {
+    reasons.push("no-current-rows");
+  } else if (input.readableRows === 0) {
+    reasons.push("no-readable-current-rows");
+  } else if (input.computedCount === 0 && input.malformedRows > 0) {
+    reasons.push("all-current-rows-malformed");
+  }
+
+  if (input.computedCount === 0) {
+    reasons.push("computed-count-zero");
+  } else if (input.missingCount > 0 || input.malformedRows > 0) {
+    reasons.push("partial-coverage");
+  }
+
+  if (input.computedCount === 0) {
+    return { status: "unavailable", reasons };
+  }
+  if (reasons.length > 0) {
+    return { status: "degraded", reasons };
+  }
+  return { status: "ok", reasons };
+}
+
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
   async (db: D1Database, url: URL): Promise<Response> => {
+    const nowSec = Math.floor(Date.now() / 1000);
     const stablecoinId = url.searchParams.get("stablecoin");
     const parsedParams = parseQueryParams(url.searchParams, {
       days: { type: "int", default: 30, min: 1, max: 365, rangePolicy: "reject" },
@@ -59,7 +136,7 @@ export const handleStressSignals = withErrorHandler(
           computed_at: number;
         }>();
 
-      const cutoff = Math.floor(Date.now() / 1000) - days * DAY_SECONDS;
+      const cutoff = nowSec - days * DAY_SECONDS;
       const history = await db
         .prepare(
           `SELECT snapshot_date, score, band, signals_json
@@ -75,14 +152,19 @@ export const handleStressSignals = withErrorHandler(
           signals_json: string;
         }>();
 
-      const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
-      const methodologyVersion = getDepegDewsMethodologyVersionAt(computedAt);
       let malformedRows = 0;
       const currentParsed = latest
         ? safeJsonParse<Record<string, unknown> | null>(latest.signals_json, null)
         : null;
       const currentUnwrapped = unwrapStressSignalsEnvelope(currentParsed);
       if (latest && currentUnwrapped == null) malformedRows++;
+      const currentReasons: StressSignalDataReason[] = [];
+      if (!latest) {
+        currentReasons.push("single-coin-current-row-missing", "computed-count-zero");
+      } else if (currentUnwrapped == null) {
+        currentReasons.push("current-row-malformed", "computed-count-zero");
+      }
+      const currentStatus: StressSignalDataStatus = currentUnwrapped == null ? "unavailable" : "ok";
 
       const historyRows = history.results.map((r) => {
         const parsed = safeJsonParse<Record<string, unknown> | null>(r.signals_json, null);
@@ -101,6 +183,18 @@ export const handleStressSignals = withErrorHandler(
         };
       }).filter((row): row is NonNullable<typeof row> => row !== null);
 
+      const currentComputedAt = latest && currentUnwrapped ? latest.computed_at : null;
+      const latestHistoryRow = historyRows.length > 0 ? historyRows[historyRows.length - 1] : null;
+      const methodologyAsOf = currentComputedAt ?? latestHistoryRow?.date ?? 0;
+      const methodologyVersion = methodologyAsOf > 0
+        ? getDepegDewsMethodologyVersionAt(methodologyAsOf)
+        : DEPEG_DEWS_METHODOLOGY_VERSION;
+      const responseHeaders = currentComputedAt != null
+        ? addFreshnessHeaders({
+            "Cache-Control": CACHE_PROFILES.standard,
+          }, currentComputedAt, STRESS_SIGNALS_MAX_AGE_SEC)
+        : buildUnavailableHeaders("DEWS current row unavailable");
+
       return jsonResponse({
         current: latest && currentUnwrapped
           ? {
@@ -110,21 +204,22 @@ export const handleStressSignals = withErrorHandler(
               amplifiers: currentUnwrapped.amplifiers,
               computedAt: latest.computed_at,
               methodologyVersion: getDepegDewsMethodologyVersionAt(latest.computed_at),
+              ageClassification: classifyStressSignalAge(latest.computed_at, nowSec),
             }
           : null,
         history: historyRows,
         malformedRows,
+        currentStatus,
+        currentReasons,
         methodology: buildMethodologyEnvelope({
           version: methodologyVersion,
           versionLabel: toMethodologyVersionLabel(methodologyVersion),
           currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
           currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
           changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-          asOf: computedAt,
+          asOf: methodologyAsOf,
         }),
-      }, addFreshnessHeaders({
-        "Cache-Control": CACHE_PROFILES.standard,
-      }, computedAt, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
+      }, responseHeaders);
     }
 
     // All coins: latest valid row per coin.
@@ -149,10 +244,21 @@ export const handleStressSignals = withErrorHandler(
     let updatedAt = 0;
     let oldestComputedAt: number | null = null;
     let malformedRows = 0;
+    const readableRows = new Set<string>();
+    const validRows: Array<{
+      stablecoinId: string;
+      score: number;
+      band: string;
+      signals: Record<string, unknown>;
+      amplifiers: { psi: number; contagion: number };
+      computedAt: number;
+      methodologyVersion: string;
+    }> = [];
     for (const row of rows.results) {
       if (!READABLE_IDS.has(row.stablecoin_id)) {
         continue;
       }
+      readableRows.add(row.stablecoin_id);
       const parsed = safeJsonParse<Record<string, unknown> | null>(row.signals_json, null);
       const unwrapped = unwrapStressSignalsEnvelope(parsed);
       if (unwrapped == null) {
@@ -160,32 +266,62 @@ export const handleStressSignals = withErrorHandler(
         continue;
       }
       const methodologyVersion = getDepegDewsMethodologyVersionAt(row.computed_at);
-      signals[row.stablecoin_id] = {
+      validRows.push({
+        stablecoinId: row.stablecoin_id,
         score: row.score,
         band: row.band,
         signals: unwrapped.signals,
         amplifiers: unwrapped.amplifiers,
         computedAt: row.computed_at,
         methodologyVersion,
-      };
+      });
       updatedAt = Math.max(updatedAt, row.computed_at);
       oldestComputedAt = oldestComputedAt == null
         ? row.computed_at
         : Math.min(oldestComputedAt, row.computed_at);
     }
 
-    const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
-    const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
+    for (const row of validRows) {
+      signals[row.stablecoinId] = {
+        score: row.score,
+        band: row.band,
+        signals: row.signals,
+        amplifiers: row.amplifiers,
+        computedAt: row.computedAt,
+        methodologyVersion: row.methodologyVersion,
+        ageClassification: classifyStressSignalAge(row.computedAt, nowSec, updatedAt),
+      };
+    }
 
-    return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, malformedRows, methodology: buildMethodologyEnvelope({
+    const eligibleCount = READABLE_IDS.size;
+    const computedCount = validRows.length;
+    const missingCount = Math.max(0, eligibleCount - readableRows.size);
+    const coverageRatio = eligibleCount > 0 ? Number((computedCount / eligibleCount).toFixed(4)) : 0;
+    const coverage = buildAggregateCoverage({
+      rawRows: rows.results.length,
+      readableRows: readableRows.size,
+      computedCount,
+      missingCount,
+      malformedRows,
+    });
+
+    const asOf = updatedAt > 0 ? updatedAt : 0;
+    const methodologyVersion = updatedAt > 0
+      ? getDepegDewsMethodologyVersionAt(updatedAt)
+      : DEPEG_DEWS_METHODOLOGY_VERSION;
+    const responseHeaders = oldestComputedAt != null
+      ? addFreshnessHeaders({
+          "Cache-Control": CACHE_PROFILES.standard,
+        }, oldestComputedAt, STRESS_SIGNALS_MAX_AGE_SEC)
+      : buildUnavailableHeaders("DEWS current rows unavailable");
+
+    return jsonResponse({ signals, updatedAt, oldestComputedAt: oldestComputedAt ?? undefined, eligibleCount, computedCount, missingCount, malformedRows, coverageRatio, coverageStatus: coverage.status, coverageReasons: coverage.reasons, methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf,
-    }) }, addFreshnessHeaders({
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, asOf, API_FRESHNESS_MAX_AGE_SEC.stressSignals));
+    }) }, responseHeaders);
   },
 );

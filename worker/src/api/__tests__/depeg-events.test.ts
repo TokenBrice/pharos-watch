@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { DepegEventsResponseSchema } from "@shared/types/market";
+import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "./helpers/mock-d1";
 import { makeDepegRow } from "./helpers/fixtures";
 import { handleDepegEvents } from "../depeg-events";
@@ -40,6 +41,36 @@ describe("handleDepegEvents", () => {
     expect(event).not.toHaveProperty("peak_deviation_bps");
   });
 
+  it("maps optional provenance JSON while preserving legacy rows", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 2 }] },
+      {
+        match: "depeg_events",
+        rows: [
+          {
+            ...row,
+            provenance_json: JSON.stringify({
+              sourceKind: "market",
+              replayRunId: "run-1",
+              confidenceTier: "medium",
+              auditVerdict: "confirmed",
+            }),
+          },
+          { ...row, id: 2 },
+        ],
+      },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const body = (await res.json()) as { events: Array<Record<string, unknown>> };
+    expect(body.events[0]?.provenance).toMatchObject({
+      sourceKind: "market",
+      replayRunId: "run-1",
+      confidenceTier: "medium",
+      auditVerdict: "confirmed",
+    });
+    expect(body.events[1]?.provenance).toBeNull();
+  });
+
   it("returns 200 with empty results when no data", async () => {
     const emptyDb = mockD1([
       { match: "COUNT", rows: [{ total: 0 }] },
@@ -56,6 +87,24 @@ describe("handleDepegEvents", () => {
     const db = mockD1([]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=<script>"));
     expect(res.status).toBe(404);
+  });
+
+  it("filters active events", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "depeg_events", rows: [makeDepegRow({ ended_at: null })] },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true"));
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: unknown[]; total: number };
+    expect(body.events).toHaveLength(1);
+    expect(body.total).toBe(1);
+    const dataQuery = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("FROM depeg_events") && !entry.sql.includes("COUNT(*)"));
+    expect(dataQuery?.sql).toContain("ended_at IS NULL");
   });
 
   it("includes X-Data-Age header", async () => {
@@ -132,5 +181,130 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.sql).toContain("id < ?");
     expect(dataQuery?.binds).toContain(first.started_at);
     expect(dataQuery?.binds).toContain(first.id);
+  });
+
+  it("can include schema-validated pending incidents with derivable confirmation categories", async () => {
+    const nowSec = 1_800_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(nowSec * 1000));
+
+    try {
+      const db = mockD1([
+        { match: "depeg_events", rows: [] },
+        {
+          match: "FROM depeg_pending",
+          rows: [
+            {
+              id: 10,
+              stablecoin_id: "usdt-tether",
+              symbol: "USDT",
+              peg_type: "peggedUSD",
+              direction: "below",
+              first_seen_bps: -180,
+              first_seen_at: nowSec - 600,
+              first_price: 0.982,
+              last_seen_bps: -240,
+              last_seen_at: nowSec - 120,
+              last_price: 0.976,
+              peak_seen_bps: -310,
+              peak_price: 0.969,
+              peg_reference: 1,
+              reason: "large-cap+low-confidence",
+              updated_at: nowSec - 120,
+            },
+          ],
+        },
+        {
+          match: "FROM dex_prices",
+          rows: [
+            {
+              stablecoin_id: "usdt-tether",
+              source_pool_count: 2,
+              source_total_tvl: 5_000_000,
+              updated_at: nowSec - 60,
+            },
+          ],
+        },
+        {
+          match: "FROM dex_price_challenger_snapshots",
+          rows: [
+            {
+              stablecoin_id: "usdt-tether",
+              snapshot_at: nowSec - 60,
+              has_rows: 0,
+            },
+          ],
+        },
+      ]);
+
+      const res = await handleDepegEvents(
+        db,
+        new URL("https://x/api/depeg-events?includeTotal=false&includePending=true"),
+      );
+
+      expect(res.status).toBe(200);
+      const body = DepegEventsResponseSchema.parse(await res.json());
+      expect(body.pending).toEqual([
+        {
+          stablecoinId: "usdt-tether",
+          symbol: "USDT",
+          direction: "below",
+          firstSeenAt: nowSec - 600,
+          lastSeenAt: nowSec - 120,
+          firstSeenBps: -180,
+          lastSeenBps: -240,
+          peakSeenBps: -310,
+          reason: "large-cap+low-confidence",
+          ageSec: 600,
+          expiresAt: nowSec - 600 + (45 * 60),
+          availableConfirmationCategories: ["offchain", "dex"],
+          missingConfirmationCategories: ["pool"],
+        },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("filters pending incidents by readable stablecoin ID", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 0 }] },
+      { match: "depeg_events", rows: [] },
+      {
+        match: "FROM depeg_pending",
+        matchBinds: ["usdc-circle"],
+        rows: [
+          {
+            id: 11,
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peg_type: "peggedUSD",
+            direction: "above",
+            first_seen_bps: 140,
+            first_seen_at: 1_800_000_000,
+            first_price: 1.014,
+            last_seen_bps: null,
+            last_seen_at: null,
+            last_price: null,
+            peak_seen_bps: null,
+            peak_price: null,
+            peg_reference: 1,
+            reason: "large-cap",
+            updated_at: 1_800_000_000,
+          },
+        ],
+      },
+    ]) as MockD1Database;
+
+    const res = await handleDepegEvents(
+      db,
+      new URL("https://x/api/depeg-events?stablecoin=usdc-circle&includePending=true"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = DepegEventsResponseSchema.parse(await res.json());
+    expect(body.pending?.map((pending) => pending.stablecoinId)).toEqual(["usdc-circle"]);
+    const pendingQuery = db.getHistory().find((entry) => entry.sql.includes("FROM depeg_pending"));
+    expect(pendingQuery?.binds).toEqual(["usdc-circle"]);
   });
 });
