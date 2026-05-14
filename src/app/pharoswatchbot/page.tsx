@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Clock3,
   ExternalLink,
-  LayoutGrid,
   Megaphone,
   MessageSquareText,
   Radio,
@@ -61,21 +60,59 @@ const MINI_APP_WATCHLIST_DEEP_LINK = `${BOT_URL}?startapp=watchlist`;
 const MINI_APP_FEATURES = [
   {
     title: "Watchlist",
-    detail: "See every coin you're subscribed to with current DEWS band, safety grade, and active depegs at a glance.",
+    detail: "Followed coins, alert toggles, live risk context.",
+    icon: Bell,
   },
   {
-    title: "Settings",
-    detail: "Toggle DEWS, depeg, safety, and launch alerts globally or per coin. Set quiet hours in your local /timezone.",
+    title: "Global alerts",
+    detail: "DEWS, depeg, safety, and launches in one panel.",
+    icon: SlidersHorizontal,
   },
   {
-    title: "Snooze & quiet hours",
-    detail: "Clear an active snooze, set new quiet-hours windows, and check delivery health without opening a chat thread.",
+    title: "Per-coin tuning",
+    detail: "DEWS bands, depeg steps, safety modes.",
+    icon: ShieldCheck,
   },
   {
     title: "Presets",
-    detail: "Follow curated cohorts like usd-top25 with one tap. Per-coin tuning and preset management will expand further soon.",
+    detail: "One-tap cohorts like USD Top 25.",
+    icon: Radio,
   },
-] as const satisfies readonly { title: string; detail: string }[];
+  {
+    title: "Quiet hours",
+    detail: "Mute nights, snooze bursts, resume cleanly.",
+    icon: Clock3,
+  },
+  {
+    title: "Delivery health",
+    detail: "See whether Telegram can still reach you.",
+    icon: Zap,
+  },
+] as const satisfies readonly { title: string; detail: string; icon: LucideIcon }[];
+
+const MINI_APP_SCREENSHOTS = [
+  {
+    title: "Watchlist",
+    src: "/featured/telegram-mini-app/watchlist.png",
+    alt: "PharosWatchBot Mini App watchlist screen with per-coin alert toggles",
+    width: 380,
+    height: 691,
+  },
+  {
+    title: "Presets",
+    src: "/featured/telegram-mini-app/presets.png",
+    alt: "PharosWatchBot Mini App presets screen with followed and available preset watchlists",
+    width: 380,
+    height: 682,
+  },
+  {
+    title: "Settings",
+    src: "/featured/telegram-mini-app/settings.png",
+    alt: "PharosWatchBot Mini App settings screen with global alerts, depeg step, and quiet hours",
+    width: 377,
+    height: 686,
+  },
+] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
 
 const TELEGRAM_ACTION_ICONS = {
   bot: Bot,
@@ -504,7 +541,7 @@ export default function PharosWatchBotPage() {
 
         <section className="space-y-4" id="mini-app" aria-labelledby="mini-app-title">
           <div className="pharos-card-shell overflow-hidden border-frost-blue/30 bg-frost-blue/8 dark:bg-frost-blue/6">
-            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.78fr)]">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,0.92fr)_minmax(320px,0.9fr)]">
               <div className="border-b border-border/55 p-5 lg:border-b-0 lg:border-r lg:p-7">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-frost-blue/30 bg-background/55 text-sky-700 dark:text-sky-300">
@@ -513,18 +550,23 @@ export default function PharosWatchBotPage() {
                   <p className="pharos-kicker text-sky-700 dark:text-sky-300">Mini App</p>
                 </div>
                 <h2 id="mini-app-title" className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                  Manage alerts visually, no commands required.
+                  Control every alert from the Mini App.
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Open PharosWatchBot&rsquo;s Mini App from the menu button inside Telegram or with one tap below. It
-                  shares state with the bot &mdash; subscribe, snooze, or set quiet hours from whichever surface you
-                  prefer.
+                  Open it from Telegram to follow coins, tune thresholds, and pause noise without typing commands.
                 </p>
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                   {MINI_APP_FEATURES.map((feature) => (
                     <li key={feature.title} className="rounded-xl border border-border/60 bg-background/55 p-3.5">
-                      <p className="text-sm font-semibold text-foreground">{feature.title}</p>
-                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{feature.detail}</p>
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-frost-blue/25 bg-frost-blue/10 text-sky-700 dark:text-sky-300">
+                          <feature.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{feature.title}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.detail}</p>
+                        </div>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -543,21 +585,62 @@ export default function PharosWatchBotPage() {
                   </Button>
                 </div>
               </div>
-              <div className="p-5 lg:p-7" aria-hidden="true">
-                <div className="grid grid-cols-2 gap-3">
-                  {MINI_APP_FEATURES.map((feature) => (
-                    <div
-                      key={feature.title}
-                      className="flex aspect-[9/16] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-background/45 p-3 text-center"
-                    >
-                      <LayoutGrid className="h-5 w-5 text-muted-foreground/60" />
-                      <p className="text-[11px] font-medium leading-tight text-muted-foreground">{feature.title}</p>
-                    </div>
-                  ))}
+              <div className="flex min-h-[560px] flex-col p-5 lg:min-h-0 lg:p-7">
+                <div
+                  className="telegram-mini-app-carousel flex flex-1 overflow-hidden rounded-2xl border border-border/65 bg-background/70 shadow-sm"
+                  aria-label="Mini App screenshots"
+                >
+                  <div className="telegram-mini-app-carousel-track flex h-full w-full">
+                    {MINI_APP_SCREENSHOTS.map((screenshot) => (
+                      <figure
+                        key={screenshot.title}
+                        className="flex min-w-full flex-col"
+                      >
+                        <div className="min-h-0 flex-1 bg-[#111820] p-3">
+                          <Image
+                            src={screenshot.src}
+                            alt={screenshot.alt}
+                            width={screenshot.width}
+                            height={screenshot.height}
+                            loading={screenshot.title === "Watchlist" ? "eager" : "lazy"}
+                            sizes="(min-width: 1024px) 340px, (min-width: 640px) 70vw, 88vw"
+                            className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-xl object-contain"
+                          />
+                        </div>
+                        <figcaption className="border-t border-border/55 px-3 py-2 text-center text-[11px] font-semibold text-muted-foreground">
+                          {screenshot.title}
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
                 </div>
                 <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground/80">
-                  Mini App preview &middot; screenshots ship with the next product release.
+                  Mini App preview &middot; watchlist, presets, and settings.
                 </p>
+                <style>
+                  {`
+                    @keyframes telegramMiniAppCarousel {
+                      0%, 27% { transform: translateX(0); }
+                      33%, 60% { transform: translateX(-100%); }
+                      66%, 93% { transform: translateX(-200%); }
+                      100% { transform: translateX(0); }
+                    }
+
+                    .telegram-mini-app-carousel-track {
+                      animation: telegramMiniAppCarousel 15s ease-in-out infinite;
+                    }
+
+                    .telegram-mini-app-carousel:hover .telegram-mini-app-carousel-track {
+                      animation-play-state: paused;
+                    }
+
+                    @media (prefers-reduced-motion: reduce) {
+                      .telegram-mini-app-carousel-track {
+                        animation: none;
+                      }
+                    }
+                  `}
+                </style>
               </div>
             </div>
           </div>

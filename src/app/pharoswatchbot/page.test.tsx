@@ -60,6 +60,19 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText("391")).toBeTruthy();
     expect(screen.getByText("tracked stablecoins across active, frozen, and pre-launch coverage")).toBeTruthy();
     expect(screen.getByText(/Opens a Telegram confirmation that preloads DEWS and depeg alerts/i)).toBeTruthy();
+    expect(screen.getByText("Control every alert from the Mini App.")).toBeTruthy();
+    expect(screen.getByText("Global alerts")).toBeTruthy();
+    expect(screen.getByText("Per-coin tuning")).toBeTruthy();
+    expect(screen.getByText("Delivery health")).toBeTruthy();
+    expect(screen.getByAltText(/watchlist screen with per-coin alert toggles/i).getAttribute("src")).toBe(
+      "/featured/telegram-mini-app/watchlist.png",
+    );
+    expect(screen.getByAltText(/presets screen with followed and available preset watchlists/i).getAttribute("src")).toBe(
+      "/featured/telegram-mini-app/presets.png",
+    );
+    expect(screen.getByAltText(/settings screen with global alerts/i).getAttribute("src")).toBe(
+      "/featured/telegram-mini-app/settings.png",
+    );
 
     const jsonLd = [...container.querySelectorAll('script[type="application/ld+json"]')]
       .map((node) => node.textContent ?? "")
