@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const RECENT_EVENT_SEVERITY_VALUES = [
+const RECENT_EVENT_SEVERITY_VALUES = [
   "info",
   "notice",
   "warning",
@@ -8,7 +8,7 @@ export const RECENT_EVENT_SEVERITY_VALUES = [
   "critical",
 ] as const;
 
-export const RECENT_EVENT_TYPE_VALUES = [
+const RECENT_EVENT_TYPE_VALUES = [
   "depeg.opened",
   "depeg.resolved",
   "freeze.blocked",
@@ -18,13 +18,12 @@ export const RECENT_EVENT_TYPE_VALUES = [
   "score.downgraded",
 ] as const;
 
-export const RecentEventSeveritySchema = z.enum(RECENT_EVENT_SEVERITY_VALUES);
+const RecentEventSeveritySchema = z.enum(RECENT_EVENT_SEVERITY_VALUES);
 export type RecentEventSeverity = z.infer<typeof RecentEventSeveritySchema>;
 
-export const RecentEventTypeSchema = z.enum(RECENT_EVENT_TYPE_VALUES);
-export type RecentEventType = z.infer<typeof RecentEventTypeSchema>;
+const RecentEventTypeSchema = z.enum(RECENT_EVENT_TYPE_VALUES);
 
-export const RecentEventSchema = z.object({
+const RecentEventSchema = z.object({
   id: z.string(),
   type: RecentEventTypeSchema,
   severity: RecentEventSeveritySchema,
