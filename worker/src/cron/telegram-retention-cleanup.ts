@@ -12,9 +12,9 @@ const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
 async function deleteOlderThan(
   db: D1Database,
   sql: string,
-  cutoffSec: number,
+  cutoff: number | string,
 ): Promise<number> {
-  const result = await db.prepare(sql).bind(cutoffSec).run();
+  const result = await db.prepare(sql).bind(cutoff).run();
   return Number(result.meta?.changes ?? 0);
 }
 
@@ -48,10 +48,24 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
   );
   throwIfAborted(signal);
 
+  // `day` is TEXT (YYYY-MM-DD) in telegram_usage_daily and
+  // telegram_watcher_lifecycle_daily; an integer cutoff would never match. Bind
+  // the cutoff as a YYYY-MM-DD string so the comparison is text-vs-text.
+  const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000)
+    .toISOString()
+    .slice(0, 10);
+
   const usageDailyPruned = await deleteOlderThan(
     db,
     "DELETE FROM telegram_usage_daily WHERE day < ?",
-    nowSec - USAGE_DAILY_RETENTION_SEC,
+    cutoffDayString,
+  );
+  throwIfAborted(signal);
+
+  const watcherLifecyclePruned = await deleteOlderThan(
+    db,
+    "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ?",
+    cutoffDayString,
   );
   throwIfAborted(signal);
 
@@ -67,6 +81,7 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
     jobTargetsPruned +
     jobsPruned +
     usageDailyPruned +
+    watcherLifecyclePruned +
     diagnosticsPruned;
 
   return createCronResult({
@@ -78,11 +93,13 @@ export async function runTelegramRetentionCleanup(db: D1Database, signal?: Abort
       jobTargetsPruned,
       jobsPruned,
       usageDailyPruned,
+      watcherLifecyclePruned,
       diagnosticsPruned,
       expiredTargetsReconciled,
       retentionDays: {
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
+        watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         chatDiagnostics: CHAT_DIAGNOSTICS_RETENTION_SEC / DAY_SEC,
         processedUpdates: 7,
       },

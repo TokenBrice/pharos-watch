@@ -24,7 +24,8 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         {
           job: "telegram-inactive-cleanup",
           kind: "db-only-sidecar",
-          run: (signal) => runTelegramInactiveCleanup(runtime.db, signal),
+          run: (signal) =>
+            runTelegramInactiveCleanup(runtime.db, signal, runtime.env.TELEGRAM_BOT_TOKEN),
         },
         {
           job: "telegram-retention-cleanup",

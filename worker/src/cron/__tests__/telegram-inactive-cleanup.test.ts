@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock sendToChat so the warning sub-pass never makes a real HTTP call. The
 // test file owns the queue of responses; each `sendToChat` invocation pops the
@@ -31,6 +31,11 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 
 const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");
 
+beforeEach(() => {
+  sendToChatQueue.length = 0;
+  sendToChatCalls.length = 0;
+});
+
 interface SubscriberRow {
   chat_id: string;
   last_active_at: number;
@@ -40,10 +45,23 @@ interface ChildRow {
   chat_id: string;
 }
 
+interface UsageEventRow {
+  day: string;
+  event_type: string;
+  source_category: string;
+  action_detail: string;
+  outcome: string;
+  latency_bucket: string;
+  failure_class: string;
+  count: number;
+}
+
 const ONE_DAY_SEC = 86_400;
 const INACTIVE_RETENTION_SEC = 180 * ONE_DAY_SEC;
+const WARN_WINDOW_START_SEC = 170 * ONE_DAY_SEC;
 const RUN_INTERVAL_SEC = 7 * ONE_DAY_SEC;
 const CACHE_LAST_RUN_KEY = "cron:telegram-inactive-cleanup:last-run";
+const WARN_CACHE_KEY_PREFIX = "telegram:re-engagement-warned:";
 
 interface StubState {
   subscribers: SubscriberRow[];
@@ -51,7 +69,9 @@ interface StubState {
   presets: ChildRow[];
   pendingAlerts: ChildRow[];
   pendingDisambig: ChildRow[];
+  diagnostics: ChildRow[];
   cache: Map<string, { value: string; updated_at: number }>;
+  usageEvents: UsageEventRow[];
 }
 
 function deleteFromChild(rows: ChildRow[], chatId: string): number {
@@ -74,10 +94,53 @@ function createStubDb(state: StubState): D1Database {
         return stmt as unknown as D1PreparedStatement;
       },
       run: async () => {
-        if (sql.startsWith("INSERT INTO cache")) {
+        if (
+          sql.startsWith("INSERT INTO cache")
+          || sql.startsWith("INSERT OR REPLACE INTO cache")
+        ) {
           const [key, value, updatedAt] = bound as [string, string, number];
           state.cache.set(key, { value, updated_at: updatedAt });
           return { success: true, meta: { changes: 1 } };
+        }
+        if (sql.startsWith("INSERT INTO telegram_usage_daily")) {
+          const [
+            day,
+            eventType,
+            sourceCategory,
+            actionDetail,
+            outcome,
+            latencyBucket,
+            failureClass,
+          ] = bound as [string, string, string, string, string, string, string];
+          const existing = state.usageEvents.find(
+            (row) =>
+              row.day === day
+              && row.event_type === eventType
+              && row.source_category === sourceCategory
+              && row.action_detail === actionDetail
+              && row.outcome === outcome
+              && row.latency_bucket === latencyBucket
+              && row.failure_class === failureClass,
+          );
+          if (existing) {
+            existing.count += 1;
+          } else {
+            state.usageEvents.push({
+              day,
+              event_type: eventType,
+              source_category: sourceCategory,
+              action_detail: actionDetail,
+              outcome,
+              latency_bucket: latencyBucket,
+              failure_class: failureClass,
+              count: 1,
+            });
+          }
+          return { success: true, meta: { changes: 1 } };
+        }
+        if (sql.startsWith("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id")) {
+          const [chatId] = bound as [string];
+          return { success: true, meta: { changes: deleteFromChild(state.diagnostics, chatId) } };
         }
         if (sql.startsWith("DELETE FROM telegram_subscriptions WHERE chat_id")) {
           const [chatId] = bound as [string];
@@ -114,9 +177,36 @@ function createStubDb(state: StubState): D1Database {
           const row = state.cache.get(key);
           return row ? { value: row.value } : null;
         }
+        if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
+          const [key] = bound as [string];
+          const row = state.cache.get(key);
+          return row ? { value: row.value, updated_at: row.updated_at } : null;
+        }
         return null;
       },
       all: async () => {
+        // Warning-candidate query: 170-179 day idle subscribers still tied to
+        // active subscriptions or preset rows.
+        if (
+          sql.includes("SELECT DISTINCT s.chat_id")
+          && sql.includes("FROM telegram_subscribers s")
+        ) {
+          const [warnEndSec, warnStartSec, limit] = bound as [number, number, number];
+          const hasActive = (chatId: string) =>
+            state.subscriptions.some((r) => r.chat_id === chatId)
+            || state.presets.some((r) => r.chat_id === chatId);
+          const eligible = state.subscribers
+            .filter(
+              (sub) =>
+                sub.last_active_at >= warnEndSec
+                && sub.last_active_at < warnStartSec
+                && hasActive(sub.chat_id),
+            )
+            .sort((a, b) => a.last_active_at - b.last_active_at)
+            .slice(0, limit)
+            .map((row) => ({ chat_id: row.chat_id, last_active_at: row.last_active_at }));
+          return { results: eligible, success: true, meta: {} };
+        }
         if (sql.includes("FROM telegram_subscribers s")) {
           const [cutoffSec, limit] = bound as [number, number];
           const hasChild = (chatId: string) =>
@@ -158,7 +248,9 @@ function makeState(): StubState {
     presets: [],
     pendingAlerts: [],
     pendingDisambig: [],
+    diagnostics: [],
     cache: new Map(),
+    usageEvents: [],
   };
 }
 
@@ -283,5 +375,88 @@ describe("runTelegramInactiveCleanup", () => {
 
     expect(result.itemCount).toBe(1);
     expect(state.subscribers).toHaveLength(0);
+  });
+
+  it("clears telegram_chat_delivery_diagnostics when a chat is purged", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    state.subscribers.push({
+      chat_id: "stale-1",
+      last_active_at: now - INACTIVE_RETENTION_SEC - 86_400,
+    });
+    state.diagnostics.push({ chat_id: "stale-1" });
+    state.diagnostics.push({ chat_id: "active" }); // unrelated row must survive
+    const db = createStubDb(state);
+
+    const result = await runTelegramInactiveCleanup(db);
+
+    expect(result.itemCount).toBe(1);
+    expect(state.subscribers).toHaveLength(0);
+    expect(state.diagnostics.map((row) => row.chat_id)).toEqual(["active"]);
+  });
+
+  it("dispatches a warn-pass nudge and emits a re_engagement_warning event", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    // Subscriber sits inside the 170-179 day warn window AND still has an
+    // active subscription so it is eligible for the nudge but not yet for
+    // deletion.
+    state.subscribers.push({
+      chat_id: "warn-1",
+      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
+    });
+    state.subscriptions.push({ chat_id: "warn-1" });
+    const db = createStubDb(state);
+
+    const result = await runTelegramInactiveCleanup(db, undefined, "bot-token-123");
+
+    expect(result.status).toBe("ok");
+    // The subscriber row must NOT be deleted in this run: it is in the warn
+    // window, not past the 180-day inactivity cutoff.
+    expect(state.subscribers).toHaveLength(1);
+    expect(state.subscribers[0]?.chat_id).toBe("warn-1");
+
+    // A nudge was dispatched to the eligible chat.
+    expect(sendToChatCalls).toHaveLength(1);
+    expect(sendToChatCalls[0]?.chatId).toBe("warn-1");
+    expect(sendToChatCalls[0]?.botToken).toBe("bot-token-123");
+
+    // The 30-day warn marker was persisted for this chat.
+    const warnMarker = state.cache.get(`${WARN_CACHE_KEY_PREFIX}warn-1`);
+    expect(warnMarker).toBeTruthy();
+
+    // A re_engagement_warning usage event was recorded with outcome=sent.
+    const warningEvents = state.usageEvents.filter(
+      (row) => row.event_type === "re_engagement_warning",
+    );
+    expect(warningEvents).toHaveLength(1);
+    expect(warningEvents[0]?.outcome).toBe("sent");
+
+    // Metadata exposes the warning-pass summary.
+    const metadata = JSON.parse(result.metadata!) as {
+      warningPass?: { attempted: number; warned: number };
+    };
+    expect(metadata.warningPass?.attempted).toBe(1);
+    expect(metadata.warningPass?.warned).toBe(1);
+  });
+
+  it("skips the warning pass entirely when botToken is not provided", async () => {
+    const state = makeState();
+    const now = Math.floor(Date.now() / 1000);
+    state.subscribers.push({
+      chat_id: "warn-1",
+      last_active_at: now - WARN_WINDOW_START_SEC - ONE_DAY_SEC * 5,
+    });
+    state.subscriptions.push({ chat_id: "warn-1" });
+    const db = createStubDb(state);
+
+    const result = await runTelegramInactiveCleanup(db);
+
+    expect(sendToChatCalls).toHaveLength(0);
+    expect(state.usageEvents).toHaveLength(0);
+    const metadata = JSON.parse(result.metadata!) as {
+      warningPass?: unknown;
+    };
+    expect(metadata.warningPass).toBeUndefined();
   });
 });
