@@ -1,4 +1,5 @@
 import type { StablecoinMeta } from "../../types";
+import { isActiveStablecoinMeta } from "./status";
 
 function hasVariantFields(meta: StablecoinMeta): boolean {
   return meta.variantOf != null || meta.variantKind != null;
@@ -9,7 +10,7 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
   const metaById = new Map(tracked.map((meta) => [meta.id, meta]));
   const activeIds = new Set(
     tracked
-      .filter((meta) => meta.status !== "pre-launch")
+      .filter(isActiveStablecoinMeta)
       .map((meta) => meta.id),
   );
 
@@ -21,7 +22,7 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       continue;
     }
 
-    if (meta.status === "pre-launch") {
+    if (!isActiveStablecoinMeta(meta)) {
       errors.push(`${meta.id}: only active assets may declare variantOf / variantKind`);
     }
 

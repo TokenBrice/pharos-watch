@@ -1,6 +1,7 @@
 export * from "./api-meta";
 export * from "./live-reserves";
 export * from "./core";
+export * from "./cause-of-death";
 export * from "./digest";
 export * from "./market";
 export * from "./report-cards";

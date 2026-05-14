@@ -1,8 +1,15 @@
 # Stability Index Methodology — Version Timeline
 
-Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.2` (2026-02-25 -> 2026-03-23).
+Internal changelog reconstructed from git history. Covers PSI `v1.0` through `v3.3` (2026-02-25 -> 2026-05-14).
 
 ---
+
+## v3.3 — Active-only PSI universe (May 14, 2026)
+
+- PSI eligibility now resolves to active tracked stablecoins plus PSI-only shadow assets
+- Pre-launch tracked assets are excluded from live PSI denominators until launch
+- Frozen tracked archives remain readable on public detail surfaces but are excluded from live PSI computation
+- PSI-only shadow assets remain included for historical continuity and admin replay repairs
 
 ## v3.2 — Fail-closed depeg input availability (Mar 23, 2026)
 

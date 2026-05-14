@@ -1,11 +1,15 @@
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
+import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "./psi-eligible";
 import { SHADOW_STABLECOINS } from "./shadow-stablecoins";
-import { TRACKED_STABLECOINS } from "./stablecoins";
+import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins";
 import type { StablecoinMeta } from "../types";
 
 export const ALL_LIVE_COINS: StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
 
 export const REGISTRY_BY_ID: Map<string, StablecoinMeta> = new Map();
+export const TRACKED_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID;
+export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READABLE_META_BY_ID;
+export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
 export const REGISTRY_BY_LLAMA_ID: Map<string, StablecoinMeta> = new Map();
 export const REGISTRY_BY_GECKO_ID: Map<string, StablecoinMeta> = new Map();
 export const REGISTRY_BY_CMC_SLUG: Map<string, StablecoinMeta> = new Map();
@@ -42,6 +46,16 @@ for (const [llamaId, meta] of REGISTRY_BY_LLAMA_ID) {
   }
 }
 
+for (const shadow of SHADOW_STABLECOINS) {
+  if (!PSI_INCLUSIVE_REGISTRY_BY_ID.has(shadow.id)) {
+    throw new Error(`[stablecoin-id-registry] Shadow id missing from PSI-inclusive registry: ${shadow.id}`);
+  }
+}
+
+if (PSI_INCLUSIVE_REGISTRY_BY_ID.size !== PSI_ELIGIBLE_STABLECOINS.length) {
+  throw new Error("[stablecoin-id-registry] PSI-inclusive registry has duplicate canonical ids");
+}
+
 for (const dead of DEAD_STABLECOINS) {
   if (dead.llamaId) {
     DEAD_BY_LLAMA_ID.set(dead.llamaId, dead.name);
@@ -50,6 +64,18 @@ for (const dead of DEAD_STABLECOINS) {
 
 /** Supported external ID providers. Add new providers here as they are integrated. */
 export type ExternalIdProvider = "defillama" | "coingecko" | "cmc";
+export type StablecoinIdResolution = { canonicalId: string };
+
+function resolveFromRegistry(
+  registry: ReadonlyMap<string, StablecoinMeta>,
+  input: string,
+): StablecoinIdResolution | null {
+  if (registry.has(input)) {
+    return { canonicalId: input };
+  }
+
+  return null;
+}
 
 /**
  * Resolve an external provider ID to a canonical StablecoinMeta.
@@ -72,15 +98,26 @@ export function resolveByExternalId(
   }
 }
 
-/** Resolve a canonical stablecoin ID. Returns null for unknown IDs. */
+/** Resolve any tracked canonical stablecoin ID, including pre-launch and frozen IDs. */
+export function resolveTrackedStablecoinId(input: string): StablecoinIdResolution | null {
+  return resolveFromRegistry(TRACKED_REGISTRY_BY_ID, input);
+}
+
+/** Resolve public readback IDs: active + frozen tracked coins, excluding pre-launch and shadow-only IDs. */
+export function resolveReadableStablecoinId(input: string): StablecoinIdResolution | null {
+  return resolveFromRegistry(READABLE_REGISTRY_BY_ID, input);
+}
+
+/** Resolve the PSI universe: active tracked coins plus PSI-only shadow assets. */
+export function resolvePsiInclusiveStablecoinId(input: string): StablecoinIdResolution | null {
+  return resolveFromRegistry(PSI_INCLUSIVE_REGISTRY_BY_ID, input);
+}
+
+/** Resolve a public readback stablecoin ID. Returns null for unknown, pre-launch, and shadow-only IDs. */
 export function resolveStablecoinId(
   input: string,
-): { canonicalId: string } | null {
-  if (REGISTRY_BY_ID.has(input)) {
-    return { canonicalId: input };
-  }
-
-  return null;
+): StablecoinIdResolution | null {
+  return resolveReadableStablecoinId(input);
 }
 
 export function getLlamaId(canonicalId: string): string | null {

@@ -15,7 +15,7 @@ Shadow stablecoins preserve historically important collapse events in systems th
 
 They are used where historical continuity matters:
 
-- `shared/lib/psi-eligible.ts` combines tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding frozen tracked entries
+- `shared/lib/psi-eligible.ts` combines active tracked + shadow assets into `PSI_ELIGIBLE_STABLECOINS`, excluding pre-launch and frozen tracked entries
 - `worker/src/cron/detect-depegs.ts` and `worker/src/cron/compute-dews.ts` use the PSI-eligible set
 - `worker/src/cron/stability-index.ts` filters the live cache against `PSI_ELIGIBLE_IDS`
 - `worker/src/cron/snapshot-supply.ts` and `worker/src/api/backfill-supply-history.ts` use the PSI-eligible registry
@@ -23,7 +23,7 @@ They are used where historical continuity matters:
 - `worker/src/api/backfill-depegs.ts` can backfill shadow assets the same way it backfills tracked assets
 - `worker/src/api/backfill-dews.ts` can replay DEWS rows over the PSI-eligible universe
 - `worker/src/lib/psi-history-universe.ts` centralizes the historical PSI/DEWS replay universe
-- `shared/lib/stablecoin-id-registry.ts` includes shadow entries in canonical ID resolution
+- `shared/lib/stablecoin-id-registry.ts` includes shadow entries in PSI-inclusive canonical ID resolution; public readable ID resolution excludes shadow-only entries
 
 ---
 
@@ -74,8 +74,8 @@ Operational consequence:
 | File | Role |
 |---|---|
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata definitions |
-| `shared/lib/psi-eligible.ts` | Tracked + shadow PSI eligibility registry |
-| `shared/lib/stablecoin-id-registry.ts` | Canonical ID / external-ID resolution including shadow entries |
+| `shared/lib/psi-eligible.ts` | Active tracked + shadow PSI eligibility registry |
+| `shared/lib/stablecoin-id-registry.ts` | Scoped canonical ID / external-ID resolution, with shadow entries only in the PSI-inclusive ID scope |
 | `worker/src/cron/stability-index.ts` | PSI computation uses `PSI_ELIGIBLE_IDS` |
 | `worker/src/cron/detect-depegs.ts` | Live depeg detection metadata boundary |
 | `worker/src/cron/compute-dews.ts` | DEWS iteration over PSI-eligible assets |

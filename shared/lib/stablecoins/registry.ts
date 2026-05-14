@@ -10,6 +10,12 @@ import {
   parseCanonicalOrderAsset,
   parseStablecoinMetaAssets,
 } from "./schema";
+import {
+  isActiveStablecoinMeta,
+  isFrozenStablecoinMeta,
+  isPreLaunchStablecoinMeta,
+  isReadableStablecoinMeta,
+} from "./status";
 import { validateVariantRelationships } from "./validate-variants";
 
 const CANONICAL_ORDER = parseCanonicalOrderAsset(
@@ -115,7 +121,7 @@ export const TRACKED_IDS = new Set(TRACKED_STABLECOINS.map((stablecoin) => stabl
  * future) are both excluded from write-side crons and live aggregations.
  */
 export const ACTIVE_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.status !== "pre-launch" && stablecoin.status !== "frozen",
+  isActiveStablecoinMeta,
 );
 
 /** Set of active stablecoin IDs (excludes pre-launch and frozen). */
@@ -128,12 +134,12 @@ export const ACTIVE_META_BY_ID = new Map(
 
 /** Stablecoins in pre-launch stage. */
 export const PRE_LAUNCH_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.status === "pre-launch",
+  isPreLaunchStablecoinMeta,
 );
 
 /** Stablecoins in the frozen archive lifecycle phase. */
 export const FROZEN_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.status === "frozen",
+  isFrozenStablecoinMeta,
 );
 
 /** Set of frozen stablecoin IDs. */
@@ -153,7 +159,7 @@ export const FROZEN_META_BY_ID = new Map(
  * Pre-launch coins are excluded — they have no historical data to read.
  */
 export const READABLE_STABLECOINS = TRACKED_STABLECOINS.filter(
-  (stablecoin) => stablecoin.status !== "pre-launch",
+  isReadableStablecoinMeta,
 );
 
 /** Set of readable stablecoin IDs (active + frozen). */

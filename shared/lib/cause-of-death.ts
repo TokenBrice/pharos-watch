@@ -1,12 +1,7 @@
-export const CAUSE_OF_DEATH_VALUES = [
-  "algorithmic-failure",
-  "counterparty-failure",
-  "liquidity-drain",
-  "regulatory",
-  "abandoned",
-] as const;
+import type { CauseOfDeath } from "../types/cause-of-death";
 
-export type CauseOfDeath = (typeof CAUSE_OF_DEATH_VALUES)[number];
+export { CAUSE_OF_DEATH_VALUES } from "../types/cause-of-death";
+export type { CauseOfDeath } from "../types/cause-of-death";
 
 export const CAUSE_HEX: Record<CauseOfDeath, string> = {
   "algorithmic-failure": "#ef4444",
@@ -23,4 +18,3 @@ export const CAUSE_META: Record<CauseOfDeath, { label: string; textColor: string
   regulatory: { label: "Regulatory", textColor: "text-blue-700 dark:text-blue-400", borderColor: "border-blue-500/30" },
   abandoned: { label: "Abandoned", textColor: "text-zinc-700 dark:text-zinc-400", borderColor: "border-zinc-500/30" },
 };
-

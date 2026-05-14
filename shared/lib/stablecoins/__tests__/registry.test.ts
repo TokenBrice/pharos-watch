@@ -9,22 +9,32 @@ import {
   READABLE_STABLECOINS,
   TRACKED_STABLECOINS,
 } from "../registry";
+import {
+  isActiveStablecoinMeta,
+  isFrozenStablecoinMeta,
+  isPreLaunchStablecoinMeta,
+  isReadableStablecoinMeta,
+} from "../status";
 import { FROZEN_SNAPSHOTS_BY_ID } from "../frozen-snapshots";
 
 describe("registry universes", () => {
   it("ACTIVE = status === 'active'", () => {
+    expect(ACTIVE_STABLECOINS.every(isActiveStablecoinMeta)).toBe(true);
     expect(ACTIVE_STABLECOINS.every((c) => c.status === "active" || c.status === undefined)).toBe(true);
     expect(ACTIVE_STABLECOINS.some((c) => c.status === "pre-launch")).toBe(false);
     expect(ACTIVE_STABLECOINS.some((c) => c.status === "frozen")).toBe(false);
   });
 
   it("FROZEN = status === 'frozen'", () => {
+    expect(FROZEN_STABLECOINS.every(isFrozenStablecoinMeta)).toBe(true);
     expect(FROZEN_STABLECOINS.every((c) => c.status === "frozen")).toBe(true);
   });
 
   it("READABLE = ACTIVE ∪ FROZEN (status !== 'pre-launch')", () => {
+    expect(READABLE_STABLECOINS.every(isReadableStablecoinMeta)).toBe(true);
     expect(READABLE_STABLECOINS.length).toBe(ACTIVE_STABLECOINS.length + FROZEN_STABLECOINS.length);
     for (const coin of PRE_LAUNCH_STABLECOINS) {
+      expect(isPreLaunchStablecoinMeta(coin)).toBe(true);
       expect(READABLE_IDS.has(coin.id)).toBe(false);
     }
     for (const coin of [...ACTIVE_STABLECOINS, ...FROZEN_STABLECOINS]) {

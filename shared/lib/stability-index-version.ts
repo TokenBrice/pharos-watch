@@ -1,9 +1,24 @@
 import { createMethodologyVersion } from "./methodology-version";
 
 const psi = createMethodologyVersion({
-  currentVersion: "3.2",
+  currentVersion: "3.3",
   changelogPath: "/methodology/stability-index-changelog/",
   changelog: [
+  {
+    version: "3.3",
+    title: "Active-only PSI universe",
+    date: "2026-05-14",
+    effectiveAt: 1778716800,
+    summary:
+      "PSI eligibility now resolves to active tracked stablecoins plus PSI-only shadow assets, excluding pre-launch and frozen tracked rows from live PSI denominators and repair scopes.",
+    impact: [
+      "Pre-launch tracked assets no longer enter the PSI-eligible registry before launch",
+      "Frozen tracked archives remain available on readable public detail surfaces but are excluded from live PSI computation",
+      "PSI-only shadow assets remain included for historical continuity and admin replay repairs",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.2",
     title: "Fail-closed depeg input availability",

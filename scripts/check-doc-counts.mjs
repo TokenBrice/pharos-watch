@@ -71,7 +71,7 @@ const frozenCount = FROZEN_STABLECOINS.length;
 const shadowCount = SHADOW_STABLECOINS.length;
 
 const psiCount = PSI_ELIGIBLE_STABLECOINS.length;
-const nonFrozenTrackedCount = trackedCount - frozenCount;
+const psiActiveTrackedCount = activeCount;
 
 // 3. Reserve adapters
 const adapterCount = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).length;
@@ -94,7 +94,7 @@ const cemeteryCount = DEAD_STABLECOINS.length;
 const reportCardSnapshotCount = activeCount + cemeteryCount + frozenCount;
 
 console.log(
-  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${nonFrozenTrackedCount} non-frozen tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
+  `Authoritative counts: ${trackedCount} tracked (${activeCount} active + ${preLaunchCount} pre-launch + ${frozenCount} frozen), ${shadowCount} shadow, ${psiCount} PSI-eligible (${psiActiveTrackedCount} active tracked + ${shadowCount} shadow), ${adapterCount} adapters, ${bluechipCount} bluechip slugs, ${activeLiveEnabledCount} active live-enabled / ${trackedLiveReserveConfigCount} tracked live-reserve configs, ${cemeteryCount} cemetery, ${reportCardSnapshotCount} report-card snapshot`,
 );
 
 // --- Check primary docs for stale counts ---
@@ -174,9 +174,9 @@ const CHECKS = [
   },
   {
     file: "docs/supply-snapshot.md",
-    pattern: /(\d+) non-frozen tracked/,
-    expected: nonFrozenTrackedCount,
-    label: "non-frozen tracked",
+    pattern: /(\d+) active tracked/,
+    expected: psiActiveTrackedCount,
+    label: "active tracked",
   },
 
   // Reserve adapter counts

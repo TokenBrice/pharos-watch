@@ -17,7 +17,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 | PSI-only shadow assets | `shared/lib/shadow-stablecoins.ts` |
 | Local metadata gotchas | `shared/data/stablecoins/AGENTS.md` |
 
-`ACTIVE_STABLECOINS` excludes pre-launch and frozen entries. `READABLE_STABLECOINS` keeps active + frozen assets for archive/readback surfaces. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay.
+`ACTIVE_STABLECOINS` excludes pre-launch and frozen entries. `READABLE_STABLECOINS` keeps active + frozen assets for archive/readback surfaces. PSI-only shadow assets are intentionally outside the public tracked registry and exist only for historical PSI replay. Canonical ID resolution is split by scope in `shared/lib/stablecoin-id-registry.ts`: tracked helpers include pre-launch and frozen tracked IDs, readable helpers include only active + frozen tracked IDs, and PSI-inclusive helpers include active tracked IDs + shadow IDs.
 
 The editable stablecoin catalog lives in per-coin files under `shared/data/stablecoins/coins/*.json`. `shared/data/stablecoins/coins.generated.json` is the checked-in generated/runtime aggregate; do not edit it by hand. Regenerate it after catalog edits with:
 

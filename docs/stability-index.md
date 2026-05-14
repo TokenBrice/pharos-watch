@@ -4,7 +4,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v3.2`
+- **Current methodology version:** `v3.3`
 - **Public changelog page:** `/methodology/stability-index-changelog/`
 - **Canonical source:** `shared/lib/stability-index-version.ts`
 
@@ -111,7 +111,7 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | Input | Source |
 |-------|--------|
 | Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`, with current price from stablecoins cache or, for already-open depegs missing a current price, a replay-safe `price_cache` fallback ≤6h old |
-| Total market cap | Sum of the PSI-eligible stablecoins present in the DefiLlama cache (`PSI_ELIGIBLE_IDS` = tracked + shadow) |
+| Total market cap | Sum of the PSI-eligible stablecoins present in the DefiLlama cache (`PSI_ELIGIBLE_IDS` = active tracked + shadow; pre-launch and frozen tracked rows excluded) |
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
 | DEWS stress breadth | Latest `stress_signals` rows in warning bands (`ALERT`, `WARNING`, `DANGER`) |
 

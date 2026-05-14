@@ -5,7 +5,7 @@ import {
   DetailProviderSchema,
   PEG_CURRENCY_VALUES,
 } from "../../types/core";
-import { CAUSE_OF_DEATH_VALUES } from "../../types/market";
+import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { ReserveSliceSchema } from "../../types/reserves";
 import {
   CoinNoticeSchema,
@@ -132,7 +132,7 @@ const obituarySchema = z.object({
   sourceLabel: z.string().min(1),
 });
 
-export const StablecoinMetaAssetSchema = z.object({
+const StablecoinMetaAssetRawSchema = z.object({
   id: StablecoinIdSchema,
   llamaId: z.string().optional(),
   detailProvider: DetailProviderSchema.optional(),
@@ -180,7 +180,9 @@ export const StablecoinMetaAssetSchema = z.object({
   featuredContent: z.array(FeaturedContentSchema).optional(),
   milestones: z.array(LaunchMilestoneSchema).optional(),
   dateHistory: z.array(DateHistoryEntrySchema).optional(),
-}).strict().superRefine((meta, ctx) => {
+}).strict();
+
+export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMetaAssetRawSchema.superRefine((meta, ctx) => {
   if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -244,10 +246,10 @@ export const StablecoinMetaAssetSchema = z.object({
   }
 });
 
-export const StablecoinMetaAssetArraySchema = z.array(StablecoinMetaAssetSchema);
+export const StablecoinMetaAssetArraySchema: z.ZodType<StablecoinMeta[]> = z.array(StablecoinMetaAssetSchema);
 export const CanonicalOrderAssetSchema = z.array(StablecoinIdSchema);
 
-export const DeadStablecoinAssetSchema = z.object({
+export const DeadStablecoinAssetSchema: z.ZodType<DeadStablecoin> = z.object({
   id: DeadStablecoinIdSchema,
   name: z.string(),
   symbol: z.string(),
@@ -269,7 +271,7 @@ export const DeadStablecoinAssetSchema = z.object({
   }).strict()).optional(),
 }).strict();
 
-export const DeadStablecoinAssetArraySchema = z.array(DeadStablecoinAssetSchema);
+export const DeadStablecoinAssetArraySchema: z.ZodType<DeadStablecoin[]> = z.array(DeadStablecoinAssetSchema);
 
 function formatSchemaIssues(error: z.ZodError): string {
   return error.issues
@@ -295,7 +297,7 @@ function parseWithSchema<T>(
 }
 
 export function parseStablecoinMetaAssets(input: unknown, label: string): StablecoinMeta[] {
-  return parseWithSchema(StablecoinMetaAssetArraySchema, input, label) as StablecoinMeta[];
+  return parseWithSchema(StablecoinMetaAssetArraySchema, input, label);
 }
 
 export function parseCanonicalOrderAsset(input: unknown, label: string): string[] {
@@ -303,5 +305,5 @@ export function parseCanonicalOrderAsset(input: unknown, label: string): string[
 }
 
 export function parseDeadStablecoinAssets(input: unknown, label: string): DeadStablecoin[] {
-  return parseWithSchema(DeadStablecoinAssetArraySchema, input, label) as DeadStablecoin[];
+  return parseWithSchema(DeadStablecoinAssetArraySchema, input, label);
 }

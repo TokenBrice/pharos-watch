@@ -1,11 +1,12 @@
 import { deriveEffectiveDependencies } from "../dependency-derivation";
 import type { DependencyWeight, StablecoinMeta, VariantKind } from "../../types";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./registry";
+import { isActiveStablecoinMeta } from "./status";
 
 function hasTrackedVariantMeta(
   meta: StablecoinMeta | undefined,
 ): meta is StablecoinMeta & { variantOf: string; variantKind: VariantKind } {
-  return meta?.variantOf != null && meta.variantKind != null && meta.status !== "pre-launch";
+  return meta?.variantOf != null && meta.variantKind != null && isActiveStablecoinMeta(meta);
 }
 
 export function deriveVariantAwareDependencies(
