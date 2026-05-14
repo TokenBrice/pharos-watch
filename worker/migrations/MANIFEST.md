@@ -69,6 +69,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0123     | `0123_telegram_usage_analytics.sql`                      | Add privacy-preserving Telegram usage aggregates, watcher lifecycle snapshots, and chat delivery diagnostics                                    |
 | 0124     | `0124_telegram_delivery_claims_and_retention.sql`        | Add Telegram pending-delivery claim metadata and retention/reconciliation indexes                                                               |
 | 0125     | `0125_yield_publication_generations.sql`                 | Add yield publication generation state, row generation markers, and compact selected-source decision evidence                                   |
+| 0126     | `0126_depeg_pending_lifecycle_outcomes.sql`              | Add durable pending-depeg lifecycle outcome rows for promoted, rejected, expired, recovered, and superseded candidates                          |
+| 0127     | `0127_depeg_event_provenance_side_table.sql`             | Add side-table depeg event provenance and a JSON-projection view for historical/live event audit metadata                                       |
+| 0128     | `0128_depeg_backfill_runs.sql`                           | Add durable depeg backfill run manifests with status, counts, and replay fingerprints                                                           |
 
 ## Retired Individual Migrations
 
