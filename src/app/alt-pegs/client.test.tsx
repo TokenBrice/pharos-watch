@@ -9,17 +9,40 @@ const refetchMock = vi.fn();
 const {
   useStablecoinsMock,
   useNonUsdShareMock,
+  usePegSummaryMock,
+  useDexLiquidityMock,
+  useReportCardsMock,
+  useLogosMock,
 } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
   useNonUsdShareMock: vi.fn(),
+  usePegSummaryMock: vi.fn(),
+  useDexLiquidityMock: vi.fn(),
+  useReportCardsMock: vi.fn(),
+  useLogosMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: useStablecoinsMock,
 }));
 
+vi.mock("@/hooks/use-logos", () => ({
+  useLogos: useLogosMock,
+}));
+
 vi.mock("@/hooks/api-hooks", () => ({
   useNonUsdShare: useNonUsdShareMock,
+  usePegSummary: usePegSummaryMock,
+  useDexLiquidity: useDexLiquidityMock,
+  useReportCards: useReportCardsMock,
+}));
+
+vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
+  AltPegStablecoinTable: () => (
+    <div data-testid="alt-peg-stablecoin-table">
+      <h2>Drill Into Each Alt-Peg Cohort</h2>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/non-usd-share-chart", () => ({
@@ -140,6 +163,28 @@ describe("AltPegsClient", () => {
       refetch: refetchMock,
       meta: null,
     });
+    usePegSummaryMock.mockReturnValue({
+      data: { coins: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    });
+    useDexLiquidityMock.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    });
+    useReportCardsMock.mockReturnValue({
+      data: { cards: [] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      dataUpdatedAt: 0,
+    });
+    useLogosMock.mockReturnValue({ data: undefined });
     useNonUsdShareMock.mockReturnValue({
       data: [
         {

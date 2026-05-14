@@ -8,12 +8,13 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
-import { useNonUsdShare } from "@/hooks/api-hooks";
+import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCards } from "@/hooks/api-hooks";
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useLogos } from "@/hooks/use-logos";
 import { AltPegCohortHistoryChart } from "./alt-peg-cohort-history-chart";
-import { AltPegCohortDirectory } from "./fiat-world-atlas/cohort-directory";
+import { AltPegStablecoinTable } from "./alt-peg-stablecoin-table";
 import { FiatWorldAtlas } from "./fiat-world-atlas/world-atlas";
 import {
   buildAltPegLinkHubGroups,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/alt-peg-market";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 
 type FocusedChart = "share" | "cohorts";
 
@@ -228,11 +230,30 @@ function AltPegDistributionCard({
 export function AltPegsClient() {
   const stablecoinsQuery = useStablecoins();
   const shareQuery = useNonUsdShare();
+  const pegSummaryQuery = usePegSummary();
+  const dexLiquidityQuery = useDexLiquidity();
+  const reportCardsQuery = useReportCards();
+  const { data: logos } = useLogos();
   const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
 
   const snapshot = useMemo(
     () => buildAltPegSnapshot(stablecoinsQuery.data?.peggedAssets),
     [stablecoinsQuery.data?.peggedAssets],
+  );
+  const tableInputs = useMemo(
+    () =>
+      buildStablecoinTableInputs({
+        stablecoins: stablecoinsQuery.data?.peggedAssets,
+        fxFallbackRates: stablecoinsQuery.data?.fxFallbackRates,
+        pegSummaryCoins: pegSummaryQuery.data?.coins,
+        reportCards: reportCardsQuery.data?.cards,
+      }),
+    [
+      stablecoinsQuery.data?.peggedAssets,
+      stablecoinsQuery.data?.fxFallbackRates,
+      pegSummaryQuery.data?.coins,
+      reportCardsQuery.data?.cards,
+    ],
   );
   const trendStats = useMemo(() => buildAltPegTrendStats(shareQuery.data), [shareQuery.data]);
   const focusedChart = useMemo(() => {
@@ -340,10 +361,17 @@ export function AltPegsClient() {
         commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
       />
 
-      <AltPegCohortDirectory
-        fiatItems={FIAT_LINK_HUB_ITEMS}
-        commodityIndexItems={COMMODITY_INDEX_LINK_HUB_ITEMS}
-      />
+      <SectionErrorBoundary name="alt-peg-stablecoin-table">
+        <AltPegStablecoinTable
+          data={stablecoinsQuery.data?.peggedAssets}
+          isLoading={stablecoinsQuery.isLoading}
+          logos={logos}
+          pegRates={tableInputs.pegRates}
+          pegScores={tableInputs.pegScores}
+          dexLiquidity={dexLiquidityQuery.data ?? undefined}
+          reportCards={tableInputs.reportCards}
+        />
+      </SectionErrorBoundary>
 
       <SectionErrorBoundary name="non-usd-share">
         <section id="alt-peg-history-share" className="space-y-3">

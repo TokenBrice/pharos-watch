@@ -12,11 +12,11 @@ describe("nav-config", () => {
       "/freezewatch",
       "/pharoswatchbot",
     ]);
-    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Non-USD Stables");
+    expect(PRIMARY_NAV_ITEMS.find((item) => item.href === "/alt-pegs")?.label).toBe("Alt-Pegs");
     expect(PRIMARY_NAV_ITEMS.at(-1)).toMatchObject({ href: "/pharoswatchbot", label: "PharosWatchBot" });
 
     // FreezeWatch and PharosWatchBot are main routes now, immediately after
-    // the Non-USD Stable market-structure page. Digest and Status stay in MONITOR.
+    // the Alt-Pegs market-structure page. Digest and Status stay in MONITOR.
     const dataGroup = NAV_GROUPS.find((group) => group.key === "data");
     const monitorGroup = NAV_GROUPS.find((group) => group.key === "monitor");
     expect(dataGroup?.items.some((item) => item.href === "/freezewatch")).toBe(false);

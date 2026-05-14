@@ -1,0 +1,212 @@
+"use client";
+
+import { useCallback, useMemo, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
+import { HomepageSectionBand } from "@/components/homepage-sections";
+import { SectionSkeleton } from "@/components/homepage-skeletons";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { buildAltPegLinkHubGroups } from "@/lib/alt-peg-market";
+import type {
+  DexLiquidityMap,
+  PegCurrency,
+  PegSummaryCoin,
+  ReportCard,
+  StablecoinData,
+} from "@shared/types";
+
+const StablecoinTable = dynamic(
+  () => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable),
+  { loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" /> },
+);
+
+const ALT_PEG_GROUPS = buildAltPegLinkHubGroups();
+
+const PEG_BY_PARAM = new Map<string, PegCurrency>(
+  ALT_PEG_GROUPS.flatMap((group) =>
+    group.items.map((item) => [item.peg.toLowerCase(), item.peg]),
+  ),
+);
+
+const ALL_NON_USD_COIN_COUNT = ACTIVE_STABLECOINS.filter(
+  (sc) => sc.flags.pegCurrency !== "USD",
+).length;
+
+const EMPTY_FILTERS: readonly never[] = [];
+
+function withAlpha(hex: string, alpha: string): string {
+  return hex.startsWith("#") && hex.length === 7 ? `${hex}${alpha}` : hex;
+}
+
+interface AltPegStablecoinTableProps {
+  data: StablecoinData[] | undefined;
+  isLoading: boolean;
+  logos?: Record<string, string>;
+  pegRates?: Record<string, number>;
+  pegScores?: Map<string, PegSummaryCoin>;
+  dexLiquidity?: DexLiquidityMap;
+  reportCards?: Record<string, ReportCard>;
+}
+
+export function AltPegStablecoinTable({
+  data,
+  isLoading,
+  logos,
+  pegRates,
+  pegScores,
+  dexLiquidity,
+  reportCards,
+}: AltPegStablecoinTableProps) {
+  const { searchParams, setParam } = useUrlFilters();
+  const pinnedStablecoins = usePinnedStablecoins();
+
+  const rawPeg = searchParams.get("peg");
+  const selectedPeg = useMemo<PegCurrency | null>(() => {
+    if (!rawPeg) return null;
+    return PEG_BY_PARAM.get(rawPeg.toLowerCase()) ?? null;
+  }, [rawPeg]);
+
+  const setSelectedPeg = useCallback(
+    (peg: PegCurrency | null) => {
+      setParam("peg", peg ? peg.toLowerCase() : "");
+    },
+    [setParam],
+  );
+
+  const trackedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sc of ACTIVE_STABLECOINS) {
+      if (sc.flags.pegCurrency === "USD") continue;
+      if (selectedPeg && sc.flags.pegCurrency !== selectedPeg) continue;
+      ids.add(sc.id);
+    }
+    return ids;
+  }, [selectedPeg]);
+
+  const filteredData = useMemo(() => {
+    if (!data) return undefined;
+    return data.filter((coin) => trackedIds.has(coin.id));
+  }, [data, trackedIds]);
+
+  return (
+    <section aria-label="Alt-peg stablecoin browser" className="space-y-4">
+      <HomepageSectionBand
+        eyebrow="Cohort Details"
+        title="Drill Into Each Alt-Peg Cohort"
+        description="Browse every tracked non-USD stablecoin. Use the chips to narrow to a specific peg."
+      />
+
+      <AltPegChipStrip
+        groups={ALT_PEG_GROUPS}
+        allCount={ALL_NON_USD_COIN_COUNT}
+        selected={selectedPeg}
+        onSelect={setSelectedPeg}
+      />
+
+      <StablecoinTable
+        data={filteredData}
+        isLoading={isLoading}
+        activeFilters={EMPTY_FILTERS}
+        logos={logos}
+        pegRates={pegRates}
+        pegScores={pegScores}
+        dexLiquidity={dexLiquidity}
+        reportCards={reportCards}
+        pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
+        onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}
+      />
+    </section>
+  );
+}
+
+interface AltPegChipStripProps {
+  groups: ReturnType<typeof buildAltPegLinkHubGroups>;
+  allCount: number;
+  selected: PegCurrency | null;
+  onSelect: (peg: PegCurrency | null) => void;
+}
+
+function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStripProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="pharos-kicker">Filter by peg</h3>
+        {selected && (
+          <button
+            type="button"
+            onClick={() => onSelect(null)}
+            className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+            All
+          </span>
+          <AltPegChipButton
+            label="All Alt-Pegs"
+            count={allCount}
+            colorHex="#94a3b8"
+            isSelected={selected === null}
+            onClick={() => onSelect(null)}
+          />
+        </div>
+        {groups.map((group) => (
+          <div key={group.label} className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mr-0.5">
+              {group.label}
+            </span>
+            {group.items.map((item) => (
+              <AltPegChipButton
+                key={item.peg}
+                label={item.label}
+                count={item.coinCount}
+                colorHex={item.colorHex}
+                isSelected={selected === item.peg}
+                onClick={() => onSelect(item.peg)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface AltPegChipButtonProps {
+  label: string;
+  count: number;
+  colorHex: string;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+function AltPegChipButton({ label, count, colorHex, isSelected, onClick }: AltPegChipButtonProps) {
+  const style: CSSProperties = isSelected
+    ? {
+        borderColor: withAlpha(colorHex, "80"),
+        backgroundColor: withAlpha(colorHex, "1f"),
+        color: "var(--foreground)",
+      }
+    : {
+        borderColor: withAlpha(colorHex, "26"),
+        backgroundColor: withAlpha(colorHex, "0d"),
+      };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isSelected}
+      style={style}
+      className="pharos-focus-ring inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-[background-color,border-color,color] hover:text-foreground aria-pressed:text-foreground"
+    >
+      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorHex }} />
+      <span>{label}</span>
+      <span className="font-mono text-[11px] tabular-nums text-muted-foreground/80">{count}</span>
+    </button>
+  );
+}

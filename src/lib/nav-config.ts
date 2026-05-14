@@ -63,7 +63,7 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Market-regime read for the stablecoin system" },
   { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Cross-market safety grades and contagion scenarios" },
   { href: "/yield", label: "Yield Intelligence", icon: TrendingUp, description: "Yield ranked after adjusting for stablecoin risk" },
-  { href: "/alt-pegs", label: "Non-USD Stables", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
+  { href: "/alt-pegs", label: "Alt-Pegs", icon: Globe, description: "Market structure and cohort growth beyond dollar pegs" },
   { href: "/freezewatch", label: "FreezeWatch", icon: FreezeShieldIcon, description: "Issuer control over your stablecoin balance, surfaced live" },
   { href: "/pharoswatchbot", label: "PharosWatchBot", icon: Send, description: "Push alerts for depegs, DEWS shifts, launches, and the daily digest" },
 ];
