@@ -511,39 +511,28 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(200);
     expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
-    expect(historyHas(db, "ON CONFLICT(key) DO NOTHING", [])).toBe(true);
+    expect(historyHas(db, "ON CONFLICT(key) DO NOTHING", [])).toBe(false);
   });
 
-  it("rejects replayed mutation initData before applying the mutation", async () => {
+  it("allows multiple mutations from the same fresh Mini App launch", async () => {
     const initData = await privateInitData();
-    const db = mockD1([
-      {
-        match: "ON CONFLICT(key) DO UPDATE SET",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "DELETE FROM cache WHERE key LIKE ?",
-        rows: [],
-        runMeta: { changes: 1 },
-      },
-      {
-        match: "ON CONFLICT(key) DO NOTHING",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-    ]);
+    const db = mockD1(stateReadTables());
 
-    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+    const firstResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
       initData,
       operation: { kind: "clear-snooze" },
     }), BOT_TOKEN);
+    const secondResponse = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "set-global", alertType: "safety", enabled: true },
+    }), BOT_TOKEN);
 
-    expect(response.status).toBe(409);
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
     const history = db.getHistory();
-    expect(history.some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(false);
-    expect(history.some((entry) => entry.sql.includes("DELETE FROM cache WHERE key LIKE ?"))).toBe(true);
-    expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("alert_snooze_until_ts = NULL"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("global_alert_safety = excluded.global_alert_safety"))).toBe(true);
+    expect(history.some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
   });
 
   it("rejects stale mutation auth at the 5-minute boundary", async () => {
@@ -661,10 +650,7 @@ describe("handleTelegramMiniAppMutation", () => {
 
     expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
-    const deleteAttempts = db.getHistory().filter((entry) =>
-      entry.sql.includes("DELETE FROM cache WHERE key = ?")
-      && entry.binds.some((bind) => typeof bind === "string" && bind.startsWith("telegram-mini-app:mutation-init:")));
-    expect(deleteAttempts.length).toBeGreaterThan(0);
+    expect(db.getHistory().some((entry) => entry.sql.includes("ON CONFLICT(key) DO NOTHING"))).toBe(false);
   });
 
   it("validates initData with the previous bot token when current rejects", async () => {
@@ -942,17 +928,14 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(groupResponse.status).toBe(403);
     expect(await groupResponse.json()).toMatchObject({ code: "not-private" });
 
-    // Replay claimed: stub the claim INSERT to return changes=0.
-    const replayInitData = await privateInitData();
-    const replayDb = mockD1([
-      { match: "ON CONFLICT(key) DO NOTHING", rows: [], runMeta: { changes: 0 } },
-    ]);
-    const replayResponse = await handleTelegramMiniAppMutation(
-      replayDb,
-      request("/api/telegram-mini-app/mutate", { initData: replayInitData, operation: { kind: "clear-snooze" } }),
+    // Fresh auth remains reusable within the same Mini App launch.
+    const reusableInitData = await privateInitData();
+    const reusableDb = mockD1(stateReadTables());
+    const reusableResponse = await handleTelegramMiniAppMutation(
+      reusableDb,
+      request("/api/telegram-mini-app/mutate", { initData: reusableInitData, operation: { kind: "clear-snooze" } }),
       BOT_TOKEN,
     );
-    expect(replayResponse.status).toBe(409);
-    expect(await replayResponse.json()).toMatchObject({ code: "replay-claimed" });
+    expect(reusableResponse.status).toBe(200);
   });
 });

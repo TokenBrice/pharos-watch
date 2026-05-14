@@ -251,7 +251,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Allowed outbound dependencies.** State / persistence helpers for subscription writes and cooldowns, `telegram-presets` for dynamic preset targets, `telegram-usage-analytics` for validated usage events, shared endpoint metadata, shared stablecoin metadata, and the Telegram WebApp browser bridge on the frontend.
 
 **Must NOT.**
-- Accept mutation auth older than the 15-minute mutation window.
+- Accept mutation auth older than the 5-minute mutation window.
 - Mutate group/supergroup/channel chat rows until a numeric group `chat_id` mapping and fresh admin verification path exists.
 - Write analytics or cooldown rows before signed `initData` validation succeeds.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.

@@ -32,7 +32,6 @@ interface ValidateTelegramMiniAppInitDataOptions {
 const encoder = new TextEncoder();
 const START_PARAM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_HEX_PATTERN = /^[0-9a-f]{64}$/i;
-export const MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX = "telegram-mini-app:mutation-init:";
 const KNOWN_MINI_APP_CHAT_TYPES = new Set(["private", "sender", "group", "supergroup", "channel"]);
 const warnedNovelMiniAppChatTypes = new Set<string>();
 
@@ -93,28 +92,6 @@ function warnNovelMiniAppChatType(chatType: string | null): void {
   }
   warnedNovelMiniAppChatTypes.add(chatType);
   console.warn(`[telegram-mini-app-auth] novel chat_type received: ${chatType}`);
-}
-
-function d1ChangeCount(result: D1Result<unknown>): number {
-  const changes = Number(result.meta?.changes ?? 0);
-  return Number.isFinite(changes) ? changes : 0;
-}
-
-export async function claimTelegramMiniAppMutationInitData(
-  db: D1Database,
-  auth: Pick<TelegramMiniAppAuthContext, "initDataHash" | "userId">,
-  nowSec: number,
-  ttlSec: number,
-): Promise<boolean> {
-  await db
-    .prepare("DELETE FROM cache WHERE key LIKE ? AND updated_at < ?")
-    .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}%`, nowSec - ttlSec)
-    .run();
-  const result = await db
-    .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO NOTHING")
-    .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}${auth.initDataHash}`, auth.userId, nowSec)
-    .run();
-  return d1ChangeCount(result) > 0;
 }
 
 export async function validateTelegramMiniAppInitData(

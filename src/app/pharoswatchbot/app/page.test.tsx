@@ -74,7 +74,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByText("@watcher")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
-      body: JSON.stringify({ initData: "signed-init-data", startParam: null }),
+      body: JSON.stringify({ initData: "signed-init-data" }),
     }));
   });
 
@@ -109,7 +109,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByText("Global alerts")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
       method: "POST",
-      body: JSON.stringify({ initData: "signed-init-data", startParam: "settings" }),
+      body: JSON.stringify({ initData: "signed-init-data" }),
     }));
   });
 
@@ -133,6 +133,32 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     expect(screen.getByText("Add a coin")).toBeTruthy();
     expect(screen.getByText(/Launch intent:/)).toBeTruthy();
+  });
+
+  it("routes quiet-hours start params to settings", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "quiet-hours", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Global alerts")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith("/api/telegram-mini-app/session", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ initData: "signed-init-data" }),
+    }));
+  });
+
+  it("routes forget start params to settings", async () => {
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { start_param: "forget", user: { username: "watcher" } }, ready: vi.fn() } };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    expect(screen.getByText("Danger zone")).toBeTruthy();
   });
 
   it("shows stale-auth read-only copy instead of group-only copy", async () => {
@@ -304,6 +330,21 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(close).toHaveBeenCalled();
   });
 
+  it("uses Telegram confirmation before removing a coin and honors cancel", async () => {
+    const showConfirm = vi.fn((_msg: string, cb: (ok: boolean) => void) => cb(false));
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, showConfirm } };
+    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => baseState });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "watchlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove USDC" }));
+
+    expect(showConfirm).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("requestWriteAccess fires once after recommended-setup for sender chat with no prior subscriber", async () => {
     const requestWriteAccess = vi.fn();
     const isVersionAtLeast = vi.fn((v: string) => v === "6.9" || v === "8.0");
@@ -431,5 +472,28 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
 
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
+  });
+
+  it("clears mutation error messages after six seconds", async () => {
+    vi.useFakeTimers();
+    window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() } } };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => baseState })
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({ error: "x", code: "rate-limited" }) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<PharosWatchBotMiniAppPage />);
+    await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
+    fireEvent.click(screen.getByRole("tab", { name: "settings" }));
+    fireEvent.click(screen.getByRole("button", { name: /Safety/i }));
+
+    const copy = "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
+    await waitFor(() => expect(screen.getByText(copy)).toBeTruthy());
+
+    await act(async () => {
+      vi.advanceTimersByTime(6_000);
+    });
+
+    await waitFor(() => expect(screen.queryByText(copy)).toBeNull());
   });
 });

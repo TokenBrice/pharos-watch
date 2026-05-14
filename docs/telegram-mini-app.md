@@ -44,13 +44,13 @@ Recognized payloads:
 | `watchlist` | Watchlist panel | Per-coin subscriptions and tune controls. |
 | `coin_<stablecoinId>` | Watchlist panel scrolled to coin row | Used by per-coin Web App buttons, `/why`, `/coverage`, alert keyboards. |
 | `presets` | Presets panel | Followed presets plus available ones. |
-| `quiet-hours` | Settings panel (quiet-hours card) | Used by `/mute`, `/unmutehours` private replies. |
-| `snooze` | Settings panel (snooze card) | Used by per-coin or chat snooze ack. |
-| `health` | Delivery health panel | Used by `/health` private reply. |
-| `forget` | Privacy panel | Used by the `/forget` command. |
-| `setup_recommended` | Recommended-setup confirmation | Used by the wizard's "Open control panel" button. |
+| `quiet-hours` | Settings panel | Used by `/mute`, `/unmutehours` private replies. |
+| `snooze` | Home panel | Used by per-coin or chat snooze ack. |
+| `health` | Home panel | Used by `/health` private reply. |
+| `forget` | Settings panel | Used by the `/forget` command danger-zone entrypoint. |
+| `setup_recommended` | Watchlist panel | Legacy alias retained for older launch buttons. |
 
-Payload constraints (mirroring `?start=`): max 64 characters, charset `[A-Za-z0-9_-]`, no spaces, lowercase. Unknown payloads fall through to the home panel and emit a `mini_app_unknown_payload` usage event so we can detect drifting links in the wild. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
+Payload constraints (mirroring `?start=`): max 64 characters, charset `[A-Za-z0-9_-]`, no spaces, lowercase. Unknown payloads fall through to the home panel. The payload is treated as untrusted; authorization for every read and mutation still comes from validated `initData`.
 
 ## Seam Rules
 
@@ -80,9 +80,9 @@ HMAC validation is implemented in `worker/src/lib/telegram-mini-app-auth.ts`:
 Freshness windows:
 
 - **Session reads (`POST /api/telegram-mini-app/session`):** `auth_date` must be within 24 hours. A 24-hour read window keeps long-lived open Mini Apps usable across the day.
-- **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Stale-auth rejections emit a `mini_app_session_invalid` usage event; the client should call the session endpoint to obtain a fresh launch and prompt the user to retry.
+- **Mutations (`POST /api/telegram-mini-app/mutate`):** `auth_date` must be within 5 minutes. Telegram exposes one signed `initData` value for the launch, so a fresh launch may perform multiple mutations with the same `initData` until the freshness window expires. Stale-auth rejections emit a `mini_app_session_invalid` usage event; the client should call the session endpoint to obtain a fresh launch and prompt the user to retry.
 
-Replay protection uses a one-shot claim cache keyed on the `initData` hash, so a stolen `initData` cannot be reused even within its freshness window.
+Mutation auth is bounded by the short freshness window plus per-user mutation cooldowns. Do not add one-shot `initData` replay claims to the mutation path; they break normal multi-edit Mini App sessions because Telegram does not refresh `initData` between edits.
 
 Group, supergroup, and channel chat types are read-only in the current phase. The Mini App surfaces an explicit "Use `/settings@PharosWatchBot` in the group for now" affordance instead of failing silently.
 
@@ -109,6 +109,6 @@ For incident triage, start at the runbooks rather than DevTools:
 
 ## Test Fixtures
 
-- `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, replay protection, group/supergroup read-only behavior, bot-token rotation overlap.
+- `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, mutation cooldowns, partial-failure rollback.
 - `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.

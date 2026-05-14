@@ -72,6 +72,7 @@ function initialViewFromStartParam(startParam: string | null): ViewKey {
   if (!payload) return "home";
   const intent = miniAppPayloadIntent(payload);
   if (intent === "settings" || intent === "presets") return intent;
+  if (intent === "quiet-hours" || intent === "forget") return "settings";
   if (intent === "watchlist" || intent === "coin") return "watchlist";
   return "home";
 }
@@ -1209,16 +1210,17 @@ export function PharosWatchBotMiniAppClient() {
   const [homeScreenStatus, setHomeScreenStatus] = useState<string | null>(null);
   const [forgottenView, setForgottenView] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastHiddenAtRef = useRef<number | null>(null);
   const hasRequestedWriteAccessRef = useRef(false);
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
   const [, startTransition] = useTransition();
 
-  const loadSession = useCallback(async (nextInitData: string, nextStartParam: string | null) => {
+  const loadSession = useCallback(async (nextInitData: string) => {
     setStatus("loading");
     try {
-      setState(await postJson<TelegramMiniAppState>(SESSION_ENDPOINT, { initData: nextInitData, startParam: nextStartParam }));
+      setState(await postJson<TelegramMiniAppState>(SESSION_ENDPOINT, { initData: nextInitData }));
       setStatus("ready");
       setMessage(null);
     } catch (err) {
@@ -1301,7 +1303,7 @@ export function PharosWatchBotMiniAppClient() {
       launch.webApp?.ready?.();
       launch.webApp?.expand?.();
       if (launch.initData) {
-        void loadSession(launch.initData, launch.startParam);
+        void loadSession(launch.initData);
       } else if (launch.hasTelegramLaunchHint) {
         setStatus("error");
         setMessage("Telegram launch data was not available. Close and reopen from PharosWatchBot.");
@@ -1341,8 +1343,26 @@ export function PharosWatchBotMiniAppClient() {
 
   const triggerRefresh = useCallback(() => {
     if (!initData || status === "loading" || isMutating) return;
-    void loadSession(initData, startParam);
-  }, [initData, isMutating, loadSession, startParam, status]);
+    void loadSession(initData);
+  }, [initData, isMutating, loadSession, status]);
+
+  useEffect(() => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = null;
+    }
+    if (!message || status !== "ready") return;
+    messageTimerRef.current = setTimeout(() => {
+      setMessage(null);
+      messageTimerRef.current = null;
+    }, 6_000);
+    return () => {
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = null;
+      }
+    };
+  }, [message, status]);
 
   // visibilitychange — refetch when returning after >10 min hidden
   useEffect(() => {
@@ -1358,11 +1378,11 @@ export function PharosWatchBotMiniAppClient() {
       if (hiddenAt == null) return;
       if (Date.now() - hiddenAt < VISIBILITY_REFRESH_THRESHOLD_MS) return;
       if (!initData) return;
-      void loadSession(initData, startParam);
+      void loadSession(initData);
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  }, [initData, loadSession, startParam]);
+  }, [initData, loadSession]);
 
   const performMutation = useCallback(async (operation: TelegramMiniAppOperation): Promise<TelegramMiniAppState | null> => {
     if (!initData || state?.viewer.canMutate !== true) return null;
@@ -1445,7 +1465,7 @@ export function PharosWatchBotMiniAppClient() {
 
   const handleRemoveCoin = useCallback((coin: SubscribedCoin) => {
     const captured: SubscribedCoin = coin;
-    void (async () => {
+    const fire = () => void (async () => {
       const next = await performMutation({ kind: "remove-coin", stablecoinId: coin.stablecoinId });
       if (!next) return;
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -1455,7 +1475,15 @@ export function PharosWatchBotMiniAppClient() {
         undoTimerRef.current = null;
       }, UNDO_WINDOW_MS);
     })();
-  }, [performMutation]);
+    const confirmFn = webApp?.showConfirm;
+    if (confirmFn) {
+      confirmFn(`Remove ${coin.symbol} from your watchlist?`, (ok) => {
+        if (ok) fire();
+      });
+      return;
+    }
+    fire();
+  }, [performMutation, webApp?.showConfirm]);
 
   const handleUndoRemove = useCallback(() => {
     const captured = pendingUndo;
@@ -1557,14 +1585,13 @@ export function PharosWatchBotMiniAppClient() {
   useEffect(() => {
     const mb = webApp?.MainButton;
     if (!mb) return;
-    const haptic = () => webApp?.HapticFeedback?.notificationOccurred?.("success");
 
     let handler: (() => void) | null = null;
     let text: string | null = null;
     if (view === "home") {
       if (state && !state.subscriber.exists) {
         text = "Use recommended setup";
-        handler = () => { mutate(RECOMMENDED_OPERATION); haptic(); };
+        handler = () => mutate(RECOMMENDED_OPERATION);
       } else if (state?.subscriber.snoozeUntilTs != null) {
         text = "Clear snooze";
         handler = () => mutate({ kind: "clear-snooze" });
@@ -1587,6 +1614,7 @@ export function PharosWatchBotMiniAppClient() {
 
   useEffect(() => () => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
   }, []);
 
   if (status === "preview") return <PreviewState previewName={previewName} />;
@@ -1635,7 +1663,7 @@ export function PharosWatchBotMiniAppClient() {
 
         {status === "loading" && !optimisticState ? <HomeSkeleton /> : null}
         {status === "loading" && optimisticState ? <p className="sr-only" aria-live="polite">Refreshing settings</p> : null}
-        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData, startParam)}>Retry</MiniButton></div></section> : null}
+        {status === "error" ? <section role="alert" className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4"><p className="text-sm font-semibold text-red-700 dark:text-red-300">{message}</p><div className="mt-3"><MiniButton variant="secondary" onClick={() => void loadSession(initData)}>Retry</MiniButton></div></section> : null}
         {message && status === "ready" ? <section role="status" className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">{message}</section> : null}
 
         {optimisticState ? (

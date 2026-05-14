@@ -15,7 +15,7 @@ Detection signals:
 
 1. **Bot token rotation gap?** Cross-check with [`telegram-secret-rotation.md`](./telegram-secret-rotation.md). If `TELEGRAM_BOT_TOKEN` was rotated in the last 24 hours and `TELEGRAM_BOT_TOKEN_PREVIOUS` is unset or wrong, `initData` signed by the prior token will fail validation for the rest of its 24-hour read window. This is the single most common cause of a sudden `mini_app_session_invalid` spike.
 2. **Stale clients?** A flat 5-minute spike across a single coin or alert that just dispatched usually means many users tapped a long-lived deep link whose `auth_date` is older than 5 minutes. Mutations require a fresh launch; reads still work. The Mini App's "relaunch from Telegram" affordance is the intended remedy.
-3. **Malicious replay?** Check `mini_app_replay_claims_today` on the public pulse or the `outcome = 'invalid-auth'` rows in `telegram_usage_daily`. A coordinated burst of `mini_app_replay_claimed` events points at someone replaying a captured `initData`; replay protection still rejects it. No mutation reaches D1.
+3. **Invalid signatures?** Check the `outcome = 'invalid-signature'` and `outcome = 'invalid-auth'` rows in `telegram_usage_daily`. These point to malformed launch data, token mismatch outside a rotation overlap, or tampered payloads; no mutation reaches D1 before HMAC validation succeeds.
 4. **Worker degradation?** Confirm the `dispatch-telegram-alerts` lane is healthy via [`telegram-no-delivery.md`](./telegram-no-delivery.md). A failing Mini App pulse loader can present as auth failures in the UI when the page never receives a fresh state.
 
 ## Operator Commands
@@ -32,17 +32,6 @@ WHERE event_type = 'mini_app_session_invalid'
   AND day >= date('now', '-7 days')
 GROUP BY day, outcome
 ORDER BY day DESC, events DESC;
-```
-
-Read `mini_app_replay_claimed` events:
-
-```sql
-SELECT day, COUNT(*) AS replays
-FROM telegram_usage_daily
-WHERE event_type = 'mini_app_replay_claimed'
-  AND day >= date('now', '-7 days')
-GROUP BY day
-ORDER BY day DESC;
 ```
 
 Confirm the bot-token rotation state:
@@ -75,12 +64,12 @@ npx wrangler tail stablecoin-api --format pretty
 
 1. **Bot-token rotation gap.** Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the prior token and redeploy. Sessions signed by either token will validate during the overlap.
 2. **Stale clients.** No operator action. The Mini App's existing "session expired" UI tells users to relaunch from Telegram, which is the intended recovery path.
-3. **Replay storm.** No mutation lands in D1. Capture the rate over a 24-hour window via the SQL above; if it persists, file a follow-up to harden client-side anti-capture (lower URL TTL, stricter referer checks) rather than reacting in real time.
+3. **Invalid signatures or malformed auth.** No mutation lands in D1 before HMAC validation succeeds. If the count persists outside a rotation window, inspect recent launch-link changes and Telegram client reports before changing backend auth rules.
 4. **Worker degradation.** Follow [`telegram-no-delivery.md`](./telegram-no-delivery.md); auth failures should clear once the dispatcher recovers and the Mini App pulse loader returns fresh state.
 
 ## Cross-References
 
-- [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — auth model, freshness windows, replay protection.
+- [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — auth model, freshness windows, mutation cooldowns.
 - [`telegram-secret-rotation.md`](./telegram-secret-rotation.md) — bot-token and webhook-secret rotation contract.
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) — broader Telegram dispatch diagnostics.
 - [`telegram-operator-queries.md`](./telegram-operator-queries.md) — D1 query patterns for usage analytics.

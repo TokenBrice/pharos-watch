@@ -1,9 +1,7 @@
 import { jsonResponse, parseRequestJsonWithSchema } from "../lib/api-utils";
 import type { JsonResponseOptions } from "../lib/api-response";
 import {
-  MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX,
   TelegramMiniAppAuthError,
-  claimTelegramMiniAppMutationInitData,
   validateTelegramMiniAppInitData,
   type TelegramMiniAppAuthContext,
 } from "../lib/telegram-mini-app-auth";
@@ -251,28 +249,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
       });
     }
 
-    const replayClaimed = await claimTelegramMiniAppMutationInitData(
-      db,
-      auth,
-      nowSec(),
-      TELEGRAM_MINI_APP_MUTATION_AUTH_MAX_AGE_SEC,
-    );
-    if (!replayClaimed) {
-      await recordMiniAppEvent(db, {
-        eventType: "mini_app_mutation_denied",
-        auth,
-        actionDetail: mutationActionDetail(parsed.operation),
-        outcome: "denied",
-        failureClass: "replayed-auth",
-        latencyMs: Date.now() - start,
-      });
-      return miniAppError(
-        409,
-        "replay-claimed",
-        "Telegram Mini App mutation already used; relaunch the Mini App and try again",
-      );
-    }
-
     try {
       await applyTelegramMiniAppMutation(db, auth, parsed.operation);
     } catch (err) {
@@ -287,14 +263,6 @@ export const handleTelegramMiniAppMutation = miniAppErrorHandler(
         });
         return miniAppError(err.status, mutationErrorResponseCode(err.code), mutationErrorMessage(err));
       }
-      // Non-domain failure: roll back the replay claim so the user can retry with the same initData.
-      await db
-        .prepare("DELETE FROM cache WHERE key = ?")
-        .bind(`${MINI_APP_MUTATION_INIT_DATA_CACHE_PREFIX}${auth.initDataHash}`)
-        .run()
-        .catch((deleteErr) => {
-          console.error("[api] Error in telegram-mini-app-mutation replay-claim rollback:", deleteErr);
-        });
       throw err;
     }
 
