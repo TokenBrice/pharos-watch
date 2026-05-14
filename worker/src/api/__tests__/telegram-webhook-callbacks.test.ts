@@ -820,6 +820,10 @@ describe("handleCallbackQuery", () => {
       expect(sendCall).toBeDefined();
       const sendBody = JSON.parse((sendCall?.[1] as RequestInit).body as string);
       expect(sendBody.text).toContain("usdc-circle Safety Score");
+      const whyButtons = (sendBody.reply_markup?.inline_keyboard ?? []).flat();
+      expect(whyButtons.some((button: { text?: string; web_app?: { url?: string } }) =>
+        button.text === "Open in app" && button.web_app?.url?.includes("startapp=why_usdc-circle"),
+      )).toBe(true);
       const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(ackCall).toBeDefined();
       const ackBody = JSON.parse((ackCall?.[1] as RequestInit).body as string);
@@ -841,6 +845,10 @@ describe("handleCallbackQuery", () => {
       expect(sendCall).toBeDefined();
       const body = JSON.parse((sendCall?.[1] as RequestInit).body as string);
       expect(body.text).toContain("USDC coverage");
+      const coverageButtons = (body.reply_markup?.inline_keyboard ?? []).flat();
+      expect(coverageButtons.some((button: { text?: string; web_app?: { url?: string } }) =>
+        button.text === "Open in app" && button.web_app?.url?.includes("startapp=coverage_usdc-circle"),
+      )).toBe(true);
       const ackCall = fetchSpy.mock.calls.find((c) => String(c[0]).includes("answerCallbackQuery"));
       expect(JSON.parse((ackCall?.[1] as RequestInit).body as string).text).toBe("Coverage sent.");
       expect(db.getHistory().some((h) => /INSERT INTO telegram_subscribers/.test(h.sql))).toBe(false);
@@ -1406,7 +1414,10 @@ describe("handleCallbackQuery", () => {
       expect(subscriptionUpsert!.sql).toContain("alert_depeg = 1");
       expect(subscriptionUpsert!.sql).toContain("depeg_worsening_bps_step = excluded.depeg_worsening_bps_step");
       expect(
-        history.some((entry) => entry.sql.includes("UPDATE telegram_subscribers SET last_active_at = ?")),
+        history.some((entry) =>
+          entry.sql.includes("INSERT INTO telegram_subscribers") &&
+          entry.sql.includes("alert_depeg = MAX"),
+        ),
       ).toBe(true);
 
       const usageRows = db
@@ -1439,11 +1450,14 @@ describe("handleCallbackQuery", () => {
           entry.sql.includes("safety_mode"),
       );
       expect(subscriptionUpsert).toBeDefined();
-      expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle"]);
-      expect(subscriptionUpsert!.sql).toContain("alert_safety = 1");
-      expect(subscriptionUpsert!.sql).toContain("safety_mode = 'downgrade-only'");
+      expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle", 1, "downgrade-only"]);
+      expect(subscriptionUpsert!.sql).toContain("alert_safety = excluded.alert_safety");
+      expect(subscriptionUpsert!.sql).toContain("safety_mode = excluded.safety_mode");
       expect(
-        history.some((entry) => entry.sql.includes("UPDATE telegram_subscribers SET last_active_at = ?")),
+        history.some((entry) =>
+          entry.sql.includes("INSERT INTO telegram_subscribers") &&
+          entry.sql.includes("alert_safety = MAX"),
+        ),
       ).toBe(true);
 
       const usageRows = db

@@ -1,5 +1,6 @@
 import { API_ORIGIN, SITE_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import { getCache, setCache } from "./db-cache";
+import { postTelegramBotApi } from "./telegram";
 
 const DEFAULT_SELF_URL = API_ORIGIN;
 const TELEGRAM_WEBHOOK_PATH = "/api/telegram-webhook";
@@ -261,12 +262,7 @@ async function applyProfileField(
     return { throttled: true };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(10_000),
-  });
+  const response = await postTelegramBotApi(botToken, method, payload);
 
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
@@ -292,12 +288,7 @@ async function applyProfileField(
 }
 
 async function fetchTelegramMenuButton(botToken: string): Promise<unknown | null> {
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMenuButton`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-    signal: AbortSignal.timeout(10_000),
-  });
+  const response = await postTelegramBotApi(botToken, "getChatMenuButton", {});
   const responseText = await response.text();
   let parsed: TelegramChatMenuButtonResponse | null = null;
   try {
@@ -346,15 +337,10 @@ export async function reconcileTelegramWebhookRegistration(
     return { attempted: false, skipped: true, reason: "rate-limited", expectedUrl };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: expectedUrl,
-      secret_token: webhookSecret,
-      allowed_updates: [...TELEGRAM_ALLOWED_UPDATES],
-    }),
-    signal: AbortSignal.timeout(10_000),
+  const response = await postTelegramBotApi(botToken, "setWebhook", {
+    url: expectedUrl,
+    secret_token: webhookSecret,
+    allowed_updates: [...TELEGRAM_ALLOWED_UPDATES],
   });
 
   const responseText = await response.text();
@@ -394,12 +380,7 @@ async function setMyCommandsForScope(
     return { throttled: true };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ commands, scope }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  const response = await postTelegramBotApi(botToken, "setMyCommands", { commands, scope });
 
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;
@@ -526,11 +507,8 @@ export async function reconcileTelegramMenuButton(
     return { attempted: false, skipped: true, reason: "rate-limited", miniAppUrl };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/setChatMenuButton`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ menu_button: buildTelegramMenuButton(miniAppUrl) }),
-    signal: AbortSignal.timeout(10_000),
+  const response = await postTelegramBotApi(botToken, "setChatMenuButton", {
+    menu_button: buildTelegramMenuButton(miniAppUrl),
   });
   const responseText = await response.text();
   let parsed: TelegramApiResponse | null = null;

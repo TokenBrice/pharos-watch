@@ -5,6 +5,28 @@ export interface TelegramCreds {
   chatId: string;
 }
 
+export interface TelegramBotApiPostOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+export async function postTelegramBotApi(
+  botToken: string,
+  method: string,
+  payload: unknown,
+  options: TelegramBotApiPostOptions = {},
+): Promise<Response> {
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, AbortSignal.timeout(options.timeoutMs ?? 10_000)])
+    : AbortSignal.timeout(options.timeoutMs ?? 10_000);
+  return fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+}
+
 /** Escape HTML special characters for Telegram HTML parse mode. */
 export function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");

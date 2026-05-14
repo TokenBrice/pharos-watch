@@ -22,7 +22,9 @@
  */
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { formatCoveragePayload, formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { answerCallbackQuery, editMessage, escapeHtml } from "../lib/telegram";
+import { batchExecute } from "../lib/db";
 import {
   parseDisambiguationReply,
   type ResolvedCoin,
@@ -30,9 +32,13 @@ import {
 import {
   clearPendingDisambiguation,
   forgetSubscriber,
+  loadPendingDisambiguation,
   removePresetSubscriptions,
   removeSubscriptions,
+  setSubscriberSnooze,
+  setSubscriptionSnooze,
   setSubscriberTimezone,
+  unsubscribeAll,
   unixNow,
   upsertGlobalAlertTypes,
   upsertPresetSubscriptions,
@@ -60,13 +66,13 @@ import {
   parseSetupState,
 } from "./telegram-webhook-setup";
 import { handleSettingsCallback } from "./telegram-webhook-settings";
+import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import { dedupeCoins, parsePendingDisambiguation } from "./telegram-webhook-parsing";
 import {
   HELP_MESSAGE,
   SETUP_PENDING_ACTION_TYPE,
   type ConfirmBulkPayload,
   type PendingAction,
-  type PendingDisambiguationRow,
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
@@ -296,12 +302,7 @@ async function handleSelectDisambiguationCallback(
     await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
     return;
   }
-  const pendingRow = await db
-    .prepare(
-      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-    )
-    .bind(chatId)
-    .first<PendingDisambiguationRow>();
+  const pendingRow = await loadPendingDisambiguation(db, chatId);
   if (!pendingRow || unixNow() >= pendingRow.expires_at) {
     if (pendingRow) await clearPendingDisambiguation(db, chatId);
     await answerCallbackQuery(cb.id, botToken, { text: "Selection expired. Re-run the command." });
@@ -514,24 +515,7 @@ async function handleChatSnoozeCallback(
   // rejects, and the Workers runtime can cancel the pending fetch once the
   // handler throws, producing silent snooze failures from the user's POV.
   try {
-    await db
-      .prepare(
-        `INSERT INTO telegram_subscribers (
-           chat_id, username,
-           alert_dews, alert_depeg, alert_safety, alert_launch,
-           global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-           quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-           alert_snooze_until_ts,
-           created_at, last_active_at
-         )
-         VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
-         ON CONFLICT(chat_id) DO UPDATE SET
-           username = COALESCE(excluded.username, telegram_subscribers.username),
-           alert_snooze_until_ts = excluded.alert_snooze_until_ts,
-           last_active_at = excluded.last_active_at`,
-      )
-      .bind(chatId, callbackUsername(cb), until, now, now)
-      .run();
+    await setSubscriberSnooze(db, chatId, callbackUsername(cb), until);
   } catch (err) {
     logTelegramEvent({
       message: "snooze write failed",
@@ -580,28 +564,7 @@ async function handleCoinSnoozeCallback(
   const now = unixNow();
   const until = now + SNOOZE_SECONDS[durationToken];
   try {
-    // Upsert: if the chat has no per-coin subscription row yet (e.g. they
-    // are a global subscriber), create one with all alert flags = 0 so the
-    // snooze takes effect without enabling per-coin alerts. The dispatcher
-    // only honors `alert_snooze_until_ts` on existing subscription rows,
-    // and the per-coin snooze map (P1-U10) uses the row to filter out
-    // global fan-out for this (chat, stablecoin) pair.
-    await db
-      .prepare(
-        `INSERT INTO telegram_subscriptions (
-           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch,
-           alert_snooze_until_ts
-         )
-         VALUES (?, ?, 0, 0, 0, 0, ?)
-         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-           alert_snooze_until_ts = excluded.alert_snooze_until_ts`,
-      )
-      .bind(chatId, arg, until)
-      .run();
-    await db
-      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-      .bind(now, chatId)
-      .run();
+    await setSubscriptionSnooze(db, chatId, arg, until);
   } catch (err) {
     logTelegramEvent({
       message: "coinsnooze write failed",
@@ -673,7 +636,12 @@ async function handleWhyCallback(
   const isPrivateChat = callbackChatType(cb) === "private";
   try {
     await sendAuditedTelegramReply(db, chatId, message, botToken, {
-      replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
+      replyMarkup: isPrivateChat
+        ? buildStatusDiscoveryKeyboard(arg, {
+            includeMiniAppButton: true,
+            miniAppPayload: formatWhyPayload(arg),
+          })
+        : undefined,
       actionDetail: "callback_why",
     });
   } finally {
@@ -698,7 +666,12 @@ async function handleCoverageCallback(
   const isPrivateChat = callbackChatType(cb) === "private";
   try {
     await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
-      replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
+      replyMarkup: isPrivateChat
+        ? buildStatusDiscoveryKeyboard(arg, {
+            includeMiniAppButton: true,
+            miniAppPayload: formatCoveragePayload(arg),
+          })
+        : undefined,
       actionDetail: "callback_coverage",
     });
   } finally {
@@ -792,23 +765,8 @@ async function handleDepegStepCallback(
     return;
   }
   try {
-    const now = unixNow();
-    await db
-      .prepare(
-        `INSERT INTO telegram_subscriptions (
-           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, depeg_worsening_bps_step
-         )
-         VALUES (?, ?, 0, 1, 0, 0, ?)
-         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-           alert_depeg = 1,
-           depeg_worsening_bps_step = excluded.depeg_worsening_bps_step`,
-      )
-      .bind(chatId, arg, step)
-      .run();
-    await db
-      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-      .bind(now, chatId)
-      .run();
+    const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), arg, "ds", String(step));
+    await batchExecute(db, prepared.statements);
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: "depegstep",
@@ -851,23 +809,8 @@ async function handleSafetyDownCallback(
     return;
   }
   try {
-    const now = unixNow();
-    await db
-      .prepare(
-        `INSERT INTO telegram_subscriptions (
-           chat_id, stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, safety_mode
-         )
-         VALUES (?, ?, 0, 0, 1, 0, 'downgrade-only')
-         ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-           alert_safety = 1,
-           safety_mode = 'downgrade-only'`,
-      )
-      .bind(chatId, arg)
-      .run();
-    await db
-      .prepare("UPDATE telegram_subscribers SET last_active_at = ? WHERE chat_id = ?")
-      .bind(now, chatId)
-      .run();
+    const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), arg, "sm", "d");
+    await batchExecute(db, prepared.statements);
     await recordTelegramUsageEvent(db, {
       eventType: "subscribe",
       actionDetail: "safetydown",
@@ -1219,12 +1162,7 @@ async function handleForgetConfirmCallback(
     return;
   }
 
-  const pendingRow = await db
-    .prepare(
-      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-    )
-    .bind(chatId)
-    .first<PendingDisambiguationRow>();
+  const pendingRow = await loadPendingDisambiguation(db, chatId);
 
   if (!pendingRow || unixNow() >= pendingRow.expires_at) {
     if (pendingRow) {
@@ -1299,12 +1237,7 @@ async function handleBulkConfirmCallback(
     return;
   }
 
-  const pendingRow = await db
-    .prepare(
-      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-    )
-    .bind(chatId)
-    .first<PendingDisambiguationRow>();
+  const pendingRow = await loadPendingDisambiguation(db, chatId);
 
   if (!pendingRow || unixNow() >= pendingRow.expires_at) {
     if (pendingRow) {
@@ -1405,27 +1338,7 @@ async function executeConfirmedBulk(
 
   // unsubscribe
   if (payload.unsubscribeAll) {
-    const now = unixNow();
-    await db.batch([
-      db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(chatId),
-      db.prepare("DELETE FROM telegram_preset_subscriptions WHERE chat_id = ?").bind(chatId),
-      db
-        .prepare(
-          `UPDATE telegram_subscribers
-            SET alert_dews = 0,
-                alert_depeg = 0,
-                alert_safety = 0,
-                alert_launch = 0,
-                global_alert_dews = 0,
-                global_alert_depeg = 0,
-                global_alert_safety = 0,
-                global_alert_launch = 0,
-                global_depeg_worsening_bps_step = NULL,
-                last_active_at = ?
-          WHERE chat_id = ?`,
-        )
-        .bind(now, chatId),
-    ]);
+    await unsubscribeAll(db, chatId);
     await recordTelegramUsageEvent(db, {
       eventType: "unsubscribe",
       actionDetail: "all",

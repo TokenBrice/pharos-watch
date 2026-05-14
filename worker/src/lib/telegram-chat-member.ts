@@ -1,5 +1,6 @@
 import { getCache, setCache } from "./db-cache";
 import { drainResponseBody } from "./response-body";
+import { postTelegramBotApi } from "./telegram";
 
 const CHAT_MEMBER_CACHE_TTL_SEC = 5 * 60;
 
@@ -93,11 +94,9 @@ export async function getCachedChatMember(
 
   let response: Response;
   try {
-    response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, user_id: Number(userId) }),
-      signal: AbortSignal.timeout(10_000),
+    response = await postTelegramBotApi(botToken, "getChatMember", {
+      chat_id: chatId,
+      user_id: Number(userId),
     });
   } catch (err) {
     console.warn(
@@ -148,12 +147,7 @@ export async function getCachedChatAdministrators(
 
   let response: Response;
   try {
-    response = await fetch(`https://api.telegram.org/bot${botToken}/getChatAdministrators`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId }),
-      signal: AbortSignal.timeout(10_000),
-    });
+    response = await postTelegramBotApi(botToken, "getChatAdministrators", { chat_id: chatId });
   } catch (err) {
     console.warn(
       `[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`,

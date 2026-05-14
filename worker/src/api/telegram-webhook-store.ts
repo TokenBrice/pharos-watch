@@ -4,6 +4,7 @@ import type {
   ConfirmBulkPayload,
   ParsedSetCommand,
   PendingActionType,
+  PendingDisambiguationRow,
   PresetSubscriptionRow,
   SubscriberRow,
   SubscriptionRow,
@@ -471,6 +472,18 @@ export async function persistPendingDisambiguationRow(
     )
     .run();
   return d1ChangeCount(result) > 0;
+}
+
+export async function loadPendingDisambiguation(
+  db: D1Database,
+  chatId: string,
+): Promise<PendingDisambiguationRow | null> {
+  return db
+    .prepare(
+      "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
+    )
+    .bind(chatId)
+    .first<PendingDisambiguationRow>();
 }
 
 /**

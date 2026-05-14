@@ -13,7 +13,6 @@ import {
 import {
   SETUP_PENDING_ACTION_TYPE,
   type PendingAction,
-  type PendingDisambiguationRow,
   type TelegramWebhookUpdate,
 } from "./telegram-webhook-shared";
 import { handleSetupTickerInput, parseSetupState } from "./telegram-webhook-setup";
@@ -26,6 +25,7 @@ import {
   acquireTelegramCommandCooldown,
   claimTelegramProcessedUpdate,
   clearPendingDisambiguation,
+  loadPendingDisambiguation,
   markTelegramProcessedUpdateFailed,
   markTelegramProcessedUpdateProcessed,
   migrateTelegramChatId,
@@ -329,12 +329,7 @@ export const handleTelegramWebhook = withErrorHandler(
         return finishOk();
       }
 
-      const pendingRow = await db
-        .prepare(
-          "SELECT action_type, action_payload, alert_types, resolved_ids, ambiguous_ticker, candidates, remaining_tickers, expires_at, initiator_user_id FROM telegram_pending_disambiguation WHERE chat_id = ?",
-        )
-        .bind(chatId)
-        .first<PendingDisambiguationRow>();
+      const pendingRow = await loadPendingDisambiguation(db, chatId);
 
       const pendingNotExpired = Boolean(pendingRow && unixNow() < pendingRow.expires_at);
       const isSetupPending =
@@ -674,7 +669,7 @@ async function maybeGateNonAdminGroupActor(
   reply: (message: string) => Promise<void>,
 ): Promise<boolean> {
   if (actorUserId != null) {
-    if (await isGroupAdminActor(db, botToken, chatId, actorUserId)) {
+    if (await isGroupAdminActor(botToken, chatId, actorUserId)) {
       return true;
     }
   }

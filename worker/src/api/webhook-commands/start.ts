@@ -81,7 +81,7 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
     case "none":
       if (
         isGroupChatType(ctx.chatType) &&
-        !(await isGroupAdminActor(ctx.db, ctx.botToken, ctx.chatId, ctx.actorUserId))
+        !(await isGroupAdminActor(ctx.botToken, ctx.chatId, ctx.actorUserId))
       ) {
         await ctx.replyToChat(START_MESSAGE);
         return;

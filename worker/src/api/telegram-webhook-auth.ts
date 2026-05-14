@@ -1,4 +1,4 @@
-import { answerCallbackQuery } from "../lib/telegram";
+import { answerCallbackQuery, postTelegramBotApi } from "../lib/telegram";
 import { timingSafeCompare } from "../lib/auth";
 import { logTelegramInvalidSecretAttempt } from "../lib/telegram-log";
 import { drainResponseBody } from "../lib/response-body";
@@ -41,7 +41,6 @@ export async function validateTelegramWebhookSecret(
 }
 
 export async function isGroupAdminActor(
-  _db: D1Database,
   botToken: string,
   chatId: string,
   actorUserId: string | null,
@@ -59,11 +58,9 @@ async function getFreshChatMemberForAuthorization(
 ): Promise<{ status?: string } | null> {
   let response: Response;
   try {
-    response = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, user_id: Number(actorUserId) }),
-      signal: AbortSignal.timeout(10_000),
+    response = await postTelegramBotApi(botToken, "getChatMember", {
+      chat_id: chatId,
+      user_id: Number(actorUserId),
     });
   } catch {
     return null;
@@ -81,7 +78,7 @@ async function getFreshChatMemberForAuthorization(
 }
 
 export async function requireGroupAdminForCallback(
-  db: D1Database,
+  _db: D1Database,
   botToken: string,
   callbackQueryId: string,
   chatId: string,
@@ -90,7 +87,7 @@ export async function requireGroupAdminForCallback(
   denialText: string,
 ): Promise<boolean> {
   if (!isGroupChatType(chatType)) return true;
-  if (await isGroupAdminActor(db, botToken, chatId, actorUserId)) return true;
+  if (await isGroupAdminActor(botToken, chatId, actorUserId)) return true;
   await answerCallbackQuery(callbackQueryId, botToken, { text: denialText });
   return false;
 }

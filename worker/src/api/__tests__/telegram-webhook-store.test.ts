@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
+  loadPendingDisambiguation,
   maybePruneTelegramProcessedUpdates,
   persistPendingConfirmBulk,
   persistPendingDisambiguationRow,
@@ -110,6 +111,35 @@ describe("persistPendingDisambiguationRow", () => {
     const [entry] = db.getHistory();
     expect(entry?.binds).toContain("confirm-bulk");
     expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
+  });
+});
+
+describe("loadPendingDisambiguation", () => {
+  it("loads the full pending action row by chat id", async () => {
+    const row = {
+      action_type: "subscribe",
+      action_payload: "{}",
+      alert_types: "[]",
+      resolved_ids: "[]",
+      ambiguous_ticker: "USD",
+      candidates: "[]",
+      remaining_tickers: "[]",
+      expires_at: 1_700_000_300,
+      initiator_user_id: "123",
+    };
+    const db = mockD1([
+      {
+        match: "FROM telegram_pending_disambiguation WHERE chat_id = ?",
+        rows: [row],
+      },
+    ]);
+
+    await expect(loadPendingDisambiguation(db, "42")).resolves.toEqual(row);
+
+    const [entry] = db.getHistory();
+    expect(entry?.sql).toContain("action_type, action_payload, alert_types");
+    expect(entry?.sql).toContain("initiator_user_id FROM telegram_pending_disambiguation");
+    expect(entry?.binds).toEqual(["42"]);
   });
 });
 

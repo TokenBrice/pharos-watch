@@ -184,9 +184,9 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Owned files.**
 - `worker/src/api/telegram-webhook-store.ts` (the bulk of subscription/disambiguation writes and reads)
-- `worker/src/lib/telegram-chat-member.ts` (cached chat-admin reads via Telegram API; the cache lives in D1)
+- `worker/src/lib/telegram-chat-member.ts` (cached chat-admin read policy; Bot API HTTP goes through Outbound transport)
 - `worker/src/lib/telegram-usage-analytics.ts` (usage events, lifecycle snapshots, chat delivery diagnostics)
-- `worker/src/lib/telegram-webhook-registration.ts` (writes the Bot API webhook/commands/profile/menu-button reconcile cadence to D1 cache)
+- `worker/src/lib/telegram-webhook-registration.ts` (Bot API webhook/commands/profile/menu-button reconcile cadence and D1 cache markers; Bot API HTTP goes through Outbound transport)
 - D1 schemas — owned by the migrations themselves (see [`telegram-alerts.md`](./telegram-alerts.md#d1-schema)):
   - `telegram_subscribers` — per-chat state and defaults
   - `telegram_subscriptions` — per-chat per-coin alert prefs
@@ -203,10 +203,10 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Allowed inbound dependencies.** Every other seam may read/write through these helpers.
 
-**Allowed outbound dependencies.** Cache helpers (`worker/src/lib/db-cache.ts`), `worker/src/lib/db.ts`, Common.
+**Allowed outbound dependencies.** Cache helpers (`worker/src/lib/db-cache.ts`), `worker/src/lib/db.ts`, Outbound transport for the narrow chat-member and registration Bot API calls, Common.
 
 **Must NOT.**
-- Format messages or send to Telegram.
+- Format messages or send user-visible Telegram messages.
 - Take direct dependencies on Action handlers or Dispatch — keep the helpers callable from both lanes.
 - Add an ORM, schema-builder, or "repository" abstraction.
 
@@ -217,11 +217,11 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 **Responsibility.** The single place that hits `https://api.telegram.org/bot<token>/…`. Owns HTTP timeouts, the `link_preview_options` shape, the response-body drain (required under the Cloudflare 6-connection cap), Bot API error classification, and the auditing wrapper that updates per-chat reply diagnostics.
 
 **Owned files.**
-- `worker/src/lib/telegram.ts` (`sendToChat`, `sendBatch`, `postTelegramMessage`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
+- `worker/src/lib/telegram.ts` (`postTelegramBotApi`, `sendToChat`, `sendBatch`, `postTelegramMessage`, `answerCallbackQuery`, `editMessage`, `escapeHtml`, link-preview helpers, send-error classification)
 - `worker/src/api/telegram-webhook-replies.ts` (`sendAuditedTelegramReply` — chunks + diagnostics + replyMarkup)
 - `worker/src/lib/telegram-log.ts` (structured Telegram event logger)
 
-**Allowed inbound dependencies.** Action handlers, Callback routing, Ingress (for replies), Dispatch (alert sends), Queue (drains), admin routes, daily digest, registration reconciliation.
+**Allowed inbound dependencies.** Action handlers, Callback routing, Ingress (for replies), Dispatch (alert sends), Queue (drains), admin routes, daily digest, registration reconciliation, chat-admin membership probes.
 
 **Allowed outbound dependencies.** Native `fetch`, Common.
 
