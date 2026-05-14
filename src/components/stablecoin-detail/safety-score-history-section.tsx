@@ -50,18 +50,18 @@ function StatBox({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-background/45 px-3.5 py-3">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-lg border border-border/60 bg-background/45 px-3 py-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
-      {children}
+      <div className="mt-0.5">{children}</div>
     </div>
   );
 }
 
 function TransitionIndicator({ point }: { point: SafetyScoreHistoryPoint }) {
   if (point.prevGrade == null) {
-    return <p className="mt-1 text-sm text-muted-foreground">Initial grade</p>;
+    return <span className="text-xs text-muted-foreground">Initial grade</span>;
   }
 
   const prev = gradeRank(point.prevGrade);
@@ -69,26 +69,26 @@ function TransitionIndicator({ point }: { point: SafetyScoreHistoryPoint }) {
 
   if (curr < prev) {
     return (
-      <p className="mt-1 flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
-        <ArrowUp className="h-3.5 w-3.5" />
+      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-green-700 dark:text-green-400">
+        <ArrowUp className="h-3 w-3" />
         Upgraded from {point.prevGrade}
-      </p>
+      </span>
     );
   }
 
   if (curr > prev) {
     return (
-      <p className="mt-1 flex items-center gap-1 text-sm text-red-700 dark:text-red-400">
-        <ArrowDown className="h-3.5 w-3.5" />
+      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-red-700 dark:text-red-400">
+        <ArrowDown className="h-3 w-3" />
         Downgraded from {point.prevGrade}
-      </p>
+      </span>
     );
   }
 
   return (
-    <p className="mt-1 text-sm text-muted-foreground">
+    <span className="text-xs text-muted-foreground">
       {point.prevGrade} to {point.grade}
-    </p>
+    </span>
   );
 }
 
@@ -176,7 +176,7 @@ export function SafetyScoreHistorySection({
       <CardContent>
         {/* Summary stats strip */}
         {stats && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <StatBox label="Best Grade">
               <SafetyGradeBadge grade={stats.best.grade} score={stats.best.score} size="xs" />
             </StatBox>
@@ -185,10 +185,10 @@ export function SafetyScoreHistorySection({
             </StatBox>
             <StatBox label="Current Streak">
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-semibold tabular-nums">
+                <span className="text-xs font-semibold tabular-nums">
                   {formatTrackingSpanDays(stats.streakDays)}
                 </span>
-                <span className="text-sm text-muted-foreground">at</span>
+                <span className="text-xs text-muted-foreground">at</span>
                 <SafetyGradeBadge grade={stats.lastEntry.grade} score={stats.lastEntry.score} size="xs" />
               </div>
             </StatBox>
@@ -199,7 +199,7 @@ export function SafetyScoreHistorySection({
         {segments.length > 0 && (
           <TooltipProvider>
             <div
-              className="mt-4 flex h-4 overflow-hidden rounded-full bg-muted"
+              className="mt-3 flex h-3 overflow-hidden rounded-full bg-muted"
               role="img"
               aria-label={`Grade timeline: ${segments.map((seg) => `${seg.grade} for ${formatDuration(seg.start, seg.end)}`).join(", ")}`}
             >
@@ -237,14 +237,14 @@ export function SafetyScoreHistorySection({
         )}
 
         {/* Transition list */}
-        <ol className="mt-4 space-y-3">
+        <ol className="mt-3 divide-y divide-border/60 rounded-lg border border-border/60">
           {visibleEntries.map((point) => (
             <li
               key={`${point.date}-${point.grade}`}
-              className="rounded-lg border px-3 py-3"
+              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-1.5"
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="text-xs font-medium tabular-nums">
                   {formatChartDate(point.date * 1000, "long")}
                 </span>
                 <SafetyGradeBadge grade={point.grade} score={point.score} size="xs" />
@@ -256,12 +256,12 @@ export function SafetyScoreHistorySection({
 
         {/* Show more / show less */}
         {hiddenCount > 0 && (
-          <div className="pt-2 text-center">
+          <div className="pt-1 text-center">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs"
+              className="h-7 text-xs"
             >
               {expanded
                 ? "Show less"
