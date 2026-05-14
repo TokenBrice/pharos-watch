@@ -15,8 +15,21 @@ const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
 const BOT_URL = "https://t.me/PharosWatchBot";
 const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
 const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
+const TELEGRAM_BROWSER_PREVIEW_ATTEMPTS = 10;
+const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
+const TELEGRAM_LAUNCH_RETRY_MS = 50;
 
 type ViewKey = "home" | "watchlist" | "settings";
+
+class MiniAppRequestError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`Request failed with ${status}`);
+    this.name = "MiniAppRequestError";
+    this.status = status;
+  }
+}
 
 function initialViewFromStartParam(startParam: string | null): ViewKey {
   if (startParam === "settings") return "settings";
@@ -30,8 +43,17 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+  if (!response.ok) throw new MiniAppRequestError(response.status);
   return await response.json() as T;
+}
+
+function sessionErrorMessage(err: unknown): string {
+  if (err instanceof MiniAppRequestError) {
+    if (err.status === 401) return "Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.";
+    if (err.status === 429) return "Telegram is still opening your session. Wait a moment, then retry.";
+    if (err.status === 503) return "Telegram Mini App auth is temporarily unavailable. Try again shortly.";
+  }
+  return "Could not load Mini App settings. Reopen from Telegram or try again.";
 }
 
 function formatTime(ts: number | null): string {
@@ -279,18 +301,14 @@ export function PharosWatchBotMiniAppClient() {
   const [isMutating, setIsMutating] = useState(false);
 
   const loadSession = useCallback(async (nextInitData: string, nextStartParam: string | null) => {
-    if (!nextInitData) {
-      setStatus("preview");
-      return;
-    }
     setStatus("loading");
     try {
       setState(await postJson<TelegramMiniAppState>(SESSION_ENDPOINT, { initData: nextInitData, startParam: nextStartParam }));
       setStatus("ready");
       setMessage(null);
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setMessage("Could not load Mini App settings. Reopen from Telegram or try again.");
+      setMessage(sessionErrorMessage(err));
     }
   }, []);
 
@@ -302,9 +320,12 @@ export function PharosWatchBotMiniAppClient() {
 
     const initialize = () => {
       const launch = getTelegramLaunchContext();
-      if (!launch.webApp && !launch.initData && attempts < 10) {
+      const shouldKeepWaiting = !launch.initData
+        && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS
+        && (launch.hasTelegramLaunchHint || attempts < TELEGRAM_BROWSER_PREVIEW_ATTEMPTS);
+      if (shouldKeepWaiting) {
         attempts += 1;
-        timer = setTimeout(initialize, 50);
+        timer = setTimeout(initialize, TELEGRAM_LAUNCH_RETRY_MS);
         return;
       }
       if (cancelled) return;
@@ -316,7 +337,14 @@ export function PharosWatchBotMiniAppClient() {
       applyTelegramTheme(launch.webApp);
       cleanup = bindTelegramViewportAndTheme(launch.webApp);
       launch.webApp?.ready?.();
-      void loadSession(launch.initData, launch.startParam);
+      if (launch.initData) {
+        void loadSession(launch.initData, launch.startParam);
+      } else if (launch.hasTelegramLaunchHint) {
+        setStatus("error");
+        setMessage("Telegram launch data was not available. Close and reopen from PharosWatchBot.");
+      } else {
+        setStatus("preview");
+      }
     };
 
     initialize();

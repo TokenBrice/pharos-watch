@@ -47,15 +47,30 @@ export function getTelegramLaunchContext(): {
   initData: string;
   startParam: string | null;
   previewName: string | null;
+  hasTelegramLaunchHint: boolean;
 } {
-  if (typeof window === "undefined") return { webApp: null, initData: "", startParam: null, previewName: null };
+  if (typeof window === "undefined") {
+    return { webApp: null, initData: "", startParam: null, previewName: null, hasTelegramLaunchHint: false };
+  }
   const webApp = window.Telegram?.WebApp ?? null;
   const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash);
+  const hasTelegramLaunchHint = Boolean(
+    webApp
+    || window.Telegram
+    || search.has("tgWebAppStartParam")
+    || search.has("tgWebAppVersion")
+    || search.has("tgWebAppPlatform")
+    || hash.has("tgWebAppData")
+    || hash.has("tgWebAppVersion")
+    || hash.has("tgWebAppPlatform"),
+  );
   return {
     webApp,
     initData: webApp?.initData ?? "",
     startParam: webApp?.initDataUnsafe?.start_param ?? search.get("tgWebAppStartParam") ?? search.get("startapp"),
     previewName: webApp?.initDataUnsafe?.user?.first_name ?? webApp?.initDataUnsafe?.user?.username ?? null,
+    hasTelegramLaunchHint,
   };
 }
 
