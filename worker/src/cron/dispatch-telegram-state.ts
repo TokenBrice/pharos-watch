@@ -30,16 +30,32 @@ import {
 
 type CachedValue = { value: string; updatedAt: number } | null;
 
+function parseLaunchSnapshotIds(cached: CachedValue): string[] | null {
+  if (!cached) return null;
+  try {
+    const parsed = JSON.parse(cached.value);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((id): id is string => typeof id === "string");
+  } catch { /* expected: corrupted launch snapshot json */
+    return null;
+  }
+}
+
+export interface ActiveDepegRowWithEventId extends ActiveDepegRow {
+  event_id: number;
+}
+
 export interface DispatchSourceData {
   chatsWithActiveSnooze: number;
   dewsRows: DewsRow[];
-  activeDepegRows: ActiveDepegRow[];
+  activeDepegRows: ActiveDepegRowWithEventId[];
   safetyRows: SafetyRow[];
   dewsCache: CachedValue;
   dewsAlertableCache: CachedValue;
   depegCache: CachedValue;
   safetyCache: CachedValue;
   safetySourceCache: CachedValue;
+  launchCache: CachedValue;
 }
 
 export interface DispatchSnapshotState {
@@ -83,6 +99,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     safetySourceCache,
+    launchCache,
   ] = await Promise.all([
     db
       .prepare(
@@ -97,9 +114,9 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
       .then((result) => result.results ?? []),
     db
       .prepare(
-        "SELECT stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
+        "SELECT id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference FROM depeg_events WHERE ended_at IS NULL",
       )
-      .all<ActiveDepegRow>()
+      .all<ActiveDepegRowWithEventId>()
       .then((result) => result.results ?? []),
     db
       .prepare(
@@ -126,6 +143,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
     getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
+    getCache(db, SNAPSHOT_KEYS.launch),
   ]);
 
   return {
@@ -138,6 +156,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     safetySourceCache,
+    launchCache,
   };
 }
 
@@ -168,22 +187,25 @@ export function buildDispatchSnapshotState(
       previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "")
     );
 
-  const currentSnapshots = {
-    dews: buildDewsSnapshot(sourceData.dewsRows),
-    dewsAlertable: buildDewsAlertableSnapshot(
-      sourceData.dewsRows,
-      previousDewsAlertableSnapshot,
-    ),
-    depeg: buildDepegSnapshot(sourceData.activeDepegRows),
-    safety:
-      currentSafetySnapshot != null && safetySourceAssessment.generation != null
-        ? buildAlertSafetySnapshotEnvelope(
-            currentSafetySnapshot,
-            safetySourceAssessment.generation,
-          )
-        : null,
-    launch: PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
-  };
+  // Augment the current depeg snapshot with the active event id per coin so the
+  // close-then-reopen-within-one-window diff in dispatch-telegram-events can tell
+  // event #1 (now ended) and event #2 (now active) apart. Legacy snapshots
+  // without `eventId` still diff on stablecoin_id alone (backward compatible).
+  const currentDepegSnapshot = buildDepegSnapshot(sourceData.activeDepegRows);
+  for (const row of sourceData.activeDepegRows) {
+    const entry = currentDepegSnapshot[row.stablecoin_id];
+    if (entry) {
+      (entry as DepegSnapshot[string] & { eventId?: number }).eventId = row.event_id;
+    }
+  }
+
+  // P1.7: when dews/depeg snapshots are stale we enter the seed branch and skip
+  // fan-out. If we ALSO overwrite the launch snapshot here, any pre-launch coin
+  // that flipped to active between the prior healthy run and this seed is
+  // silently absorbed. Preserve the prior launch snapshot so the next healthy
+  // run can detect the transition. When there is no parseable prior snapshot
+  // we still seed with the current pre-launch set (no transition to lose).
+  const previousLaunchIds = parseLaunchSnapshotIds(sourceData.launchCache);
 
   const mustSeedSnapshots =
     isSnapshotMissingOrStale(sourceData.dewsCache, nowSec) ||
@@ -192,6 +214,26 @@ export function buildDispatchSnapshotState(
     isSnapshotMissingOrStale(sourceData.depegCache, nowSec) ||
     previousDewsSnapshot == null ||
     previousDepegSnapshot == null;
+
+  const currentSnapshots = {
+    dews: buildDewsSnapshot(sourceData.dewsRows),
+    dewsAlertable: buildDewsAlertableSnapshot(
+      sourceData.dewsRows,
+      previousDewsAlertableSnapshot,
+    ),
+    depeg: currentDepegSnapshot,
+    safety:
+      currentSafetySnapshot != null && safetySourceAssessment.generation != null
+        ? buildAlertSafetySnapshotEnvelope(
+            currentSafetySnapshot,
+            safetySourceAssessment.generation,
+          )
+        : null,
+    launch:
+      mustSeedSnapshots && previousLaunchIds != null
+        ? previousLaunchIds
+        : PRE_LAUNCH_STABLECOINS.map((coin) => coin.id),
+  };
 
   return {
     nowSec,

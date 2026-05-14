@@ -2843,4 +2843,186 @@ describe("dispatchTelegramAlerts", () => {
     expect(sentChatIds.has(megaChatId)).toBe(true);
     expect(sentChatIds.size).toBeGreaterThan(1);
   });
+
+  it("preserves the launch snapshot in the seed branch so the next healthy run still detects the transition (P1.7)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Stand-in prior launch snapshot: pretend usdc-circle was pre-launch on the
+    // last healthy run. usdc-circle is in ACTIVE_IDS but not in the live
+    // PRE_LAUNCH_STABLECOINS, so it represents the kind of pre-launch -> active
+    // transition this test exercises.
+    const preservedLaunchIds = ["usdc-circle"];
+    // First cycle: dews + depeg snapshots are missing -> seed branch fires.
+    let snapshotsHealthy = false;
+    let cachedLaunchSnapshot: string = JSON.stringify(preservedLaunchIds);
+
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:launch-snapshot") {
+        return { value: cachedLaunchSnapshot, updatedAt: now - 60 };
+      }
+      if (!snapshotsHealthy) {
+        // Force seed branch by returning null for dews/depeg in cycle 1.
+        return null;
+      }
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:dews-alertable-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    // The seed branch writes via setCache; capture the launch-snapshot write
+    // so we can prove it preserved the prior IDs instead of overwriting them
+    // with the (empty-of-usdc-circle) current PRE_LAUNCH set.
+    mockSetCache.mockImplementation(async (_db: unknown, key: string, value: string) => {
+      if (key === "alert:launch-snapshot") {
+        cachedLaunchSnapshot = value;
+      }
+      return undefined;
+    });
+
+    // Cycle 1: seed branch only needs the three source SELECTs.
+    const dbCycle1 = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+    ]);
+    const cycle1 = await dispatchTelegramAlerts(dbCycle1, "bot-token");
+    const cycle1Meta = JSON.parse(cycle1.metadata) as { snapshotSeeded: boolean };
+    expect(cycle1Meta.snapshotSeeded).toBe(true);
+
+    // Bug regression guard: the seed branch must NOT have written the live
+    // PRE_LAUNCH_STABLECOINS set; the prior `["usdc-circle"]` must survive.
+    const parsedAfterSeed = JSON.parse(cachedLaunchSnapshot) as string[];
+    expect(parsedAfterSeed).toContain("usdc-circle");
+
+    // Cycle 2: snapshots are now healthy. The preserved prior launch snapshot
+    // contains usdc-circle; the live PRE_LAUNCH_STABLECOINS does not (usdc-circle
+    // is active), so the launch diff must surface a launch alert.
+    snapshotsHealthy = true;
+    const dbCycle2 = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM depeg_events WHERE ended_at IS NULL", rows: [] },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_launch = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "555", last_active_at: now }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const cycle2 = await dispatchTelegramAlerts(dbCycle2, "bot-token");
+    const cycle2Meta = JSON.parse(cycle2.metadata) as {
+      eventsDetected: { launch: number };
+      subscribersNotified: number;
+      messagesSent: number;
+    };
+
+    expect(cycle2Meta.eventsDetected.launch).toBe(1);
+    expect(cycle2Meta.subscribersNotified).toBe(1);
+    expect(cycle2Meta.messagesSent).toBe(1);
+    expect(mockSendToChat).toHaveBeenCalledTimes(1);
+    expect(mockSendToChat.mock.calls[0]?.[0]).toBe("555");
+  });
+
+  it("emits BOTH resolved (event #1) and new-trigger (event #2) when an active depeg closes and reopens within one window (P1.10)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Prior depeg snapshot: event #1 active for usdc-circle (eventId carried).
+    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
+      if (key === "alert:dews-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:dews-alertable-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      if (key === "alert:depeg-snapshot") {
+        return {
+          value: JSON.stringify({
+            "usdc-circle": {
+              stablecoinId: "usdc-circle",
+              symbol: "USDC",
+              direction: "below",
+              deviationBps: 120,
+              price: 0.988,
+              pegReference: 1,
+              eventId: 1,
+            },
+          }),
+          updatedAt: now - 60,
+        };
+      }
+      if (key === "alert:safety-snapshot") {
+        return { value: JSON.stringify({}), updatedAt: now - 60 };
+      }
+      return null;
+    });
+
+    // Current state: event #1 ended 1 minute ago; event #2 is now active for the
+    // same coin with a different event_id. The active SELECT returns event #2;
+    // the resolved-lookup SELECT (MAX(ended_at)) returns event #1.
+    const db = mockD1([
+      { match: "FROM stress_signals", rows: [] },
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            event_id: 2,
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            direction: "below",
+            peak_deviation_bps: 90,
+            start_price: 0.991,
+            peg_reference: 1,
+          },
+        ],
+      },
+      {
+        match: "FROM depeg_events event",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peak_deviation_bps: 120,
+            started_at: now - 1800,
+            ended_at: now - 60,
+            recovery_price: 1,
+          },
+        ],
+      },
+      { match: "FROM safety_grade_history", rows: [] },
+      { match: "SELECT p.id, p.chat_id, p.message_html", rows: [] },
+      {
+        match: "sub.alert_depeg = 1",
+        rows: [{ stablecoin_id: "usdc-circle", chat_id: "12345", last_active_at: now }],
+      },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
+    ]);
+
+    const result = await dispatchTelegramAlerts(db, "bot-token");
+    const metadata = JSON.parse(result.metadata) as {
+      eventsDetected: {
+        depeg: number;
+        depegTriggered: number;
+        depegResolved: number;
+        depegWorsening: number;
+      };
+    };
+
+    // BOTH events must fire: the new event #2 trigger AND the event #1 resolve.
+    expect(metadata.eventsDetected.depegTriggered).toBe(1);
+    expect(metadata.eventsDetected.depegResolved).toBe(1);
+    // Worsening must NOT fire — event #1 != event #2; the new event is a
+    // fresh trigger, not a worsening of the prior event.
+    expect(metadata.eventsDetected.depegWorsening).toBe(0);
+  });
 });

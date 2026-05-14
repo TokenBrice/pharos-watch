@@ -65,7 +65,6 @@ export async function buildTelegramDispatchEvents(
   } = sourceData;
   const {
     currentSafetySnapshot,
-    currentSnapshots,
     safeDepegSnapshot,
     safeDewsAlertable,
     safeDewsSnapshot,
@@ -87,10 +86,32 @@ export async function buildTelegramDispatchEvents(
   );
 
   const previousActiveIds = new Set(Object.keys(safeDepegSnapshot));
-  const currentActiveIds = new Set(Object.keys(currentSnapshots.depeg));
+
+  // P1.10: prior snapshots carry an optional `eventId` so we can tell a
+  // close-then-reopen-within-one-window apart (event #1 ended, event #2 active
+  // for the same coin). Legacy snapshots without `eventId` fall back to
+  // stablecoin_id-only membership so behavior is unchanged for older caches.
+  const previousEventIdByStablecoinId = new Map<string, number>();
+  for (const [stablecoinId, entry] of Object.entries(safeDepegSnapshot)) {
+    const eventId = (entry as { eventId?: unknown }).eventId;
+    if (typeof eventId === "number" && Number.isFinite(eventId)) {
+      previousEventIdByStablecoinId.set(stablecoinId, eventId);
+    }
+  }
+  const currentRowByStablecoinId = new Map(
+    activeDepegRows.map((row) => [row.stablecoin_id, row] as const),
+  );
+  function isReopenedEvent(stablecoinId: string, currentEventId: number): boolean {
+    const previousEventId = previousEventIdByStablecoinId.get(stablecoinId);
+    return previousEventId != null && previousEventId !== currentEventId;
+  }
 
   const depegTriggered: DepegAlertPayload[] = activeDepegRows
-    .filter((row) => !previousActiveIds.has(row.stablecoin_id))
+    .filter(
+      (row) =>
+        !previousActiveIds.has(row.stablecoin_id) ||
+        isReopenedEvent(row.stablecoin_id, row.event_id),
+    )
     .map((row) => ({
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
@@ -107,6 +128,11 @@ export async function buildTelegramDispatchEvents(
       if (!previous || previous.direction !== row.direction || currentDeviationBps <= previous.deviationBps) {
         return [];
       }
+      // A close-then-reopen surfaces as `depegTriggered` for the new event id;
+      // suppress the worsening alert so we don't double-fire on the same event.
+      if (isReopenedEvent(row.stablecoin_id, row.event_id)) {
+        return [];
+      }
       return [{
         stablecoinId: row.stablecoin_id,
         symbol: row.symbol,
@@ -119,7 +145,13 @@ export async function buildTelegramDispatchEvents(
     });
 
   const depegResolved: DepegResolved[] = [];
-  const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => !currentActiveIds.has(stablecoinId));
+  // A previously-active coin "resolved" either because it has no active event
+  // anymore OR because the active event id changed (close-then-reopen).
+  const resolvedCandidateIds = [...previousActiveIds].filter((stablecoinId) => {
+    const currentRow = currentRowByStablecoinId.get(stablecoinId);
+    if (!currentRow) return true;
+    return isReopenedEvent(stablecoinId, currentRow.event_id);
+  });
   if (resolvedCandidateIds.length > 0) {
     throwIfAborted(signal);
     const resolvedRows: Array<{
