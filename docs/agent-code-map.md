@@ -580,7 +580,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/address-price-providers/birdeye.ts` - runBirdeyeAddressProvider
 - `worker/src/lib/address-price-providers/dexpaprika.ts` - runDexPaprikaAddressProvider
 - `worker/src/lib/address-price-providers/dexscreener.ts` - runDexScreenerAddressProvider
-- `worker/src/lib/address-price-providers/geckoterminal.ts` - runGeckoTerminalAddressProvider
+- `worker/src/lib/address-price-providers/coingecko-onchain.ts` - runCoingeckoOnchainAddressProvider
 - `worker/src/lib/address-price-providers/index.ts` - ADDRESS_PROVIDER_CIRCUIT_SOURCE, buildAddressPriceTargetsByProvider, collectAddressPriceProviderQuotes, resolveEnabledAddressPriceProviders
 - `worker/src/lib/address-price-providers/moralis.ts` - runMoralisAddressProvider
 - `worker/src/lib/address-price-providers/shared.ts` - ADDRESS_PROVIDER_MIN_LIQUIDITY_USD, ADDRESS_PROVIDER_RUN_BUDGET_MS, chunk, emptyProviderResult, fetchProviderJson, getTokenAddressFromRecord
