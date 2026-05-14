@@ -8,6 +8,7 @@ Route contract for `/`, the main Pharos dashboard.
 
 - **Server shell:** `src/app/page.tsx`
 - **Desktop masthead:** `src/components/site-header.tsx`
+- **Homepage top tape:** `src/components/homepage-top-tape.tsx` + `src/components/homepage-tape.tsx`
 - **KPI strip:** `src/components/kpi-bar.tsx`
 - **Main dashboard client:** `src/components/homepage-client.tsx`
 
@@ -15,7 +16,7 @@ The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
 2. `SiteHeader`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
-3. a responsive wrapper containing optional `HomepageStartHereCallout`, `HomepageTape`, and `KpiBar`
+3. a responsive wrapper containing optional `HomepageStartHereCallout` and `KpiBar`
 4. `HomepageClient`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
@@ -30,11 +31,11 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 - peg count from `PEG_CURRENCY_COUNT`
 - chain count from `CHAIN_META`
 
-The visible top fold is split across three independently composed surfaces:
+The visible top fold is split across four independently composed surfaces:
 
+- `HomepageTopTape`, rendered directly under the global PSI `RegimeBar` on `/`; it uses full mobile width and the available desktop width to the right of the sidebar
 - `SiteHeader` on `lg+`
 - the optional `HomepageStartHereCallout`, rendered by `src/app/page.tsx` between `SiteHeader` and the KPI strip
-- `HomepageTape`, rendered after the Start Here callout and before the KPI strip
 - `KpiBar` across breakpoints
 
 `SiteHeader` owns the visible `h1` and keeps one raw heading across breakpoints. Mobile and desktop masthead layouts may duplicate metric groups, but they must not duplicate the page-level heading because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
@@ -97,7 +98,7 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 ### `HomepageTape`
 
-The live tape reads `useRecentEvents(20)`, which resolves to `GET /api/recent-events?limit=20` and is delivered to browsers through same-origin `/_site-data/recent-events?limit=20` on production Pages hosts. The component renders nothing on endpoint errors or a valid empty event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useRecentEvents(20)`, which resolves to `GET /api/recent-events?limit=20` and is delivered to browsers through same-origin `/_site-data/recent-events?limit=20` on production Pages hosts. `HomepageTopTape` mounts it only on `/`, directly under the global PSI regime bar. On desktop it starts at the active sidebar width so it does not cover the main navigation; on mobile it spans the full viewport. The component renders nothing on endpoint errors or a valid empty event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
 ---
 
@@ -155,14 +156,14 @@ The `/start/` route is documented in [Start Page](./start-page.md).
 
 ## Section Order
 
-Above the fold (`src/app/page.tsx`):
+Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 
-1. `SiteHeader`
-2. `HomepageStartHereCallout` (first-session only)
-3. `HomepageTape`
+1. `HomepageTopTape` directly below the global PSI `RegimeBar`
+2. `SiteHeader`
+3. `HomepageStartHereCallout` (first-session only)
 4. `KpiBar`
 
-The Start Here callout, live tape, and KPI bar share a plain vertical wrapper. Returning visitors who have retired the Start Here callout see the live tape directly under the header.
+The Start Here callout and KPI bar share a plain vertical wrapper. Returning visitors who have retired the Start Here callout see the Market Snapshot directly under the masthead.
 
 Under the fold (`HomepageClient`):
 

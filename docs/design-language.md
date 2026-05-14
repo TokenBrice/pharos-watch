@@ -122,6 +122,7 @@ Home keeps a single visible page `h1` owned by `SiteHeader`; the rest of the top
 Behavioral contract: [Homepage](./homepage.md)
 
 - Masthead strip: `pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5` — stacked on mobile, side-by-side from `md` upward
+- Live tape: homepage-only strip mounted directly below the global PSI `RegimeBar`, before the masthead. It spans the full viewport on mobile and starts at the active sidebar width on desktop so the ticker never covers the navigation column.
 - Start Here onboarding callout: large CTA card appears only during a browser's first homepage session and retires once `/start/` has been opened, so repeat visitors drop straight into live data
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 - Snapshot PSI lead card always renders the three compact delta pills (`24h`, `7d`, `30d`) beside the score/band lockup

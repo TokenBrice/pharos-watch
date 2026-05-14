@@ -3,7 +3,6 @@ import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { HomepageStartHereCallout } from "@/components/homepage-sections";
-import { HomepageTape } from "@/components/homepage-tape";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -91,7 +90,6 @@ export default function HomePage() {
           <div className="empty:hidden">
             <HomepageStartHereCallout />
           </div>
-          <HomepageTape />
           <div>
             <KpiBar />
           </div>

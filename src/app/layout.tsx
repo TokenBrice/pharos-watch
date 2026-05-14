@@ -9,6 +9,7 @@ import { FeedbackButton } from "@/components/feedback-button";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
+import { HomepageTopTape } from "@/components/homepage-top-tape";
 import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -80,12 +81,13 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>
-          <RouteChrome>
-            <RegimeBar />
-            <div className="h-[3px] shrink-0" />
-            <Header />
-          </RouteChrome>
           <SidebarProvider>
+            <RouteChrome>
+              <RegimeBar />
+              <div className="h-[3px] shrink-0" />
+              <HomepageTopTape />
+              <Header />
+            </RouteChrome>
             <div className="flex min-h-screen">
               <RouteChrome>
                 <Sidebar />
