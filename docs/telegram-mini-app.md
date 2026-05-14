@@ -33,7 +33,7 @@ The full inventory of launch entrypoints and their reconciliation paths is docum
 
 ## Payload Scheme
 
-Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. Both parsers — the worker `?start=` deep-link parser (`worker/src/api/telegram-webhook-parsing.ts:parseStartPayload`) and the frontend `?startapp=` parser (`src/app/pharoswatchbot/app/client.tsx:initialViewFromStartParam`) — import the same registry from `shared/lib/telegram-mini-app-payloads.ts` so drift between the bot and the Mini App is impossible.
+Mini App launches accept a `?startapp=<payload>` parameter that selects the initial view. Both parsers — the worker `?start=` deep-link parser in `worker/src/api/telegram-webhook-parsing.ts` and the frontend `?startapp=` parser in `src/app/pharoswatchbot/app/client.tsx` — import the same registry from `shared/lib/telegram-mini-app-payloads.ts` so drift between the bot and the Mini App is impossible.
 
 Recognized payloads:
 
@@ -111,4 +111,4 @@ For incident triage, start at the runbooks rather than DevTools:
 
 - `worker/src/lib/__tests__/telegram-mini-app-auth.test.ts` — HMAC validation, freshness windows, replay protection, group/supergroup read-only behavior, bot-token rotation overlap.
 - `worker/src/api/__tests__/telegram-mini-app.test.ts` — session and mutation endpoint behavior, state contract, mutation cooldowns, partial-failure rollback.
-- `src/app/pharoswatchbot/app/__tests__/page.test.tsx` — client preview state and post-launch rendering.
+- `src/app/pharoswatchbot/app/page.test.tsx` — client preview state and post-launch rendering.

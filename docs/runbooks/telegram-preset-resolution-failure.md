@@ -17,7 +17,7 @@ Behavior: dispatch aborts the run rather than producing a falsely-empty preset-s
 
 1. **D1 schema drift?** The query in `resolveTelegramPresetTargets` reads `telegram_preset_subscriptions`. Confirm the migration list (`worker/migrations/MANIFEST.md`) is in sync and the latest migration matches the deployed Worker.
 2. **Stablecoins cache available?** The resolver reads the strict `stablecoins` cache plus `TRACKED_STABLECOINS`. A missing or stale cache makes resolution fail closed. Check `cache["alert:safety-source-cache"]` and the upstream `publish-report-card-cache` cron run; the resolver depends on the same source-of-truth.
-3. **TRACKED_STABLECOINS drift?** If a deploy changed `shared/data/stablecoins/tracked-stablecoins.json` while the preset rows reference an alias that no longer maps to any active coin, the resolver may return zero targets. Verify each canonical preset alias (`usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`) still produces a non-empty target set.
+3. **TRACKED_STABLECOINS drift?** If a deploy changed `shared/data/stablecoins/coins.generated.json` while the preset rows reference an alias that no longer maps to any active coin, the resolver may return zero targets. Verify each canonical preset alias (`usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`) still produces a non-empty target set.
 4. **Transient D1 failure?** `presetQueryFailures` increments when the `telegram_preset_subscriptions` SELECT throws. Check the `telegram_api` and D1 circuits via [`db-connectivity.md`](./db-connectivity.md).
 
 ## Operator Commands
