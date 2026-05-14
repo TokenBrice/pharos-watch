@@ -65,21 +65,48 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
     if (commandsResult.attempted) {
       console.log("[cron] Reconciled Telegram command suggestions");
     }
+  } catch (err) {
+    logTelegramEvent({
+      message: "registration reconciliation failed",
+      action: "reconcile-commands",
+      module: "five-minute-telegram",
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
+  try {
     const profileResult = await reconcileTelegramProfileRegistration(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
     });
     if (profileResult.attempted) {
       console.log("[cron] Reconciled Telegram bot profile metadata");
     }
+  } catch (err) {
+    logTelegramEvent({
+      message: "registration reconciliation failed",
+      action: "reconcile-profile",
+      module: "five-minute-telegram",
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
+  try {
     const menuResult = await reconcileTelegramMenuButton(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
     });
     if (menuResult.attempted) {
       console.log(`[cron] Reconciled Telegram menu button: ${menuResult.miniAppUrl}`);
     }
+  } catch (err) {
+    logTelegramEvent({
+      message: "registration reconciliation failed",
+      action: "reconcile-menu",
+      module: "five-minute-telegram",
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
+  try {
     const result = await reconcileTelegramWebhookRegistration(runtime.db, {
       botToken: runtime.env.TELEGRAM_BOT_TOKEN,
       webhookSecret: runtime.env.TELEGRAM_WEBHOOK_SECRET,
@@ -91,7 +118,7 @@ export async function runFiveMinuteTelegramSlot(runtime: ScheduledRuntimeContext
   } catch (err) {
     logTelegramEvent({
       message: "registration reconciliation failed",
-      action: "reconcile-registration",
+      action: "reconcile-webhook",
       module: "five-minute-telegram",
       err: err instanceof Error ? err.message : String(err),
     });
