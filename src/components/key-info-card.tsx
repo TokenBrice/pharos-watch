@@ -13,11 +13,20 @@ import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
 import type { StablecoinMeta } from "@shared/types";
 import {
-  GOVERNANCE_BADGE_STYLES,
   BACKING_BADGE_STYLES,
+  BACKING_LABELS,
+  GOVERNANCE_BADGE_STYLES,
+  GOVERNANCE_LABELS,
   PEG_BADGE_STYLES,
+  PEG_LABELS,
   POR_BADGE_STYLES,
 } from "@shared/lib/classification";
+import { buildPegLandingUrl } from "@/lib/peg-landing";
+import {
+  buildBackingTaxonomyUrl,
+  buildGovernanceTaxonomyUrl,
+  buildInfrastructureTaxonomyUrl,
+} from "@/lib/stablecoin-taxonomy";
 
 export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const [openChain, setOpenChain] = useState<string | null>(null);
@@ -28,16 +37,24 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
   const backing = BACKING_BADGE_STYLES[meta.flags.backing];
   const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
+  const governanceHref = buildGovernanceTaxonomyUrl(meta.flags.governance);
+  const backingHref = buildBackingTaxonomyUrl(meta.flags.backing);
+  const pegHref = buildPegLandingUrl(meta.flags.pegCurrency);
+  const governanceFullLabel = GOVERNANCE_LABELS[meta.flags.governance] ?? meta.flags.governance;
+  const backingFullLabel = BACKING_LABELS[meta.flags.backing] ?? meta.flags.backing;
+  const pegFullLabel = PEG_LABELS[meta.flags.pegCurrency] ?? meta.flags.pegCurrency;
   const infrastructures = meta.infrastructures ?? [];
   const infrastructureSummaries = infrastructures.map((value) => ({
     value,
     label: getInfrastructureLabel(value),
     summary: getInfrastructureSummary(value),
+    href: buildInfrastructureTaxonomyUrl(value),
   }));
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
   const hasContracts = contracts.length > 0;
+  const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
   const visibleMobileContracts = showAllContractsMobile ? contracts : mobileContractsPreview;
   const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
@@ -50,43 +67,62 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         <DetailSectionTitle>
           Key Information
         </DetailSectionTitle>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {meta.name} ({meta.symbol}) is a {governanceFullLabel}, {backingFullLabel} stablecoin pegged to{" "}
+          {pegFullLabel}.
+        </p>
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4">
         {/* Classification badges (identity) then external links (navigation) */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {gov && (
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}
+              <Link
+                href={governanceHref}
+                aria-label={`Browse ${governanceFullLabel} stablecoins`}
+                className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${gov.cls}`}
               >
                 {gov.label}
-              </span>
+              </Link>
             )}
             {backing && (
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}
+              <Link
+                href={backingHref}
+                aria-label={`Browse ${backingFullLabel} stablecoins`}
+                className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${backing.cls}`}
               >
                 {backing.label}
-              </span>
+              </Link>
             )}
-            {peg && (
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
-              >
-                {peg.label}
-              </span>
-            )}
-            {infrastructureSummaries.map(({ value, label }) => (
-              <span
+            {peg &&
+              (pegHref ? (
+                <Link
+                  href={pegHref}
+                  aria-label={`Browse ${pegFullLabel} stablecoins`}
+                  className={`pharos-focus-ring inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-colors hover:brightness-110 ${peg.cls}`}
+                >
+                  {peg.label}
+                </Link>
+              ) : (
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
+                >
+                  {peg.label}
+                </span>
+              ))}
+            {infrastructureSummaries.map(({ value, label, href }) => (
+              <Link
                 key={value}
+                href={href}
+                aria-label={`Browse ${label} infrastructure stablecoins`}
                 className={
                   value === "m0"
-                    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 dark:text-violet-400"
-                    : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue"
+                    ? "pharos-focus-ring inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-700 transition-colors hover:brightness-110 dark:text-violet-400"
+                    : "pharos-focus-ring inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-3 py-1 text-xs font-semibold text-frost-blue transition-colors hover:brightness-110"
                 }
               >
                 {label}
-              </span>
+              </Link>
             ))}
             {meta.flags.yieldBearing && (
               <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
@@ -156,9 +192,14 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         {infrastructureSummaries.length > 0 && (
           <div className="border-t border-border/40 pt-3 sm:pt-4 space-y-3">
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Infrastructure</p>
-            {infrastructureSummaries.map(({ value, label, summary }) => (
+            {infrastructureSummaries.map(({ value, label, summary, href }) => (
               <div key={value}>
-                <p className="text-xs font-semibold text-foreground">{label}</p>
+                <Link
+                  href={href}
+                  className="pharos-focus-ring rounded-sm text-xs font-semibold text-foreground hover:text-frost-blue"
+                >
+                  {label}
+                </Link>
                 <p className="text-sm leading-relaxed text-muted-foreground">{summary}</p>
               </div>
             ))}
@@ -219,9 +260,12 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         {/* Contract Addresses */}
         {hasContracts && (
           <div className="border-t border-border/40 pt-3 sm:pt-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Contract Addresses
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+              Contract Deployments
             </p>
+            {contractSummary && (
+              <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>
+            )}
             <div className="grid grid-cols-6 gap-2 sm:hidden">
               {visibleMobileContracts.map((c) => (
                 <ContractChainButton
@@ -313,6 +357,22 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
       </CardContent>
     </Card>
   );
+}
+
+function buildContractDeploymentSummary(contracts: StablecoinMeta["contracts"]): string | null {
+  const list = contracts ?? [];
+  if (list.length === 0) return null;
+  const chainNames = list.slice(0, 4).map((c) => CHAIN_META[c.chain]?.name ?? c.chain);
+  const remaining = Math.max(list.length - chainNames.length, 0);
+  const remainingSuffix = remaining > 0 ? `, plus ${remaining} more` : "";
+  const formattedChains =
+    chainNames.length <= 1
+      ? chainNames[0] ?? ""
+      : chainNames.length === 2
+        ? `${chainNames[0]} and ${chainNames[1]}`
+        : `${chainNames.slice(0, -1).join(", ")}, and ${chainNames[chainNames.length - 1]}`;
+  const deploymentLabel = list.length === 1 ? "deployment" : "deployments";
+  return `${list.length} ${deploymentLabel} tracked across ${formattedChains}${remainingSuffix}.`;
 }
 
 function ContractChainButton({

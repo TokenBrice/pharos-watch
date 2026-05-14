@@ -246,6 +246,15 @@ export default function StablecoinDetailClient({
     variantParent: viewModel.variantParent,
     variantKind: viewModel.coin.variantKind ?? null,
   });
+  const variantRelationshipCard = viewModel.variantParent && viewModel.coin.variantKind ? (
+    <UnderlyingAssetCard
+      parent={viewModel.variantParent}
+      kind={viewModel.coin.variantKind}
+      siblings={viewModel.variantSiblings}
+    />
+  ) : viewModel.childVariants.length > 0 ? (
+    <ParentVariantsCard variants={viewModel.childVariants} />
+  ) : null;
   const s = DETAIL_SECTION_DEFS;
   const detailSections = [
     s.safety,
@@ -334,43 +343,38 @@ export default function StablecoinDetailClient({
             <SafetyScoreHistorySection stablecoinId={viewModel.id} />
           </div>
         </section>
-      </div>
-
-      {staticProfileContent ? <div className="mt-12">{staticProfileContent}</div> : null}
-
-      {/* ── Context & details zone ── */}
-      <div className="mt-12 space-y-6">
-        <section id="overview">
-          <div className="space-y-6">
-            {viewModel.variantParent && viewModel.coin.variantKind ? (
-              <UnderlyingAssetCard
-                parent={viewModel.variantParent}
-                kind={viewModel.coin.variantKind}
-                siblings={viewModel.variantSiblings}
-              />
-            ) : null}
-            {viewModel.childVariants.length > 0 ? <ParentVariantsCard variants={viewModel.childVariants} /> : null}
-            <NoticesAndSummarySection
-              stablecoinId={viewModel.id}
-              coin={viewModel.coin}
-              summary={viewModel.summary}
-              reserves={viewModel.reserves}
-              reserveFetchError={viewModel.reserveFetchError}
-              redemptionBackstop={viewModel.redemptionBackstop}
-              isNavToken={viewModel.isNavToken}
-              coinData={viewModel.coinData}
-              consensusSources={viewModel.consensusSources}
-              agreeSources={viewModel.agreeSources}
-              dexPriceCheck={viewModel.dexPriceCheck}
-            />
-          </div>
-        </section>
 
         <section id="info">
           <KeyInfoCard meta={viewModel.coin} />
         </section>
+      </div>
 
-        {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
+      {/* ── Context & details zone ── */}
+      <div className="mt-12 space-y-6">
+        <section id="overview">
+          <NoticesAndSummarySection
+            stablecoinId={viewModel.id}
+            coin={viewModel.coin}
+            summary={viewModel.summary}
+            reserves={viewModel.reserves}
+            reserveFetchError={viewModel.reserveFetchError}
+            redemptionBackstop={viewModel.redemptionBackstop}
+            isNavToken={viewModel.isNavToken}
+            coinData={viewModel.coinData}
+            consensusSources={viewModel.consensusSources}
+            agreeSources={viewModel.agreeSources}
+            dexPriceCheck={viewModel.dexPriceCheck}
+          />
+        </section>
+
+        {(variantRelationshipCard || hasCollateralUsage) && (
+          <div
+            className={`grid gap-6 ${variantRelationshipCard && hasCollateralUsage ? "lg:grid-cols-2" : ""}`}
+          >
+            {variantRelationshipCard}
+            {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
+          </div>
+        )}
 
         {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
       </div>

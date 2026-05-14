@@ -136,8 +136,9 @@ describe("StablecoinDetailClient", () => {
     cleanup();
   });
 
-  it("renders static profile content after the safety assessment", () => {
+  it("renders static profile content in the loading fallback", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading" });
 
     const { container } = render(
       <StablecoinDetailClient
@@ -148,16 +149,12 @@ describe("StablecoinDetailClient", () => {
       />,
     );
 
-    const safetySection = container.querySelector("#report-card");
     const staticProfile = screen.getByTestId("static-profile");
-
-    expect(safetySection).toBeTruthy();
-    expect(
-      safetySection!.compareDocumentPosition(staticProfile) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(staticProfile.textContent).toContain("Static stablecoin profile");
+    expect(container.textContent).toContain("Loading research dossier");
   });
 
-  it("renders the parent variants card inside the single overview section", () => {
+  it("renders the parent variants card outside the overview section", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     const { container } = render(
       <StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
@@ -166,13 +163,13 @@ describe("StablecoinDetailClient", () => {
     const overviewSections = container.querySelectorAll("#overview");
     expect(overviewSections).toHaveLength(1);
     expect(screen.getByText("Variants")).toBeTruthy();
-    expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(true);
+    expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(false);
     expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Browse all tracked variants" })).toBeTruthy();
   });
 
-  it("renders the underlying asset card inside the single overview section for variants", () => {
+  it("renders the underlying asset card outside the overview section for variants", () => {
     const coin = TRACKED_META_BY_ID.get("susds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
       id: coin.id,
@@ -205,7 +202,7 @@ describe("StablecoinDetailClient", () => {
     const overviewSections = container.querySelectorAll("#overview");
     expect(overviewSections).toHaveLength(1);
     expect(screen.getByText("Underlying Asset")).toBeTruthy();
-    expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(true);
+    expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(false);
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Browse all savings variants" })).toBeTruthy();
   });
