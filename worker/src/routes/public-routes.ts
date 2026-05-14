@@ -4,7 +4,6 @@ import { handleStablecoinReserves } from "../api/stablecoin-reserves";
 import { handleBlacklist } from "../api/blacklist";
 import { handleBlacklistSummary } from "../api/blacklist-summary";
 import { handleDepegEvents } from "../api/depeg-events";
-import { handleRecentEvents } from "../api/recent-events";
 import { handleEvents } from "../api/events";
 import { handlePegSummary } from "../api/peg-summary";
 import { handleHealth } from "../api/health";
@@ -39,7 +38,6 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("blacklist", ({ db, url }) => handleBlacklist(db, url)),
   defineStaticRoute("blacklist-summary", ({ db }) => handleBlacklistSummary(db)),
   defineStaticRoute("depeg-events", ({ db, url }) => handleDepegEvents(db, url)),
-  defineStaticRoute("recent-events", ({ db, url }) => handleRecentEvents(db, url)),
   defineStaticRoute("events", ({ db, url }) => handleEvents(db, url)),
   defineStaticRoute("peg-summary", ({ db }) => handlePegSummary(db)),
   defineStaticRoute("health", ({ db }) => handleHealth(db)),

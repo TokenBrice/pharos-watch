@@ -32,7 +32,6 @@ import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, SafetyScoreHistoryResponseSchema } from "@shared/types/report-cards";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
 import { HealthResponseSchema } from "@shared/types/status";
-import { type RecentEventsResponse, RecentEventsResponseSchema } from "@shared/types/tape";
 import { YieldHistoryResponseSchema, YieldRankingsResponseSchema } from "@shared/types/yield";
 import {
   CRON_1H,
@@ -212,13 +211,5 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       producerIntervalMs: CRON_30MIN,
       schema: StressSignalDetailResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
-    }),
-  recentEvents: (limit = 20) =>
-    pollingDescriptor<RecentEventsResponse>({
-      queryKey: ["recent-events", limit],
-      path: API_PATHS.recentEvents({ limit }),
-      producerIntervalMs: CRON_15MIN,
-      schema: RecentEventsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.recentEvents,
     }),
 } as const;

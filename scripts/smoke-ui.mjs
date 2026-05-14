@@ -18,7 +18,9 @@ const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
 const DEFAULT_LOCAL_OVERFLOW_WORKERS = 2;
 const DEFAULT_LIVE_OVERFLOW_WORKERS = 1;
 const MAX_OVERFLOW_WORKERS = 6;
-export const HOMEPAGE_RECENT_EVENTS_SMOKE_PATH = "/_site-data/recent-events?limit=1";
+// Homepage tape now hits the unified events endpoint; the smoke check pings
+// it to verify the site-data lane is reachable from the page host.
+export const HOMEPAGE_RECENT_EVENTS_SMOKE_PATH = "/_site-data/events?limit=1";
 const DEFAULT_LIVE_CANARY_ROUTES = ["/yield/", "/alt-pegs/", "/freezewatch/", "/stability-index/"];
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",

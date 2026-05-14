@@ -39,8 +39,6 @@ export const API_PATHS = {
       includeTotal: params?.includeTotal,
       includePending: params?.includePending,
     }),
-  recentEvents: (params?: { limit?: number }) =>
-    buildQueryPath("/api/recent-events", { limit: params?.limit }),
   events: (params?: Record<string, QueryParamValue>) => buildQueryPath("/api/events", params),
   usdsStatus: () => "/api/usds-status",
   bluechipRatings: () => "/api/bluechip-ratings",
@@ -146,6 +144,7 @@ export const API_PATHS = {
   backfillStabilityIndex: () => "/api/backfill-stability-index",
   backfillMintBurnPrices: () => "/api/backfill-mint-burn-prices",
   backfillMintBurn: () => "/api/backfill-mint-burn",
+  backfillTape: () => "/api/backfill-tape",
   reclassifyAtomicRoundtrips: () => "/api/reclassify-atomic-roundtrips",
   auditDepegHistoryBase: () => "/api/audit-depeg-history",
   auditDepegHistoryDryRun: () => buildQueryPath("/api/audit-depeg-history", { "dry-run": true }),

@@ -199,16 +199,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   },
   {
-    key: "recent-events",
-    path: API_PATHS.recentEvents(),
-    methods: ["GET"],
-    adminRequired: false,
-    mutatingAdmin: false,
-    cacheBypass: false,
-    strictContract: true,
-    probeGroup: "public",
-  },
-  {
     key: "events",
     path: API_PATHS.events(),
     methods: ["GET"],
@@ -723,6 +713,20 @@ const BASE_ENDPOINT_DEFINITIONS = [
     statusPageAction: {
       label: "Backfill Mint/Burn",
       confirm: "Run mint/burn backfill job?",
+      method: "POST",
+    },
+  },
+  {
+    key: "backfill-tape",
+    path: API_PATHS.backfillTape(),
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill Tape",
+      confirm: "Re-run tape projectors for selected classes? Prefer dry-run first (?dryRun=true).",
       method: "POST",
     },
   },

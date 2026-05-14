@@ -160,7 +160,7 @@ describe("getOverflowRoutes", () => {
 
 describe("HOMEPAGE_RECENT_EVENTS_SMOKE_PATH", () => {
   it("checks the same same-origin site-data path used by the homepage tape", () => {
-    expect(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH).toBe("/_site-data/recent-events?limit=1");
+    expect(HOMEPAGE_RECENT_EVENTS_SMOKE_PATH).toBe("/_site-data/events?limit=1");
   });
 });
 

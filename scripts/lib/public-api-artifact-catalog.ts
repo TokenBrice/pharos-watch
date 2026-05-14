@@ -318,26 +318,6 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
-    key: "recent-events",
-    path: API_PATHS.recentEvents(),
-    summary: "Recent events tape",
-    description:
-      "Unified chronological feed of recent depeg, freeze, and safety-grade transition events across all tracked stablecoins. Powers the homepage event ticker.",
-    tags: ["Risk"],
-    parameters: [
-      {
-        name: "limit",
-        in: "query",
-        schema: { type: "integer", minimum: 1, maximum: 50 },
-        description: "Maximum number of events to return (default 20, max 50).",
-      },
-    ],
-    postman: {
-      folder: "Risk and market structure",
-      query: { limit: "20" },
-    },
-  },
-  {
     key: "events",
     path: API_PATHS.events(),
     summary: "Tape events",

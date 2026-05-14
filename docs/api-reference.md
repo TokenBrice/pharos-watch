@@ -292,7 +292,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **33**.
+Total documented public operations: **32**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -313,7 +313,6 @@ Total documented public operations: **33**.
 | GET | `/api/non-usd-share` | Non-USD share | Market Structure, History | X-API-Key | `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/public-status-history` | Public status history | Status | X-API-Key | `limit?`, `window?` | 200, 400, 401, 429, 503 |
-| GET | `/api/recent-events` | Recent events tape | Risk | X-API-Key | `limit?` | 200, 400, 401, 429, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards` | Report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
@@ -1092,43 +1091,6 @@ Composite peg scores and aggregate statistics for tracked stablecoins. Scores ar
 | `fallbackPegRates`     | `string[]`                    | _(optional)_ pegType keys using stale FX fallback rates                                                                       |
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
-
----
-
-### `GET /api/recent-events`
-
-Unified chronological feed of recent transition events across the product. Powers the homepage event ticker. Aggregates the latest depeg openings/resolutions (`depeg_events`), freeze/destroy/unblacklist events (`blacklist_events`), and report-card grade transitions (`safety_grade_history`) into a single time-ordered list. Each event carries a short title, a severity tier, and an `href` pointing to the deep-dive surface where it was authored.
-
-**Cache:** realtime
-
-**Query parameters**
-
-| Param   | Type     | Description                                                  |
-| ------- | -------- | ------------------------------------------------------------ |
-| `limit` | `number` | Maximum events to return (default `20`, min `1`, max `50`). |
-
-**Response**
-
-```text
-{
-  "events": [RecentEvent, ...]
-}
-```
-
-**`RecentEvent`**
-
-| Field          | Type                                                                                                                            | Description                                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `id`           | `string`                                                                                                                        | Stable opaque id, e.g. `"depeg.opened:42"` or `"freeze.destroyed:eth-0xabc-12"`.                              |
-| `type`         | `"depeg.opened" \| "depeg.resolved" \| "freeze.blocked" \| "freeze.unblocked" \| "freeze.destroyed" \| "score.upgraded" \| "score.downgraded"` | Dot-namespaced event type slug.                                                                              |
-| `severity`     | `"info" \| "notice" \| "warning" \| "severe" \| "critical"`                                                                     | Severity tier derived per-class (depeg bps, freeze USD amount, or score-grade tier delta).                   |
-| `ts`           | `number`                                                                                                                        | Unix seconds. For depeg openings: `started_at`. For resolutions: `ended_at`. Otherwise the source row's transition time. |
-| `stablecoinId` | `string \| null`                                                                                                                | Canonical Pharos ID when resolvable; `null` for freeze events where only the symbol is recorded.             |
-| `symbol`       | `string \| null`                                                                                                                | Token symbol used by the source row.                                                                         |
-| `title`        | `string`                                                                                                                        | Short one-line headline suitable for a ticker, e.g. `"USDC depeg opened (−1200 bps)"`.                       |
-| `href`         | `string`                                                                                                                        | Relative path on `pharos.watch` to the deep-dive surface (e.g. `/stablecoin/usdc-circle/#peg-history`).      |
-
-Events are merged across the three sources and returned sorted by `ts` descending. Backfill rows (depeg `source = 'backfill'`) and suppressed blacklist events are excluded.
 
 ---
 

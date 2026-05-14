@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 // Wire schemas for the /api/events endpoint backed by the `tape_events` D1
-// table. Kept separate from `shared/types/tape.ts` (which models the
-// frontend-tape recent-events feed) so the two evolve independently.
+// table.
 
 export const TAPE_EVENT_SEVERITY_VALUES = [
   "info",

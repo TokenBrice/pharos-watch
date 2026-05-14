@@ -251,7 +251,7 @@ describe("site-data proxy", () => {
       && entry.binds[5] === 1)).toBe(true);
   });
 
-  it("proxies the homepage recent-events tape path with its query string", async () => {
+  it("proxies the homepage tape events path with its query string", async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({ events: [] }), {
       status: 200,
       headers: {
@@ -262,16 +262,16 @@ describe("site-data proxy", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const response = await onRequest({
-      request: new Request("https://pharos.watch/_site-data/recent-events?limit=1", {
+      request: new Request("https://pharos.watch/_site-data/events?limit=1", {
         headers: { Origin: "https://pharos.watch" },
       }),
       env: makeEnv(),
-      params: { path: "recent-events" },
+      params: { path: "events" },
     });
 
     expect(response.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
-      "https://site-api.pharos.watch/api/recent-events?limit=1",
+      "https://site-api.pharos.watch/api/events?limit=1",
       expect.objectContaining({
         method: "GET",
         headers: expect.any(Headers),
