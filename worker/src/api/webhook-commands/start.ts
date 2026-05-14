@@ -2,15 +2,21 @@ import {
   classifyTelegramStartSource,
   recordTelegramUsageEvent,
 } from "../../lib/telegram-usage-analytics";
+import { buildTelegramMiniAppUrl } from "../../lib/telegram-webhook-registration";
 import { parseStartPayload } from "../telegram-webhook-parsing";
 import { sendWizardIntro } from "../telegram-webhook-setup";
 import { START_MESSAGE } from "../telegram-webhook-shared";
 import { isGroupAdminActor, isGroupChatType } from "../telegram-webhook-auth";
+import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import type { WebhookCommandHandler } from "./context";
 import { handleSubscribe } from "./subscribe";
 import { handleStatus } from "./status";
 import { handleWhy } from "./why";
 import { handleCoverage } from "./coverage";
+
+const APP_PRIVATE_MESSAGE = "Open the Pharos Mini App to manage your alerts.";
+const APP_GROUP_MESSAGE = "DM the bot to open the Pharos Mini App for your personal alerts.";
+const BOT_DM_DEEP_LINK = "https://t.me/PharosWatchBot?start=app";
 
 export const handleStart: WebhookCommandHandler = async (ctx, args) => {
   const sourceCategory = classifyTelegramStartSource(args);
@@ -47,6 +53,30 @@ export const handleStart: WebhookCommandHandler = async (ctx, args) => {
     case "coverage":
       await handleCoverage(ctx, payload.coinId);
       return;
+    case "app": {
+      // `?start=app` / `?start=home` deep-link: nudge the user into the Mini
+      // App home view. Private chats get a Web App button; groups (Telegram
+      // rejects `web_app` outside private) get a URL button into the bot's DM.
+      if (ctx.chatType === "private") {
+        await ctx.replyToChatWithMarkup(APP_PRIVATE_MESSAGE, {
+          replyMarkup: {
+            inline_keyboard: [[
+              {
+                text: "Open Mini App",
+                web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.home) },
+              },
+            ]],
+          },
+        });
+        return;
+      }
+      await ctx.replyToChatWithMarkup(APP_GROUP_MESSAGE, {
+        replyMarkup: {
+          inline_keyboard: [[{ text: "Open in DM", url: BOT_DM_DEEP_LINK }]],
+        },
+      });
+      return;
+    }
     case "setup":
     case "none":
       if (

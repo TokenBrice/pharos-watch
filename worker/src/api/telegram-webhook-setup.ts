@@ -11,6 +11,7 @@
 import { escapeHtml } from "../lib/telegram";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
 import {
   listTelegramPresets,
   resolveTelegramPresetTargets,
@@ -91,7 +92,19 @@ function buildBranchKeyboard(options: { includeMiniAppButton?: boolean } = {}): 
     [{ text: "Custom setup", callback_data: "setup:branch:custom" }],
     [{ text: "I'll type commands myself", callback_data: "setup:branch:skip" }],
   ];
-  if (options.includeMiniAppButton) rows.push([{ text: "Open control panel", web_app: { url: buildTelegramMiniAppUrl("setup_recommended") } }]);
+  if (options.includeMiniAppButton) {
+    // The recommended setup subscribes the user to a ~25-coin watchlist; the
+    // most useful follow-up surface is the watchlist itself, where the new
+    // coins are visible. Payload name comes from the shared registry
+    // (`@shared/lib/telegram-mini-app-payloads`) so the frontend `?startapp=`
+    // parser stays in sync — see T-31.
+    rows.push([
+      {
+        text: "Open control panel",
+        web_app: { url: buildTelegramMiniAppUrl(MINI_APP_PAYLOAD_NAMES.watchlist) },
+      },
+    ]);
+  }
   return { inline_keyboard: rows };
 }
 

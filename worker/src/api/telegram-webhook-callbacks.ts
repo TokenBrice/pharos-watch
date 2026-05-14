@@ -485,8 +485,9 @@ async function handleStatusCallback(
   }
   const meta = TRACKED_META_BY_ID.get(arg);
   const status = await loadStatusForCoin(db, arg);
+  const isPrivateChat = callbackChatType(cb) === "private";
   await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
-    replyMarkup: buildStatusDiscoveryKeyboard(arg),
+    replyMarkup: buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: isPrivateChat }),
     actionDetail: "callback_status",
   });
   await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
@@ -505,7 +506,9 @@ async function handleWhyCallback(
     return;
   }
   const message = await buildWhyMessage(db, arg);
+  const isPrivateChat = callbackChatType(cb) === "private";
   await sendAuditedTelegramReply(db, chatId, message, botToken, {
+    replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
     actionDetail: "callback_why",
   });
   await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
@@ -525,7 +528,9 @@ async function handleCoverageCallback(
   }
   const meta = TRACKED_META_BY_ID.get(arg);
   const status = await loadStatusForCoin(db, arg);
+  const isPrivateChat = callbackChatType(cb) === "private";
   await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
+    replyMarkup: isPrivateChat ? buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: true }) : undefined,
     actionDetail: "callback_coverage",
   });
   await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });

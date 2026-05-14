@@ -513,3 +513,87 @@ describe("runTelegramDegradationWatchdog · abort", () => {
     ).rejects.toThrow("scheduled abort");
   });
 });
+
+describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
+  interface CronRunRow {
+    status: "ok" | "degraded" | "error" | "skipped_locked";
+    metadata: Record<string, unknown> | null;
+  }
+
+  // Simulates D1 filtering: returns the first row whose status appears in the
+  // SQL's `status IN (...)` clause. Rows are ordered newest-first by the caller.
+  function makeDbWithCronRows(rows: CronRunRow[]): D1Database {
+    const prepare = vi.fn((sql: string) => {
+      const bind = vi.fn(() => statement);
+      const first = vi.fn(async () => {
+        if (sql.includes("COUNT(*) AS total")) {
+          return {
+            total: 0,
+            expired: 0,
+            due: 0,
+            deferred: 0,
+            near_ttl: 0,
+            oldest_pending_created_at: null,
+            oldest_due_created_at: null,
+            estimated_drain_time_sec: 0,
+          };
+        }
+        if (sql.includes("FROM cron_runs WHERE job = 'dispatch-telegram-alerts'")) {
+          const inMatch = sql.match(/status IN \(([^)]+)\)/);
+          const allowed = inMatch
+            ? new Set(inMatch[1].split(",").map((s) => s.trim().replace(/'/g, "")))
+            : null;
+          const row = rows.find((r) => (allowed == null ? true : allowed.has(r.status)));
+          if (!row) return null;
+          return { metadata: row.metadata == null ? null : JSON.stringify(row.metadata) };
+        }
+        return null;
+      });
+      const statement = { bind, first } as unknown as D1PreparedStatement;
+      return statement;
+    });
+    return { prepare } as unknown as D1Database;
+  }
+
+  it("skips aborted run and reads the prior succeeded run's metadata", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
+    const db = makeDbWithCronRows([
+      { status: "error", metadata: null },
+      {
+        status: "ok",
+        metadata: {
+          eventsDetected: { dews: 1, depeg: 0, safety: 0, launch: 0 },
+          messagesSent: 5,
+        },
+      },
+    ]);
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    // The completed run sent messages, so the streak resets.
+    expect(meta.zeroSend.streak).toBe(0);
+    expect(store.values.has(WATCHDOG_KEYS.zeroSendStreak)).toBe(false);
+  });
+
+  it("preserves the streak when every recent run aborted (no metadata)", async () => {
+    const store = installCacheStore();
+    const nowSec = Math.floor(Date.now() / 1000);
+    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
+    const db = makeDbWithCronRows([
+      { status: "error", metadata: null },
+      { status: "error", metadata: null },
+    ]);
+
+    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    // No completed run found, watchdog returns without touching the streak.
+    expect(meta.zeroSend.streak).toBe(2);
+    expect(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value).toBe("2");
+  });
+});

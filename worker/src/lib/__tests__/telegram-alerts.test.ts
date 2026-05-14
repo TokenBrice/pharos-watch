@@ -818,8 +818,16 @@ describe("splitMessage HTML safety", () => {
 describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
   const TELEGRAM_CALLBACK_DATA_MAX_BYTES = 64;
 
-  function collectCallbackData(markup: { inline_keyboard: ReadonlyArray<ReadonlyArray<{ callback_data: string }>> }): string[] {
-    return markup.inline_keyboard.flatMap((row) => row.map((btn) => btn.callback_data));
+  function collectCallbackData(markup: { inline_keyboard: ReadonlyArray<ReadonlyArray<unknown>> }): string[] {
+    return markup.inline_keyboard.flatMap((row) =>
+      row
+        .map((btn) =>
+          typeof btn === "object" && btn !== null && "callback_data" in btn
+            ? (btn as { callback_data?: unknown }).callback_data
+            : undefined,
+        )
+        .filter((data): data is string => typeof data === "string"),
+    );
   }
 
   function singleCoinAlerts(stablecoinId: string): ConsolidatedAlerts {

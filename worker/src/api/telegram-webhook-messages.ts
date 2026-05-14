@@ -390,10 +390,10 @@ export function buildManageEntryKeyboard(options: { includeMiniAppButton?: boole
   return { inline_keyboard: rows };
 }
 
-export function buildMiniAppOnlyKeyboard(text = "Open control panel"): {
+export function buildMiniAppOnlyKeyboard(text = "Open control panel", payload = "watchlist"): {
   inline_keyboard: InlineKeyboardButton[][];
 } {
-  return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl("watchlist") } }]] };
+  return { inline_keyboard: [[{ text, web_app: { url: buildTelegramMiniAppUrl(payload) } }]] };
 }
 
 /**

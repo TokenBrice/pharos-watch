@@ -303,6 +303,17 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
     { label: "Quiet-hours chats", value: data.quietHoursEnabledChats },
     { label: "Queued deliveries", value: data.pendingDeliveries },
   ].filter(isPulseStat);
+  const miniAppStats = [
+    { label: "Sessions today", value: data.miniAppSessionsToday },
+    { label: "Mutations today", value: data.miniAppMutationsToday },
+    { label: "Denied today", value: data.miniAppDeniedToday },
+    { label: "Replay-protected today", value: data.miniAppReplayClaimsToday },
+    {
+      label: "Open → first mutation (P50)",
+      value: data.miniAppOpenToFirstMutationP50Sec,
+      detail: "seconds",
+    },
+  ].filter(isPulseStat);
 
   return (
     <section
@@ -446,6 +457,7 @@ export function TelegramPulseBoard({ className }: { className?: string }) {
             <PulseStatGroup title="Daily lifecycle" items={lifecycleStats} />
             <PulseStatGroup title="Alert coverage" items={alertCoverageStats} />
             <PulseStatGroup title="Delivery controls" items={deliveryStats} />
+            <PulseStatGroup title="Mini App today" items={miniAppStats} />
           </div>
         </div>
       </details>

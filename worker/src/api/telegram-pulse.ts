@@ -12,6 +12,10 @@ import {
   loadTelegramTopFollowedCoins,
   refreshTelegramLifecycleSnapshotIfStale,
 } from "../lib/telegram-usage-analytics";
+import {
+  loadTelegramMiniAppDailyAggregate,
+  utcDayFromUnixSeconds,
+} from "../lib/status/telegram-bot-stats";
 
 const TELEGRAM_PULSE_CACHE_SECONDS = 300;
 const TELEGRAM_LIFECYCLE_HISTORY_SECONDS = 900;
@@ -209,13 +213,18 @@ async function buildTelegramPulseSnapshot(
   const currentSnapshot = await computeTelegramCurrentLifecycleSnapshot(db, nowSec);
   await refreshTelegramLifecycleSnapshotIfStale(db, nowSec, currentSnapshot);
   const unavailableFields = new Set(currentSnapshot.unavailableFields ?? []);
-  const [topRows, snapshotHistory] = await Promise.all([
+  const [topRows, snapshotHistory, miniAppDailyAggregate] = await Promise.all([
     loadTelegramTopFollowedCoins(db, 5).catch((error) => {
       console.warn("[telegram-pulse] top followed coin telemetry unavailable:", error);
       unavailableFields.add("topCoins");
       return [];
     }),
     loadTelegramLifecycleHistory(db),
+    loadTelegramMiniAppDailyAggregate(db, utcDayFromUnixSeconds(nowSec)).catch((error) => {
+      console.warn("[telegram-pulse] mini-app daily aggregate unavailable:", error);
+      unavailableFields.add("miniAppDailyAggregate");
+      return null;
+    }),
   ]);
   const fallbackHistory = await loadFallbackWatcherHistory(db).catch((error) => {
     console.warn("[telegram-pulse] fallback watcher history unavailable:", error);
@@ -254,6 +263,21 @@ async function buildTelegramPulseSnapshot(
     pendingDeliveries: unavailableFields.has("pendingDeliveries")
       ? null
       : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),
+    miniAppSessionsToday: miniAppDailyAggregate
+      ? publicOptionalCount(miniAppDailyAggregate.sessions, "miniAppSessionsToday", suppressedFields)
+      : null,
+    miniAppMutationsToday: miniAppDailyAggregate
+      ? publicOptionalCount(miniAppDailyAggregate.mutations, "miniAppMutationsToday", suppressedFields)
+      : null,
+    miniAppDeniedToday: miniAppDailyAggregate
+      ? publicOptionalCount(miniAppDailyAggregate.denied, "miniAppDeniedToday", suppressedFields)
+      : null,
+    miniAppReplayClaimsToday: miniAppDailyAggregate
+      ? publicOptionalCount(miniAppDailyAggregate.replayClaimed, "miniAppReplayClaimsToday", suppressedFields)
+      : null,
+    // P50 stays null until Wave 6 (T-64) wires bucketed session→first-mutation
+    // latency through `telegram_usage_daily.latency_bucket`.
+    miniAppOpenToFirstMutationP50Sec: null,
     currentSnapshotAt: currentSnapshot.snapshotAt,
     lifecycleHistoryUpdatedAt: latestLifecycleHistoryUpdatedAt(snapshotHistory.points),
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,

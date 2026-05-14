@@ -3,6 +3,7 @@ import {
   formatAdministratorMentions,
   getCachedChatAdministrators,
 } from "../lib/telegram-chat-member";
+import { getCache, setCache } from "../lib/db-cache";
 import {
   formatDisambiguation,
   parseDisambiguationReply,
@@ -100,6 +101,38 @@ const PENDING_PASSTHROUGH_COMMANDS = new Set([
 
 const PHAROS_BOT_USERNAMES = new Set(["pharoswatchbot"]);
 
+/**
+ * Local `my_chat_member` shape. Defined here rather than in
+ * `telegram-webhook-shared.ts` because that module is owned by another wave;
+ * the dispatch only needs to read the few fields it acts on.
+ */
+interface TelegramChatMemberUpdated {
+  chat?: {
+    id?: number;
+    type?: "private" | "group" | "supergroup" | "channel" | "sender" | string;
+    title?: string;
+  };
+  from?: {
+    id?: number;
+    username?: string;
+    first_name?: string;
+  };
+  old_chat_member?: { status?: string };
+  new_chat_member?: { status?: string };
+}
+
+type TelegramWebhookUpdateWithChatMember = TelegramWebhookUpdate & {
+  my_chat_member?: TelegramChatMemberUpdated;
+};
+
+/**
+ * Cache TTL for the per-chat welcome-on-add idempotency marker. Telegram can
+ * deliver `my_chat_member` repeatedly for the same chat (e.g. on re-promote
+ * after the bot was demoted), so we suppress the welcome message for 24h once
+ * sent.
+ */
+const TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC = 24 * 60 * 60;
+
 const COMMAND_COOLDOWNS_SEC: Record<string, number> = {
   "/brief": 30,
   "/top": 20,
@@ -134,7 +167,7 @@ export const handleTelegramWebhook = withErrorHandler(
     }
     if (!botToken) return ok();
 
-    let update: TelegramWebhookUpdate;
+    let update: TelegramWebhookUpdateWithChatMember;
     try {
       update = await request.json();
     } catch {
@@ -217,6 +250,23 @@ export const handleTelegramWebhook = withErrorHandler(
           callbackErrorClass = "callback_query";
         }
         return finishOk(callbackErrorClass);
+      }
+
+      if (update.my_chat_member) {
+        let myChatMemberErrorClass: string | null = null;
+        try {
+          await handleMyChatMember(db, botToken, update.my_chat_member);
+        } catch (err) {
+          logTelegramEvent({
+            message: "my_chat_member failed",
+            chatId: update.my_chat_member.chat?.id ?? null,
+            userId: update.my_chat_member.from?.id ?? null,
+            action: "my_chat_member",
+            err: err instanceof Error ? err.message : String(err),
+          });
+          myChatMemberErrorClass = "my_chat_member";
+        }
+        return finishOk(myChatMemberErrorClass);
       }
 
       const chatId = update.message?.chat?.id?.toString();
@@ -435,13 +485,14 @@ function isGroupChat(chatType: string): boolean {
   return isGroupChatType(chatType);
 }
 
-function resolveUpdateType(update: TelegramWebhookUpdate): string {
+function resolveUpdateType(update: TelegramWebhookUpdateWithChatMember): string {
   if (update.callback_query) return "callback_query";
   if (update.message) return "message";
+  if (update.my_chat_member) return "my_chat_member";
   return "unknown";
 }
 
-function resolveUpdateChatId(update: TelegramWebhookUpdate): string | null {
+function resolveUpdateChatId(update: TelegramWebhookUpdateWithChatMember): string | null {
   const messageChatId = update.message?.chat?.id;
   if (typeof messageChatId === "number" && Number.isFinite(messageChatId)) {
     return String(messageChatId);
@@ -449,6 +500,10 @@ function resolveUpdateChatId(update: TelegramWebhookUpdate): string | null {
   const callbackChatId = update.callback_query?.message?.chat?.id;
   if (typeof callbackChatId === "number" && Number.isFinite(callbackChatId)) {
     return String(callbackChatId);
+  }
+  const memberChatId = update.my_chat_member?.chat?.id;
+  if (typeof memberChatId === "number" && Number.isFinite(memberChatId)) {
+    return String(memberChatId);
   }
   return null;
 }
@@ -722,4 +777,80 @@ async function replyToChat(
   options: { replyMarkup?: unknown } = {},
 ): Promise<void> {
   await sendAuditedTelegramReply(db, chatId, message, botToken, options);
+}
+
+function isBotAddedTransition(
+  oldStatus: string | undefined,
+  newStatus: string | undefined,
+): boolean {
+  const wasAbsent = oldStatus === "left" || oldStatus === "kicked";
+  const isPresent = newStatus === "member" || newStatus === "administrator";
+  return wasAbsent && isPresent;
+}
+
+function buildGroupWelcomeMessage(adderMention: string): string {
+  return [
+    `<b>Thanks for adding Pharos Watch</b>${adderMention ? `, ${adderMention}` : ""}.`,
+    "",
+    "I send stablecoin alerts into this chat: DEWS stress, depeg events, safety grade changes, and launches.",
+    "",
+    "Group admins can run <code>/subscribe@PharosWatchBot dews usd-top25</code> here. For your own watchlist and quiet hours, message me in DM.",
+  ].join("\n");
+}
+
+function buildGroupWelcomeReplyMarkup(): {
+  inline_keyboard: { text: string; url: string }[][];
+} {
+  return {
+    inline_keyboard: [
+      [{ text: "Read the docs →", url: "https://pharos.watch/pharoswatchbot/" }],
+      [{ text: "Personal alerts in DM →", url: "https://t.me/PharosWatchBot?start=setup" }],
+    ],
+  };
+}
+
+function formatAdderMention(from: TelegramChatMemberUpdated["from"]): string {
+  if (!from) return "";
+  if (from.username) return `@${from.username}`;
+  if (from.first_name) return escapeHtml(from.first_name);
+  return "";
+}
+
+async function handleMyChatMember(
+  db: D1Database,
+  botToken: string,
+  payload: TelegramChatMemberUpdated,
+): Promise<void> {
+  const chatType = payload.chat?.type;
+  // `my_chat_member` for private/sender chats is emitted on /start, on
+  // block/unblock, and on other 1:1 status changes. We only welcome on a
+  // bot-added-to-group transition.
+  if (chatType === "private" || chatType === "sender") return;
+  if (!isBotAddedTransition(payload.old_chat_member?.status, payload.new_chat_member?.status)) {
+    return;
+  }
+  const chatId = payload.chat?.id;
+  if (typeof chatId !== "number" || !Number.isFinite(chatId)) return;
+  const chatIdStr = String(chatId);
+
+  // 24h idempotency marker per chat — Telegram may redeliver `my_chat_member`
+  // when the bot is removed and re-added quickly; we never want two welcomes.
+  const cacheKey = `telegram:group-welcome:${chatIdStr}`;
+  const cached = await getCache(db, cacheKey);
+  if (cached && Date.now() / 1000 - cached.updatedAt < TELEGRAM_GROUP_WELCOME_CACHE_TTL_SEC) {
+    return;
+  }
+
+  const adderMention = formatAdderMention(payload.from);
+  await sendAuditedTelegramReply(
+    db,
+    chatIdStr,
+    buildGroupWelcomeMessage(adderMention),
+    botToken,
+    {
+      actionDetail: "group-welcome",
+      replyMarkup: buildGroupWelcomeReplyMarkup(),
+    },
+  );
+  await setCache(db, cacheKey, "1");
 }

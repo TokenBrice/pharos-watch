@@ -74,9 +74,11 @@ async function readPendingCapacity(db: D1Database, nowSec: number): Promise<Pend
 
 async function readLatestDispatchMetadata(db: D1Database) {
   try {
+    // Exclude aborted/locked runs (error, skipped_locked) so a canceled dispatch
+    // does not falsely reset the zero-send streak (post-release-review E.6).
     const row = await db
       .prepare(
-        "SELECT metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",
+        "SELECT metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' AND status IN ('ok', 'degraded') ORDER BY started_at DESC LIMIT 1",
       )
       .first<{ metadata: string | null }>();
     if (!row?.metadata) return null;

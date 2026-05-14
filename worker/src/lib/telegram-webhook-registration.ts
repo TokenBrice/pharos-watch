@@ -12,7 +12,7 @@ const TELEGRAM_WEBHOOK_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_COMMANDS_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_PROFILE_RECONCILE_TTL_SEC = 15 * 60;
 const TELEGRAM_MENU_RECONCILE_TTL_SEC = 15 * 60;
-const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query"] as const;
+const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
 const TELEGRAM_WEBHOOK_CACHE_VERSION = 2;
 const TELEGRAM_COMMANDS_CACHE_VERSION = 5;
 const TELEGRAM_PROFILE_CACHE_VERSION = 3;
@@ -23,9 +23,9 @@ const TELEGRAM_MENU_CACHE_VERSION = 1;
 // reconciliation loop self-heals any drift introduced via BotFather.
 export const TELEGRAM_BOT_NAME = "Pharos Watch";
 export const TELEGRAM_BOT_SHORT_DESCRIPTION =
-  "Stablecoin alerts: DEWS stress, depeg events, safety grade changes, and launches. Track the Pharos universe.";
+  "Track 380+ stablecoins. Tap the menu button for the alert control panel.";
 export const TELEGRAM_BOT_DESCRIPTION =
-  "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Learn more at https://pharos.watch/pharoswatchbot/";
+  "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/";
 export const TELEGRAM_MINI_APP_URL = new URL(TELEGRAM_MINI_APP_PATH, SITE_ORIGIN).toString();
 export const TELEGRAM_MINI_APP_BUTTON_TEXT = "Manage Alerts";
 
@@ -41,6 +41,7 @@ export function buildTelegramMiniAppUrl(startParam?: string | null): string {
 export const TELEGRAM_BOT_COMMANDS = [
   { command: "start", description: "Get started with Pharos alerts" },
   { command: "help", description: "Command reference" },
+  { command: "sample", description: "Preview a synthetic alert before subscribing" },
   { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
   { command: "brief", description: "Latest Pharos market brief" },
   { command: "top", description: "Rank current views: depeg, dews, yield, liquidity, chains, safety" },

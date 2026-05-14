@@ -58,6 +58,20 @@ interface TelegramBotTopStablecoinRow {
   preset_implied_subscribers?: number | string | null;
 }
 
+export interface TelegramMiniAppDailyAggregateRow {
+  mini_app_sessions: number | string | null;
+  mini_app_mutations: number | string | null;
+  mini_app_denied: number | string | null;
+  mini_app_replay_claimed: number | string | null;
+}
+
+export interface TelegramMiniAppDailyAggregate {
+  sessions: number;
+  mutations: number;
+  denied: number;
+  replayClaimed: number;
+}
+
 interface OptionalTelegramTelemetry<T> {
   value: T | null;
   error?: string;
@@ -233,6 +247,29 @@ const TELEGRAM_RETRY_ERROR_CLASSES_SQL = `SELECT last_error_class AS error_class
  GROUP BY last_error_class
  ORDER BY pending_count DESC, last_error_class ASC
  LIMIT 10`;
+// Mini App events recorded by `telegram-mini-app.ts`:
+// - successful mutations are tagged with the per-operation `mini_app_*` event
+//   type returned by `mutationEventType`, plus the generic `mini_app_mutation`
+//   fallback for unmapped operations;
+// - denied mutations always use `mini_app_mutation_denied`; replay protection
+//   sets `failure_class = 'replayed-auth'`.
+const TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES = [
+  "mini_app_mutation",
+  "mini_app_recommended_setup",
+  "mini_app_coin_add",
+  "mini_app_coin_remove",
+  "mini_app_quiet_hours",
+] as const;
+const TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS = TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES
+  .map(() => "?")
+  .join(", ");
+const TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL = `SELECT
+  SUM(CASE WHEN event_type = 'mini_app_session_valid' AND outcome = 'success' THEN count ELSE 0 END) AS mini_app_sessions,
+  SUM(CASE WHEN event_type IN (${TELEGRAM_MINI_APP_SUCCESS_EVENT_PLACEHOLDERS}) AND outcome = 'success' THEN count ELSE 0 END) AS mini_app_mutations,
+  SUM(CASE WHEN event_type = 'mini_app_mutation_denied' THEN count ELSE 0 END) AS mini_app_denied,
+  SUM(CASE WHEN event_type = 'mini_app_mutation_denied' AND failure_class = 'replayed-auth' THEN count ELSE 0 END) AS mini_app_replay_claimed
+FROM telegram_usage_daily
+WHERE day = ?`;
 function coerceCount(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -307,6 +344,26 @@ async function loadTelegramRetryErrorClasses(db: D1Database): Promise<TelegramBo
   return result.results ?? [];
 }
 
+export function utcDayFromUnixSeconds(nowSec: number): string {
+  return new Date(nowSec * 1000).toISOString().slice(0, 10);
+}
+
+export async function loadTelegramMiniAppDailyAggregate(
+  db: D1Database,
+  day: string,
+): Promise<TelegramMiniAppDailyAggregate> {
+  const row = await db
+    .prepare(TELEGRAM_MINI_APP_DAILY_AGGREGATE_SQL)
+    .bind(...TELEGRAM_MINI_APP_SUCCESS_EVENT_TYPES, day)
+    .first<TelegramMiniAppDailyAggregateRow>();
+  return {
+    sessions: coerceCount(row?.mini_app_sessions),
+    mutations: coerceCount(row?.mini_app_mutations),
+    denied: coerceCount(row?.mini_app_denied),
+    replayClaimed: coerceCount(row?.mini_app_replay_claimed),
+  };
+}
+
 async function loadTelegramTopStablecoins(db: D1Database): Promise<TelegramBotTopStablecoinRow[]> {
   const rows = await loadTelegramTopFollowedCoins(db, 5);
   return rows.map((row) => ({
@@ -353,6 +410,7 @@ export function mapTelegramBotStats(input: {
   topStablecoins: TelegramBotTopStablecoinRow[];
   presetQueryFailures?: number;
   inactiveSubscribersCleanedThisWeek?: number | null;
+  miniAppDailyAggregate?: TelegramMiniAppDailyAggregate | null;
   lifecycleSnapshot?: TelegramCurrentLifecycleSnapshot | null;
   unavailableFields?: string[];
   telemetryErrors?: Record<string, string>;
@@ -478,6 +536,7 @@ export function mapTelegramBotStats(input: {
 }
 
 export async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats> {
+  const today = utcDayFromUnixSeconds(now);
   const [
     aggregate,
     pendingDisambiguations,
@@ -487,6 +546,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailuresResult,
     inactiveCleanupResult,
+    miniAppDailyAggregateResult,
     lifecycleSnapshotResult,
   ] = await Promise.all([
     loadTelegramBotAggregate(db),
@@ -497,6 +557,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramTopStablecoins(db),
     loadOptionalTelegramTelemetry("presetQueryFailures", loadPresetQueryFailureCount(db)),
     loadOptionalTelegramTelemetry("inactiveSubscribersCleanedThisWeek", loadInactiveSubscribersCleanedThisWeek(db, now)),
+    loadOptionalTelegramTelemetry("miniAppDailyAggregate", loadTelegramMiniAppDailyAggregate(db, today)),
     loadOptionalTelegramTelemetry("lifecycleSnapshot", refreshTelegramLifecycleSnapshotIfStale(db, now)),
   ]);
   const optionalResults = {
@@ -504,6 +565,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     retryErrorClassCounts: retryErrorClassesResult,
     presetQueryFailures: presetQueryFailuresResult,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
+    miniAppDailyAggregate: miniAppDailyAggregateResult,
     lifecycleSnapshot: lifecycleSnapshotResult,
   };
   const unavailableFields = Object.entries(optionalResults)
@@ -525,6 +587,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     topStablecoins,
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,
+    miniAppDailyAggregate: miniAppDailyAggregateResult.value,
     lifecycleSnapshot: lifecycleSnapshotResult.value,
     unavailableFields,
     telemetryErrors,

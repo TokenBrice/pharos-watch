@@ -2,6 +2,7 @@ import type { WebhookCommandHandler } from "./context";
 import { handleStart } from "./start";
 import { handlePresets } from "./presets";
 import { handleHelp } from "./help";
+import { handleSample } from "./sample";
 import { handleList } from "./list";
 import { handleStatus } from "./status";
 import { handleBrief } from "./brief";
@@ -33,6 +34,7 @@ export const COMMAND_HANDLERS: Record<string, WebhookCommandHandler> = {
   "/start": handleStart,
   "/presets": handlePresets,
   "/help": handleHelp,
+  "/sample": handleSample,
   "/list": handleList,
   "/status": handleStatus,
   "/brief": handleBrief,

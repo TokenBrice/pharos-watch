@@ -1,0 +1,71 @@
+# Runbook: Telegram Setup Wizard Stuck
+
+## Symptom
+
+Users report that the `/start` setup wizard does not progress: tapping a branch button (Recommended / Custom / Skip) either re-renders the intro keyboard or returns "still working on the previous step, try again in a moment".
+
+Detection signals:
+
+- Users open `/start`, tap a branch button, and see no state change in the chat.
+- The chat is on a fresh slash command but the dispatcher emits "pending action found" because a stale `telegram_pending_disambiguation` row with `action_type = "setup-step"` exists past its TTL.
+- The chat has no other pending state (no bulk confirm, no ticker disambiguation), but `/cancel` is the only way to clear the wizard.
+
+The wizard persists state in `telegram_pending_disambiguation` with `action_type = "setup-step"` and a 5-minute TTL. Expired rows should be swept by the `telegram-disambiguation-cleanup` job on the 5-minute Telegram cron slot, but if the cleanup pass fails or a row sticks past its `expires_at`, the user remains visibly stuck.
+
+## Quick Diagnostic Checklist
+
+1. **Is the cleanup pass running?** `crons["telegram-disambiguation-cleanup"].lastRun` should be recent (within the 5-minute slot). The pass emits `disambiguationRowsCleaned` in its metadata.
+2. **Is the row genuinely stale?** A row with `expires_at < unixepoch()` should be ignored by the wizard, but if Ingress is gated on the row's presence rather than freshness, the wizard appears stuck.
+3. **Is the user spamming `/start`?** Each `/start` clears wizard state and re-issues the intro, so a single stuck user is usually a stale row, not a race.
+
+## Operator Commands
+
+Find stuck setup-step rows:
+
+```sql
+SELECT chat_id, action_type, expires_at, action_payload
+FROM telegram_pending_disambiguation
+WHERE action_type = 'setup-step'
+  AND expires_at < unixepoch()
+ORDER BY expires_at ASC;
+```
+
+Confirm the disambiguation cleanup is current:
+
+```bash
+curl -sS -H "CF-Access-Client-Id: $CF_ID" \
+        -H "CF-Access-Client-Secret: $CF_SECRET" \
+        https://api.pharos.watch/api/status \
+  | jq '.crons["telegram-disambiguation-cleanup"]'
+```
+
+Inspect the wizard handler if behavior diverges from the documented flow:
+
+```bash
+worker/src/api/telegram-webhook-setup.ts
+# Specifically: sendWizardIntro, wizard branch/target/confirm callbacks
+```
+
+## Remediation
+
+1. **Stale rows past TTL.** Delete the stuck row for the affected chat. The wizard will re-issue a fresh intro on the next `/start`:
+
+   ```sql
+   DELETE FROM telegram_pending_disambiguation
+   WHERE chat_id = '<chat_id>'
+     AND action_type = 'setup-step'
+     AND expires_at < unixepoch();
+   ```
+
+   Use `wrangler d1 execute` with the Worker D1 binding. This is the same cleanup the scheduled pass performs; running it manually is safe and idempotent.
+
+2. **Cleanup pass failing.** If multiple chats are stuck and the cleanup pass shows `status = "failed"` or has not run recently, force a single sweep via the next cron tick (no separate admin endpoint exists) and follow [`telegram-no-delivery.md`](./telegram-no-delivery.md) for the cron lane.
+
+3. **User reports per-chat lockup with no stale row.** Suspect a bug in the wizard branch dispatcher rather than a stuck row. Capture the chat ID, the `action_payload` JSON, and a Wrangler tail snippet of the failing webhook delivery before clearing the row, and file a follow-up so the bug can be reproduced.
+
+## Cross-References
+
+- [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Setup Wizard" — wizard state, callback namespace, TTL.
+- [`docs/telegram-mini-app.md`](../telegram-mini-app.md) — Mini App `setup_recommended` payload and the equivalent `recommended-setup` mutation.
+- [`telegram-operator-queries.md`](./telegram-operator-queries.md) — D1 queries for pending rows, jobs, and dead letters.
+- [`telegram-no-delivery.md`](./telegram-no-delivery.md) — cron lane diagnostics.

@@ -9,11 +9,13 @@ import {
   ChevronDown,
   Clock3,
   ExternalLink,
+  LayoutGrid,
   Megaphone,
   MessageSquareText,
   Radio,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   Terminal,
   Users,
   Zap,
@@ -53,6 +55,27 @@ const COIN_COUNT = TRACKED_STABLECOIN_COUNT;
 const BOT_URL = "https://t.me/PharosWatchBot";
 const SETUP_DEEP_LINK = `${BOT_URL}?start=setup`;
 const RECOMMENDED_SETUP_DEEP_LINK = `${BOT_URL}?start=sub_dews-depeg_usd-top25`;
+const MINI_APP_HOME_DEEP_LINK = `${BOT_URL}?startapp=home`;
+const MINI_APP_WATCHLIST_DEEP_LINK = `${BOT_URL}?startapp=watchlist`;
+
+const MINI_APP_FEATURES = [
+  {
+    title: "Watchlist",
+    detail: "See every coin you're subscribed to with current DEWS band, safety grade, and active depegs at a glance.",
+  },
+  {
+    title: "Settings",
+    detail: "Toggle DEWS, depeg, safety, and launch alerts globally or per coin. Set quiet hours in your local /timezone.",
+  },
+  {
+    title: "Snooze & quiet hours",
+    detail: "Clear an active snooze, set new quiet-hours windows, and check delivery health without opening a chat thread.",
+  },
+  {
+    title: "Presets",
+    detail: "Follow curated cohorts like usd-top25 with one tap. Per-coin tuning and preset management will expand further soon.",
+  },
+] as const satisfies readonly { title: string; detail: string }[];
 
 const TELEGRAM_ACTION_ICONS = {
   bot: Bot,
@@ -103,7 +126,7 @@ const GROWTH_SUPPORT = [
   },
   {
     title: "Noise controls",
-    detail: "Raise the DEWS floor, set depeg milestones, mute upgrades, schedule UTC quiet hours, snooze on the fly.",
+    detail: "Raise the DEWS floor, set depeg milestones, mute upgrades, schedule quiet hours in your /timezone, snooze on the fly.",
     signal: "/set, /mute",
     icon: SlidersHorizontal,
   },
@@ -428,16 +451,33 @@ export default function PharosWatchBotPage() {
                   </div>
                   <TelegramPulseStrip />
                 </div>
-                <Button asChild size="lg" className="shrink-0 gap-2">
-                  <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
-                    Use Recommended Setup
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                </Button>
+                <div className="flex shrink-0 flex-col gap-2">
+                  <Button asChild size="lg" className="gap-2">
+                    <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                      Use Recommended Setup
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="gap-2">
+                    <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                      <Smartphone className="h-4 w-4" aria-hidden="true" />
+                      Open Mini App
+                    </a>
+                  </Button>
+                </div>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 Opens a Telegram confirmation that preloads DEWS and depeg alerts on the top 25 USD stablecoins.
-                Tune later with /set.
+                Tune later with /set, or{" "}
+                <a
+                  href={MINI_APP_WATCHLIST_DEEP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-sm underline underline-offset-4 transition-colors hover:text-foreground"
+                >
+                  open the Mini App
+                </a>{" "}
+                to manage alerts visually.
               </p>
             </div>
           </div>
@@ -459,6 +499,67 @@ export default function PharosWatchBotPage() {
             {TELEGRAM_ACTIONS.map((action, index) => (
               <SurfaceCard key={action.key} action={action} index={index} />
             ))}
+          </div>
+        </section>
+
+        <section className="space-y-4" id="mini-app" aria-labelledby="mini-app-title">
+          <div className="pharos-card-shell overflow-hidden border-frost-blue/30 bg-frost-blue/8 dark:bg-frost-blue/6">
+            <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.78fr)]">
+              <div className="border-b border-border/55 p-5 lg:border-b-0 lg:border-r lg:p-7">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-frost-blue/30 bg-background/55 text-sky-700 dark:text-sky-300">
+                    <Smartphone className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <p className="pharos-kicker text-sky-700 dark:text-sky-300">Mini App</p>
+                </div>
+                <h2 id="mini-app-title" className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                  Manage alerts visually, no commands required.
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  Open PharosWatchBot&rsquo;s Mini App from the menu button inside Telegram or with one tap below. It
+                  shares state with the bot &mdash; subscribe, snooze, or set quiet hours from whichever surface you
+                  prefer.
+                </p>
+                <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {MINI_APP_FEATURES.map((feature) => (
+                    <li key={feature.title} className="rounded-xl border border-border/60 bg-background/55 p-3.5">
+                      <p className="text-sm font-semibold text-foreground">{feature.title}</p>
+                      <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{feature.detail}</p>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-5 flex flex-wrap gap-2.5">
+                  <Button asChild size="sm" className="gap-2">
+                    <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                      <Smartphone className="h-4 w-4" aria-hidden="true" />
+                      Open Mini App
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="gap-2">
+                    <a href={MINI_APP_WATCHLIST_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                      Open watchlist
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <div className="p-5 lg:p-7" aria-hidden="true">
+                <div className="grid grid-cols-2 gap-3">
+                  {MINI_APP_FEATURES.map((feature) => (
+                    <div
+                      key={feature.title}
+                      className="flex aspect-[9/16] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/60 bg-background/45 p-3 text-center"
+                    >
+                      <LayoutGrid className="h-5 w-5 text-muted-foreground/60" />
+                      <p className="text-[11px] font-medium leading-tight text-muted-foreground">{feature.title}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground/80">
+                  Mini App preview &middot; screenshots ship with the next product release.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -712,6 +813,12 @@ export default function PharosWatchBotPage() {
                   <a href={RECOMMENDED_SETUP_DEEP_LINK} target="_blank" rel="noopener noreferrer">
                     <Bot className="h-4 w-4" />
                     Start Bot
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="gap-2">
+                  <a href={MINI_APP_HOME_DEEP_LINK} target="_blank" rel="noopener noreferrer">
+                    <Smartphone className="h-4 w-4" />
+                    Try the Mini App
                   </a>
                 </Button>
                 {TELEGRAM_ACTIONS.filter((action) => !action.isPrimary).map((action) => {

@@ -162,8 +162,20 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/mute <start>-<end>",
         description:
-          "Set UTC quiet hours (integer hours, 0–23). Notifications are silenced; messages still deliver.",
+          "Set quiet hours (integer hours, 0–23) interpreted in the chat's /timezone — UTC if none is set. Notifications are silenced; messages still deliver.",
         example: "/mute 22-07",
+      },
+      {
+        command: "/timezone <IANA-zone>",
+        description:
+          "Set the chat's IANA timezone used to resolve /mute quiet hours locally (e.g. Europe/Paris, America/New_York). Sending /timezone with no argument shows the current zone and an inline keyboard of common zones.",
+        example: "/timezone Europe/Paris",
+      },
+      {
+        command: "/settings",
+        description:
+          "Open an inline-keyboard panel for chat-level settings (quiet hours, snooze clear, global DEWS/depeg/safety/launch toggles). Add a ticker (e.g. /settings USDC) to open the per-coin panel with DEWS floor, depeg step, safety mode, and launch toggle.",
+        example: "/settings USDC",
       },
       {
         command: "/unmutehours",
@@ -252,7 +264,7 @@ export const TELEGRAM_PARAM_LEGEND = [
   { token: "<ticker>", meaning: "Symbol (USDC) or coin-id (usdc-circle)" },
   { token: "<value>", meaning: "Setting-specific — see the /set rows" },
   { token: "<view>", meaning: "depeg, dews, yield, liquidity, chains, safety" },
-  { token: "<start>-<end>", meaning: "Integer UTC hours, 0–23" },
+  { token: "<start>-<end>", meaning: "Integer hours, 0–23 (interpreted in the chat's /timezone; UTC by default)" },
   { token: "all", meaning: "Reserved target meaning every tracked stablecoin" },
 ] as const;
 
@@ -280,7 +292,12 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "How do I silence Telegram notifications during certain hours?",
     answer:
-      "Use /mute <start>-<end> with integer UTC hours. For example, /mute 22-07 silences alerts between 10pm and 7am UTC. Use /unmutehours to disable quiet hours.",
+      "Use /mute <start>-<end> with integer hours (0–23). For example, /mute 22-07 silences alerts between 10pm and 7am. Quiet hours are interpreted in the chat's /timezone — set it once with /timezone Europe/Paris (or any IANA zone) and /mute will use it; without /timezone, hours fall back to UTC. Use /unmutehours to disable quiet hours.",
+  },
+  {
+    question: "Is there a Mini App or do I have to type commands?",
+    answer:
+      "Both work. Every alert family, preset, and threshold is reachable through commands. There's also a Mini App you can open from the bot's menu button or via https://t.me/PharosWatchBot?startapp=home — it gives you a visual surface for the watchlist, settings, snooze, and presets without typing slash commands. The Mini App and the bot share the same subscription state, so you can switch between them freely.",
   },
   {
     question: "What are preset watchlists?",

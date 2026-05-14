@@ -2,6 +2,7 @@ import { escapeHtml } from "../../lib/telegram";
 import { loadTelegramChatHealthDiagnostics } from "../../lib/telegram-usage-analytics";
 import { isQuietHoursActive } from "../../cron/telegram-quiet-hours";
 import {
+  buildMiniAppOnlyKeyboard,
   formatQuietHours,
   describeGlobalAlertSettings,
 } from "../telegram-webhook-messages";
@@ -155,5 +156,12 @@ export const handleHealth: WebhookCommandHandler = async (ctx) => {
     "Use /list for full settings or /settings for inline controls.",
   ];
 
-  await ctx.replyToChat(escapeHtml(lines.join("\n")));
+  const message = escapeHtml(lines.join("\n"));
+  if (ctx.chatType === "private") {
+    await ctx.replyToChatWithMarkup(message, {
+      replyMarkup: buildMiniAppOnlyKeyboard("Open in app", "health"),
+    });
+    return;
+  }
+  await ctx.replyToChat(message);
 };

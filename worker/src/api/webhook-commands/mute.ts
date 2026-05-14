@@ -1,6 +1,9 @@
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { formatQuietHours } from "../telegram-webhook-messages";
+import {
+  buildMiniAppOnlyKeyboard,
+  formatQuietHours,
+} from "../telegram-webhook-messages";
 import { parseQuietHours } from "../telegram-webhook-parsing";
 import { unixNow, upsertSubscriberRow } from "../telegram-webhook-store";
 import type { WebhookCommandHandler } from "./context";
@@ -27,10 +30,15 @@ export const handleMute: WebhookCommandHandler = async (ctx, args) => {
     actionDetail: "mute",
     outcome: "enabled",
   });
-  await ctx.replyToChat(
-    escapeHtml(
-      `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)}.\n` +
-        "Messages will still arrive, but Telegram notifications will be silenced in that window.",
-    ),
+  const message = escapeHtml(
+    `Quiet hours enabled: ${formatQuietHours(parsed.startHourUtc, parsed.endHourUtc)}.\n` +
+      "Messages will still arrive, but Telegram notifications will be silenced in that window.",
   );
+  if (ctx.chatType === "private") {
+    await ctx.replyToChatWithMarkup(message, {
+      replyMarkup: buildMiniAppOnlyKeyboard("Tweak in app", "quiet-hours"),
+    });
+    return;
+  }
+  await ctx.replyToChat(message);
 };

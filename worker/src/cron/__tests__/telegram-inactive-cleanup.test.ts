@@ -1,5 +1,35 @@
-import { describe, expect, it } from "vitest";
-import { runTelegramInactiveCleanup } from "../telegram-inactive-cleanup";
+import { describe, expect, it, vi } from "vitest";
+
+// Mock sendToChat so the warning sub-pass never makes a real HTTP call. The
+// test file owns the queue of responses; each `sendToChat` invocation pops the
+// next entry. Tests can assert call args and call counts.
+type SendResult = Awaited<ReturnType<typeof import("../../lib/telegram").sendToChat>>;
+const sendToChatQueue: SendResult[] = [];
+const sendToChatCalls: Array<{ chatId: string; text: string; botToken: string; opts: unknown }> = [];
+
+vi.mock("../../lib/telegram", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/telegram")>();
+  return {
+    ...actual,
+    sendToChat: vi.fn(async (chatId: string, text: string, botToken: string, opts: unknown) => {
+      sendToChatCalls.push({ chatId, text, botToken, opts });
+      const next = sendToChatQueue.shift();
+      if (next) return next;
+      return {
+        ok: true,
+        blocked: false,
+        retryable: false,
+        permanentFailure: false,
+        statusCode: 200,
+        errorClass: null,
+        delivery: "sent",
+        retryAfterSec: null,
+      } satisfies SendResult;
+    }),
+  };
+});
+
+const { runTelegramInactiveCleanup } = await import("../telegram-inactive-cleanup");
 
 interface SubscriberRow {
   chat_id: string;

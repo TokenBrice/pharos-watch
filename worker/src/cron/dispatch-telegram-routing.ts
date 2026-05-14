@@ -230,6 +230,17 @@ export function splitFreshQueue(
   return { toSend, toEnqueue, deferredPerChat };
 }
 
+/**
+ * Telegram chat-id convention: user IDs are positive integers and group/
+ * supergroup/channel IDs are negative. Mini App `web_app` inline buttons are
+ * rejected by Telegram outside private chats, so we use this heuristic to
+ * decide whether `buildAlertReplyMarkup` may append the Mini App row.
+ */
+function isPrivateChatId(chatId: string): boolean {
+  const parsed = Number(chatId);
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 export function expandSubscriberChunks(
   subscribers: RoutedSubscriberAlert[],
   blockedChats: ReadonlySet<string> = new Set(),
@@ -237,6 +248,7 @@ export function expandSubscriberChunks(
   const messages: BatchMessage[] = [];
   for (const sub of subscribers) {
     if (blockedChats.has(sub.chatId)) continue;
+    const privateChat = isPrivateChatId(sub.chatId);
     for (const [chunkIndex, chunk] of sub.chunks.entries()) {
       // Single-coin alerts get a small link-preview card on the first chunk
       // (Bot API 7.0+). Multi-coin and overflow chunks fall back to the
@@ -247,7 +259,7 @@ export function expandSubscriberChunks(
         html: chunk,
         canonicalHtml: sub.canonicalHtml,
         disableNotification: sub.disableNotification,
-        replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex),
+        replyMarkup: buildAlertReplyMarkup(sub.alerts, chunkIndex, { privateChat }),
         chunkIndex,
         alertType: sub.alertType,
         ...(linkPreviewOptions ? { linkPreviewOptions } : {}),

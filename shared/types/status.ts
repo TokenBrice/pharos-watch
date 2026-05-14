@@ -330,6 +330,11 @@ export interface TelegramPulse {
   alertTypeChats: TelegramAlertTypeChats;
   quietHoursEnabledChats: number | null;
   pendingDeliveries: number | null;
+  miniAppSessionsToday?: number | null;
+  miniAppMutationsToday?: number | null;
+  miniAppDeniedToday?: number | null;
+  miniAppReplayClaimsToday?: number | null;
+  miniAppOpenToFirstMutationP50Sec?: number | null;
   currentSnapshotAt: number;
   lifecycleHistoryUpdatedAt: number | null;
   lifecycleHistoryEverySeconds: number;
@@ -384,6 +389,11 @@ const TelegramPulseBaseSchema = z.object({
   alertTypeChats: TelegramAlertTypeChatsSchema,
   quietHoursEnabledChats: z.number().nullable(),
   pendingDeliveries: z.number().nullable(),
+  miniAppSessionsToday: z.number().nullable().optional(),
+  miniAppMutationsToday: z.number().nullable().optional(),
+  miniAppDeniedToday: z.number().nullable().optional(),
+  miniAppReplayClaimsToday: z.number().nullable().optional(),
+  miniAppOpenToFirstMutationP50Sec: z.number().nullable().optional(),
   currentSnapshotAt: z.number().optional(),
   lifecycleHistoryUpdatedAt: z.number().nullable().optional(),
   lifecycleHistoryEverySeconds: z.number().optional(),

@@ -11,6 +11,7 @@ import {
   isDepegStepValue,
   type DepegStepValue,
 } from "./telegram-constants";
+import { buildTelegramMiniAppUrl } from "./telegram-webhook-registration";
 
 // Re-export the chunking constants so existing callers that import them from
 // this module (and any downstream tests) keep working.
@@ -556,30 +557,94 @@ export function getSingleAlertStablecoinId(alerts: ConsolidatedAlerts): string |
   return unique.size === 1 ? ids[0] ?? null : null;
 }
 
-export function buildAlertReplyMarkup(alerts: ConsolidatedAlerts, chunkIndex: number) {
+export interface AlertReplyMarkupOptions {
+  /**
+   * True when the destination chat is a private DM (Telegram convention:
+   * positive numeric chat_id). Mini App `web_app` buttons are rejected by
+   * Telegram in groups/channels, so they are only appended when this is true.
+   */
+  privateChat?: boolean;
+}
+
+export function buildAlertReplyMarkup(
+  alerts: ConsolidatedAlerts,
+  chunkIndex: number,
+  options: AlertReplyMarkupOptions = {},
+) {
   const stablecoinId = chunkIndex === 0 ? getSingleAlertStablecoinId(alerts) : null;
-  if (!stablecoinId) return SNOOZE_REPLY_MARKUP;
+  const privateChat = options.privateChat === true;
+  if (!stablecoinId) {
+    // Multi-coin chunk on the first chunk of a private DM: surface a Mini App
+    // entry point pointed at the watchlist view so the user can tune alerts
+    // across multiple coins without copy-pasting symbols. Telegram rejects
+    // `web_app` buttons in groups/channels, so this is gated on `privateChat`.
+    if (privateChat && chunkIndex === 0 && hasMultipleStablecoinIds(alerts)) {
+      return {
+        inline_keyboard: [
+          [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
+          [
+            {
+              text: "Open Watchlist",
+              web_app: { url: buildTelegramMiniAppUrl("watchlist") },
+            },
+          ],
+        ],
+      };
+    }
+    return SNOOZE_REPLY_MARKUP;
+  }
   // Per-coin snooze row (P1-U10): lets the user mute just this coin without
   // touching the chat-level snooze. callback_data stays within Telegram's
   // 64-byte limit even for the longest tracked stablecoin id; the property
   // test in `telegram-alerts.test.ts` enforces this invariant.
-  return {
-    inline_keyboard: [
-      [
-        { text: "Status", callback_data: `status:${stablecoinId}` },
-        { text: "Depeg +250", callback_data: `depegstep:${stablecoinId}:250` },
-      ],
-      [
-        { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },
-      ],
-      [
-        { text: "Snooze coin 1h", callback_data: `coinsnooze:${stablecoinId}:1h` },
-        { text: "4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
-        { text: "24h", callback_data: `coinsnooze:${stablecoinId}:24h` },
-      ],
-      SNOOZE_REPLY_MARKUP.inline_keyboard[0],
+  type AlertInlineButton =
+    | { text: string; callback_data: string }
+    | { text: string; web_app: { url: string } };
+  const baseRows: AlertInlineButton[][] = [
+    [
+      { text: "Status", callback_data: `status:${stablecoinId}` },
+      { text: "Depeg +250", callback_data: `depegstep:${stablecoinId}:250` },
     ],
-  } as const;
+    [
+      { text: "Safety downgrades", callback_data: `safetydown:${stablecoinId}` },
+    ],
+    [
+      { text: "Snooze coin 1h", callback_data: `coinsnooze:${stablecoinId}:1h` },
+      { text: "4h", callback_data: `coinsnooze:${stablecoinId}:4h` },
+      { text: "24h", callback_data: `coinsnooze:${stablecoinId}:24h` },
+    ],
+    [...SNOOZE_REPLY_MARKUP.inline_keyboard[0]],
+  ];
+  if (privateChat) {
+    // Mini App "Tune in app" row — only valid in private DMs (Telegram
+    // rejects `web_app` inline buttons in groups/channels).
+    baseRows.push([
+      {
+        text: "Tune in app",
+        web_app: { url: buildTelegramMiniAppUrl(`coin_${stablecoinId}`) },
+      },
+    ]);
+  }
+  return { inline_keyboard: baseRows };
+}
+
+function hasMultipleStablecoinIds(alerts: ConsolidatedAlerts): boolean {
+  const ids = new Set<string>();
+  const allLists = [
+    alerts.dews,
+    alerts.depegTriggered,
+    alerts.depegResolved,
+    alerts.depegWorsening,
+    alerts.safety,
+    alerts.launch,
+  ];
+  for (const list of allLists) {
+    for (const e of list) {
+      ids.add(e.stablecoinId);
+      if (ids.size > 1) return true;
+    }
+  }
+  return false;
 }
 
 /**

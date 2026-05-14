@@ -1,5 +1,9 @@
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { isDepegStepValue } from "../lib/telegram-constants";
+import {
+  TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
+  TELEGRAM_START_PAYLOAD_MAX_LENGTH,
+} from "@shared/lib/telegram-mini-app-payloads";
 import type {
   ConfirmBulkPayload,
   ParsedSetCommand,
@@ -314,13 +318,11 @@ export function parseSetCommand(args: string): ParsedSetCommand | { error: strin
 export type ParsedStartPayload =
   | { kind: "none" }
   | { kind: "setup" }
+  | { kind: "app" }
   | { kind: "subscribe"; args: string }
   | { kind: "status"; coinId: string }
   | { kind: "why"; coinId: string }
   | { kind: "coverage"; coinId: string };
-
-const START_PAYLOAD_MAX_LENGTH = 64;
-const START_PAYLOAD_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 /**
  * Parse a Telegram `/start <payload>` deep-link payload into a typed action.
@@ -328,16 +330,23 @@ const START_PAYLOAD_PATTERN = /^[A-Za-z0-9_-]+$/;
  * - `sub_<types>_<targets>` (e.g. `sub_dews-depeg_usd-top25`) → subscribe
  * - `status_<id>` / `why_<id>` / `coverage_<id>` → read-only insights
  * - `setup` → setup wizard placeholder
+ * - `app` / `home` → Mini App launch nudge (see registry in
+ *   `@shared/lib/telegram-mini-app-payloads`)
  * Unknown or malformed payloads return `{ kind: "none" }`.
+ *
+ * Charset/length constraints are sourced from
+ * `@shared/lib/telegram-mini-app-payloads` so the worker `?start=` parser and
+ * the Mini App `?startapp=` parser stay aligned.
  */
 export function parseStartPayload(args: string): ParsedStartPayload {
   const payload = args.trim();
   if (!payload) return { kind: "none" };
-  if (payload.length > START_PAYLOAD_MAX_LENGTH) return { kind: "none" };
-  if (!START_PAYLOAD_PATTERN.test(payload)) return { kind: "none" };
+  if (payload.length > TELEGRAM_START_PAYLOAD_MAX_LENGTH) return { kind: "none" };
+  if (!TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(payload)) return { kind: "none" };
 
   const lower = payload.toLowerCase();
   if (lower === "setup") return { kind: "setup" };
+  if (lower === "app" || lower === "home") return { kind: "app" };
 
   const firstSep = lower.indexOf("_");
   if (firstSep === -1) return { kind: "none" };
