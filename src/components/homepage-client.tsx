@@ -22,7 +22,6 @@ import { HomepageSectionBand } from "@/components/homepage-sections";
 import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
 import { Button } from "@/components/ui/button";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
-import { HomepageTape } from "@/components/homepage-tape";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import {
@@ -469,10 +468,6 @@ export function HomepageClient() {
           </p>
         )}
       </section>
-
-      <SectionErrorBoundary name="homepage-tape">
-        <HomepageTape />
-      </SectionErrorBoundary>
     </div>
   );
 }

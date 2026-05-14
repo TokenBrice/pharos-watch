@@ -15,7 +15,7 @@ The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 active stablecoins
 2. `SiteHeader`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
-3. a responsive wrapper containing optional `HomepageStartHereCallout`, optional `HomepageVilleTeaser`, and `KpiBar`
+3. a responsive wrapper containing optional `HomepageStartHereCallout`, `HomepageTape`, and `KpiBar`
 4. `HomepageClient`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
@@ -34,7 +34,7 @@ The visible top fold is split across three independently composed surfaces:
 
 - `SiteHeader` on `lg+`
 - the optional `HomepageStartHereCallout`, rendered by `src/app/page.tsx` between `SiteHeader` and the KPI strip
-- the optional `HomepageVilleTeaser`, rendered after the Start Here callout until dismissed
+- `HomepageTape`, rendered after the Start Here callout and before the KPI strip
 - `KpiBar` across breakpoints
 
 `SiteHeader` owns the visible `h1` and keeps one raw heading across breakpoints. Mobile and desktop masthead layouts may duplicate metric groups, but they must not duplicate the page-level heading because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
@@ -155,10 +155,10 @@ Above the fold (`src/app/page.tsx`):
 
 1. `SiteHeader`
 2. `HomepageStartHereCallout` (first-session only)
-3. `HomepageVilleTeaser` (dismissible companion-experience promo)
+3. `HomepageTape`
 4. `KpiBar`
 
-The optional modules and KPI bar share a plain vertical wrapper. Returning visitors see the KPI bar directly under the header only after both optional modules are hidden or dismissed.
+The Start Here callout, live tape, and KPI bar share a plain vertical wrapper. Returning visitors who have retired the Start Here callout see the live tape directly under the header.
 
 Under the fold (`HomepageClient`):
 
