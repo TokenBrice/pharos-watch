@@ -49,6 +49,8 @@ The stable `id` field is the primary dead-coin identifier across the cemetery UI
 
 The `/cemetery/` page links directly to both exports from the route header so researchers and journalists can cite/download the dataset without inspecting the repository.
 
+The `/cemetery/` page also emits a `Dataset` JSON-LD node built from the checked-in JSON export metadata, alongside the existing `CollectionPage` and `ItemList` nodes. The dataset node links JSON and CSV `DataDownload` distributions at the public `/datasets/stablecoin-cemetery.{json,csv}` URLs, exposes field descriptions as `variableMeasured`, includes source checksum / row-count metadata, and must not point crawlers at internal `/_site-data/*` URLs.
+
 ### Frozen entries in the cemetery
 
 Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into the cemetery alongside curated `DEAD_STABLECOINS` through `shared/lib/cemetery-merged.ts`:

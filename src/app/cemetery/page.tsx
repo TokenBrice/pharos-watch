@@ -4,6 +4,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
+import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -70,6 +71,7 @@ export default function CemeteryPage() {
                 },
               })),
             },
+            buildCemeteryDatasetJsonLd(),
           ]),
         }}
       />
