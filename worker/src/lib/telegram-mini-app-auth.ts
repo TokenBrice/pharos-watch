@@ -73,6 +73,11 @@ function parseUser(rawUser: string | null): { id: string; username: string | nul
   };
 }
 
+function isPrivateUserLaunchChatType(chatType: string | null): boolean {
+  // Telegram uses "sender" for direct-link Mini App launches from the user's private context.
+  return chatType === null || chatType === "private" || chatType === "sender";
+}
+
 export async function validateTelegramMiniAppInitData(
   initData: string,
   botToken: string,
@@ -113,6 +118,6 @@ export async function validateTelegramMiniAppInitData(
     chatType,
     startParam,
     authDate,
-    canMutatePrivateChat: chatType === null || chatType === "private",
+    canMutatePrivateChat: isPrivateUserLaunchChatType(chatType),
   };
 }

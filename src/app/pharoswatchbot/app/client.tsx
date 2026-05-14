@@ -116,6 +116,16 @@ function StatusPanel({ state, canMutate, isMutating, onMutate }: {
   onMutate: (operation: TelegramMiniAppOperation) => void;
 }) {
   const activeGlobalCount = (Object.keys(ALERT_LABELS) as TelegramAlertType[]).filter((type) => state.subscriber.globalAlerts[type]).length;
+  const readOnlyCopy = state.viewer.mutationBlockReason === "stale-auth"
+    ? {
+      title: "Reopen Telegram to edit settings",
+      body: "This session is still readable, but edits require a fresh launch from Telegram.",
+    }
+    : {
+      title: "Group settings are command-only for now",
+      body: "Use /settings@PharosWatchBot in the group. Only group admins can change alert settings.",
+    };
+
   return (
     <div className="space-y-4">
       {!state.viewer.canMutate ? (
@@ -123,8 +133,8 @@ function StatusPanel({ state, canMutate, isMutating, onMutate }: {
           <div className="flex gap-3">
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Group settings are command-only for now</h2>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Use /settings@PharosWatchBot in the group. Only group admins can change alert settings.</p>
+              <h2 className="text-sm font-semibold text-foreground">{readOnlyCopy.title}</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{readOnlyCopy.body}</p>
             </div>
           </div>
         </section>

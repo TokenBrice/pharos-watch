@@ -233,7 +233,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 ## 9. Mini App surface
 
-**Responsibility.** Serve the Telegram Mini App UI and its two signed `initData` API calls. Load private-chat state, expose read-only group/stale-auth state, apply private-chat mutations, and return the same state contract the frontend renders. This seam is intentionally narrow: it does not receive Telegram webhook updates and it does not call the Telegram Bot API.
+**Responsibility.** Serve the Telegram Mini App UI and its two signed `initData` API calls. Load private-user state, expose read-only group/stale-auth state, apply private-user mutations, and return the same state contract the frontend renders. Telegram direct-link launches can report the private user context as `chat_type="sender"`. This seam is intentionally narrow: it does not receive Telegram webhook updates and it does not call the Telegram Bot API.
 
 **Owned files.**
 - `src/app/pharoswatchbot/app/page.tsx`
@@ -252,7 +252,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
 
 **Must NOT.**
 - Accept mutation auth older than the 15-minute mutation window.
-- Mutate group/supergroup chat rows until a numeric group `chat_id` mapping and fresh admin verification path exists.
+- Mutate group/supergroup/channel chat rows until a numeric group `chat_id` mapping and fresh admin verification path exists.
 - Write analytics or cooldown rows before signed `initData` validation succeeds.
 - Duplicate per-coin or preset write SQL outside the existing State / persistence helpers.
 - Use `Telegram.WebApp.sendData` without updating `allowed_updates` and treating incoming `web_app_data` as untrusted.

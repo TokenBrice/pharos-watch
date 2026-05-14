@@ -48,6 +48,23 @@ describe("validateTelegramMiniAppInitData", () => {
     });
   });
 
+  it("treats Telegram direct-link sender launches as private-user launches", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "sender",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+
+    await expect(validateTelegramMiniAppInitData(initData, BOT_TOKEN, {
+      maxAgeSec: 86_400,
+      nowSec: NOW_SEC,
+    })).resolves.toMatchObject({
+      userId: "42",
+      chatType: "sender",
+      canMutatePrivateChat: true,
+    });
+  });
+
   it("rejects tampered fields", async () => {
     const initData = await signedInitData({
       auth_date: String(NOW_SEC - 60),

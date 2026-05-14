@@ -24,9 +24,9 @@ Launch paths:
 - Persistent bot menu button: the five-minute Telegram reconciliation lane sets the default menu button to `Manage Alerts` with a Web App URL of `/pharoswatchbot/app/`.
 - Bot profile Main Mini App: configured through BotFather as `Launch app`; preview media and loading-screen customization are BotFather-owned and are not reconciled by Worker code.
 - Private command replies: `/start`, `/settings`, `/list`, and `/status <ticker>` include Web App buttons in private chats. These buttons attach `startapp` context (`setup_recommended`, `settings`, `watchlist`, or `coin_<stablecoinId>`) so the Mini App opens on the matching panel. Group and supergroup replies keep the existing command and callback keyboards.
-- Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`.
+- Direct Mini App deep links: `https://t.me/PharosWatchBot?startapp=<payload>` may open the app with a start parameter; backend authorization for every Mini App read and mutation validates Telegram `initData`. Telegram reports private direct-link launches as `chat_type="sender"`, which the backend treats as the user's private alert settings context.
 
-Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group rows until a safe numeric group `chat_id` mapping and admin verification path exists.
+Group behavior is intentionally unchanged. Group setup, settings, and subscription mutations remain available only through addressed bot commands and existing callback flows, with the same fresh admin checks as before. The Mini App must not mutate group, supergroup, or channel rows until a safe numeric group `chat_id` mapping and admin verification path exists.
 
 BotFather-owned release checklist:
 

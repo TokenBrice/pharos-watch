@@ -162,6 +162,31 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.viewer.mutationBlockReason).toBe("not-private");
   });
 
+  it("treats direct-link sender launches as mutable private-chat state", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "sender",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(db, request("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as {
+      viewer: {
+        chatId: string | null;
+        chatType: string | null;
+        canMutate: boolean;
+        mutationBlockReason: string | null;
+      };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.viewer.chatId).toBe("42");
+    expect(body.viewer.chatType).toBe("sender");
+    expect(body.viewer.canMutate).toBe(true);
+    expect(body.viewer.mutationBlockReason).toBeNull();
+  });
+
   it("rate-limits repeated session opens after successful auth", async () => {
     const initData = await privateInitData();
     const cooldownKey = "telegram:command-cooldown:42:mini-app:session";
@@ -329,6 +354,23 @@ describe("handleTelegramMiniAppMutation", () => {
       operation: { kind: "set-global", alertType: "dews", enabled: true },
     }), BOT_TOKEN);
     expect(response.status).toBe(403);
+  });
+
+  it("allows direct-link sender mutations", async () => {
+    const initData = await signedInitData({
+      auth_date: String(NOW_SEC - 60),
+      chat_type: "sender",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const db = mockD1(stateReadTables());
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "clear-snooze" },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "alert_snooze_until_ts = NULL", ["42", "alice"])).toBe(true);
   });
 
   it("rejects stale mutation auth", async () => {

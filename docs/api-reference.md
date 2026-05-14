@@ -3008,7 +3008,7 @@ Returns the current private-chat Mini App control-panel state for a Telegram use
 
 `startParam` is optional and is used only as a fallback when Telegram did not include `start_param` inside `initData`.
 
-**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`. Private sessions older than the 15-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group launches return read-only state with `viewer.mutationBlockReason="not-private"`.
+**Response:** JSON Mini App state. Private fresh sessions return `viewer.canMutate=true`, including Telegram direct-link launches where `chat_type="sender"` identifies the user's private context. Private sessions older than the 15-minute mutation window but younger than 24 hours return state with `viewer.canMutate=false` and `viewer.mutationBlockReason="stale-auth"`. Group, supergroup, and channel launches return read-only state with `viewer.mutationBlockReason="not-private"`.
 
 Key fields:
 
@@ -3025,7 +3025,7 @@ Errors: `400` invalid request shape, `401` invalid or stale Telegram session, `4
 
 Applies one private-chat Mini App setting mutation, then returns the refreshed Mini App state.
 
-**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-chat-only.
+**Authentication:** exempt from `X-API-Key`; requires signed Telegram Mini App `initData` no older than 15 minutes. Mutations are private-user-context only (`chat_type` absent, `private`, or Telegram direct-link `sender`).
 
 **Site-data lane:** denied.
 
