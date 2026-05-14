@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import {
+  computeExcludedBalanceAdjustedSupplyRaw,
   resolveSupplementalPrice,
   selectSingleOnChainSupplyContract,
   selectSupplementalOnChainSupplyContract,
@@ -70,6 +71,23 @@ describe("selectSingleOnChainSupplyContract", () => {
       ethereumContract,
       avalancheContract,
     ], "susdc-spark"))).toBe(ethereumContract);
+  });
+});
+
+describe("computeExcludedBalanceAdjustedSupplyRaw", () => {
+  it("subtracts configured non-circulating balances before decimal conversion", () => {
+    expect(computeExcludedBalanceAdjustedSupplyRaw(
+      40_020_000n * 10n ** 18n,
+      [
+        19_686_793n * 10n ** 18n,
+        19_780_590n * 10n ** 18n,
+      ],
+    )).toBe(552_617n * 10n ** 18n);
+  });
+
+  it("fails closed when excluded balances exhaust supply", () => {
+    expect(computeExcludedBalanceAdjustedSupplyRaw(1_000n, [1_000n])).toBeNull();
+    expect(computeExcludedBalanceAdjustedSupplyRaw(1_000n, [1_001n])).toBeNull();
   });
 });
 

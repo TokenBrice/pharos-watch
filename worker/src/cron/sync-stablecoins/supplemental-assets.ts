@@ -12,7 +12,8 @@ import { resolveMarketCap } from "../../lib/resolve-market-cap";
 import { throwIfAborted } from "../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { probeTrackedTokenSupply } from "../reserve-adapters/helpers";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { fetchOnchainUint256, probeTrackedTokenSupply } from "../reserve-adapters/helpers";
 import type { DefiLlamaCoinPrice, PeggedAsset } from "./enrich-prices";
 import {
   buildZephyrProtocolPeggedAsset,
@@ -32,6 +33,28 @@ const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, { chain: string; rpcUrl?:
   // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
   // vault supply plus the guarded protocol-redeem price keeps the asset visible.
   "susdc-spark": { chain: "ethereum" },
+};
+
+type SupplementalOnChainSupplySource = "onchain-total-supply" | "onchain-circulating-supply";
+
+interface OnChainSupplyExclusionConfig {
+  chain: string;
+  holderAddresses: string[];
+  supplySource: SupplementalOnChainSupplySource;
+}
+
+const CURATED_ONCHAIN_SUPPLY_EXCLUSIONS: Record<string, OnChainSupplyExclusionConfig> = {
+  // Tangent mints USG inventory to PegKeeper contracts that deposit/withdraw
+  // from protocol liquidity pools. Tangent's own UI excludes those live
+  // balances from circulating USG, so the fallback mirrors that on-chain rule.
+  "usg-tangent": {
+    chain: "ethereum",
+    holderAddresses: [
+      "0xf89615f75c8161dc185c03020240905f6b66bad9",
+      "0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e",
+    ],
+    supplySource: "onchain-circulating-supply",
+  },
 };
 
 function pegTypeKey(meta: StablecoinMeta): string {
@@ -416,13 +439,75 @@ export function selectSupplementalOnChainSupplyContract(
   return selectSingleOnChainSupplyContract(meta);
 }
 
-/** Fetch totalSupply from one unambiguous on-chain contract and return mcap = supply × price. */
+export function computeExcludedBalanceAdjustedSupplyRaw(
+  totalSupplyRaw: bigint,
+  excludedBalancesRaw: readonly bigint[],
+): bigint | null {
+  if (totalSupplyRaw <= 0n) return null;
+
+  let excludedRaw = 0n;
+  for (const balanceRaw of excludedBalancesRaw) {
+    if (balanceRaw < 0n) return null;
+    excludedRaw += balanceRaw;
+  }
+
+  const adjustedRaw = totalSupplyRaw - excludedRaw;
+  return adjustedRaw > 0n ? adjustedRaw : null;
+}
+
+async function adjustOnChainSupplyForExcludedBalances(input: {
+  meta: StablecoinMeta;
+  supplyContract: NonNullable<StablecoinMeta["contracts"]>[number];
+  totalSupplyRaw: bigint;
+  signal: AbortSignal;
+  chainRpc?: ChainRpcConfig;
+  curatedRpc?: { rpcUrl?: string; fallbackRpcUrl?: string };
+}): Promise<{ raw: bigint; supplySource: SupplementalOnChainSupplySource } | null> {
+  const exclusionConfig = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[input.meta.id];
+  if (!exclusionConfig) return null;
+
+  if (input.supplyContract.chain === "solana" || input.supplyContract.chain !== exclusionConfig.chain) {
+    throw new Error(
+      `configured supply exclusions require ${exclusionConfig.chain}, selected ${input.supplyContract.chain}`,
+    );
+  }
+
+  const balances = await Promise.all(
+    exclusionConfig.holderAddresses.map((holderAddress) =>
+      fetchOnchainUint256({
+        contract: input.supplyContract.address,
+        data: encodeBalanceOfCallData(holderAddress),
+        signal: input.signal,
+        rpcUrl: input.curatedRpc?.rpcUrl ?? input.chainRpc?.rpcUrl,
+        fallbackRpcUrl: input.curatedRpc?.fallbackRpcUrl ?? input.chainRpc?.fallbackRpcUrl,
+        rpcMode: "public-rpc",
+        chain: input.supplyContract.chain,
+      }),
+    ),
+  );
+
+  if (balances.some((balance): balance is null => balance == null)) {
+    throw new Error("configured excluded-balance read returned null");
+  }
+
+  const adjustedRaw = computeExcludedBalanceAdjustedSupplyRaw(input.totalSupplyRaw, balances as bigint[]);
+  if (adjustedRaw == null) {
+    throw new Error("configured excluded balances are greater than or equal to total supply");
+  }
+
+  return {
+    raw: adjustedRaw,
+    supplySource: exclusionConfig.supplySource,
+  };
+}
+
+/** Fetch supply from one unambiguous on-chain contract and return mcap = supply × price. */
 async function fetchOnChainMcap(
   meta: StablecoinMeta,
   priceUsd: number,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
-): Promise<number | null> {
+): Promise<{ mcap: number; supplySource: SupplementalOnChainSupplySource } | null> {
   const curated = CURATED_ONCHAIN_SUPPLY_CONTRACTS[meta.id];
   const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
@@ -450,15 +535,25 @@ async function fetchOnChainMcap(
       curated?.rpcUrl ?? chainRpc?.rpcUrl,
       curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
     );
-    if (raw > 0n) {
-      const decimals = supplyContract.decimals ?? (supplyContract.chain === "solana" ? 6 : 18);
-      const supply = Number(raw) / 10 ** decimals;
-      const mcap = supply * priceUsd;
-      if (Number.isFinite(mcap) && mcap > 0) {
-        const chainLabel = supplyContract.chain === "solana" ? "Solana" : "On-chain";
-        console.log(`[fiat-cg] ${chainLabel} supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
-        return mcap;
-      }
+    if (raw <= 0n) return null;
+
+    const adjustment = await adjustOnChainSupplyForExcludedBalances({
+      meta,
+      supplyContract,
+      totalSupplyRaw: raw,
+      signal: supplySignal,
+      chainRpc,
+      curatedRpc: curated,
+    });
+    const supplyRaw = adjustment?.raw ?? raw;
+    const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
+    const decimals = supplyContract.decimals ?? (supplyContract.chain === "solana" ? 6 : 18);
+    const supply = Number(supplyRaw) / 10 ** decimals;
+    const mcap = supply * priceUsd;
+    if (Number.isFinite(mcap) && mcap > 0) {
+      const chainLabel = supplyContract.chain === "solana" ? "Solana" : "On-chain";
+      console.log(`[fiat-cg] ${chainLabel} supply fallback for ${meta.symbol}: ${supply.toFixed(2)} units → $${mcap.toFixed(2)} mcap`);
+      return { mcap, supplySource };
     }
   } catch (err) {
     const chainLabel = supplyContract.chain === "solana" ? "Solana" : "EVM";
@@ -535,8 +630,8 @@ async function fetchFiatCoinGeckoTokens(
         if (!mcap && priceForSupply != null) {
           const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
           if (onChainMcap) {
-            mcap = onChainMcap;
-            supplySource = "onchain-total-supply";
+            mcap = onChainMcap.mcap;
+            supplySource = onChainMcap.supplySource;
           }
         }
 

@@ -4,7 +4,7 @@ Daily market cap snapshot pipeline. Captures cached `peggedAssets` whose IDs are
 
 Shadow assets are part of PSI eligibility, but this cron only reads rows present in the cached `stablecoins` payload. Shadow-asset history therefore requires separate historical/backfill coverage unless a shadow asset is present in that cache.
 
-The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko gap-fill rows, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, and on-chain-total-supply supplemental rows assembled by the 15-minute `syncStablecoins()` cron.
+The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains the primary source for regular assets, but the cached payload can include CoinGecko gap-fill rows, DefiLlama history gap-fill rows, commodity/CoinGecko supplemental rows, on-chain-total-supply supplemental rows, and configured on-chain-circulating-supply rows assembled by the 15-minute `syncStablecoins()` cron.
 
 ---
 
@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS chain_supply_history (
 - If the DefiLlama live list collapses a tracked asset to zero supply but recent DefiLlama chart history still has a fresh non-zero total, the worker repairs the current plus 1d/7d/30d total supply buckets from that chart history and tags the asset `supplySource = "defillama-history-gap-fill"`. This covers list-endpoint regressions such as TRYB where the per-chain live row zeroes out while DefiLlama history remains populated.
 
 The snapshot cron records those repaired USD totals as-is.
+
+**Supplemental on-chain exceptions:** `syncStablecoins()` can admit `detailProvider === "coingecko"` assets through a single-deployment on-chain supply fallback. The default label is `supplySource = "onchain-total-supply"`. For narrow protocol-inventory cases, the worker can subtract configured live holder balances from that same total-supply read and publish `supplySource = "onchain-circulating-supply"`; if any configured balance read fails, the fallback is skipped for that run. The snapshot cron records the cached USD total and does not repeat those RPC reads.
 
 **Key gotcha:** The list endpoint returns `circulating` values already in USD for all peg types. Do **not** multiply by price --- that double-converts. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs, but the list endpoint is already converted.
 
