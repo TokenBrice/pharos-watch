@@ -83,15 +83,18 @@ function targetKeysForSubscriber(sub: SubscriberQueueEntry): string[] {
 async function filterAlreadyTerminalSubscribers(
   db: D1Database,
   subscriberQueue: SubscriberQueueEntry[],
-): Promise<SubscriberQueueEntry[]> {
+): Promise<{ subscriberQueue: SubscriberQueueEntry[]; terminalKeys: Set<string> }> {
   const targetKeys = subscriberQueue.flatMap(targetKeysForSubscriber);
-  if (targetKeys.length === 0) return subscriberQueue;
+  if (targetKeys.length === 0) return { subscriberQueue, terminalKeys: new Set() };
   const terminalKeys = await loadTerminalTelegramAlertTargetKeys(db, targetKeys);
-  if (terminalKeys.size === 0) return subscriberQueue;
-  return subscriberQueue.filter((sub) => {
-    const keys = targetKeysForSubscriber(sub);
-    return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
-  });
+  if (terminalKeys.size === 0) return { subscriberQueue, terminalKeys };
+  return {
+    subscriberQueue: subscriberQueue.filter((sub) => {
+      const keys = targetKeysForSubscriber(sub);
+      return keys.length === 0 || !keys.every((key) => terminalKeys.has(key));
+    }),
+    terminalKeys,
+  };
 }
 
 async function readPresetFailureCount(db: D1Database): Promise<number> {
@@ -295,7 +298,8 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
     const freshCandidateChats = subscriberQueue.length;
     const freshCandidateCount = subscriberQueue.reduce((sum, sub) => sum + sub.chunks.length, 0);
     const alertJobManifests = await persistTelegramAlertJobManifests(db, subscriberQueue, nowSec);
-    subscriberQueue = await filterAlreadyTerminalSubscribers(db, subscriberQueue);
+    const terminalFilter = await filterAlreadyTerminalSubscribers(db, subscriberQueue);
+    subscriberQueue = terminalFilter.subscriberQueue;
 
     const drainOnlyRiskPriority = freshCandidateCount > 0 ? TELEGRAM_PENDING_PRIORITY.riskAlert : null;
     const drainResult = await drainPendingQueue(
@@ -334,6 +338,7 @@ export async function dispatchTelegramAlerts(db: D1Database, botToken: string, s
       chatsInBackoff,
       globalBackoffUntil,
       dispatchStartedAtMs,
+      terminalTargetKeys: terminalFilter.terminalKeys,
       signal,
     });
     await finalizeTelegramAlertJobManifests(db, alertJobManifests, perAlertType, nowSec);

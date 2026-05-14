@@ -82,7 +82,7 @@ export async function loadTerminalTelegramAlertTargetKeys(
         `SELECT pending_dedupe_key
            FROM telegram_alert_job_targets
           WHERE pending_dedupe_key IN (${inClause.sql})
-            AND status IN ('sent', 'failed', 'expired')`,
+            AND status IN ('sent', 'expired')`,
       )
       .bind(...inClause.binds)
       .all<{ pending_dedupe_key: string }>();

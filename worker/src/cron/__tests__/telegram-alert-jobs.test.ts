@@ -5,6 +5,10 @@ import {
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,
 } from "../telegram-alert-jobs";
+import {
+  loadTerminalTelegramAlertTargetKeys,
+  recordTelegramAlertTargetStatuses,
+} from "../telegram-alert-target-status";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
 
 function subscriber(partial: Partial<RoutedSubscriberAlert> = {}): RoutedSubscriberAlert {
@@ -81,5 +85,42 @@ describe("telegram alert job manifests", () => {
     expect(update?.binds[2]).toBe(2);
     expect(update?.binds[3]).toBe(1);
     expect(update?.binds[5]).toBe("telegram:depeg:abc");
+  });
+});
+
+describe("telegram alert target statuses", () => {
+  it("does not treat failed target keys as terminal for fresh-send idempotency", async () => {
+    const db = mockD1([
+      { match: "FROM telegram_alert_job_targets", rows: [{ pending_dedupe_key: "sent-key" }] },
+    ]);
+
+    const terminal = await loadTerminalTelegramAlertTargetKeys(db, ["sent-key", "failed-key"]);
+
+    expect(terminal).toEqual(new Set(["sent-key"]));
+    const [query] = db.getHistory();
+    expect(query?.sql).toContain("status IN ('sent', 'expired')");
+    expect(query?.sql).not.toContain("'failed'");
+  });
+
+  it("allows a later successful send to replace a previously failed target status", async () => {
+    const db = mockD1([
+      { match: "UPDATE telegram_alert_job_targets", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    await recordTelegramAlertTargetStatuses(db, [
+      { targetKey: "retry-key", status: "sent", at: 1_800_000_100 },
+    ]);
+
+    const [update] = db.getHistory();
+    expect(update?.sql).toContain("WHERE pending_dedupe_key = ?");
+    expect(update?.sql).toContain("AND status <> 'sent'");
+    expect(update?.binds).toEqual([
+      "sent",
+      1_800_000_100,
+      null,
+      null,
+      null,
+      "retry-key",
+    ]);
   });
 });

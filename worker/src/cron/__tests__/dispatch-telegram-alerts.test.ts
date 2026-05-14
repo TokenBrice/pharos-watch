@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 
 const mockGetCache = vi.fn();
@@ -31,6 +31,8 @@ vi.mock("../../lib/telegram", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
+const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
+const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending-queue");
 const { TELEGRAM_MAX_MESSAGES_PER_RUN } = await import("../../lib/telegram-constants");
 
 function makeSafetySourceCache(
@@ -59,6 +61,20 @@ function makeSafetySnapshotCache(
     }),
     updatedAt: Math.floor(Date.now() / 1000) - 60,
   };
+}
+
+function countPendingAlertInsertBatches(db: MockD1Database): () => number {
+  const originalBatch = db.batch.bind(db);
+  let pendingInsertBatchCount = 0;
+  db.batch = (async (statements: D1PreparedStatement[]) => {
+    if (statements.some((statement) =>
+      ((statement as { sql?: string }).sql ?? "").includes("INSERT INTO telegram_pending_alerts")
+    )) {
+      pendingInsertBatchCount += 1;
+    }
+    return originalBatch(statements);
+  }) as D1Database["batch"];
+  return () => pendingInsertBatchCount;
 }
 
 beforeEach(() => {
@@ -104,6 +120,71 @@ afterEach(() => {
 });
 
 describe("dispatchTelegramAlerts", () => {
+  it("filters already-terminal chunks before fresh delivery", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const terminalChunkKey = buildDedupeKey({
+      chatId: "chat-1",
+      html: "chunk-0",
+      canonicalHtml: "canonical-body",
+      disableNotification: false,
+      chunkIndex: 0,
+      alertType: "depeg",
+    });
+    mockSendBatch.mockResolvedValue([
+      {
+        chatId: "chat-1",
+        ok: true,
+        blocked: false,
+        retryable: false,
+        permanentFailure: false,
+        statusCode: 200,
+        errorClass: null,
+        delivery: "sent",
+        retryAfterSec: null,
+      },
+    ]);
+    const db = mockD1([
+      { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE telegram_alert_job_targets", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [], runMeta: { changes: 0 } },
+    ]);
+
+    const result = await deliverTelegramSubscriberQueue({
+      db,
+      subscriberQueue: [
+        {
+          chatId: "chat-1",
+          lastActiveAt: now,
+          alerts: {
+            dews: [],
+            depegTriggered: [],
+            depegResolved: [],
+            depegWorsening: [],
+            safety: [],
+            launch: [],
+          },
+          canonicalHtml: "canonical-body",
+          chunks: ["chunk-0", "chunk-1"],
+          disableNotification: false,
+          alertType: "depeg",
+        },
+      ],
+      botToken: "bot-token",
+      drainResult: emptyDrainResult(),
+      maxMessagesPerRun: 10,
+      nowSec: now,
+      chatsInBackoff: new Map(),
+      globalBackoffUntil: null,
+      dispatchStartedAtMs: Date.now(),
+      terminalTargetKeys: new Set([terminalChunkKey]),
+    });
+
+    expect(result.freshAttempted).toBe(1);
+    expect(result.subscribersNotified).toBe(1);
+    const sent = mockSendBatch.mock.calls[0]?.[0] as Array<{ html: string; chunkIndex?: number }>;
+    expect(sent).toEqual([expect.objectContaining({ html: "chunk-1", chunkIndex: 1 })]);
+  });
+
   it("skips when circuit breaker is open", async () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
 
@@ -1561,6 +1642,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
       { match: "DELETE FROM telegram_pending_alerts WHERE created_at", rows: [] },
     ]);
+    const pendingInsertBatchCount = countPendingAlertInsertBatches(db);
 
     const result = await dispatchTelegramAlerts(db, "bot-token");
     const metadata = JSON.parse(result.metadata) as {
@@ -1581,6 +1663,7 @@ describe("dispatchTelegramAlerts", () => {
     );
     const pendingInserts = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO telegram_pending_alerts"));
     expect(pendingInserts).toHaveLength(4);
+    expect(pendingInsertBatchCount()).toBe(1);
     expect(pendingInserts.every((entry) => entry.binds[4] == null)).toBe(true);
   });
 

@@ -131,9 +131,6 @@ function inferRateLimitScope(responseBody: string): "chat" | "global" {
   if (lower.includes("chat") || lower.includes("group") || lower.includes("user")) {
     return "chat";
   }
-  if (parseTelegramRetryAfter(responseBody) != null) {
-    return "global";
-  }
   return "chat";
 }
 

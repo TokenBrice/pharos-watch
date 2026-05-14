@@ -178,6 +178,25 @@ describe("sendToChat", () => {
     const result = await sendToChat("12345", "test", "bot-token");
 
     expect(result.retryAfterSec).toBe(38);
+    expect(result.rateLimitScope).toBe("chat");
+  });
+
+  it("classifies explicit bot-wide Telegram rate limits as global", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error_code: 429,
+          description: "Too Many Requests: bot-wide retry after 38",
+          parameters: { retry_after: 38 },
+        }),
+        { status: 429 },
+      ),
+    );
+
+    const result = await sendToChat("12345", "test", "bot-token");
+
+    expect(result.retryAfterSec).toBe(38);
     expect(result.rateLimitScope).toBe("global");
   });
 
