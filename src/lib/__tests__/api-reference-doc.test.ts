@@ -19,10 +19,11 @@ describe("loadApiReferenceDocument", () => {
   it("captures endpoint subsections under the public endpoint group", async () => {
     const document = await loadApiReferenceDocument();
     const publicEndpoints = document.sections.find((section) => section.title === "Public Endpoints");
+    const endpointSubsections = publicEndpoints?.subsections.filter((section) => section.method !== null) ?? [];
 
     expect(publicEndpoints).toBeDefined();
-    expect(publicEndpoints?.subsections.length).toBeGreaterThan(10);
-    expect(publicEndpoints?.subsections[0]?.title).toBe("`GET /api/stablecoins`");
+    expect(endpointSubsections.length).toBeGreaterThan(10);
+    expect(endpointSubsections[0]?.title).toBe("`GET /api/stablecoins`");
   });
 
   it("builds a concise section set for /about/api without embedding full endpoint docs", async () => {

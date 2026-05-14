@@ -9,6 +9,7 @@ import {
   createDataUnavailableStatus,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -66,7 +67,7 @@ const FLOW_STATUS_PRESETS = {
   },
 } satisfies Record<string, CoverageStatusPreset>;
 
-export function resolveFlowCoverage(
+function resolveFlow(
   flowCoverageStatus: MintBurnCoverageStatus | null | undefined,
   dataAvailable = true,
 ): CoverageStatus {
@@ -77,7 +78,7 @@ export function resolveFlowCoverage(
   return createPresetStatus(FLOW_STATUS_PRESETS[flowCoverageStatus ?? "none"] ?? FLOW_STATUS_PRESETS.none);
 }
 
-export function formatFlowsBreakdown(
+function formatFlows(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -91,7 +92,7 @@ export function formatFlowsBreakdown(
   ];
 }
 
-export const FLOWS_STATUS_KINDS: readonly string[] = [
+const FLOWS_KINDS: readonly string[] = [
   "full",
   "partial-history",
   "lagging",
@@ -101,7 +102,7 @@ export const FLOWS_STATUS_KINDS: readonly string[] = [
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
-export const FLOWS_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const FLOWS_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Full / Partial / Lagging / Bootstr.",
     description: "Mint/burn flow coverage maturity and sync state for configured assets.",
@@ -118,3 +119,15 @@ export const FLOWS_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["disabled"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: FLOWS_KINDS,
+  legendItems: FLOWS_LEGEND,
+  resolve: resolveFlow,
+  formatBreakdown: formatFlows,
+});
+
+export const resolveFlowCoverage = coverageFeature.resolve;
+export const formatFlowsBreakdown = coverageFeature.formatBreakdown;
+export const FLOWS_STATUS_KINDS = coverageFeature.statusKinds;
+export const FLOWS_LEGEND_ITEMS = coverageFeature.legendItems;

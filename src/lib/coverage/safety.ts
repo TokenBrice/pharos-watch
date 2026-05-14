@@ -8,6 +8,7 @@ import {
   createDataUnavailableStatus,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -32,7 +33,7 @@ const SAFETY_STATUS_PRESETS = {
   },
 } satisfies Record<string, CoverageStatusPreset>;
 
-export function resolveSafetyCoverage(
+function resolveSafety(
   safetyScore: number | null | undefined,
   dataAvailable = true,
 ): CoverageStatus {
@@ -43,7 +44,7 @@ export function resolveSafetyCoverage(
   return createPresetStatus(safetyScore != null ? SAFETY_STATUS_PRESETS.rated : SAFETY_STATUS_PRESETS.nr);
 }
 
-export function formatSafetyBreakdown(
+function formatSafety(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -55,17 +56,29 @@ export function formatSafetyBreakdown(
   ];
 }
 
-export const SAFETY_STATUS_KINDS: readonly string[] = [
+const SAFETY_KINDS: readonly string[] = [
   "rated",
   "nr",
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
 // "NR" is shared with DEX; the dedicated "general" legend entry covers it.
-export const SAFETY_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const SAFETY_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Rated",
     description: "This asset currently receives an overall Safety Score.",
     kinds: ["rated"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: SAFETY_KINDS,
+  legendItems: SAFETY_LEGEND,
+  resolve: resolveSafety,
+  formatBreakdown: formatSafety,
+});
+
+export const resolveSafetyCoverage = coverageFeature.resolve;
+export const formatSafetyBreakdown = coverageFeature.formatBreakdown;
+export const SAFETY_STATUS_KINDS = coverageFeature.statusKinds;
+export const SAFETY_LEGEND_ITEMS = coverageFeature.legendItems;

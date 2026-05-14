@@ -404,7 +404,7 @@ export function getPublicApiEndpointSummaries(document: ApiReferenceDocument): A
   const publicEndpoints = document.sections.find((section) => section.id === "public-endpoints");
   if (!publicEndpoints) return [];
 
-  return publicEndpoints.subsections.map((section) => {
+  return publicEndpoints.subsections.filter((section) => section.method !== null).map((section) => {
     const title = section.title.replaceAll("`", "");
     const path = title.replace(/^(GET|POST)\s+/, "");
     return {

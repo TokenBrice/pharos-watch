@@ -1,5 +1,6 @@
 import type {
   CoverageBreakdownItem,
+  CoverageRow,
   CoverageStatus,
   CoverageTone,
 } from "@/lib/coverage-types";
@@ -82,3 +83,28 @@ export function breakdownItem(key: string, label: string, count: number): Covera
  * upstream feed has not loaded yet.
  */
 export const DATA_UNAVAILABLE_KIND = "data-unavailable";
+
+export type CoverageBreakdownFormatter = (
+  rows: readonly CoverageRow[],
+  breakdownMap: ReadonlyMap<string, number>,
+) => CoverageBreakdownItem[];
+
+/**
+ * Per-feature resolver bundle. Each `src/lib/coverage/<feature>.ts` module
+ * exports one `coverageFeature` built via `defineCoverageFeature`, collapsing
+ * what used to be four parallel named exports per feature.
+ */
+export interface CoverageFeatureModule<
+  TResolve extends (...args: never[]) => CoverageStatus,
+> {
+  statusKinds: readonly string[];
+  legendItems: readonly CoverageLegendItem[];
+  resolve: TResolve;
+  formatBreakdown: CoverageBreakdownFormatter;
+}
+
+export function defineCoverageFeature<
+  TResolve extends (...args: never[]) => CoverageStatus,
+>(def: CoverageFeatureModule<TResolve>): CoverageFeatureModule<TResolve> {
+  return def;
+}

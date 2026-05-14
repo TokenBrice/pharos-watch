@@ -9,6 +9,7 @@ import {
   createDataUnavailableStatus,
   createPresetStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -65,7 +66,7 @@ const DEX_STATUS_PRESETS = {
   },
 } satisfies Record<string, CoverageStatusPreset>;
 
-export function resolveDexCoverage(
+function resolveDex(
   coverageClass: LiquidityCoverageClass | null | undefined,
   dataAvailable = true,
 ): CoverageStatus {
@@ -76,7 +77,7 @@ export function resolveDexCoverage(
   return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
 }
 
-export function formatDexBreakdown(
+function formatDex(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -89,7 +90,7 @@ export function formatDexBreakdown(
   ];
 }
 
-export const DEX_STATUS_KINDS: readonly string[] = [
+const DEX_KINDS: readonly string[] = [
   "primary",
   "mixed",
   "fallback",
@@ -99,7 +100,7 @@ export const DEX_STATUS_KINDS: readonly string[] = [
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
-export const DEX_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const DEX_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Primary / Mixed / Fallback",
     description:
@@ -112,3 +113,15 @@ export const DEX_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["legacy"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: DEX_KINDS,
+  legendItems: DEX_LEGEND,
+  resolve: resolveDex,
+  formatBreakdown: formatDex,
+});
+
+export const resolveDexCoverage = coverageFeature.resolve;
+export const formatDexBreakdown = coverageFeature.formatBreakdown;
+export const DEX_STATUS_KINDS = coverageFeature.statusKinds;
+export const DEX_LEGEND_ITEMS = coverageFeature.legendItems;

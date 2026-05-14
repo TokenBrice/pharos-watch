@@ -6,6 +6,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  defineCoverageFeature,
   resolveBooleanCoverageStatus,
   type CoverageLegendItem,
   type CoverageStatusPreset,
@@ -30,7 +31,7 @@ const YIELD_NONE_PRESET: CoverageStatusPreset = {
   spokenLabel: "Gap",
 };
 
-export function resolveYieldCoverage(hasYieldCoverage: boolean, dataAvailable = true): CoverageStatus {
+function resolveYield(hasYieldCoverage: boolean, dataAvailable = true): CoverageStatus {
   if (!dataAvailable) {
     return createDataUnavailableStatus("Yield");
   }
@@ -38,7 +39,7 @@ export function resolveYieldCoverage(hasYieldCoverage: boolean, dataAvailable = 
   return resolveBooleanCoverageStatus(hasYieldCoverage, YIELD_RANKED_PRESET, YIELD_NONE_PRESET);
 }
 
-export function formatYieldBreakdown(
+function formatYield(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -51,12 +52,24 @@ export function formatYieldBreakdown(
   ];
 }
 
-export const YIELD_STATUS_KINDS: readonly string[] = ["ranked", "none", "data-unavailable"] as const;
+const YIELD_KINDS: readonly string[] = ["ranked", "none", "data-unavailable"] as const;
 
-export const YIELD_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const YIELD_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Ranked",
     description: "This asset currently appears in the Yield Intelligence rankings.",
     kinds: ["ranked"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: YIELD_KINDS,
+  legendItems: YIELD_LEGEND,
+  resolve: resolveYield,
+  formatBreakdown: formatYield,
+});
+
+export const resolveYieldCoverage = coverageFeature.resolve;
+export const formatYieldBreakdown = coverageFeature.formatBreakdown;
+export const YIELD_STATUS_KINDS = coverageFeature.statusKinds;
+export const YIELD_LEGEND_ITEMS = coverageFeature.legendItems;

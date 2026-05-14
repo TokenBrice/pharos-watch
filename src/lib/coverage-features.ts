@@ -1,29 +1,13 @@
-import {
-  BLACKLIST_LEGEND_ITEMS,
-  BLACKLIST_STATUS_KINDS,
-  formatBlacklistBreakdown,
-} from "@/lib/coverage/blacklist";
-import {
-  DEPENDENCY_LEGEND_ITEMS,
-  DEPENDENCY_STATUS_KINDS,
-  formatDependencyBreakdown,
-} from "@/lib/coverage/dependency";
-import { DEX_LEGEND_ITEMS, DEX_STATUS_KINDS, formatDexBreakdown } from "@/lib/coverage/dex";
-import { FLOWS_LEGEND_ITEMS, FLOWS_STATUS_KINDS, formatFlowsBreakdown } from "@/lib/coverage/flows";
-import { formatPriceBreakdown, PRICE_LEGEND_ITEMS, PRICE_STATUS_KINDS } from "@/lib/coverage/price";
-import {
-  formatRedemptionBreakdown,
-  REDEMPTION_LEGEND_ITEMS,
-  REDEMPTION_STATUS_KINDS,
-} from "@/lib/coverage/redemption";
-import {
-  formatReservesBreakdown,
-  RESERVES_LEGEND_ITEMS,
-  RESERVES_STATUS_KINDS,
-} from "@/lib/coverage/reserves";
-import { formatSafetyBreakdown, SAFETY_LEGEND_ITEMS, SAFETY_STATUS_KINDS } from "@/lib/coverage/safety";
+import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
+import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
+import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
+import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as priceFeature } from "@/lib/coverage/price";
+import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
+import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
+import { coverageFeature as safetyFeature } from "@/lib/coverage/safety";
 import type { CoverageLegendItem } from "@/lib/coverage/shared";
-import { formatYieldBreakdown, YIELD_LEGEND_ITEMS, YIELD_STATUS_KINDS } from "@/lib/coverage/yield";
+import { coverageFeature as yieldFeature } from "@/lib/coverage/yield";
 import type { CoverageFeatureDefinition, CoverageFeatureKey } from "@/lib/coverage-types";
 
 export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
@@ -36,8 +20,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with ≥3 price sources`,
     headlineFilter: (row) => (row.statuses.price.sourceCount ?? 0) >= 3,
     href: "/depeg/",
-    statusKinds: PRICE_STATUS_KINDS,
-    formatBreakdown: formatPriceBreakdown,
+    statusKinds: priceFeature.statusKinds,
+    formatBreakdown: priceFeature.formatBreakdown,
   },
   {
     key: "safety",
@@ -45,8 +29,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Safety",
     description: "Overall report-card grade on the Safety Scores surface.",
     href: "/safety-scores/",
-    statusKinds: SAFETY_STATUS_KINDS,
-    formatBreakdown: formatSafetyBreakdown,
+    statusKinds: safetyFeature.statusKinds,
+    formatBreakdown: safetyFeature.formatBreakdown,
   },
   {
     key: "dex",
@@ -54,8 +38,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "DEX",
     description: "DEX liquidity observation and price verification confidence.",
     href: "/liquidity/",
-    statusKinds: DEX_STATUS_KINDS,
-    formatBreakdown: formatDexBreakdown,
+    statusKinds: dexFeature.statusKinds,
+    formatBreakdown: dexFeature.formatBreakdown,
   },
   {
     key: "reserves",
@@ -67,8 +51,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCountLabel: "Score-grade live",
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with score-grade live reserves`,
     headlineShareLabel: "Score-grade live reserve market-cap reach",
-    statusKinds: RESERVES_STATUS_KINDS,
-    formatBreakdown: formatReservesBreakdown,
+    statusKinds: reservesFeature.statusKinds,
+    formatBreakdown: reservesFeature.formatBreakdown,
   },
   {
     key: "redemption",
@@ -80,8 +64,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with strong redemption coverage`,
     headlineShareLabel: "Strong redemption market-cap reach",
     href: "/methodology/#safety-scores-methodology",
-    statusKinds: REDEMPTION_STATUS_KINDS,
-    formatBreakdown: formatRedemptionBreakdown,
+    statusKinds: redemptionFeature.statusKinds,
+    formatBreakdown: redemptionFeature.formatBreakdown,
   },
   {
     key: "yield",
@@ -89,8 +73,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Yield",
     description: "Current presence in the Yield Intelligence rankings.",
     href: "/yield/",
-    statusKinds: YIELD_STATUS_KINDS,
-    formatBreakdown: formatYieldBreakdown,
+    statusKinds: yieldFeature.statusKinds,
+    formatBreakdown: yieldFeature.formatBreakdown,
   },
   {
     key: "flows",
@@ -98,8 +82,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Flows",
     description: "Configured issuance-chain mint/burn flow tracking and coverage state.",
     href: "/flows/",
-    statusKinds: FLOWS_STATUS_KINDS,
-    formatBreakdown: formatFlowsBreakdown,
+    statusKinds: flowsFeature.statusKinds,
+    formatBreakdown: flowsFeature.formatBreakdown,
   },
   {
     key: "blacklist",
@@ -111,8 +95,8 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with resolved freezable status`,
     headlineShareLabel: "Resolved status market-cap reach",
     href: "/freezewatch/",
-    statusKinds: BLACKLIST_STATUS_KINDS,
-    formatBreakdown: formatBlacklistBreakdown,
+    statusKinds: blacklistFeature.statusKinds,
+    formatBreakdown: blacklistFeature.formatBreakdown,
   },
   {
     key: "dependency",
@@ -120,21 +104,21 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     shortLabel: "Dependency",
     description: "Reserve or mechanism dependency edges in the report-card graph.",
     href: "/dependency-map/",
-    statusKinds: DEPENDENCY_STATUS_KINDS,
-    formatBreakdown: formatDependencyBreakdown,
+    statusKinds: dependencyFeature.statusKinds,
+    formatBreakdown: dependencyFeature.formatBreakdown,
   },
 ] as const;
 
 export const COVERAGE_FEATURE_LEGEND_ITEMS: Record<CoverageFeatureKey, readonly CoverageLegendItem[]> = {
-  price: PRICE_LEGEND_ITEMS,
-  safety: SAFETY_LEGEND_ITEMS,
-  dex: DEX_LEGEND_ITEMS,
-  reserves: RESERVES_LEGEND_ITEMS,
-  redemption: REDEMPTION_LEGEND_ITEMS,
-  yield: YIELD_LEGEND_ITEMS,
-  flows: FLOWS_LEGEND_ITEMS,
-  blacklist: BLACKLIST_LEGEND_ITEMS,
-  dependency: DEPENDENCY_LEGEND_ITEMS,
+  price: priceFeature.legendItems,
+  safety: safetyFeature.legendItems,
+  dex: dexFeature.legendItems,
+  reserves: reservesFeature.legendItems,
+  redemption: redemptionFeature.legendItems,
+  yield: yieldFeature.legendItems,
+  flows: flowsFeature.legendItems,
+  blacklist: blacklistFeature.legendItems,
+  dependency: dependencyFeature.legendItems,
 };
 
 /**

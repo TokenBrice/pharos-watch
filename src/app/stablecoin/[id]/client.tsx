@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { FeedbackModal } from "@/components/feedback-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ReportCardDetail } from "@/components/report-card";
@@ -29,6 +28,11 @@ import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { BlacklistStablecoin } from "@shared/types";
+
+const FeedbackModal = dynamic(
+  () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
+  { ssr: false },
+);
 
 function DetailSectionSkeleton({ className }: { className: string }) {
   return <Skeleton className={className} />;

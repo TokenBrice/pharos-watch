@@ -1,15 +1,15 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { BlacklistStatus } from "@shared/lib/report-cards";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
-import { resolveBlacklistCoverage } from "@/lib/coverage/blacklist";
-import { resolveDependencyCoverage } from "@/lib/coverage/dependency";
-import { resolveDexCoverage } from "@/lib/coverage/dex";
-import { resolveFlowCoverage } from "@/lib/coverage/flows";
-import { resolvePriceCoverage } from "@/lib/coverage/price";
-import { resolveRedemptionCoverage } from "@/lib/coverage/redemption";
-import { resolveReserveCoverage } from "@/lib/coverage/reserves";
-import { resolveSafetyCoverage } from "@/lib/coverage/safety";
-import { resolveYieldCoverage } from "@/lib/coverage/yield";
+import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
+import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
+import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
+import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as priceFeature } from "@/lib/coverage/price";
+import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
+import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
+import { coverageFeature as safetyFeature } from "@/lib/coverage/safety";
+import { coverageFeature as yieldFeature } from "@/lib/coverage/yield";
 import type {
   CoverageFeatureDefinition,
   CoverageFeatureKey,
@@ -157,15 +157,15 @@ export function buildCoverageRow({
 }: BuildCoverageRowInput): CoverageRow {
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
-    price: resolvePriceCoverage(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
-    safety: resolveSafetyCoverage(safetyScore, hasData("safety")),
-    dex: resolveDexCoverage(dexCoverageClass, hasData("dex")),
-    reserves: resolveReserveCoverage(coin, liveReserveFresh, hasData("reserves")),
-    redemption: resolveRedemptionCoverage(redemptionEntry, hasData("redemption")),
-    yield: resolveYieldCoverage(hasYieldCoverage, hasData("yield")),
-    flows: resolveFlowCoverage(flowCoverageStatus, hasData("flows")),
-    blacklist: resolveBlacklistCoverage(coin, blacklistStatus),
-    dependency: resolveDependencyCoverage(hasDependencyCoverage, hasData("dependency")),
+    price: priceFeature.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
+    safety: safetyFeature.resolve(safetyScore, hasData("safety")),
+    dex: dexFeature.resolve(dexCoverageClass, hasData("dex")),
+    reserves: reservesFeature.resolve(coin, liveReserveFresh, hasData("reserves")),
+    redemption: redemptionFeature.resolve(redemptionEntry, hasData("redemption")),
+    yield: yieldFeature.resolve(hasYieldCoverage, hasData("yield")),
+    flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
+    blacklist: blacklistFeature.resolve(coin, blacklistStatus),
+    dependency: dependencyFeature.resolve(hasDependencyCoverage, hasData("dependency")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
 
   return {

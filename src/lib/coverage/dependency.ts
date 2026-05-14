@@ -6,6 +6,7 @@ import type {
 import {
   breakdownItem,
   createDataUnavailableStatus,
+  defineCoverageFeature,
   resolveBooleanCoverageStatus,
   type CoverageLegendItem,
   type CoverageStatusPreset,
@@ -30,7 +31,7 @@ const DEPENDENCY_NONE_PRESET: CoverageStatusPreset = {
   spokenLabel: "Gap",
 };
 
-export function resolveDependencyCoverage(
+function resolveDependency(
   hasDependencyCoverage: boolean,
   dataAvailable = true,
 ): CoverageStatus {
@@ -41,7 +42,7 @@ export function resolveDependencyCoverage(
   return resolveBooleanCoverageStatus(hasDependencyCoverage, DEPENDENCY_NODE_PRESET, DEPENDENCY_NONE_PRESET);
 }
 
-export function formatDependencyBreakdown(
+function formatDependency(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -54,12 +55,24 @@ export function formatDependencyBreakdown(
   ];
 }
 
-export const DEPENDENCY_STATUS_KINDS: readonly string[] = ["node", "none", "data-unavailable"] as const;
+const DEPENDENCY_KINDS: readonly string[] = ["node", "none", "data-unavailable"] as const;
 
-export const DEPENDENCY_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Node",
     description: "The asset participates in the report-card dependency graph.",
     kinds: ["node"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: DEPENDENCY_KINDS,
+  legendItems: DEPENDENCY_LEGEND,
+  resolve: resolveDependency,
+  formatBreakdown: formatDependency,
+});
+
+export const resolveDependencyCoverage = coverageFeature.resolve;
+export const formatDependencyBreakdown = coverageFeature.formatBreakdown;
+export const DEPENDENCY_STATUS_KINDS = coverageFeature.statusKinds;
+export const DEPENDENCY_LEGEND_ITEMS = coverageFeature.legendItems;

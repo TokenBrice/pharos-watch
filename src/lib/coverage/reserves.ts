@@ -10,10 +10,11 @@ import {
   breakdownItem,
   createDataUnavailableStatus,
   createStatus,
+  defineCoverageFeature,
   type CoverageLegendItem,
 } from "./shared";
 
-export function resolveReserveCoverage(
+function resolveReserve(
   coin: StablecoinMeta,
   liveReserveFresh: boolean | null = true,
   dataAvailable = true,
@@ -115,7 +116,7 @@ export function resolveReserveCoverage(
   );
 }
 
-export function formatReservesBreakdown(
+function formatReserves(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -131,7 +132,7 @@ export function formatReservesBreakdown(
   ];
 }
 
-export const RESERVES_STATUS_KINDS: readonly string[] = [
+const RESERVES_KINDS: readonly string[] = [
   "live",
   "live-configured",
   "checking",
@@ -143,7 +144,7 @@ export const RESERVES_STATUS_KINDS: readonly string[] = [
   "data-unavailable",
 ] as const;
 
-export const RESERVES_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const RESERVES_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Score-grade",
     description:
@@ -178,3 +179,15 @@ export const RESERVES_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["curated", "estimated"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: RESERVES_KINDS,
+  legendItems: RESERVES_LEGEND,
+  resolve: resolveReserve,
+  formatBreakdown: formatReserves,
+});
+
+export const resolveReserveCoverage = coverageFeature.resolve;
+export const formatReservesBreakdown = coverageFeature.formatBreakdown;
+export const RESERVES_STATUS_KINDS = coverageFeature.statusKinds;
+export const RESERVES_LEGEND_ITEMS = coverageFeature.legendItems;

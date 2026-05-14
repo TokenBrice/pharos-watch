@@ -7,6 +7,7 @@ import {
   createDataUnavailableStatus,
   createStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
 } from "./shared";
 
@@ -19,7 +20,7 @@ function hasBlacklistTrackerCoverage(coin: StablecoinMeta, blacklistStatus: Blac
   return BLACKLIST_SYMBOLS.has(coin.symbol.toUpperCase());
 }
 
-export function resolveBlacklistCoverage(
+function resolveBlacklist(
   coin: StablecoinMeta,
   blacklistStatus: BlacklistStatus | null = null,
 ): CoverageStatus {
@@ -95,7 +96,7 @@ export function resolveBlacklistCoverage(
   );
 }
 
-export function formatBlacklistBreakdown(
+function formatBlacklist(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -115,7 +116,7 @@ export function formatBlacklistBreakdown(
   return items;
 }
 
-export const BLACKLIST_STATUS_KINDS: readonly string[] = [
+const BLACKLIST_KINDS: readonly string[] = [
   "live",
   "yes",
   "dilutable",
@@ -125,7 +126,7 @@ export const BLACKLIST_STATUS_KINDS: readonly string[] = [
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
-export const BLACKLIST_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const BLACKLIST_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Live",
     description: "Direct freeze controls are confirmed and live blacklist event tracking is published for this issuer.",
@@ -158,3 +159,15 @@ export const BLACKLIST_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["no"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: BLACKLIST_KINDS,
+  legendItems: BLACKLIST_LEGEND,
+  resolve: resolveBlacklist,
+  formatBreakdown: formatBlacklist,
+});
+
+export const resolveBlacklistCoverage = coverageFeature.resolve;
+export const formatBlacklistBreakdown = coverageFeature.formatBreakdown;
+export const BLACKLIST_STATUS_KINDS = coverageFeature.statusKinds;
+export const BLACKLIST_LEGEND_ITEMS = coverageFeature.legendItems;

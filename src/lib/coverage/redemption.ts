@@ -10,6 +10,7 @@ import {
   createPresetStatus,
   createStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
   type CoverageStatusPreset,
 } from "./shared";
@@ -75,7 +76,7 @@ const REDEMPTION_ROUTE_STATUS_PRESETS = {
   },
 } satisfies Record<string, CoverageStatusPreset>;
 
-export function resolveRedemptionCoverage(
+function resolveRedemption(
   entry: RedemptionBackstopEntry | null | undefined,
   dataAvailable = true,
 ): CoverageStatus {
@@ -143,7 +144,7 @@ export function resolveRedemptionCoverage(
   );
 }
 
-export function formatRedemptionBreakdown(
+function formatRedemption(
   _rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -161,7 +162,7 @@ export function formatRedemptionBreakdown(
   ];
 }
 
-export const REDEMPTION_STATUS_KINDS: readonly string[] = [
+const REDEMPTION_KINDS: readonly string[] = [
   "offchain-issuer",
   "psm-swap",
   "queue-redeem",
@@ -175,7 +176,7 @@ export const REDEMPTION_STATUS_KINDS: readonly string[] = [
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
-export const REDEMPTION_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const REDEMPTION_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Issuer / PSM / Queue / Collat. / Stable / Basket",
     description: "The modeled redemption-backstop route family counted as strong redemption coverage.",
@@ -201,3 +202,15 @@ export const REDEMPTION_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["configured-unrated"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: REDEMPTION_KINDS,
+  legendItems: REDEMPTION_LEGEND,
+  resolve: resolveRedemption,
+  formatBreakdown: formatRedemption,
+});
+
+export const resolveRedemptionCoverage = coverageFeature.resolve;
+export const formatRedemptionBreakdown = coverageFeature.formatBreakdown;
+export const REDEMPTION_STATUS_KINDS = coverageFeature.statusKinds;
+export const REDEMPTION_LEGEND_ITEMS = coverageFeature.legendItems;

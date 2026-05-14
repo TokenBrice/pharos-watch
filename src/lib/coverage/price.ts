@@ -9,10 +9,11 @@ import {
   createDataUnavailableStatus,
   createStatus,
   DATA_UNAVAILABLE_KIND,
+  defineCoverageFeature,
   type CoverageLegendItem,
 } from "./shared";
 
-export function resolvePriceCoverage(
+function resolvePrice(
   coin: StablecoinMeta,
   hasPegCoverage: boolean,
   consensusSources?: string[],
@@ -63,7 +64,7 @@ export function resolvePriceCoverage(
   );
 }
 
-export function formatPriceBreakdown(
+function formatPrice(
   rows: readonly CoverageRow[],
   breakdownMap: ReadonlyMap<string, number>,
 ): CoverageBreakdownItem[] {
@@ -96,14 +97,14 @@ export function formatPriceBreakdown(
   return items;
 }
 
-export const PRICE_STATUS_KINDS: readonly string[] = [
+const PRICE_KINDS: readonly string[] = [
   "tracked",
   "price-only",
   "missing",
   DATA_UNAVAILABLE_KIND,
 ] as const;
 
-export const PRICE_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
+const PRICE_LEGEND: readonly CoverageLegendItem[] = [
   {
     term: "Tracked",
     description: "Price and depeg monitoring are available. Source count appears when the price pipeline reports it.",
@@ -120,3 +121,15 @@ export const PRICE_LEGEND_ITEMS: readonly CoverageLegendItem[] = [
     kinds: ["missing"],
   },
 ] as const;
+
+export const coverageFeature = defineCoverageFeature({
+  statusKinds: PRICE_KINDS,
+  legendItems: PRICE_LEGEND,
+  resolve: resolvePrice,
+  formatBreakdown: formatPrice,
+});
+
+export const resolvePriceCoverage = coverageFeature.resolve;
+export const formatPriceBreakdown = coverageFeature.formatBreakdown;
+export const PRICE_STATUS_KINDS = coverageFeature.statusKinds;
+export const PRICE_LEGEND_ITEMS = coverageFeature.legendItems;
