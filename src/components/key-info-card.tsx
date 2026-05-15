@@ -20,6 +20,7 @@ import {
   PEG_BADGE_STYLES,
   PEG_LABELS,
   POR_BADGE_STYLES,
+  POR_TIER_STYLES,
 } from "@shared/lib/classification";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
@@ -136,11 +137,28 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             )}
             {!isDecentralized &&
               (meta.proofOfReserves ? (
-                <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
-                >
-                  {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                </span>
+                meta.proofOfReserves.attestorTier ? (
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_TIER_STYLES[meta.proofOfReserves.attestorTier].cls}`}
+                    title={[
+                      meta.proofOfReserves.provider,
+                      meta.proofOfReserves.cadence,
+                      meta.proofOfReserves.attestorJurisdiction,
+                      meta.proofOfReserves.attestorLicense,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  >
+                    {POR_TIER_STYLES[meta.proofOfReserves.attestorTier].label}
+                    {meta.proofOfReserves.provider ? ` · ${meta.proofOfReserves.provider}` : ""}
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
+                  >
+                    {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
+                  </span>
+                )
               ) : (
                 <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
                   No PoR
