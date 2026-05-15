@@ -9,10 +9,10 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { YieldSourceLink } from "@/components/yield-source-link";
+import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
-import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import {
   computePysBreakdown,
@@ -22,7 +22,6 @@ import {
 } from "@/lib/yield-constants";
 import {
   YIELD_SOURCE_DEPTH_DEFINITIONS,
-  formatYieldSourceRiskDriverSummary,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -37,6 +36,25 @@ interface YieldLeaderboardTableRowProps {
   onPrefetch: (stablecoinId: string) => void;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
+}
+
+function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number; max: number }) {
+  const span = Math.max(0, max - min);
+  // WHY: zero-width spans collapse the dot onto the bar's left edge; bias to centered.
+  const position = span === 0 ? 50 : Math.max(0, Math.min(100, ((apy30d - min) / span) * 100));
+  return (
+    <div
+      className="relative inline-flex h-4 w-14 items-center"
+      role="img"
+      aria-label={`30 day APY range ${min.toFixed(1)}% to ${max.toFixed(1)}%, current ${apy30d.toFixed(1)}%`}
+    >
+      <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-muted" />
+      <div
+        className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500"
+        style={{ left: `${position}%` }}
+      />
+    </div>
+  );
 }
 
 function YieldLeaderboardTableRowBase({
@@ -59,9 +77,7 @@ function YieldLeaderboardTableRowBase({
     benchmarkAdjustment,
     benchmarkSpread,
     effectiveYield,
-    rowUtility,
     sourceRiskPenalty,
-    yieldEfficiency,
     sustainabilityMult,
   } = useMemo(
     () => computePysBreakdown(
@@ -81,10 +97,6 @@ function YieldLeaderboardTableRowBase({
     }),
     [row.provenance?.sourceSwitch, row.sourceRisk],
   );
-  const sourceRiskSummary = useMemo(
-    () => formatYieldSourceRiskDriverSummary(sourceRiskDrivers),
-    [sourceRiskDrivers],
-  );
   const availableSources = useMemo(
     () => [
       ...(row.provenance?.sourceKey
@@ -98,6 +110,65 @@ function YieldLeaderboardTableRowBase({
     [row],
   );
 
+  // WHY: USD-fallback benchmark on a non-USD peg yields a currency-mismatched score; surface a caveat.
+  const isCurrencyMismatchedBenchmark =
+    row.benchmarkSelectionMode === "fallback-usd" && row.peg !== null && row.peg !== "USD";
+  const altSourceCount = row.altSources?.length ?? 0;
+  const totalSourceCount = 1 + altSourceCount;
+  const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
+  const apyLabel = formatPercent(row.apy30d);
+  const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
+
+  const pysCell = row.pharosYieldScore !== null ? (
+    <span className="inline-flex items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`cursor-help ${pysColor}`}>{formatScore(row.pharosYieldScore)}</span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[300px]">
+          <PysBreakdown
+            mode="popover"
+            score={row.pharosYieldScore}
+            toneClass={pysColor}
+            apy30d={row.apy30d}
+            effectiveYield={effectiveYield}
+            benchmarkAdjustment={benchmarkAdjustment}
+            benchmarkSpread={benchmarkSpread}
+            benchmarkLabel={row.benchmarkLabel}
+            benchmarkSelectionMode={row.benchmarkSelectionMode}
+            sourceRiskPenalty={sourceRiskPenalty}
+            adjustedRiskPenalty={adjustedRiskPenalty}
+            sustainabilityMult={sustainabilityMult}
+            grade={grade}
+            safetyScore={safetyScore}
+            sourceRiskDrivers={sourceRiskDrivers}
+          />
+        </TooltipContent>
+      </Tooltip>
+      {isCurrencyMismatchedBenchmark ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label="Currency-mismatched benchmark caveat"
+              className="pharos-focus-ring inline-block h-1.5 w-1.5 rounded-full bg-amber-500"
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+              }}
+            />
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[260px] text-[11px]">
+            Benchmarked against USD because the {row.peg} reference rate isn{"’"}t wired yet. PYS may overstate excess yield.
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+    </span>
+  ) : (
+    <span className={`font-mono tabular-nums ${pysColor}`}>{"—"}</span>
+  );
+
   return (
     <Fragment key={row.id}>
       <InteractiveTableRow
@@ -106,11 +177,62 @@ function YieldLeaderboardTableRowBase({
         onHover={() => onPrefetch(row.id)}
         className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
       >
-        <TableCell className="text-right text-xs font-mono tabular-nums text-muted-foreground" title={row.rankLabel}>
-          <span>{row.viewRank}</span>
+        {/* WHY: below md we render a single full-width card cell; the per-column cells stay as table cells above md. */}
+        <TableCell colSpan={columnCount} className="md:hidden">
           <span className="sr-only">{row.rankLabel}</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <StablecoinLogo src={logos[row.id]} name={row.name} size={28} />
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-medium">{row.symbol}</span>
+                    <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                    {row.provenance?.confidenceTier ?? "source"} {"·"} {row.yieldSource}
+                  </div>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-0.5">
+                <span className="font-mono text-sm tabular-nums">{apyLabel}</span>
+                <span className="inline-flex items-center gap-1">
+                  <span className={`font-mono text-xs tabular-nums ${pysColor}`}>
+                    {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"}
+                  </span>
+                  {grade && grade !== "NR" ? (
+                    <Badge
+                      variant="outline"
+                      className={`px-1 py-0 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+                    >
+                      {grade}
+                    </Badge>
+                  ) : null}
+                  {isCurrencyMismatchedBenchmark ? (
+                    <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  ) : null}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+              <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
+                {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
+              </Badge>
+              <span>TVL <span className="font-mono tabular-nums text-foreground">{tvlLabel}</span></span>
+              {stabilityPct !== null ? (
+                <span>Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span></span>
+              ) : null}
+              <span>
+                {warningSignalCount > 0
+                  ? `${warningSignalCount} warning${warningSignalCount === 1 ? "" : "s"}`
+                  : "No warnings"}
+              </span>
+            </div>
+          </div>
         </TableCell>
-        <TableCell>
+
+        <TableCell className="hidden md:table-cell">
+          <span className="sr-only">{row.rankLabel}</span>
           <div className="min-w-[104px]">
             <div className="flex items-center gap-2">
               <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
@@ -119,31 +241,9 @@ function YieldLeaderboardTableRowBase({
                 {row.name}
               </span>
             </div>
-            <div className="mt-1 grid max-w-[148px] grid-cols-2 gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground sm:hidden">
-              <span className="truncate">
-                Safety{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {grade && grade !== "NR" ? grade : safetyScore !== null ? Math.round(safetyScore) : "—"}
-                </span>
-              </span>
-              <span className="truncate">
-                TVL{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—"}
-                </span>
-              </span>
-              <span className="col-span-2 truncate">
-                {row.provenance?.confidenceTier ?? "source"} · {row.yieldSource}
-              </span>
-              <span className="col-span-2 truncate">
-                {warningSignalCount > 0
-                  ? `${warningSignalCount} warning${warningSignalCount === 1 ? "" : "s"}`
-                  : "No warnings"}
-              </span>
-            </div>
           </div>
         </TableCell>
-        <TableCell className="text-right font-mono tabular-nums">{formatPercent(row.apy30d)}</TableCell>
+        <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">{apyLabel}</TableCell>
         <TableCell className="hidden text-center md:table-cell">
           {grade && grade !== "NR" ? (
             <Badge
@@ -162,79 +262,13 @@ function YieldLeaderboardTableRowBase({
               {Math.round(safetyScore)}
             </Badge>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">{"—"}</span>
           )}
         </TableCell>
-        <TableCell className="text-right font-mono tabular-nums">
-          {row.pharosYieldScore !== null ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className={`cursor-help ${pysColor}`}>{formatScore(row.pharosYieldScore)}</span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[260px]">
-                <div className="space-y-1.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Effective Yield: </span>
-                    <span className="font-mono tabular-nums">{effectiveYield.toFixed(1)}%</span>
-                  </div>
-                  {benchmarkSpread !== null ? (
-                    <div>
-                      <span className="text-muted-foreground">Benchmark Adj.: </span>
-                      <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment)}</span>
-                    </div>
-                  ) : null}
-                  <div>
-                    <span className="text-muted-foreground">Yield Efficiency: </span>
-                    <span className="font-mono tabular-nums">{yieldEfficiency.toFixed(1)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Source Risk Penalty: </span>
-                    <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}x</span>
-                    <span className="text-muted-foreground">, utility </span>
-                    <span className="font-mono tabular-nums">{rowUtility.toFixed(1)}</span>
-                  </div>
-                  <div className="rounded-md border border-border/60 bg-background/60 px-2 py-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                    {sourceRiskSummary}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    <span className="font-mono tabular-nums">{row.apy30d.toFixed(1)}%</span> APY
-                    {benchmarkSpread !== null ? (
-                      <>
-                        {" "}with{" "}
-                        <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment)}</span>{" "}
-                        benchmark adj. ({(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of{" "}
-                        <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkSpread)}</span>
-                        {row.benchmarkLabel ? ` vs ${row.benchmarkLabel}` : " spread"})
-                      </>
-                    ) : null}
-                    {" "} /{" "}
-                    <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}x</span>{" "}
-                    adjusted safety penalty
-                    {" "} /{" "}
-                    <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}x</span>{" "}
-                    source penalty
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Safety: </span>
-                    <span className="font-mono tabular-nums">{grade ?? "?"}</span>
-                    <span className="text-muted-foreground">
-                      {" "}(
-                      <span className="font-mono tabular-nums">{safetyScore ?? 40}</span>
-                      )
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Consistency: </span>
-                    <span className="font-mono tabular-nums">{(sustainabilityMult * 100).toFixed(0)}%</span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className={`font-mono tabular-nums ${pysColor}`}>—</span>
-          )}
+        <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">
+          {pysCell}
         </TableCell>
-        <TableCell className="hidden max-w-[160px] text-left text-sm text-muted-foreground sm:table-cell">
+        <TableCell className="hidden max-w-[160px] text-left text-sm text-muted-foreground md:table-cell">
           <div title={row.provenance?.selectionReason ?? row.yieldSource}>
             <div className="flex items-center gap-1">
               <YieldSourceLink href={row.yieldSourceUrl} className="max-w-[160px]" iconClassName="h-3 w-3" stopPropagation>
@@ -252,42 +286,40 @@ function YieldLeaderboardTableRowBase({
             </p>
           </div>
         </TableCell>
-        <TableCell className="hidden text-center sm:table-cell">
+        <TableCell className="hidden text-center md:table-cell">
           <Badge variant="outline" className={`text-xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
             {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
           </Badge>
         </TableCell>
         <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
-          {row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—"}
+          {tvlLabel}
         </TableCell>
         <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
-          {row.yieldStability !== null ? (
-            <div className="flex items-center justify-end gap-2">
-              <div
-                className="h-1.5 w-16 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-label={`Yield stability: ${Math.round(row.yieldStability * 100)}%`}
-                aria-valuenow={Math.round(row.yieldStability * 100)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="h-full rounded-full bg-emerald-500"
-                  style={{ width: `${Math.min(100, Math.max(0, row.yieldStability * 100))}%` }}
-                />
-              </div>
-              <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                {Math.round(row.yieldStability * 100)}%
-              </span>
-            </div>
+          {stabilityPct !== null ? (
+            <span className="text-xs text-muted-foreground">
+              {stabilityPct}%
+            </span>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground">{"—"}</span>
           )}
         </TableCell>
-        <TableCell className="hidden text-right text-xs font-mono tabular-nums text-muted-foreground xl:table-cell">
-          {row.apyMin30d !== null && row.apyMax30d !== null
-            ? `${row.apyMin30d.toFixed(1)}% – ${row.apyMax30d.toFixed(1)}%`
-            : "—"}
+        <TableCell className="hidden text-right xl:table-cell">
+          {row.apyMin30d !== null && row.apyMax30d !== null ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex cursor-help items-center justify-end">
+                  <ApyRangeBar apy30d={row.apy30d} min={row.apyMin30d} max={row.apyMax30d} />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="text-[11px]">
+                <span className="font-mono tabular-nums">
+                  {row.apyMin30d.toFixed(1)}% - {row.apyMax30d.toFixed(1)}%
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs text-muted-foreground">{"—"}</span>
+          )}
         </TableCell>
         <TableCell className="hidden text-center md:table-cell">
           {warningSignalCount === 0 ? (
@@ -326,27 +358,7 @@ function YieldLeaderboardTableRowBase({
             </Tooltip>
           )}
         </TableCell>
-        <TableCell className="hidden text-center md:table-cell">
-          {1 + (row.altSources?.length ?? 0) > 1 ? (
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenSourceSheet(row.id);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
-              }}
-              className="pharos-focus-ring inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
-            >
-              {1 + row.altSources.length}
-            </button>
-          ) : (
-            <span className="font-mono text-xs text-muted-foreground">1</span>
-          )}
-        </TableCell>
-        <TableCell className="px-2 py-2 text-right">
+        <TableCell className="hidden px-2 py-2 text-right md:table-cell">
           <button
             type="button"
             onClick={(event) => {
@@ -394,6 +406,12 @@ function YieldLeaderboardTableRowBase({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Benchmark</p>
                   <p className="mt-0.5 text-xs text-foreground">{benchmarkReferenceText}</p>
                 </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Sources</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {totalSourceCount} {totalSourceCount === 1 ? "source" : "sources"} tracked
+                  </p>
+                </div>
                 {warningSignalCount > 0 ? (
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Signals</p>
@@ -407,7 +425,7 @@ function YieldLeaderboardTableRowBase({
                     </ul>
                   </div>
                 ) : null}
-                {(row.altSources?.length ?? 0) > 0 ? (
+                {altSourceCount > 0 ? (
                   <button
                     type="button"
                     onClick={(event) => {
@@ -415,9 +433,9 @@ function YieldLeaderboardTableRowBase({
                       onOpenSourceSheet(row.id);
                     }}
                     className="pharos-focus-ring mt-auto inline-flex items-center justify-center rounded-full bg-muted px-2 py-1 text-xs font-mono text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                    aria-label={`${1 + row.altSources.length} yield sources — open source explorer`}
+                    aria-label={`${totalSourceCount} yield sources — open source explorer`}
                   >
-                    +{row.altSources.length} alt sources
+                    +{altSourceCount} alt sources
                   </button>
                 ) : null}
               </div>

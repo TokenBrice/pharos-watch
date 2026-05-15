@@ -193,10 +193,10 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
 
-    expect(screen.getByText("Source Risk Penalty:")).toBeTruthy();
-    expect(screen.getByText("2.00x")).toBeTruthy();
+    expect(screen.getByText(/source-risk penalty/i)).toBeTruthy();
+    expect(container.textContent ?? "").toContain("2.00×");
   });
 
   it("explains populated source-risk drivers in the detail PYS block", () => {
@@ -236,11 +236,12 @@ describe("YieldDetailSection", () => {
     render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
 
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
-      expect(screen.getByText(label)).toBeTruthy();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
-    expect(screen.getByText(/Most APY comes from incentives, not base yield/i)).toBeTruthy();
-    expect(screen.getByText(/Venue TVL is small relative to the stablecoin supply/i)).toBeTruthy();
-    expect(screen.getByText(/Selected source changed versus the prior published snapshot/i)).toBeTruthy();
+    // WHY: driver descriptions render as title= tooltips on compact tag chips,
+    // not as visible text — verify the chip carries the description via its title attribute.
+    const rewardChip = screen.getAllByText("reward-heavy")[0] as HTMLElement;
+    expect(rewardChip.getAttribute("title")).toMatch(/Most APY comes from incentives/i);
   });
 
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {

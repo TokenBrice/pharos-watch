@@ -1,13 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -16,7 +18,7 @@ import { useYieldDetailSectionModel } from "@/components/yield-detail-section-mo
 import { formatSignedPercent } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
-import { YieldDetailSectionPysBreakdown } from "@/components/yield-detail-section-pys-breakdown";
+import { PysBreakdown } from "@/components/pys-breakdown";
 import { YieldDetailSectionStatCard } from "@/components/yield-detail-section-stat-card";
 
 interface YieldDetailSectionProps {
@@ -184,34 +186,26 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         <YieldDetailSectionStatCard label="Current APY" value={formatPercent(view.ranking.currentApy)} />
         <YieldDetailSectionStatCard label="30d APY" value={formatPercent(view.ranking.apy30d)} />
         <YieldDetailSectionStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
-          <YieldDetailSectionPysBreakdown
+          <PysBreakdown
+            mode="inline"
             score={view.ranking.pharosYieldScore}
             toneClass={view.pysColor}
-            adjustedRiskPenalty={view.pysBreakdown.adjustedRiskPenalty}
-            benchmarkAdjustment={view.pysBreakdown.benchmarkAdjustment}
-            benchmarkLabel={view.ranking.benchmarkLabel}
-            benchmarkSpread={view.pysBreakdown.benchmarkSpread}
+            apy30d={view.ranking.apy30d}
             effectiveYield={view.pysBreakdown.effectiveYield}
+            benchmarkAdjustment={view.pysBreakdown.benchmarkAdjustment}
+            benchmarkSpread={view.pysBreakdown.benchmarkSpread}
+            benchmarkLabel={view.ranking.benchmarkLabel}
+            benchmarkSelectionMode={view.ranking.benchmarkSelectionMode}
             sourceRiskPenalty={view.pysBreakdown.sourceRiskPenalty}
-            yieldEfficiency={view.pysBreakdown.yieldEfficiency}
-            safetyGrade={view.ranking.safetyGrade}
-            safetyScore={view.ranking.safetyScore}
+            adjustedRiskPenalty={view.pysBreakdown.adjustedRiskPenalty}
             sustainabilityMult={view.pysBreakdown.sustainabilityMult}
+            grade={view.ranking.safetyGrade}
+            safetyScore={view.ranking.safetyScore}
+            sourceRiskDrivers={view.sourceRiskDrivers}
           />
           {view.ranking.provenance?.usedDefaultSafety ? (
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
-          {view.sourceRiskDrivers.length > 0 ? (
-            <ul className="mt-1 space-y-1 text-[11px] text-muted-foreground">
-              {view.sourceRiskDrivers.map((driver) => (
-                <li key={driver.key}>
-                  <span className="font-medium text-foreground">{driver.label}</span>: {driver.description}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-1 text-[11px] text-muted-foreground">No populated source-risk driver.</p>
-          )}
         </YieldDetailSectionStatCard>
         <YieldDetailSectionStatCard
           label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>}
@@ -294,6 +288,16 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           </div>
         </div>
       ) : null}
+
+      <div className="flex items-center justify-end pt-1">
+        <Link
+          href={`${buildStablecoinUrl(stablecoinId)}yield/`}
+          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          View full yield analysis
+          <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+        </Link>
+      </div>
 
       <MethodologyCardActions topic="pys" />
     </YieldDetailSectionFrame>

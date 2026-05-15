@@ -17,20 +17,19 @@ import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-r
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
-  { id: "rank", label: "View #", className: "w-[58px] text-right" },
-  { id: "coin", label: "Coin", className: "w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
-  { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "text-right", title: "30-day average annual percentage yield" },
+  { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
+  { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "hidden md:table-cell text-right", title: "30-day average annual percentage yield" },
   { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
   {
     id: "pys",
     label: "PYS",
     headerAdornment: <MethodologyHint topic="pys" />,
     sortKey: "pys",
-    className: "text-right",
+    className: "hidden md:table-cell text-right",
     title: "Pharos Yield Score: risk-adjusted yield ranking",
   },
-  { id: "source", label: "Source", className: "hidden sm:table-cell text-left" },
-  { id: "yieldType", label: "Type", sortKey: "yieldType", className: "hidden sm:table-cell text-center", title: "Yield mechanism type" },
+  { id: "source", label: "Source", className: "hidden md:table-cell text-left" },
+  { id: "yieldType", label: "Type", sortKey: "yieldType", className: "hidden md:table-cell text-center", title: "Yield mechanism type" },
   { id: "tvl", label: "TVL", sortKey: "tvl", className: "hidden lg:table-cell text-right", title: "Total value locked in yield source" },
   {
     id: "yieldStability",
@@ -42,8 +41,7 @@ const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   },
   { id: "range30d", label: "30d Range", className: "hidden xl:table-cell text-right" },
   { id: "signals", label: <MethodologyLabel topic="yieldWarnings">Signals</MethodologyLabel>, className: "hidden md:table-cell text-center" },
-  { id: "sources", label: "Sources", sortKey: "sourceCount", className: "hidden md:table-cell text-center", title: "Number of yield sources tracked" },
-  { id: "expand", label: <span className="sr-only">Expand row</span>, className: "w-[44px] text-right" },
+  { id: "expand", label: <span className="sr-only">Expand row</span>, className: "hidden md:table-cell w-[44px] text-right" },
 ] as const;
 
 const COLUMN_COUNT = YIELD_COLUMNS.length;
