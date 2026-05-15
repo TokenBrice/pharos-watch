@@ -40,6 +40,7 @@ export interface ComputeCardInput {
   redemptionBackstopMap: Record<string, RedemptionBackstopEntry>;
   bluechipMap: Record<string, BluechipRating>;
   overallScores: Map<string, number>;
+  decentralizationScores: Map<string, number>;
   blacklistStatus: BlacklistStatus;
   liveReserveMap: Map<string, ReserveSlice[]>;
   dependencies: DependencyWeight[];
@@ -96,6 +97,23 @@ function resolvePegInput(
   };
 }
 
+function resolveWrappedAssetDependency(
+  meta: StablecoinMeta,
+  dependencies: readonly DependencyWeight[],
+): DependencyWeight | null {
+  if (meta.variantOf) {
+    return dependencies.find((dependency) => dependency.id === meta.variantOf) ?? {
+      id: meta.variantOf,
+      weight: 1,
+      type: "wrapper",
+    };
+  }
+
+  const wrapperDependencies = dependencies.filter((dependency) => (dependency.type ?? "collateral") === "wrapper");
+  if (wrapperDependencies.length !== 1 || wrapperDependencies[0].weight < 0.8) return null;
+  return wrapperDependencies[0];
+}
+
 function computeReportCard(input: ComputeCardInput): ReportCard {
   const {
     meta,
@@ -105,6 +123,7 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     redemptionBackstopMap,
     bluechipMap,
     overallScores,
+    decentralizationScores,
     blacklistStatus,
     liveReserveMap,
     dependencies,
@@ -135,6 +154,11 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
 
   const resilienceFactors = resolveResilienceFactors(meta);
   const liveSlices = liveReserveMap.get(meta.id);
+  const wrappedAssetDependency = resolveWrappedAssetDependency(meta, dependencies);
+  const wrappedAssetDecentralizationScore =
+    wrappedAssetDependency != null
+      ? (decentralizationScores.get(wrappedAssetDependency.id) ?? null)
+      : null;
 
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta, {
@@ -143,7 +167,11 @@ function computeReportCard(input: ComputeCardInput): ReportCard {
     }),
     liquidity: scoreLiquidity(liq, redemption, { activeDepegBps }),
     resilience: scoreResilience(meta, blacklistStatus, liveSlices),
-    decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
+    decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta, {
+      wrappedAssetDecentralizationScore,
+      wrappedAssetId: wrappedAssetDependency?.id ?? null,
+      variantKind: wrappedAssetDependency?.id === meta.variantOf ? (meta.variantKind ?? null) : null,
+    }),
     dependencyRisk: scoreDependencyRisk({
       governance: meta.flags.governance as GovernanceType,
       dependencies,
@@ -234,6 +262,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
   );
   const sortedMetas = topologicalOrder([...ACTIVE_STABLECOINS], { dependenciesById });
   const overallScores = new Map<string, number>();
+  const decentralizationScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
 
   for (const meta of sortedMetas) {
@@ -245,6 +274,7 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
       redemptionBackstopMap: input.redemptionBackstopMap,
       bluechipMap: input.bluechipMap,
       overallScores,
+      decentralizationScores,
       blacklistStatus: input.resolvedBlacklistStatuses.get(meta.id) ?? false,
       liveReserveMap: input.liveReserveMap,
       dependencies: dependenciesById.get(meta.id) ?? [],
@@ -253,6 +283,9 @@ export function buildLiveReportCards(input: BuildLiveReportCardsInput): BuildLiv
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
+    }
+    if (card.dimensions.decentralization.score !== null) {
+      decentralizationScores.set(card.id, card.dimensions.decentralization.score);
     }
   }
 

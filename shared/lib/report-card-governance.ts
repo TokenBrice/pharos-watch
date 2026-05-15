@@ -4,11 +4,13 @@ import type {
   ReportCardDimension,
   ReportCardDetailItem,
   StablecoinMeta,
+  VariantKind,
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
 import { joinReportCardDetail } from "./report-card-detail";
 import { inferGovernanceQuality } from "./report-card-policy";
 import { chainInfraLabel, chainInfraScore, resolveResilienceFactors } from "./report-card-resilience";
+import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "immutable-code": 100,
@@ -28,6 +30,12 @@ const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   wrapper: "Wrapper (inherits upstream)",
 };
 
+export interface ScoreDecentralizationOptions {
+  wrappedAssetDecentralizationScore?: number | null;
+  wrappedAssetId?: string | null;
+  variantKind?: VariantKind | null;
+}
+
 export function resolveGovernanceQuality(governance: GovernanceType, meta?: StablecoinMeta): GovernanceQuality {
   if (meta?.governanceQuality) return meta.governanceQuality;
   const base = inferGovernanceQuality(governance);
@@ -41,9 +49,26 @@ export function resolveGovernanceQuality(governance: GovernanceType, meta?: Stab
   return base;
 }
 
-export function scoreDecentralization(governance: GovernanceType, meta?: StablecoinMeta): ReportCardDimension {
+export function scoreDecentralization(
+  governance: GovernanceType,
+  meta?: StablecoinMeta,
+  options: ScoreDecentralizationOptions = {},
+): ReportCardDimension {
   const quality = resolveGovernanceQuality(governance, meta);
   let score = GOVERNANCE_QUALITY_SCORE[quality];
+  const inheritedWrapperScore =
+    quality === "wrapper" && typeof options.wrappedAssetDecentralizationScore === "number"
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(options.wrappedAssetDecentralizationScore - wrapperPenaltyForVariant(options.variantKind)),
+          ),
+        )
+      : null;
+  if (inheritedWrapperScore != null) {
+    score = inheritedWrapperScore;
+  }
 
   const factors = meta ? resolveResilienceFactors(meta) : undefined;
   const infraScore = factors ? chainInfraScore(factors.chainTier, factors.deploymentModel) : 100;
@@ -65,7 +90,7 @@ export function scoreDecentralization(governance: GovernanceType, meta?: Stablec
     score = Math.max(0, score + penalty);
   }
 
-  const governanceScore = GOVERNANCE_QUALITY_SCORE[quality];
+  const governanceScore = inheritedWrapperScore ?? GOVERNANCE_QUALITY_SCORE[quality];
   const penaltyApplied =
     penalty < 0 &&
     quality !== "immutable-code" &&
@@ -76,6 +101,14 @@ export function scoreDecentralization(governance: GovernanceType, meta?: Stablec
   const detailItems: ReportCardDetailItem[] = [
     { label: "Governance", value: GOVERNANCE_QUALITY_LABEL[quality], detail: `${governanceScore}` },
   ];
+  if (inheritedWrapperScore != null) {
+    const wrapperPenalty = wrapperPenaltyForVariant(options.variantKind);
+    detailItems.push({
+      label: "Wrapped asset",
+      value: options.wrappedAssetId ?? "Tracked parent",
+      detail: `parent ${Math.round(options.wrappedAssetDecentralizationScore ?? 0)} - ${wrapperPenalty}`,
+    });
+  }
   if (factors && penaltyApplied) {
     detailItems.push({
       label: "Chain",
