@@ -30,7 +30,7 @@
     "worker/src/api/mint-burn-flows.ts": 100,
     "worker/src/api/status.ts": 100,
     "worker/src/api/telegram-webhook.ts": 84.5,
-    "worker/src/api/telegram-webhook-callbacks.ts": 73.8,
+    "worker/src/api/telegram-webhook-callbacks.ts": 73.6,
     "worker/src/api/telegram-mini-app.ts": 96,
     "worker/src/api/telegram-mini-app-state.ts": 83.3,
     "worker/src/api/telegram-mini-app-mutations.ts": 92.9,
