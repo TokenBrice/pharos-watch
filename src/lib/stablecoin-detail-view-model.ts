@@ -259,45 +259,29 @@ export function buildFeatureAvailability(
   };
 }
 
+function staleQueryFrom<T>(
+  preset: StablecoinDetailStaleQuery["preset"],
+  query: DetailQueryResource<T>,
+  hasData: (data: T | undefined) => boolean,
+): StablecoinDetailStaleQuery {
+  return {
+    preset,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    hasData: hasData(query.data),
+    meta: query.meta,
+  };
+}
+
 export function buildStaleQueryInputs(
   queries: StablecoinDetailViewModelQueryInputs,
 ): StablecoinDetailStaleQuery[] {
   return [
-    {
-      preset: "stablecoins",
-      dataUpdatedAt: queries.stablecoinList.dataUpdatedAt,
-      error: queries.stablecoinList.error,
-      hasData: !!queries.stablecoinList.data?.peggedAssets?.length,
-      meta: queries.stablecoinList.meta,
-    },
-    {
-      preset: "pegSummary",
-      dataUpdatedAt: queries.pegSummary.dataUpdatedAt,
-      error: queries.pegSummary.error,
-      hasData: !!queries.pegSummary.data?.coins?.length,
-      meta: queries.pegSummary.meta,
-    },
-    {
-      preset: "dexLiquidity",
-      dataUpdatedAt: queries.dexLiquidity.dataUpdatedAt,
-      error: queries.dexLiquidity.error,
-      hasData: !!queries.dexLiquidity.data,
-      meta: queries.dexLiquidity.meta,
-    },
-    {
-      preset: "reportCards",
-      dataUpdatedAt: queries.reportCards.dataUpdatedAt,
-      error: queries.reportCards.error,
-      hasData: !!queries.reportCards.data?.cards?.length,
-      meta: queries.reportCards.meta,
-    },
-    {
-      preset: "redemptionBackstops",
-      dataUpdatedAt: queries.redemptionBackstops.dataUpdatedAt,
-      error: queries.redemptionBackstops.error,
-      hasData: !!queries.redemptionBackstops.data?.coins,
-      meta: queries.redemptionBackstops.meta,
-    },
+    staleQueryFrom("stablecoins", queries.stablecoinList, (data) => !!data?.peggedAssets?.length),
+    staleQueryFrom("pegSummary", queries.pegSummary, (data) => !!data?.coins?.length),
+    staleQueryFrom("dexLiquidity", queries.dexLiquidity, (data) => !!data),
+    staleQueryFrom("reportCards", queries.reportCards, (data) => !!data?.cards?.length),
+    staleQueryFrom("redemptionBackstops", queries.redemptionBackstops, (data) => !!data?.coins),
   ];
 }
 
