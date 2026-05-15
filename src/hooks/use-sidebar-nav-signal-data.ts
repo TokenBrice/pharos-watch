@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { CRON_15MIN, CRON_30MIN, CRON_BLACKLIST, CRON_1MIN } from "@/lib/cron-intervals";
+import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
 import type {
   BlacklistSummaryResponse,
@@ -20,12 +21,13 @@ const PATHS = {
 } as const;
 
 function useLightApiQuery<T>(key: string, path: string, intervalMs: number, enabled = true) {
+  const { staleTime, refetchInterval } = getPollingWindow(intervalMs);
   return useQuery({
     queryKey: ["api", key],
     queryFn: () => fetchLightApiJson<T>(path),
     enabled,
-    staleTime: intervalMs,
-    refetchInterval: intervalMs * 2,
+    staleTime,
+    refetchInterval,
     retry: 1,
   });
 }

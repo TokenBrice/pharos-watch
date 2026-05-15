@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
+import { getPollingWindow } from "@/hooks/use-api-query";
 import { CRON_30MIN } from "@/lib/cron-intervals";
 
 const STABILITY_INDEX_PATH = "/api/stability-index";
@@ -32,10 +33,11 @@ export interface StabilityIndexLightResponse {
 }
 
 export function useStabilityIndexLight() {
+  const { staleTime, refetchInterval } = getPollingWindow(CRON_30MIN);
   return useQuery({
     queryKey: ["api", STABILITY_INDEX_PATH],
     queryFn: () => fetchLightApiJson<StabilityIndexLightResponse>(STABILITY_INDEX_PATH),
-    staleTime: CRON_30MIN,
-    refetchInterval: CRON_30MIN * 2,
+    staleTime,
+    refetchInterval,
   });
 }

@@ -58,6 +58,7 @@
     "check:shared-cycles": "node scripts/check-shared-cycles.mjs",
     "check:shared-types-imports": "node scripts/check-shared-types-imports.mjs",
     "check:supply-helper-usage": "node scripts/check-supply-helper-usage.mjs",
+    "check:hook-polling-window": "node scripts/check-hook-polling-window.mjs",
     "check:hotspot-ratchet": "node scripts/check-hotspot-ratchet.mjs",
     "check:redemption-backstops": "tsx scripts/check-redemption-backstops.ts",
     "check:hotspot-ratchet:update-baseline": "node scripts/update-hotspot-ratchet-baseline.mjs",
