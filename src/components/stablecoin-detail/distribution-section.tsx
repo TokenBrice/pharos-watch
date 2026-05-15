@@ -11,6 +11,7 @@ import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-toolti
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -265,8 +266,10 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const { data: liquidityMap, isLoading } = useDexLiquidity();
 
+  const liq = liquidityMap?.[stablecoinId];
+  const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
+
   const { data, total } = useMemo(() => {
-    const liq = liquidityMap?.[stablecoinId];
     if (!liq?.protocolTvl) return { data: [], total: 0 };
 
     return buildDonutData(liq.protocolTvl, {
@@ -277,7 +280,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         return path ? { path } : null;
       },
     });
-  }, [liquidityMap, stablecoinId]);
+  }, [liq]);
 
   if (isLoading) {
     return (
@@ -291,6 +294,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       </Card>
     );
   }
+
+  if (isEmpty) return null;
 
   if (data.length === 0) {
     return (
