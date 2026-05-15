@@ -19,7 +19,6 @@
 import type { ThreatBand } from "@shared/lib/classification";
 import { clamp } from "@shared/lib/math";
 import { DEWS_SIGNAL_LABELS, DEWS_SIGNAL_WEIGHTS, type DewsSignalKey } from "@shared/lib/dews-config";
-import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import { CONTAGION_AMPLIFIER_CAP } from "./constants";
 import { getThreatBand, piecewiseLinear } from "./dews/compatibility";
 import { classifyEvidenceKinds } from "./dews/evidence-policy";
