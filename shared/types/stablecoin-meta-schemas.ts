@@ -14,6 +14,7 @@ import type {
   YieldConfig,
 } from "./core";
 import {
+  ATTESTOR_TIER_VALUES,
   BACKING_TYPE_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   COLLATERAL_QUALITY_VALUES,
@@ -26,7 +27,9 @@ import {
   INFRASTRUCTURE_VALUES,
   LAUNCH_MILESTONE_TYPE_VALUES,
   LAUNCH_PHASE_VALUES,
+  MECHANISM_ARCHETYPE_VALUES,
   PEG_CURRENCY_VALUES,
+  PROOF_OF_RESERVES_CADENCE_VALUES,
   PROOF_OF_RESERVES_TYPE_VALUES,
   STABLECOIN_STATUS_VALUES,
   VARIANT_KIND_VALUES,
@@ -53,6 +56,10 @@ export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z.object({
   type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
   url: z.string(),
   provider: z.string().optional(),
+  attestorTier: z.enum(ATTESTOR_TIER_VALUES).optional(),
+  cadence: z.enum(PROOF_OF_RESERVES_CADENCE_VALUES).optional(),
+  attestorJurisdiction: z.string().optional(),
+  attestorLicense: z.string().optional(),
 }).strict();
 
 export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z.object({
@@ -142,4 +149,5 @@ export const StablecoinMetaEnumSchemas = {
   variantKind: z.enum(VARIANT_KIND_VALUES),
   launchPhase: z.enum(LAUNCH_PHASE_VALUES),
   status: z.enum(STABLECOIN_STATUS_VALUES),
+  mechanismArchetype: z.enum(MECHANISM_ARCHETYPE_VALUES),
 } as const;
