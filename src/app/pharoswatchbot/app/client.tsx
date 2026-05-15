@@ -25,10 +25,15 @@ const DEPEG_STEP_OPTIONS = [
 ] as const satisfies readonly { value: TelegramDepegStepBps | null; label: string; caption: string }[];
 const SUGGESTED_SEARCH_IDS = ["usdt-tether", "usdc-circle", "dai-makerdao"] as const;
 const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
+/** Outside Telegram (browser preview), stop polling after ~0.5s (10 × 50ms) so the preview banner appears promptly. */
 const TELEGRAM_BROWSER_PREVIEW_ATTEMPTS = 10;
+/** Inside Telegram, poll for up to 8s (160 × 50ms) while Telegram's launch initData settles on slow clients. */
 const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
+/** Delay between Telegram launch-context polls; 50ms keeps the spin tight without busy-looping. */
 const TELEGRAM_LAUNCH_RETRY_MS = 50;
+/** Grace period during which a removed coin can be restored via the undo toast. */
 const UNDO_WINDOW_MS = 5_000;
+/** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
 const SNOOZE_DURATION_TOKENS = ["1h", "4h", "24h"] as const satisfies readonly TelegramSnoozeDurationToken[];
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
@@ -174,6 +179,7 @@ function formatSnoozePill(snoozeUntilTs: number): string {
 }
 
 function availableTimezones(): readonly string[] {
+  // `Intl.supportedValuesOf` is ES2022 and not yet in the lib.dom types we target, so probe via an unknown cast.
   const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
   if (typeof intl.supportedValuesOf === "function") {
     try {
@@ -186,9 +192,12 @@ function availableTimezones(): readonly string[] {
   return FALLBACK_TIMEZONES;
 }
 
+// Hoisted so render paths (StatusPanel) don't re-allocate the formatter on every render.
+const HEALTH_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
 function formatTime(ts: number | null): string {
   if (ts == null) return "Not recorded";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(ts * 1000));
+  return HEALTH_TIME_FORMATTER.format(new Date(ts * 1000));
 }
 
 function formatHour(hour: number | null | undefined): string {
@@ -1402,6 +1411,10 @@ function optimisticGlobalAlerts(state: TelegramMiniAppState, operation: Telegram
   return base;
 }
 
+function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts"] {
+  return { dews: false, depeg: false, safety: false, launch: false, depegStepBps: null };
+}
+
 export function PharosWatchBotMiniAppClient() {
   const [webApp, setWebApp] = useState<TelegramWebAppSdk | null>(null);
   const [initData, setInitData] = useState("");
@@ -1448,7 +1461,7 @@ export function PharosWatchBotMiniAppClient() {
 
   const optimisticGlobals = useMemo(() => {
     if (state && optimisticOperation) return optimisticGlobalAlerts(state, optimisticOperation);
-    return state?.subscriber.globalAlerts ?? { dews: false, depeg: false, safety: false, launch: false, depegStepBps: null } as Record<TelegramAlertType, boolean> & { depegStepBps: TelegramDepegStepBps | null };
+    return state?.subscriber.globalAlerts ?? defaultGlobalAlerts();
   }, [state, optimisticOperation]);
 
   const subscriptionsForView: TelegramMiniAppState["subscriptions"] = useMemo(() => {
@@ -1536,7 +1549,8 @@ export function PharosWatchBotMiniAppClient() {
     };
   }, [loadSession]);
 
-  // Eruda debug toggle (?debug=eruda)
+  // Eruda debug toggle (?debug=eruda) — dev-only; the production short-circuit and
+  // dynamic-import-from-string pattern below keep the CDN URL out of the production bundle.
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (process.env.NODE_ENV === "production") return;
@@ -1545,8 +1559,12 @@ export function PharosWatchBotMiniAppClient() {
     let cancelled = false;
     (async () => {
       try {
+        // Magic comments: `webpackIgnore: true` covers webpack/Next dev builds, `@vite-ignore` covers Vite
+        // (Turbopack honors webpackIgnore today). The `as string` cast prevents static URL analysis so
+        // the bundler leaves the import as a runtime fetch instead of trying to resolve the CDN URL.
         const erudaModule = await import(/* @vite-ignore */ /* webpackIgnore: true */ "https://cdn.jsdelivr.net/npm/eruda" as string);
         if (cancelled) return;
+        // Cast to unknown first because the dynamic CDN module has no static type and we only probe `init`.
         const eruda = (erudaModule as { default?: { init?: () => void } }).default ?? (erudaModule as unknown as { init?: () => void });
         eruda?.init?.();
       } catch {
