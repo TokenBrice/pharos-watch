@@ -12,7 +12,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
+import { getBlacklistGapStatus, type FreshnessStatus } from "@shared/lib/status-thresholds";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { getDeferredBlacklistCoverage } from "../lib/blacklist-coverage-manifest";
 import { loadBlacklistCurrentBalanceMap } from "../lib/blacklist-current-balances";
@@ -90,7 +90,7 @@ function buildCoverage() {
   };
 }
 
-function classifyLedgerFreshness(observedAt: number | null | undefined, now: number): "fresh" | "degraded" | "stale" {
+function classifyLedgerFreshness(observedAt: number | null | undefined, now: number): FreshnessStatus {
   if (observedAt == null) return "stale";
   const ageSec = Math.max(0, now - observedAt);
   if (ageSec <= API_FRESHNESS_MAX_AGE_SEC.blacklistSummary) return "fresh";

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { mockD1 } from "./helpers/mock-d1";
 
 // Mock stablecoins to avoid importing full metadata tree
@@ -103,10 +104,10 @@ describe("handleChains", () => {
       chains: Array<{ id: string; totalUsd: number; healthScore: number | null }>;
       _meta: {
         ageSeconds: number;
-        status: "fresh" | "degraded" | "stale";
+        status: FreshnessStatus;
         dependencies: {
           reportCards: {
-            status: "fresh" | "degraded" | "stale" | "unavailable";
+            status: FreshnessStatus | "unavailable";
           };
         };
       };
@@ -137,10 +138,10 @@ describe("handleChains", () => {
     const body = await response.json() as {
       chains: Array<{ healthScore: number | null }>;
       _meta: {
-        status: "fresh" | "degraded" | "stale";
+        status: FreshnessStatus;
         dependencies: {
           reportCards: {
-            status: "fresh" | "degraded" | "stale" | "unavailable";
+            status: FreshnessStatus | "unavailable";
             reason?: string | null;
           };
         };
@@ -173,7 +174,7 @@ describe("handleChains", () => {
 
     const response = await handleChains(db);
     const body = await response.json() as {
-      _meta: { ageSeconds: number; status: "fresh" | "degraded" | "stale" };
+      _meta: { ageSeconds: number; status: FreshnessStatus };
     };
 
     expect(response.status).toBe(200);
@@ -203,11 +204,11 @@ describe("handleChains", () => {
     const body = await response.json() as {
       chains: Array<{ healthScore: number | null }>;
       _meta: {
-        status: "fresh" | "degraded" | "stale";
+        status: FreshnessStatus;
         dependencies: {
           reportCards: {
             ageSeconds?: number | null;
-            status: "fresh" | "degraded" | "stale" | "unavailable";
+            status: FreshnessStatus | "unavailable";
             reason?: string | null;
           };
         };
@@ -246,7 +247,7 @@ describe("handleChains", () => {
         dependencies: {
           reportCards: {
             ageSeconds?: number | null;
-            status: "fresh" | "degraded" | "stale" | "unavailable";
+            status: FreshnessStatus | "unavailable";
           };
         };
       };

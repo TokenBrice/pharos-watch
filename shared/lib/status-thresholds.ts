@@ -10,11 +10,19 @@ export const FRESHNESS_RATIOS = {
 } as const;
 
 /**
+ * Canonical freshness status tier emitted by API freshness helpers across the
+ * worker, shared, and worker test suites. Endpoint-specific extensions
+ * (e.g. chains' `"unavailable"` dependency state) compose this union rather
+ * than redeclaring the base literal in each module.
+ */
+export type FreshnessStatus = "fresh" | "degraded" | "stale";
+
+/**
  * Classify an age/interval ratio into the canonical freshness status tier.
  * Shared between worker buildFreshnessMeta and the frontend X-Data-Age fallback
  * so threshold changes propagate in one place.
  */
-export function classifyFreshnessRatio(ratio: number): "fresh" | "degraded" | "stale" {
+export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
   if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
   if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
   return "stale";
