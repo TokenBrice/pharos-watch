@@ -11,7 +11,7 @@
 
 import { clamp } from "@shared/lib/math";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
-import type { DEWSInput, SignalResult } from "../dews";
+import type { DEWSInput, SignalResult } from "./types";
 import { piecewiseLinear } from "./compatibility";
 
 // ---------------------------------------------------------------------------

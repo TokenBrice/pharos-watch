@@ -8,7 +8,7 @@
  */
 
 import type { DewsSignalKey } from "@shared/lib/dews-config";
-import type { DEWSEvidenceKind, DEWSInput, SignalResult } from "../dews";
+import type { DEWSEvidenceKind, DEWSInput, SignalResult } from "./types";
 
 export const EVIDENCE_STRESS_THRESHOLD = 10;
 
