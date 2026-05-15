@@ -7,7 +7,7 @@ import { useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
-  collapseByCoinClass,
+  collapseForHomepageStrip,
   eventClassSlug,
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
@@ -48,6 +48,41 @@ interface TapeItemProps {
   entry: CollapsedTapeEntry;
   logoSrc: string | undefined;
   logoName: string | null;
+  logos: Record<string, string>;
+}
+
+const STACKED_LOGO_LIMIT = 4;
+
+function StackedCoinLogos({
+  coinIds,
+  logos,
+}: {
+  coinIds: ReadonlyArray<string>;
+  logos: Record<string, string>;
+}) {
+  const visible = coinIds.slice(0, STACKED_LOGO_LIMIT);
+  const overflow = coinIds.length - visible.length;
+  return (
+    <span className="inline-flex items-center" aria-label={`${coinIds.length} coins`}>
+      {visible.map((coinId, idx) => (
+        <span key={coinId} className={idx === 0 ? "" : "-ml-2"}>
+          <StablecoinLogo src={logos[coinId]} name={coinId} size={22} />
+        </span>
+      ))}
+      {overflow > 0 ? (
+        <span className="-ml-2 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-border/60 bg-background/80 px-1 text-[10px] font-semibold tabular-nums text-foreground/80">
+          +{overflow}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function consolidatedDewsTitle(event: TapeEvent): string | null {
+  const prev = event.payload?.prevBand;
+  const next = event.payload?.newBand;
+  if (typeof prev !== "string" || typeof next !== "string") return null;
+  return `DEWS ${prev} → ${next}`;
 }
 
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
@@ -77,16 +112,21 @@ function resolveEventHref(event: TapeEvent): string {
   return event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
 }
 
-function TapeItem({ entry, logoSrc, logoName }: TapeItemProps) {
-  const { event, count } = entry;
+function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
+  const { event, count, coinIds } = entry;
   const bgClass = tapeClassChipBg(event.type);
+  const consolidated = coinIds && coinIds.length > 1;
+  const title = consolidated ? consolidatedDewsTitle(event) ?? event.title : event.title;
+  const badgeValue = consolidated ? coinIds.length : count;
 
   return (
     <Link
       href={resolveEventHref(event)}
       className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
     >
-      {logoName ? (
+      {consolidated ? (
+        <StackedCoinLogos coinIds={coinIds} logos={logos} />
+      ) : logoName ? (
         <StablecoinLogo src={logoSrc} name={logoName} size={22} />
       ) : (
         <span
@@ -94,13 +134,13 @@ function TapeItem({ entry, logoSrc, logoName }: TapeItemProps) {
           className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
         />
       )}
-      <span className="text-foreground">{event.title}</span>
-      {count > 1 ? (
+      <span className="text-foreground">{title}</span>
+      {badgeValue > 1 ? (
         <span
-          aria-label={`${count} similar events`}
+          aria-label={consolidated ? `${badgeValue} coins` : `${badgeValue} similar events`}
           className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-foreground/80"
         >
-          ×{count}
+          ×{badgeValue}
         </span>
       ) : null}
       <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
@@ -129,7 +169,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
-    () => collapseByCoinClass(events.filter((event) => eventClassSlug(event.type) !== "score")),
+    () => collapseForHomepageStrip(events.filter((event) => eventClassSlug(event.type) !== "score")),
     [events],
   );
   const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);
@@ -164,6 +204,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
                     entry={entry}
                     logoSrc={logoId ? logos[logoId] : undefined}
                     logoName={logoId}
+                    logos={logos}
                   />
                 );
               })}

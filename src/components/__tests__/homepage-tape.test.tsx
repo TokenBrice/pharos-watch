@@ -278,6 +278,94 @@ describe("HomepageTape", () => {
     expect(screen.queryByText(/×\d/)).toBeNull();
   });
 
+  it("consolidates DEWS band changes across coins into one cell with stacked logos", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-sdx",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 60_000,
+            coinId: "sdx-stable",
+            title: "SDX DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+          makeTapeEvent({
+            id: "evt-usdm",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 65_000,
+            coinId: "usdm-mountain",
+            title: "USDM DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+          makeTapeEvent({
+            id: "evt-usdgo",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 70_000,
+            coinId: "usdgo-goldfinch",
+            title: "USDGO DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // Three per-coin chips collapse into one consolidated "DEWS CALM → WATCH".
+    expect(screen.getAllByText("DEWS CALM → WATCH")).toHaveLength(2);
+    expect(screen.queryByText("SDX DEWS CALM → WATCH")).toBeNull();
+    expect(screen.queryByText("USDM DEWS CALM → WATCH")).toBeNull();
+    expect(screen.queryByText("USDGO DEWS CALM → WATCH")).toBeNull();
+    // Badge reflects the coin count, not the literal event count.
+    expect(screen.getAllByText("×3")).toHaveLength(2);
+    expect(screen.getAllByLabelText("3 coins")).toHaveLength(4); // stack + badge × marquee dup
+  });
+
+  it("keeps DEWS escalations separate from de-escalations across the same coins", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-sdx-up",
+            type: "dews.escalated",
+            severity: "notice",
+            coinId: "sdx-stable",
+            title: "SDX DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+          }),
+          makeTapeEvent({
+            id: "evt-usdm-down",
+            type: "dews.deescalated",
+            severity: "info",
+            coinId: "usdm-mountain",
+            title: "USDM DEWS WATCH → CALM",
+            payload: { prevBand: "WATCH", newBand: "CALM" },
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // Single-coin DEWS entries keep their original symbol-prefixed title.
+    expect(screen.getAllByText("SDX DEWS CALM → WATCH")).toHaveLength(2);
+    expect(screen.getAllByText("USDM DEWS WATCH → CALM")).toHaveLength(2);
+    expect(screen.queryByText(/×\d/)).toBeNull();
+  });
+
   it("appends a single non-duplicated 'View all events' terminator linking to /timeline/", () => {
     mockLatestEvents({
       data: {
