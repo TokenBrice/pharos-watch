@@ -51,7 +51,7 @@ describe("classifyChangedFiles", () => {
   });
 
   it("routes repo-local Codex config changes to agent process guidance", () => {
-    const contract = classifyChangedFiles([".codex/config.toml", "scripts/pharos-change-contract.mjs"]);
+    const contract = classifyChangedFiles([".codex/config.toml", "scripts/ci/pharos-change-contract.mjs"]);
 
     expect(contract.families.map((family) => family.id)).toContain("agent-hooks-process");
     expect(contract.docsToRead).toContain("docs/process/agent-artifacts.md");
@@ -65,32 +65,32 @@ describe("session delta helpers", () => {
       ".codex/config.toml": "same",
       ".claude/settings.json": "new",
       "docs/scripts.md": "absent",
-      "scripts/pharos-change-contract.mjs": "after",
+      "scripts/ci/pharos-change-contract.mjs": "after",
     }, {
       ".codex/config.toml": "same",
       "docs/scripts.md": "before",
-      "scripts/pharos-change-contract.mjs": "before",
+      "scripts/ci/pharos-change-contract.mjs": "before",
     })).toEqual([
       ".claude/settings.json",
       "docs/scripts.md",
-      "scripts/pharos-change-contract.mjs",
+      "scripts/ci/pharos-change-contract.mjs",
     ]);
   });
 
   it("keeps unchanged pre-session dirty files out of the active session delta", () => {
     const fingerprints: Record<string, string> = {
       "docs/scripts.md": "baseline-dirty",
-      "scripts/pharos-change-contract.mjs": "new-session-change",
+      "scripts/ci/pharos-change-contract.mjs": "new-session-change",
     };
 
     expect(findSessionChangedFiles([
       "docs/scripts.md",
-      "scripts/pharos-change-contract.mjs",
+      "scripts/ci/pharos-change-contract.mjs",
     ], {
       "docs/scripts.md": "baseline-dirty",
     }, {
       buildFingerprints: (files) => Object.fromEntries(files.map((file) => [file, fingerprints[file]])),
-    })).toEqual(["scripts/pharos-change-contract.mjs"]);
+    })).toEqual(["scripts/ci/pharos-change-contract.mjs"]);
   });
 
   it("includes pre-session dirty files when their current dirty fingerprint changes", () => {
@@ -102,11 +102,11 @@ describe("session delta helpers", () => {
   });
 
   it("does not report a pre-session dirty file after it is restored clean", () => {
-    expect(findSessionChangedFiles(["scripts/pharos-change-contract.mjs"], {
+    expect(findSessionChangedFiles(["scripts/ci/pharos-change-contract.mjs"], {
       "docs/scripts.md": "baseline-dirty",
     }, {
-      buildFingerprints: () => ({ "scripts/pharos-change-contract.mjs": "new-session-change" }),
-    })).toEqual(["scripts/pharos-change-contract.mjs"]);
+      buildFingerprints: () => ({ "scripts/ci/pharos-change-contract.mjs": "new-session-change" }),
+    })).toEqual(["scripts/ci/pharos-change-contract.mjs"]);
   });
 });
 

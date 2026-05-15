@@ -6,7 +6,7 @@ matcher = "startup|resume|clear"
 
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=session-start'
+command = 'node "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.mjs" --hook=session-start'
 timeout = 10
 statusMessage = "Loading Pharos change contract"
 
@@ -15,7 +15,7 @@ matcher = ".*"
 
 [[hooks.PreToolUse.hooks]]
 type = "command"
-command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=pre-tool-use'
+command = 'node "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.mjs" --hook=pre-tool-use'
 timeout = 5
 statusMessage = "Checking Pharos hard blocks"
 
@@ -24,6 +24,6 @@ matcher = ".*"
 
 [[hooks.PermissionRequest.hooks]]
 type = "command"
-command = 'node "$(git rev-parse --show-toplevel)/scripts/pharos-change-contract.mjs" --hook=permission-request'
+command = 'node "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.mjs" --hook=permission-request'
 timeout = 5
 statusMessage = "Checking Pharos production policy"

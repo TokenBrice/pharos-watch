@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/pharos-change-contract.mjs --hook=session-start"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/ci/pharos-change-contract.mjs --hook=session-start"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/pharos-change-contract.mjs --hook=pre-tool-use"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/ci/pharos-change-contract.mjs --hook=pre-tool-use"
           },
           {
             "type": "command",
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/pharos-change-contract.mjs --hook=pre-tool-use"
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/ci/pharos-change-contract.mjs --hook=pre-tool-use"
           }
         ]
       }
