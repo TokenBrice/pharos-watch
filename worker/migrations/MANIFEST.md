@@ -106,3 +106,8 @@ If a migration corrupts data:
 5. **Redeploy worker:** use the standard production deploy workflow, or manually run the equivalent Worker Versions sequence (`cd worker && npx wrangler versions upload`, smoke the preview URL, `npx wrangler versions deploy <VERSION_ID>@100`, then `npx wrangler triggers deploy`). `wrangler deploy` bypasses the preview-smoke/promotion flow and should be treated as an emergency shortcut only.
 
 Cloudflare D1 Time Travel retention is account-plan dependent. Verify the current retention window in Cloudflare before relying on a rollback bookmark.
+
+## Related process docs
+
+- [`docs/process/d1-baseline-squash-plan.md`](../../docs/process/d1-baseline-squash-plan.md) — cadence, procedure, and risks for the next baseline squash.
+- [`docs/process/d1-backup-plan.md`](../../docs/process/d1-backup-plan.md) — proposal for a weekly off-Cloudflare logical backup that extends recovery beyond Time Travel retention.
