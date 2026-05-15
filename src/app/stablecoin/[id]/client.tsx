@@ -18,6 +18,7 @@ import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
+import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
@@ -287,6 +288,10 @@ export default function StablecoinDetailClient({
         <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
+        <RecentBlacklistBanner
+          symbol={viewModel.coin.symbol}
+          frozenStatus={viewModel.coin.status === "frozen" ? "frozen" : "active"}
+        />
 
         {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
           <FrozenStateBanner
