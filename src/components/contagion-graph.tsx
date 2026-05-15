@@ -19,9 +19,17 @@ interface ContagionGraphProps {
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
   focusCoinId?: string;
+  minimalChrome?: boolean;
 }
 
-export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, focusCoinId }: ContagionGraphProps) {
+export function ContagionGraph({
+  cards,
+  dependencyEdges,
+  mcapMap,
+  logos,
+  focusCoinId,
+  minimalChrome,
+}: ContagionGraphProps) {
   const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId });
 
   if (graph.nodes.length === 0) return null;
@@ -45,13 +53,15 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, focusCo
 
   return (
     <Card className="overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none">
-      <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
-        <p className="sr-only">
-          Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
-          {graph.visibleLinks.length} visible edges.
-        </p>
-        <ContagionGraphHeader graph={graph} />
-      </CardHeader>
+      {!minimalChrome ? (
+        <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
+          <p className="sr-only">
+            Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
+            {graph.visibleLinks.length} visible edges.
+          </p>
+          <ContagionGraphHeader graph={graph} />
+        </CardHeader>
+      ) : null}
       <CardContent className="p-3 sm:p-4">
         <ContagionGraphStage
           graph={graph}
@@ -59,13 +69,15 @@ export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, focusCo
           nodeTooltipEl={nodeTooltipEl}
           edgeTooltipEl={edgeTooltipEl}
           overlay={
-            <ContagionGraphInsights
-              inspectedNode={inspectedNode}
-              visibleLinks={graph.visibleLinks}
-              nodeMap={graph.nodeMap}
-              logos={logos}
-              onTraceNode={graph.handleTraceNodeChange}
-            />
+            !minimalChrome ? (
+              <ContagionGraphInsights
+                inspectedNode={inspectedNode}
+                visibleLinks={graph.visibleLinks}
+                nodeMap={graph.nodeMap}
+                logos={logos}
+                onTraceNode={graph.handleTraceNodeChange}
+              />
+            ) : null
           }
         />
         <div className="sr-only" aria-live="polite" aria-atomic="true">

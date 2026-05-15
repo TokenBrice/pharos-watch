@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -8,12 +9,19 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "./section-title";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { CollateralUsageSection } from "./collateral-usage-section";
 
 interface ContagionSnapshotProps {
   stablecoinId: string;
+  variantRelationshipCard?: ReactNode;
+  hasCollateralUsage?: boolean;
 }
 
-export function ContagionSnapshot({ stablecoinId }: ContagionSnapshotProps) {
+export function ContagionSnapshot({
+  stablecoinId,
+  variantRelationshipCard,
+  hasCollateralUsage,
+}: ContagionSnapshotProps) {
   const { data: rc } = useReportCards();
   const { data: list } = useStablecoins();
   const { data: logos } = useLogos();
@@ -22,29 +30,49 @@ export function ContagionSnapshot({ stablecoinId }: ContagionSnapshotProps) {
   if (!focus) return null;
   const edges = rc.dependencyGraph?.edges ?? [];
   const touches = edges.filter((e) => e.from === stablecoinId || e.to === stablecoinId);
-  if (touches.length === 0) return null;
+  const hasContagion = touches.length > 0;
+  const hasRightColumn = Boolean(variantRelationshipCard) || Boolean(hasCollateralUsage);
+
+  if (!hasContagion && !hasRightColumn) {
+    return null;
+  }
+
   const mcapMap = new Map<string, number>();
   for (const coin of list.peggedAssets) {
     mcapMap.set(coin.id, getCirculatingRaw(coin));
   }
+
+  const rightColumn = (
+    <div className="space-y-4">
+      {variantRelationshipCard}
+      {hasCollateralUsage ? <CollateralUsageSection stablecoinId={stablecoinId} /> : null}
+    </div>
+  );
+
   return (
     <Card className="rounded-xl">
       <CardHeader>
         <DetailSectionTitle>
-          <MethodologyLabel topic="dependencyRisk">Contagion Snapshot</MethodologyLabel>
+          <MethodologyLabel topic="dependencyRisk">Dependency Context</MethodologyLabel>
         </DetailSectionTitle>
         <p className="text-sm text-muted-foreground">
-          Stablecoins one hop away from {focus.symbol} — downstream dependents and upstream dependencies.
+          Stablecoins {focus.symbol} depends on, supports, or is wrapped by.
         </p>
       </CardHeader>
       <CardContent>
-        <ContagionGraph
-          cards={rc.cards}
-          dependencyEdges={edges}
-          mcapMap={mcapMap}
-          logos={logos}
-          focusCoinId={stablecoinId}
-        />
+        <div className={hasContagion && hasRightColumn ? "grid gap-6 lg:grid-cols-2" : "grid gap-6 grid-cols-1"}>
+          {hasContagion ? (
+            <ContagionGraph
+              cards={rc.cards}
+              dependencyEdges={edges}
+              mcapMap={mcapMap}
+              logos={logos}
+              focusCoinId={stablecoinId}
+              minimalChrome
+            />
+          ) : null}
+          {hasRightColumn ? rightColumn : null}
+        </div>
       </CardContent>
     </Card>
   );

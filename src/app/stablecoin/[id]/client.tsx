@@ -83,13 +83,6 @@ const DexLiquidityCard = dynamic(() => import("@/components/dex-liquidity-card")
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
 
-const CollateralUsageSection = dynamic(
-  () => import("@/components/stablecoin-detail/collateral-usage-section").then((mod) => mod.CollateralUsageSection),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[200px] w-full rounded-xl" />,
-  },
-);
-
 const DistributionSection = dynamic(
   () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
   {
@@ -386,15 +379,11 @@ export default function StablecoinDetailClient({
           />
         </section>
 
-        {(variantRelationshipCard || hasCollateralUsage) && (
-          <div
-            className={`grid gap-6 ${variantRelationshipCard && hasCollateralUsage ? "lg:grid-cols-2" : ""}`}
-          >
-            {variantRelationshipCard}
-            {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
-          </div>
-        )}
-        <ContagionSnapshot stablecoinId={viewModel.id} />
+        <ContagionSnapshot
+          stablecoinId={viewModel.id}
+          variantRelationshipCard={variantRelationshipCard}
+          hasCollateralUsage={hasCollateralUsage}
+        />
       </div>
 
       {/* ── Yield zone ── */}

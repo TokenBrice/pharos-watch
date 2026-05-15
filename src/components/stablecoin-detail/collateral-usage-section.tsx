@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
@@ -106,26 +105,24 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
   const GRID_CLASSES = "grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <section id="collateral-usage">
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500 animate-in fade-in duration-300">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            <DetailSectionTitle>
-              {ticker} Is Used as Collateral by:
-            </DetailSectionTitle>
-            <Badge variant="outline" className="text-[11px]">
-              {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
-            </Badge>
-          </div>
-          {usage.length > 3 && wrapperCount > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {collateralCount > 0 && `${collateralCount} collateral`}
-              {collateralCount > 0 && wrapperCount > 0 && " · "}
-              {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
+    <section id="collateral-usage" className="animate-in fade-in duration-300">
+      <div className="border-l-[3px] border-l-amber-500 pl-3">
+        <div className="flex items-center gap-2">
+          <DetailSectionTitle>
+            {ticker} Is Used as Collateral by:
+          </DetailSectionTitle>
+          <Badge variant="outline" className="text-[11px]">
+            {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
+          </Badge>
+        </div>
+        {usage.length > 3 && wrapperCount > 0 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {collateralCount > 0 && `${collateralCount} collateral`}
+            {collateralCount > 0 && wrapperCount > 0 && " · "}
+            {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
+          </p>
+        )}
+        <div className="mt-3">
           {isCompact ? (
             <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
               {visible.map(renderItem)}
@@ -152,8 +149,8 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
               {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
             </button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </section>
   );
 }
