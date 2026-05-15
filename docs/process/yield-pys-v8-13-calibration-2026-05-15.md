@@ -34,7 +34,7 @@ The benchmark registry now supports `USD`, `EUR`, `CHF`, `GBP`, `JPY`, `MXN`, `B
 
 ### sourceRiskScore derivation rule (commit `e70720a3c`)
 
-`shared/lib/yield-scoring.ts::computeSourceRiskScoreFromPenalty(penalty)`:
+`computeSourceRiskScoreFromPenalty` in `shared/lib/yield-scoring.ts`:
 
 ```text
 score = clamp(round(((penalty - 1) / (PYS_MAX_SOURCE_RISK_PENALTY - 1)) * 100), 0, 100)

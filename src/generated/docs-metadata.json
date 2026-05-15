@@ -1,6 +1,6 @@
 {
   "api-reference": {
-    "dateModified": "2026-05-15T13:43:23+02:00",
+    "dateModified": "2026-05-15T19:09:03+02:00",
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
@@ -60,7 +60,7 @@
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "yield-intelligence": {
-    "dateModified": "2026-05-14T10:39:11+02:00",
+    "dateModified": "2026-05-15T19:09:03+02:00",
     "dateCreated": "2026-03-01T16:21:41+01:00"
   },
   "shadow-stablecoins": {
@@ -72,7 +72,7 @@
     "dateCreated": "2026-03-11T10:55:15+01:00"
   },
   "design-language": {
-    "dateModified": "2026-05-15T13:01:29+02:00",
+    "dateModified": "2026-05-15T18:31:44+02:00",
     "dateCreated": "2026-02-28T11:03:51+01:00"
   },
   "design-tokens": {

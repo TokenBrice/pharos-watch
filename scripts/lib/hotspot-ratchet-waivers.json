@@ -3,6 +3,18 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
+  "worker/src/cron/fetch-tbill-rate.ts": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only."
+  },
+  "src/components/tape/event-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes."
+  },
+  "src/app/yield/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass."
+  },
   "worker/src/lib/telegram/usage-analytics.ts": {
     "disposition": "queued-p4",
     "notes": "Telegram usage-analytics aggregation now spans event ingestion, retention windowing, redaction, and digest-friendly projection. Surfaced as a hotspot after the worker/lib telegram cluster reorg (commit c900c7b9). Split projection vs. retention/redaction in a follow-up telegram analytics cleanup."
@@ -51,14 +63,6 @@
     "disposition": "queued-p4",
     "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass."
   },
-  "shared/lib/redemption-backstop-configs/validation.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the stablecoin-redeem.ts per-coin split (Phase 4 Wave 1) reshuffled the hotspot rankings. The validator owns the cross-config invariants and per-route schema enforcement; split per-route validators in a follow-up redemption-config cleanup."
-  },
-  "worker/src/api/backfill-supply-history.ts": {
-    "disposition": "queued-p4",
-    "notes": "Admin supply backfill grew with overrides, conservative-recompute paths, and per-coin slicing. Surfaced after Wave 1/3 admin-path cleanups; planning/execution split would mirror the backfill-depegs decomposition (Wave 3 commit)."
-  },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
@@ -66,10 +70,6 @@
   "src/components/pre-launch-detail.tsx": {
     "disposition": "deferred",
     "notes": "Pre-launch stablecoin detail page intentionally colocates phase timeline, sponsor metadata, and CTA blocks while the upcoming-coin surface stabilizes. Defer decomposition until pre-launch UX patterns settle."
-  },
-  "src/app/about/page.tsx": {
-    "disposition": "deferred",
-    "notes": "Static About page intentionally colocates the methodology overview, data-sources table, and corporate notices in one long render. Splitting now would not improve maintainability — defer until the About page is rewritten."
   },
   "src/app/compare/client.tsx": {
     "disposition": "queued-p4",

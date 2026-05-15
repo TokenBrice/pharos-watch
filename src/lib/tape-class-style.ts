@@ -8,7 +8,7 @@ import { eventClassSlug } from "@/lib/tape-collapse";
 // The marquee uses denser cells (`/10`); the timeline uses full-width rows,
 // where the lighter `/8` opacity reads as a hue tag rather than a fill.
 
-export const TAPE_CLASS_BG_CHIP: Record<string, string> = {
+const TAPE_CLASS_BG_CHIP: Record<string, string> = {
   depeg: "bg-rose-500/10",
   freeze: "bg-cyan-500/10",
   score: "bg-indigo-500/10",
@@ -24,7 +24,7 @@ export const TAPE_CLASS_BG_CHIP: Record<string, string> = {
   cemetery: "bg-zinc-500/10",
 };
 
-export const TAPE_CLASS_BG_ROW: Record<string, string> = {
+const TAPE_CLASS_BG_ROW: Record<string, string> = {
   depeg: "bg-rose-500/[0.08]",
   freeze: "bg-cyan-500/[0.08]",
   score: "bg-indigo-500/[0.08]",
@@ -40,7 +40,7 @@ export const TAPE_CLASS_BG_ROW: Record<string, string> = {
   cemetery: "bg-zinc-500/[0.08]",
 };
 
-export const TAPE_CLASS_LABEL: Record<string, string> = {
+const TAPE_CLASS_LABEL: Record<string, string> = {
   depeg: "Depegs",
   freeze: "Freezes",
   score: "Grade changes",
