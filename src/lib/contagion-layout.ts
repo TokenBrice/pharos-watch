@@ -66,17 +66,17 @@ export const NODE_LIMIT_OPTIONS = [50, 100, 200] as const;
 export type NodeLimitOption = (typeof NODE_LIMIT_OPTIONS)[number];
 export const DEFAULT_NODE_LIMIT: NodeLimitOption = 50;
 export const MIN_RADIUS = 10;
-export const MAX_RADIUS = 34;
+const MAX_RADIUS = 34;
 export const RING_WIDTH = 3;
 export const HUB_LABEL_FONT_SIZE = 11;
-export const CORE_PAIR_X_JITTER = 12;
-export const CORE_PAIR_Y_OFFSET = 118;
-export const CORE_RING_RADIUS_X = 102;
-export const CORE_RING_RADIUS_Y = 74;
-export const TIER2_RING_RADIUS_X = 214;
-export const TIER2_RING_RADIUS_Y = 154;
-export const CORE_LANE_HALF_WIDTH = 56;
-export const CORE_LANE_MARGIN = 10;
+const CORE_PAIR_X_JITTER = 12;
+const CORE_PAIR_Y_OFFSET = 118;
+const CORE_RING_RADIUS_X = 102;
+const CORE_RING_RADIUS_Y = 74;
+const TIER2_RING_RADIUS_X = 214;
+const TIER2_RING_RADIUS_Y = 154;
+const CORE_LANE_HALF_WIDTH = 56;
+const CORE_LANE_MARGIN = 10;
 
 export const SUPERNODE_CONFIG = {
   weightInWeight: 0.5,
@@ -149,7 +149,7 @@ export function clampGraphPosition(x: number, y: number, r: number): LayoutTarge
   };
 }
 
-export function placeOnEllipse(
+function placeOnEllipse(
   ids: string[],
   radiusX: number,
   radiusY: number,
@@ -166,7 +166,7 @@ export function placeOnEllipse(
   }
 }
 
-export function pushTargetsOutOfLane(
+function pushTargetsOutOfLane(
   targetById: Map<string, LayoutTarget>,
   coreA: LayoutTarget,
   coreB: LayoutTarget,
