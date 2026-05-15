@@ -13,6 +13,21 @@ on:
         required: false
         default: pages-static-export
         type: string
+    secrets:
+      DIGEST_API_KEY:
+        required: true
+      SITE_API_SHARED_SECRET:
+        required: true
+      SMOKE_API_KEY:
+        required: true
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+      OPS_SMOKE_CF_ACCESS_CLIENT_ID:
+        required: true
+      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET:
+        required: true
 
 permissions:
   contents: read
@@ -23,11 +38,18 @@ jobs:
     with:
       api_base_url: ${{ inputs.api_base_url }}
       artifact_name: ${{ inputs.artifact_name }}
-    secrets: inherit
+    secrets:
+      DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
+      SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
 
   pages-publish:
     needs: pages-prepare
     uses: ./.github/workflows/pages-publish.yml
     with:
       artifact_name: ${{ inputs.artifact_name }}
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
+      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}

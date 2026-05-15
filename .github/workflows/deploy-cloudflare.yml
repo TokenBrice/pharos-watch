@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - id: classify
         env:
           DEPLOY_BASE_SHA: ${{ github.event.before }}
@@ -62,6 +63,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -119,6 +122,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -164,11 +169,12 @@ jobs:
           SMOKE_API_REQUIRE_KEY: "true"
       - name: Promote uploaded worker version to production
         env:
+          WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.version_id }}
           WRANGLER_OUTPUT_FILE_PATH: /tmp/wrangler-output.jsonl
         run: |
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
-          npx --no-install wrangler versions deploy "${{ needs.upload-worker-version.outputs.version_id }}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
+          npx --no-install wrangler versions deploy "${WORKER_VERSION_ID}@100" --message "GitHub Actions deploy ${GITHUB_SHA}" --yes
       - name: Sync worker triggers
         run: cd worker && npx --no-install wrangler triggers deploy
       - name: Smoke production worker
@@ -184,9 +190,11 @@ jobs:
           SMOKE_API_TIMEOUT_MS: "15000"
       - name: Roll back production worker to previous stable version
         if: ${{ steps.production-smoke-api.outcome == 'failure' && needs.upload-worker-version.outputs.previous_version_id != '' }}
+        env:
+          PREVIOUS_WORKER_VERSION_ID: ${{ needs.upload-worker-version.outputs.previous_version_id }}
         run: >-
           cd worker
-          && npx --no-install wrangler rollback "${{ needs.upload-worker-version.outputs.previous_version_id }}"
+          && npx --no-install wrangler rollback "${PREVIOUS_WORKER_VERSION_ID}"
           --message "Auto rollback after smoke-api failure for ${GITHUB_SHA}"
           --yes
       - name: Fail after production worker smoke failure
@@ -249,6 +257,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24

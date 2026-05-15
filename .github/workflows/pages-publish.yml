@@ -8,6 +8,15 @@ on:
         required: false
         default: pages-static-export
         type: string
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+      OPS_SMOKE_CF_ACCESS_CLIENT_ID:
+        required: true
+      OPS_SMOKE_CF_ACCESS_CLIENT_SECRET:
+        required: true
 
 permissions:
   contents: read
@@ -22,6 +31,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -76,6 +87,8 @@ jobs:
       SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -87,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -104,6 +119,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
@@ -130,6 +147,8 @@ jobs:
       CF_PAGES_DEPLOYMENT_ID: ${{ needs.deploy-pages.outputs.previous_deployment_id }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
