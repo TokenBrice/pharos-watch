@@ -1,0 +1,105 @@
+import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { fetchEvmCallHexAtBlock } from "../evm-rpc";
+import { getArchiveFallbackRpcUrls } from "../public-rpc-registry";
+import {
+  buildParentDerivedLiveOverride,
+  decodeUint256WordBigInt,
+  encodeAddress,
+  ERC4626_NAV_MAX_RATIO,
+  ERC4626_NAV_MIN_RATIO,
+  ETHEREUM_CHAIN,
+  PROTOCOL_REDEEM_SOURCE,
+  resolveTrustedOverrideParent,
+  USDC_CIRCLE_ID,
+  type CurrentPriceOverride,
+  type LivePriceContext,
+  type PriceSourceProvider,
+} from "./helpers";
+
+const IDLE_CDO_VIRTUAL_PRICE_SELECTOR = "0x9290d427"; // virtualPrice(address)
+
+interface IdleCdoTrancheConfig {
+  id: string;
+  parentId: string;
+  chain: string;
+  cdo: string;
+  tranche: string;
+  assetDecimals: number;
+}
+
+// Idle Perpetual Yield Tranches priced from `virtualPrice(address tranche)`
+// on the CDO contract. The returned amount is denominated in the underlying
+// asset's decimals, so the published price multiplies it by the tracked
+// parent's live USD price.
+const IDLE_CDO_TRANCHES: readonly IdleCdoTrancheConfig[] = [
+  {
+    id: "aa-falconx-mev-capital",
+    parentId: USDC_CIRCLE_ID,
+    chain: ETHEREUM_CHAIN,
+    cdo: "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+    tranche: "0xc26a6fa2c37b38e549a4a1807543801db684f99c",
+    assetDecimals: 6,
+  },
+];
+
+const IDLE_CDO_TRANCHES_BY_ID = new Map<string, IdleCdoTrancheConfig>(
+  IDLE_CDO_TRANCHES.map((entry) => [entry.id, entry]),
+);
+
+async function fetchIdleCdoTrancheAssetsPerShare(
+  config: IdleCdoTrancheConfig,
+  blockNumberOrTag: number | "latest",
+  signal?: AbortSignal,
+): Promise<number | null> {
+  const calldata = `${IDLE_CDO_VIRTUAL_PRICE_SELECTOR}${encodeAddress(config.tranche)}`;
+  const quoteHex = await fetchEvmCallHexAtBlock(config.chain, config.cdo, calldata, blockNumberOrTag, {
+    signal,
+    extraRpcUrls: getArchiveFallbackRpcUrls(config.chain),
+  });
+  if (!quoteHex) {
+    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned null`);
+    return null;
+  }
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
+  if (outputAmount == null || outputAmount <= 0n) {
+    console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned zero or invalid output`);
+    return null;
+  }
+  const assetsPerShare = Number(outputAmount) / 10 ** config.assetDecimals;
+  if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
+  if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
+    console.warn(
+      `[authoritative-price-sources] ${config.id}: virtualPrice() ratio ${assetsPerShare} outside trusted bounds`,
+    );
+    return null;
+  }
+  return assetsPerShare;
+}
+
+export const idleCdoTrancheProvider: PriceSourceProvider = {
+  source: PROTOCOL_REDEEM_SOURCE,
+  matches(stablecoinId: string): boolean {
+    return IDLE_CDO_TRANCHES_BY_ID.has(stablecoinId);
+  },
+  async fetchLivePrice(
+    asset: PeggedAsset,
+    context: LivePriceContext,
+    signal?: AbortSignal,
+  ): Promise<CurrentPriceOverride | null> {
+    const config = IDLE_CDO_TRANCHES_BY_ID.get(asset.id);
+    if (!config) return null;
+
+    const parent = resolveTrustedOverrideParent(
+      context,
+      config.parentId,
+      () =>
+        `[authoritative-price-sources] ${asset.id}: skipped Idle CDO virtualPrice because parent ${config.parentId} provenance is not trusted`,
+    );
+    if (!parent) return null;
+
+    const assetsPerShare = await fetchIdleCdoTrancheAssetsPerShare(config, "latest", signal);
+    if (assetsPerShare == null) return null;
+
+    return buildParentDerivedLiveOverride(parent, assetsPerShare);
+  },
+};
