@@ -172,7 +172,6 @@ export function HeroCardMobileSection({
       <HeroTertiaryMetrics
         metrics={tertiaryMetrics}
         chainCount={chainCount}
-        infrastructures={infrastructures}
         earlyPegScore={earlyPegScore}
         trackingSpanDays={trackingSpanDays}
         activeDepeg={activeDepeg}
@@ -266,7 +265,6 @@ export function HeroCardDesktopSection({
         <HeroTertiaryMetrics
           metrics={tertiaryMetrics}
           chainCount={chainCount}
-          infrastructures={infrastructures}
           earlyPegScore={earlyPegScore}
           trackingSpanDays={trackingSpanDays}
           activeDepeg={activeDepeg}

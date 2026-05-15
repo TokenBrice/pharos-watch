@@ -8,11 +8,7 @@ import {
   formatPercentChange,
   formatSupply,
 } from "@shared/lib/format";
-import type {
-  Infrastructure,
-  StablecoinData,
-  StablecoinMeta,
-} from "@shared/types";
+import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import { PegGauge } from "@/components/peg-gauge";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -73,7 +69,6 @@ function MetricChip({
 export function HeroTertiaryMetrics({
   metrics,
   chainCount,
-  infrastructures,
   earlyPegScore,
   trackingSpanDays,
   activeDepeg,
@@ -81,7 +76,6 @@ export function HeroTertiaryMetrics({
 }: {
   metrics: HeroTertiaryMetricConfig[];
   chainCount: number;
-  infrastructures: Infrastructure[];
   earlyPegScore: boolean;
   trackingSpanDays: number;
   activeDepeg: boolean;
