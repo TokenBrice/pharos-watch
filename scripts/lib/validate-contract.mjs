@@ -14,10 +14,13 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:env-contract",
   "npm run check:frozen-invariants",
   "npm run check:generated-artifacts",
+  "npm run check:hook-polling-window",
   "npm run check:hotspot-ratchet",
   "npm run check:migrations",
   "npm run check:redemption-backstops",
+  "npm run check:reserve-fixture-freshness",
   "npm run check:shared-cycles",
+  "npm run check:shared-types-imports",
   "npm run check:sql-safety",
   "npm run check:stablecoin-data",
   "npm run check:supply-helper-usage",
@@ -40,8 +43,6 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run check:classifier-sensitive-copy",
 ];
 
-export const COMMON_VALIDATE_POSTBUILD_COMMANDS = ["npm run test:noncritical", "npm run coverage:critical"];
-
 export const NONCRITICAL_TEST_SHARD_COUNT = 3;
 
 export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_SHARD_COUNT) {
@@ -51,7 +52,16 @@ export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_
   });
 }
 
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
+  ...buildNoncriticalTestShardCommands(),
+  "npm run coverage:critical",
+];
+
+export const PAGES_SMOKE_VALIDATE_COMMANDS = ["npm run validate:pages-smoke"];
+
 export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker", "npm run typecheck:worker-scripts"];
+
+export const WORKER_SMOKE_VALIDATE_COMMANDS = ["npm run validate:worker-smoke"];
 
 export function buildValidateCommandPlan({ pagesChanged = true, workerChanged = true } = {}) {
   return [

@@ -11,7 +11,9 @@ import { createExecutionUnit, runCommandBatches, runShellCommand } from "../lib/
 import {
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
+  PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
 
@@ -30,7 +32,7 @@ function addCommand(plan, cmd, reason) {
   plan.push({ cmd, reasons: [reason] });
 }
 
-export function buildCommandPlan(changedFiles) {
+export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke = false } = {}) {
   if (!hasDeployImpact(changedFiles)) {
     return [];
   }
@@ -59,10 +61,25 @@ export function buildCommandPlan(changedFiles) {
     }
   }
 
+  if (pagesSmoke && pagesChanged) {
+    for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Opt-in Pages smoke requested via MERGE_GATE_PAGES_SMOKE=1");
+    }
+  }
+
+  if (workerSmoke && workerChanged) {
+    for (const cmd of WORKER_SMOKE_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Opt-in worker smoke requested via MERGE_GATE_WORKER_SMOKE=1");
+    }
+  }
+
   return plan;
 }
 
-export function buildFullCommandPlan(reason = "Full deploy path requested") {
+export function buildFullCommandPlan(
+  reason = "Full deploy path requested",
+  { pagesSmoke = false, workerSmoke = false } = {},
+) {
   const plan = [];
 
   for (const cmd of COMMON_VALIDATE_PREBUILD_COMMANDS) {
@@ -79,6 +96,18 @@ export function buildFullCommandPlan(reason = "Full deploy path requested") {
 
   for (const cmd of WORKER_VALIDATE_COMMANDS) {
     addCommand(plan, cmd, reason);
+  }
+
+  if (pagesSmoke) {
+    for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Opt-in Pages smoke requested via MERGE_GATE_PAGES_SMOKE=1");
+    }
+  }
+
+  if (workerSmoke) {
+    for (const cmd of WORKER_SMOKE_VALIDATE_COMMANDS) {
+      addCommand(plan, cmd, "Opt-in worker smoke requested via MERGE_GATE_WORKER_SMOKE=1");
+    }
   }
 
   return plan;
@@ -119,12 +148,17 @@ export function getChangedFiles({
     .filter(Boolean);
 }
 
-export function getCommandEnv(cmd, changedFiles) {
+export function getCommandEnv(cmd, changedFiles, env = process.env) {
+  const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1"
+    ? {}
+    : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
+
   if (cmd !== "npm run coverage:critical") {
-    return {};
+    return baseEnv;
   }
 
   return {
+    ...baseEnv,
     CRITICAL_COVERAGE_CHANGED_FILES: changedFiles.join(","),
   };
 }
@@ -158,9 +192,18 @@ export function buildExecutionBatches(plan) {
     }
   }
 
+  const smokeUnits = [];
+  for (const cmd of [...PAGES_SMOKE_VALIDATE_COMMANDS, ...WORKER_SMOKE_VALIDATE_COMMANDS]) {
+    const item = findPlanItem(plan, cmd);
+    if (item) {
+      smokeUnits.push(createExecutionUnit([item]));
+    }
+  }
+
   return [
     ...prebuildCommands.map((item) => [createExecutionUnit([item])]),
     ...(postValidateUnits.length > 0 ? [postValidateUnits] : []),
+    ...(smokeUnits.length > 0 ? [smokeUnits] : []),
   ];
 }
 
@@ -175,20 +218,60 @@ export async function runExecutionBatches(
 
   await runCommandBatches(batches, {
     exit,
-    getCommandEnv: (item) => getCommandEnv(item.cmd, changedFiles),
+    getCommandEnv: (item) => getCommandEnv(item.cmd, changedFiles, env),
     label: "merge-gate",
     runCommandImpl,
   });
 }
 
-export async function runMergeGate({ argv = process.argv.slice(2), env = process.env } = {}) {
+export function fetchBaseRef({ baseRef, execFile = execFileSync } = {}) {
+  if (!baseRef || !baseRef.startsWith("origin/")) {
+    return;
+  }
+  const branch = baseRef.slice("origin/".length);
+  try {
+    execFile("git", ["fetch", "--quiet", "origin", branch], { stdio: "ignore" });
+  } catch {
+    console.warn(`[merge-gate] Warning: could not fetch ${baseRef}; continuing with the local snapshot.`);
+  }
+}
+
+export async function runMergeGate({
+  argv = process.argv.slice(2),
+  env = process.env,
+  runCommandImpl = runShellCommand,
+  execFile = execFileSync,
+} = {}) {
   const args = new Set(argv);
   const stagedMode = args.has("--staged");
+  const baseRefOverridden = typeof env.MERGE_GATE_BASE_REF === "string" && env.MERGE_GATE_BASE_REF.length > 0;
   const baseRef = env.MERGE_GATE_BASE_REF ?? "origin/main";
   const headRef = env.MERGE_GATE_HEAD_REF ?? "HEAD";
   const dryRun = env.MERGE_GATE_DRY_RUN === "1";
   const forceFullDeploy = env.MERGE_GATE_FULL_DEPLOY === "1";
-  const changedFiles = forceFullDeploy ? [] : getChangedFiles({ stagedMode, baseRef, headRef });
+  const pagesSmoke = env.MERGE_GATE_PAGES_SMOKE === "1";
+  const workerSmoke = env.MERGE_GATE_WORKER_SMOKE === "1";
+  const skipFetch = env.MERGE_GATE_NO_FETCH === "1";
+
+  const nodeModulesResult = await runCommandImpl(
+    "node scripts/ci/check-node-modules-fresh.mjs",
+    {},
+    {},
+  );
+  const nodeModulesStatus = typeof nodeModulesResult === "number"
+    ? nodeModulesResult
+    : (nodeModulesResult?.status ?? 1);
+  if (nodeModulesStatus !== 0) {
+    console.error("[merge-gate] FAILED: node_modules drift check is fatal (node_modules/ missing).");
+    process.exit(nodeModulesStatus);
+    return;
+  }
+
+  if (!stagedMode && !forceFullDeploy && !baseRefOverridden && !skipFetch) {
+    fetchBaseRef({ baseRef, execFile });
+  }
+
+  const changedFiles = forceFullDeploy ? [] : getChangedFiles({ stagedMode, baseRef, headRef, execFile });
 
   console.log(`[merge-gate] Base ref: ${forceFullDeploy ? "(full deploy fallback)" : baseRef}`);
   console.log(`[merge-gate] Head ref: ${headRef}`);
@@ -206,8 +289,9 @@ export async function runMergeGate({ argv = process.argv.slice(2), env = process
   const plan = forceFullDeploy
     ? buildFullCommandPlan(
         "Full deploy fallback requested; local merge gate mirrors the full deploy-path validate core",
+        { pagesSmoke, workerSmoke },
       )
-    : buildCommandPlan(changedFiles);
+    : buildCommandPlan(changedFiles, { pagesSmoke, workerSmoke });
 
   if (plan.length === 0) {
     console.log("[merge-gate] No Pages or worker deploy surfaces changed; gate skipped.");
@@ -226,7 +310,7 @@ export async function runMergeGate({ argv = process.argv.slice(2), env = process
     return;
   }
 
-  await runExecutionBatches(plan, changedFiles, env);
+  await runExecutionBatches(plan, changedFiles, env, { runCommandImpl });
 
   console.log("[merge-gate] All checks passed.");
 }

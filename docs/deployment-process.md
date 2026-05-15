@@ -75,9 +75,9 @@ Default policy:
    - `npm run typecheck:worker`
    - `npm run typecheck:worker-scripts`
 
-After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups in parallel by default. This keeps the validation surface aligned with deploy CI while reducing local wall time. Set `MERGE_GATE_SERIAL=1` when debugging output ordering or resource contention.
+After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups in parallel by default. The non-critical Vitest lane runs as three `npm run test:noncritical -- --shard=N/3` shards locally to match the CI fan-out; `MERGE_GATE_SERIAL=1` still serializes everything when local CPU is constrained. This keeps the validation surface aligned with deploy CI while reducing local wall time. The gate also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` at the very top of every run; it warns when `package-lock.json` is newer than `node_modules/` and fails fast only when `node_modules/` is missing entirely. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, and `check:reserve-fixture-freshness` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows), `check:phishing-signatures` / `check:classifier-sensitive-copy` (already in `PAGES_VALIDATE_COMMANDS`), `check:build-size` (slow, currently CI-only).
 
-Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure. The gate still skips deploy-time smoke suites locally.
+Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure. The gate still skips deploy-time smoke suites locally unless they are explicitly opted in via `MERGE_GATE_PAGES_SMOKE=1` or `MERGE_GATE_WORKER_SMOKE=1`.
 
 Useful merge-gate controls:
 
@@ -87,6 +87,10 @@ Useful merge-gate controls:
 - `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_SERIAL=1` to run the plan serially for lower local resource pressure
+- `MERGE_GATE_PAGES_SMOKE=1` to opt in to `npm run validate:pages-smoke` after build for Pages-impacting diffs (slow, ~3-5 min)
+- `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker typechecks for worker-impacting diffs (slow, ~1-2 min)
+- `MERGE_GATE_NO_FETCH=1` to skip the best-effort `git fetch origin main` that keeps the diff base honest (use when offline)
+- `MERGE_GATE_NATIVE_ENV=1` to skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection (use when debugging TZ-specific bugs)
 
 ## Yield History Cleanup Windows
 

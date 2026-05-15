@@ -168,10 +168,13 @@ describe("validate-ci parity", () => {
       "npm run check:env-contract",
       "npm run check:frozen-invariants",
       "npm run check:generated-artifacts",
+      "npm run check:hook-polling-window",
       "npm run check:hotspot-ratchet",
       "npm run check:migrations",
       "npm run check:redemption-backstops",
+      "npm run check:reserve-fixture-freshness",
       "npm run check:shared-cycles",
+      "npm run check:shared-types-imports",
       "npm run check:sql-safety",
       "npm run check:stablecoin-data",
       "npm run check:supply-helper-usage",
@@ -368,7 +371,9 @@ describe("validate-ci parity", () => {
       buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
     ).toEqual([
       PAGES_VALIDATE_COMMANDS,
-      ["npm run test:noncritical"],
+      ["npm run test:noncritical -- --shard=1/3"],
+      ["npm run test:noncritical -- --shard=2/3"],
+      ["npm run test:noncritical -- --shard=3/3"],
       ["npm run coverage:critical"],
       ["npm run typecheck:worker"],
       ["npm run typecheck:worker-scripts"],
@@ -377,7 +382,9 @@ describe("validate-ci parity", () => {
     expect(
       buildPostPrebuildExecutionUnits({ pagesChanged: false, workerChanged: true }).map((unit) => unit.commands),
     ).toEqual([
-      ["npm run test:noncritical"],
+      ["npm run test:noncritical -- --shard=1/3"],
+      ["npm run test:noncritical -- --shard=2/3"],
+      ["npm run test:noncritical -- --shard=3/3"],
       ["npm run coverage:critical"],
       ["npm run typecheck:worker"],
       ["npm run typecheck:worker-scripts"],
@@ -425,7 +432,9 @@ describe("validate-ci parity", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm run test:noncritical",
+      "npm run test:noncritical -- --shard=1/3",
+      "npm run test:noncritical -- --shard=2/3",
+      "npm run test:noncritical -- --shard=3/3",
       "npm run coverage:critical",
       "npm run typecheck:worker",
       "npm run typecheck:worker-scripts",
