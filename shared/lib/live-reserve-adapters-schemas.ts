@@ -115,6 +115,7 @@ function createInputSchemaForKinds(kinds: readonly LiveReserveInputKind[]): z.Zo
   if (schemas.length === 1) {
     return schemas[0];
   }
+  // Cast: z.union requires a non-empty tuple type that TS cannot infer from .map(); length > 1 is guarded above
   return z.union(schemas as unknown as [z.ZodTypeAny, ...z.ZodTypeAny[]]);
 }
 

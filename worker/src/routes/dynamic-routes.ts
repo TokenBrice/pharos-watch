@@ -158,6 +158,7 @@ export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(
 function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
   dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>,
 ): RouteMatch {
+  // Cast: TS cannot narrow the binding type to the matching Key generic from a string-keyed lookup
   const binding = DYNAMIC_ADMIN_ROUTE_BINDINGS[dynamicAdminEndpoint.key] as unknown as DynamicAdminRouteBinding<Key>;
   return {
     dependencies: binding.dependencies,

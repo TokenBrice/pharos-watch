@@ -601,6 +601,7 @@ export function simulateLoadScenarios(fixture: SyntheticTelegramFixture): LoadSc
 }
 
 function runExplainQueryPlan(db: DatabaseSync, check: QueryPlanCheckDefinition): QueryPlanCheckResult {
+  // Cast: better-sqlite3 .all() returns unknown[]; EXPLAIN QUERY PLAN's row shape is stable per SQLite docs
   const rows = db.prepare(`EXPLAIN QUERY PLAN ${check.sql}`).all(...check.binds) as unknown as QueryPlanRow[];
   const details = rows.map((row) => row.detail);
   return evaluateQueryPlan(check, details);
