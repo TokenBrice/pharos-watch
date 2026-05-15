@@ -23,6 +23,7 @@ describe("buildCoverageDatasetJsonLd", () => {
       includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
       mainEntityOfPage: { "@id": "https://pharos.watch/coverage/" },
     });
+    expect(jsonLd).not.toHaveProperty("isPartOf");
     expect(jsonLd).not.toHaveProperty("distribution");
     expect(jsonLd).not.toHaveProperty("dateModified");
     expect(jsonLd.variableMeasured).toEqual(

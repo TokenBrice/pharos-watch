@@ -30,6 +30,7 @@ describe("CoveragePage", () => {
       isAccessibleForFree: true,
       includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
     });
+    expect(dataset).not.toHaveProperty("isPartOf");
     expect(dataset).not.toHaveProperty("distribution");
     expect(dataset).not.toHaveProperty("dateModified");
     expect(dataset.variableMeasured).toEqual(

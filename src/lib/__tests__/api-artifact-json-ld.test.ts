@@ -32,6 +32,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         expect.objectContaining({
           "@type": "Dataset",
           "@id": "https://pharos.watch/cemetery/#dataset",
+          includedInDataCatalog: { "@id": "https://pharos.watch/about/api/#data-catalog" },
           distribution: expect.arrayContaining([
             expect.objectContaining({
               "@type": "DataDownload",
@@ -47,5 +48,7 @@ describe("buildApiArtifactCatalogJsonLd", () => {
         }),
       ]),
     );
+    const dataset = jsonLd.find((node) => node["@type"] === "Dataset");
+    expect(dataset).not.toHaveProperty("isPartOf");
   });
 });

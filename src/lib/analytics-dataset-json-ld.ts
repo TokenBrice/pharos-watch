@@ -56,7 +56,6 @@ export function buildCoverageDatasetJsonLd(options: { siteUrl?: string } = {}) {
     publisher: organization,
     isAccessibleForFree: true,
     includedInDataCatalog: { "@id": `${siteUrl}/about/api/#data-catalog` },
-    isPartOf: { "@id": `${siteUrl}#website` },
     mainEntityOfPage: { "@id": `${siteUrl}/coverage/` },
     keywords: [
       "stablecoin coverage",

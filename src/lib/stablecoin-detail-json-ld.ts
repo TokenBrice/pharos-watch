@@ -66,7 +66,6 @@ export function buildStablecoinDatasetJsonLd(
     description: statusCopy.description,
     url: detailUrl,
     inLanguage: "en",
-    isPartOf: { "@id": `${siteUrl}#website` },
     mainEntityOfPage: detailUrl,
     ...(datasetSameAs.length > 0 ? { sameAs: datasetSameAs } : {}),
     creator: { "@id": `${siteUrl}#organization` },

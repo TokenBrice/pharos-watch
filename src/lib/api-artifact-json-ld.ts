@@ -79,6 +79,6 @@ export function buildApiArtifactCatalogJsonLd(options: { siteUrl?: string } = {}
       isPartOf: { "@id": catalogId },
       publisher: organization,
     },
-    { ...cemeteryDataset, isPartOf: { "@id": catalogId } },
+    { ...cemeteryDataset, includedInDataCatalog: { "@id": catalogId } },
   ];
 }
