@@ -69,15 +69,13 @@ export function ContagionGraph({
           nodeTooltipEl={nodeTooltipEl}
           edgeTooltipEl={edgeTooltipEl}
           overlay={
-            !minimalChrome ? (
-              <ContagionGraphInsights
-                inspectedNode={inspectedNode}
-                visibleLinks={graph.visibleLinks}
-                nodeMap={graph.nodeMap}
-                logos={logos}
-                onTraceNode={graph.handleTraceNodeChange}
-              />
-            ) : null
+            <ContagionGraphInsights
+              inspectedNode={inspectedNode}
+              visibleLinks={graph.visibleLinks}
+              nodeMap={graph.nodeMap}
+              logos={logos}
+              onTraceNode={graph.handleTraceNodeChange}
+            />
           }
         />
         <div className="sr-only" aria-live="polite" aria-atomic="true">
