@@ -5,7 +5,7 @@ import {
   GOLDEN_FIXTURES,
   parseArgs,
   scoreRows,
-} from "../yield-pys-v8-calibration";
+} from "../maintenance/yield-pys-v8-calibration";
 
 function row(overrides: Record<string, unknown>) {
   return {

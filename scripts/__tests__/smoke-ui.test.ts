@@ -11,7 +11,7 @@ import {
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
-} from "../smoke-ui.mjs";
+} from "../maintenance/smoke-ui.mjs";
 
 function withEnv(key: string, value: string | undefined, fn: () => void) {
   const previous = process.env[key];

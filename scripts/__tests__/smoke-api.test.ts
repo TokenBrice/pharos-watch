@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ENDPOINT_ASSERTIONS } from "../smoke-api.mjs";
+import { ENDPOINT_ASSERTIONS } from "../maintenance/smoke-api.mjs";
 
 function makeRedemptionBody(overrides: Record<string, unknown> = {}) {
   return {

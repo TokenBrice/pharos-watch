@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFreezePlan } from "../freeze-stablecoin";
+import { buildFreezePlan } from "../maintenance/freeze-stablecoin";
 
 describe("buildFreezePlan", () => {
   it("composes a frozen-snapshots entry and a JSON-patch hint", () => {

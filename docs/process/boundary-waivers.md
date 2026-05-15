@@ -1,6 +1,6 @@
 # Worker Import Boundary Waivers
 
-Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`. The check is implemented in `scripts/check-worker-import-boundary.mjs` and runs as part of the pre-push merge gate.
+Pharos enforces a strict layering rule: code under `worker/src/` must not import from `src/` or `@/`, and code under `src/`, `shared/`, `scripts/`, or `functions/` must not import from `worker/src/`. The check is implemented in `scripts/ci/check-worker-import-boundary.mjs` and runs as part of the pre-push merge gate.
 
 Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule. Every exempt file MUST have an entry below explaining why retirement is not feasible today.
 
@@ -8,7 +8,7 @@ Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule.
 
 ## Active Waivers
 
-### 1. `scripts/check-frozen-invariants.ts`
+### 1. `scripts/ci/check-frozen-invariants.ts`
 
 - **Waiver ID:** `frozen-invariants-lifecycle-registry-check`
 - **Status:** Long-lived. No active retirement plan.
@@ -28,7 +28,7 @@ Files listed in `BOUNDARY_WAIVERS` inside the checker are exempt from this rule.
 ## Adding a Waiver
 
 1. Confirm the cross-layer import cannot be replaced by promoting metadata into `shared/`.
-2. Append an entry to `BOUNDARY_WAIVERS` in `scripts/check-worker-import-boundary.mjs` with a one-line reason.
+2. Append an entry to `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.mjs` with a one-line reason.
 3. Bump `MAX_BOUNDARY_WAIVERS` and document the new cap.
 4. Add a section to this document explaining the file, reason, what was tried, mitigations, and retirement plan (or "permanent").
 5. Update `scripts/__tests__/worker-boundary-waivers.test.ts` to cover the new entry.

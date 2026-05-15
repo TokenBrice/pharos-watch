@@ -4,7 +4,7 @@ import {
   getChangedFilesFromGit,
   isAllZeroSha,
   parseChangedFilesFromEnv,
-} from "../check-critical-coverage.mjs";
+} from "../ci/check-critical-coverage.mjs";
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {

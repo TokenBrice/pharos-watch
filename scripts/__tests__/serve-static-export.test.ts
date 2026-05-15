@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createStaticExportServer } from "../serve-static-export.mjs";
+import { createStaticExportServer } from "../maintenance/serve-static-export.mjs";
 
 const roots: string[] = [];
 const servers: Server[] = [];

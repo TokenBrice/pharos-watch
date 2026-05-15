@@ -7,8 +7,8 @@ import {
   buildFullCommandPlan,
   getChangedFiles,
   runExecutionBatches,
-} from "../test-merge-gate.mjs";
-import { getCommandEnv } from "../test-merge-gate.mjs";
+} from "../maintenance/test-merge-gate.mjs";
+import { getCommandEnv } from "../maintenance/test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
   buildCiValidateStepPlan,

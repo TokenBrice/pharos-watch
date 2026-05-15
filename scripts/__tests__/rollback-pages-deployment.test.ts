@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { rollbackPagesDeployment } from "../rollback-pages-deployment.mjs";
+import { rollbackPagesDeployment } from "../maintenance/rollback-pages-deployment.mjs";
 
 const noRetry = { maxAttempts: 1, retryDelayMs: 0 };
 

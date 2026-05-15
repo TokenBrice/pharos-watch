@@ -15,7 +15,7 @@ import {
   renderDocsIndexMarkdown,
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
-import { writeMarkdownRoute } from "../generate-markdown-exports";
+import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { changelogs } from "../../src/data/changelogs";
 import digests from "../../data/digests.json";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";

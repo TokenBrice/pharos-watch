@@ -184,24 +184,24 @@ describe("validate-ci parity", () => {
 
   it("preserves generated artifact order through the shared prebuild registry and runner", () => {
     const expectedCommands = [
-      "tsx scripts/generate-sitemap-dates.ts",
-      "tsx scripts/generate-docs-metadata.ts",
-      "tsx scripts/generate-cemetery-dataset.ts",
-      "tsx scripts/generate-postman-collection.ts",
-      "tsx scripts/generate-openapi-spec.ts",
-      "tsx scripts/generate-llms-txt.ts",
-      "node scripts/generate-stablecoin-frozen-registry.mjs",
-      "node scripts/generate-api-reference.mjs",
+      "tsx scripts/maintenance/generate-sitemap-dates.ts",
+      "tsx scripts/maintenance/generate-docs-metadata.ts",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts",
+      "tsx scripts/maintenance/generate-postman-collection.ts",
+      "tsx scripts/maintenance/generate-openapi-spec.ts",
+      "tsx scripts/maintenance/generate-llms-txt.ts",
+      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
+      "node scripts/maintenance/generate-api-reference.mjs",
     ];
     const expectedCheckCommands = [
-      "tsx scripts/generate-sitemap-dates.ts --check",
-      "tsx scripts/generate-docs-metadata.ts --check",
-      "tsx scripts/generate-cemetery-dataset.ts --check",
-      "tsx scripts/generate-postman-collection.ts --check",
-      "tsx scripts/generate-openapi-spec.ts --check",
-      "tsx scripts/generate-llms-txt.ts --check",
-      "node scripts/generate-stablecoin-frozen-registry.mjs --check",
-      "node scripts/generate-api-reference.mjs --check",
+      "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+      "tsx scripts/maintenance/generate-docs-metadata.ts --check",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
+      "tsx scripts/maintenance/generate-postman-collection.ts --check",
+      "tsx scripts/maintenance/generate-openapi-spec.ts --check",
+      "tsx scripts/maintenance/generate-llms-txt.ts --check",
+      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
+      "node scripts/maintenance/generate-api-reference.mjs --check",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
@@ -217,8 +217,8 @@ describe("validate-ci parity", () => {
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
-      "scripts/generate-sitemap-dates.ts",
-      "scripts/generate-docs-metadata.ts",
+      "scripts/maintenance/generate-sitemap-dates.ts",
+      "scripts/maintenance/generate-docs-metadata.ts",
     ]);
     expect(buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands))).toEqual(
       expectedCommands.map((cmd) => [[cmd]]),
@@ -281,7 +281,14 @@ describe("validate-ci parity", () => {
     expect(testNoncriticalJob).toContain("fail-fast: false");
     expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/3");
     expect(validateJob).toContain("- test-noncritical");
-    expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
+    // Agent J extracted the verifier to .github/scripts/verify-validate-results.mjs;
+    // the inline ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT] assertion now lives there.
+    const verifyScript = readFileSync(
+      resolve(process.cwd(), ".github/scripts/verify-validate-results.mjs"),
+      "utf8",
+    );
+    expect(verifyScript).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
+    expect(validateJob).toContain("verify-validate-results.mjs");
   });
 
   it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {

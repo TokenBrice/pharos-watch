@@ -4,7 +4,7 @@ import {
   auditCoinbase,
   auditOptionalSourceShapes,
   runPricingProviderAudit,
-} from "../audit-pricing-provider-config";
+} from "../maintenance/audit-pricing-provider-config";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

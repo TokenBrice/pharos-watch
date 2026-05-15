@@ -7,7 +7,7 @@ import {
   buildPriceSourceDepthAudit,
   classifySourceFamily,
   type AuditStablecoinMeta,
-} from "../audit-price-source-depth";
+} from "../maintenance/audit-price-source-depth";
 
 describe("audit-price-source-depth", () => {
   it("buckets source depths with a 5+ overflow bucket", () => {

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findBroadSharedTypesValueImports } from "../check-shared-types-imports.mjs";
+import { findBroadSharedTypesValueImports } from "../ci/check-shared-types-imports.mjs";
 
 let tempDirs: string[] = [];
 

@@ -50,12 +50,12 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact([".github/workflows/pages-publish.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-llms-txt.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-docs-metadata.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/build-world-map-svg.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-markdown-exports.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-openapi-spec.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-postman-collection.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-llms-txt.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-docs-metadata.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
   });
 });
 
@@ -71,7 +71,7 @@ describe("hasWorkerPromotionImpact", () => {
   it("returns false for validation, root package, tests, and known Pages-only shared changes", () => {
     expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(false);
     expect(hasWorkerPromotionImpact(["scripts/lib/validate-contract.mjs"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["scripts/smoke-ui.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/public-docs.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
@@ -125,18 +125,18 @@ describe("hasDeployImpact", () => {
       "scripts/lib/deploy-impact.mjs",
       "scripts/lib/validate-contract.mjs",
       ".github/actions/setup-workspace/action.yml",
-      "scripts/check-cron-abort-contract.mjs",
-      "scripts/check-cron-connection-budget.ts",
-      "scripts/check-doc-source-paths.mjs",
-      "scripts/check-env-contract.mjs",
-      "scripts/check-sql-interpolation-safety.mjs",
-      "scripts/generate-cemetery-dataset.ts",
-      "scripts/run-critical-coverage.mjs",
-      "scripts/run-generated-artifacts.mjs",
-      "scripts/run-noncritical-tests.mjs",
-      "scripts/run-validate-postbuild.mjs",
-      "scripts/run-validate-prebuild.mjs",
-      "scripts/test-merge-gate.mjs",
+      "scripts/ci/check-cron-abort-contract.mjs",
+      "scripts/ci/check-cron-connection-budget.ts",
+      "scripts/ci/check-doc-source-paths.mjs",
+      "scripts/ci/check-env-contract.mjs",
+      "scripts/ci/check-sql-interpolation-safety.mjs",
+      "scripts/maintenance/generate-cemetery-dataset.ts",
+      "scripts/maintenance/run-critical-coverage.mjs",
+      "scripts/maintenance/run-generated-artifacts.mjs",
+      "scripts/maintenance/run-noncritical-tests.mjs",
+      "scripts/maintenance/run-validate-postbuild.mjs",
+      "scripts/maintenance/run-validate-prebuild.mjs",
+      "scripts/maintenance/test-merge-gate.mjs",
     ];
 
     for (const file of deploySupportFiles) {
@@ -148,7 +148,7 @@ describe("hasDeployImpact", () => {
   });
 
   it("treats static map generation as Pages-only deploy infrastructure", () => {
-    const file = "scripts/build-world-map-svg.ts";
+    const file = "scripts/maintenance/build-world-map-svg.ts";
 
     expect(hasDeployImpact([file])).toBe(true);
     expect(hasPagesDeployImpact([file])).toBe(true);
@@ -257,7 +257,7 @@ diff --git a/package-lock.json b/package-lock.json
         "package-lock.json",
         "public/_redirects",
         "scripts/lib/validate-contract.mjs",
-        "scripts/smoke-ui.mjs",
+        "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",
       ].join("\n");

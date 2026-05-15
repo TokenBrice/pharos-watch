@@ -7,7 +7,7 @@ import {
   simulateLoadScenarios,
   summarizeFixture,
   type QueryPlanCheckDefinition,
-} from "../check-telegram-load";
+} from "../ci/check-telegram-load";
 
 describe("Telegram load simulation", () => {
   it("builds fixtures that cover the required subscriber states", () => {
