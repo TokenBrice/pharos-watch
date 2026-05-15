@@ -1,6 +1,12 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
-/** Safely serialize data for embedding in a <script type="application/ld+json"> tag. */
+/**
+ * Escapes JSON-LD strings for safe embedding inside <script type="application/ld+json">.
+ *
+ * - `<` and `>` prevent malicious payloads from injecting parent script tags.
+ * - `/` prevents `</script>` from terminating the JSON-LD block (the HTML parser
+ *   does not know it is inside JSON, only that it is inside a <script> element).
+ */
 export function safeJsonLd(data: Record<string, unknown> | Record<string, unknown>[]): string {
   return JSON.stringify(data)
     .replace(/</g, "\\u003c")
