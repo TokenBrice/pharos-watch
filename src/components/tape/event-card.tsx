@@ -20,14 +20,13 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   deviationBgClass,
   deviationColorClass,
-  severityToAccent,
 } from "@/lib/severity-colors";
 import { formatCompactUsd } from "@shared/lib/format";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 function eventClass(type: string): string {
@@ -68,20 +67,15 @@ export const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
   critical: "Critical",
 };
 
+// Severity is communicated via text color on the inline tag — the wire-service
+// stream deliberately omits border-l rails and badge chrome (see
+// docs/tape-page.md Visual Identity for the locked-in rules).
 const SEVERITY_TEXT: Record<TapeEventSeverity, string> = {
-  info: "text-zinc-700 dark:text-zinc-400",
+  info: "text-zinc-600 dark:text-zinc-400",
   notice: "text-sky-700 dark:text-sky-400",
   warning: "text-amber-700 dark:text-amber-400",
   severe: "text-orange-700 dark:text-orange-400",
   critical: "text-red-700 dark:text-red-400",
-};
-
-const SEVERITY_BORDER: Record<TapeEventSeverity, string> = {
-  info: "border-zinc-500/40",
-  notice: "border-sky-500/40",
-  warning: "border-amber-500/40",
-  severe: "border-orange-500/40",
-  critical: "border-red-500/40",
 };
 
 function formatRelativeTime(tsMs: number): string {
@@ -92,8 +86,22 @@ function formatRelativeTime(tsMs: number): string {
   return `${Math.round(ageSec / 86_400)}d ago`;
 }
 
+function formatHhMm(tsMs: number): string {
+  return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
 function formatAbsoluteDate(tsMs: number): string {
   return new Date(tsMs).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+function deriveTicker(event: TapeEvent): string | null {
+  if (event.coinId) {
+    const symbol = TRACKED_META_BY_ID.get(event.coinId)?.symbol;
+    if (symbol) return symbol;
+  }
+  const payloadSymbol = event.payload?.symbol;
+  if (typeof payloadSymbol === "string" && payloadSymbol.length > 0) return payloadSymbol;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -331,12 +339,15 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
-  const accent = severityToAccent(event.severity);
   const severityLabel = SEVERITY_LABEL[event.severity];
   const severityText = SEVERITY_TEXT[event.severity];
-  const severityBorder = SEVERITY_BORDER[event.severity];
   const href = event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
   const titleId = `tape-event-${event.id}`;
+  const ticker = deriveTicker(event);
+  // For coin events the title is redundant with [ticker + type + enrichment];
+  // for non-coin events (methodology, lifecycle without coin) the title is the
+  // primary descriptive content and we surface it as the body line.
+  const summaryLine = event.summary && event.summary.length > 0 ? event.summary : (!event.coinId ? event.title : "");
   const [copied, setCopied] = useState(false);
   const handleCopyPermalink = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -355,59 +366,59 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
       href={href}
       aria-labelledby={titleId}
       data-event-id={event.id}
-      className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group relative flex items-start gap-3 border-l-[3px] p-3 ${accent}${
-        highlighted ? " ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""
+      className={`pharos-focus-ring group block border-b border-border/30 px-3 py-2 font-mono text-xs transition-colors hover:bg-muted/30${
+        highlighted ? " bg-amber-500/5" : ""
       }`}
     >
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground">
-        {event.coinId ? (
-          <StablecoinLogo src={logoSrc} name={event.coinId} size={24} />
-        ) : (
-          <ClassIcon type={event.type} />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span id={titleId} className="truncate text-sm font-medium text-foreground">
-            {event.title}
-          </span>
-          <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${severityBorder} ${severityText}`}>
-            {severityLabel}
-          </Badge>
-          {count > 1 ? (
-            <Badge
-              variant="outline"
-              aria-label={`${count} similar events grouped`}
-              className="text-[10px] tabular-nums text-foreground/80"
-            >
-              ×{count}
-            </Badge>
-          ) : null}
-          {event.chain ? (
-            <span className="text-[11px] text-muted-foreground">{event.chain}</span>
-          ) : null}
-        </div>
-        {event.summary ? (
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{event.summary}</p>
+      <div className="flex items-baseline gap-x-2.5 gap-y-1 flex-wrap">
+        <time
+          dateTime={new Date(event.ts).toISOString()}
+          title={formatAbsoluteDate(event.ts)}
+          className="shrink-0 tabular-nums text-muted-foreground"
+        >
+          {formatHhMm(event.ts)}
+        </time>
+        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">
+          {event.coinId ? (
+            <StablecoinLogo src={logoSrc} name={event.coinId} size={16} />
+          ) : (
+            <ClassIcon type={event.type} className="h-3.5 w-3.5" />
+          )}
+        </span>
+        <span id={titleId} className="sr-only">{event.title}</span>
+        {ticker ? (
+          <span aria-hidden="true" className="shrink-0 font-semibold text-foreground">{ticker}</span>
         ) : null}
-        <EventCardEnrichment event={event} />
-      </div>
-      <div className="flex shrink-0 items-center gap-1.5">
+        <span className="shrink-0 text-muted-foreground">{event.type}</span>
+        <span className={`shrink-0 uppercase tracking-wide ${severityText}`} aria-label={`severity ${severityLabel}`}>
+          {severityLabel}
+        </span>
+        {count > 1 ? (
+          <span aria-label={`${count} similar events grouped`} className="shrink-0 tabular-nums text-muted-foreground">
+            ×{count}
+          </span>
+        ) : null}
+        {event.chain ? (
+          <span className="shrink-0 uppercase tracking-wide text-muted-foreground">[{event.chain}]</span>
+        ) : null}
+        <span className="flex-1" aria-hidden="true" />
         <button
           type="button"
           onClick={handleCopyPermalink}
           aria-label={copied ? "Permalink copied" : "Copy permalink to this event"}
-          className="pharos-focus-ring rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+          className="pharos-focus-ring shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>
-        <time
-          dateTime={new Date(event.ts).toISOString()}
-          title={formatAbsoluteDate(event.ts)}
-          className="tabular-nums text-[11px] text-muted-foreground"
-        >
-          {formatRelativeTime(event.ts)}
-        </time>
+        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
+      </div>
+      {summaryLine ? (
+        <p className="mt-0.5 pl-[calc(5ch+2.25rem)] text-muted-foreground/80 line-clamp-2">
+          {summaryLine}
+        </p>
+      ) : null}
+      <div className="pl-[calc(5ch+2.25rem)]">
+        <EventCardEnrichment event={event} />
       </div>
     </Link>
   );

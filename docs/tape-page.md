@@ -34,6 +34,23 @@ Metadata is authored directly in `src/app/tape/page.tsx` with canonical `/tape/`
 
 ---
 
+## Visual Identity
+
+`/tape/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/tape/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
+
+1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the linked-event band, or the empty state. The whole stream is a flat typographic surface.
+2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
+3. **Geist Mono is the dominant typeface** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
+4. **Severity is communicated by text color**, not by card border or background fill. The `severityToAccent` `border-l-[3px]` rail is intentionally dropped from `EventCard`.
+5. **Time prefix on every row** — `HH:MM` in mono `tabular-nums` at the start of each event line, syslog-style.
+6. **Structured row layout** — `time | logo | ticker | event.type slug | severity | count | chain | spacer | age`. The event title is redundant with these fields for coin events and is replaced by the structured form; the event summary becomes the second line.
+7. **Day separator** — full-width mono rule with the date inline (`─── TODAY · MAY 15, 2026 ─────────────`), not a thin underline header.
+8. **Currently-open band** — mono uppercase eyebrow (`⚠ CURRENTLY OPEN · N INCIDENTS`) over hairline-divided rows; no rounded shell.
+9. **Linked-event band** — mono uppercase eyebrow (`↗ YOU FOLLOWED A LINK TO THIS EVENT`) over a single event row; no shell.
+10. **Filter row keeps `pharos-card-shell`** — it is a control surface, not part of the stream.
+
+---
+
 ## URL Filter Contract
 
 Filter state is read from URL search params via `useUrlFilters`, parsed in `readTapeFilterState` (`src/components/tape/tape-filters.tsx`):
@@ -142,3 +159,19 @@ If a new projector class ships, also update:
 4. the per-class deep-link footer on the source tracker page (`/depeg/`, `/freezewatch/`, `/flows/`, etc.)
 
 If the homepage marquee's data source or severity floor changes, also update [homepage.md](./homepage.md).
+
+If you find yourself wrapping event rows in `pharos-card-shell`, rounding corners, or replacing the mono typography with sans, stop and re-read the [Aesthetic Lock](#aesthetic-lock).
+
+---
+
+## Aesthetic Lock
+
+**Do not harmonize `/tape/` with the standard `pharos-card-shell` / rounded-card analytics surface.** The wire-service treatment described under [Visual Identity](#visual-identity) is intentional and load-bearing for this route's identity. The matching carve-out lives in [design-language.md](./design-language.md) under `### Tape (Special)`; the lock holds from either entry point.
+
+Specifically:
+
+- The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, the linked-event band, and the empty state is by design, not an oversight.
+- Geist Mono as the dominant stream typeface is a third deliberate carve-out alongside Digest (Newsreader + Courier) and the detail-page `AiSummary` (Georgia).
+- Severity-as-text-color (no left rail, no fill) is part of the wire-service identity. Restoring the `border-l-[3px]` rail regresses the design.
+
+Future "harmonize /tape with the rest of the site" suggestions should be rejected unless the user explicitly asks to retire the wire-service treatment.

@@ -35,9 +35,9 @@ const WINDOW_LABEL: Record<TapeWindowKey, string> = {
 
 function EventSkeleton() {
   return (
-    <div className="space-y-2" aria-hidden="true">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+    <div className="divide-y divide-border/30 border-y border-border/30" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-9 w-full rounded-none" />
       ))}
     </div>
   );
@@ -57,9 +57,9 @@ function EmptyState({
   activeChips: readonly ActiveFilterChip[];
 }) {
   return (
-    <div className="pharos-card-shell px-6 py-10 text-center text-sm text-muted-foreground">
-      <Radar className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
-      <p className="font-medium text-foreground">No events match these filters.</p>
+    <div className="border-y border-border/30 px-3 py-10 text-center font-mono text-xs text-muted-foreground">
+      <Radar className="mx-auto mb-3 h-6 w-6 text-muted-foreground" aria-hidden="true" />
+      <p className="uppercase tracking-wider text-foreground">No events match these filters.</p>
       {activeChips.length > 0 ? (
         <>
           <p className="mt-1">Remove a filter to widen the view:</p>
@@ -69,21 +69,21 @@ function EmptyState({
                 key={chip.key}
                 type="button"
                 onClick={chip.onClear}
-                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2.5 py-1 text-xs text-foreground hover:bg-accent/40"
+                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-none border border-border/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40"
               >
                 <span>{chip.label}</span>
                 <span aria-hidden="true">×</span>
               </button>
             ))}
           </div>
-          <Button variant="ghost" size="sm" className="mt-4 text-xs text-muted-foreground" onClick={onClearAll}>
+          <Button variant="ghost" size="sm" className="mt-4 font-mono text-xs uppercase tracking-wide text-muted-foreground" onClick={onClearAll}>
             Reset all filters
           </Button>
         </>
       ) : (
         <>
           <p className="mt-1">Try widening the time window or dropping the severity floor.</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={onClearAll}>
+          <Button variant="outline" size="sm" className="mt-4 font-mono uppercase tracking-wide" onClick={onClearAll}>
             Widen to all time
           </Button>
         </>
@@ -178,20 +178,18 @@ interface SummaryBandProps {
 function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
-    <span className="font-medium text-foreground">
+    <span className="font-semibold text-foreground">
       Showing {loadedCount.toLocaleString()} of {totalCount!.toLocaleString()} events
     </span>
   ) : (
-    <span className="font-medium text-foreground">
+    <span className="font-semibold text-foreground">
       {loadedCount.toLocaleString()} {loadedCount === 1 ? "event" : "events"}
     </span>
   );
-  // Lead with the actionable fact (open incidents) when present, then the
-  // configuration state (count → window → severity).
   const parts: React.ReactNode[] = [];
   if (openCount > 0) {
     parts.push(
-      <span key="open" className="font-medium text-amber-700 dark:text-amber-400">
+      <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
         {openCount} open {openCount === 1 ? "incident" : "incidents"}
       </span>,
     );
@@ -214,7 +212,7 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
     );
   }
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
       {parts.map((part, i) => (
         <span key={i} className="contents">
           {i > 0 ? <span aria-hidden="true">·</span> : null}
@@ -232,18 +230,15 @@ interface OpenIncidentsSectionProps {
 
 function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
   return (
-    <section
-      aria-labelledby="tape-open-incidents-heading"
-      className="pharos-card-shell p-3 space-y-2"
-    >
+    <section aria-labelledby="tape-open-incidents-heading" className="space-y-1">
       <h2
         id="tape-open-incidents-heading"
-        className="pharos-kicker flex items-center gap-1.5 text-amber-700 dark:text-amber-400"
+        className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
-        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-        Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
+        <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+        ⚠ Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
       </h2>
-      <div className="space-y-2">
+      <div className="border-y border-amber-500/30">
         {incidents.map((event) => (
           <EventCard
             key={event.id}
@@ -266,12 +261,17 @@ interface DayGroupSectionProps {
 function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSectionProps) {
   const { primary, secondary } = formatDayLabel(group.dayKey, nowMs);
   return (
-    <section aria-label={`${primary} ${secondary}`} className="space-y-2">
-      <div className="sticky top-0 z-10 -mx-1 flex items-baseline justify-between border-b border-border/50 bg-background/85 px-1 pb-1.5 pt-1 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <h3 className="text-sm font-semibold text-foreground">{primary}</h3>
-        <span className="text-[11px] tabular-nums text-muted-foreground">{secondary}</span>
+    <section aria-label={`${primary} ${secondary}`}>
+      <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+        <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <span aria-hidden="true">───</span>
+          <h3 className="shrink-0 text-foreground">
+            {primary} <span className="text-muted-foreground">· {secondary}</span>
+          </h3>
+          <span aria-hidden="true" className="flex-1 border-t border-border/40" />
+        </div>
       </div>
-      <div className="space-y-2">
+      <div className="border-b border-border/30">
         {group.collapsed.map(({ key, event, count }) => (
           <EventCard
             key={key}
@@ -476,10 +476,10 @@ export function TapeClient() {
           <button
             type="button"
             onClick={() => setParam("coin", "")}
-            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2.5 py-1 text-xs text-foreground hover:bg-accent/40"
+            className="pharos-focus-ring inline-flex items-center gap-1.5 border border-border/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40"
             aria-label={`Clear coin filter ${filters.coin}`}
           >
-            <span>Filtered to <span className="font-medium">{filters.coin}</span></span>
+            <span>Filtered to <span className="font-semibold">{filters.coin}</span></span>
             <span aria-hidden="true">×</span>
           </button>
         </div>
@@ -506,27 +506,26 @@ export function TapeClient() {
       {permalinkId && !permalinkBuffer.isLoading && !bufferEvent && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div
           title={permalinkId}
-          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+          className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
         >
-          The linked event isn&apos;t in this view. Try widening the filters or removing the time window.
+          ⚠ The linked event isn&apos;t in this view. Try widening the filters or removing the time window.
         </div>
       ) : null}
 
       {bufferEvent ? (
-        <section
-          aria-labelledby="tape-linked-event-heading"
-          className="pharos-card-shell p-3 space-y-2"
-        >
-          <h2 id="tape-linked-event-heading" className="pharos-kicker flex items-center gap-1.5 text-foreground/80">
-            <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-            You followed a link to this event
+        <section aria-labelledby="tape-linked-event-heading" className="space-y-1">
+          <h2 id="tape-linked-event-heading" className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-foreground/70">
+            <Link2 className="h-3 w-3" aria-hidden="true" />
+            ↗ You followed a link to this event
           </h2>
-          <EventCard
-            event={bufferEvent}
-            logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
-            highlighted={highlightedId === bufferEvent.id}
-            domId={eventDomId(bufferEvent.id)}
-          />
+          <div className="border-y border-border/40">
+            <EventCard
+              event={bufferEvent}
+              logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
+              highlighted={highlightedId === bufferEvent.id}
+              domId={eventDomId(bufferEvent.id)}
+            />
+          </div>
         </section>
       ) : null}
 
@@ -539,7 +538,7 @@ export function TapeClient() {
       ) : visibleEvents.length === 0 ? (
         <EmptyState onClearAll={emptyStateFallback} activeChips={emptyStateChips} />
       ) : (
-        <div id="tape-feed" className="space-y-6" aria-live="polite">
+        <div id="tape-feed" className="space-y-4" aria-live="polite">
           {dayGroups.map((group) => (
             <DayGroupSection
               key={group.dayKey}
@@ -566,7 +565,7 @@ export function TapeClient() {
               <div ref={sentinelRef} aria-hidden="true" />
             </div>
           ) : nextCursor == null && rawEvents.length > 0 ? (
-            <p className="pt-2 text-center text-xs text-muted-foreground">End of tape.</p>
+            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">─── End of tape ───</p>
           ) : null}
         </div>
       )}
