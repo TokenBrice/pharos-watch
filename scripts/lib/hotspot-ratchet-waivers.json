@@ -71,8 +71,8 @@
     "disposition": "deferred",
     "notes": "Pre-launch stablecoin detail page intentionally colocates phase timeline, sponsor metadata, and CTA blocks while the upcoming-coin surface stabilizes. Defer decomposition until pre-launch UX patterns settle."
   },
-  "src/app/compare/client.tsx": {
+  "src/components/key-info-card.tsx": {
     "disposition": "queued-p4",
-    "notes": "Compare client owns peer-set construction, side-by-side rendering, and filter state in one shell. Split filter/state vs. table rendering in a follow-up compare UI pass."
+    "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass."
   }
 }

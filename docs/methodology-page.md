@@ -105,7 +105,7 @@ The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [proce
 
 Top-tier classification surfaced on the homepage Bluechip rail and on per-coin detail pages. A coin is rated bluechip only when it meets strict floors across safety, liquidity, and resilience simultaneously — there is no weighted blend that lets a weak factor be averaged away. The runtime gates and current eligibility cohort are documented in [bluechip-ratings.md](bluechip-ratings.md); the methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
 
-### Proof of Reserves {#proof-of-reserves}
+### Proof of Reserves
 
 `StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `monthly` / `quarterly` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
 

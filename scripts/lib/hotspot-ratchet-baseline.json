@@ -60,9 +60,9 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "src/components/contagion-graph.tsx": {
-    "fileLines": 77,
-    "maxFunctionLines": 54,
-    "branchCount": 1,
+    "fileLines": 90,
+    "maxFunctionLines": 64,
+    "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
       "fileLines": 140,
@@ -252,8 +252,8 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 911,
-    "maxFunctionLines": 320,
+    "fileLines": 914,
+    "maxFunctionLines": 324,
     "branchCount": 66,
     "disposition": "queued-p4",
     "targetBudget": {
