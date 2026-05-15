@@ -1119,6 +1119,24 @@ describe("scoreDecentralization (v6 — 5-band penalty)", () => {
     // wrapper (10) with no penalty applied
     expect(result.score).toBe(10);
   });
+
+  it("inherits tracked variant wrapper decentralization from the parent with the variant haircut", () => {
+    const meta = {
+      ...makeMeta("unproven", "native-multichain", "wrapper"),
+      variantOf: "bold-liquity",
+      variantKind: "strategy-vault",
+    };
+    const result = scoreDecentralization("centralized-dependent", meta as never, {
+      wrappedAssetId: "bold-liquity",
+      wrappedAssetDecentralizationScore: 100,
+      variantKind: "strategy-vault",
+    });
+
+    expect(result.score).toBe(95);
+    expect(result.grade).toBe("A+");
+    expect(result.detail).toContain("Wrapped asset: bold-liquity");
+    expect(result.detail).toContain("parent 100 - 5");
+  });
 });
 
 describe("isBlacklistable", () => {

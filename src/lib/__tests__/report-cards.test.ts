@@ -840,6 +840,27 @@ describe("scoreDecentralization", () => {
     expect(result.grade).toBe("F");
   });
 
+  it("derives tracked variant wrapper decentralization from the wrapped asset", () => {
+    const meta = makeMeta({
+      flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: true, rwa: false, navToken: true },
+      governanceQuality: "wrapper",
+      variantOf: "bold-liquity",
+      variantKind: "strategy-vault",
+      chainTier: "unproven",
+      deploymentModel: "native-multichain",
+    });
+    const result = scoreDecentralization("centralized-dependent", meta, {
+      wrappedAssetId: "bold-liquity",
+      wrappedAssetDecentralizationScore: 100,
+      variantKind: "strategy-vault",
+    });
+
+    expect(result.score).toBe(95);
+    expect(result.grade).toBe("A+");
+    expect(result.detail).toContain("Wrapped asset: bold-liquity");
+    expect(result.detail).toContain("parent 100 - 5");
+  });
+
   // --- Detail string ---
 
   it("includes governance quality label and infra label in detail", () => {
