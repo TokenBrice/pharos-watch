@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useCallback, useMemo, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { FilterCombobox } from "@/components/filter-combobox";
@@ -107,6 +106,13 @@ interface TapeFiltersProps {
   eventsForCoinDirectory?: TapeEvent[];
 }
 
+function segmentedCornerClass(index: number, total: number): string {
+  if (total <= 1) return "";
+  if (index === 0) return "rounded-r-none";
+  if (index === total - 1) return "rounded-l-none";
+  return "rounded-none";
+}
+
 export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   const onToggleClass = useCallback(
     (slug: string) => {
@@ -125,83 +131,100 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   const activeClassSet = useMemo(() => new Set(state.type), [state.type]);
   const activeClassCount = state.type.length;
 
+  // Mobile-only disclosure for the class chip row. Desktop renders the chips
+  // unconditionally via `hidden sm:block`. Initial state reflects the URL so a
+  // shared link with active classes opens expanded; manual collapse sticks.
+  const [mobileClassesOpen, setMobileClassesOpen] = useState(activeClassCount > 0);
+
+  const classChips = (
+    <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
+      {TAPE_CLASSES.map((cls) => {
+        const slug = `${cls.slug}.*`;
+        const active = activeClassSet.has(slug);
+        return (
+          <button
+            key={cls.slug}
+            type="button"
+            onClick={() => onToggleClass(cls.slug)}
+            aria-pressed={active}
+            className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""}`}
+          >
+            {cls.label}
+          </button>
+        );
+      })}
+      {state.type.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setParam("type", "")}
+          className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Clear classes
+        </button>
+      ) : null}
+    </div>
+  );
+
   return (
-    <div className="space-y-3 rounded-xl border border-border/60 bg-card/30 p-3">
-      <details
-        className="group"
-        // `open` re-evaluates when the URL/state changes, which keeps the
-        // class chips visible whenever the user has at least one active.
-        open={activeClassCount > 0}
+    <div className="pharos-card-shell space-y-3 p-3">
+      <button
+        type="button"
+        onClick={() => setMobileClassesOpen((v) => !v)}
+        aria-expanded={mobileClassesOpen}
+        aria-controls="tape-class-chips-mobile"
+        className="pharos-focus-ring inline-flex cursor-pointer items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground sm:hidden"
       >
-        <summary className="pharos-focus-ring inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
-          <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
-          {activeClassCount > 0
-            ? `Filter by class · ${activeClassCount} active`
-            : `Filter by class`}
-        </summary>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
-          {TAPE_CLASSES.map((cls) => {
-            const slug = `${cls.slug}.*`;
-            const active = activeClassSet.has(slug);
+        <span className={`inline-block transition-transform ${mobileClassesOpen ? "rotate-90" : ""}`} aria-hidden="true">▸</span>
+        {activeClassCount > 0 ? `Filter by class · ${activeClassCount} active` : `Filter by class`}
+      </button>
+
+      {mobileClassesOpen ? (
+        <div id="tape-class-chips-mobile" className="sm:hidden">
+          {classChips}
+        </div>
+      ) : null}
+
+      <div className="hidden sm:block">{classChips}</div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex isolate">
+          {WINDOW_OPTIONS.map((opt, i) => {
+            const active = state.window === opt.value;
             return (
               <button
-                key={cls.slug}
+                key={opt.value}
                 type="button"
-                onClick={() => onToggleClass(cls.slug)}
-                aria-pressed={active}
-                className={`pharos-focus-ring inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                  active
-                    ? "border-primary/60 bg-primary/15 text-foreground"
-                    : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
-                }`}
+                role="radio"
+                aria-checked={active}
+                onClick={() => setParam("window", opt.value)}
+                className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${segmentedCornerClass(i, WINDOW_OPTIONS.length)}`}
               >
-                {cls.label}
+                {opt.label}
               </button>
             );
           })}
-          {state.type.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setParam("type", "")}
-              className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              Clear classes
-            </button>
-          ) : null}
         </div>
-      </details>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <ToggleGroup
-          type="single"
-          value={state.window}
-          onValueChange={(v) => v && setParam("window", v)}
-          aria-label="Filter by time window"
-          className="flex gap-1"
-        >
-          {WINDOW_OPTIONS.map((opt) => (
-            <ToggleGroupItem key={opt.value} value={opt.value} variant="outline" size="sm" className="text-xs">
-              {opt.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
 
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <ToggleGroup
-                type="single"
-                value={state.severity}
-                onValueChange={(v) => v && setParam("severity", v === DEFAULT_SEVERITY ? "" : v)}
-                aria-label="Filter by severity floor"
-                className="flex gap-1"
-              >
-                {TAPE_FILTER_SEVERITY_VALUES.map((sev) => (
-                  <ToggleGroupItem key={sev} value={sev} variant="outline" size="sm" className="text-xs">
-                    {SEVERITY_LABELS[sev]}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap isolate">
+                {TAPE_FILTER_SEVERITY_VALUES.map((sev, i) => {
+                  const active = state.severity === sev;
+                  return (
+                    <button
+                      key={sev}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setParam("severity", sev === DEFAULT_SEVERITY ? "" : sev)}
+                      className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${segmentedCornerClass(i, TAPE_FILTER_SEVERITY_VALUES.length)}`}
+                    >
+                      {SEVERITY_LABELS[sev]}
+                    </button>
+                  );
+                })}
+              </div>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               info → notice → warning → severe → critical. The selected tier and above are shown.

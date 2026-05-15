@@ -19,10 +19,12 @@ import {
   type TapeWindowKey,
 } from "@/components/tape/tape-filters";
 import { collapseByCoinClass, type CollapsedTapeEntry } from "@/lib/tape-collapse";
+import { timeAgo } from "@shared/lib/format";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 const HIGHLIGHT_DURATION_MS = 2000;
 const DAY_MS = 86_400_000;
+const TAPE_FRESH_WINDOW_MS = 10 * 60 * 1000;
 
 const WINDOW_LABEL: Record<TapeWindowKey, string> = {
   "24h": "last 24h",
@@ -134,9 +136,11 @@ interface SummaryBandProps {
   openCount: number;
   windowLabel: string;
   severityLabel: string;
+  dataUpdatedAt: number;
+  nowMs: number;
 }
 
-function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel }: SummaryBandProps) {
+function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-medium text-foreground">
@@ -158,6 +162,20 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
         {openCount} currently open
       </span>
     ));
+  }
+  const isFresh = dataUpdatedAt > 0 && nowMs - dataUpdatedAt < TAPE_FRESH_WINDOW_MS;
+  if (dataUpdatedAt > 0) {
+    parts.push(
+      <span key="updated" className="inline-flex items-center gap-1.5">
+        {isFresh ? (
+          <span className="relative inline-flex h-1.5 w-1.5" aria-hidden="true">
+            <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          </span>
+        ) : null}
+        <span>Updated {timeAgo(Math.floor(dataUpdatedAt / 1000))}</span>
+      </span>,
+    );
   }
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -375,6 +393,8 @@ export function TapeClient() {
         openCount={openIncidents.length}
         windowLabel={WINDOW_LABEL[filters.window]}
         severityLabel={severityLabel}
+        dataUpdatedAt={dataUpdatedAt}
+        nowMs={nowMs}
       />
 
       <TapeFilters state={filters} setParam={setParam} />

@@ -67,8 +67,7 @@ export default function TapePage() {
         </>
       )}
       leadParagraphs={[
-        "A cross-class chronological view of stablecoin events: depegs, freezes, score changes, and methodology bumps on one timeline.",
-        "Use this when you want everything for one coin, everything in one severity tier, or a unified view across event classes. The dedicated trackers go deeper for any single class.",
+        "Every confirmed event across tracked stablecoins, newest first. Defaults to notice+ severity; drop the floor or widen the window to see more.",
       ]}
     >
       <TapeClient />
