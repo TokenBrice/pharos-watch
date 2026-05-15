@@ -16,7 +16,7 @@ import type {
   YieldType,
 } from "@shared/types";
 
-export type YieldPegFilter = PegCurrency | "all" | "non-usd";
+export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
 export type YieldWarningsFilter = "all" | "hide" | "only";
 export type YieldSourceConfidenceFilter =
   | "all"
@@ -65,6 +65,7 @@ export interface YieldViewModelFilters {
 
 export interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];
+  currencyTabs: YieldFilterOption<YieldPegFilter>[];
   yieldType: YieldFilterOption<YieldType | "all">[];
   warnings: YieldFilterOption<YieldWarningsFilter>[];
   minSafety: YieldFilterOption[];
@@ -169,6 +170,14 @@ const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
 ];
 
 const HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS = new Set<PegCurrency>(["SGD", "MXN"]);
+// Currencies that get their own tab in the leaderboard currency tab strip.
+// Anything not in this set rolls into the "Other" tab. AUD + CAD share a tab.
+const CURRENCY_TAB_PEGS: readonly PegCurrency[] = ["USD", "EUR", "GBP", "JPY", "CHF", "MXN", "BRL"];
+const CURRENCY_TAB_AUD_CAD_PEGS: readonly PegCurrency[] = ["AUD", "CAD"];
+const CURRENCY_TAB_ENUMERATED_PEGS = new Set<PegCurrency>([
+  ...CURRENCY_TAB_PEGS,
+  ...CURRENCY_TAB_AUD_CAD_PEGS,
+]);
 const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "all">[] = [
   "deterministic",
   "curated",
@@ -319,16 +328,22 @@ function matchesPeg(peg: PegCurrency | null, filter: YieldPegFilter): boolean {
   if (filter === "all") return true;
   if (!peg) return false;
   if (filter === "non-usd") return peg !== "USD";
+  if (filter === "aud-cad") return peg === "AUD" || peg === "CAD";
+  if (filter === "other") return !CURRENCY_TAB_ENUMERATED_PEGS.has(peg);
   return peg === filter;
 }
 
-function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
+function countPegs(rows: readonly YieldRanking[]): Map<PegCurrency, number> {
   const pegCounts = new Map<PegCurrency, number>();
   for (const row of rows) {
     const peg = getYieldRankingPeg(row.id);
     if (peg) pegCounts.set(peg, (pegCounts.get(peg) ?? 0) + 1);
   }
+  return pegCounts;
+}
 
+function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(rows);
   const pegs = Array.from(pegCounts.keys()).sort(compareYieldPegs);
   const nonUsdCount = pegs.reduce((sum, peg) => sum + (peg !== "USD" ? pegCounts.get(peg) ?? 0 : 0), 0);
   const options: YieldFilterOption<YieldPegFilter>[] = [
@@ -342,6 +357,34 @@ function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<Yield
     if (peg === "USD" || HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS.has(peg)) continue;
     options.push({ value: peg, label: getYieldPegLabel(peg), count: pegCounts.get(peg) ?? 0 });
   }
+
+  return options;
+}
+
+// Tab-strip option set: a curated, conditional list of currency tabs for the
+// leaderboard. Tabs only appear when at least one row matches.
+function buildCurrencyTabOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(rows);
+  const options: YieldFilterOption<YieldPegFilter>[] = [
+    { value: "all", label: "All", count: rows.length },
+  ];
+
+  for (const peg of CURRENCY_TAB_PEGS) {
+    const count = pegCounts.get(peg) ?? 0;
+    if (count > 0) options.push({ value: peg, label: getYieldPegLabel(peg), count });
+  }
+
+  const audCadCount = CURRENCY_TAB_AUD_CAD_PEGS.reduce(
+    (sum, peg) => sum + (pegCounts.get(peg) ?? 0),
+    0,
+  );
+  if (audCadCount > 0) options.push({ value: "aud-cad", label: "AUD/CAD", count: audCadCount });
+
+  let otherCount = 0;
+  for (const [peg, count] of pegCounts) {
+    if (!CURRENCY_TAB_ENUMERATED_PEGS.has(peg)) otherCount += count;
+  }
+  if (otherCount > 0) options.push({ value: "other", label: "Other", count: otherCount });
 
   return options;
 }
@@ -382,6 +425,7 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
 
   return {
     peg: buildPegOptions(rows),
+    currencyTabs: buildCurrencyTabOptions(rows),
     yieldType: [
       { value: "all", label: "All types", count: rows.length },
       ...Array.from(yieldTypeCounts.entries())
@@ -460,7 +504,10 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   normalizedParams: Record<keyof YieldViewModelUrlParams, string | null>;
   invalidParamKeys: Array<keyof YieldViewModelUrlParams>;
 } {
-  const validPegValues = new Set(options.peg.map((option) => option.value));
+  const validPegValues = new Set<YieldPegFilter>([
+    ...options.peg.map((option) => option.value),
+    ...options.currencyTabs.map((option) => option.value),
+  ]);
   const validYieldTypes = new Set(options.yieldType.map((option) => option.value));
   const validWarnings = new Set(options.warnings.map((option) => option.value));
   const validConfidence = new Set(options.sourceConfidence.map((option) => option.value));
@@ -534,7 +581,12 @@ function rowMatchesFilters(row: YieldRanking, filters: YieldViewModelFilters): b
 
 function getComparisonLabel(filters: YieldViewModelFilters): string {
   if (filters.yieldType !== "all") return YIELD_TYPE_LABELS[filters.yieldType] ?? filters.yieldType;
-  if (filters.peg !== "all") return filters.peg === "non-usd" ? "Non-USD set" : `${getYieldPegLabel(filters.peg)} peg`;
+  if (filters.peg !== "all") {
+    if (filters.peg === "non-usd") return "Non-USD set";
+    if (filters.peg === "aud-cad") return "AUD/CAD set";
+    if (filters.peg === "other") return "Other currencies set";
+    return `${getYieldPegLabel(filters.peg)} peg`;
+  }
   if (filters.benchmark !== "all") return `${filters.benchmark} benchmark`;
   if (filters.warnings === "hide") return "No-warning set";
   if (filters.warnings === "only") return "Warning set";

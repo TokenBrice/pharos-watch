@@ -258,4 +258,58 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(rows, { warnings: "only", minSafety: "70" });
     expect(model.matchingPreset).toBeNull();
   });
+
+  it("builds currency tab options conditional on row presence", () => {
+    const model = buildYieldViewModel(rows, {});
+    const tabValues = model.options.currencyTabs.map((option) => option.value);
+
+    // USD + EUR present in rows; AUD/CAD/Other absent → no tabs for those.
+    expect(tabValues).toEqual(["all", "USD", "EUR"]);
+    expect(model.options.currencyTabs.find((option) => option.value === "all")?.count).toBe(3);
+    expect(model.options.currencyTabs.find((option) => option.value === "USD")?.count).toBe(2);
+    expect(model.options.currencyTabs.find((option) => option.value === "EUR")?.count).toBe(1);
+  });
+
+  it("groups AUD/CAD into a shared tab and aggregates non-enumerated pegs into Other", () => {
+    const audCadOtherRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD", name: "AUDD" }),
+      makeYieldRanking({ id: "cadm-mento", symbol: "CADM", name: "CADM" }),
+      makeYieldRanking({ id: "zarp-zarp", symbol: "ZARP", name: "ZARP" }),
+      makeYieldRanking({ id: "paxg-paxos", symbol: "PAXG", name: "PAXG" }),
+    ];
+
+    const model = buildYieldViewModel(audCadOtherRows, {});
+    const tabValues = model.options.currencyTabs.map((option) => option.value);
+
+    expect(tabValues).toEqual(["all", "aud-cad", "other"]);
+    expect(model.options.currencyTabs.find((option) => option.value === "aud-cad")?.count).toBe(2);
+    expect(model.options.currencyTabs.find((option) => option.value === "other")?.count).toBe(2);
+  });
+
+  it("filters rows by the aud-cad and other peg aggregates", () => {
+    const audCadOtherRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD" }),
+      makeYieldRanking({ id: "cadm-mento", symbol: "CADM" }),
+      makeYieldRanking({ id: "zarp-zarp", symbol: "ZARP" }),
+      makeYieldRanking({ id: "usdc-circle", symbol: "USDC" }),
+    ];
+
+    const audCadModel = buildYieldViewModel(audCadOtherRows, { peg: "aud-cad" });
+    expect(audCadModel.visibleRows.map((row) => row.id)).toEqual(["audd-novatti", "cadm-mento"]);
+    expect(audCadModel.comparisonLabel).toBe("AUD/CAD set");
+
+    const otherModel = buildYieldViewModel(audCadOtherRows, { peg: "other" });
+    expect(otherModel.visibleRows.map((row) => row.id)).toEqual(["zarp-zarp"]);
+    expect(otherModel.comparisonLabel).toBe("Other currencies set");
+  });
+
+  it("accepts aud-cad and other peg URL params even when no peg-pill option matches", () => {
+    const audCadRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD" }),
+    ];
+
+    const model = buildYieldViewModel(audCadRows, { peg: "aud-cad" });
+    expect(model.filters.peg).toBe("aud-cad");
+    expect(model.invalidParamKeys).not.toContain("peg");
+  });
 });

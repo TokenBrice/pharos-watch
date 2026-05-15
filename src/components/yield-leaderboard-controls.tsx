@@ -121,12 +121,14 @@ function FilterSelect({
   );
 }
 
-function FilterPill({
+function CurrencyTab({
   label,
+  count,
   active,
   onClick,
 }: {
   label: string;
+  count: number;
   active: boolean;
   onClick: () => void;
 }) {
@@ -134,14 +136,23 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        "pharos-focus-ring min-h-10 rounded-full border px-3 text-xs font-medium transition-colors sm:min-h-8",
+        "pharos-focus-ring min-h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors sm:min-h-8",
         active
           ? "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300"
           : "border-border/70 bg-background/60 text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
-      {label}
+      <span>{label}</span>
+      <span
+        className={cn(
+          "ml-1.5 font-mono text-[10px] tabular-nums",
+          active ? "text-sky-700/80 dark:text-sky-300/80" : "text-muted-foreground/80",
+        )}
+      >
+        {count}
+      </span>
     </button>
   );
 }
@@ -215,6 +226,7 @@ export function YieldLeaderboardControls({
 }: YieldLeaderboardControlsProps) {
   const { filters, options, presets } = viewModel;
   const panelId = useId();
+  const currencyTabsId = useId();
   const [showFilters, setShowFilters] = useState(false);
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
@@ -241,28 +253,51 @@ export function YieldLeaderboardControls({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 md:justify-end">
-          {options.peg.length > 1
-            ? options.peg.map((option) => (
-                <FilterPill
-                  key={option.value}
-                  label={labelYieldFilterOption(option)}
-                  active={filters.peg === option.value}
-                  onClick={() => onFilterChange("peg", option.value)}
-                />
-              ))
-            : null}
-          {hasResettableState ? (
-            <button
-              type="button"
-              onClick={onClearFilters}
-              className="pharos-focus-ring min-h-10 rounded-full border border-border/70 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:min-h-8"
-            >
-              Reset
-            </button>
-          ) : null}
-        </div>
+        {hasResettableState ? (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="pharos-focus-ring self-start rounded-full border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:self-center md:py-1.5"
+          >
+            Reset
+          </button>
+        ) : null}
       </div>
+
+      {options.currencyTabs.length > 1 ? (
+        <>
+          <label className="sr-only" htmlFor={currencyTabsId}>
+            Filter by currency
+          </label>
+          <select
+            id={currencyTabsId}
+            value={options.currencyTabs.some((option) => option.value === filters.peg) ? filters.peg : "all"}
+            onChange={(event) => onFilterChange("peg", event.target.value)}
+            className="pharos-focus-ring min-h-10 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
+          >
+            {options.currencyTabs.map((option) => (
+              <option key={option.value} value={option.value}>
+                {`${option.label} (${option.count})`}
+              </option>
+            ))}
+          </select>
+          <div
+            role="tablist"
+            aria-label="Filter by currency"
+            className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
+          >
+            {options.currencyTabs.map((option) => (
+              <CurrencyTab
+                key={option.value}
+                label={option.label}
+                count={option.count}
+                active={filters.peg === option.value}
+                onClick={() => onFilterChange("peg", option.value)}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
 
       <div className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible md:pb-0">
         {presets.map((preset) => (
