@@ -129,7 +129,7 @@ function getSourceDisplay(
   fallbackLabel = sourceKey,
 ): YieldHistorySourceDisplay {
   if (sourceKey === "best") {
-    return { sourceKey, label: "Best source" };
+    return { sourceKey, label: "Best yield (selected)" };
   }
 
   const source = allSources.find((candidate) => candidate.sourceKey === sourceKey);

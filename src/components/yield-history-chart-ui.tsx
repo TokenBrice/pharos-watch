@@ -125,18 +125,25 @@ export function SourceSwitchDot({ cx, cy, payload, active = false }: WarningDotP
   );
 }
 
+export interface SpikeTooltipInfo {
+  trailingAvg: number;
+  ratio: number;
+}
+
 export function YieldHistoryTooltip({
   active,
   payload,
   label,
   showBreakdown,
   compact,
+  spikesByDate,
 }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; payload: YieldHistoryChartPoint }>;
   label?: number | string;
   showBreakdown: boolean;
   compact: boolean;
+  spikesByDate?: Map<number, SpikeTooltipInfo>;
 }) {
   const labelTimestamp = toTimestampMs(label);
   if (!active || !payload || payload.length === 0 || !Number.isFinite(labelTimestamp)) {
@@ -145,6 +152,8 @@ export function YieldHistoryTooltip({
 
   const point = payload.find((entry) => entry.dataKey === "apy")?.payload ?? payload[0]?.payload;
   if (!point) return null;
+
+  const spikeInfo = spikesByDate?.get(point.date) ?? null;
 
   return (
     <div
@@ -187,6 +196,14 @@ export function YieldHistoryTooltip({
           <span className="block font-medium uppercase tracking-[0.14em]">Source changed</span>
           <span className="mt-1 block normal-case tracking-normal">
             The selected source changed versus the prior published snapshot. This explains provenance churn, not stablecoin safety.
+          </span>
+        </div>
+      ) : null}
+      {spikeInfo ? (
+        <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-[10px] text-orange-700 dark:text-orange-300">
+          <span className="block font-medium uppercase tracking-[0.14em]">Yield spike</span>
+          <span className="mt-1 block normal-case tracking-normal">
+            {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing 30d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
           </span>
         </div>
       ) : null}
@@ -233,7 +250,7 @@ export function Controls({
   hideSourceSelector?: boolean;
 }) {
   const selectedSourceLabel = selectedSourceKey === "best"
-    ? "Best source"
+    ? "Best yield (highest APY)"
     : getYieldHistorySourceDisplayLabel(
         availableSources.find((source) => source.sourceKey === selectedSourceKey) ?? {
           sourceKey: selectedSourceKey,
@@ -285,7 +302,7 @@ export function Controls({
               <DropdownMenuContent align="start" className="max-h-72 w-[min(22rem,calc(100vw-2rem))]">
                 <DropdownMenuRadioGroup value={selectedSourceKey} onValueChange={onSourceChange}>
                   <DropdownMenuRadioItem value="best" className="text-xs">
-                    Best source
+                    Best yield (highest APY)
                   </DropdownMenuRadioItem>
                   {availableSources.map((source) => (
                     <DropdownMenuRadioItem key={source.sourceKey} value={source.sourceKey} className="text-xs">
