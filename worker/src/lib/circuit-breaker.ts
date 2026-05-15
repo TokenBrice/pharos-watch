@@ -10,6 +10,7 @@ import {
   CIRCUIT_OPEN_THRESHOLD,
   CIRCUIT_PROBE_INTERVAL_SEC,
 } from "./circuit-config";
+import { CIRCUIT_SOURCE } from "./constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
 
@@ -209,6 +210,13 @@ function getConfiguredLiveReserveCircuitSources(): Set<string> {
   );
 }
 
+function getActiveCircuitSources(): Set<string> {
+  return new Set([
+    ...Object.values(CIRCUIT_SOURCE),
+    ...getConfiguredLiveReserveCircuitSources(),
+  ]);
+}
+
 export function filterStaleLiveReserveCircuitStates(
   circuits: Record<string, CircuitRecord>,
 ): Record<string, CircuitRecord> {
@@ -217,5 +225,14 @@ export function filterStaleLiveReserveCircuitStates(
     Object.entries(circuits).filter(([source]) => (
       !source.startsWith("live-reserves:") || configuredLiveReserveSources.has(source)
     )),
+  );
+}
+
+export function filterInactiveCircuitStates(
+  circuits: Record<string, CircuitRecord>,
+): Record<string, CircuitRecord> {
+  const activeCircuitSources = getActiveCircuitSources();
+  return Object.fromEntries(
+    Object.entries(circuits).filter(([source]) => activeCircuitSources.has(source)),
   );
 }

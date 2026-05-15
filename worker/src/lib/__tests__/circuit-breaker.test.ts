@@ -14,6 +14,7 @@ import {
   recordOutcome,
   recoverBreakerOnNoCandidate,
   getCircuitStates,
+  filterInactiveCircuitStates,
   mapCronStatusToCircuitOutcome,
 } from "../circuit-breaker";
 import { sendAlert } from "../alerts";
@@ -268,6 +269,18 @@ describe("circuit-breaker", () => {
       expect(Object.keys(states)).toHaveLength(1);
       expect(states["good"].state).toBe("closed");
       expect(states["bad"]).toBeUndefined();
+    });
+  });
+
+  describe("filterInactiveCircuitStates", () => {
+    it("drops retired circuit cache rows that are not configured sources", () => {
+      const states = filterInactiveCircuitStates({
+        [CIRCUIT_SOURCE.DEXSCREENER_PRICES]: makeRecord({ state: "open", consecutiveFailures: 3 }),
+        "geckoterminal-address-prices": makeRecord({ state: "open", consecutiveFailures: 13 }),
+      });
+
+      expect(states[CIRCUIT_SOURCE.DEXSCREENER_PRICES]?.state).toBe("open");
+      expect(states["geckoterminal-address-prices"]).toBeUndefined();
     });
   });
 

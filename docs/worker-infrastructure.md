@@ -768,7 +768,6 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ALCHEMY_PRICES`                     | `alchemy-prices`              | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `MORALIS_PRICES`                     | `moralis-prices`              | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `BIRDEYE_PRICES`                     | `birdeye-prices`              | `enrich-prices` targeted Solana exact-address primary augmentation                                                        |
-| `GECKO_TERMINAL_ADDRESS_PRICES`      | `geckoterminal-address-prices` | `enrich-prices` targeted exact-address primary augmentation                                                               |
 | `TREASURY_RATES`                     | `treasury-rates`              | `fetch-tbill-rate`                                                                                                        |
 | `ETHERSCAN`                          | `etherscan`                   | `sync-blacklist`                                                                                                          |
 | `TRONGRID`                           | `trongrid`                    | `sync-blacklist` (Tron chains)                                                                                            |
@@ -811,6 +810,7 @@ Primary-oracle implementation notes:
 - `PYTH_PRICES` only counts as a healthy outcome when at least one requested feed resolves into a usable price; Hermes feed IDs are normalized by lowercasing and stripping an optional leading `0x`.
 - `REDSTONE_PRICES` only counts as healthy when it returns at least one usable symbol. The worker queries an exact-case tracked-symbol allowlist in sequential batches of 10 and retries batch-dropped symbols individually once.
 - dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today.
+- `/api/health` completes the circuit list from active `CIRCUIT_SOURCE` values plus configured `live-reserves:*` scopes, and filters retired/stale cache rows so old breaker keys do not keep surfacing as active incidents after a source is removed.
 - Scheduled handlers that write breaker state from cron outcomes now treat `degraded` and `skipped_locked` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
 
 ---

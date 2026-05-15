@@ -312,7 +312,7 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 - **Freshness confidence decay**: staged pool effective TVL is multiplied by `max(0.5, 1 - ageHours / 48)`; rows older than 24h are excluded from scoring merge.
 - **Staged pool defaults**: `organic_fraction = 0.5`, `balanceRatio = 1.0`, `lockedLiquidity = null`, `maturity = min(daysSinceDiscovered, 30)`, `isStable` inferred from normalized `quoteSymbol`.
 - **Source order and transport**: `CG Onchain -> GeckoTerminal -> DexScreener -> CG Tickers`, executed sequentially with one active fetch at a time (`1` connection).
-- **Failure telemetry**: cron metadata records both `failedCoins` and `failedCoinErrors`; DexScreener malformed-pair or per-target errors are downgraded to warnings so a single bad fallback payload does not fail the whole coin crawl.
+- **Failure telemetry**: cron metadata records both `failedCoins` and `failedCoinErrors`; DexScreener malformed-pair or per-target errors are downgraded to warnings so a single bad fallback payload does not fail the whole coin crawl. DexScreener discovery records one aggregate breaker outcome per coin crawl rather than one failure per optional token target, so partial target misses do not open the source-wide breaker by themselves.
 
 ### Global Deduped Aggregates (`__global__`)
 

@@ -137,7 +137,7 @@ describe("crawlCoin DexScreener hardening", () => {
     );
   });
 
-  it("downgrades DexScreener target errors to warnings instead of failing the coin crawl", async () => {
+  it("records one DexScreener failure for a crawl with only target errors", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("DexScreener boom"));
@@ -156,6 +156,34 @@ describe("crawlCoin DexScreener hardening", () => {
       expect.anything(),
       CIRCUIT_SOURCE.DEXSCREENER_PRICES,
       false,
+    );
+  });
+
+  it("records DexScreener discovery success when any target request reaches the source", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus)
+      .mockRejectedValueOnce(new Error("first target failed"))
+      .mockResolvedValueOnce({
+        ok: true,
+        pairs: [],
+      });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "test-coin",
+      [
+        { chain: "ethereum", address: "0xabc", decimals: 18 },
+        { chain: "bsc", address: "0xdef", decimals: 18 },
+      ],
+      null,
+      new Set(),
+    );
+
+    expect(result).toEqual({ pools: [], priceObs: [], unresolvedChains: [] });
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
+    expect(recordOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      true,
     );
   });
 

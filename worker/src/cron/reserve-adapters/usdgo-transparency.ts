@@ -16,6 +16,7 @@ interface UsdgoTransparencyPayload {
     collateralizationRatio?: number;
     buidlUsdM?: string | number;
     gsUsdM?: string | number;
+    jltxxUsdM?: string | number;
     usdUsdM?: string | number;
     backingAssetsM?: string | number;
     circulationSupplyMFormatted?: string | number;
@@ -31,6 +32,11 @@ function parseMillionUsd(value: unknown, label: string): number {
   return parsed * 1_000_000;
 }
 
+function parseOptionalMillionUsd(value: unknown, label: string): number {
+  if (value == null) return 0;
+  return parseMillionUsd(value, label);
+}
+
 export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): AdapterResult {
   if (!payload.ok || !payload.data) {
     throw new Error("usdgo-transparency returned an invalid response");
@@ -38,10 +44,11 @@ export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): Adapt
 
   const buidlUsd = parseMillionUsd(payload.data.buidlUsdM, "buidlUsdM");
   const stablecoinReserveFundUsd = parseMillionUsd(payload.data.gsUsdM, "gsUsdM");
+  const jpmorganLiquidityTokenUsd = parseOptionalMillionUsd(payload.data.jltxxUsdM, "jltxxUsdM");
   const cashUsd = parseMillionUsd(payload.data.usdUsdM, "usdUsdM");
   const totalReserveUsd = parseMillionUsd(payload.data.backingAssetsM, "backingAssetsM");
   const supplyUsd = parseMillionUsd(payload.data.circulationSupplyMFormatted, "circulationSupplyMFormatted");
-  const componentTotalUsd = buidlUsd + stablecoinReserveFundUsd + cashUsd;
+  const componentTotalUsd = buidlUsd + stablecoinReserveFundUsd + jpmorganLiquidityTokenUsd + cashUsd;
   if (totalReserveUsd > 0 && Math.abs(componentTotalUsd - totalReserveUsd) / totalReserveUsd > 0.01) {
     throw new Error(
       `usdgo-transparency reserve components sum to ${componentTotalUsd.toFixed(2)}, expected ${totalReserveUsd.toFixed(2)}`,
@@ -76,6 +83,11 @@ export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): Adapt
       {
         name: "Goldman Sachs Stablecoin Reserves Fund (STBXX)",
         value: stablecoinReserveFundUsd,
+        risk: "low",
+      },
+      {
+        name: "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX)",
+        value: jpmorganLiquidityTokenUsd,
         risk: "low",
       },
       {

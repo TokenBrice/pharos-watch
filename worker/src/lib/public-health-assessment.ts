@@ -11,7 +11,7 @@ import type { CacheStatus, HealthResponse } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-utils";
 import { queryBlacklistGapMetrics, type BlacklistGapMetrics } from "./blacklist-gaps";
 import {
-  filterStaleLiveReserveCircuitStates,
+  filterInactiveCircuitStates,
   getCircuitStates,
   type CircuitRecord,
 } from "./circuit-breaker";
@@ -91,7 +91,7 @@ function publicHealthErrorMessage(kind: "blacklist" | "circuit" | "db" | "mint-b
 function completeCircuitStates(
   circuits: Record<string, CircuitRecord>,
 ): Record<string, CircuitRecord> {
-  const completed = filterStaleLiveReserveCircuitStates(circuits);
+  const completed = filterInactiveCircuitStates(circuits);
 
   for (const source of Object.values(CIRCUIT_SOURCE)) {
     if (!completed[source]) {

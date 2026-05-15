@@ -86,10 +86,14 @@ export async function crawlDexScreenerPoolsStage({
   }
 
   let dsRequests = 0;
+  let successfulRequests = 0;
 
   for (const [chain, address] of targets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
+      if (dsRequests > 0) {
+        await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, successfulRequests > 0);
+      }
       return { stoppedEarly: true };
     }
 
@@ -109,8 +113,8 @@ export async function crawlDexScreenerPoolsStage({
         DISCOVERY_STAGE_TIMEOUT_MS.dexscreener,
         0,
       );
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, result.ok);
       if (!result.ok) continue;
+      successfulRequests++;
 
       for (const pair of result.pairs) {
         const tvl = pair.liquidity?.usd ?? 0;
@@ -184,8 +188,11 @@ export async function crawlDexScreenerPoolsStage({
     } catch (err) {
       if (context.signal?.aborted) throw err;
       console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, false);
     }
+  }
+
+  if (dsRequests > 0) {
+    await dependencies.recordOutcome(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, successfulRequests > 0);
   }
 
   return { stoppedEarly: false };
