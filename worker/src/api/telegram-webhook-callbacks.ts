@@ -76,7 +76,10 @@ import {
 } from "./telegram-webhook-shared";
 import { SNOOZE_SECONDS, isDepegStepValue } from "../lib/telegram-constants";
 import { logTelegramEvent } from "../lib/telegram-log";
-import { recordTelegramUsageEvent } from "../lib/telegram-usage-analytics";
+import {
+  recordTelegramUsageEvent,
+  type TelegramUsageEventType,
+} from "../lib/telegram-usage-analytics";
 import { requireGroupAdminForCallback } from "./telegram-webhook-auth";
 import { sendAuditedTelegramReply } from "./telegram-webhook-replies";
 import { makeActionRunner } from "./webhook-commands/action-runner";
@@ -176,6 +179,128 @@ async function requireAdminForMutatingCallback(
     });
   }
   return allowed;
+}
+
+/**
+ * Envelope shared by every mutating callback handler:
+ *   1. Validate the parsed callback data; if invalid, ack with "Action not
+ *      recognized." (or a custom toast) and bail without touching D1.
+ *   2. Optionally gate on group-admin status.
+ *   3. Run the D1 write inside a try/catch:
+ *      - success → record a `recordTelegramUsageEvent("...success")` row and
+ *        ack with `successText`.
+ *      - failure → `logTelegramEvent`, record `recordTelegramUsageEvent(
+ *        "...failure", failureClass: "d1_write_failed")`, ack `failureText`.
+ *
+ * Per-handler bodies shrink to: validate → write → success text.
+ *
+ * Outliers that don't fit the envelope (read-only callbacks, callbacks with
+ * post-success follow-up messages, callbacks with their own state machine)
+ * stay as bespoke handlers.
+ */
+async function runCallbackMutation<TValid>(params: {
+  db: D1Database;
+  botToken: string;
+  cb: TelegramCallbackQuery;
+  chatId: string;
+  /** Return the parsed/validated payload, or `null` to short-circuit with `invalidText`. */
+  validate: () => TValid | null;
+  /** If true, gate the write on `requireAdminForMutatingCallback`. */
+  requireAdmin?: boolean;
+  /** Telemetry rows + log envelope. */
+  eventType: TelegramUsageEventType;
+  actionDetail: string;
+  /** `action` field used by `logTelegramEvent` on failure. */
+  logAction: string;
+  /** First-line message field used by `logTelegramEvent` on failure. */
+  logMessage: string;
+  /** Outcome label on the success row (defaults to "success"). */
+  successOutcome?: string;
+  /** D1 write. */
+  write: (validated: TValid) => Promise<void>;
+  /** Toast text on success. */
+  successText: string | ((validated: TValid) => string);
+  /** Toast text when validation fails (defaults to "Action not recognized."). */
+  invalidText?: string;
+  /** Toast text when the D1 write throws. */
+  failureText: string;
+}): Promise<void> {
+  const validated = params.validate();
+  if (validated == null) {
+    await answerCallbackQuery(params.cb.id, params.botToken, {
+      text: params.invalidText ?? "Action not recognized.",
+    });
+    return;
+  }
+  if (
+    params.requireAdmin &&
+    !(await requireAdminForMutatingCallback(
+      params.db,
+      params.botToken,
+      params.cb,
+      params.chatId,
+    ))
+  ) {
+    return;
+  }
+  try {
+    await params.write(validated);
+  } catch (err) {
+    logTelegramEvent({
+      message: params.logMessage,
+      chatId: params.chatId,
+      userId: params.cb.from?.id ?? null,
+      action: params.logAction,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    await recordTelegramUsageEvent(params.db, {
+      eventType: params.eventType,
+      actionDetail: params.actionDetail,
+      outcome: "failure",
+      failureClass: "d1_write_failed",
+    });
+    await answerCallbackQuery(params.cb.id, params.botToken, { text: params.failureText });
+    return;
+  }
+  await recordTelegramUsageEvent(params.db, {
+    eventType: params.eventType,
+    actionDetail: params.actionDetail,
+    outcome: params.successOutcome ?? "success",
+  });
+  const text =
+    typeof params.successText === "function"
+      ? params.successText(validated)
+      : params.successText;
+  await answerCallbackQuery(params.cb.id, params.botToken, { text });
+}
+
+/**
+ * Envelope for read-only coin callbacks (`status:<id>`, `why:<id>`,
+ * `coverage:<id>`) that share the same shape:
+ *   1. Validate `<id>` against the tracked allowlist; bail with "Action not
+ *      recognized." otherwise.
+ *   2. Run a `send` callback that posts the card (may throw — the ack still
+ *      fires in the `finally`, see P1.16).
+ *   3. Ack with a fixed "X sent." toast.
+ */
+async function runReadOnlyCoinCallback(params: {
+  botToken: string;
+  cb: TelegramCallbackQuery;
+  parsed: ParsedCallbackData;
+  send: (id: string, isPrivateChat: boolean) => Promise<void>;
+  ackText: string;
+}): Promise<void> {
+  const { arg, parts } = params.parsed;
+  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
+    await answerCallbackQuery(params.cb.id, params.botToken, { text: "Action not recognized." });
+    return;
+  }
+  const isPrivateChat = callbackChatType(params.cb) === "private";
+  try {
+    await params.send(arg, isPrivateChat);
+  } finally {
+    await answerCallbackQuery(params.cb.id, params.botToken, { text: params.ackText });
+  }
 }
 
 export interface TelegramCallbackQuery {
@@ -499,49 +624,27 @@ async function handleChatSnoozeCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isSnoozeArg(arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-    return;
-  }
-  const now = unixNow();
-  const until = now + SNOOZE_SECONDS[arg];
-
   // Sequence DB write BEFORE the ack so the toast reflects actual outcome.
   // A concurrent Promise.all would leave the ack in-flight if the write
   // rejects, and the Workers runtime can cancel the pending fetch once the
   // handler throws, producing silent snooze failures from the user's POV.
-  try {
-    await setSubscriberSnooze(db, chatId, callbackUsername(cb), until);
-  } catch (err) {
-    logTelegramEvent({
-      message: "snooze write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
-      action: "snooze",
-      err: err instanceof Error ? err.message : String(err),
-    });
-    await recordTelegramUsageEvent(db, {
-      eventType: "snooze_change",
-      actionDetail: "chat",
-      outcome: "failure",
-      failureClass: "d1_write_failed",
-    });
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Could not save snooze. Please try again.",
-    });
-    return;
-  }
-  await recordTelegramUsageEvent(db, {
+  await runCallbackMutation<SnoozeArg>({
+    db,
+    botToken,
+    cb,
+    chatId,
+    validate: () =>
+      hasExactParts(parsed.parts, 2) && isSnoozeArg(parsed.arg) ? parsed.arg : null,
+    requireAdmin: true,
     eventType: "snooze_change",
     actionDetail: "chat",
-    outcome: "set",
-  });
-  await answerCallbackQuery(cb.id, botToken, {
-    text: `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+    logAction: "snooze",
+    logMessage: "snooze write failed",
+    successOutcome: "set",
+    write: async (arg) =>
+      setSubscriberSnooze(db, chatId, callbackUsername(cb), unixNow() + SNOOZE_SECONDS[arg]),
+    successText: (arg) => `Snoozed for ${arg}. Use /list to verify or tap a longer window.`,
+    failureText: "Could not save snooze. Please try again.",
   });
 }
 
@@ -552,46 +655,33 @@ async function handleCoinSnoozeCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  const durationToken = parts[2];
-  if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isSnoozeArg(durationToken)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-    return;
-  }
-  const now = unixNow();
-  const until = now + SNOOZE_SECONDS[durationToken];
-  try {
-    await setSubscriptionSnooze(db, chatId, arg, until);
-  } catch (err) {
-    logTelegramEvent({
-      message: "coinsnooze write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
-      action: "coinsnooze",
-      err: err instanceof Error ? err.message : String(err),
-    });
-    await recordTelegramUsageEvent(db, {
-      eventType: "snooze_change",
-      actionDetail: "coin",
-      outcome: "failure",
-      failureClass: "d1_write_failed",
-    });
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Could not save snooze. Please try again.",
-    });
-    return;
-  }
-  const meta = TRACKED_META_BY_ID.get(arg);
-  await recordTelegramUsageEvent(db, {
+  await runCallbackMutation<{ id: string; duration: SnoozeArg }>({
+    db,
+    botToken,
+    cb,
+    chatId,
+    validate: () => {
+      const durationToken = parsed.parts[2];
+      if (
+        !hasExactParts(parsed.parts, 3) ||
+        !isKnownStablecoinId(parsed.arg) ||
+        !isSnoozeArg(durationToken)
+      ) {
+        return null;
+      }
+      return { id: parsed.arg, duration: durationToken };
+    },
+    requireAdmin: true,
     eventType: "snooze_change",
     actionDetail: "coin",
-    outcome: "set",
-  });
-  await answerCallbackQuery(cb.id, botToken, {
-    text: `Snoozed ${meta?.symbol ?? arg} for ${durationToken}.`,
+    logAction: "coinsnooze",
+    logMessage: "coinsnooze write failed",
+    successOutcome: "set",
+    write: async ({ id, duration }) =>
+      setSubscriptionSnooze(db, chatId, id, unixNow() + SNOOZE_SECONDS[duration]),
+    successText: ({ id, duration }) =>
+      `Snoozed ${TRACKED_META_BY_ID.get(id)?.symbol ?? id} for ${duration}.`,
+    failureText: "Could not save snooze. Please try again.",
   });
 }
 
@@ -602,22 +692,20 @@ async function handleStatusCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  const meta = TRACKED_META_BY_ID.get(arg);
-  const status = await loadStatusForCoin(db, arg);
-  const isPrivateChat = callbackChatType(cb) === "private";
-  try {
-    await sendAuditedTelegramReply(db, chatId, buildStatusMessage(meta?.symbol ?? arg, status), botToken, {
-      replyMarkup: buildStatusDiscoveryKeyboard(arg, { includeMiniAppButton: isPrivateChat }),
-      actionDetail: "callback_status",
-    });
-  } finally {
-    await answerCallbackQuery(cb.id, botToken, { text: "Status sent." });
-  }
+  await runReadOnlyCoinCallback({
+    botToken,
+    cb,
+    parsed,
+    ackText: "Status sent.",
+    send: async (id, isPrivateChat) => {
+      const status = await loadStatusForCoin(db, id);
+      const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
+      await sendAuditedTelegramReply(db, chatId, buildStatusMessage(symbol, status), botToken, {
+        replyMarkup: buildStatusDiscoveryKeyboard(id, { includeMiniAppButton: isPrivateChat }),
+        actionDetail: "callback_status",
+      });
+    },
+  });
 }
 
 async function handleWhyCallback(
@@ -627,26 +715,24 @@ async function handleWhyCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  const message = await buildWhyMessage(db, arg);
-  const isPrivateChat = callbackChatType(cb) === "private";
-  try {
-    await sendAuditedTelegramReply(db, chatId, message, botToken, {
-      replyMarkup: isPrivateChat
-        ? buildStatusDiscoveryKeyboard(arg, {
-            includeMiniAppButton: true,
-            miniAppPayload: formatWhyPayload(arg),
-          })
-        : undefined,
-      actionDetail: "callback_why",
-    });
-  } finally {
-    await answerCallbackQuery(cb.id, botToken, { text: "Why sent." });
-  }
+  await runReadOnlyCoinCallback({
+    botToken,
+    cb,
+    parsed,
+    ackText: "Why sent.",
+    send: async (id, isPrivateChat) => {
+      const message = await buildWhyMessage(db, id);
+      await sendAuditedTelegramReply(db, chatId, message, botToken, {
+        replyMarkup: isPrivateChat
+          ? buildStatusDiscoveryKeyboard(id, {
+              includeMiniAppButton: true,
+              miniAppPayload: formatWhyPayload(id),
+            })
+          : undefined,
+        actionDetail: "callback_why",
+      });
+    },
+  });
 }
 
 async function handleCoverageCallback(
@@ -656,27 +742,25 @@ async function handleCoverageCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  const meta = TRACKED_META_BY_ID.get(arg);
-  const status = await loadStatusForCoin(db, arg);
-  const isPrivateChat = callbackChatType(cb) === "private";
-  try {
-    await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(meta?.symbol ?? arg, status), botToken, {
-      replyMarkup: isPrivateChat
-        ? buildStatusDiscoveryKeyboard(arg, {
-            includeMiniAppButton: true,
-            miniAppPayload: formatCoveragePayload(arg),
-          })
-        : undefined,
-      actionDetail: "callback_coverage",
-    });
-  } finally {
-    await answerCallbackQuery(cb.id, botToken, { text: "Coverage sent." });
-  }
+  await runReadOnlyCoinCallback({
+    botToken,
+    cb,
+    parsed,
+    ackText: "Coverage sent.",
+    send: async (id, isPrivateChat) => {
+      const status = await loadStatusForCoin(db, id);
+      const symbol = TRACKED_META_BY_ID.get(id)?.symbol ?? id;
+      await sendAuditedTelegramReply(db, chatId, buildCoverageMessage(symbol, status), botToken, {
+        replyMarkup: isPrivateChat
+          ? buildStatusDiscoveryKeyboard(id, {
+              includeMiniAppButton: true,
+              miniAppPayload: formatCoveragePayload(id),
+            })
+          : undefined,
+        actionDetail: "callback_coverage",
+      });
+    },
+  });
 }
 
 async function handleQuickSubCallback(
@@ -755,42 +839,41 @@ async function handleDepegStepCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  const step = Number(parts[2]);
-  if (!hasExactParts(parts, 3) || !isKnownStablecoinId(arg) || !isDepegStepValue(step)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-    return;
-  }
-  try {
-    const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), arg, "ds", String(step));
-    await batchExecute(db, prepared.statements);
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: "depegstep",
-      outcome: "success",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: `Depeg worsening alerts set to ${step} bps.` });
-  } catch (err) {
-    logTelegramEvent({
-      message: "depegstep callback write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
-      action: "depegstep",
-      err: err instanceof Error ? err.message : String(err),
-    });
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: "depegstep",
-      outcome: "failure",
-      failureClass: "d1_write_failed",
-    });
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Could not save setting. Please try again.",
-    });
-  }
+  await runCallbackMutation<{ id: string; step: number }>({
+    db,
+    botToken,
+    cb,
+    chatId,
+    validate: () => {
+      const step = Number(parsed.parts[2]);
+      if (
+        !hasExactParts(parsed.parts, 3) ||
+        !isKnownStablecoinId(parsed.arg) ||
+        !isDepegStepValue(step)
+      ) {
+        return null;
+      }
+      return { id: parsed.arg, step };
+    },
+    requireAdmin: true,
+    eventType: "subscribe",
+    actionDetail: "depegstep",
+    logAction: "depegstep",
+    logMessage: "depegstep callback write failed",
+    write: async ({ id, step }) => {
+      const prepared = prepareCoinSettingStatements(
+        db,
+        chatId,
+        callbackUsername(cb),
+        id,
+        "ds",
+        String(step),
+      );
+      await batchExecute(db, prepared.statements);
+    },
+    successText: ({ step }) => `Depeg worsening alerts set to ${step} bps.`,
+    failureText: "Could not save setting. Please try again.",
+  });
 }
 
 async function handleSafetyDownCallback(
@@ -800,41 +883,32 @@ async function handleSafetyDownCallback(
   chatId: string,
   parsed: ParsedCallbackData,
 ): Promise<void> {
-  const { arg, parts } = parsed;
-  if (!hasExactParts(parts, 2) || !isKnownStablecoinId(arg)) {
-    await answerCallbackQuery(cb.id, botToken, { text: "Action not recognized." });
-    return;
-  }
-  if (!(await requireAdminForMutatingCallback(db, botToken, cb, chatId))) {
-    return;
-  }
-  try {
-    const prepared = prepareCoinSettingStatements(db, chatId, callbackUsername(cb), arg, "sm", "d");
-    await batchExecute(db, prepared.statements);
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: "safetydown",
-      outcome: "success",
-    });
-    await answerCallbackQuery(cb.id, botToken, { text: "Safety alerts set to downgrades only." });
-  } catch (err) {
-    logTelegramEvent({
-      message: "safetydown callback write failed",
-      chatId,
-      userId: cb.from?.id ?? null,
-      action: "safetydown",
-      err: err instanceof Error ? err.message : String(err),
-    });
-    await recordTelegramUsageEvent(db, {
-      eventType: "subscribe",
-      actionDetail: "safetydown",
-      outcome: "failure",
-      failureClass: "d1_write_failed",
-    });
-    await answerCallbackQuery(cb.id, botToken, {
-      text: "Could not save setting. Please try again.",
-    });
-  }
+  await runCallbackMutation<string>({
+    db,
+    botToken,
+    cb,
+    chatId,
+    validate: () =>
+      hasExactParts(parsed.parts, 2) && isKnownStablecoinId(parsed.arg) ? parsed.arg : null,
+    requireAdmin: true,
+    eventType: "subscribe",
+    actionDetail: "safetydown",
+    logAction: "safetydown",
+    logMessage: "safetydown callback write failed",
+    write: async (id) => {
+      const prepared = prepareCoinSettingStatements(
+        db,
+        chatId,
+        callbackUsername(cb),
+        id,
+        "sm",
+        "d",
+      );
+      await batchExecute(db, prepared.statements);
+    },
+    successText: "Safety alerts set to downgrades only.",
+    failureText: "Could not save setting. Please try again.",
+  });
 }
 
 async function handleBulkActionCallback(
