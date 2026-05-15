@@ -1,8 +1,12 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, ReferenceDot, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import type {
+  ChartAnnotation,
+  ChartAnnotationKind,
+} from "@/hooks/use-chart-annotations";
 
 const MONO_AXIS_TICK = {
   fontSize: 12,
@@ -122,3 +126,44 @@ export function ChartGrid({
 }
 
 export const TimeGrid = ChartGrid;
+
+/**
+ * Hex literals — Recharts SVG `fill` / `stroke` cannot resolve CSS variables,
+ * so the annotation palette is kept here as the canonical source.
+ */
+const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
+  "depeg": "#ef4444", // red-500
+  "mint-burn-spike": "#3b82f6", // blue-500
+  "blacklist-surge": "#f59e0b", // amber-500
+  "governance": "#a855f7", // purple-500
+  "regulatory": "#64748b", // slate-500
+  "methodology-change": "#facc15", // amber-400
+};
+
+interface ChartAnnotationDotsProps {
+  annotations: readonly ChartAnnotation[];
+}
+
+/**
+ * Renders Recharts `<ReferenceDot>` markers for event annotations on
+ * `McapChart` / `PegDeviationChart`. `ifOverflow="hidden"` keeps out-of-range
+ * markers from extending the chart's data domain.
+ */
+export function ChartAnnotationDots({ annotations }: ChartAnnotationDotsProps) {
+  if (annotations.length === 0) return null;
+  return (
+    <>
+      {annotations.map((a) => (
+        <ReferenceDot
+          key={`${a.ts}-${a.kind}`}
+          x={a.ts}
+          ifOverflow="hidden"
+          r={4}
+          fill={ANNOTATION_HEX_COLORS[a.kind]}
+          stroke="#ffffff"
+          strokeWidth={2}
+        />
+      ))}
+    </>
+  );
+}

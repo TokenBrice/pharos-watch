@@ -10,8 +10,15 @@ import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range
 import { formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import {
+  ChartAnnotationDots,
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+} from "@/components/chart-primitives";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { DAY_MS } from "@/lib/constants";
 
 function PegXTick({
@@ -97,13 +104,14 @@ function formatTooltip(value: number): [string, string] {
 interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
+  stablecoinId: string;
 }
 
 /**
  * Continuous USD-price line for USD-pegged coins with a $1 reference line.
  * Non-USD pegs need FX adjustment so the chart is hidden for them (returns null).
  */
-export function PegDeviationChart({ data, pegCurrency }: PegDeviationChartProps) {
+export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
@@ -117,6 +125,10 @@ export function PegDeviationChart({ data, pegCurrency }: PegDeviationChartProps)
   }, [data]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
+
+  const fromMs = filteredData[0]?.ts ?? null;
+  const toMs = filteredData[filteredData.length - 1]?.ts ?? null;
+  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
   const xTicks = useMemo(() => {
     if (range !== "all" || filteredData.length === 0) return undefined;
@@ -203,6 +215,7 @@ export function PegDeviationChart({ data, pegCurrency }: PegDeviationChartProps)
                   dot={false}
                   isAnimationActive={false}
                 />
+                <ChartAnnotationDots annotations={annotations} />
               </LineChart>
             ) : (
               <ChartSkeleton className="h-full w-full" />
@@ -214,6 +227,15 @@ export function PegDeviationChart({ data, pegCurrency }: PegDeviationChartProps)
           </div>
         )}
       </CardContent>
+      {annotations.length > 0 ? (
+        <ul className="sr-only" aria-label="Chart events">
+          {annotations.map((a) => (
+            <li key={`${a.ts}-${a.kind}`}>
+              {new Date(a.ts).toLocaleDateString()}: {a.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Card>
   );
 }

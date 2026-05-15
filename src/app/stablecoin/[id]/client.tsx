@@ -421,7 +421,7 @@ export default function StablecoinDetailClient({
         <section id="chart">
           {frozenNote}
           <LazySection minHeight={420}>
-            <McapChart data={viewModel.supplyHistory} />
+            <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
           </LazySection>
         </section>
 
@@ -429,7 +429,7 @@ export default function StablecoinDetailClient({
           <section id="peg-deviation">
             {frozenNote}
             <LazySection minHeight={420}>
-              <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} />
+              <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} stablecoinId={viewModel.id} />
             </LazySection>
           </section>
         ) : null}

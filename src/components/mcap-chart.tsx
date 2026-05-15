@@ -10,9 +10,16 @@ import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import {
+  ChartAnnotationDots,
+  DateTooltip,
+  MonoYAxis,
+  TimeGrid,
+  TimeXAxis,
+} from "@/components/chart-primitives";
 import { computeChartYDomain } from "@/lib/chart-utils";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { DAY_MS } from "@/lib/constants";
 
 function McapXTick({
@@ -87,9 +94,10 @@ function McapXTick({
 
 interface McapChartProps {
   data: SupplyHistoryPoint[];
+  stablecoinId: string;
 }
 
-export function McapChart({ data }: McapChartProps) {
+export function McapChart({ data, stablecoinId }: McapChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -103,6 +111,10 @@ export function McapChart({ data }: McapChartProps) {
   }, [data]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
+
+  const fromMs = filteredData[0]?.ts ?? null;
+  const toMs = filteredData[filteredData.length - 1]?.ts ?? null;
+  const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
   // Compute explicit monthly ticks for "all" range with adaptive spacing.
   // Cursor always snaps to the first January on or after the data start,
@@ -183,6 +195,7 @@ export function McapChart({ data }: McapChartProps) {
                   formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
                 />
                 <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
+                <ChartAnnotationDots annotations={annotations} />
               </AreaChart>
             ) : (
               <ChartSkeleton className="h-full w-full" />
@@ -194,6 +207,15 @@ export function McapChart({ data }: McapChartProps) {
           </div>
         )}
       </CardContent>
+      {annotations.length > 0 ? (
+        <ul className="sr-only" aria-label="Chart events">
+          {annotations.map((a) => (
+            <li key={`${a.ts}-${a.kind}`}>
+              {new Date(a.ts).toLocaleDateString()}: {a.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </Card>
   );
 }
