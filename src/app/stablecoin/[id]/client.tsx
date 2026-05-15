@@ -103,10 +103,10 @@ const SafetyScoreHistorySection = dynamic(
 
 const DETAIL_SECTION_DEFS = {
   safety: { id: "report-card", label: "Safety" },
-  overview: { id: "overview", label: "Overview" },
+  overview: { id: "overview", label: "Summary" },
   price: { id: "price", label: "Price" },
   reserves: { id: "reserves", label: "Reserves" },
-  market: { id: "chart", label: "Market" },
+  market: { id: "chart", label: "Mcap History" },
   yield: { id: "yield", label: "Yield" },
   liquidity: { id: "liquidity", label: "Liquidity" },
   flows: { id: "flows", label: "Flows" },
@@ -259,13 +259,11 @@ export default function StablecoinDetailClient({
   const detailSections = [
     s.safety,
     s.overview,
-    // Reserves renders in the left column of OverviewSection and on mobile
-    // stacks above Price, so the pill order tracks that scroll order.
     ...(viewModel.reserves ? [s.reserves] : []),
     ...(hasPriceTransparency ? [s.price] : []),
-    s.market,
     ...(viewModel.hasYieldSection ? [s.yield] : []),
     s.liquidity,
+    s.market,
     ...(viewModel.hasFlows ? [s.flows] : []),
     ...(viewModel.hasBlacklist ? [s.blacklist] : []),
     s.history,
@@ -375,8 +373,23 @@ export default function StablecoinDetailClient({
             {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
           </div>
         )}
+      </div>
 
-        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
+      {/* ── Yield zone ── */}
+      {viewModel.hasYieldSection && (
+        <div className="mt-12">
+          <YieldDetailSection stablecoinId={viewModel.id} />
+        </div>
+      )}
+
+      {/* ── Liquidity zone ── */}
+      <div className="mt-12">
+        <section id="liquidity">
+          {frozenNote}
+          <SectionErrorBoundary name="liquidity">
+            <DexLiquidityCard stablecoinId={viewModel.id} />
+          </SectionErrorBoundary>
+        </section>
       </div>
 
       {/* ── Market zone ── */}
@@ -403,13 +416,6 @@ export default function StablecoinDetailClient({
 
       {/* ── Activity zone ── */}
       <div className="mt-12 space-y-6">
-        <section id="liquidity">
-          {frozenNote}
-          <SectionErrorBoundary name="liquidity">
-            <DexLiquidityCard stablecoinId={viewModel.id} />
-          </SectionErrorBoundary>
-        </section>
-
         {viewModel.hasFlows ? frozenNote : null}
         <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
