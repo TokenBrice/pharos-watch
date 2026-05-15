@@ -78,12 +78,14 @@ export async function fetchCgPools(
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
       if (deadlineMs && Date.now() >= deadlineMs) {
+        // TODO(2.6): convert to logCronEvent
         console.log(
           `[dex-liquidity] CG pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
         );
         return false;
       }
       if (Date.now() - startMs > CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS) {
+        // TODO(2.6): convert to logCronEvent
         console.log(
           `[dex-liquidity] CG pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
           `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`,
@@ -132,6 +134,7 @@ export async function fetchCgPools(
     },
   });
 
+  // TODO(2.6): convert to logCronEvent
   console.log(
     `[dex-liquidity] CG pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
     `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known), ${stats.poolsSkippedRatio} skipped (vol/TVL ratio)`
@@ -153,6 +156,7 @@ export function mergeCgPools(
   });
 
   if (merged > 0) {
+    // TODO(2.6): convert to logCronEvent
     console.log(`[dex-liquidity] Merged ${merged} CG pools into ${cgNewPools.size} stablecoins (${withBalance} with balance data)`);
   }
 }
@@ -190,12 +194,14 @@ export async function fetchGtPools(
     signal,
     beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
       if (deadlineMs && Date.now() >= deadlineMs) {
+        // TODO(2.6): convert to logCronEvent
         console.log(
           `[dex-liquidity] GT pool crawl shared deadline reached after ${requestCount}/${totalTokens} requests, yielding partial results`,
         );
         return false;
       }
       if (Date.now() - startMs > CRAWL_BUDGETS.GECKO_TERMINAL_MS) {
+        // TODO(2.6): convert to logCronEvent
         console.log(
           `[dex-liquidity] GT pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
           `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`,
@@ -239,6 +245,7 @@ export async function fetchGtPools(
     return { newPools, priceObs, stats };
   }
 
+  // TODO(2.6): convert to logCronEvent
   console.log(
     `[dex-liquidity] GT pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
     `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known), ${stats.poolsSkippedRatio} skipped (vol/TVL ratio)`
@@ -254,6 +261,7 @@ export function mergeGtPools(
   const merged = mergeSecondaryPools(metrics, gtNewPools);
 
   if (merged > 0) {
+    // TODO(2.6): convert to logCronEvent
     console.log(`[dex-liquidity] Merged ${merged} GT pools into ${gtNewPools.size} stablecoins`);
   }
 }
