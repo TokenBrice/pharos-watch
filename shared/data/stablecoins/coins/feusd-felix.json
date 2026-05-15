@@ -2,6 +2,7 @@
   "id": "feusd-felix",
   "name": "Felix feUSD",
   "symbol": "FEUSD",
+  "oneLiner": "feUSD is Felix Protocol's Liquity-v2-fork dollar on Hyperliquid, minted from overcollateralized CDPs against HYPE, kHYPE, wstHYPE, and bridged BTC.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "HYPE, kHYPE, wstHYPE, and UBTC (feUBTC) via overcollateralized CDPs on Hyperliquid (Liquity V2 fork); the live adapter reports four active branches",
   "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
+  "mechanismArchetype": "cdp",
   "llamaId": "251",
   "detailProvider": "defillama",
   "geckoId": "felix-feusd",

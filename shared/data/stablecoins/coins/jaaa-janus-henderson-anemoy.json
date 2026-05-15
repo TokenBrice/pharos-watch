@@ -2,6 +2,7 @@
   "id": "jaaa-janus-henderson-anemoy",
   "name": "Janus Henderson Anemoy AAA CLO Fund",
   "symbol": "JAAA",
+  "oneLiner": "JAAA is Janus Henderson's actively managed AAA CLO fund, tokenized through Anemoy/Centrifuge as a permissioned NAV-accreting fund share rather than a $1 token.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Actively managed AAA-rated CLO tranche portfolio selected by Janus Henderson and tokenized through Anemoy / Centrifuge fund rails.",
   "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/ethereum/mainnet/jaaa-nav-v2",
-    "provider": "Chainlink NAVLink / Centrifuge"
+    "provider": "Chainlink NAVLink / Centrifuge",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

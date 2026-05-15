@@ -2,6 +2,7 @@
   "id": "gldy-streamex",
   "name": "Streamex Gold Yield",
   "symbol": "GLDY",
+  "oneLiner": "GLDY is Streamex's tokenized gold ounce on Base, backed by physical bullion and gold-leasing receivables with Chainlink Proof of Reserve.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://data.chain.link/feeds/base/base/gldy-reserves",
-    "provider": "Chainlink Proof of Reserve"
+    "provider": "Chainlink Proof of Reserve",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

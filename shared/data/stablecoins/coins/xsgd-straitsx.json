@@ -2,6 +2,7 @@
   "id": "xsgd-straitsx",
   "name": "StraitsX XSGD",
   "symbol": "XSGD",
+  "oneLiner": "XSGD is StraitsX's MAS-licensed Singapore-dollar stablecoin, redeemable 1:1 against SGD cash held at Tier-1 banks DBS and Standard Chartered.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SGD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
   "pegMechanism": "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "289",
   "detailProvider": "defillama",
   "geckoId": "xsgd",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.straitsx.com/xsgd",
-    "provider": "Independent public accountants (ISCA standards)"
+    "provider": "Independent public accountants (ISCA standards)",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Singapore",
+    "attestorLicense": "ISCA-registered public accountants"
   },
   "links": [
     {

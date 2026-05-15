@@ -2,6 +2,7 @@
   "id": "kag-kinesis",
   "name": "Kinesis Silver",
   "symbol": "KAG",
+  "oneLiner": "KAG is Kinesis Silver, a tokenized claim on one troy ounce of investment-grade silver bullion with direct physical redemption and transaction-fee yield sharing.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kinesis.money/trust-security/",
-    "provider": "Bureau Veritas (Inspectorate International)"
+    "provider": "Bureau Veritas (Inspectorate International)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

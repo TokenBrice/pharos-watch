@@ -2,6 +2,7 @@
   "id": "busd0-usual",
   "name": "Bond USD0",
   "symbol": "bUSD0",
+  "oneLiner": "bUSD0 is Usual's bond-leg wrapper of USD0, splitting deposited USD0 into a fixed-notional bond token plus a separate early-exit right redeemable at maturity.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

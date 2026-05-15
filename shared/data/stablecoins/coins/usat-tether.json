@@ -2,6 +2,7 @@
   "id": "usat-tether",
   "name": "Tether USA-T",
   "symbol": "USAT",
+  "oneLiner": "USAT is Tether's GENIUS-Act-compliant U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
   "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "343",
   "detailProvider": "defillama",
   "geckoId": "usa",

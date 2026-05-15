@@ -2,6 +2,7 @@
   "id": "apyusd-apyx",
   "name": "apyUSD",
   "symbol": "apyUSD",
+  "oneLiner": "apyUSD is the ERC-4626 yield-bearing wrapper of apxUSD, capturing dividends and preferred-equity yield from Apyx's Digital Asset Treasury collateral.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

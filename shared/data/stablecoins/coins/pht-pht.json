@@ -2,6 +2,7 @@
   "id": "pht-pht",
   "name": "PHT Stablecoin",
   "symbol": "PHT",
+  "oneLiner": "PHT is APACX's Philippine Peso stablecoin minted from overcollateralized CDP vaults (MakerDAO MCD fork) against apcxUSDT and Chainlink PHP/USD oracle.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "PHP",
@@ -12,6 +13,7 @@
   },
   "collateral": "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
   "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
+  "mechanismArchetype": "cdp",
   "llamaId": "299",
   "detailProvider": "defillama",
   "geckoId": "pht-stablecoin",

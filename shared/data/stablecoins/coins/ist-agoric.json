@@ -2,6 +2,7 @@
   "id": "ist-agoric",
   "name": "Inter Stable Token",
   "symbol": "IST",
+  "oneLiner": "IST is Inter Protocol's decentralized dollar on Agoric, minted from overcollateralized IBC ATOM vaults plus a PSM swapping IBC stablecoins 1:1.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
   "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
+  "mechanismArchetype": "cdp",
   "llamaId": "135",
   "detailProvider": "defillama",
   "geckoId": "inter-stable-token",

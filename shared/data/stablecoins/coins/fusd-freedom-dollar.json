@@ -2,6 +2,7 @@
   "id": "fusd-freedom-dollar",
   "name": "Freedom Dollar",
   "symbol": "FUSD",
+  "oneLiner": "FUSD is the Zano privacy-chain dollar token; public reserve details and redemption mechanics are limited, and it is not bridged to tracked Pharos chains.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

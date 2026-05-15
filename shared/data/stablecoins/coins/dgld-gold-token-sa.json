@@ -2,6 +2,7 @@
   "id": "dgld-gold-token-sa",
   "name": "DGLD Tokenized Gold",
   "symbol": "DGLD",
+  "oneLiner": "DGLD is Gold Token SA's tokenized physical gold from Swiss vaults, each token redeemable for 1 troy ounce of allocated LBMA PAMP-refined gold.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://explorer.dgld.ch/",
-    "provider": "MKS PAMP (bar serial numbers + independent physical audits)"
+    "provider": "MKS PAMP (bar serial numbers + independent physical audits)",
+    "attestorTier": "niche",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Switzerland"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "ausd-agora",
   "name": "Agora Dollar",
   "symbol": "AUSD",
+  "oneLiner": "AUSD is Agora's centralized dollar stablecoin, redeemable 1:1 and backed by cash, short-dated U.S. Treasury bills, and overnight repos managed by VanEck.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
   "pegMechanism": "Fiat-backed 1:1; users deposit USD and mint AUSD at par; direct redemption for USD through Agora; reserves held in bankruptcy-remote Delaware Statutory Trust administered by State Street",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "205",
   "detailProvider": "defillama",
   "geckoId": "agora-dollar",
@@ -19,7 +21,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://oracles.chaoslabs.xyz/por-feeds/agora",
-    "provider": "Chaos Labs"
+    "provider": "Chaos Labs",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

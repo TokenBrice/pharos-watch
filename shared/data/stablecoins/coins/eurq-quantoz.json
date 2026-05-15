@@ -2,6 +2,7 @@
   "id": "eurq-quantoz",
   "name": "Quantoz EURQ",
   "symbol": "EURQ",
+  "oneLiner": "EURQ is Quantoz Payments' MiCA-licensed euro stablecoin from a Dutch EMI, redeemable 1:1 against segregated euro cash and short EU government bonds.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,11 +13,16 @@
   },
   "collateral": "Euro-denominated cash deposits and government bonds held in segregated reserves with reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "quantoz-eurq",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://quantoz.com/transparency"
+    "url": "https://quantoz.com/transparency",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Netherlands",
+    "attestorLicense": "EMI (MiCA)"
   },
   "links": [
     {

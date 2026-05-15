@@ -2,6 +2,7 @@
   "id": "ebusd-ebisu",
   "name": "Ebisu ebUSD",
   "symbol": "ebUSD",
+  "oneLiner": "ebUSD is Ebisu's overcollateralized USD stablecoin minted from Liquity-v2 CDP branches backed by weETH, sUSDe, WBTC, LBTC, and stcUSD on Ethereum and Plasma.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, LBTC, and stcUSD; the live adapter reports current per-branch shares, with WETH and XPL configured as additional dormant branches",
   "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and redemptions; production deployments mint natively on both Ethereum and Plasma",
+  "mechanismArchetype": "cdp",
   "llamaId": "288",
   "detailProvider": "defillama",
   "geckoId": "ebusd-stablecoin",

@@ -2,6 +2,7 @@
   "id": "srusde-strata",
   "name": "Strata Senior USDe",
   "symbol": "srUSDe",
+  "oneLiner": "srUSDe is Strata's senior tranche over a USDe yield strategy; the junior tranche absorbs first-loss while exits depend on tranche liquidity, not 1:1 redemption.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "usde-ethena",
   "collateral": "Senior tranche token over a Strata risk-tranched USDe yield strategy; junior tranche capital absorbs first-loss or underperformance before senior holders",
   "pegMechanism": "srUSDe targets a stable senior NAV backed by USDe strategy collateral and junior-tranche subordination; exits depend on Strata tranche liquidity and settlement rules rather than a simple 1:1 stablecoin redemption",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "strata-senior-usde",
   "links": [

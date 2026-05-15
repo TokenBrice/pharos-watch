@@ -2,6 +2,7 @@
   "id": "usdf-astherus",
   "name": "Astherus",
   "symbol": "USDF",
+  "oneLiner": "USDF is Astherus's delta-neutral synthetic dollar on BSC, minted 1:1 against USDT; yields from BTC/ETH funding-rate arbitrage via Ceffu MirrorX on Binance.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
   "pegMechanism": "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "219",
   "detailProvider": "defillama",
   "geckoId": "astherus-usdf",

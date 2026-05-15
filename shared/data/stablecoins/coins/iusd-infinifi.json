@@ -2,6 +2,7 @@
   "id": "iusd-infinifi",
   "name": "infiniFi USD",
   "symbol": "IUSD",
+  "oneLiner": "IUSD is infiniFi's USDC-collateralized dollar stablecoin, with reserves deployed duration-matched across institutional private credit and liquid DeFi lending.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://eth-api.infinifi.xyz/api/protocol/data",
-    "provider": "infiniFi"
+    "provider": "infiniFi",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "savusd-avant",
   "name": "Avant Staked USD",
   "symbol": "savUSD",
+  "oneLiner": "savUSD is Avant's yield-bearing wrapper of avUSD; share price compounds with delta-neutral strategy yield, exits inherit avUSD's USDC redemption.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "avusd-avant",
   "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
   "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "avant-staked-usd",
   "links": [

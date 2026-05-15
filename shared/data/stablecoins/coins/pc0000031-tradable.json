@@ -2,6 +2,7 @@
   "id": "pc0000031-tradable",
   "name": "Tradable NA Rent Financing Platform SSTN",
   "symbol": "PC0000031",
+  "oneLiner": "PC0000031 is a KYC-gated Tradable senior secured term note on a North American rent-financing platform; contract-priced at $1 par, not a liquid stablecoin.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

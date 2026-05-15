@@ -2,6 +2,7 @@
   "id": "usdf-falcon",
   "name": "Falcon USD",
   "symbol": "USDf",
+  "oneLiner": "USDf is Falcon Finance's overcollateralized synthetic dollar minted 1:1 from stablecoins or via dynamic ratios against BTC, ETH, SOL, and altcoin collateral.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
   "pegMechanism": "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "246",
   "detailProvider": "defillama",
   "geckoId": "falcon-finance",
@@ -20,7 +22,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.falcon.finance/transparency",
-    "provider": "ht.digital"
+    "provider": "ht.digital",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

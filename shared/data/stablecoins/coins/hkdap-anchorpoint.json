@@ -2,6 +2,7 @@
   "id": "hkdap-anchorpoint",
   "name": "HKDAP",
   "symbol": "HKDAP",
+  "oneLiner": "HKDAP is Anchorpoint's pre-launch HKD stablecoin, licensed by the HKMA in April 2026 and planned as 1:1 backed by segregated high-quality liquid reserves.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
   "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once Anchorpoint launches the business",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

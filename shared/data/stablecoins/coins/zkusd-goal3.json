@@ -2,6 +2,7 @@
   "id": "zkusd-goal3",
   "name": "zkUSD Dollar",
   "symbol": "zkUSD",
+  "oneLiner": "zkUSD is a Goal3 sportsbook dollar token on ZKsync Era, redeemed 1:1 to USDC; the protocol claims overcollateralization but composition is undisclosed.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

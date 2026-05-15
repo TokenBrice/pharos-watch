@@ -2,6 +2,7 @@
   "id": "eurspkcc-spiko",
   "name": "Spiko Digital Assets Cash & Carry Fund - Euro Share Class",
   "symbol": "EURSPKCC",
+  "oneLiner": "EURSPKCC is the EUR share of Spiko's Digital Assets Cash & Carry fund, a French FPS combining crypto basis-trade exposure with short-duration T-bills.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -17,7 +18,11 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-cash-and-carry",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF FPS / Alternative Investment Fund"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "pc0000033-tradable",
   "name": "Tradable APAC Diversified Finance Provider SSTN",
   "symbol": "PC0000033",
+  "oneLiner": "PC0000033 is a KYC-gated Tradable senior secured term note on an APAC diversified finance provider; contract-priced at $1 par, not a liquid stablecoin.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

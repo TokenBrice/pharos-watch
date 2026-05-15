@@ -2,6 +2,7 @@
   "id": "pgold-polaris",
   "name": "Polaris Gold",
   "symbol": "pGOLD",
+  "oneLiner": "pGOLD is Polaris's pre-launch synthetic gold CDP token minted against pETH collateral; tracks one troy ounce of gold with no physical backing or custodian.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "GOLD",

@@ -2,6 +2,7 @@
   "id": "gbpm-mento",
   "name": "Mento British Pound",
   "symbol": "GBPm",
+  "oneLiner": "GBPm is Mento's British pound stablecoin on Celo, minted from CDPs collateralized by USDm with oracle-priced redemption and reserve transparency.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "GBP",
@@ -12,13 +13,16 @@
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint GBPm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+  "mechanismArchetype": "cdp",
   "llamaId": "358",
   "detailProvider": "defillama",
   "geckoId": "celo-british-pound",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

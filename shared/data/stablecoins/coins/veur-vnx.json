@@ -2,6 +2,7 @@
   "id": "veur-vnx",
   "name": "VNX EURO",
   "symbol": "VEUR",
+  "oneLiner": "VEUR is VNX's Liechtenstein-licensed euro stablecoin redeemable 1:1, backed by EUR cash in bank accounts and Areva-audited under the FMA Blockchain Act.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,13 +13,18 @@
   },
   "collateral": "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG (registered KYC/AML customers only)",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "158",
   "detailProvider": "defillama",
   "geckoId": "vnx-euro",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://vnx.li/transparency/",
-    "provider": "AREVA General Auditing and Trust Company Limited"
+    "provider": "AREVA General Auditing and Trust Company Limited",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Liechtenstein",
+    "attestorLicense": "FMA TVTG (Blockchain Act)"
   },
   "links": [
     {

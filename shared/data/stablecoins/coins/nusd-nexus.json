@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Nexus USD",
   "symbol": "NUSD",
+  "oneLiner": "NUSD is a legacy Synapse bridge-liquidity stable asset backed by a DAI/USDC/USDT pool, with the dollar peg inherited from the underlying basket.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

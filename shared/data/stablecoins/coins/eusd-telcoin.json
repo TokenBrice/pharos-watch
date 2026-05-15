@@ -2,6 +2,7 @@
   "id": "eusd-telcoin",
   "name": "eUSD",
   "symbol": "eUSD",
+  "oneLiner": "eUSD is Telcoin Digital Asset Bank's dollar stablecoin, issued under a Nebraska digital-asset depository charter with KYC-gated 1:1 mint and redemption.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
   "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "eusd-2",
   "cmcSlug": "eusd-telcoindab",

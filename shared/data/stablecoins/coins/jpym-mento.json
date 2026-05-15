@@ -2,6 +2,7 @@
   "id": "jpym-mento",
   "name": "Mento Japanese Yen",
   "symbol": "JPYm",
+  "oneLiner": "JPYm is Mento's CDP-backed yen stablecoin, minted against USDm collateral via the Mento FX system on Celo with on-chain reserve and oracle pricing.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "JPY",
@@ -12,13 +13,16 @@
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint JPYm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+  "mechanismArchetype": "cdp",
   "llamaId": "363",
   "detailProvider": "defillama",
   "geckoId": "celo-japanese-yen",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

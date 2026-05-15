@@ -2,6 +2,7 @@
   "id": "eure-monerium",
   "name": "Monerium EUR emoney",
   "symbol": "EURE",
+  "oneLiner": "EURE is Monerium's MiCA-regulated euro e-money, minted on SEPA deposits and redeemed 1:1 by an EMI; reserves sit in EUR bank deposits and an LVNAV fund.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,12 +13,17 @@
   },
   "collateral": "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
   "pegMechanism": "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "101",
   "detailProvider": "defillama",
   "geckoId": "monerium-eur-money-2",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://monerium.com/financial-information/"
+    "url": "https://monerium.com/financial-information/",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Iceland",
+    "attestorLicense": "EMI (Central Bank of Iceland)"
   },
   "links": [
     {

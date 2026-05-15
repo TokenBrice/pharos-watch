@@ -2,6 +2,7 @@
   "id": "mhyper-midas",
   "name": "Midas mHYPER",
   "symbol": "mHYPER",
+  "oneLiner": "mHYPER is a Midas NAV-accreting liquid-yield token wrapping Hyperithm market-neutral stablecoin strategies; permissioned mint/redeem, not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -17,7 +18,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas transparency dashboard and issuer disclosures"
+    "provider": "Midas transparency dashboard and issuer disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
   },
   "links": [
     {

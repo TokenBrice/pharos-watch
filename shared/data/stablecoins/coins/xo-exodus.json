@@ -2,6 +2,7 @@
   "id": "xo-exodus",
   "name": "XO Cash",
   "symbol": "XO",
+  "oneLiner": "XO is MoonPay's MTL-licensed dollar token on Solana, issued via M0 Protocol with USD deposits and short-term Treasury bills held in bankruptcy-remote SPVs.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -15,12 +16,15 @@
   ],
   "collateral": "Fully reserved 1:1 by U.S. dollar deposits and short-term U.S. Treasury bills held for the benefit of token holders via M0 Protocol's bankruptcy-remote SPV structure; reserves issued and managed by MoonPay under U.S. Money Transmitter Licenses; native M0 yield is retained by MoonPay/Exodus rather than passed through to XO holders",
   "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xo-cash",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://dashboard.m0.org/",
-    "provider": "M0 Protocol"
+    "provider": "M0 Protocol",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

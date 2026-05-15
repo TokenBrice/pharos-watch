@@ -2,6 +2,7 @@
   "id": "xtusd-xt",
   "name": "XTUSD",
   "symbol": "XTUSD",
+  "oneLiner": "XTUSD is XT.com's centralized dollar token, issued from limited-disclosure issuer reserves with no Pharos-modeled holder redemption route.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "XT.com issuer-managed dollar reserves; public collateral detail is limited",
   "pegMechanism": "Centralized exchange-issued dollar token with issuance and account exits handled through XT.com infrastructure; no Pharos redemption backstop is modeled without source-reviewed public terms",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "xtusd",
   "protocolSlug": "xt-com",

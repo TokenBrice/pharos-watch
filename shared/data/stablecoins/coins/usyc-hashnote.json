@@ -2,6 +2,7 @@
   "id": "usyc-hashnote",
   "name": "Hashnote USYC",
   "symbol": "USYC",
+  "oneLiner": "USYC is Hashnote's tokenized T-bill share backed by short-term U.S. Treasuries and reverse repos, with same-day USDC subscription and redemption at NAV.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
   "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
+  "mechanismArchetype": "tbill",
   "llamaId": "237",
   "detailProvider": "defillama",
   "geckoId": "hashnote-usyc",

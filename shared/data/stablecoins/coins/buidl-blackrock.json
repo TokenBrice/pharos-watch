@@ -2,6 +2,7 @@
   "id": "buidl-blackrock",
   "name": "BlackRock USD",
   "symbol": "BUIDL",
+  "oneLiner": "BUIDL is BlackRock's tokenized institutional money-market fund, NAV-pegged to $1 and backed by U.S. Treasuries, repos, and cash custodied by BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,17 @@
   },
   "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
   "pegMechanism": "NAV-based pricing with institutional redemption through BlackRock/Securitize",
+  "mechanismArchetype": "tbill",
   "llamaId": "173",
   "detailProvider": "defillama",
   "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://securitize.io/blackrock/buidl",
-    "provider": "Bank of New York Mellon"
+    "provider": "Bank of New York Mellon",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

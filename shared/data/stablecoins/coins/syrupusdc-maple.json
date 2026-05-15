@@ -2,6 +2,7 @@
   "id": "syrupusdc-maple",
   "name": "Maple syrupUSDC",
   "symbol": "syrupUSDC",
+  "oneLiner": "syrupUSDC is Maple's ERC-4626 receipt for USDC lent to institutional borrowers as overcollateralized fixed-rate loans; withdrawals served by a FIFO queue.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm"
+    "provider": "The Network Firm",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

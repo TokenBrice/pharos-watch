@@ -2,6 +2,7 @@
   "id": "cdxusd-cod3x",
   "name": "Cod3x USD",
   "symbol": "cdxUSD",
+  "oneLiner": "cdxUSD is Cod3x's dollar stablecoin on Base, minted and burned by protocol-permissioned Facilitators against strategy-managed crypto and stablecoin collateral.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

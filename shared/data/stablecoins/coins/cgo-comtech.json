@@ -2,6 +2,7 @@
   "id": "cgo-comtech",
   "name": "Comtech Gold",
   "symbol": "CGO",
+  "oneLiner": "CGO is ComTech's tokenized gold from the UAE, each token redeemable for 1 gram of 24K physical gold stored in DMCC-endorsed Transguard vaults.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://comtechgold.com/Routine",
-    "provider": "unnamed"
+    "provider": "unnamed",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

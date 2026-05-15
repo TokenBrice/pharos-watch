@@ -2,6 +2,7 @@
   "id": "tryb-bilira",
   "name": "BiLira",
   "symbol": "TRYB",
+  "oneLiner": "TRYB is BiLira's Turkish-lira stablecoin, redeemable 1:1 against TRY cash reserves held by the issuer in Turkey.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "TRY",
@@ -12,6 +13,7 @@
   },
   "collateral": "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains",
   "pegMechanism": "Direct 1:1 issuance and redemption through BiLira; issuer-managed native deployments extend TRYB across multiple chains",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "300",
   "detailProvider": "defillama",
   "geckoId": "bilira",

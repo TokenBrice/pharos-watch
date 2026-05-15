@@ -2,6 +2,7 @@
   "id": "sbold-k3-capital",
   "name": "sBOLD by K3 Capital",
   "symbol": "sBOLD",
+  "oneLiner": "sBOLD is K3 Capital's ERC-4626 wrapper of BOLD; deposits route to Liquity V2 Stability Pools to earn interest and liquidation gains, with BOLD-tier CDP risk.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -15,6 +16,7 @@
   "pegReferenceId": "bold-liquity",
   "collateral": "BOLD deposited into K3's ERC-4626 sBOLD vault and allocated across Liquity V2 Stability Pools to earn interest and liquidation gains",
   "pegMechanism": "Vault shares appreciate against BOLD as Stability Pool interest and liquidation gains are compounded; liquidation collateral is converted back to BOLD by mutable solver/swap infrastructure, so final value inherits BOLD peg and K3 execution risk",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "sbold-by-k3-capital",
   "links": [

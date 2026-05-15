@@ -2,6 +2,7 @@
   "id": "spkcc-spiko",
   "name": "Spiko Digital Assets Cash & Carry Fund",
   "symbol": "SPKCC",
+  "oneLiner": "SPKCC is the USD share class of Spiko's regulated French AIF combining a digital-asset cash-and-carry basis strategy with short-duration T-bill collateral.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,16 @@
   },
   "collateral": "USD share class of the Spiko Digital Assets Cash & Carry Fund, combining systematic cash-and-carry exposure with short-duration cash and Treasury-bill collateral.",
   "pegMechanism": "USD-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "spiko-digital-assets-cash-carry-fund",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-cash-and-carry",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France"
   },
   "links": [
     {

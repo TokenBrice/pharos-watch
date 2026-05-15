@@ -2,6 +2,7 @@
   "id": "deuro-deuro",
   "name": "Decentralized Euro",
   "symbol": "DEURO",
+  "oneLiner": "DEURO is a decentralized euro stablecoin minted from overcollateralized BTC, ETH, and crypto vaults using a Frankencoin-style oracle-free auction mechanism.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",
@@ -12,6 +13,7 @@
   },
   "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
   "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "decentralized-euro",
   "links": [

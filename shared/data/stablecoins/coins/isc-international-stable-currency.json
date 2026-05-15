@@ -2,6 +2,7 @@
   "id": "isc-international-stable-currency",
   "name": "International Stable Currency",
   "symbol": "ISC",
+  "oneLiner": "ISC is a purchasing-power token tracking a basket of physical gold, investment-grade bonds, T-bills, global equities, and cash; price appreciates over time.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "VAR",

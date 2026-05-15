@@ -2,6 +2,7 @@
   "id": "usdu-usdu-finance",
   "name": "USDU Finance",
   "symbol": "USDU",
+  "oneLiner": "USDU is USDU Finance's DAO-minted dollar backed by Curve, Morpho, and TermMax vault shares; the issuer reports ~40% collateralization by design.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

@@ -2,6 +2,7 @@
   "id": "acred-apollo-securitize",
   "name": "Apollo Diversified Credit Securitize Fund",
   "symbol": "ACRED",
+  "oneLiner": "ACRED is a tokenized, NAV-accreting feeder share into Apollo's diversified private credit fund, administered by Securitize for qualified purchasers.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -17,7 +18,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund",
-    "provider": "Securitize / Apollo (NAV statements published per fund cadence)"
+    "provider": "Securitize / Apollo (NAV statements published per fund cadence)",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

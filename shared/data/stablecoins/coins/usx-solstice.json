@@ -2,6 +2,7 @@
   "id": "usx-solstice",
   "name": "Solstice USX",
   "symbol": "USX",
+  "oneLiner": "USX is Solstice's Solana dollar minted 1:1 against USDC/USDT, with Chainlink Proof of Reserve and KYC-gated institutional minting at $500K minimum.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

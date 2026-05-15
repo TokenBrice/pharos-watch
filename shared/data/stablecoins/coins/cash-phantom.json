@@ -2,6 +2,7 @@
   "id": "cash-phantom",
   "name": "CASH",
   "symbol": "CASH",
+  "oneLiner": "CASH is Phantom and Bridge Building's centralized USD stablecoin on Solana, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and MMFs.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
   "pegMechanism": "Direct 1:1 redemption via Bridge Building Inc. (BBI) with reserves held in bankruptcy-remote custodial accounts",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "316",
   "detailProvider": "defillama",
   "geckoId": "cash-4",

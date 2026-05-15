@@ -2,6 +2,7 @@
   "id": "nect-beraborrow",
   "name": "Nectar",
   "symbol": "NECT",
+  "oneLiner": "NECT is Beraborrow's Liquity v2-style overcollateralized stablecoin on Berachain, minted against iBGT, WBERA, BTC/ETH variants, and Kodiak Island LPs.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
   "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
+  "mechanismArchetype": "cdp",
   "llamaId": "329",
   "detailProvider": "defillama",
   "geckoId": "nectar",

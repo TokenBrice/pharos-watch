@@ -2,6 +2,7 @@
   "id": "usdat-saturn",
   "name": "Saturn USDat",
   "symbol": "USDat",
+  "oneLiner": "USDat is Saturn's yield-bearing dollar wrapper on M0, backed 100% by M (M0 tokenized short-term U.S. T-bills) with KYC-gated mint/redeem via the Swap Facility.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -15,12 +16,15 @@
   ],
   "collateral": "100% backed by M (M0 Protocol's tokenized short-term U.S. Treasury bills) at launch — capital is held directly in the USDat smart contract and verifiable on-chain; protocol roadmap allows reserves to shift toward digital credit instruments (e.g. Strategy STRC preferred equity) over time",
   "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "saturn-dollar",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://app.saturn.credit/insights/saturn-protocol",
-    "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)"
+    "provider": "Saturn Protocol (on-chain reserve, with Accountable + Chainlink NAV oracle integration in progress)",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "vbill-vaneck",
   "name": "VanEck Treasury Fund",
   "symbol": "VBILL",
+  "oneLiner": "VBILL is VanEck's tokenized T-bill share advised by Van Eck Associates and administered via Securitize/State Street under a BVI Professional Fund.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,17 @@
   },
   "collateral": "Short-duration U.S. Treasury bills held by a BVI Professional Fund advised by Van Eck Associates; tokenization, transfer agency, and KYC by Securitize with State Street as fund administrator",
   "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "vaneck-treasury-fund",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://securitize.io/primary-market/vaneck-vbill",
-    "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)"
+    "provider": "Securitize / Van Eck Associates (daily NAV and holdings disclosures)",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "British Virgin Islands",
+    "attestorLicense": "BVI Professional Fund"
   },
   "links": [
     {

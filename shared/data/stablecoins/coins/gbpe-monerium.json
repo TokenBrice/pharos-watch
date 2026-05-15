@@ -2,6 +2,7 @@
   "id": "gbpe-monerium",
   "name": "Monerium GBP emoney",
   "symbol": "GBPe",
+  "oneLiner": "GBPe is Monerium's regulated British pound e-money, minted and redeemed by a licensed EMI against safeguarded GBP funds and permitted EMI reserve assets.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -12,12 +13,17 @@
   },
   "collateral": "British pound e-money claim backed by safeguarded client funds and permitted EMI reserve assets under Monerium's regulated e-money framework",
   "pegMechanism": "Mint-and-burn through Monerium after onboarding/KYC: GBPe is issued when users deposit GBP through supported bank rails and burned when redeemed back to a bank account.",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "monerium-gbp-emoney",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",
-    "provider": "Monerium financial information"
+    "provider": "Monerium financial information",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Iceland",
+    "attestorLicense": "EMI (Central Bank of Iceland)"
   },
   "links": [
     {

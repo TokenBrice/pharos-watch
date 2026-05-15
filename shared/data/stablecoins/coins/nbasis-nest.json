@@ -2,6 +2,7 @@
   "id": "nbasis-nest",
   "name": "Nest Basis Vault",
   "symbol": "nBASIS",
+  "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
   "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "nest-basis-vault",
   "protocolSlug": "nest-credit",

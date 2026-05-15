@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Australian Dollar",
   "symbol": "AUDm",
+  "oneLiner": "AUDm is Mento's crypto-backed Australian dollar on Celo, minted by depositing USDm as Liquity-v2-style CDP collateral against the Mento reserve mix.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "AUD",
@@ -14,11 +15,14 @@
   },
   "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard)",
   "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing AUDm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the AUDm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg",
+  "mechanismArchetype": "cdp",
   "geckoId": "celo-australian-dollar",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

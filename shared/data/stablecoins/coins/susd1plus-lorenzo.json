@@ -2,6 +2,7 @@
   "id": "susd1plus-lorenzo",
   "name": "staked USD1+",
   "symbol": "sUSD1+",
+  "oneLiner": "sUSD1+ is Lorenzo's staked receipt over the USD1+ synthetic-dollar strategy backed by WLFI USD1 reserve yield and delta-neutral strategy returns on BNB Chain.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -13,6 +14,7 @@
   "pegReferenceId": "usd1-world-liberty-financial",
   "collateral": "Staked receipt over Lorenzo USD1+, a synthetic dollar strategy ultimately settled into WLFI USD1 and designed to combine USD1 reserve yield with delta-neutral strategy returns",
   "pegMechanism": "sUSD1+ accrues yield from the Lorenzo USD1+ vault while final exit depends on unstaking back into USD1+ and settlement into USD1-supported stable liquidity",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-usd1",
   "cmcSlug": "lorenzo-staked-usd1",

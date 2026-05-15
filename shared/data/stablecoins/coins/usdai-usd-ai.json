@@ -2,6 +2,7 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
+  "oneLiner": "USDai is USD.AI's base stablecoin, minted and redeemed on a PYUSD settlement rail; the yield-bearing sUSDai variant is a separate queued product.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -19,6 +20,7 @@
   },
   "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
   "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
   "detailProvider": "defillama",
   "geckoId": "usdai",

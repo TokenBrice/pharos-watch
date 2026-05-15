@@ -2,6 +2,7 @@
   "id": "hbusdt-hyperbeat",
   "name": "Hyperbeat USDT",
   "symbol": "hbUSDT",
+  "oneLiner": "hbUSDT is Hyperbeat's yield-bearing USDT vault token on HyperEVM, exposing holders to DeFi lending and strategy returns over Tether's underlying par.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -20,7 +21,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://accountable.hyperbeat.org/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "canBeBlacklisted": true,
   "blacklistabilityReview": {

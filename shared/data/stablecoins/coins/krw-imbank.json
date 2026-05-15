@@ -2,6 +2,7 @@
   "id": "krw-imbank",
   "name": "iM Bank KRW Stablecoin",
   "symbol": "KRW-iM",
+  "oneLiner": "KRW-iM is South Korea's first bank-led KRW stablecoin proof-of-concept, run by iM Bank and Finger on Kaia with BTQ's post-quantum security stack.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
@@ -12,6 +13,7 @@
   },
   "collateral": "Bank-backed KRW reserves; proof-of-concept features quantum-resistant post-quantum cryptography (PQC) security via BTQ Technologies on Kaia blockchain",
   "pegMechanism": "Pre-launch bank-led KRW stablecoin proof-of-concept on Kaia: iM Bank and Finger are testing KRW reserve reconciliation with BTQ QSSN/PQC security infrastructure; production mint, redemption, and reserve reporting terms remain pending",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Canadian Dollar",
   "symbol": "CADm",
+  "oneLiner": "CADm is Mento's oracle-priced Canadian dollar stablecoin on Celo, redeemable through reserve swaps backed by a diversified basket of stablecoins and crypto.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CAD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

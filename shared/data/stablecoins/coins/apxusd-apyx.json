@@ -2,6 +2,7 @@
   "id": "apxusd-apyx",
   "name": "apxUSD",
   "symbol": "apxUSD",
+  "oneLiner": "apxUSD is Apyx's dollar stablecoin backed by preferred shares of Digital Asset Treasury companies plus a cash and T-Bill buffer, mintable 1:1.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

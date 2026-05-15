@@ -2,6 +2,7 @@
   "id": "jpysc-sbi-startale",
   "name": "JPYSC",
   "symbol": "JPYSC",
+  "oneLiner": "JPYSC is a pre-launch yen stablecoin to be issued by Shinsei Trust & Banking, distributed by SBI VC Trade under Japan's Type III electronic payment framework.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -12,6 +13,7 @@
   },
   "collateral": "Planned trust-bank JPY backing through Shinsei Trust & Banking under Japan's Type III Electronic Payment Instrument framework; public reserve composition and attestations are pending launch",
   "pegMechanism": "Pre-launch trust-bank-backed JPY stablecoin: Shinsei Trust & Banking is expected to issue JPYSC under Japan's regulated electronic-payment-instrument framework, with SBI VC Trade as distributor and Startale as technical lead; contracts, redemption terms, and reserve reports remain pending regulatory approval and launch",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

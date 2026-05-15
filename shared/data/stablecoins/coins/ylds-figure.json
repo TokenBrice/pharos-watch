@@ -2,6 +2,7 @@
   "id": "ylds-figure",
   "name": "YLDS",
   "symbol": "YLDS",
+  "oneLiner": "YLDS is Figure's SEC-registered face-amount certificate paying SOFR-minus-50bps daily interest, backed by short-term Treasuries and overnight repos at UMB Bank.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,18 @@
   },
   "collateral": "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
   "pegMechanism": "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
+  "mechanismArchetype": "tbill",
   "llamaId": "272",
   "detailProvider": "defillama",
   "geckoId": "ylds",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf",
-    "provider": "KPMG LLP"
+    "provider": "KPMG LLP",
+    "attestorTier": "big4",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {

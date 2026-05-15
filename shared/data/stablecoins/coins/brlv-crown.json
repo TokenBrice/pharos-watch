@@ -2,6 +2,7 @@
   "id": "brlv-crown",
   "name": "Crown BRLV",
   "symbol": "BRLV",
+  "oneLiner": "BRLV is Crown's centralized Brazilian real stablecoin, mint/redeemed 1:1 for BRL and backed mostly by Brazilian federal Treasury bonds in segregated custody.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -12,12 +13,16 @@
   },
   "collateral": "Brazilian federal government bonds, Tesouro Selic-linked ETFs, and de minimis cash/equivalents held in legally segregated, bankruptcy-remote reserve custody through Crown's guarantor/security-agent structure",
   "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "crown-brlv",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://crown-brlv.com/en/transparency/",
-    "provider": "Fact Finance"
+    "provider": "Fact Finance",
+    "attestorTier": "niche",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Brazil"
   },
   "links": [
     {

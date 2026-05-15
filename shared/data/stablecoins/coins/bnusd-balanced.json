@@ -2,6 +2,7 @@
   "id": "bnusd-balanced",
   "name": "Balanced Dollar",
   "symbol": "BNUSD",
+  "oneLiner": "bnUSD is Balanced's decentralized dollar stablecoin on ICON, minted from overcollateralized CDPs against sICX and bridged cross-chain via xCall.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized loans on ICON against sICX (staked ICX), with cross-chain Hub collateral support for assets bridged in via Balanced's xCall infrastructure",
   "pegMechanism": "CDP-style mint: users borrow bnUSD against eligible collateral on the ICON Hub through the Balanced Loans contract, paying a 0.2% origination fee and a 2% annualised interest charge; loans must remain above the protocol's collateral ratio or are eligible for liquidation. The same bnUSD supply circulates wrapper-free across connected chains via xCall, so cross-chain balances net back to the canonical ICON issuance.",
+  "mechanismArchetype": "cdp",
   "llamaId": "204",
   "detailProvider": "defillama",
   "geckoId": "balanced-dollars",

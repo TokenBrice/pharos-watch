@@ -2,6 +2,7 @@
   "id": "usn-noon",
   "name": "Noon USN",
   "symbol": "USN",
+  "oneLiner": "USN is Noon's yield-portfolio dollar minted 1:1 against USDC/USDT, backed by Fasanara private credit, JAAA CLOs, DeFi lending, Pendle PTs, and T-bills.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://noon.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "stusds-sky",
   "name": "Staked USDS",
   "symbol": "stUSDS",
+  "oneLiner": "stUSDS is Sky's risk-capital staking module over USDS funding SKY-backed borrowing; holders earn the stUSDS Rate and absorb shortfall and governance slashing.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "usds-sky",
   "collateral": "USDS supplied to Sky's stUSDS risk-capital module, where deposits fund SKY-backed borrowing and earn the stUSDS Rate; holders absorb staked-SKY loan shortfall and governance slashing risk",
   "pegMechanism": "ERC-4626 NAV shares over USDS; users deposit USDS to mint stUSDS and withdraw USDS subject to unutilized module liquidity, while bad debt or governance slashing can reduce redeemable value",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "links": [
     {

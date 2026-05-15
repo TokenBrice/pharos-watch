@@ -2,6 +2,7 @@
   "id": "ftusd-flying-tulip",
   "name": "Flying Tulip USD",
   "symbol": "ftUSD",
+  "oneLiner": "ftUSD is Flying Tulip's stablecoin minted 1:1 against USDC or USDT, with deposits routed to Aave and native assets borrowed against them to fund staking carry.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -16,7 +17,9 @@
   "geckoId": "flying-tulip-usd",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://flyingtulip.com/ftusd/dashboard/"
+    "url": "https://flyingtulip.com/ftusd/dashboard/",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

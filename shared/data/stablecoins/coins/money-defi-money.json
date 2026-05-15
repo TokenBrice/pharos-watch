@@ -2,6 +2,7 @@
   "id": "money-defi-money",
   "name": "defi.money",
   "symbol": "MONEY",
+  "oneLiner": "MONEY is defi.money's crvUSD-style stablecoin minted against overcollateralized loans of WBTC, ETH, and other approved collateral on Arbitrum and Optimism.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized loan collateral accepted by defi.money markets on supported networks, including assets such as WBTC and ETH rather than a fixed USDC reserve portfolio",
   "pegMechanism": "crvUSD-style loan/CDP stablecoin: users deposit approved collateral, borrow MONEY against protocol risk parameters and conversion ranges, and maintain solvency through market-specific liquidation and peg-keeper mechanics",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "defi-money",
   "protocolSlug": "defi-money",

@@ -2,6 +2,7 @@
   "id": "usdpt-western-union",
   "name": "US Dollar Payment Token",
   "symbol": "USDPT",
+  "oneLiner": "USDPT is Western Union's Solana dollar stablecoin issued by Anchorage Digital Bank with U.S. Bank as reserve custodian for B2B agent settlement.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

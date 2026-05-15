@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "NXUSD",
   "symbol": "NXUSD",
+  "oneLiner": "NXUSD is a Nereus Finance overcollateralized CDP minted on Avalanche; the token has shown a sustained soft-depeg pattern between $0.95 and $1.01.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "Overcollateralized Nereus Finance lending positions, primarily Avalanche ecosystem crypto collateral",
   "pegMechanism": "Borrowed stablecoin minted against overcollateralized deposits in Nereus markets and repaid or liquidated through protocol rules",
+  "mechanismArchetype": "cdp",
   "geckoId": "nxusd",
   "protocolSlug": "nereus-finance",
   "links": [

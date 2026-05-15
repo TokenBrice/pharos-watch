@@ -2,6 +2,7 @@
   "id": "cadd-cad-digital",
   "name": "CAD Digital",
   "symbol": "CADD",
+  "oneLiner": "CADD is Tetra Trust's regulated Canadian dollar stablecoin, redeemable 1:1 against CAD held in trust under Alberta's Loan and Trust Corporations Act.",
   "status": "active",
   "launchDate": "2026-05-04",
   "flags": {
@@ -32,6 +33,7 @@
   },
   "collateralQuality": "rwa",
   "pegMechanism": "Direct 1:1 mint and redemption of CADD for CAD through CAD Digital's regulated issuance framework",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "387",
   "detailProvider": "defillama",
   "geckoId": "cad-digital",
@@ -39,7 +41,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tetradg.com/cadd-reserve-attestations/",
-    "provider": "Baker Tilly (monthly reserve attestations)"
+    "provider": "Baker Tilly (monthly reserve attestations)",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Canada"
   },
   "links": [
     {

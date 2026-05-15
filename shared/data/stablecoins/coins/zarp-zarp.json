@@ -2,6 +2,7 @@
   "id": "zarp-zarp",
   "name": "ZARP Stablecoin",
   "symbol": "ZARP",
+  "oneLiner": "ZARP is a centralized South African Rand stablecoin, redeemable 1:1 against ZAR cash reserves held in treasury at Old Mutual Wealth.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "ZAR",
@@ -12,12 +13,17 @@
   },
   "collateral": "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
   "pegMechanism": "Mint/burn 1:1 with ZAR through ZARP Stablecoin (Pty) Ltd issuing partners; reserves may not be used for any purpose other than redemption",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "zarp-stablecoin",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kempengroup.co.za/wp-content/uploads/2025/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2025-09-04-1757061801998.pdf",
-    "provider": "Kempen Audit"
+    "provider": "Kempen Audit",
+    "attestorTier": "niche",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "South Africa",
+    "attestorLicense": "IRBA-registered auditors"
   },
   "links": [
     {

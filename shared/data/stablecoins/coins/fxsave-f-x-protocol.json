@@ -2,6 +2,7 @@
   "id": "fxsave-f-x-protocol",
   "name": "f(x) USD Saving",
   "symbol": "fxSAVE",
+  "oneLiner": "fxSAVE is the yield-bearing vault receipt over f(x) Protocol's fxUSD savings strategy, inheriting fxUSD's WBTC and wstETH CDP collateral risk.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "fxusd-f-x-protocol",
   "collateral": "fxUSD deposited into f(x) Protocol's saving/stability strategy; backing inherits fxUSD's WBTC and wstETH collateral base plus strategy execution risk",
   "pegMechanism": "fxSAVE is a yield-bearing vault receipt over fxUSD strategy exposure; holders exit through the vault back into fxUSD, then inherit the underlying f(x) Protocol redemption and liquidation mechanics",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "fx-usd-saving",
   "links": [

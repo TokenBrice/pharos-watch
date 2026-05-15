@@ -2,6 +2,7 @@
   "id": "pgold-pleasing",
   "name": "Pleasing Gold",
   "symbol": "PGOLD",
+  "oneLiner": "PGOLD is Pleasing's gold-backed token; each unit represents one troy ounce of LBMA-standard 99.99% bullion under issuer custody with KYC-gated redemption.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",

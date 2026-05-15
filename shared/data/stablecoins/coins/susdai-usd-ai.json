@@ -2,6 +2,7 @@
   "id": "susdai-usd-ai",
   "name": "Staked USDai",
   "symbol": "sUSDai",
+  "oneLiner": "sUSDai is USD.AI's staked wrapper of USDai; share price accrues yield from a PYUSD liquid sleeve and GPU-backed AI-compute loans, with a 30-day queued exit.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

@@ -2,6 +2,7 @@
   "id": "wemix-dollar-wemix",
   "name": "WEMIX Dollar",
   "symbol": "WEMIX$",
+  "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, with issuer-managed reserves and liquidity on the non-EVM-indexed WEMIX chain.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "WEMIX ecosystem reserve assets and issuer-managed liquidity on WEMIX chain",
   "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "wemix-dollar",
   "protocolSlug": "wemix",

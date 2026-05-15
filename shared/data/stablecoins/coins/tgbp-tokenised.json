@@ -2,6 +2,7 @@
   "id": "tgbp-tokenised",
   "name": "Tokenised GBP",
   "symbol": "tGBP",
+  "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP and gilts custodied by Enumis.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash and short-term UK government bonds (zero-coupon gilts) held in a segregated account at a UK-regulated financial institution, custodied by Enumis Limited",
   "pegMechanism": "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "317",
   "detailProvider": "defillama",
   "geckoId": "tokenised-gbp",

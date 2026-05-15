@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Brazilian Real",
   "symbol": "BRLm",
+  "oneLiner": "BRLm is Mento's oracle-priced Brazilian real on Celo, exchanged through FPMM swap routes against the diversified Mento reserve mix.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "BRL",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

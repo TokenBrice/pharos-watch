@@ -2,6 +2,7 @@
   "id": "usp-pikudao",
   "name": "PikuDAO USP",
   "symbol": "USP",
+  "oneLiner": "USP is PikuDAO's NAV-appreciating yield-fund token backed by Turkey-FX delta-neutral arbitrage, DeFi allocations, and a stablecoin buffer, KYC-gated.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

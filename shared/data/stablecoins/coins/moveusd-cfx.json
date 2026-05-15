@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "CFX MoveUSD",
   "symbol": "MOVEUSD",
+  "oneLiner": "MOVEUSD is CFX's USD stablecoin on Solana, issuer-managed against USD deposits, cash equivalents, and U.S. Treasury securities for approved customers.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "USD deposits, cash-equivalent instruments, and marketable U.S. Treasury securities supporting the CFX-issued MoveUSD token at a 1:1 U.S. dollar target",
   "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+  "mechanismArchetype": "fiat-cash",
   "links": [
     {
       "label": "Docs",

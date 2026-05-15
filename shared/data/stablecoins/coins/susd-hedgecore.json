@@ -2,6 +2,7 @@
   "id": "susd-hedgecore",
   "name": "Staked USD Coin",
   "symbol": "SUSD",
+  "oneLiner": "HedgeCore sUSD is a soul-bound BSC yield wrapper minted from USDC and routed through Venus lending; early redemption is operator-controlled, not a backstop.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

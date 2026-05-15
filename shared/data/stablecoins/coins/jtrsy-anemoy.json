@@ -2,6 +2,7 @@
   "id": "jtrsy-anemoy",
   "name": "Janus Henderson Anemoy Treasury Fund",
   "symbol": "JTRSY",
+  "oneLiner": "JTRSY is Anemoy's tokenized short-duration U.S. Treasury fund sub-advised by Janus Henderson; whitelisted investors subscribe and redeem at fund NAV same-day.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
   "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "janus-henderson-anemoy-treasury-fund",
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://centrifuge.io/pools/jtrsy",
-    "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
+    "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
   },
   "links": [
     {

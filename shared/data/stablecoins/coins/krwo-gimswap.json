@@ -2,6 +2,7 @@
   "id": "krwo-gimswap",
   "name": "KRWO",
   "symbol": "KRWO",
+  "oneLiner": "KRWO is a Korean won-pegged stablecoin issued by Gimswap against Open Voucher KRW vouchers at a 10,000:1 ratio; multi-chain ERC-20 with minter privileges.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
@@ -12,6 +13,7 @@
   },
   "collateral": "Open Voucher (OV) KRW vouchers issued by Open Asset and represented on-chain as OV tokens used as collateral for KRWO issuance",
   "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "krwo",
   "links": [

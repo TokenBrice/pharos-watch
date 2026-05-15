@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Solayer USD",
   "symbol": "sUSD",
+  "oneLiner": "Solayer sUSD is a Solana Token-2022 interest-bearing stablecoin backed by U.S. T-bill exposure and RWA partner products; balances grow via interest extension.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
   "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
+  "mechanismArchetype": "tbill",
   "geckoId": "solayer-usd",
   "protocolSlug": "solayer-usd",
   "links": [

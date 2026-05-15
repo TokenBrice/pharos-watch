@@ -2,6 +2,7 @@
   "id": "mnee-mnee",
   "name": "MNEE USD",
   "symbol": "MNEE",
+  "oneLiner": "MNEE is a USD stablecoin backed by short-dated U.S. Treasuries and cash at qualified custodians, attested by Wolf and Company under Antigua FSRC license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",
   "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "284",
   "detailProvider": "defillama",
   "geckoId": "mnee-usd-stablecoin",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.mnee.io/transparency",
-    "provider": "Wolf and Company, P.C."
+    "provider": "Wolf and Company, P.C.",
+    "attestorTier": "regional",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

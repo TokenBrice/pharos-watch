@@ -2,6 +2,7 @@
   "id": "brl-itau",
   "name": "Itau Unibanco BRL Stablecoin",
   "symbol": "BRL-ITAU",
+  "oneLiner": "BRL-ITAU is a pre-launch stablecoin under evaluation by Brazil's largest private bank Itau Unibanco, with peg currency and design pending BCB regulation.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",

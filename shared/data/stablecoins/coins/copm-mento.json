@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Colombian Peso",
   "symbol": "COPm",
+  "oneLiner": "COPm is Mento's oracle-priced Colombian peso stablecoin on Celo, mint and redeem through the Mento reserve backed by a mixed crypto and stablecoin basket.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "OTHER",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "brd-volpon",
   "name": "BRD Stablecoin",
   "symbol": "BRD",
+  "oneLiner": "BRD is a pre-launch Brazilian real stablecoin from CF Inovacao, backed by Brazilian Treasury bonds and structured to pass Selic-rate yield back to holders.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",

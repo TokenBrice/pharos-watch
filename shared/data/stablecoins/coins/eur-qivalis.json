@@ -2,6 +2,7 @@
   "id": "eur-qivalis",
   "name": "Qivalis Euro",
   "symbol": "QEUR",
+  "oneLiner": "QEUR is a pre-launch MiCA-oriented euro stablecoin from Qivalis, a 17-bank consortium targeting H2 2026 issuance under a Dutch EMI license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,6 +13,7 @@
   },
   "collateral": "Planned 100% reserve backing held in euros and high-quality liquid assets; Qivalis states that no stablecoins or tokens have been issued yet",
   "pegMechanism": "Pre-launch MiCA-oriented euro stablecoin design: Qivalis describes a regulated 1:1-backed euro token with safeguarded reserves and reliable on-demand access once official issuance begins",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

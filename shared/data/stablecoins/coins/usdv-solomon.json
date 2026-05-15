@@ -2,6 +2,7 @@
   "id": "usdv-solomon",
   "name": "Solomon USDv",
   "symbol": "USDV",
+  "oneLiner": "USDV is Solomon Labs's synthetic dollar on Solana backed by Ceffu-custodied delta-neutral perp margin, with no permissionless public redemption rail.",
   "llamaId": "261",
   "detailProvider": "defillama",
   "geckoId": "solomon-usdv",
@@ -16,10 +17,13 @@
   },
   "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
   "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.solomonlabs.org/transparency/asset-attestations",
-    "provider": "Solomon Labs and Ceffu attestations"
+    "provider": "Solomon Labs and Ceffu attestations",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

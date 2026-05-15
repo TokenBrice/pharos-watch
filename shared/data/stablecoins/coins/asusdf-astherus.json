@@ -2,6 +2,7 @@
   "id": "asusdf-astherus",
   "name": "Aster Staked USDF",
   "symbol": "asUSDF",
+  "oneLiner": "asUSDF is the staked, NAV-accreting wrapper of Aster's USDF, capturing yield from underlying delta-neutral and funding-fee strategies on Binance/MirrorX.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

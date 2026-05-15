@@ -3,6 +3,7 @@
   "detailProvider": "coingecko",
   "name": "Virtue USD",
   "symbol": "VUSD",
+  "oneLiner": "VUSD is Virtue Money's CDP dollar on IOTA, minted by borrowing against overcollateralized IOTA and stIOTA positions with liquidation defending the peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -13,6 +14,7 @@
   },
   "collateral": "Overcollateralized IOTA and stIOTA positions backing VUSD debt inside the Virtue Money protocol",
   "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
+  "mechanismArchetype": "cdp",
   "geckoId": "virtue-usd",
   "links": [
     {

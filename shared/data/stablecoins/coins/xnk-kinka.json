@@ -2,6 +2,7 @@
   "id": "xnk-kinka",
   "name": "Kinka",
   "symbol": "XNK",
+  "oneLiner": "XNK is Kinka's gold-backed commodity token, with each token representing one troy ounce of 99.99% Japanese-brand gold bullion held with Loomis vaulting.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf",
-    "provider": "Kinka issuer disclosures"
+    "provider": "Kinka issuer disclosures",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "British Virgin Islands"
   },
   "links": [
     {

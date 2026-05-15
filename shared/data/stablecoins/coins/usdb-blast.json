@@ -2,6 +2,7 @@
   "id": "usdb-blast",
   "name": "USDB Blast",
   "symbol": "USDB",
+  "oneLiner": "USDB is Blast L2's native yield-bearing dollar, bridged USDC/USDT routed through MakerDAO DSR with auto-rebasing yield to Blast holders.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
   "pegMechanism": "Automatic rebasing with yield from underlying centralized stablecoin strategies",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "172",
   "detailProvider": "defillama",
   "geckoId": "usdb",

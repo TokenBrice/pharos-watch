@@ -2,6 +2,7 @@
   "id": "eurau-allunity",
   "name": "AllUnity EUR",
   "symbol": "EURAU",
+  "oneLiner": "EURAU is AllUnity's MiCA-licensed euro stablecoin, redeemable 1:1 against EUR held in full-reserve, segregated accounts at EU credit institutions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,12 +13,15 @@
   },
   "collateral": "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
   "pegMechanism": "Direct 1:1 redemption through AllUnity",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "319",
   "detailProvider": "defillama",
   "geckoId": "allunity-eur",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://allunity.com/trust-center/"
+    "url": "https://allunity.com/trust-center/",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

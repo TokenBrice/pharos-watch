@@ -2,6 +2,7 @@
   "id": "susd-synthetix",
   "name": "sUSD",
   "symbol": "SUSD",
+  "oneLiner": "Synthetix sUSD is an overcollateralized debt-pool stablecoin backed by SNX, ETH, and USDC; SNX minting was deprecated in 2025 and sUSD has traded below peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
   "pegMechanism": "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
+  "mechanismArchetype": "cdp",
   "llamaId": "22",
   "detailProvider": "defillama",
   "geckoId": "nusd",

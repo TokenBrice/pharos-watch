@@ -2,6 +2,7 @@
   "id": "fidd-fidelity",
   "name": "Fidelity Digital Dollar",
   "symbol": "FIDD",
+  "oneLiner": "FIDD is Fidelity Digital Assets' dollar stablecoin, issued under an OCC national trust charter and backed by cash and short-term U.S. Treasuries at BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,18 @@
   },
   "collateral": "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
   "pegMechanism": "Direct 1:1 redemption through Fidelity Digital Assets platforms",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "348",
   "detailProvider": "defillama",
   "geckoId": "fidelity-digital-dollar",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.fidelitydigitalassets.com/stablecoin",
-    "provider": "PricewaterhouseCoopers"
+    "provider": "PricewaterhouseCoopers",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "OCC National Trust Bank Charter"
   },
   "links": [
     {

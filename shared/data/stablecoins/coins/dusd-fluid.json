@@ -2,6 +2,7 @@
   "id": "dusd-fluid",
   "name": "Fluid DigitalDollar",
   "symbol": "DUSD",
+  "oneLiner": "DUSD is Fluid Finance's USD stablecoin on Arbitrum, redeemable 1:1 against USD safeguarded at regulated European banks with on-chain balance attestations.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 USD cash held in client-safeguarded accounts at regulated European banks; accounts are ring-fenced and bankruptcy-remote from Fluid Finance SA, with theft and fraud cover via Lloyd's of London. The DUSD smart contract enforces a verifiedOffchainAssetBalance ceiling so minted supply cannot exceed the attested treasury balance.",
   "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "70",
   "detailProvider": "defillama",
   "links": [

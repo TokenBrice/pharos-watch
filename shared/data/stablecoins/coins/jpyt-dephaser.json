@@ -2,6 +2,7 @@
   "id": "jpyt-dephaser",
   "name": "Dephaser JPY",
   "symbol": "JPYT",
+  "oneLiner": "JPYT is DePhaser's yen stablecoin, minted by locking USDT on Optimism or USDC on Base against a yen FX oracle, with collateral returned on redemption.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "JPY",

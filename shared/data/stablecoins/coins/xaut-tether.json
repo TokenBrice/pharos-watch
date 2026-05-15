@@ -2,6 +2,7 @@
   "id": "xaut-tether",
   "name": "Tether Gold",
   "symbol": "XAUT",
+  "oneLiner": "XAUT is Tether's gold-backed commodity token, with each token representing one fine troy ounce of LBMA Good Delivery gold held in Swiss vaults.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -20,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://gold.tether.to/reports",
-    "provider": "BDO Italia"
+    "provider": "BDO Italia",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Italy",
+    "attestorLicense": "BDO member firm assurance"
   },
   "links": [
     {

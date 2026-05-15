@@ -2,6 +2,7 @@
   "id": "vchf-vnx",
   "name": "VNX Swiss Franc",
   "symbol": "VCHF",
+  "oneLiner": "VCHF is VNX's Liechtenstein-licensed Swiss franc stablecoin redeemable 1:1, backed by CHF cash in Swiss and Liechtenstein bank accounts with Areva audits.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
@@ -12,6 +13,7 @@
   },
   "collateral": "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
   "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "157",
   "detailProvider": "defillama",
   "geckoId": "vnx-swiss-franc",

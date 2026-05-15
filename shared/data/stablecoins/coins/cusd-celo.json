@@ -2,6 +2,7 @@
   "id": "cusd-celo",
   "name": "Mento Dollar",
   "symbol": "USDm",
+  "oneLiner": "USDm is Mento's oracle-priced dollar stablecoin on Celo (formerly cUSD), backed by a diversified crypto and stablecoin reserve at roughly 1.36x collateral.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "cmcSlug": "celo-dollar",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://reserve.mento.org/"
+    "url": "https://reserve.mento.org/",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

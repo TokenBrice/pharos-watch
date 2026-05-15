@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "HomeCoin",
   "symbol": "HOME",
+  "oneLiner": "HOME is HomeCoin's dollar stablecoin backed by U.S. home-loan liens and property receivables, with foreclosure as the ultimate recovery path.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -58,7 +59,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.homecoin.finance/",
-    "provider": "HomeCoin"
+    "provider": "HomeCoin",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "reserves": [
     {

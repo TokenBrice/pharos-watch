@@ -2,6 +2,7 @@
   "id": "u-united-stables",
   "name": "United Stables",
   "symbol": "U",
+  "oneLiner": "U is a BVI-issued multi-stablecoin wrapper dollar minted 1:1 against USD, USDC, USDT, and USD1, with Bermuda trustee custody via Wallets Trust Limited.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

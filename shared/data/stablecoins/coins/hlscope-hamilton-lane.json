@@ -2,6 +2,7 @@
   "id": "hlscope-hamilton-lane",
   "name": "Hamilton Lane Senior Credit Opportunities Securitize Fund",
   "symbol": "HLSCOPE",
+  "oneLiner": "HLSCOPE is Hamilton Lane's SCOPE senior secured private-credit fund tokenized via Securitize for qualified purchasers, priced at NAV rather than $1.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
   "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
   "links": [

@@ -2,6 +2,7 @@
   "id": "pc0000101-tradable",
   "name": "Tradable NA Post-Settlement Legal Financing Receivables",
   "symbol": "PC0000101",
+  "oneLiner": "PC0000101 is a KYC-gated Tradable private-credit token backed by North American post-settlement legal-financing receivables; contract-priced at $1 par.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

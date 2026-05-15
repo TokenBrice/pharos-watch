@@ -2,6 +2,7 @@
   "id": "usdgo-osl",
   "name": "USDGO",
   "symbol": "USDGO",
+  "oneLiner": "USDGO is OSL's dollar stablecoin on Solana, issued 1:1 under U.S. OCC federal bank oversight via Anchorage Digital Bank with U.S. Treasury and cash backing.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
   "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "347",
   "detailProvider": "defillama",
   "geckoId": "usdgo",

@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Ripio wBRL",
   "symbol": "WBRL",
+  "oneLiner": "WBRL is Ripio's wrapped Brazilian real stablecoin targeting 1 WBRL = 1 BRL, backed by BRL cash and local-currency instruments under Ripio's wFIAT issuance.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -14,6 +15,7 @@
   },
   "collateral": "Brazilian-real cash and liquid local-currency instruments backing Ripio wBRL at a one Brazilian real target",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "brazilian-real",
   "links": [
     {

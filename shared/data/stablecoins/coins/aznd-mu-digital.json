@@ -2,6 +2,7 @@
   "id": "aznd-mu-digital",
   "name": "Mu Digital AZND",
   "symbol": "AZND",
+  "oneLiner": "AZND is Mu Digital's KYC-gated, NAV-bearing dollar token backed by a Singapore-regulated Asia credit fund, with a muBOND junior tranche absorbing first losses.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://mu.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

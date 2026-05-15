@@ -2,6 +2,7 @@
   "id": "btcusd-btcfi",
   "name": "Bitcoin USD",
   "symbol": "BtcUSD",
+  "oneLiner": "BtcUSD is BTCfi's overcollateralized USD stablecoin minted from BTC variants (WBTC, BTCB, cbBTC, native BTC) via Liquity-style CDP vaults.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
   "pegMechanism": "Overcollateralized CDP with liquidation mechanisms",
+  "mechanismArchetype": "cdp",
   "llamaId": "183",
   "detailProvider": "defillama",
   "geckoId": "bitcoin-usd-btcfi",

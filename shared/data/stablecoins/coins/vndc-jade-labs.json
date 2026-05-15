@@ -2,6 +2,7 @@
   "id": "vndc-jade-labs",
   "name": "VNDC",
   "symbol": "VNDC",
+  "oneLiner": "VNDC is Jade Labs's Vietnamese dong stablecoin redeemable 1:1 via ONUS and VNDC Hub, with self-reported reserves and no third-party attestation.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "VND",
@@ -12,12 +13,16 @@
   },
   "collateral": "Vietnamese dong reserves self-reported by Jade Labs (the VNDC issuer) and tracked across Polygon and BNB Smart Chain deployments; no formal independent attestation is published",
   "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "vndc",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://vndc.io/",
-    "provider": "Jade Labs / VNDC issuer disclosure"
+    "provider": "Jade Labs / VNDC issuer disclosure",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Vietnam"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "aa-falconx-mev-capital",
   "name": "MEV Capital Falcon USDC Senior Tranche",
   "symbol": "AA_FalconXUSDC",
+  "oneLiner": "AA_FalconXUSDC is the senior tranche of an Idle CDO routing USDC into Morpho lending markets collateralized by Falcon Finance's USDf.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

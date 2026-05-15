@@ -2,6 +2,7 @@
   "id": "usp-pareto-credit",
   "name": "Pareto USP",
   "symbol": "USP",
+  "oneLiner": "USP is Pareto's tokenized private-credit dollar minted 1:1 by verified users against USDC/USDS and deployed into Pareto credit vaults with a liquid buffer.",
   "llamaId": "349",
   "detailProvider": "coingecko",
   "geckoId": "pareto-usp",

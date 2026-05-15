@@ -2,6 +2,7 @@
   "id": "mai-qidao",
   "name": "MAI",
   "symbol": "MAI",
+  "oneLiner": "MAI is QiDao's overcollateralized stablecoin minted against crypto vault collateral across nine chains; currently in a sustained soft depeg below $0.99.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
   "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "mimatic",
   "cmcSlug": "mai",

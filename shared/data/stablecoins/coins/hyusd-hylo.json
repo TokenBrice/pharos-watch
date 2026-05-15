@@ -2,6 +2,7 @@
   "id": "hyusd-hylo",
   "name": "Hylo HYUSD",
   "symbol": "HYUSD",
+  "oneLiner": "HYUSD is Hylo's overcollateralized dollar stablecoin on Solana, backed by a basket of Solana LSTs with the xSOL companion token absorbing volatility.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
   "pegMechanism": "Overcollateralization (150%+) with companion leveraged token (xSOL) absorbing SOL volatility; operates on Solana (not Ethereum or a Stage 1 L2)",
+  "mechanismArchetype": "cdp",
   "llamaId": "302",
   "detailProvider": "defillama",
   "geckoId": "hylo-usd",

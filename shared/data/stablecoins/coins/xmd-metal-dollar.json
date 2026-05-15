@@ -3,6 +3,7 @@
   "detailProvider": "coingecko",
   "name": "Metal Dollar",
   "symbol": "XMD",
+  "oneLiner": "XMD is Metallicus's basket-backed dollar token on XPR Network, reserved by USDC, PYUSD, and Paxos-dollar stablecoins managed by the issuer.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

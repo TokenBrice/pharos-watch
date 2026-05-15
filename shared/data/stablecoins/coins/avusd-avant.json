@@ -2,6 +2,7 @@
   "id": "avusd-avant",
   "name": "Avant USD",
   "symbol": "avUSD",
+  "oneLiner": "avUSD is Avant's centralized dollar stablecoin, redeemable 1:1 for USDC and deployed into actively managed market-neutral strategies for yield.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

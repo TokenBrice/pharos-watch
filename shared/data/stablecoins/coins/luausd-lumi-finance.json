@@ -2,6 +2,7 @@
   "id": "luausd-lumi-finance",
   "name": "Lumi Finance LUAUSD",
   "symbol": "LUAUSD",
+  "oneLiner": "LUAUSD is Lumi Finance's nonstandard dollar reference token on Arbitrum, tied to LUA floor-price mechanics rather than 1:1 fiat redemption.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

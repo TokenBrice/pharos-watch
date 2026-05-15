@@ -2,6 +2,7 @@
   "id": "bd-basedollar",
   "name": "Base Dollar",
   "symbol": "BD",
+  "oneLiner": "BD is a pre-launch Liquity V2 fork on Base, designed as an overcollateralized dollar stablecoin minted against LP token collateral and earning AERO yield.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "LP-collateralized stablecoin forking Liquity V2 on Base L2; yield generated from AERO farming, with revenue split between users, protocol-owned liquidity treasury, and BD stakers",
   "pegMechanism": "Liquity V2-style Base fork: BD is minted against LP token collateral and each BaseD stablecoin is designed to be redeemable for $1 of system collateral, with collateral redemption and borrower/liquidation incentives supporting the dollar peg",
+  "mechanismArchetype": "cdp",
   "detailProvider": "defillama",
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "grams-token-teknoloji",
   "name": "Gram Silver",
   "symbol": "GRAMS",
+  "oneLiner": "GRAMS is Token Teknoloji's gram-silver stablecoin from Turkey, backed by one gram of physical silver per token held at Turkish bank custodians.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "SILVER",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.token.com.tr/en/reserve-tokens/gram-silver-grams/",
-    "provider": "Token Teknoloji reserve proof page"
+    "provider": "Token Teknoloji reserve proof page",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Turkey"
   },
   "links": [
     {

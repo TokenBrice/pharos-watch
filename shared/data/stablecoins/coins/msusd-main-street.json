@@ -2,6 +2,7 @@
   "id": "msusd-main-street",
   "name": "Main Street USD",
   "symbol": "MSUSD",
+  "oneLiner": "msUSD is Main Street's USDC-backed dollar stablecoin minted 1:1 by KYC-verified users; delta-neutral options yield accrues separately via the msY token.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

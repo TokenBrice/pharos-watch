@@ -2,6 +2,7 @@
   "id": "kau-kinesis",
   "name": "Kinesis Gold",
   "symbol": "KAU",
+  "oneLiner": "KAU is Kinesis Gold, a token redeemable for one gram of LBMA-approved physical gold held in allocated ABX vaults, with transaction-fee yield sharing.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://kinesis.money/audits/",
-    "provider": "Bureau Veritas (Inspectorate International)"
+    "provider": "Bureau Veritas (Inspectorate International)",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

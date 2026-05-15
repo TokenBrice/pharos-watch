@@ -2,6 +2,7 @@
   "id": "usdnr-nerona",
   "name": "Nerona USD",
   "symbol": "USDnr",
+  "oneLiner": "USDnr is Nerona's permissioned 1:1 wrapper of M0's M token backed by short-term U.S. T-bills; T-bill yield accrues to M0 and Nerona, not USDnr holders.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -15,12 +16,15 @@
   ],
   "collateral": "Backed 1:1 by $M (M0 Protocol's tokenized short-term U.S. Treasury bill exposure, sourced from the M0 Minter MXON). USDnr is a permissioned wrapper minted by Nerona Labs against $M held in M0-managed reserves, with a Stability Reserve buffer maintained on top of circulating supply",
   "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona Labs by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying $M accrues to the M0 reserve and Nerona — USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault) routes that yield to stakers. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
+  "mechanismArchetype": "tbill",
   "llamaId": "377",
   "detailProvider": "defillama",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://dashboard.m0.org/stablecoins/usdnr",
-    "provider": "M0 Protocol"
+    "provider": "M0 Protocol",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

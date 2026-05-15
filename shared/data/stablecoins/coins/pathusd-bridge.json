@@ -2,6 +2,7 @@
   "id": "pathusd-bridge",
   "name": "PathUSD",
   "symbol": "pathUSD",
+  "oneLiner": "pathUSD is Tempo's quote stablecoin; mint via USDC deposit and redeem through Bridge into a reserve of cash, short Treasuries, repo, and MMF exposure.",
   "llamaId": "385",
   "detailProvider": "defillama",
   "geckoId": "pathusd",
@@ -15,10 +16,13 @@
   },
   "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
+  "mechanismArchetype": "fiat-cash",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
-    "provider": "Bridge reserve disclosures"
+    "provider": "Bridge reserve disclosures",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

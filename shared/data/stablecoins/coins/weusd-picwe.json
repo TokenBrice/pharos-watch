@@ -2,6 +2,7 @@
   "id": "weusd-picwe",
   "name": "WEUSD",
   "symbol": "WEUSD",
+  "oneLiner": "WEUSD is PicWe's omni-chain USDC wrapper minted and redeemed 1:1 against USDC; the token has been trading off-peg near $0.91 despite documented backing.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "100% USDC-backed omni-chain stablecoin according to PicWe documentation; future RWA/yield collateral is described as roadmap rather than current backing",
   "pegMechanism": "PicWe mint/redeem flow issues WEUSD against USDC and supports on-chain redemption back to USDC with a documented redemption fee.",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "278",
   "detailProvider": "defillama",
   "geckoId": "weusd",

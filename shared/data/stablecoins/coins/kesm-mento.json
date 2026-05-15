@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Kenyan Shilling",
   "symbol": "KESm",
+  "oneLiner": "KESm is Mento's oracle-priced Kenyan-shilling stablecoin on Celo, issued via FPMM swaps against a multi-asset reserve dashboarded by Mento Labs.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "OTHER",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

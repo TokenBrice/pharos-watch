@@ -2,6 +2,7 @@
   "id": "krw1-bdacs",
   "name": "BDACS KRW1",
   "symbol": "KRW1",
+  "oneLiner": "KRW1 is BDACS's 1:1 Korean won stablecoin, pilot-live with Woori Bank holding the won escrow; commercial launch awaits Korea's Digital Asset Basic Act.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 South Korean won held in escrow at Woori Bank with real-time banking-API proof of reserves",
   "pegMechanism": "Custodian-managed mint/redemption against KRW deposits at Woori Bank; KRW1 is a brand trademarked by BDACS (December 2023) and operated by BDACS as the regulated digital asset custodian",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

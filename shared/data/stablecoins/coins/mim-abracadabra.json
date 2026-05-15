@@ -2,6 +2,7 @@
   "id": "mim-abracadabra",
   "name": "Magic Internet Money",
   "symbol": "MIM",
+  "oneLiner": "MIM is Abracadabra's CDP-style stablecoin minted against interest-bearing tokens and crypto collateral in cauldron vaults, with automatic liquidations.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Interest-bearing tokens and crypto collateral deposited into active Abracadabra cauldrons, currently concentrated in yvDAI and WBTC with smaller yvWETH/WETH positions",
   "pegMechanism": "CDP-style cauldrons with overcollateralization and automatic liquidations (4% liquidation fee); borrowers are incentivized to buy MIM below $1 to repay debt; 0.5% borrow/interest fees accrue to sSPELL stakers and governance treasury",
+  "mechanismArchetype": "cdp",
   "llamaId": "10",
   "detailProvider": "defillama",
   "geckoId": "magic-internet-money",

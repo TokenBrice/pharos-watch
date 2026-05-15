@@ -2,6 +2,7 @@
   "id": "djed-coti",
   "name": "Djed Stablecoin",
   "symbol": "DJED",
+  "oneLiner": "DJED is COTI's overcollateralized Cardano dollar stablecoin, minted against ADA reserves while SHEN holders absorb reserve volatility within a target band.",
   "llamaId": "93",
   "detailProvider": "defillama",
   "geckoId": "djed",
@@ -16,6 +17,7 @@
   },
   "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
   "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
+  "mechanismArchetype": "cdp",
   "links": [
     {
       "label": "Website",

@@ -2,6 +2,7 @@
   "id": "eurs-stasis",
   "name": "Stasis Euro",
   "symbol": "EURS",
+  "oneLiner": "EURS is STASIS Malta's MiCA-regulated euro stablecoin, redeemable 1:1 against euro deposits at licensed EU institutions including central-bank accounts.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,13 +13,18 @@
   },
   "collateral": "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
   "pegMechanism": "Direct 1:1 redemption through STSS (Malta) Limited; users send EURS to the treasury wallet, euros are transferred from a segregated bank account, and redeemed tokens are frozen or burned",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "51",
   "detailProvider": "defillama",
   "geckoId": "stasis-eurs",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://stasis.net/transparency",
-    "provider": "BDO Malta"
+    "provider": "BDO Malta",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Malta",
+    "attestorLicense": "MiCA"
   },
   "links": [
     {

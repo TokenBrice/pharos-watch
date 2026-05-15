@@ -2,6 +2,7 @@
   "id": "ntbill-nest",
   "name": "Nest Treasury Vault",
   "symbol": "nTBILL",
+  "oneLiner": "nTBILL is Nest's NAV-accreting Treasury vault token, routing into Janus Henderson JTRSY and Superstate USTB short-duration T-bill exposure.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Tokenised short-duration U.S. Treasury exposure routed by Nest into Janus Henderson JTRSY and Superstate USTB positions, plus a small stablecoin liquidity buffer",
   "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "nest-treasury-vault",
   "protocolSlug": "nest-credit",

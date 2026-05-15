@@ -2,6 +2,7 @@
   "id": "syzusd-yuzu",
   "name": "Staked Yuzu USD",
   "symbol": "syzUSD",
+  "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma with KYC-gated primary redemption.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -27,7 +28,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://yuzu.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

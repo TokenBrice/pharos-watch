@@ -2,6 +2,7 @@
   "id": "yzusd-yuzu",
   "name": "Yuzu USD",
   "symbol": "YZUSD",
+  "oneLiner": "yzUSD is Yuzu's KYC-gated yield-bearing dollar on Plasma, minted 1:1 with USDT0 and backed by overcollateralized DeFi strategies with a yzPP junior tranche.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://yuzu.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

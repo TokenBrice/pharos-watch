@@ -2,6 +2,7 @@
   "id": "usdp-parallel",
   "name": "Parallel USDp",
   "symbol": "USDp",
+  "oneLiner": "USDp is Parallel's DAO-governed dollar minted against a whitelisted basket of overcollateralized stablecoins through a licensed Angle Transmuter fork.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

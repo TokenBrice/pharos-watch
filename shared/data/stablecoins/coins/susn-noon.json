@@ -2,6 +2,7 @@
   "id": "susn-noon",
   "name": "Staked USN",
   "symbol": "sUSN",
+  "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from private credit, CLOs, DeFi lending, and T-bills, with delta-neutral CEX strategies on top.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,12 +23,15 @@
   "pegReferenceId": "usn-noon",
   "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
   "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-usn",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://noon.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

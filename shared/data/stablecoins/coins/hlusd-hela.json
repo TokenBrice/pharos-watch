@@ -3,6 +3,7 @@
   "detailProvider": "coingecko",
   "name": "HeLa USD",
   "symbol": "HLUSD",
+  "oneLiner": "HLUSD is the HeLa ecosystem's centralized dollar stablecoin, backed by fiat and fiat-equivalent reserves and used as the HeLa runtime settlement asset.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -13,6 +14,7 @@
   },
   "collateral": "Fiat and fiat-equivalent reserve assets supporting the HeLa ecosystem's HLUSD stablecoin at a one U.S. dollar target",
   "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "hela-usd",
   "links": [
     {

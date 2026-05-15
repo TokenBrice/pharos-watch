@@ -2,6 +2,7 @@
   "id": "scrvusd-curve",
   "name": "Savings crvUSD",
   "symbol": "scrvUSD",
+  "oneLiner": "scrvUSD is Curve's savings-rate wrapper of crvUSD; the share price compounds with a slice of crvUSD borrower interest, with crvUSD-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "crvusd-curve",
   "collateral": "crvUSD deposited into Curve's savings vault; the wrapper remains fully backed by crvUSD while a share of borrower interest and protocol revenue compounds through the vault exchange rate",
   "pegMechanism": "Deposit crvUSD to mint scrvUSD and redeem scrvUSD for the current convertToAssets amount of crvUSD; the share price rises as Curve redirects part of crvUSD borrowing revenue to scrvUSD depositors",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "savings-crvusd",
   "links": [

@@ -2,6 +2,7 @@
   "id": "pc0000089-tradable",
   "name": "Tradable LatAm Residential SSTL",
   "symbol": "PC0000089",
+  "oneLiner": "PC0000089 is a KYC-gated Tradable private-credit instrument backed by Latin American residential lending; contract-priced at $1 par, not a liquid stablecoin.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

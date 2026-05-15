@@ -2,6 +2,7 @@
   "id": "usdz-anzen",
   "name": "Anzen USDz",
   "symbol": "USDz",
+  "oneLiner": "USDz is Anzen's RWA dollar backed 1:1 by Secured Private Credit Tokens — U.S. private-credit assets underwritten by Percent — locked in smart contracts.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
   "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+  "mechanismArchetype": "tbill",
   "llamaId": "202",
   "detailProvider": "defillama",
   "geckoId": "anzen-usdz",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://rwa.anzen.finance/transparency",
-    "provider": "on-chain SPCT collateralization"
+    "provider": "on-chain SPCT collateralization",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

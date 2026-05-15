@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Ripio wMXN",
   "symbol": "WMXN",
+  "oneLiner": "WMXN is Ripio's Mexican-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
@@ -14,6 +15,7 @@
   },
   "collateral": "Mexican-peso cash and liquid local-currency instruments backing Ripio wMXN at a one Mexican peso target",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "mexican-peso",
   "links": [
     {

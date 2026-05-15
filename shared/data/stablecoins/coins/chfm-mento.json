@@ -2,6 +2,7 @@
   "id": "chfm-mento",
   "name": "Mento Swiss Franc",
   "symbol": "CHFm",
+  "oneLiner": "CHFm is Mento's CDP-backed Swiss franc stablecoin on Celo, minted by borrowers against USDm collateral inside the Mento system.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CHF",
@@ -12,13 +13,16 @@
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with live collateral and debt rows exposed by the Mento reserve dashboard API",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint CHFm against USDm collateral, while repayment/redemption mechanics and oracle pricing route value back through the Mento system",
+  "mechanismArchetype": "cdp",
   "llamaId": "370",
   "detailProvider": "defillama",
   "geckoId": "cchf",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
