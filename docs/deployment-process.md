@@ -112,6 +112,7 @@ Defined across:
 - `.github/workflows/pages-publish.yml` for the reusable Pages publish + live smoke path
 - `.github/workflows/pages-release.yml` for the shared Pages build/smoke/deploy path
 - `.github/workflows/rebuild-pages.yml` for the scheduled/manual Pages-only rebuild path
+- `.github/workflows/zizmor.yml` for GitHub Actions workflow security scanning into Code Scanning
 
 Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 

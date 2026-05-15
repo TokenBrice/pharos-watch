@@ -71,7 +71,7 @@ When `SMOKE_UI_EXPECT_GA_ID` is set, `npm run test:smoke-ui` first verifies that
 
 ## CI Pipeline
 
-Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
+Defined across `.github/workflows/validate-ci.yml`, `.github/workflows/pull-request-checks.yml`, `.github/workflows/deploy-cloudflare.yml`, `.github/workflows/pages-prepare.yml`, `.github/workflows/pages-publish.yml`, `.github/workflows/pages-release.yml`, `.github/workflows/rebuild-pages.yml`, `.github/workflows/codeql.yml`, `.github/workflows/zizmor.yml`, `.github/workflows/dependency-audit.yml`, `.github/workflows/secret-scan.yml`, and `.github/workflows/safe-browsing-monitor.yml`.
 
 For deployment/worktree operating procedure (including the local merge gate before every push), see [Deployment Process](./deployment-process.md).
 
@@ -152,7 +152,14 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
 - uses `.github/codeql/codeql-config.yml` to exclude Vitest/test fixtures from production security scanning
 
-11. `Dependency Audit`:
+11. `Zizmor`:
+
+- defined in `.github/workflows/zizmor.yml`
+- runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
+- scans GitHub Actions workflows and uploads SARIF findings to GitHub Code Scanning
+- runs separately from CodeQL so workflow-security findings have their own tool identity and triage state
+
+12. `Dependency Audit`:
 
 - defined in `.github/workflows/dependency-audit.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -164,7 +171,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
   - scheduled dependency-audit findings must get a tracked triage note or remediation issue the same business day
   - do not leave a new high/critical finding unowned between audit detection and the next production deploy
 
-12. `Secret Scan`:
+13. `Secret Scan`:
 
 - defined in `.github/workflows/secret-scan.yml`
 - runs on a weekly Monday schedule and on manual dispatch
@@ -172,7 +179,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - uses the root `.gitleaksignore` to suppress reviewed historical false positives by exact fingerprint
 - scans commit history for accidentally committed secrets and fails on any non-allowlisted finding
 
-13. `Safe Browsing Monitor`:
+14. `Safe Browsing Monitor`:
 
 - defined in `.github/workflows/safe-browsing-monitor.yml`
 - runs on a daily schedule (`17 7 * * *`) and on manual dispatch
@@ -180,7 +187,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - requires the `GOOGLE_SAFE_BROWSING_API_KEY` repository secret
 - fails the run on any flagged URL; complements the deploy-gating `check:phishing-signatures` static scan
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, SEO gate, and Safe Browsing classifier guardrails before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/daily/manual lanes for dependency auditing, history-aware secret scanning, and Safe Browsing verdict monitoring.
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, SEO gate, and Safe Browsing classifier guardrails before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, history-aware secret scanning, and Safe Browsing verdict monitoring.
 
 Current GitHub repository secrets required by the deploy path:
 
