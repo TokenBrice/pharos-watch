@@ -29,16 +29,26 @@ export interface BackfillCoinReplayResult {
   marketDiagnostics: HistoricalMarketSourceDiagnostics | null;
 }
 
-export async function backfillCoin(
-  meta: StablecoinMeta,
-  geckoId: string,
-  getPegRef: (timestamp: number) => number,
-  supplyByDate: SupplySnapshot[],
-  fxRates?: Record<string, number>,
-  replayWindow?: BackfillReplayWindow | null,
-  coingeckoApiKey?: string | null,
-  missingSupplyUsd?: number | null,
-): Promise<BackfillCoinReplayResult> {
+export async function backfillCoin(opts: {
+  meta: StablecoinMeta;
+  geckoId: string;
+  getPegRef: (timestamp: number) => number;
+  supplyByDate: SupplySnapshot[];
+  fxRates?: Record<string, number>;
+  replayWindow?: BackfillReplayWindow | null;
+  coingeckoApiKey?: string | null;
+  missingSupplyUsd?: number | null;
+}): Promise<BackfillCoinReplayResult> {
+  const {
+    meta,
+    geckoId,
+    getPegRef,
+    supplyByDate,
+    fxRates,
+    replayWindow,
+    coingeckoApiKey,
+    missingSupplyUsd,
+  } = opts;
   const pegType = `pegged${meta.flags.pegCurrency}`;
   const nativePegCurrency = normalizeSupportedPegCurrency(meta.flags.pegCurrency);
   const candidateSupplySnapshots = replayWindow

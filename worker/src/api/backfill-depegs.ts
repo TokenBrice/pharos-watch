@@ -597,16 +597,16 @@ export async function handleBackfillDepegs(
         }
 
         try {
-          const replay = await backfillCoin(
+          const replay = await backfillCoin({
             meta,
             geckoId,
             getPegRef,
             supplyByDate,
             fxRates,
             replayWindow,
-            coingeckoApiKey ?? null,
-            currentSupplyUsd,
-          );
+            coingeckoApiKey: coingeckoApiKey ?? null,
+            missingSupplyUsd: currentSupplyUsd,
+          });
           const events = replay.events;
 
           if (dryRun) {

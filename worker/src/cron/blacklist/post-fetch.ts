@@ -132,17 +132,17 @@ export async function processFetchedBlacklistRows(
     ? await fetchBlacklistAssetPriceFromCache(options.db, options.config.stablecoin)
     : null;
 
-  const enrichCounters = await enrichRowBalances(
-    newRows,
-    options.config,
-    options.etherscanApiKey,
-    options.drpcApiKey,
-    options.etherscanLimiter,
-    options.runBudget,
-    options.signal,
-    options.chainRpcs,
+  const enrichCounters = await enrichRowBalances({
+    rows: newRows,
+    config: options.config,
+    etherscanApiKey: options.etherscanApiKey,
+    drpcApiKey: options.drpcApiKey,
+    etherscanLimiter: options.etherscanLimiter,
+    runBudget: options.runBudget,
+    signal: options.signal,
+    chainRpcs: options.chainRpcs,
     assetPriceUsd,
-  );
+  });
 
   for (const row of newRows) {
     if (shouldSuppressAsMirrorZero(row.stablecoin, row.event_type, row.amount_native)) {
