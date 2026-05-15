@@ -280,6 +280,226 @@ export interface UpsertSubscriberInput {
 const ALERT_KEYS: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
 
 /**
+ * Discriminated normalization of every `telegram_subscribers` upsert. Each
+ * variant maps to one mutually-exclusive mutation intent, so adding a future
+ * flag in the wrong combination becomes a compile-time error inside this
+ * module instead of a left-to-right SQL-evaluation footgun at runtime.
+ */
+type UpsertSubscriberKind =
+  | {
+      kind: "bump";
+      chatId: string;
+      username: string | null;
+      nowSec: number;
+      perCoinAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+      globalAlertBumps?: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+      quietHours?:
+        | { enabled: true; startHourUtc: number; endHourUtc: number }
+        | { enabled: false };
+    }
+  | {
+      kind: "override";
+      chatId: string;
+      username: string | null;
+      nowSec: number;
+      globalAlertOverrides: { dews?: 0 | 1; depeg?: 0 | 1; safety?: 0 | 1; launch?: 0 | 1 };
+      quietHours?:
+        | { enabled: true; startHourUtc: number; endHourUtc: number }
+        | { enabled: false };
+    }
+  | {
+      kind: "preference";
+      chatId: string;
+      username: string | null;
+      nowSec: number;
+      /** `undefined` = leave existing; explicit `null` = write SQL NULL. */
+      timezone?: string | null;
+      /** `undefined` = leave existing; explicit `null` = clear snooze. */
+      alertSnoozeUntilTs?: number | null;
+    };
+
+/**
+ * Build the SQL + binds for a single `telegram_subscribers` upsert. All five
+ * subscriber-row UPSERT sites in this file route through this builder so that
+ * the 15-column INSERT shape, the `created_at`/`last_active_at` defaults, and
+ * the COALESCE(excluded.username, ...) preservation rule live in exactly one
+ * place. Bind order is stable so the existing `binds[6] === 1` assertion in
+ * `telegram-webhook-settings.test.ts` continues to hold for the bump/override
+ * shapes.
+ */
+function buildSubscriberUpsert(
+  kind: UpsertSubscriberKind,
+): { sql: string; binds: unknown[] } {
+  if (kind.kind === "preference") {
+    return buildSubscriberPreferenceUpsert(kind);
+  }
+
+  const quietHours = kind.quietHours;
+  const quietStart = quietHours?.enabled ? quietHours.startHourUtc : null;
+  const quietEnd = quietHours?.enabled ? quietHours.endHourUtc : null;
+  const quietEnabled = quietHours?.enabled ? 1 : 0;
+
+  const updates: string[] = [
+    "username = COALESCE(excluded.username, telegram_subscribers.username)",
+    "last_active_at = excluded.last_active_at",
+  ];
+
+  const perCoinRow: Array<0 | 1> = [0, 0, 0, 0];
+  if (kind.kind === "bump" && kind.perCoinAlertBumps) {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key = ALERT_KEYS[i];
+      const value = kind.perCoinAlertBumps[key];
+      if (value != null) {
+        updates.push(
+          `alert_${key} = MAX(telegram_subscribers.alert_${key}, excluded.alert_${key})`,
+        );
+        perCoinRow[i] = value;
+      }
+    }
+  }
+
+  const globalRow: Array<0 | 1> = [0, 0, 0, 0];
+  if (kind.kind === "bump" && kind.globalAlertBumps) {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key = ALERT_KEYS[i];
+      const value = kind.globalAlertBumps[key];
+      if (value != null) {
+        updates.push(
+          `global_alert_${key} = MAX(telegram_subscribers.global_alert_${key}, excluded.global_alert_${key})`,
+        );
+        globalRow[i] = value;
+      }
+    }
+  }
+  if (kind.kind === "override") {
+    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
+      const key = ALERT_KEYS[i];
+      const value = kind.globalAlertOverrides[key];
+      if (value != null) {
+        updates.push(`global_alert_${key} = excluded.global_alert_${key}`);
+        globalRow[i] = value;
+      }
+    }
+  }
+
+  if (quietHours != null) {
+    updates.push(
+      "quiet_hours_enabled = excluded.quiet_hours_enabled",
+      "quiet_hours_start_utc = excluded.quiet_hours_start_utc",
+      "quiet_hours_end_utc = excluded.quiet_hours_end_utc",
+    );
+  }
+
+  const sql = `
+      INSERT INTO telegram_subscribers (
+        chat_id, username,
+        alert_dews, alert_depeg, alert_safety, alert_launch,
+        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
+        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
+        created_at, last_active_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
+    `;
+  const binds: unknown[] = [
+    kind.chatId,
+    kind.username,
+    perCoinRow[0],
+    perCoinRow[1],
+    perCoinRow[2],
+    perCoinRow[3],
+    globalRow[0],
+    globalRow[1],
+    globalRow[2],
+    globalRow[3],
+    quietEnabled,
+    quietStart,
+    quietEnd,
+    kind.nowSec,
+    kind.nowSec,
+  ];
+  return { sql, binds };
+}
+
+/**
+ * `preference` upserts touch a single optional column (`timezone` or
+ * `alert_snooze_until_ts`) plus the always-written `username`/`last_active_at`
+ * pair. All alert flag and quiet-hours columns get their schema defaults on
+ * initial insert and are preserved (not mentioned in the SET clause) on
+ * conflict.
+ */
+function buildSubscriberPreferenceUpsert(kind: Extract<
+  UpsertSubscriberKind,
+  { kind: "preference" }
+>): { sql: string; binds: unknown[] } {
+  const setsTimezone = kind.timezone !== undefined;
+  const setsSnooze = kind.alertSnoozeUntilTs !== undefined;
+  // Callers always set exactly one preference column today; if they need to
+  // set both in the future, extend this builder rather than reintroducing a
+  // hand-rolled INSERT.
+  if (setsTimezone === setsSnooze) {
+    throw new Error(
+      "buildSubscriberPreferenceUpsert: exactly one of timezone or alertSnoozeUntilTs must be set",
+    );
+  }
+
+  const updates: string[] = [
+    "username = COALESCE(excluded.username, telegram_subscribers.username)",
+  ];
+  if (setsTimezone) updates.push("timezone = excluded.timezone");
+  if (setsSnooze) {
+    // Distinguish between "set to NULL" and "set to a timestamp" so the
+    // `historyHas("alert_snooze_until_ts = NULL", ...)` assertion in
+    // `telegram-mini-app.test.ts:933` keeps matching the clearAlertSnooze path.
+    updates.push(
+      kind.alertSnoozeUntilTs === null
+        ? "alert_snooze_until_ts = NULL"
+        : "alert_snooze_until_ts = excluded.alert_snooze_until_ts",
+    );
+  }
+  updates.push("last_active_at = excluded.last_active_at");
+
+  const insertColumns = [
+    "chat_id",
+    "username",
+    "alert_dews",
+    "alert_depeg",
+    "alert_safety",
+    "alert_launch",
+    "global_alert_dews",
+    "global_alert_depeg",
+    "global_alert_safety",
+    "global_alert_launch",
+    "quiet_hours_enabled",
+    "quiet_hours_start_utc",
+    "quiet_hours_end_utc",
+  ];
+  const insertValues = ["?", "?", "0", "0", "0", "0", "0", "0", "0", "0", "0", "NULL", "NULL"];
+  const binds: unknown[] = [kind.chatId, kind.username];
+  if (setsTimezone) {
+    insertColumns.push("timezone");
+    insertValues.push("?");
+    binds.push(kind.timezone);
+  }
+  if (setsSnooze) {
+    insertColumns.push("alert_snooze_until_ts");
+    insertValues.push("?");
+    binds.push(kind.alertSnoozeUntilTs);
+  }
+  insertColumns.push("created_at", "last_active_at");
+  insertValues.push("?", "?");
+  binds.push(kind.nowSec, kind.nowSec);
+
+  const sql = `INSERT INTO telegram_subscribers (
+         ${insertColumns.join(", ")}
+       )
+       VALUES (${insertValues.join(", ")})
+       ON CONFLICT(chat_id) DO UPDATE SET
+         ${updates.join(",\n         ")}`;
+  return { sql, binds };
+}
+
+/**
  * Upserts a telegram_subscribers row. Any field left undefined preserves
  * existing values on conflict and defaults to 0/NULL on initial insert.
  *
@@ -293,98 +513,36 @@ export function prepareUpsertSubscriberRow(
   input: UpsertSubscriberInput,
 ): D1PreparedStatement {
   if (input.globalAlertBumps && input.globalAlertOverrides) {
-    // SQLite applies the UPDATE SET clauses left-to-right, so combining both
-    // would silently let the override win for any shared column. Forbid it so
-    // future callers cannot accidentally rely on evaluation order.
+    // Defense-in-depth: the discriminated `UpsertSubscriberKind` makes this
+    // unreachable for internal callers, but the wide external `UpsertSubscriberInput`
+    // surface still admits it. SQLite applies UPDATE SET clauses left-to-right,
+    // so combining both would silently let the override win for any shared
+    // column. Forbid it so future external callers cannot rely on order.
     throw new Error(
       "upsertSubscriberRow: globalAlertBumps and globalAlertOverrides cannot be combined",
     );
   }
 
-  const quietStart = input.quietHours?.enabled ? input.quietHours.startHourUtc : null;
-  const quietEnd = input.quietHours?.enabled ? input.quietHours.endHourUtc : null;
-  const quietEnabled = input.quietHours?.enabled ? 1 : 0;
-
-  const updates: string[] = [
-    "username = COALESCE(excluded.username, telegram_subscribers.username)",
-    "last_active_at = excluded.last_active_at",
-  ];
-
-  const perCoinRow = [0, 0, 0, 0];
-  if (input.perCoinAlertBumps) {
-    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
-      const key = ALERT_KEYS[i];
-      const value = input.perCoinAlertBumps[key];
-      if (value != null) {
-        updates.push(
-          `alert_${key} = MAX(telegram_subscribers.alert_${key}, excluded.alert_${key})`,
-        );
-        perCoinRow[i] = value;
+  const kind: UpsertSubscriberKind = input.globalAlertOverrides
+    ? {
+        kind: "override",
+        chatId: input.chatId,
+        username: input.username,
+        nowSec: input.nowSec,
+        globalAlertOverrides: input.globalAlertOverrides,
+        quietHours: input.quietHours,
       }
-    }
-  }
-
-  const globalRow = [0, 0, 0, 0];
-  if (input.globalAlertBumps) {
-    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
-      const key = ALERT_KEYS[i];
-      const value = input.globalAlertBumps[key];
-      if (value != null) {
-        updates.push(
-          `global_alert_${key} = MAX(telegram_subscribers.global_alert_${key}, excluded.global_alert_${key})`,
-        );
-        globalRow[i] = value;
-      }
-    }
-  }
-  if (input.globalAlertOverrides) {
-    for (let i = 0; i < ALERT_KEYS.length; i += 1) {
-      const key: TelegramAlertType = ALERT_KEYS[i];
-      const value = input.globalAlertOverrides[key];
-      if (value != null) {
-        updates.push(`global_alert_${key} = excluded.global_alert_${key}`);
-        globalRow[i] = value;
-      }
-    }
-  }
-
-  if (input.quietHours != null) {
-    updates.push(
-      "quiet_hours_enabled = excluded.quiet_hours_enabled",
-      "quiet_hours_start_utc = excluded.quiet_hours_start_utc",
-      "quiet_hours_end_utc = excluded.quiet_hours_end_utc",
-    );
-  }
-
-  return db
-    .prepare(`
-      INSERT INTO telegram_subscribers (
-        chat_id, username,
-        alert_dews, alert_depeg, alert_safety, alert_launch,
-        global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-        quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-        created_at, last_active_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(chat_id) DO UPDATE SET ${updates.join(", ")}
-    `)
-    .bind(
-      input.chatId,
-      input.username,
-      perCoinRow[0],
-      perCoinRow[1],
-      perCoinRow[2],
-      perCoinRow[3],
-      globalRow[0],
-      globalRow[1],
-      globalRow[2],
-      globalRow[3],
-      quietEnabled,
-      quietStart,
-      quietEnd,
-      input.nowSec,
-      input.nowSec,
-    );
+    : {
+        kind: "bump",
+        chatId: input.chatId,
+        username: input.username,
+        nowSec: input.nowSec,
+        perCoinAlertBumps: input.perCoinAlertBumps,
+        globalAlertBumps: input.globalAlertBumps,
+        quietHours: input.quietHours,
+      };
+  const { sql, binds } = buildSubscriberUpsert(kind);
+  return db.prepare(sql).bind(...binds);
 }
 
 export async function upsertSubscriberRow(
@@ -833,7 +991,8 @@ export async function applyGlobalSetting(
 /**
  * Replace the subscriber's IANA timezone (used to interpret quiet hours
  * locally). `timezone = null` clears any prior value, reverting the chat to
- * UTC. Initial-insert defaults match `clearAlertSnooze` so they stay in sync.
+ * UTC. Routes through the single `buildSubscriberUpsert` builder so the
+ * 15-column INSERT shape stays in lock-step with the rest of the file.
  */
 export async function setSubscriberTimezone(
   db: D1Database,
@@ -841,25 +1000,14 @@ export async function setSubscriberTimezone(
   username: string | null,
   timezone: string | null,
 ): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username,
-         alert_dews, alert_depeg, alert_safety, alert_launch,
-         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-         timezone,
-         created_at, last_active_at
-       )
-       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         timezone = excluded.timezone,
-         last_active_at = excluded.last_active_at`,
-    )
-    .bind(chatId, username, timezone, now, now)
-    .run();
+  const { sql, binds } = buildSubscriberUpsert({
+    kind: "preference",
+    chatId,
+    username,
+    nowSec: unixNow(),
+    timezone,
+  });
+  await db.prepare(sql).bind(...binds).run();
 }
 
 /**
@@ -873,25 +1021,14 @@ export async function setSubscriberSnooze(
   username: string | null,
   untilSec: number,
 ): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username,
-         alert_dews, alert_depeg, alert_safety, alert_launch,
-         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-         alert_snooze_until_ts,
-         created_at, last_active_at
-       )
-       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, ?, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         alert_snooze_until_ts = excluded.alert_snooze_until_ts,
-         last_active_at = excluded.last_active_at`,
-    )
-    .bind(chatId, username, untilSec, now, now)
-    .run();
+  const { sql, binds } = buildSubscriberUpsert({
+    kind: "preference",
+    chatId,
+    username,
+    nowSec: unixNow(),
+    alertSnoozeUntilTs: untilSec,
+  });
+  await db.prepare(sql).bind(...binds).run();
 }
 
 /**
@@ -1001,9 +1138,168 @@ function prepareChatMigrationCacheStatements(
 }
 
 /**
+ * Per-column merge strategies used when copying a row from the old chat onto
+ * an existing new-chat row. Adding a column to a tracked table means picking
+ * a strategy here and listing it in `MIGRATION_TABLE_DESCRIPTORS` — no SQL
+ * editing required for the common cases.
+ */
+type MergeStrategy =
+  | "max"                // MAX(old, new)
+  | "min"                // MIN(old, new)
+  | "coalesce-old-first" // COALESCE(old, new) — preserve old non-NULL
+  | "nullif-max-zero";   // NULLIF(MAX(COALESCE(old, 0), COALESCE(new, 0)), 0)
+
+interface MigrationDescriptor {
+  table: string;
+  /** Copy columns in SELECT/INSERT order. `chat_id` is supplied by the bind. */
+  copyColumns: readonly string[];
+  /** Conflict resolution mode. `insert-or-ignore` skips the DO UPDATE block entirely. */
+  mode:
+    | { kind: "insert-or-ignore" }
+    | {
+        kind: "upsert";
+        conflictColumns: readonly string[];
+        merges: ReadonlyArray<{ column: string; strategy: MergeStrategy }>;
+      };
+}
+
+const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
+  {
+    table: "telegram_subscriptions",
+    copyColumns: [
+      "stablecoin_id",
+      "alert_dews",
+      "alert_depeg",
+      "alert_safety",
+      "alert_launch",
+      "dews_min_band",
+      "safety_mode",
+      "depeg_worsening_bps_step",
+      "alert_snooze_until_ts",
+    ],
+    mode: {
+      kind: "upsert",
+      conflictColumns: ["chat_id", "stablecoin_id"],
+      merges: [
+        { column: "alert_dews", strategy: "max" },
+        { column: "alert_depeg", strategy: "max" },
+        { column: "alert_safety", strategy: "max" },
+        { column: "alert_launch", strategy: "max" },
+        { column: "dews_min_band", strategy: "coalesce-old-first" },
+        { column: "safety_mode", strategy: "coalesce-old-first" },
+        { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
+        { column: "alert_snooze_until_ts", strategy: "nullif-max-zero" },
+      ],
+    },
+  },
+  {
+    table: "telegram_preset_subscriptions",
+    copyColumns: [
+      "preset_id",
+      "alert_dews",
+      "alert_depeg",
+      "alert_safety",
+      "depeg_worsening_bps_step",
+      "created_at",
+      "updated_at",
+    ],
+    mode: {
+      kind: "upsert",
+      conflictColumns: ["chat_id", "preset_id"],
+      merges: [
+        { column: "alert_dews", strategy: "max" },
+        { column: "alert_depeg", strategy: "max" },
+        { column: "alert_safety", strategy: "max" },
+        { column: "depeg_worsening_bps_step", strategy: "coalesce-old-first" },
+        { column: "created_at", strategy: "min" },
+        { column: "updated_at", strategy: "max" },
+      ],
+    },
+  },
+  {
+    table: "telegram_pending_disambiguation",
+    copyColumns: [
+      "alert_types",
+      "resolved_ids",
+      "ambiguous_ticker",
+      "candidates",
+      "remaining_tickers",
+      "expires_at",
+      "action_type",
+      "action_payload",
+      "initiator_user_id",
+    ],
+    mode: { kind: "insert-or-ignore" },
+  },
+  {
+    table: "telegram_chat_delivery_diagnostics",
+    copyColumns: [
+      "last_successful_delivery_at",
+      "last_successful_reply_at",
+      "last_delivery_attempt_at",
+      "recent_failure_class",
+      "updated_at",
+    ],
+    mode: {
+      kind: "upsert",
+      conflictColumns: ["chat_id"],
+      merges: [
+        { column: "last_successful_delivery_at", strategy: "nullif-max-zero" },
+        { column: "last_successful_reply_at", strategy: "nullif-max-zero" },
+        { column: "last_delivery_attempt_at", strategy: "nullif-max-zero" },
+        { column: "recent_failure_class", strategy: "coalesce-old-first" },
+        { column: "updated_at", strategy: "max" },
+      ],
+    },
+  },
+];
+
+function renderMergeExpr(table: string, column: string, strategy: MergeStrategy): string {
+  switch (strategy) {
+    case "max":
+      return `MAX(${table}.${column}, excluded.${column})`;
+    case "min":
+      return `MIN(${table}.${column}, excluded.${column})`;
+    case "coalesce-old-first":
+      return `COALESCE(${table}.${column}, excluded.${column})`;
+    case "nullif-max-zero":
+      return `NULLIF(MAX(COALESCE(${table}.${column}, 0), COALESCE(excluded.${column}, 0)), 0)`;
+  }
+}
+
+function buildMigrationStatement(
+  db: D1Database,
+  descriptor: MigrationDescriptor,
+): D1PreparedStatement {
+  const insertColumns = ["chat_id", ...descriptor.copyColumns].join(",\n        ");
+  const selectColumns = ["?", ...descriptor.copyColumns].join(",\n        ");
+  // SAFETY: `descriptor.table` and every column in `descriptor.copyColumns` /
+  // `descriptor.mode.merges` / `descriptor.mode.conflictColumns` come from the
+  // closed-set `MIGRATION_TABLE_DESCRIPTORS` constant defined just above. No
+  // runtime data flows into the SQL string.
+  const verb = descriptor.mode.kind === "insert-or-ignore" ? "INSERT OR IGNORE INTO" : "INSERT INTO";
+  let sql = `${verb} ${descriptor.table} (\n        ${insertColumns}\n      )\n      SELECT\n        ${selectColumns}\n      FROM ${descriptor.table}\n      WHERE chat_id = ?`;
+  if (descriptor.mode.kind === "upsert") {
+    const conflict = descriptor.mode.conflictColumns.join(", ");
+    const setClause = descriptor.mode.merges
+      .map((m) => `${m.column} = ${renderMergeExpr(descriptor.table, m.column, m.strategy)}`)
+      .join(",\n        ");
+    sql += `\n      ON CONFLICT(${conflict}) DO UPDATE SET\n        ${setClause}`;
+  }
+  return db.prepare(sql);
+}
+
+/**
  * Merge Telegram group state after Telegram upgrades a group to a supergroup.
  * Telegram emits both `migrate_to_chat_id` and `migrate_from_chat_id` service
  * messages; this helper is idempotent so either event can safely run first.
+ *
+ * The `telegram_subscribers` block is intentionally kept inline: it has three
+ * outlier merge expressions (`quiet_hours_start_utc`/`quiet_hours_end_utc`
+ * jointly track `quiet_hours_enabled`, and `consecutive_block_first_at` uses
+ * a MIN-with-NULL CASE) that don't fit the per-column strategy framework. The
+ * other four tables flow through `MIGRATION_TABLE_DESCRIPTORS` so adding a
+ * column there is a one-line descriptor change.
  */
 export async function migrateTelegramChatId(
   db: D1Database,
@@ -1104,157 +1400,9 @@ export async function migrateTelegramChatId(
         created_at = MIN(telegram_subscribers.created_at, excluded.created_at),
         last_active_at = MAX(telegram_subscribers.last_active_at, excluded.last_active_at)
     `).bind(newChatId, oldChatId),
-    db.prepare(`
-      INSERT INTO telegram_subscriptions (
-        chat_id,
-        stablecoin_id,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        dews_min_band,
-        safety_mode,
-        depeg_worsening_bps_step,
-        alert_snooze_until_ts
-      )
-      SELECT
-        ?,
-        stablecoin_id,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        alert_launch,
-        dews_min_band,
-        safety_mode,
-        depeg_worsening_bps_step,
-        alert_snooze_until_ts
-      FROM telegram_subscriptions
-      WHERE chat_id = ?
-      ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
-        alert_dews = MAX(telegram_subscriptions.alert_dews, excluded.alert_dews),
-        alert_depeg = MAX(telegram_subscriptions.alert_depeg, excluded.alert_depeg),
-        alert_safety = MAX(telegram_subscriptions.alert_safety, excluded.alert_safety),
-        alert_launch = MAX(telegram_subscriptions.alert_launch, excluded.alert_launch),
-        dews_min_band = COALESCE(telegram_subscriptions.dews_min_band, excluded.dews_min_band),
-        safety_mode = COALESCE(telegram_subscriptions.safety_mode, excluded.safety_mode),
-        depeg_worsening_bps_step = COALESCE(
-          telegram_subscriptions.depeg_worsening_bps_step,
-          excluded.depeg_worsening_bps_step
-        ),
-        alert_snooze_until_ts = NULLIF(
-          MAX(
-            COALESCE(telegram_subscriptions.alert_snooze_until_ts, 0),
-            COALESCE(excluded.alert_snooze_until_ts, 0)
-          ),
-          0
-        )
-    `).bind(newChatId, oldChatId),
-    db.prepare(`
-      INSERT INTO telegram_preset_subscriptions (
-        chat_id,
-        preset_id,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        depeg_worsening_bps_step,
-        created_at,
-        updated_at
-      )
-      SELECT
-        ?,
-        preset_id,
-        alert_dews,
-        alert_depeg,
-        alert_safety,
-        depeg_worsening_bps_step,
-        created_at,
-        updated_at
-      FROM telegram_preset_subscriptions
-      WHERE chat_id = ?
-      ON CONFLICT(chat_id, preset_id) DO UPDATE SET
-        alert_dews = MAX(telegram_preset_subscriptions.alert_dews, excluded.alert_dews),
-        alert_depeg = MAX(telegram_preset_subscriptions.alert_depeg, excluded.alert_depeg),
-        alert_safety = MAX(telegram_preset_subscriptions.alert_safety, excluded.alert_safety),
-        depeg_worsening_bps_step = COALESCE(
-          telegram_preset_subscriptions.depeg_worsening_bps_step,
-          excluded.depeg_worsening_bps_step
-        ),
-        created_at = MIN(telegram_preset_subscriptions.created_at, excluded.created_at),
-        updated_at = MAX(telegram_preset_subscriptions.updated_at, excluded.updated_at)
-    `).bind(newChatId, oldChatId),
-    db.prepare(`
-      INSERT OR IGNORE INTO telegram_pending_disambiguation (
-        chat_id,
-        alert_types,
-        resolved_ids,
-        ambiguous_ticker,
-        candidates,
-        remaining_tickers,
-        expires_at,
-        action_type,
-        action_payload,
-        initiator_user_id
-      )
-      SELECT
-        ?,
-        alert_types,
-        resolved_ids,
-        ambiguous_ticker,
-        candidates,
-        remaining_tickers,
-        expires_at,
-        action_type,
-        action_payload,
-        initiator_user_id
-      FROM telegram_pending_disambiguation
-      WHERE chat_id = ?
-    `).bind(newChatId, oldChatId),
-    db.prepare(`
-      INSERT INTO telegram_chat_delivery_diagnostics (
-        chat_id,
-        last_successful_delivery_at,
-        last_successful_reply_at,
-        last_delivery_attempt_at,
-        recent_failure_class,
-        updated_at
-      )
-      SELECT
-        ?,
-        last_successful_delivery_at,
-        last_successful_reply_at,
-        last_delivery_attempt_at,
-        recent_failure_class,
-        updated_at
-      FROM telegram_chat_delivery_diagnostics
-      WHERE chat_id = ?
-      ON CONFLICT(chat_id) DO UPDATE SET
-        last_successful_delivery_at = NULLIF(
-          MAX(
-            COALESCE(telegram_chat_delivery_diagnostics.last_successful_delivery_at, 0),
-            COALESCE(excluded.last_successful_delivery_at, 0)
-          ),
-          0
-        ),
-        last_successful_reply_at = NULLIF(
-          MAX(
-            COALESCE(telegram_chat_delivery_diagnostics.last_successful_reply_at, 0),
-            COALESCE(excluded.last_successful_reply_at, 0)
-          ),
-          0
-        ),
-        last_delivery_attempt_at = NULLIF(
-          MAX(
-            COALESCE(telegram_chat_delivery_diagnostics.last_delivery_attempt_at, 0),
-            COALESCE(excluded.last_delivery_attempt_at, 0)
-          ),
-          0
-        ),
-        recent_failure_class = COALESCE(
-          telegram_chat_delivery_diagnostics.recent_failure_class,
-          excluded.recent_failure_class
-        ),
-        updated_at = MAX(telegram_chat_delivery_diagnostics.updated_at, excluded.updated_at)
-    `).bind(newChatId, oldChatId),
+    ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
+      buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
+    ),
     db.prepare("UPDATE telegram_pending_alerts SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_alert_job_targets SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("UPDATE telegram_alert_dead_letters SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
@@ -1275,25 +1423,14 @@ export async function clearAlertSnooze(
   chatId: string,
   username: string | null,
 ): Promise<void> {
-  const now = unixNow();
-  await db
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, username,
-         alert_dews, alert_depeg, alert_safety, alert_launch,
-         global_alert_dews, global_alert_depeg, global_alert_safety, global_alert_launch,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc,
-         alert_snooze_until_ts,
-         created_at, last_active_at
-       )
-       VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, ?, ?)
-       ON CONFLICT(chat_id) DO UPDATE SET
-         username = COALESCE(excluded.username, telegram_subscribers.username),
-         alert_snooze_until_ts = NULL,
-         last_active_at = excluded.last_active_at`,
-    )
-    .bind(chatId, username, now, now)
-    .run();
+  const { sql, binds } = buildSubscriberUpsert({
+    kind: "preference",
+    chatId,
+    username,
+    nowSec: unixNow(),
+    alertSnoozeUntilTs: null,
+  });
+  await db.prepare(sql).bind(...binds).run();
 }
 
 function preparePresetSubscriptionStatements(
