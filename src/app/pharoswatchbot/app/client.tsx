@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { formatCoveragePayload, formatWhyPayload, miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
-import type { CatalogCoin, CoinInsightTarget, FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState, TelegramSnoozeDurationToken } from "./types";
+import type { CatalogCoin, CoinInsightTarget, FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
 import { useMiniAppMutations } from "./use-mini-app-mutations";
@@ -19,38 +19,16 @@ import { ForgottenView } from "./components/ForgottenView";
 import { PreviewState } from "./components/PreviewState";
 import { StatusPanel } from "./components/StatusPanel";
 import { WatchlistPanel } from "./components/WatchlistPanel";
+import { ALERT_LABELS, DEPEG_STEP_OPTIONS, PHAROS_COIN_PAGE_PREFIX, RECOMMENDED_OPERATION } from "./constants";
+import { formatHour } from "./format";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
-// Constants/helpers exported below are consumed by sibling panel components
-// (StatusPanel, CoinCard, WatchlistPanel) which import from this module.
-export const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
 const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
-export const DEPEG_STEP_OPTIONS = [
-  { value: null, label: "Any depeg", caption: "No gate" },
-  { value: 100, label: "+100 bps", caption: "Tighter" },
-  { value: 250, label: "+250 bps", caption: "Balanced" },
-  { value: 500, label: "+500 bps", caption: "Quieter" },
-] as const satisfies readonly { value: TelegramDepegStepBps | null; label: string; caption: string }[];
-export const SUGGESTED_SEARCH_IDS = ["usdt-tether", "usdc-circle", "dai-makerdao"] as const;
-export const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
-export const SNOOZE_DURATION_TOKENS = ["1h", "4h", "24h"] as const satisfies readonly TelegramSnoozeDurationToken[];
 const FALLBACK_TIMEZONES = ["UTC", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Australia/Sydney"] as const;
 const BOT_USERNAME = "PharosWatchBot";
-export const PHAROS_COIN_PAGE_PREFIX = "https://pharos.watch/stablecoin/";
-
-export const DEWS_BAND_OPTIONS = [
-  { value: "ALERT" as const, label: "ALERT", caption: "Light yellow" },
-  { value: "WARNING" as const, label: "WARNING", caption: "Orange" },
-  { value: "DANGER" as const, label: "DANGER", caption: "Red only" },
-] as const;
-export const SAFETY_MODE_OPTIONS = [
-  { value: "all" as const, label: "All changes" },
-  { value: "downgrade-only" as const, label: "Downgrades" },
-  { value: "upgrade-only" as const, label: "Upgrades" },
-] as const;
 
 type ViewKey = "home" | "watchlist" | "presets" | "settings";
 
@@ -93,13 +71,6 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return await response.json() as T;
 }
 
-export function formatSnoozePill(snoozeUntilTs: number): string {
-  const date = new Date(snoozeUntilTs * 1000);
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  return `${hh}:${mm} UTC`;
-}
-
 function availableTimezones(): readonly string[] {
   // `Intl.supportedValuesOf` is ES2022 and not yet in the lib.dom types we target, so probe via an unknown cast.
   const intl = Intl as unknown as { supportedValuesOf?: (key: string) => string[] };
@@ -112,19 +83,6 @@ function availableTimezones(): readonly string[] {
     }
   }
   return FALLBACK_TIMEZONES;
-}
-
-// Hoisted so render paths (StatusPanel) don't re-allocate the formatter on every render.
-const HEALTH_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-
-export function formatTime(ts: number | null): string {
-  if (ts == null) return "Not recorded";
-  return HEALTH_TIME_FORMATTER.format(new Date(ts * 1000));
-}
-
-export function formatHour(hour: number | null | undefined): string {
-  if (hour == null) return "--";
-  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 function QuietHoursPicker({ state, canMutate, isMutating, onMutate }: {

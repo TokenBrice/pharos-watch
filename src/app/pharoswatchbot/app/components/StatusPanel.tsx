@@ -1,13 +1,8 @@
 "use client";
 
 import { Check, Clock3, Home, ShieldAlert } from "lucide-react";
-import {
-  RECOMMENDED_OPERATION,
-  SNOOZE_DURATION_TOKENS,
-  formatHour,
-  formatSnoozePill,
-  formatTime,
-} from "../client";
+import { RECOMMENDED_OPERATION, SNOOZE_DURATION_TOKENS } from "../constants";
+import { formatHour, formatSnoozePill, formatTime } from "../format";
 import type {
   TelegramMiniAppOperation,
   TelegramMiniAppState,

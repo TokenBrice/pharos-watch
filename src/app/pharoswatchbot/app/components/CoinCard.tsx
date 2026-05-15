@@ -9,8 +9,8 @@ import {
   PHAROS_COIN_PAGE_PREFIX,
   SAFETY_MODE_OPTIONS,
   SNOOZE_DURATION_TOKENS,
-  formatSnoozePill,
-} from "../client";
+} from "../constants";
+import { formatSnoozePill } from "../format";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
   CoinInsightTarget,

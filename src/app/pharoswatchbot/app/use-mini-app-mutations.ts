@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { apiRequest } from "@/lib/api";
 import { API_PATHS } from "@shared/lib/api-endpoints";
-import { ALERT_LABELS } from "./client";
+import { ALERT_LABELS } from "./constants";
 import {
   isMiniAppErrorCode,
   miniAppErrorMessage,

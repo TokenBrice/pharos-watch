@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import { ExternalLink, Info, Search, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  PHAROS_COIN_PAGE_PREFIX,
-  SUGGESTED_SEARCH_IDS,
-} from "../client";
+import { PHAROS_COIN_PAGE_PREFIX, SUGGESTED_SEARCH_IDS } from "../constants";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
   CatalogCoin,
