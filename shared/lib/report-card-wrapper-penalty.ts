@@ -1,8 +1,8 @@
 import type { VariantKind } from "../types";
 
-export const LEGACY_WRAPPER_PENALTY = 3;
+const LEGACY_WRAPPER_PENALTY = 3;
 
-export const VARIANT_WRAPPER_PENALTY: Record<VariantKind, number> = {
+const VARIANT_WRAPPER_PENALTY: Record<VariantKind, number> = {
   "savings-passthrough": 3,
   "strategy-vault": 5,
   "risk-absorption": 5,

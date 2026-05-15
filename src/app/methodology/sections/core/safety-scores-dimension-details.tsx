@@ -71,9 +71,15 @@ export function SafetyScoresDimensionDetails() {
             <span className="text-foreground">Single entity</span> &mdash; 20 (unregulated or unverified issuer)
           </li>
           <li>
-            <span className="text-foreground">Wrapper</span> &mdash; 10 (inherits upstream governance)
+            <span className="text-foreground">Wrapper</span> &mdash; inherits tracked parent Decentralization
+            with a wrapper-kind haircut; unresolved wrappers fall back to 10
           </li>
         </ul>
+        <p className="text-xs">
+          Resolvable wrappers use the wrapped asset&apos;s already chain-adjusted Decentralization score: savings wrappers
+          subtract 3, strategy-vault and risk-absorption wrappers subtract 5, and bond-maturity wrappers subtract 8.
+          For example, yBOLD and sBOLD inherit from BOLD, while sfrxUSD inherits from frxUSD.
+        </p>
         <p className="font-medium text-foreground mt-2">
           Chain-risk penalty (DAO and multisig governance &mdash; exempt for immutable-code, wrapper,
           regulated-entity, single-entity):

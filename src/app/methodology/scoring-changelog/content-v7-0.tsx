@@ -1,5 +1,30 @@
 import { VersionCard, getScoringEntry } from "./content-shared";
 
+export function ScoringChangelogV725Entry() {
+  return (
+    <VersionCard
+      entry={getScoringEntry("7.25")}
+      accent="border-l-violet-500"
+    >
+      <p>
+        Wrapper Decentralization now follows the tracked wrapped asset when the parent relationship is known, instead
+        of assigning every wrapper the same flat low score.
+      </p>
+      <ul className="list-disc list-inside space-y-1">
+        <li>
+          Parent-linked wrappers such as yBOLD, sBOLD, and sfrxUSD inherit the wrapped asset&apos;s already
+          chain-adjusted Decentralization score.
+        </li>
+        <li>
+          The inherited score uses the same wrapper-kind haircut as Dependency Risk: savings minus 3,
+          strategy-vault/risk-absorption minus 5, and bond-maturity minus 8.
+        </li>
+        <li>Wrappers without a resolvable single tracked parent keep the conservative fallback score of 10.</li>
+      </ul>
+    </VersionCard>
+  );
+}
+
 export function ScoringChangelogV724Entry() {
   return (
     <VersionCard

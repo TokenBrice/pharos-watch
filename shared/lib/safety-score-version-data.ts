@@ -1,9 +1,24 @@
 import type { MethodologyVersionConfig } from "./methodology-version";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {
-  currentVersion: "7.24",
+  currentVersion: "7.25",
   changelogPath: "/methodology/scoring-changelog/",
   changelog: [
+    {
+      version: "7.25",
+      title: "Wrapper decentralization inherits from tracked parent assets",
+      date: "2026-05-15",
+      effectiveAt: 1778803200,
+      summary:
+        "Tracked wrappers with a resolvable parent asset now derive Decentralization from the wrapped asset's Decentralization score, with the same wrapper-kind haircut used for dependency ceilings.",
+      impact: [
+        "Parent-linked wrappers such as yBOLD, sBOLD, and sfrxUSD no longer receive the old flat 10-point Decentralization score when their wrapped asset is already tracked",
+        "Savings wrappers inherit parent Decentralization minus 3 points; strategy-vault and risk-absorption variants inherit parent minus 5; bond-maturity variants inherit parent minus 8",
+        "Wrappers without a resolvable single tracked parent still fall back to the conservative 10-point wrapper score",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
     {
       version: "7.24",
       title: "Capacity-aware redemption effective-exit blending",
