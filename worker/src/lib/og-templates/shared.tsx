@@ -6,7 +6,6 @@ const BG = "#0a0f1e";
 const TEXT_PRIMARY = "#e8e8e8";
 const TEXT_SECONDARY = "#8b8fa3";
 const FROST_BLUE = "#5ba3d9";
-const BORDER = "#1e293b";
 
 // Semantic colors for data visualization
 export const SEMANTIC_COLORS = {
@@ -27,16 +26,6 @@ export const GRADE_COLORS: Record<string, string> = {
   "B+": "#5ba3d9", "B": "#5ba3d9", "B-": "#7dd3fc",
   "C+": "#f59e0b", "C": "#f59e0b", "C-": "#fbbf24",
   "D": "#f97316", "F": "#ef4444", "NR": "#94a3b8",
-};
-
-// Typography constants for consistency
-export const TYPOGRAPHY = {
-  header: { fontSize: 32, fontWeight: 700, fontFamily: "Geist Sans" },
-  label: { fontSize: 14, fontWeight: 400, fontFamily: "Geist Sans", letterSpacing: "0.06em" },
-  value: { fontSize: 36, fontWeight: 700, fontFamily: "Geist Mono" },
-  grade: { fontSize: 44, fontWeight: 700, fontFamily: "Geist Mono" },
-  secondary: { fontSize: 16, fontWeight: 400, fontFamily: "Geist Sans" },
-  caption: { fontSize: 12, fontWeight: 400, fontFamily: "Geist Sans" },
 };
 
 export interface CardFrameProps {
@@ -231,17 +220,4 @@ export function Sparkline({
   );
 }
 
-/** Helper to format numbers with sign */
-export function formatChange(value: number, suffix = "%"): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}${suffix}`;
-}
-
-/** Get color for a numeric change value */
-export function getChangeColor(value: number): string {
-  if (value > 0) return SEMANTIC_COLORS.positive;
-  if (value < 0) return SEMANTIC_COLORS.negative;
-  return TEXT_SECONDARY;
-}
-
-export { BG, TEXT_PRIMARY, TEXT_SECONDARY, FROST_BLUE, BORDER };
+export { TEXT_SECONDARY, FROST_BLUE };

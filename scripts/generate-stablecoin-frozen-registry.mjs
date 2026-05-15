@@ -59,9 +59,6 @@ import coinsGenerated from "./coins.generated.json";
 /** FNV-1a 32-bit fingerprint of \`coins.generated.json\` at generation time. */
 export const STABLECOIN_META_ASSETS_FROZEN_HASH = ${JSON.stringify(fingerprint)};
 
-/** Number of stablecoin metas captured in the frozen snapshot. */
-export const STABLECOIN_META_ASSETS_FROZEN_COUNT = ${parsed.length};
-
 /**
  * Pre-validated stablecoin metas, exposed in source order. The generator
  * runs alongside \`npm run check:stablecoin-data\`, which performs the
