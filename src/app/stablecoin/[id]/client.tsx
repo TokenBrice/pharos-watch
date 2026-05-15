@@ -11,6 +11,7 @@ import { ReportCardDetail } from "@/components/report-card";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { LazySection } from "@/components/lazy-section";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
@@ -344,7 +345,9 @@ export default function StablecoinDetailClient({
             />
           )}
           <div className="mt-4">
-            <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+            <LazySection minHeight={220}>
+              <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+            </LazySection>
           </div>
         </section>
 
@@ -393,7 +396,9 @@ export default function StablecoinDetailClient({
         <section id="liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
-            <DexLiquidityCard stablecoinId={viewModel.id} />
+            <LazySection minHeight={360}>
+              <DexLiquidityCard stablecoinId={viewModel.id} />
+            </LazySection>
           </SectionErrorBoundary>
         </section>
       </div>
@@ -402,13 +407,17 @@ export default function StablecoinDetailClient({
       <div className="mt-12 space-y-6">
         <section id="chart">
           {frozenNote}
-          <McapChart data={viewModel.supplyHistory} />
+          <LazySection minHeight={420}>
+            <McapChart data={viewModel.supplyHistory} />
+          </LazySection>
         </section>
 
         {viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken ? (
           <section id="peg-deviation">
             {frozenNote}
-            <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} />
+            <LazySection minHeight={420}>
+              <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} />
+            </LazySection>
           </section>
         ) : null}
 
@@ -440,12 +449,14 @@ export default function StablecoinDetailClient({
         <div className="mt-12">
           <section id="history">
             {frozenNote}
-            <DepegHistory
-              stablecoinId={viewModel.id}
-              earliestTrackingDate={viewModel.earliestTrackingDate}
-              hasPriceData={viewModel.coinData.price != null}
-              depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
-            />
+            <LazySection minHeight={360}>
+              <DepegHistory
+                stablecoinId={viewModel.id}
+                earliestTrackingDate={viewModel.earliestTrackingDate}
+                hasPriceData={viewModel.coinData.price != null}
+                depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+              />
+            </LazySection>
           </section>
         </div>
       ) : null}
