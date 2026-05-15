@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useState } from "react";
 import {
   Activity,
   ArrowLeftRight,
   Award,
   BookOpen,
   Calendar,
+  Check,
   Coins,
   Flame,
+  Link2,
   Lock,
   Radar,
   Rocket,
@@ -235,29 +238,42 @@ function CauseOfDeathPill({ cause }: { cause: string }) {
   );
 }
 
+const FREEZE_ACTION_LABEL: Record<string, string> = {
+  "freeze.blocked": "frozen",
+  "freeze.unblocked": "unfrozen",
+  "freeze.destroyed": "destroyed",
+};
+
 function FreezeEnrichment({ event }: { event: TapeEvent }) {
-  // Title for `blocked`/`destroyed` already carries the USD amount; only
-  // surface a body badge for `unblocked` where the title is amount-less and
-  // the dollar size of the released balance is the headline signal.
-  if (event.type !== "freeze.unblocked") return null;
   const amount = event.payload?.amountUsdAtEvent;
   if (typeof amount !== "number" || amount <= 0) return null;
+  const action = FREEZE_ACTION_LABEL[event.type];
+  if (!action) return null;
   return (
     <div className="mt-1.5 flex items-center gap-1.5 text-xs">
       <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground/80">
         {formatCompactUsd(amount)}
       </span>
-      <span className="text-[11px] text-muted-foreground">released</span>
+      <span className="text-[11px] text-muted-foreground">{action}</span>
     </div>
   );
 }
 
 function CemeteryEnrichment({ event }: { event: TapeEvent }) {
   const cause = event.payload?.causeOfDeath;
-  if (typeof cause !== "string" || cause.length === 0) return null;
+  const peakMcap = event.payload?.peakMcap;
+  const causeStr = typeof cause === "string" && cause.length > 0 ? cause : null;
+  const peakNum = typeof peakMcap === "number" && peakMcap > 0 ? peakMcap : null;
+  if (!causeStr && !peakNum) return null;
   return (
-    <div className="mt-1.5">
-      <CauseOfDeathPill cause={cause} />
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      {causeStr ? <CauseOfDeathPill cause={causeStr} /> : null}
+      {peakNum ? (
+        <span className="inline-flex items-center gap-1 font-mono text-[11px] tabular-nums text-muted-foreground">
+          <span>Peak</span>
+          <span className="text-foreground/80">{formatCompactUsd(peakNum)}</span>
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -284,7 +300,7 @@ function LifecycleEnrichment({ event }: { event: TapeEvent }) {
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
       {causeStr ? <CauseOfDeathPill cause={causeStr} /> : null}
       {frozenStr ? (
-        <span className="text-[11px] tabular-nums text-muted-foreground">Frozen {frozenStr}</span>
+        <span className="text-[11px] tabular-nums text-muted-foreground">Archived {frozenStr}</span>
       ) : null}
     </div>
   );
@@ -321,6 +337,17 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
   const severityBorder = SEVERITY_BORDER[event.severity];
   const href = event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
   const titleId = `tape-event-${event.id}`;
+  const [copied, setCopied] = useState(false);
+  const handleCopyPermalink = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof window === "undefined" || !navigator.clipboard) return;
+    const permalink = `${window.location.origin}/tape/?event=${encodeURIComponent(event.id)}`;
+    void navigator.clipboard.writeText(permalink).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  }, [event.id]);
 
   return (
     <Link
@@ -365,13 +392,23 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         ) : null}
         <EventCardEnrichment event={event} />
       </div>
-      <time
-        dateTime={new Date(event.ts).toISOString()}
-        title={formatAbsoluteDate(event.ts)}
-        className="shrink-0 tabular-nums text-[11px] text-muted-foreground"
-      >
-        {formatRelativeTime(event.ts)}
-      </time>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <button
+          type="button"
+          onClick={handleCopyPermalink}
+          aria-label={copied ? "Permalink copied" : "Copy permalink to this event"}
+          className="pharos-focus-ring rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
+        </button>
+        <time
+          dateTime={new Date(event.ts).toISOString()}
+          title={formatAbsoluteDate(event.ts)}
+          className="tabular-nums text-[11px] text-muted-foreground"
+        >
+          {formatRelativeTime(event.ts)}
+        </time>
+      </div>
     </Link>
   );
 }
