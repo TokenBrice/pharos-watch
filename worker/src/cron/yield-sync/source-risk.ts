@@ -175,8 +175,12 @@ function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlac
   return null;
 }
 
-function inferVenueProtocol(source: EvaluatedYieldSource): string | null {
-  if (source.sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho";
+export function inferVenueProtocol(source: {
+  sourceKey: string;
+  yieldType?: EvaluatedYieldSource["yieldType"] | null;
+  dataSource: EvaluatedYieldSource["dataSource"];
+}): string | null {
+  if (source.sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho-blue";
   if (source.sourceKey.startsWith("protocol-api:pendle:")) return "pendle";
   if (source.sourceKey.startsWith("protocol-api:yearn:")) return "yearn";
   if (source.sourceKey.startsWith("protocol-api:kong:")) return "kong";

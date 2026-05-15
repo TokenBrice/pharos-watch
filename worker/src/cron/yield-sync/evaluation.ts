@@ -8,6 +8,7 @@ import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import { inferVenueProtocol, resolveReviewedYieldRiskConfig } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
@@ -225,6 +226,10 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
       const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
       const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
+      const resolvedVenueRiskTier =
+        y.sourceRisk?.venueRiskTier ??
+        resolveReviewedYieldRiskConfig(inferVenueProtocol(y))?.venueRiskTier ??
+        "unknown";
       const sourceRiskPenaltyInput =
         y.sourceRisk?.sourceRiskPenalty ??
         derivePysSourceRiskPenalty({
@@ -233,7 +238,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
           sourceAgeSeconds,
           sourceSwitchCount30d: candidateSwitchCount30d,
           observationCount30d,
-          venueRiskTier: y.sourceRisk?.venueRiskTier ?? "unknown",
+          venueRiskTier: resolvedVenueRiskTier,
         });
       const pysComponents = computePysComponents({
         apy30d,

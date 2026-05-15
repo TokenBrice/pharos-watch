@@ -26,7 +26,7 @@ The benchmark registry now supports `USD`, `EUR`, `CHF`, `GBP`, `JPY`, `MXN`, `B
 | AUD | FRED `IR3TIB01AUM156N` | 3M interbank | Used as a proxy for the RBA cash rate target |
 | CAD | Bank of Canada Valet API series `V122530` | Overnight repo | CORRA-equivalent |
 
-**Retention policy:** fetchers retain the last known value with `benchmarkSelectionMode: "fallback-stale"` on transient feed outages; they only fall back to USD when **no** native rate has ever been observed. This means the universal USD fallback for non-USD pegs has been replaced by a stale-tolerant native path.
+**Retention policy:** fetchers retain the last known value on transient feed outages — the selection mode stays `"native"` with `isFallback: true` and a `fallbackMode: "<source>-retained"` provenance tag — and only fall back to USD (`benchmarkSelectionMode: "fallback-usd"`) when **no** native rate has ever been observed. This means the universal USD fallback for non-USD pegs has been replaced by a stale-tolerant native path.
 
 **Pulled from:** commit `10e469cf4` — "feat(yield): expand benchmark registry to GBP, JPY, MXN, BRL, AUD, CAD".
 

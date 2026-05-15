@@ -146,7 +146,7 @@ function YieldLeaderboardTableRowBase({
         <TooltipTrigger asChild>
           <span className={`cursor-help ${pysColor}`}>{formatScore(row.pharosYieldScore)}</span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-[300px]">
+        <TooltipContent className="max-w-[300px] border border-border bg-popover p-3 text-foreground">
           <PysBreakdown
             mode="popover"
             score={row.pharosYieldScore}

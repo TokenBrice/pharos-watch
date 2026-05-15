@@ -637,6 +637,12 @@ Fetches the benchmark registry used by Yield Intelligence:
 - USD 3M Treasury yield from FRED `DGS3MO`, falling back to Treasury.gov yield XML when FRED is unavailable
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
+- GBP SONIA daily proxy from FRED `IUDSOIA` (v8.13)
+- JPY call-rate proxy from FRED `IRSTCB01JPM156N` (v8.13)
+- MXN CETES 28-day from Banxico SIE (`SF43936`) — requires `BANXICO_TOKEN` env; absent token routes MXN-pegged rows back to USD fallback (v8.13)
+- BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
+- AUD interbank proxy from FRED `IR3TIB01AUM156N` (v8.13)
+- CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
 
 Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
 
@@ -997,7 +1003,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON)                                                  |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, plus v8.13 additions: GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d, BRL SELIC, AUD interbank proxy, CAD CORRA proxy) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
