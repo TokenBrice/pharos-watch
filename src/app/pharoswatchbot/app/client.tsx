@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { Bell, Bot, Check, Clock3, ExternalLink, Home, Info, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bell, Check, Clock3, ExternalLink, Home, Info, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { formatCoveragePayload, formatWhyPayload, miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
-import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
+import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramAlertType, TelegramCoinSnoozeDurationToken, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState, TelegramSnoozeDurationToken } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
+import { useTelegramBridge } from "./use-telegram-bridge";
+import { isMiniAppErrorCode, MiniAppRequestError, miniAppErrorMessage, type MiniAppErrorCode } from "./error-messages";
+import { MiniButton } from "./components/MiniButton";
+import { TogglePill } from "./components/TogglePill";
+import { HomeSkeleton } from "./components/HomeSkeleton";
+import { ForgottenView } from "./components/ForgottenView";
+import { PreviewState } from "./components/PreviewState";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
-const BOT_URL = "https://t.me/PharosWatchBot";
 const ALERT_LABELS = { dews: "DEWS", depeg: "Depeg", safety: "Safety", launch: "Launch" } as const satisfies Record<TelegramAlertType, string>;
 const PRESET_ALERT_TYPES = ["dews", "depeg", "safety"] as const;
 type PresetAlertType = (typeof PRESET_ALERT_TYPES)[number];
@@ -26,12 +30,6 @@ const DEPEG_STEP_OPTIONS = [
 ] as const satisfies readonly { value: TelegramDepegStepBps | null; label: string; caption: string }[];
 const SUGGESTED_SEARCH_IDS = ["usdt-tether", "usdc-circle", "dai-makerdao"] as const;
 const RECOMMENDED_OPERATION = { kind: "recommended-setup", presetId: "usd-top25", alertTypes: ["dews", "depeg"] } as const satisfies TelegramMiniAppOperation;
-/** Outside Telegram (browser preview), stop polling after ~0.5s (10 × 50ms) so the preview banner appears promptly. */
-const TELEGRAM_BROWSER_PREVIEW_ATTEMPTS = 10;
-/** Inside Telegram, poll for up to 8s (160 × 50ms) while Telegram's launch initData settles on slow clients. */
-const TELEGRAM_LAUNCH_MAX_ATTEMPTS = 160;
-/** Delay between Telegram launch-context polls; 50ms keeps the spin tight without busy-looping. */
-const TELEGRAM_LAUNCH_RETRY_MS = 50;
 /** Grace period during which a removed coin can be restored via the undo toast. */
 const UNDO_WINDOW_MS = 5_000;
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
@@ -46,34 +44,6 @@ type CoinInsightKind = "why" | "coverage";
 type CoinInsightTarget = { kind: CoinInsightKind; coinId: string };
 
 const ORDERED_VIEWS: ViewKey[] = ["home", "watchlist", "presets", "settings"];
-
-type MiniAppErrorCode =
-  | "stale-auth"
-  | "replay-claimed"
-  | "not-private"
-  | "rate-limited"
-  | "validation-error"
-  | "body-too-large"
-  | "internal"
-  | "not-configured"
-  | "preset-unavailable"
-  | "unknown-coin"
-  | "unknown-preset"
-  | "invalid-coin-patch"
-  | "invalid-alert-types"
-  | "invalid-timezone";
-
-class MiniAppRequestError extends Error {
-  readonly status: number;
-  readonly code: MiniAppErrorCode | null;
-
-  constructor(status: number, code: MiniAppErrorCode | null = null) {
-    super(`Request failed with ${status}`);
-    this.name = "MiniAppRequestError";
-    this.status = status;
-    this.code = code;
-  }
-}
 
 function initialViewFromStartParam(startParam: string | null): { view: ViewKey; coinId: string | null; insight: CoinInsightTarget | null } {
   const payload = parseMiniAppPayload(startParam);
@@ -93,23 +63,6 @@ function initialViewFromStartParam(startParam: string | null): { view: ViewKey; 
   return { view: "home", coinId: null, insight: null };
 }
 
-function isMiniAppErrorCode(value: unknown): value is MiniAppErrorCode {
-  return value === "stale-auth"
-    || value === "replay-claimed"
-    || value === "not-private"
-    || value === "rate-limited"
-    || value === "validation-error"
-    || value === "body-too-large"
-    || value === "internal"
-    || value === "not-configured"
-    || value === "preset-unavailable"
-    || value === "unknown-coin"
-    || value === "unknown-preset"
-    || value === "invalid-coin-patch"
-    || value === "invalid-alert-types"
-    || value === "invalid-timezone";
-}
-
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const response = await apiRequest(path, {
     method: "POST",
@@ -127,49 +80,6 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     throw new MiniAppRequestError(response.status, code);
   }
   return await response.json() as T;
-}
-
-function sessionErrorMessage(err: unknown): string {
-  if (err instanceof MiniAppRequestError) {
-    if (err.code === "stale-auth") return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
-    if (err.status === 401) return "Telegram launch authorization was rejected. Close and reopen from PharosWatchBot.";
-    if (err.status === 429) return "Telegram is still opening your session. Wait a moment, then retry.";
-    if (err.status === 503) return "Telegram Mini App auth is temporarily unavailable. Try again shortly.";
-  }
-  return "Could not load Mini App settings. Reopen from Telegram or try again.";
-}
-
-function mutationErrorMessage(err: unknown): string {
-  if (err instanceof MiniAppRequestError) {
-    switch (err.code) {
-      case "stale-auth":
-        return "Telegram authorization expired. Close and reopen from PharosWatchBot.";
-      case "replay-claimed":
-        return "This Telegram launch was already used. Reopen the Mini App to continue.";
-      case "rate-limited":
-        return "Slow down — Telegram is rate-limiting your edits. Try again in a moment.";
-      case "not-private":
-        return "This Mini App can only edit personal alerts. Use the bot commands in groups.";
-      case "validation-error":
-      case "unknown-coin":
-      case "unknown-preset":
-      case "invalid-coin-patch":
-      case "invalid-alert-types":
-      case "invalid-timezone":
-        return "Change was rejected by the server.";
-      case "body-too-large":
-        return "Request was too large to send.";
-      case "not-configured":
-      case "preset-unavailable":
-        return "Mini App backend is temporarily unavailable. Try again shortly.";
-      case "internal":
-        return "Something went wrong. Try again or reopen Telegram.";
-      default:
-        break;
-    }
-    if (err.status >= 500) return "Something went wrong. Try again or reopen Telegram.";
-  }
-  return "Change was not saved. Reopen from Telegram if authorization expired.";
 }
 
 function formatSnoozePill(snoozeUntilTs: number): string {
@@ -204,111 +114,6 @@ function formatTime(ts: number | null): string {
 function formatHour(hour: number | null | undefined): string {
   if (hour == null) return "--";
   return `${String(hour).padStart(2, "0")}:00`;
-}
-
-function MiniButton({ ariaLabel, children, disabled, onClick, variant = "primary" }: {
-  ariaLabel?: string;
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-  variant?: "primary" | "secondary" | "danger";
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        variant === "primary" ? "bg-[var(--telegram-button,var(--brand-accent))] text-[var(--telegram-button-text,white)] hover:opacity-90" : "",
-        variant === "secondary" ? "border border-border/65 bg-background/70 text-foreground hover:bg-muted/45" : "",
-        variant === "danger" ? "border border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/15 dark:text-red-300" : "",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function TogglePill({ label, enabled, disabled, onToggle, ariaLabel }: { label: string; enabled: boolean; disabled?: boolean; onToggle: () => void; ariaLabel?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={enabled}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onToggle}
-      className={cn(
-        "pharos-focus-ring inline-flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        enabled ? "border-sky-500/35 bg-sky-500/10 text-sky-800 dark:text-sky-200" : "border-border/65 bg-background/60 text-muted-foreground hover:bg-muted/45",
-      )}
-    >
-      <span>{label}</span>
-      <span className={cn("h-2.5 w-2.5 rounded-full", enabled ? "bg-sky-500" : "bg-muted-foreground/35")} />
-    </button>
-  );
-}
-
-function ForgottenView({ onClose }: { onClose: () => void }) {
-  return (
-    <section className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
-      <section role="status" className="rounded-2xl border border-border/70 bg-card/90 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-            <Trash2 className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">Your data has been deleted</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Every alert and preference tied to your chat has been removed.</p>
-          </div>
-        </div>
-        <div className="mt-5">
-          <MiniButton onClick={onClose} ariaLabel="Close Mini App">Close</MiniButton>
-        </div>
-      </section>
-    </section>
-  );
-}
-
-function PreviewState({ previewName }: { previewName: string | null }) {
-  return (
-    <section className="mx-auto flex min-h-[100svh] max-w-lg flex-col justify-center px-4 py-8">
-      <section className="rounded-2xl border border-border/70 bg-card/90 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300">
-            <Bot className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">PharosWatchBot app preview</h1>
-            <p className="text-xs text-muted-foreground">Read-only browser mode</p>
-          </div>
-        </div>
-        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          {previewName ? `${previewName}, open this page inside Telegram to manage alerts.` : "Open this page from the Telegram bot menu to load your alert settings."}
-        </p>
-        <div className="mt-5 grid gap-2">
-          <Button asChild className="gap-2">
-            <a href={BOT_URL} target="_blank" rel="noopener noreferrer">Open PharosWatchBot <ExternalLink className="h-4 w-4" aria-hidden="true" /></a>
-          </Button>
-          <Button asChild variant="outline"><Link href="/pharoswatchbot/">View setup guide</Link></Button>
-        </div>
-      </section>
-    </section>
-  );
-}
-
-function HomeSkeleton() {
-  return (
-    <div className="mt-4 space-y-4" aria-busy="true" aria-live="polite" aria-label="Loading Telegram settings">
-      <div className="h-32 animate-pulse rounded-2xl border border-border/70 bg-card/90" />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="h-20 animate-pulse rounded-2xl border border-border/70 bg-card/90" />
-        <div className="h-20 animate-pulse rounded-2xl border border-border/70 bg-card/90" />
-      </div>
-      <div className="h-12 animate-pulse rounded-xl border border-border/65 bg-background/60" />
-    </div>
-  );
 }
 
 function StatusPanel({ state, canMutate, isMutating, onMutate, optimisticHomeHeadline, homeScreenStatus, onAddToHomeScreen }: {
@@ -1417,16 +1222,14 @@ function defaultGlobalAlerts(): TelegramMiniAppState["subscriber"]["globalAlerts
 }
 
 export function PharosWatchBotMiniAppClient() {
-  const [webApp, setWebApp] = useState<TelegramWebAppSdk | null>(null);
-  const [initData, setInitData] = useState("");
-  const [startParam, setStartParam] = useState<string | null>(null);
-  const [previewName, setPreviewName] = useState<string | null>(null);
   const [state, setState] = useState<TelegramMiniAppState | null>(null);
   const [view, setView] = useState<ViewKey>("home");
   const [coinTarget, setCoinTarget] = useState<string | null>(null);
   const [visibleCoinTarget, setVisibleCoinTarget] = useState<string | null>(null);
   const [coinInsightTarget, setCoinInsightTarget] = useState<CoinInsightTarget | null>(null);
   const [highlightedCoinId, setHighlightedCoinId] = useState<string | null>(null);
+  // Session network status. The bridge hook owns the Telegram probe lifecycle; this state only
+  // tracks the session fetch + the "missing launch data" terminal error after the bridge resolves.
   const [status, setStatus] = useState<"preview" | "loading" | "ready" | "error">("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
@@ -1440,6 +1243,7 @@ export function PharosWatchBotMiniAppClient() {
   const hasRequestedWriteAccessRef = useRef(false);
   const hasMutatedThisSessionRef = useRef(false);
   const hasProbedHomeScreenRef = useRef(false);
+  const hasInitialisedFromStartParamRef = useRef(false);
   const [, startTransition] = useTransition();
 
   const loadSession = useCallback(async (nextInitData: string, options: { clearMessage?: boolean } = {}) => {
@@ -1450,7 +1254,7 @@ export function PharosWatchBotMiniAppClient() {
       if (options.clearMessage !== false) setMessage(null);
     } catch (err) {
       setStatus("error");
-      setMessage(sessionErrorMessage(err));
+      setMessage(miniAppErrorMessage(err, "session"));
     }
   }, []);
 
@@ -1501,54 +1305,48 @@ export function PharosWatchBotMiniAppClient() {
     return `${activeGlobalCount} global alert families, ${optimisticState.subscriptions.length} explicit coins${presetClause}.`;
   }, [optimisticState]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let cleanup = () => {};
-    let attempts = 0;
+  // BackButton handler reacts to the current view/insight target.
+  const handleTelegramBack = useCallback(() => {
+    if (coinInsightTarget) {
+      setCoinInsightTarget(null);
+      return;
+    }
+    setView("home");
+  }, [coinInsightTarget]);
 
-    const initialize = () => {
-      const launch = getTelegramLaunchContext();
-      const shouldKeepWaiting = !launch.initData
-        && attempts < TELEGRAM_LAUNCH_MAX_ATTEMPTS
-        && (launch.hasTelegramLaunchHint || attempts < TELEGRAM_BROWSER_PREVIEW_ATTEMPTS);
-      if (shouldKeepWaiting) {
-        attempts += 1;
-        timer = setTimeout(initialize, TELEGRAM_LAUNCH_RETRY_MS);
-        return;
-      }
-      if (cancelled) return;
-      setWebApp(launch.webApp);
-      setInitData(launch.initData);
-      setStartParam(launch.startParam);
-      const initial = initialViewFromStartParam(launch.startParam);
+  const handleTelegramSettings = useCallback(() => setView("settings"), []);
+
+  const backButtonVisible = view !== "home" || coinInsightTarget != null;
+  const { webApp, initData, startParam, previewName, status: bridgeStatus } = useTelegramBridge({
+    onBack: handleTelegramBack,
+    backButtonVisible,
+    onSettings: handleTelegramSettings,
+  });
+
+  // Translate bridge resolution into our session-level status and kick off the initial fetch.
+  // Runs once per bridge-status transition; downstream session reloads go through `loadSession`.
+  useEffect(() => {
+    if (bridgeStatus === "loading") return;
+    if (!hasInitialisedFromStartParamRef.current) {
+      hasInitialisedFromStartParamRef.current = true;
+      const initial = initialViewFromStartParam(startParam);
       setView(initial.view);
       setCoinTarget(initial.coinId);
       setVisibleCoinTarget(initial.insight ? null : initial.coinId);
       setCoinInsightTarget(initial.insight);
-      setPreviewName(launch.previewName);
-      applyTelegramTheme(launch.webApp);
-      cleanup = bindTelegramViewportAndTheme(launch.webApp);
-      launch.webApp?.ready?.();
-      launch.webApp?.expand?.();
-      if (launch.initData) {
-        void loadSession(launch.initData);
-      } else if (launch.hasTelegramLaunchHint) {
-        setStatus("error");
-        setMessage("Telegram launch data was not available. Close and reopen from PharosWatchBot.");
-      } else {
-        setStatus("preview");
-      }
-    };
-
-    initialize();
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-      cleanup();
-    };
-  }, [loadSession]);
+    }
+    if (bridgeStatus === "preview") {
+      setStatus("preview");
+      return;
+    }
+    if (bridgeStatus === "missing") {
+      setStatus("error");
+      setMessage("Telegram launch data was not available. Close and reopen from PharosWatchBot.");
+      return;
+    }
+    // bridgeStatus === "ready"
+    if (initData) void loadSession(initData);
+  }, [bridgeStatus, initData, loadSession, startParam]);
 
   // Eruda debug toggle (?debug=eruda) — dev-only; the production short-circuit and
   // dynamic-import-from-string pattern below keep the CDN URL out of the production bundle.
@@ -1673,7 +1471,7 @@ export function PharosWatchBotMiniAppClient() {
       }
       return next;
     } catch (err) {
-      setMessage(mutationErrorMessage(err));
+      setMessage(miniAppErrorMessage(err, "mutation"));
       webApp?.HapticFeedback?.notificationOccurred?.("error");
       if (err instanceof MiniAppRequestError && err.status === 401 && err.code === "stale-auth") {
         await loadSession(initData, { clearMessage: false });
@@ -1780,29 +1578,6 @@ export function PharosWatchBotMiniAppClient() {
     webApp?.close?.();
   }, [webApp]);
 
-  // BackButton
-  useEffect(() => {
-    const bb = webApp?.BackButton;
-    if (!bb) return;
-    if (view === "home" && !coinInsightTarget) {
-      bb.hide?.();
-      return;
-    }
-    const handler = () => {
-      if (coinInsightTarget) {
-        setCoinInsightTarget(null);
-        return;
-      }
-      setView("home");
-    };
-    bb.show?.();
-    bb.onClick?.(handler);
-    return () => {
-      bb.offClick?.(handler);
-      bb.hide?.();
-    };
-  }, [coinInsightTarget, view, webApp]);
-
   // Scroll-to-coin: when launched with `coin_<id>`, scroll the matching row
   // into view and apply a temporary highlight. Runs once per coin target.
   useEffect(() => {
@@ -1830,19 +1605,6 @@ export function PharosWatchBotMiniAppClient() {
       clearTimeout(clearTimer);
     };
   }, [coinTarget, state, view, visibleCoinTarget]);
-
-  // SettingsButton
-  useEffect(() => {
-    const sb = webApp?.SettingsButton;
-    if (!sb) return;
-    const handler = () => setView("settings");
-    sb.onClick?.(handler);
-    sb.show?.();
-    return () => {
-      sb.offClick?.(handler);
-      sb.hide?.();
-    };
-  }, [webApp]);
 
   const handleAddToHomeScreen = useCallback(() => {
     webApp?.addToHomeScreen?.();
