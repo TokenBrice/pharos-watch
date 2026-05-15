@@ -407,6 +407,32 @@ The preferred finish-level control language is now the shared pill system:
 - used on time-range controls, density toggles, lens pills, and lightweight route context summaries
 - pills should feel dense and precise, not marketing-chip playful
 
+`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 431. Following the May 2026 detail-page pass, this includes the hero tertiary chips (chains pill, proof-of-reserves tier chip, freezable pill), per-section freshness stamps, and the longform scrollspy. New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
+
+### Proof-of-Reserves Attestor Tier Ladder
+
+`POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines a 4-tier categorical color ladder used for the per-coin proof-of-reserves badge on detail pages. The ladder maps directly to `AttestorTier` from `shared/types/core.ts`:
+
+| Tier       | Color            | Token classes                                                                                  | Meaning                                                          |
+| ---------- | ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `big4`     | emerald          | `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30`               | Big-4 firm independent attestation                               |
+| `regional` | blue             | `bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30`                           | Licensed regional CPA / auditor                                  |
+| `niche`    | muted / neutral  | `bg-muted/40 text-muted-foreground border-border/60`                                           | Single-jurisdiction or small-practice attestor                   |
+| `self`     | amber            | `bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30`                       | Issuer self-attestation, no third-party signoff                  |
+| `none`     | red              | `bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30`                               | No attestation surface published                                 |
+
+This is the canonical 4-tier categorical ladder for evidence-quality badges. Reuse `POR_TIER_STYLES` rather than redefining the palette inline. The ladder degrades cleanly to a 3-tier emerald / amber / red flatten for severity-style surfaces; do not introduce a competing "audit quality" palette.
+
+### Freshness Stamps
+
+`FreshnessIndicator` from `src/components/status/freshness-indicator.tsx` is the canonical "Updated X ago" affordance across the dashboard. It computes age client-side from a `updatedAtMs` prop, switches into a stale tone once `staleAfterMs` is exceeded, and pauses ticking while the document is hidden. As of the May 2026 detail-page pass it also renders inside the Safety Score card header on the stablecoin detail route, paired with the per-card `pharos-control-pill` chrome.
+
+When adding a new freshness stamp:
+
+- always pass `updatedAtMs` from the originating cache snapshot, not `Date.now()` at render
+- match `staleAfterMs` to the producer cron interval (see CLAUDE.md hook timing rule)
+- prefer the small inline form inside `CardHeader`; avoid stacking a new "last updated" line of body copy on the same surface
+
 ---
 
 ## Tables

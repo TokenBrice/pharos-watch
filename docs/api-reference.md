@@ -331,6 +331,16 @@ Total documented public operations: **32**.
 
 <!-- GENERATED-END: public-endpoints-quick-reference -->
 
+### `GET /api/events`
+
+Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above.
+
+As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`src/hooks/use-chart-annotations.ts`) consumes this endpoint to drive per-coin chart annotations on the stablecoin detail route. The hook is gated by `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` — see [process/feature-flags.md](process/feature-flags.md).
+
+**Phase 1 (shipped May 2026):** the hook is wired through the consumer surface (`<ChartAnnotationDots>` + screen-reader-only legend) but returns an empty array. Charts render byte-identically to the pre-flag baseline; the flag-off path never fetches.
+
+**Phase 2 (planned):** align the hook's URL params to the handler's existing shape — `coin=<id>` + `since` / `until` in epoch ms — or extend the worker to accept chart-friendly aliases (`stablecoin`, `from`, `to`). Phase 2 will also wire `useApiQueryWithMeta`, map tape-event rows into `ChartAnnotation`, and clamp results to the rendered chart's `[fromMs, toMs]` window inside the memo so out-of-range markers cannot push the data domain.
+
 ### `GET /api/stablecoins`
 
 Full stablecoin list with current supply, price, chain breakdown, and FX rates. Data is refreshed by cron every 15 minutes; the cache entry has a 10-minute max-age.

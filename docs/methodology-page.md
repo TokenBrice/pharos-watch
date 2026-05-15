@@ -86,6 +86,45 @@ For the safety-score changelog specifically, update both:
 
 ---
 
+## Methodology-Context Anchors
+
+`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
+
+### Blacklist tracker {#blacklist-tracker}
+
+Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. Pharos tracks the centralized stablecoins listed in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`) — assets outside that list are excluded because they lack a confirmed admin freeze surface. The supported set today covers fiat-backed majors (USDT, USDC, PYUSD, FDUSD, USD1, USDP, TUSD, RLUSD, EURC, BUIDL, etc.) plus tokenised metals (PAXG, XAUT, XAUM).
+
+The detail page renders the existing per-coin blacklist module unchanged, plus a "Recent activity" banner above the report-card section when one of two thresholds is hit over a trailing 7-day window:
+
+- `freezes + destroys >= 5`, or
+- any `destroys > 0`.
+
+The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [process/feature-flags.md](process/feature-flags.md)) and suppressed when the coin is already in `frozen` status so it does not double up with the existing frozen badge. Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/blacklist-tracker-version.ts` for the versioned methodology snapshot.
+
+### Bluechip rating {#bluechip}
+
+Top-tier classification surfaced on the homepage Bluechip rail and on per-coin detail pages. A coin is rated bluechip only when it meets strict floors across safety, liquidity, and resilience simultaneously — there is no weighted blend that lets a weak factor be averaged away. The runtime gates and current eligibility cohort are documented in [bluechip-ratings.md](bluechip-ratings.md); the methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
+
+### Proof of Reserves {#proof-of-reserves}
+
+`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `monthly` / `quarterly` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
+
+- `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
+- `regional` — blue. Licensed regional CPA or auditor with a recognized practice.
+- `niche` — muted/neutral. Small or single-jurisdiction attestor without a wide reputation.
+- `self` — amber. Issuer-published self-attestation, no third-party signoff.
+- `none` — red. No attestation surface published.
+
+The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly"). The methodology anchor `#proof-of-reserves` covers the tier ladder and cadence semantics; it intentionally lives under the safety-scores group rather than as a top-level section because it feeds the same Resilience / Dependency dimensions that already anchor under `#safety-scores-methodology`.
+
+## StablecoinMeta surfacing fields (May 2026)
+
+`StablecoinMeta` carries three optional editorial fields used by the detail-page hero and mechanism diagram. None of these change scoring — they only affect how a coin is presented:
+
+- `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR when `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is on (see [process/feature-flags.md](process/feature-flags.md)).
+- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-backed`, `cdp`, `delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
+- `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
+
 ## Verification Shortcuts
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
@@ -98,6 +137,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.12** (2026-05-15): Documented the new `#blacklist-tracker`, `#bluechip`, and `#proof-of-reserves` methodology-context sub-anchors used by the May 2026 detail-page work, plus the surfacing fields (`oneLiner`, `mechanismArchetype`, `attestorTier`, `cadence`) now carried on `StablecoinMeta`.
 - **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.
 - **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.
 - **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.
