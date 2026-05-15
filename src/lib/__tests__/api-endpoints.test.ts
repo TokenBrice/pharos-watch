@@ -18,7 +18,7 @@ import {
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
-import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-api.mjs";
+import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/maintenance/smoke-api.mjs";
 
 describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
