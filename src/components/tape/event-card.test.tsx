@@ -177,7 +177,7 @@ describe("EventCard enrichment", () => {
     expect(container.querySelector("ul")).toBeNull();
   });
 
-  it("non-enriched class (freeze) renders no enrichment fragment", () => {
+  it("freeze.unblocked renders a USD badge when amount > 0", () => {
     const event = makeEvent({
       type: "freeze.unblocked",
       severity: "info",
@@ -194,9 +194,116 @@ describe("EventCard enrichment", () => {
       },
       sourceUrl: "/freezewatch/",
     });
-    const { container } = render(<EventCard event={event} />);
-    expect(container.querySelector("ul")).toBeNull();
-    expect(screen.queryByText(/bps/)).toBeNull();
+    render(<EventCard event={event} />);
+    expect(screen.getByText("$840K")).toBeTruthy();
+    expect(screen.getByText(/released/)).toBeTruthy();
+  });
+
+  it("freeze.unblocked with zero amount renders no body badge", () => {
+    const event = makeEvent({
+      type: "freeze.unblocked",
+      severity: "info",
+      coinId: null,
+      chain: "Ethereum",
+      title: "USDT address unfrozen · Ethereum",
+      summary: "Issuer removed an address from the blacklist.",
+      payload: {
+        stablecoin: "USDT",
+        chainId: "ethereum",
+        chainName: "Ethereum",
+        amountUsdAtEvent: 0,
+        sourceEventId: "ethereum-0xabc-0x1cf",
+      },
+      sourceUrl: "/freezewatch/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.queryByText(/released/)).toBeNull();
+  });
+
+  it("freeze.blocked renders no body badge (amount is already in the title)", () => {
+    const event = makeEvent({
+      type: "freeze.blocked",
+      severity: "notice",
+      coinId: null,
+      chain: "Tron",
+      title: "USDT freeze $343k · Tron",
+      summary: "Issuer froze $343k of USDT on Tron.",
+      payload: {
+        stablecoin: "USDT",
+        chainId: "tron",
+        chainName: "Tron",
+        amountUsdAtEvent: 343007,
+        sourceEventId: "tron-0xdef-1",
+      },
+      sourceUrl: "/freezewatch/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.queryByText(/released/)).toBeNull();
+  });
+
+  it("cemetery renders the cause-of-death pill", () => {
+    const event = makeEvent({
+      type: "cemetery.entry.added",
+      severity: "notice",
+      title: "USDH entered cemetery (peak $14.0M)",
+      summary: "First Solana CDP, last one standing.",
+      coinId: "usdh-hubble-2026-05",
+      payload: {
+        symbol: "USDH",
+        name: "Hubble USDH",
+        causeOfDeath: "abandoned",
+        deathDate: "2026-05",
+        peakMcap: 14_000_000,
+        sourceUrl: "https://www.coingecko.com/en/coins/usdh",
+        sourceLabel: "CoinGecko",
+      },
+      sourceUrl: "/cemetery/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText("Abandoned")).toBeTruthy();
+  });
+
+  it("lifecycle renders the cause pill and the frozen date in absolute form", () => {
+    const event = makeEvent({
+      type: "lifecycle.tracked.frozen",
+      severity: "notice",
+      title: "USDX frozen",
+      summary: "Archived after issuer wind-down.",
+      coinId: "usdx-issuer",
+      payload: {
+        symbol: "USDX",
+        name: "USD Issuer",
+        frozenAt: "2026-04-30",
+        causeOfDeath: "regulatory",
+        sourceUrl: null,
+        sourceLabel: null,
+      },
+      sourceUrl: "/stablecoin/usdx-issuer/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText("Regulatory")).toBeTruthy();
+    expect(screen.getByText(/Frozen Apr 30, 2026/)).toBeTruthy();
+  });
+
+  it("lifecycle without payload renders neither pill nor date", () => {
+    const event = makeEvent({
+      type: "lifecycle.tracked.frozen",
+      severity: "notice",
+      title: "USDX frozen",
+      summary: "",
+      coinId: "usdx-issuer",
+      payload: {
+        symbol: "USDX",
+        name: "USD Issuer",
+        frozenAt: null,
+        causeOfDeath: null,
+        sourceUrl: null,
+        sourceLabel: null,
+      },
+      sourceUrl: "/stablecoin/usdx-issuer/",
+    });
+    render(<EventCard event={event} />);
+    expect(screen.queryByText(/Frozen /)).toBeNull();
   });
 
   it("preserves a single anchor wrapper across all enrichment paths", () => {

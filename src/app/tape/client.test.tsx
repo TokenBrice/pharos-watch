@@ -14,6 +14,7 @@ type UseEventsResult = {
   fetchNextPage: () => Promise<unknown>;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  total: number | null;
 };
 
 type LatestEventsResult = {
@@ -91,6 +92,7 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
     fetchNextPage: vi.fn().mockResolvedValue(undefined),
     hasNextPage: false,
     isFetchingNextPage: false,
+    total: events.length,
     ...overrides,
   });
 }
@@ -251,5 +253,20 @@ describe("TapeClient", () => {
     expect(screen.getByText("2 events")).toBeTruthy();
     expect(screen.getByText("last 7 days")).toBeTruthy();
     expect(screen.getByText("notice+ severity")).toBeTruthy();
+  });
+
+  it("summary band shows partial-load count when total exceeds loaded events", () => {
+    mockEvents(
+      [
+        makeTapeEvent({ id: "evt-1", title: "Event one" }),
+        makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
+      ],
+      { total: 1247, hasNextPage: true },
+    );
+
+    render(<TapeClient />);
+
+    expect(screen.getByText("Showing 2 of 1,247 events")).toBeTruthy();
+    expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
   });
 });

@@ -24,6 +24,7 @@ import {
   deviationColorClass,
   severityToAccent,
 } from "@/lib/severity-colors";
+import { formatCompactUsd } from "@shared/lib/format";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 function eventClass(type: string): string {
@@ -214,11 +215,89 @@ function MethodologyEnrichment({ event }: { event: TapeEvent }) {
   );
 }
 
+// Cause-of-death labels mirror `shared/types/cause-of-death.ts` enum values.
+// Kept locally rather than importing the enum to avoid a runtime dep on
+// stablecoin schema modules from the EventCard render path.
+const CAUSE_OF_DEATH_LABELS: Record<string, string> = {
+  "algorithmic-failure": "Algorithmic failure",
+  "counterparty-failure": "Counterparty failure",
+  "liquidity-drain": "Liquidity drain",
+  "regulatory": "Regulatory",
+  "abandoned": "Abandoned",
+};
+
+function CauseOfDeathPill({ cause }: { cause: string }) {
+  const label = CAUSE_OF_DEATH_LABELS[cause] ?? cause;
+  return (
+    <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
+function FreezeEnrichment({ event }: { event: TapeEvent }) {
+  // Title for `blocked`/`destroyed` already carries the USD amount; only
+  // surface a body badge for `unblocked` where the title is amount-less and
+  // the dollar size of the released balance is the headline signal.
+  if (event.type !== "freeze.unblocked") return null;
+  const amount = event.payload?.amountUsdAtEvent;
+  if (typeof amount !== "number" || amount <= 0) return null;
+  return (
+    <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+      <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground/80">
+        {formatCompactUsd(amount)}
+      </span>
+      <span className="text-[11px] text-muted-foreground">released</span>
+    </div>
+  );
+}
+
+function CemeteryEnrichment({ event }: { event: TapeEvent }) {
+  const cause = event.payload?.causeOfDeath;
+  if (typeof cause !== "string" || cause.length === 0) return null;
+  return (
+    <div className="mt-1.5">
+      <CauseOfDeathPill cause={cause} />
+    </div>
+  );
+}
+
+function formatAbsoluteDay(value: string): string | null {
+  const segments = value.split("-");
+  const year = Number(segments[0]);
+  const month = Number(segments[1] ?? "1");
+  const day = Number(segments[2] ?? "1");
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+  const date = new Date(Date.UTC(year, Math.max(0, month - 1), Math.max(1, day)));
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+function LifecycleEnrichment({ event }: { event: TapeEvent }) {
+  const cause = event.payload?.causeOfDeath;
+  const frozenAt = event.payload?.frozenAt;
+  const causeStr = typeof cause === "string" && cause.length > 0 ? cause : null;
+  const frozenStr = typeof frozenAt === "string" && frozenAt.length > 0 ? formatAbsoluteDay(frozenAt) : null;
+  if (!causeStr && !frozenStr) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      {causeStr ? <CauseOfDeathPill cause={causeStr} /> : null}
+      {frozenStr ? (
+        <span className="text-[11px] tabular-nums text-muted-foreground">Frozen {frozenStr}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function EventCardEnrichment({ event }: { event: TapeEvent }) {
   switch (eventClass(event.type)) {
     case "depeg":       return <DepegEnrichment event={event} />;
     case "score":       return <ScoreEnrichment event={event} />;
     case "methodology": return <MethodologyEnrichment event={event} />;
+    case "freeze":      return <FreezeEnrichment event={event} />;
+    case "cemetery":    return <CemeteryEnrichment event={event} />;
+    case "lifecycle":   return <LifecycleEnrichment event={event} />;
     default:            return null;
   }
 }

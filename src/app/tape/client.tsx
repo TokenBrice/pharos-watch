@@ -139,17 +139,26 @@ function deriveOpenIncidents(events: readonly TapeEvent[]): TapeEvent[] {
 }
 
 interface SummaryBandProps {
-  eventCount: number;
+  loadedCount: number;
+  totalCount: number | null;
   openCount: number;
   windowLabel: string;
   severityLabel: string;
 }
 
-function SummaryBand({ eventCount, openCount, windowLabel, severityLabel }: SummaryBandProps) {
+function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel }: SummaryBandProps) {
+  const showsPartial = totalCount != null && totalCount > loadedCount;
+  const countNode = showsPartial ? (
+    <span className="font-medium text-foreground">
+      Showing {loadedCount.toLocaleString()} of {totalCount!.toLocaleString()} events
+    </span>
+  ) : (
+    <span className="font-medium text-foreground">
+      {loadedCount.toLocaleString()} {loadedCount === 1 ? "event" : "events"}
+    </span>
+  );
   const parts: React.ReactNode[] = [
-    <span key="count" className="font-medium text-foreground">
-      {eventCount} {eventCount === 1 ? "event" : "events"}
-    </span>,
+    countNode,
     <span key="window">{windowLabel}</span>,
     <span key="severity">{severityLabel}</span>,
   ];
@@ -267,6 +276,7 @@ export function TapeClient() {
     isFetchingNextPage,
     meta,
     dataUpdatedAt,
+    total,
   } = events;
 
   const visibleEvents = useMemo(
@@ -370,7 +380,8 @@ export function TapeClient() {
   return (
     <div className="space-y-6">
       <SummaryBand
-        eventCount={visibleEvents.length}
+        loadedCount={visibleEvents.length}
+        totalCount={total}
         openCount={openIncidents.length}
         windowLabel={WINDOW_LABEL[filters.window]}
         severityLabel={severityLabel}
@@ -435,7 +446,11 @@ export function TapeClient() {
           {hasNextPage ? (
             <div className="pt-2 text-center">
               <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isFetchingNextPage}>
-                {isFetchingNextPage ? "Loading…" : "Load more"}
+                {isFetchingNextPage
+                  ? "Loading…"
+                  : total != null && total > rawEvents.length
+                    ? `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
+                    : "Load more"}
               </Button>
               <div ref={sentinelRef} aria-hidden="true" />
             </div>
