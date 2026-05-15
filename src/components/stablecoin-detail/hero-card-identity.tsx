@@ -67,6 +67,18 @@ function InfrastructureBadge({ value }: { value: Infrastructure }) {
   );
 }
 
+const GOVERNANCE_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["governance"], string> = {
+  centralized: "centralized",
+  "centralized-dependent": "CeFi-dependent",
+  decentralized: "decentralized",
+};
+
+const BACKING_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["backing"], string> = {
+  "rwa-backed": "RWA-backed",
+  "crypto-backed": "crypto-backed",
+  algorithmic: "algorithmic",
+};
+
 function HeroClassificationLine({
   coin,
   infrastructures,
@@ -77,42 +89,87 @@ function HeroClassificationLine({
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
   const backingHref = buildBackingTaxonomyUrl(coin.flags.backing);
-  const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
-  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
+  const governanceFullLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
+  const backingFullLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
+  const pegShortLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
 
-  const pillClass =
-    "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
+  const isNonUsdPeg = coin.flags.pegCurrency !== "USD";
+  const isAlgorithmic = coin.flags.backing === "algorithmic";
+  const isDecentralized = coin.flags.governance === "decentralized";
 
   const showPegBadge =
-    coin.flags.pegCurrency !== "USD"
+    isNonUsdPeg
     && coin.flags.pegCurrency !== "VAR"
     && coin.flags.pegCurrency !== "OTHER"
     && coin.flags.pegCurrency !== "GOLD"
     && coin.flags.pegCurrency !== "SILVER";
 
+  const sentenceSegments: { key: string; label: string; href: string | null; aria: string }[] = [];
+  if (!isNonUsdPeg) {
+    sentenceSegments.push({
+      key: "peg",
+      label: "USD-pegged",
+      href: pegHref,
+      aria: `Browse ${pegShortLabel} stablecoins`,
+    });
+  }
+  if (!isAlgorithmic) {
+    sentenceSegments.push({
+      key: "backing",
+      label: BACKING_SENTENCE_LABELS[coin.flags.backing],
+      href: backingHref,
+      aria: `Browse ${backingFullLabel} stablecoins`,
+    });
+  }
+  if (!isDecentralized) {
+    sentenceSegments.push({
+      key: "governance",
+      label: GOVERNANCE_SENTENCE_LABELS[coin.flags.governance],
+      href: governanceHref,
+      aria: `Browse ${governanceFullLabel} stablecoins`,
+    });
+  }
+
+  const segmentLinkClass =
+    "pharos-focus-ring rounded-sm underline-offset-2 transition-colors hover:text-foreground hover:underline";
+  const pillClass =
+    "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
+
   return (
-    <p className="flex flex-wrap items-center gap-1.5">
-      <Link
-        href={governanceHref}
-        className={pillClass}
-        aria-label={`Browse ${governanceLabel} stablecoins`}
-      >
-        {governanceLabel}
-      </Link>
-      <Link
-        href={backingHref}
-        className={pillClass}
-        aria-label={`Browse ${backingLabel} stablecoins`}
-      >
-        {backingLabel}
-      </Link>
-      {pegHref ? (
-        <Link href={pegHref} className={pillClass} aria-label={`Browse ${pegLabel} stablecoins`}>
-          {pegLabel}
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      {sentenceSegments.length > 0 && (
+        <span className="inline-flex flex-wrap items-baseline">
+          {sentenceSegments.map((segment, index) => (
+            <span key={segment.key} className="inline">
+              {index > 0 && <span aria-hidden>, </span>}
+              {segment.href ? (
+                <Link href={segment.href} className={segmentLinkClass} aria-label={segment.aria}>
+                  {segment.label}
+                </Link>
+              ) : (
+                <span>{segment.label}</span>
+              )}
+            </span>
+          ))}
+        </span>
+      )}
+      {isDecentralized && (
+        <Link
+          href={governanceHref}
+          className={pillClass}
+          aria-label={`Browse ${governanceFullLabel} stablecoins`}
+        >
+          Decentralized
         </Link>
-      ) : (
-        <span className={pillClass}>{pegLabel}</span>
+      )}
+      {isAlgorithmic && (
+        <Link
+          href={backingHref}
+          className={pillClass}
+          aria-label={`Browse ${backingFullLabel} stablecoins`}
+        >
+          Algorithmic
+        </Link>
       )}
       {showPegBadge && (
         <span
@@ -217,7 +274,8 @@ interface HeroIdentityProps {
   reportCard?: ReportCard | null;
 }
 
-function FreezablePill({
+// Exported for unit testing; rendered indirectly via HeroMobileIdentity / HeroDesktopIdentity.
+export function FreezablePill({
   coin,
   reportCard,
 }: {
