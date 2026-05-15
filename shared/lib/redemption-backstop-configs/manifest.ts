@@ -54,7 +54,7 @@ export const REDEMPTION_BACKSTOP_CONFIG_MANIFEST = [
   },
   {
     name: "stablecoin-redeem",
-    filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem.ts",
+    filePath: "shared/lib/redemption-backstop-configs/stablecoin-redeem/index.ts",
     configs: STABLECOIN_REDEEM_BACKSTOP_CONFIGS,
     allowedRouteFamilies: ["stablecoin-redeem"],
     reviewerLane: "protocol stablecoin redemption rails",
