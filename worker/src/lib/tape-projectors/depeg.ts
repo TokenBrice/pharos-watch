@@ -23,6 +23,7 @@ import {
 } from "../tape-event-store";
 import type { TapeEventInsert } from "../tape-event-types";
 import { DEFAULT_BATCH_LIMIT, type ProjectorOptions, type ProjectorResult } from "./types";
+import { formatDuration, formatPrice } from "@shared/lib/format";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
 
@@ -35,6 +36,7 @@ interface DepegSourceRow {
   peak_deviation_bps: number;
   started_at: number;          // epoch seconds
   ended_at: number | null;     // epoch seconds
+  start_price: number | null;
   peg_reference: number;
   source: string;
   methodology_version: string | null;
@@ -57,11 +59,11 @@ async function fetchDepegRows(
 ): Promise<DepegSourceRow[]> {
   const baseSql = variant === "opened"
     ? `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, peg_reference, source, methodology_version
+              started_at, ended_at, start_price, peg_reference, source, methodology_version
          FROM depeg_events
          WHERE source = 'live' AND started_at > ?`
     : `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-              started_at, ended_at, peg_reference, source, methodology_version
+              started_at, ended_at, start_price, peg_reference, source, methodology_version
          FROM depeg_events
          WHERE source = 'live' AND ended_at IS NOT NULL AND ended_at > ?`;
   const orderCol = variant === "opened" ? "started_at" : "ended_at";
@@ -113,9 +115,14 @@ async function projectDepegByVariant(
     const title = variant === "opened"
       ? `${row.symbol} depeg opened (${sign}${absBps} bps)`
       : `${row.symbol} depeg resolved`;
+    const directionWord = row.direction === "below" ? "below" : "above";
     const summary = variant === "opened"
-      ? `${row.symbol} crossed peg threshold ${sign}${absBps} bps from $${row.peg_reference}.`
-      : `${row.symbol} returned within peg tolerance.`;
+      ? (row.start_price != null
+          ? `Trading at ${formatPrice(row.start_price)} (${directionWord} peg).`
+          : `${row.symbol} crossed peg threshold (${directionWord} peg).`)
+      : (row.ended_at != null
+          ? `Resolved after ${formatDuration(row.started_at, row.ended_at)} (peak ${sign}${absBps} bps).`
+          : `Resolved (peak ${sign}${absBps} bps).`);
 
     events.push({
       eventId: buildTapeEventId({ tsMs, type, sourceTable: "depeg_events", sourceRowId, transition }),
@@ -205,7 +212,7 @@ export async function projectDepegPeakWorsened(
 
   let rowsResult: D1Result<DepegSourceRow>;
   const sql = `SELECT id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
-                      started_at, ended_at, peg_reference, source, methodology_version
+                      started_at, ended_at, start_price, peg_reference, source, methodology_version
                  FROM depeg_events
                  WHERE source = 'live' AND ended_at IS NULL
                  ORDER BY id ASC
@@ -253,7 +260,7 @@ export async function projectDepegPeakWorsened(
       pegCurrency: row.peg_type,
       chain: null,
       title: `${row.symbol} depeg peak worsened (${sign}${absBps} bps)`,
-      summary: `${row.symbol} peak deviation widened to ${sign}${absBps} bps from ${sign}${prevAbsBps} bps.`,
+      summary: `Deviation widened to ${sign}${absBps} bps from ${sign}${prevAbsBps} bps.`,
       payload: {
         symbol: row.symbol,
         direction: row.direction,

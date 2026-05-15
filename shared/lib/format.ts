@@ -57,7 +57,7 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 
-function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
+export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
   if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
   return `${symbol}${price.toFixed(decimals)}`;
 }
