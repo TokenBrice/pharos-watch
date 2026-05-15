@@ -47,6 +47,7 @@ function durationFromCount(count: number): string {
 interface TapeItemProps {
   entry: CollapsedTapeEntry;
   logoSrc: string | undefined;
+  logoName: string | null;
 }
 
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
@@ -57,27 +58,35 @@ const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 md:ml-[var(--pharos-homepage-tape-offset)] md:w-[calc(100%-var(--pharos-homepage-tape-offset))]",
 };
 
-function resolveEventLogoId(event: TapeEvent): string | null {
-  // Wire schema exposes a canonical `coinId`; symbol-only fallback is no
-  // longer needed.
-  return event.coinId ?? null;
+function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
+  if (event.coinId) return event.coinId;
+  // Freeze rows from the blacklist projector ship without `coinId` but carry
+  // the symbol in `payload.stablecoin`. Map to the canonical `<ticker>-<issuer>`
+  // logo key so the strip still renders the issuer's coin logo.
+  const rawSym = event.payload?.stablecoin;
+  if (typeof rawSym !== "string" || rawSym.length === 0) return null;
+  const target = rawSym.toLowerCase();
+  for (const key of Object.keys(logos)) {
+    const dashIdx = key.indexOf("-");
+    if (dashIdx > 0 && key.slice(0, dashIdx) === target) return key;
+  }
+  return null;
 }
 
 function resolveEventHref(event: TapeEvent): string {
   return event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
 }
 
-function TapeItem({ entry, logoSrc }: TapeItemProps) {
+function TapeItem({ entry, logoSrc, logoName }: TapeItemProps) {
   const { event, count } = entry;
   const bgClass = tapeClassChipBg(event.type);
-  const logoName = event.coinId ?? event.title;
 
   return (
     <Link
       href={resolveEventHref(event)}
       className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
     >
-      {event.coinId ? (
+      {logoName ? (
         <StablecoinLogo src={logoSrc} name={logoName} size={22} />
       ) : (
         <span
@@ -116,7 +125,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   // freeze.unblocked actions) so the strip stays signal-rich. The collapse
   // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
   // into a single cell with a count badge.
-  const { data, isLoading, error } = useLatestEvents({ limit: 20, severityFloor: "notice" });
+  const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
@@ -147,13 +156,17 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
             </div>
           ) : (
             <div className="pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5" aria-live="off">
-              {duplicated.map((entry, idx) => (
-                <TapeItem
-                  key={`${entry.key}-${idx}`}
-                  entry={entry}
-                  logoSrc={logos[resolveEventLogoId(entry.event) ?? ""]}
-                />
-              ))}
+              {duplicated.map((entry, idx) => {
+                const logoId = resolveEventLogoId(entry.event, logos);
+                return (
+                  <TapeItem
+                    key={`${entry.key}-${idx}`}
+                    entry={entry}
+                    logoSrc={logoId ? logos[logoId] : undefined}
+                    logoName={logoId}
+                  />
+                );
+              })}
               <TapeTerminator />
             </div>
           )}

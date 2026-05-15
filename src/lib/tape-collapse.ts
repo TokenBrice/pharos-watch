@@ -20,7 +20,14 @@ export function collapseByCoinClass(events: ReadonlyArray<TapeEvent>): Collapsed
   const indexByKey = new Map<string, number>();
   for (const event of events) {
     const cls = eventClassSlug(event.type);
-    const key = event.coinId ? `${event.coinId}:${cls}` : `event:${event.id}`;
+    // Events with no coin attribution (e.g., USDT freeze.blocked rows from the
+    // blacklist projector) still share a chain — group those so a single busy
+    // chain doesn't flood the strip with one row per blacklist tx.
+    const key = event.coinId
+      ? `${event.coinId}:${cls}`
+      : event.chain
+        ? `chain:${event.chain}:${cls}`
+        : `event:${event.id}`;
     const existingIdx = indexByKey.get(key);
     if (existingIdx != null) {
       result[existingIdx]!.count += 1;
