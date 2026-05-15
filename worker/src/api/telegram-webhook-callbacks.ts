@@ -310,6 +310,114 @@ export interface TelegramCallbackQuery {
   message?: { chat?: { id?: number; type?: string }; message_id?: number };
 }
 
+/**
+ * Context passed to every `CallbackActionHandler.run`. The dispatcher resolves
+ * `chatId` and validates `parsed.action` against the allowlist before dispatch,
+ * so handlers can rely on both being well-formed.
+ */
+interface CallbackContext {
+  db: D1Database;
+  botToken: string;
+  cb: TelegramCallbackQuery;
+  chatId: string;
+  parsed: ParsedCallbackData<CallbackAction>;
+}
+
+/**
+ * Registry-driven dispatch for `callback_query` taps. Each handler owns its own
+ * argument validation, optional admin gating, and ack flow. The dispatcher only
+ * resolves the chat id, validates `action` against the allowlist, and delegates.
+ */
+interface CallbackActionHandler {
+  readonly action: CallbackAction;
+  readonly run: (ctx: CallbackContext) => Promise<void>;
+}
+
+const CALLBACK_ACTION_HANDLERS: Record<CallbackAction, CallbackActionHandler> = {
+  snooze: {
+    action: "snooze",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleChatSnoozeCallback(db, botToken, cb, chatId, parsed),
+  },
+  coinsnooze: {
+    action: "coinsnooze",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleCoinSnoozeCallback(db, botToken, cb, chatId, parsed),
+  },
+  status: {
+    action: "status",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleStatusCallback(db, botToken, cb, chatId, parsed),
+  },
+  why: {
+    action: "why",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleWhyCallback(db, botToken, cb, chatId, parsed),
+  },
+  coverage: {
+    action: "coverage",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleCoverageCallback(db, botToken, cb, chatId, parsed),
+  },
+  quicksub: {
+    action: "quicksub",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleQuickSubCallback(db, botToken, cb, chatId, parsed),
+  },
+  depegstep: {
+    action: "depegstep",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleDepegStepCallback(db, botToken, cb, chatId, parsed),
+  },
+  safetydown: {
+    action: "safetydown",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleSafetyDownCallback(db, botToken, cb, chatId, parsed),
+  },
+  confirm: {
+    action: "confirm",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleBulkActionCallback(db, botToken, cb, chatId, parsed),
+  },
+  cancel: {
+    action: "cancel",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleBulkActionCallback(db, botToken, cb, chatId, parsed),
+  },
+  manage: {
+    action: "manage",
+    run: ({ db, botToken, cb, parsed }) =>
+      handleManageActionCallback(db, botToken, cb, parsed),
+  },
+  unsub: {
+    action: "unsub",
+    run: ({ db, botToken, cb, parsed }) =>
+      handleUnsubscribeActionCallback(db, botToken, cb, parsed),
+  },
+  select: {
+    action: "select",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleSelectDisambiguationCallback(db, botToken, cb, chatId, { ...parsed, action: "select" }),
+  },
+  help: {
+    action: "help",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleHelpActionCallback(db, botToken, cb, chatId, { ...parsed, action: "help" }),
+  },
+  tz: {
+    action: "tz",
+    run: ({ db, botToken, cb, chatId, parsed }) =>
+      handleTimezoneCallback(db, botToken, cb, chatId, parsed),
+  },
+  // `settings` is short-circuited before the registry lookup; the entry here
+  // keeps the Record exhaustive over CallbackAction and is unreachable in
+  // practice.
+  settings: {
+    action: "settings",
+    run: async () => undefined,
+  },
+};
+
 export async function handleCallbackQuery(
   db: D1Database,
   botToken: string,
@@ -323,6 +431,10 @@ export async function handleCallbackQuery(
 
   const parsed = parseCallbackData(cb.data ?? "");
 
+  // `setup` and `settings` run through bespoke pre-dispatch paths that need
+  // earlier access to D1 (loading pending-disambiguation state) than the
+  // registry-driven path; keep them as direct calls so the registry stays a
+  // pure lookup.
   if (parsed.action === "setup") {
     await handleSetupCallback(db, botToken, cb, chatId, parsed);
     return;
@@ -334,7 +446,8 @@ export async function handleCallbackQuery(
   }
 
   // Reject unknown actions before any handler can touch D1. Per-action arg
-  // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs below.
+  // validation (isSnoozeArg, isKnownStablecoinId, ...) still runs inside the
+  // handler.
   const action = parsed.action;
   if (!isKnownCallbackAction(action)) {
     await recordTelegramUsageEvent(db, {
@@ -347,56 +460,8 @@ export async function handleCallbackQuery(
   }
 
   const knownParsed: ParsedCallbackData<CallbackAction> = { ...parsed, action };
-
-  switch (knownParsed.action) {
-    case "snooze":
-      await handleChatSnoozeCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "coinsnooze":
-      await handleCoinSnoozeCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "status":
-      await handleStatusCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "why":
-      await handleWhyCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "coverage":
-      await handleCoverageCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "quicksub":
-      await handleQuickSubCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "depegstep":
-      await handleDepegStepCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "safetydown":
-      await handleSafetyDownCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "confirm":
-    case "cancel":
-      await handleBulkActionCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "manage":
-      await handleManageActionCallback(db, botToken, cb, knownParsed);
-      return;
-    case "unsub":
-      await handleUnsubscribeActionCallback(db, botToken, cb, knownParsed);
-      return;
-    case "select":
-      await handleSelectDisambiguationCallback(db, botToken, cb, chatId, { ...knownParsed, action: "select" });
-      return;
-    case "help":
-      await handleHelpActionCallback(db, botToken, cb, chatId, { ...knownParsed, action: "help" });
-      return;
-    case "tz":
-      await handleTimezoneCallback(db, botToken, cb, chatId, knownParsed);
-      return;
-    case "settings":
-      // Settings are handled before the allowlist check, but keep the switch
-      // exhaustive for CallbackAction.
-      return;
-  }
+  const handler = CALLBACK_ACTION_HANDLERS[knownParsed.action];
+  await handler.run({ db, botToken, cb, chatId, parsed: knownParsed });
 }
 
 async function handleHelpActionCallback(
