@@ -16,8 +16,8 @@ export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminUrlRouteC
     if (!isActiveCircuitSource(circuit)) return adminErrorResponse(400, `Unknown circuit: ${circuit}`);
 
     // Breaker state is persisted in the `cache` table under "circuit:<source>"
-    // (worker/src/lib/circuit-breaker.ts). Deleting the row forces the next
-    // call to re-probe with a closed breaker.
+    // (worker/src/lib/circuit-breaker.ts), including configured live-reserve
+    // scopes. Deleting the row forces the next call to re-probe closed.
     const result = await db.prepare("DELETE FROM cache WHERE key = ?").bind(`circuit:${circuit}`).run();
     const cleared = result.meta?.changes ?? 0;
     await logAdminAction(
