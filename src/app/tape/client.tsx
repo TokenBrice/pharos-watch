@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { Radar, AlertTriangle, Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -44,15 +43,51 @@ function EventSkeleton() {
   );
 }
 
-function EmptyState({ onClear }: { onClear: () => void }) {
+interface ActiveFilterChip {
+  key: string;
+  label: string;
+  onClear: () => void;
+}
+
+function EmptyState({
+  onClearAll,
+  activeChips,
+}: {
+  onClearAll: () => void;
+  activeChips: readonly ActiveFilterChip[];
+}) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card/40 px-6 py-12 text-center text-sm text-muted-foreground">
-      <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
+    <div className="pharos-card-shell px-6 py-10 text-center text-sm text-muted-foreground">
+      <Radar className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
       <p className="font-medium text-foreground">No events match these filters.</p>
-      <p className="mt-1">Try widening the time window, dropping the severity floor, or clearing the type chips.</p>
-      <Button variant="outline" size="sm" className="mt-4" onClick={onClear}>
-        Reset filters
-      </Button>
+      {activeChips.length > 0 ? (
+        <>
+          <p className="mt-1">Remove a filter to widen the view:</p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            {activeChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onClear}
+                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2.5 py-1 text-xs text-foreground hover:bg-accent/40"
+              >
+                <span>{chip.label}</span>
+                <span aria-hidden="true">×</span>
+              </button>
+            ))}
+          </div>
+          <Button variant="ghost" size="sm" className="mt-4 text-xs text-muted-foreground" onClick={onClearAll}>
+            Reset all filters
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="mt-1">Try widening the time window or dropping the severity floor.</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={onClearAll}>
+            Widen to all time
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -151,18 +186,19 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
       {loadedCount.toLocaleString()} {loadedCount === 1 ? "event" : "events"}
     </span>
   );
-  const parts: React.ReactNode[] = [
-    countNode,
-    <span key="window">{windowLabel}</span>,
-    <span key="severity">{severityLabel}</span>,
-  ];
+  // Lead with the actionable fact (open incidents) when present, then the
+  // configuration state (count → window → severity).
+  const parts: React.ReactNode[] = [];
   if (openCount > 0) {
-    parts.splice(1, 0, (
+    parts.push(
       <span key="open" className="font-medium text-amber-700 dark:text-amber-400">
-        {openCount} currently open
-      </span>
-    ));
+        {openCount} open {openCount === 1 ? "incident" : "incidents"}
+      </span>,
+    );
   }
+  parts.push(countNode);
+  parts.push(<span key="window">{windowLabel}</span>);
+  parts.push(<span key="severity">{severityLabel}</span>);
   const isFresh = dataUpdatedAt > 0 && nowMs - dataUpdatedAt < TAPE_FRESH_WINDOW_MS;
   if (dataUpdatedAt > 0) {
     parts.push(
@@ -231,7 +267,7 @@ function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSection
   const { primary, secondary } = formatDayLabel(group.dayKey, nowMs);
   return (
     <section aria-label={`${primary} ${secondary}`} className="space-y-2">
-      <div className="flex items-baseline justify-between border-b border-border/50 pb-1.5">
+      <div className="sticky top-0 z-10 -mx-1 flex items-baseline justify-between border-b border-border/50 bg-background/85 px-1 pb-1.5 pt-1 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <h3 className="text-sm font-semibold text-foreground">{primary}</h3>
         <span className="text-[11px] tabular-nums text-muted-foreground">{secondary}</span>
       </div>
@@ -385,8 +421,46 @@ export function TapeClient() {
 
   const severityLabel = `${SEVERITY_LABEL[filters.severity]} severity`;
 
+  const emptyStateChips: ActiveFilterChip[] = useMemo(() => {
+    const chips: ActiveFilterChip[] = [];
+    if (filters.window !== "7d") {
+      chips.push({ key: "window", label: `Window: ${WINDOW_LABEL[filters.window]}`, onClear: () => setParam("window", "7d") });
+    }
+    if (filters.severity !== TAPE_DEFAULT_SEVERITY) {
+      chips.push({ key: "severity", label: `Severity: ${SEVERITY_LABEL[filters.severity]}`, onClear: () => setParam("severity", "") });
+    }
+    if (filters.chain !== "all") {
+      chips.push({ key: "chain", label: `Chain: ${filters.chain}`, onClear: () => setParam("chain", "all") });
+    }
+    if (filters.peg !== "all") {
+      chips.push({ key: "peg", label: `Peg: ${filters.peg}`, onClear: () => setParam("peg", "all") });
+    }
+    if (filters.type.length > 0) {
+      chips.push({ key: "type", label: `${filters.type.length} class filter${filters.type.length === 1 ? "" : "s"}`, onClear: () => setParam("type", "") });
+    }
+    if (filters.coin !== "") {
+      chips.push({ key: "coin", label: `Coin: ${filters.coin}`, onClear: () => setParam("coin", "") });
+    }
+    if (filters.q !== "") {
+      chips.push({ key: "q", label: `Search: "${filters.q}"`, onClear: () => setParam("q", "") });
+    }
+    return chips;
+  }, [filters, setParam]);
+
+  const emptyStateFallback = useCallback(() => {
+    if (hasActiveFilters) handleClearFilters();
+    else setParam("window", "all");
+  }, [hasActiveFilters, handleClearFilters, setParam]);
+
   return (
     <div className="space-y-6">
+      <a
+        href="#tape-feed"
+        className="pharos-focus-ring sr-only rounded-md bg-background px-3 py-1.5 text-xs font-medium focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
+      >
+        Skip to events
+      </a>
+
       <SummaryBand
         loadedCount={visibleEvents.length}
         totalCount={total}
@@ -396,6 +470,20 @@ export function TapeClient() {
         dataUpdatedAt={dataUpdatedAt}
         nowMs={nowMs}
       />
+
+      {filters.coin ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setParam("coin", "")}
+            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-2.5 py-1 text-xs text-foreground hover:bg-accent/40"
+            aria-label={`Clear coin filter ${filters.coin}`}
+          >
+            <span>Filtered to <span className="font-medium">{filters.coin}</span></span>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      ) : null}
 
       <TapeFilters state={filters} setParam={setParam} />
 
@@ -416,22 +504,30 @@ export function TapeClient() {
       ) : null}
 
       {permalinkId && !permalinkBuffer.isLoading && !bufferEvent && !rawEvents.some((e) => e.id === permalinkId) ? (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-          Event <code className="font-mono text-xs">{permalinkId}</code> isn&apos;t in this view. Try widening the
-          filters or removing the time window.
+        <div
+          title={permalinkId}
+          className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300"
+        >
+          The linked event isn&apos;t in this view. Try widening the filters or removing the time window.
         </div>
       ) : null}
 
       {bufferEvent ? (
-        <div className="space-y-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Linked event</p>
+        <section
+          aria-labelledby="tape-linked-event-heading"
+          className="pharos-card-shell p-3 space-y-2"
+        >
+          <h2 id="tape-linked-event-heading" className="pharos-kicker flex items-center gap-1.5 text-foreground/80">
+            <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+            You followed a link to this event
+          </h2>
           <EventCard
             event={bufferEvent}
             logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
             highlighted={highlightedId === bufferEvent.id}
             domId={eventDomId(bufferEvent.id)}
           />
-        </div>
+        </section>
       ) : null}
 
       {openIncidents.length > 0 ? (
@@ -441,9 +537,9 @@ export function TapeClient() {
       {isLoading ? (
         <EventSkeleton />
       ) : visibleEvents.length === 0 ? (
-        <EmptyState onClear={hasActiveFilters ? handleClearFilters : () => setParam("window", "all")} />
+        <EmptyState onClearAll={emptyStateFallback} activeChips={emptyStateChips} />
       ) : (
-        <div className="space-y-6" aria-live="polite">
+        <div id="tape-feed" className="space-y-6" aria-live="polite">
           {dayGroups.map((group) => (
             <DayGroupSection
               key={group.dayKey}
@@ -456,11 +552,16 @@ export function TapeClient() {
           {hasNextPage ? (
             <div className="pt-2 text-center">
               <Button variant="outline" size="sm" onClick={handleLoadMore} disabled={isFetchingNextPage}>
-                {isFetchingNextPage
-                  ? "Loading…"
-                  : total != null && total > rawEvents.length
-                    ? `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
-                    : "Load more"}
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden="true" />
+                    Loading…
+                  </>
+                ) : total != null && total > rawEvents.length ? (
+                  `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
+                ) : (
+                  "Load more"
+                )}
               </Button>
               <div ref={sentinelRef} aria-hidden="true" />
             </div>
@@ -469,17 +570,6 @@ export function TapeClient() {
           ) : null}
         </div>
       )}
-
-      <p className="mt-2 text-xs text-muted-foreground">
-        Browse by class:{" "}
-        <Link href="/depeg/" className="underline-offset-4 hover:underline">Depeg Tracker</Link>
-        {" · "}
-        <Link href="/freezewatch/" className="underline-offset-4 hover:underline">FreezeWatch</Link>
-        {" · "}
-        <Link href="/flows/" className="underline-offset-4 hover:underline">Mint/Burn Flows</Link>
-        {" · "}
-        <Link href="/safety-scores/" className="underline-offset-4 hover:underline">Safety Scores</Link>
-      </p>
     </div>
   );
 }
