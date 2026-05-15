@@ -81,6 +81,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [portfolio-page.md](./portfolio-page.md) - `/portfolio/` route shell, local persistence, and report-card dependency contract
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
+- [tape-page.md](./tape-page.md) - `/tape/` cross-class event feed route, URL filter contract, projector pipeline, and homepage marquee integration
 
 ## Public Route Coverage
 
@@ -119,6 +120,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |
 | `/start/`                                       | [start-page.md](./start-page.md)                                                                                                                      |
 | `/status/`                                      | [status-dashboard.md](./status-dashboard.md)                                                                                                          |
+| `/tape/`                                        | [tape-page.md](./tape-page.md)                                                                                                                        |
 | `/stablecoins/`                                 | [architecture.md](./architecture.md), [classification.md](./classification.md) — taxonomy surface only; tracked-variant browse ownership stays on `/` |
 | `/stablecoins/[peg]/`                           | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/backing/`                         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
