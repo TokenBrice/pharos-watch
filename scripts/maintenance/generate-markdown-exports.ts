@@ -19,7 +19,7 @@ import {
 } from "../lib/markdown-renderers";
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
-const OUT_DIR = join(dirname(SCRIPT_PATH), "../out");
+const OUT_DIR = join(dirname(SCRIPT_PATH), "../../out");
 
 export function writeMarkdownRoute(outDir: string, route: MarkdownRoute): void {
   if (!route.path.startsWith("/") || !route.path.endsWith("/")) {
