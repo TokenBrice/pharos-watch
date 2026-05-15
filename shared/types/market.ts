@@ -652,7 +652,15 @@ const BlacklistSummaryStatsSchema = z.object({
   perCoinFrozenTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinDestroyedTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
-  perCoinRecentEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), BlacklistRecentEventTypeCountsSchema),
+  // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
+  // payloads — which either omit the field entirely or carry a partial record
+  // — still parse. Optional with `{}` default covers the missing-field case;
+  // the detail-page banner hook does `record[symbol] ?? zero-counts` for the
+  // missing-coin case at runtime.
+  perCoinRecentEventTypes: z
+    .record(z.string(), BlacklistRecentEventTypeCountsSchema)
+    .optional()
+    .default({}),
 });
 
 const BlacklistChainOptionSchema = z.object({
