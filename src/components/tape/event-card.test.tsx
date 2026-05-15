@@ -196,7 +196,9 @@ describe("EventCard enrichment", () => {
     });
     render(<EventCard event={event} />);
     expect(screen.getByText("$840K")).toBeTruthy();
-    expect(screen.getByText(/released/)).toBeTruthy();
+    // Title contains "unfrozen"; the body badge also says "unfrozen" — so we
+    // expect at least two matches.
+    expect(screen.getAllByText(/unfrozen/).length).toBeGreaterThan(1);
   });
 
   it("freeze.unblocked with zero amount renders no body badge", () => {
@@ -217,10 +219,12 @@ describe("EventCard enrichment", () => {
       sourceUrl: "/freezewatch/",
     });
     render(<EventCard event={event} />);
-    expect(screen.queryByText(/released/)).toBeNull();
+    // Amount badge not rendered when amount is 0; the word still appears in
+    // the title which we cannot scope away here.
+    expect(screen.queryByText(/^\$\d/)).toBeNull();
   });
 
-  it("freeze.blocked renders no body badge (amount is already in the title)", () => {
+  it("freeze.blocked renders a USD badge labeled 'frozen'", () => {
     const event = makeEvent({
       type: "freeze.blocked",
       severity: "notice",
@@ -238,7 +242,8 @@ describe("EventCard enrichment", () => {
       sourceUrl: "/freezewatch/",
     });
     render(<EventCard event={event} />);
-    expect(screen.queryByText(/released/)).toBeNull();
+    expect(screen.getByText("$343K")).toBeTruthy();
+    expect(screen.getByText(/frozen/)).toBeTruthy();
   });
 
   it("cemetery renders the cause-of-death pill", () => {
@@ -267,7 +272,7 @@ describe("EventCard enrichment", () => {
     const event = makeEvent({
       type: "lifecycle.tracked.frozen",
       severity: "notice",
-      title: "USDX frozen",
+      title: "USDX archived",
       summary: "Archived after issuer wind-down.",
       coinId: "usdx-issuer",
       payload: {
@@ -282,14 +287,14 @@ describe("EventCard enrichment", () => {
     });
     render(<EventCard event={event} />);
     expect(screen.getByText("Regulatory")).toBeTruthy();
-    expect(screen.getByText(/Frozen Apr 30, 2026/)).toBeTruthy();
+    expect(screen.getByText(/Archived Apr 30, 2026/)).toBeTruthy();
   });
 
   it("lifecycle without payload renders neither pill nor date", () => {
     const event = makeEvent({
       type: "lifecycle.tracked.frozen",
       severity: "notice",
-      title: "USDX frozen",
+      title: "USDX archived",
       summary: "",
       coinId: "usdx-issuer",
       payload: {
