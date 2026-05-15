@@ -1,4 +1,5 @@
 export * from "./api-meta";
+export * from "./chart-annotation";
 export * from "./live-reserves";
 export * from "./core";
 export * from "./cause-of-death";

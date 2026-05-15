@@ -561,6 +561,33 @@ If the coin needs explicit user-facing caveats, add `notices`.
 
 Use `tags` sparingly for editorial categorization, not for core classification.
 
+### 6d. Historical chart annotations (optional)
+
+When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/curated-annotations.ts`. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
+
+Schema (mirrors `shared/types/chart-annotation.ts`):
+
+```ts
+{
+  ts: Date.UTC(YYYY, monthIdx, day), // months are 0-indexed
+  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "governance" | "regulatory" | "methodology-change",
+  label: string, // ≤80 chars
+  severity?: "low" | "med" | "high",
+  href?: string, // primary source — issuer post-mortem, regulator filing, methodology changelog
+}
+```
+
+Curation rules:
+
+- One entry per discrete event (don't collapse multi-day depegs).
+- Use the price-bottom / supply-pivot timestamp, not the press cycle.
+- Severity follows the tape vocabulary: `high` for grade-impacting events, `med` for non-fatal stress, `low` for context.
+- Add an inline `// YYYY-MM-DD — short note` comment on each `ts:` line so the date is legible at review time.
+- Sort each coin's array by `ts` ascending.
+- Do NOT invent dates. Drop a candidate rather than guess.
+
+Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The flag-flip gate for `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is ≥10 annotations across the top 4 coins by mcap (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
+
 ---
 
 ## Phase 7 - Validate

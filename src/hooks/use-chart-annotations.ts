@@ -4,6 +4,11 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { TapeEventsResponseSchema, type TapeEvent } from "@shared/types/tape-event";
+import type {
+  ChartAnnotation,
+  ChartAnnotationKind,
+} from "@shared/types/chart-annotation";
+import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
 import { CRON_1H } from "@/lib/cron-intervals";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";
 import { useApiQueryWithMeta } from "./use-api-query";
@@ -11,31 +16,26 @@ import { useApiQueryWithMeta } from "./use-api-query";
 /**
  * Idea 4 phase 2 — event-annotated price/supply charts.
  *
- * Pulls tape events from `/api/events` filtered to the given coin + time range
- * and maps them into the `ChartAnnotation` shape consumed by
- * `<ChartAnnotationLines>` and the SR-only event legend. Out-of-range rows are
- * clamped inside the memo so they cannot push the chart's data domain (defence
- * in depth with `ifOverflow="hidden"` on the lines themselves).
+ * Merges two annotation sources, both gated by
+ * `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`:
  *
- * Gated by `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`: when off, the hook returns
- * an empty array and the underlying query is disabled.
+ *   1. Worker tape events from `/api/events?coin=…&since=…&until=…` (live,
+ *      auto-detected depegs / mint-burn spikes / freeze surges / methodology
+ *      changes).
+ *
+ *   2. Static editorial annotations from
+ *      `shared/data/annotations/curated-annotations.ts` (historical events the
+ *      tape can't recover: SVB depeg, BUSD ban, Black Thursday, coin launches,
+ *      etc).
+ *
+ * Both sources are clamped to `[fromMs, toMs]` in this memo so out-of-range
+ * rows never extend the chart's data domain (defence in depth with
+ * `ifOverflow="hidden"` on the lines themselves). Per-source rows are
+ * de-duplicated by `kind` + same-day timestamp, with the curated entry
+ * winning over the tape row.
  */
 
-export type ChartAnnotationKind =
-  | "depeg"
-  | "mint-burn-spike"
-  | "blacklist-surge"
-  | "governance"
-  | "regulatory"
-  | "methodology-change";
-
-export interface ChartAnnotation {
-  ts: number; // unix ms
-  kind: ChartAnnotationKind;
-  label: string;
-  severity?: "low" | "med" | "high";
-  href?: string;
-}
+export type { ChartAnnotation, ChartAnnotationKind };
 
 interface UseChartAnnotationsResult {
   data: ChartAnnotation[];
@@ -43,6 +43,7 @@ interface UseChartAnnotationsResult {
 }
 
 const EMPTY_ANNOTATIONS: ChartAnnotation[] = [];
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // `apiFetchWithMeta` lifts `_meta` off the body before schema parsing.
 const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });
@@ -101,24 +102,43 @@ export function useChartAnnotations(
   );
 
   return useMemo<UseChartAnnotationsResult>(() => {
-    if (!enabled || !query.data) {
-      return { data: EMPTY_ANNOTATIONS, isLoading: query.isLoading };
+    if (!enabled) {
+      return { data: EMPTY_ANNOTATIONS, isLoading: false };
     }
     const lo = fromMs as number;
     const hi = toMs as number;
+
+    const curated = getCuratedAnnotations(stablecoinId);
     const annotations: ChartAnnotation[] = [];
-    for (const ev of query.data.events) {
-      if (ev.ts < lo || ev.ts > hi) continue;
-      const kind = mapWorkerKind(ev.type);
-      if (kind === null) continue;
-      annotations.push({
-        ts: ev.ts,
-        kind,
-        label: ev.title,
-        severity: severityToBand(ev.severity),
-        href: ev.sourceUrl ?? undefined,
-      });
+    const seen = new Set<string>();
+
+    for (const a of curated) {
+      if (a.ts < lo || a.ts > hi) continue;
+      const key = `${a.kind}|${Math.floor(a.ts / DAY_MS)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      annotations.push(a);
     }
+
+    if (query.data) {
+      for (const ev of query.data.events) {
+        if (ev.ts < lo || ev.ts > hi) continue;
+        const kind = mapWorkerKind(ev.type);
+        if (kind === null) continue;
+        const key = `${kind}|${Math.floor(ev.ts / DAY_MS)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        annotations.push({
+          ts: ev.ts,
+          kind,
+          label: ev.title,
+          severity: severityToBand(ev.severity),
+          href: ev.sourceUrl ?? undefined,
+        });
+      }
+    }
+
+    annotations.sort((a, b) => a.ts - b.ts);
     return { data: annotations, isLoading: query.isLoading };
-  }, [enabled, fromMs, toMs, query.data, query.isLoading]);
+  }, [enabled, stablecoinId, fromMs, toMs, query.data, query.isLoading]);
 }

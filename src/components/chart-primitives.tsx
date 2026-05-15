@@ -6,7 +6,7 @@ import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type {
   ChartAnnotation,
   ChartAnnotationKind,
-} from "@/hooks/use-chart-annotations";
+} from "@shared/types/chart-annotation";
 
 const MONO_AXIS_TICK = {
   fontSize: 12,
