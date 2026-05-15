@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-b
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
+import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
@@ -180,6 +181,7 @@ export default function StablecoinDetailClient({
   staticProfileContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
   const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
   const { data: depegHistoryData } = useInfiniteDepegEvents({
@@ -285,7 +287,7 @@ export default function StablecoinDetailClient({
       <StaleDataBanner queries={viewModel.staleQueries} />
 
       {/* ── Identity zone ── */}
-      <div className="space-y-4">
+      <div ref={heroRef} className="space-y-4">
         <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
@@ -302,6 +304,15 @@ export default function StablecoinDetailClient({
           />
         ) : null}
       </div>
+
+      <MobileStickySummary
+        coin={viewModel.coin}
+        coinData={viewModel.coinData}
+        pegRef={viewModel.pegRef}
+        logoSrc={viewModel.logoSrc}
+        reportCard={viewModel.reportCard ?? null}
+        observeTarget={heroRef}
+      />
 
       {/* ── Navigation zone ── */}
       <div className="mt-6">
