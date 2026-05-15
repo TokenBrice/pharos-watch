@@ -310,10 +310,10 @@ export function DepegClient() {
         />
         <div className="mt-2 flex justify-end">
           <Link
-            href="/tape/?type=depeg.*"
+            href="/timeline/?type=depeg.*"
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
           >
-            See all depeg events on the Tape →
+            See all depeg events on the Timeline →
           </Link>
         </div>
       </SectionErrorBoundary>

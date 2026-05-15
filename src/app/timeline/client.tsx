@@ -10,6 +10,7 @@ import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { EventCard, SEVERITY_LABEL } from "@/components/tape/event-card";
+import { ClassDigestRow } from "@/components/tape/class-digest-row";
 import {
   TapeFilters,
   readTapeFilterState,
@@ -17,7 +18,7 @@ import {
   TAPE_DEFAULT_SEVERITY,
   type TapeWindowKey,
 } from "@/components/tape/tape-filters";
-import { collapseByCoinClass, type CollapsedTapeEntry } from "@/lib/tape-collapse";
+import { digestByDay, type DigestedDay } from "@/lib/tape-digest";
 import { timeAgo } from "@shared/lib/format";
 import type { TapeEvent } from "@shared/types/tape-event";
 
@@ -37,7 +38,7 @@ function EventSkeleton() {
   return (
     <div className="divide-y divide-border/30 border-y border-border/30" aria-hidden="true">
       {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-9 w-full rounded-none" />
+        <Skeleton key={i} className="h-12 w-full rounded-none" />
       ))}
     </div>
   );
@@ -119,27 +120,6 @@ function formatDayLabel(dayKey: string, nowMs: number): { primary: string; secon
   if (dayKey === yesterdayKey) return { primary: "Yesterday", secondary: absolute };
   const weekday = date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
   return { primary: weekday, secondary: absolute };
-}
-
-interface DayGroup {
-  dayKey: string;
-  collapsed: CollapsedTapeEntry[];
-}
-
-function groupAndCollapse(events: readonly TapeEvent[]): DayGroup[] {
-  const groups: { dayKey: string; events: TapeEvent[] }[] = [];
-  const indexByKey = new Map<string, number>();
-  for (const event of events) {
-    const key = utcDayKey(event.ts);
-    const idx = indexByKey.get(key);
-    if (idx != null) {
-      groups[idx]!.events.push(event);
-    } else {
-      indexByKey.set(key, groups.length);
-      groups.push({ dayKey: key, events: [event] });
-    }
-  }
-  return groups.map((g) => ({ dayKey: g.dayKey, collapsed: collapseByCoinClass(g.events) }));
 }
 
 // Pair `depeg.opened` events against `depeg.resolved` events with the same
@@ -251,15 +231,16 @@ function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
   );
 }
 
-interface DayGroupSectionProps {
-  group: DayGroup;
+interface DayDigestSectionProps {
+  day: DigestedDay;
   nowMs: number;
   logos: Record<string, string>;
   highlightedId: string | null;
 }
 
-function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSectionProps) {
-  const { primary, secondary } = formatDayLabel(group.dayKey, nowMs);
+function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigestSectionProps) {
+  const { primary, secondary } = formatDayLabel(day.dayKey, nowMs);
+  const classCount = day.classes.length;
   return (
     <section aria-label={`${primary} ${secondary}`}>
       <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -268,18 +249,20 @@ function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSection
           <h3 className="shrink-0 text-foreground">
             {primary} <span className="text-muted-foreground">· {secondary}</span>
           </h3>
+          <span className="shrink-0 tabular-nums text-muted-foreground">
+            · {day.totalCount} {day.totalCount === 1 ? "event" : "events"} · {classCount} {classCount === 1 ? "class" : "classes"}
+          </span>
           <span aria-hidden="true" className="flex-1 border-t border-border/40" />
         </div>
       </div>
-      <div className="border-b border-border/30">
-        {group.collapsed.map(({ key, event, count }) => (
-          <EventCard
-            key={key}
-            event={event}
-            count={count}
-            logoSrc={event.coinId ? logos[event.coinId] : undefined}
-            highlighted={highlightedId === event.id}
-            domId={eventDomId(event.id)}
+      <div>
+        {day.classes.map((digest) => (
+          <ClassDigestRow
+            key={`${day.dayKey}-${digest.classSlug}`}
+            digest={digest}
+            logos={logos}
+            highlightedId={highlightedId}
+            eventDomId={eventDomId}
           />
         ))}
       </div>
@@ -287,7 +270,7 @@ function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSection
   );
 }
 
-export function TapeClient() {
+export function TimelineClient() {
   const { getParam, setParam, setParams } = useUrlFilters();
   const filters = readTapeFilterState(getParam);
   const { data: logos } = useLogos();
@@ -330,7 +313,7 @@ export function TapeClient() {
   );
 
   const openIncidents = useMemo(() => deriveOpenIncidents(visibleEvents), [visibleEvents]);
-  const dayGroups = useMemo(() => groupAndCollapse(visibleEvents), [visibleEvents]);
+  const digestedDays = useMemo(() => digestByDay(visibleEvents, nowMs), [visibleEvents, nowMs]);
 
   const permalinkId = getParam("event", "");
   const [autoLoadEnabled, setAutoLoadEnabled] = useState(false);
@@ -359,9 +342,19 @@ export function TapeClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHighlightedId(permalinkId);
     const rafId = window.requestAnimationFrame(() => {
+      // Expand any <details> ancestor of the target so the row is visible.
       const el = document.getElementById(eventDomId(permalinkId));
-      if (el && typeof el.scrollIntoView === "function") {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el) {
+        let parent: HTMLElement | null = el.parentElement;
+        while (parent) {
+          if (parent.tagName === "DETAILS") {
+            (parent as HTMLDetailsElement).open = true;
+          }
+          parent = parent.parentElement;
+        }
+        if (typeof el.scrollIntoView === "function") {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
       }
     });
     const timeoutId = window.setTimeout(() => {
@@ -449,7 +442,8 @@ export function TapeClient() {
 
   const emptyStateFallback = useCallback(() => {
     if (hasActiveFilters) handleClearFilters();
-    else setParam("window", "all");
+    // Write the alltime URL token to bypass the "all" sentinel in useUrlFilters.
+    else setParam("window", "alltime");
   }, [hasActiveFilters, handleClearFilters, setParam]);
 
   return (
@@ -490,7 +484,7 @@ export function TapeClient() {
       <StaleDataBanner
         queries={[
           {
-            label: "Tape",
+            label: "Timeline",
             dataUpdatedAt,
             error,
             hasData: rawEvents.length > 0,
@@ -539,10 +533,10 @@ export function TapeClient() {
         <EmptyState onClearAll={emptyStateFallback} activeChips={emptyStateChips} />
       ) : (
         <div id="tape-feed" className="space-y-4" aria-live="polite">
-          {dayGroups.map((group) => (
-            <DayGroupSection
-              key={group.dayKey}
-              group={group}
+          {digestedDays.map((day) => (
+            <DayDigestSection
+              key={day.dayKey}
+              day={day}
               nowMs={nowMs}
               logos={logos}
               highlightedId={highlightedId}
@@ -565,7 +559,7 @@ export function TapeClient() {
               <div ref={sentinelRef} aria-hidden="true" />
             </div>
           ) : nextCursor == null && rawEvents.length > 0 ? (
-            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">─── End of tape ───</p>
+            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">─── End of timeline ───</p>
           ) : null}
         </div>
       )}

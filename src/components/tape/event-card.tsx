@@ -25,6 +25,7 @@ import {
   deviationBgClass,
   deviationColorClass,
 } from "@/lib/severity-colors";
+import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
 import { formatCompactUsd } from "@shared/lib/format";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
@@ -341,9 +342,11 @@ interface EventCardProps {
 export function EventCard({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
   const severityLabel = SEVERITY_LABEL[event.severity];
   const severityText = SEVERITY_TEXT[event.severity];
-  const href = event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
+  const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
   const titleId = `tape-event-${event.id}`;
   const ticker = deriveTicker(event);
+  const rowTint = tapeClassRowBg(event.type);
+  const chipTint = tapeClassChipBg(event.type);
   // For coin events the title is redundant with [ticker + type + enrichment];
   // for non-coin events (methodology, lifecycle without coin) the title is the
   // primary descriptive content and we surface it as the body line.
@@ -353,7 +356,7 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
     e.preventDefault();
     e.stopPropagation();
     if (typeof window === "undefined" || !navigator.clipboard) return;
-    const permalink = `${window.location.origin}/tape/?event=${encodeURIComponent(event.id)}`;
+    const permalink = `${window.location.origin}/timeline/?event=${encodeURIComponent(event.id)}`;
     void navigator.clipboard.writeText(permalink).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
@@ -366,11 +369,11 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
       href={href}
       aria-labelledby={titleId}
       data-event-id={event.id}
-      className={`pharos-focus-ring group block border-b border-border/30 px-3 py-2 font-mono text-xs transition-colors hover:bg-muted/30${
+      className={`pharos-focus-ring group block border-b border-border/30 px-3 py-2 font-mono text-xs transition-colors hover:bg-muted/30 ${rowTint}${
         highlighted ? " bg-amber-500/5" : ""
       }`}
     >
-      <div className="flex items-baseline gap-x-2.5 gap-y-1 flex-wrap">
+      <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap">
         <time
           dateTime={new Date(event.ts).toISOString()}
           title={formatAbsoluteDate(event.ts)}
@@ -378,11 +381,13 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         >
           {formatHhMm(event.ts)}
         </time>
-        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">
+        <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground">
           {event.coinId ? (
-            <StablecoinLogo src={logoSrc} name={event.coinId} size={16} />
+            <StablecoinLogo src={logoSrc} name={event.coinId} size={22} />
           ) : (
-            <ClassIcon type={event.type} className="h-3.5 w-3.5" />
+            <span className={`inline-flex h-5 w-5 items-center justify-center rounded-sm ${chipTint}`}>
+              <ClassIcon type={event.type} className="h-3.5 w-3.5" />
+            </span>
           )}
         </span>
         <span id={titleId} className="sr-only">{event.title}</span>
@@ -413,11 +418,11 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
       </div>
       {summaryLine ? (
-        <p className="mt-0.5 pl-[calc(5ch+2.25rem)] text-muted-foreground/80 line-clamp-2">
+        <p className="mt-0.5 pl-[calc(5ch+2.75rem)] text-muted-foreground/80 line-clamp-2">
           {summaryLine}
         </p>
       ) : null}
-      <div className="pl-[calc(5ch+2.25rem)]">
+      <div className="pl-[calc(5ch+2.75rem)]">
         <EventCardEnrichment event={event} />
       </div>
     </Link>

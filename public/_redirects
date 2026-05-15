@@ -11,6 +11,13 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# Tape → Timeline rename; /timeline/ is canonical. Query string is preserved
+# by Cloudflare Pages, so existing `?event=`, `?coin=`, `?type=` permalinks
+# survive the redirect.
+/tape/* /timeline/:splat 301
+/tape/ /timeline/ 301
+/tape /timeline/ 301
+
 /report-cards /safety-scores/ 301
 /report-cards/ /safety-scores/ 301
 /report-cards/* /safety-scores/:splat 301

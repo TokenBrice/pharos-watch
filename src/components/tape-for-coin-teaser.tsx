@@ -23,9 +23,9 @@ export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
   return (
     <div className="pharos-card-shell space-y-3 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="pharos-kicker">On the Tape</p>
+        <p className="pharos-kicker">On the Timeline</p>
         <Link
-          href={`/tape/?coin=${encodeURIComponent(coinId)}`}
+          href={`/timeline/?coin=${encodeURIComponent(coinId)}`}
           className="pharos-focus-ring inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           View all

@@ -21,6 +21,17 @@ const WINDOW_OPTIONS: { value: TapeWindowKey; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
+// `useUrlFilters` treats the literal string "all" as a sentinel "clear" value,
+// which would delete the param and silently revert to the 7d default. Use a
+// distinct URL token for the all-time window so the click writes through.
+const WINDOW_URL_VALUE: Record<TapeWindowKey, string> = {
+  "24h": "24h",
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+  all: "alltime",
+};
+
 const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
   info: "Info+",
   notice: "Notice+",
@@ -54,6 +65,7 @@ export interface TapeFilterState {
 export { DEFAULT_SEVERITY as TAPE_DEFAULT_SEVERITY };
 
 function parseTapeWindow(value: string): TapeWindowKey {
+  if (value === "alltime") return "all";
   if (value === "24h" || value === "7d" || value === "30d" || value === "90d" || value === "all") {
     return value;
   }
@@ -228,7 +240,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => setParam("window", opt.value)}
+                onClick={() => setParam("window", WINDOW_URL_VALUE[opt.value])}
                 className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
               >
                 {opt.label}

@@ -8,9 +8,9 @@ import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   collapseByCoinClass,
-  eventClassSlug,
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
+import { tapeClassChipBg } from "@/lib/tape-class-style";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 const SEVERITY_DOT_CLASS: Record<TapeEventSeverity, string> = {
@@ -28,29 +28,6 @@ const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
   severe: "Severe",
   critical: "Critical",
 };
-
-// Per-class background tint. Hues are picked to be distinct from the severity
-// ramp (emerald/sky/amber/orange/red) so type and severity stay readable
-// independently. Tailwind classes are static strings as required.
-const CLASS_BG: Record<string, string> = {
-  depeg: "bg-rose-500/10",
-  freeze: "bg-cyan-500/10",
-  score: "bg-indigo-500/10",
-  dews: "bg-fuchsia-500/10",
-  psi: "bg-sky-500/10",
-  mint_burn: "bg-orange-500/10",
-  reserve: "bg-emerald-500/10",
-  redemption: "bg-teal-500/10",
-  yield: "bg-lime-500/10",
-  liquidity: "bg-blue-500/10",
-  methodology: "bg-violet-500/10",
-  lifecycle: "bg-amber-500/10",
-  cemetery: "bg-zinc-500/10",
-};
-
-function eventTypeClass(type: string): string {
-  return CLASS_BG[eventClassSlug(type)] ?? "";
-}
 
 function formatRelativeTime(tsMs: number): string {
   const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
@@ -86,12 +63,12 @@ function resolveEventLogoId(event: TapeEvent): string | null {
 }
 
 function resolveEventHref(event: TapeEvent): string {
-  return event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
+  return event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
 }
 
 function TapeItem({ entry, logoSrc }: TapeItemProps) {
   const { event, count } = entry;
-  const bgClass = eventTypeClass(event.type);
+  const bgClass = tapeClassChipBg(event.type);
   const logoName = event.coinId ?? event.title;
 
   return (
@@ -124,7 +101,7 @@ function TapeItem({ entry, logoSrc }: TapeItemProps) {
 function TapeTerminator() {
   return (
     <Link
-      href="/tape/"
+      href="/timeline/"
       className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground"
     >
       <span>View all events</span>

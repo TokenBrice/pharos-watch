@@ -40,7 +40,7 @@ vi.mock("@/hooks/use-logos", () => ({
   useLogos: () => ({ data: {} }),
 }));
 
-import { TapeClient } from "@/app/tape/client";
+import { TimelineClient } from "@/app/timeline/client";
 
 afterEach(() => {
   cleanup();
@@ -97,10 +97,10 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
   });
 }
 
-describe("TapeClient", () => {
+describe("TimelineClient", () => {
   it("renders the empty state when there are no events", () => {
     mockEvents([]);
-    render(<TapeClient />);
+    render(<TimelineClient />);
     expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
   });
 
@@ -108,7 +108,7 @@ describe("TapeClient", () => {
     mockEvents([], {
       error: new Error("fetch failed"),
     });
-    const { container } = render(<TapeClient />);
+    const { container } = render(<TimelineClient />);
     expect(container.firstChild).not.toBeNull();
   });
 
@@ -131,7 +131,7 @@ describe("TapeClient", () => {
       }),
     ]);
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     // The unmatched depeg.opened renders in the day feed and in the
     // Currently-open banner — getAllByText covers both.
@@ -170,7 +170,7 @@ describe("TapeClient", () => {
       }),
     ]);
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     expect(screen.getByText("USDXL depeg peak worsened (−112 bps)")).toBeTruthy();
     expect(screen.queryByText("USDXL depeg peak worsened (−109 bps)")).toBeNull();
@@ -208,7 +208,7 @@ describe("TapeClient", () => {
       }),
     ]);
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     expect(screen.getByText(/Currently open · 1 incident/i)).toBeTruthy();
     // The unmatched EURS open appears both in the banner and in the day feed.
@@ -237,7 +237,7 @@ describe("TapeClient", () => {
       }),
     ]);
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     expect(screen.queryByText(/Currently open/i)).toBeNull();
   });
@@ -248,7 +248,7 @@ describe("TapeClient", () => {
       makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
     ]);
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     expect(screen.getByText("2 events")).toBeTruthy();
     expect(screen.getByText("last 7 days")).toBeTruthy();
@@ -264,9 +264,44 @@ describe("TapeClient", () => {
       { total: 1247, hasNextPage: true },
     );
 
-    render(<TapeClient />);
+    render(<TimelineClient />);
 
     expect(screen.getByText("Showing 2 of 1,247 events")).toBeTruthy();
     expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
+  });
+
+  it("collapses a dense yesterday class into a digest row", () => {
+    const yesterday = Date.now() - 86_400_000;
+    const events: TapeEvent[] = [];
+    for (let i = 0; i < 5; i++) {
+      events.push(
+        makeTapeEvent({
+          id: `evt-freeze-${i}`,
+          ts: yesterday - i * 60_000,
+          type: "freeze.blocked",
+          severity: "notice",
+          coinId: null,
+          chain: "ethereum",
+          title: `USDT freeze ${i}`,
+          summary: `Freeze body ${i}`,
+          payload: { stablecoin: "USDT", chainId: "ethereum", chainName: "Ethereum", amountUsdAtEvent: 100_000 },
+          sourceRowId: `f-${i}`,
+        }),
+      );
+    }
+    mockEvents(events);
+
+    render(<TimelineClient />);
+
+    // Class digest row carries the recap text; individual rows are hidden
+    // inside the collapsed <details>. "Freezes" appears both as the filter
+    // chip and as the digest-row class label — assert both occur.
+    expect(screen.getAllByText(/^Freezes$/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/5 events/).length).toBeGreaterThanOrEqual(1);
+    // Row titles still exist in the DOM (collapsed inside <details>, not removed).
+    expect(screen.getByText("USDT freeze 0")).toBeTruthy();
+    // The collapsed <details> wrapper is in the document.
+    const details = document.querySelector("details");
+    expect(details).not.toBeNull();
   });
 });

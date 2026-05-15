@@ -1,14 +1,14 @@
-# Tape Page
+# Timeline Page
 
-Route contract for the public `/tape/` surface.
+Route contract for the public `/timeline/` surface. The codebase term "tape" persists in the internal pipeline (`tape_events` D1 table, `TAPE_PROJECTOR_JOBS`, `src/components/tape/`); only the public URL and user-facing label were renamed. Inbound `/tape/` URLs 301-redirect to `/timeline/` via `public/_redirects` (query string preserved, so `?event=`, `?coin=`, `?type=` permalinks survive).
 
 ---
 
 ## Purpose
 
-`/tape/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, methodology bumps, lifecycle entries, and (as new projector classes ship) DEWS / PSI band shifts, mint/burn, reserves, redemption, yield, and liquidity events on one timeline.
+`/timeline/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, methodology bumps, lifecycle entries, and (as new projector classes ship) DEWS / PSI band shifts, mint/burn, reserves, redemption, yield, and liquidity events in one digestable view.
 
-The dedicated trackers (`/depeg/`, `/freezewatch/`, `/flows/`, `/safety-scores/`) remain the canonical surfaces for any single class. `/tape/` is the unified view for users who want everything for one coin, everything in one severity tier, or a cross-class read across event classes.
+The dedicated trackers (`/depeg/`, `/freezewatch/`, `/flows/`, `/safety-scores/`) remain the canonical surfaces for any single class. `/timeline/` is the unified view for users who want everything for one coin, everything in one severity tier, or a cross-class read across event classes.
 
 Primary audience:
 
@@ -20,23 +20,25 @@ Primary audience:
 
 ## Route Shape
 
-- **Route:** `/tape/`
-- **Server shell:** `src/app/tape/page.tsx`
-- **Client implementation:** `src/app/tape/client.tsx` (exports `TapeClient`)
+- **Route:** `/timeline/`
+- **Server shell:** `src/app/timeline/page.tsx`
+- **Client implementation:** `src/app/timeline/client.tsx` (exports `TimelineClient`)
 - **Filter UI:** `src/components/tape/tape-filters.tsx` and `src/components/tape/tape-classes.ts`
 - **Event card:** `src/components/tape/event-card.tsx`
+- **Digest grouping:** `src/lib/tape-digest.ts` + `src/components/tape/class-digest-row.tsx`
+- **Class styling:** `src/lib/tape-class-style.ts` (per-class background tints shared with the homepage marquee)
 - **Client helpers:** `src/lib/tape-collapse.ts`, `src/lib/severity-colors.ts`
 - **Primary dataset:** D1 table `tape_events` via `GET /api/events`
 
-The page renders through `FeaturePageShell` with `breadcrumbName="The Tape"`, `path="/tape/"`, title `The Tape`, a `beta` status badge, and the two-paragraph lead authored in `src/app/tape/page.tsx`.
+The page renders through `FeaturePageShell` with `breadcrumbName="Timeline"`, `path="/timeline/"`, title `Timeline`, a `beta` status badge, and the lead paragraph authored in `src/app/timeline/page.tsx`.
 
-Metadata is authored directly in `src/app/tape/page.tsx` with canonical `/tape/`, route-specific title and description, and the default shared page-metadata helper path. The OG image falls back to the static `/og-card.png`; a dynamic `/api/og/tape` generator is reserved but not yet shipped.
+Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, and the default shared page-metadata helper path. The OG image falls back to the static `/og-card.png`; a dynamic `/api/og/timeline` generator is reserved but not yet shipped.
 
 ---
 
 ## Visual Identity
 
-`/tape/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/tape/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
+`/timeline/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/tape/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
 
 1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the linked-event band, or the empty state. The whole stream is a flat typographic surface.
 2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
@@ -108,8 +110,10 @@ Future projectors (`dews`, `psi`, `mint_burn`, `reserve`, `redemption`, `yield`,
 ## Behavior
 
 - **Severity-floor default:** the page opens at `notice+`. Lower-priority chip ("All") drops the floor.
-- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels.
-- **Collapse-by-coin-class:** consecutive events of the same `(coin, class)` within a day collapse into a single card with a count badge via `collapseByCoinClass(...)`.
+- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N events · M classes`) so users can decide whether to scan a day before scrolling.
+- **Digest grouping:** within each day, events are partitioned by class (`digestByDay` in `src/lib/tape-digest.ts`). Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
+- **Collapse-by-coin-class:** within an expanded digest, consecutive events of the same `(coin, class)` further collapse into a single card with a count badge via `collapseByCoinClass(...)`.
+- **Per-class tints:** every `EventCard` and digest recap row carries a class background tint (`bg-{rose|cyan|indigo|…}-500/[0.08]` for rows; `/10` for marquee chips). The tint scheme is `src/lib/tape-class-style.ts` and is shared with `src/components/homepage-tape.tsx`. Class is signaled by hue; severity stays text-color (Aesthetic Lock).
 - **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
 - **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered above the day stream. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
@@ -120,17 +124,17 @@ Future projectors (`dews`, `psi`, `mint_burn`, `reserve`, `redemption`, `yield`,
 
 ## SEO And Crawlability
 
-- The route is indexable. `src/app/sitemap.ts` includes `${SITE_URL}/tape/`.
-- `src/app/tape/page.tsx` emits two JSON-LD blocks:
-  - `CollectionPage` with `@id=${TAPE_URL}#collection`, `isPartOf` the site `WebSite` node
+- The route is indexable. `src/app/sitemap.ts` includes `${SITE_URL}/timeline/`.
+- `src/app/timeline/page.tsx` emits two JSON-LD blocks:
+  - `CollectionPage` with `@id=${TIMELINE_URL}#collection`, `isPartOf` the site `WebSite` node
   - `ItemList` of the 12 tape classes from `TAPE_CLASSES`, each linking to `?type=<slug>.*`
-- Per-class deep-links into `/tape/` (e.g., `/tape/?type=depeg.*`) are the canonical "See all on Tape" targets used from `/depeg/`, `/freezewatch/`, and `/flows/`.
+- Per-class deep-links into `/timeline/` (e.g., `/timeline/?type=depeg.*`) are the canonical "See all on Timeline" targets used from `/depeg/`, `/freezewatch/`, and `/flows/`.
 
 ---
 
 ## Homepage Integration
 
-The homepage marquee in `src/components/homepage-tape.tsx` consumes the same backing data via `useLatestEvents()` and terminates with a single `View all events →` cell that links to `/tape/`. Update homepage and tape together if the marquee's severity or class scope changes — see [homepage.md](./homepage.md).
+The homepage marquee in `src/components/homepage-tape.tsx` consumes the same backing data via `useLatestEvents()` and terminates with a single `View all events →` cell that links to `/timeline/`. Update homepage and Timeline together if the marquee's severity or class scope changes — see [homepage.md](./homepage.md).
 
 ---
 
@@ -149,7 +153,7 @@ Update this doc when any of these contracts change:
 - the `tape_events` schema, the event-id format, or the cursor encoding
 - the `GET /api/events` query params, freshness budget, or pagination cap
 - the `?event=` permalink resolution path (buffer size, scroll behavior)
-- the JSON-LD shape emitted by `src/app/tape/page.tsx`
+- the JSON-LD shape emitted by `src/app/timeline/page.tsx`
 
 If a new projector class ships, also update:
 
@@ -166,7 +170,7 @@ If you find yourself wrapping event rows in `pharos-card-shell`, rounding corner
 
 ## Aesthetic Lock
 
-**Do not harmonize `/tape/` with the standard `pharos-card-shell` / rounded-card analytics surface.** The wire-service treatment described under [Visual Identity](#visual-identity) is intentional and load-bearing for this route's identity. The matching carve-out lives in [design-language.md](./design-language.md) under `### Tape (Special)`; the lock holds from either entry point.
+**Do not harmonize `/timeline/` with the standard `pharos-card-shell` / rounded-card analytics surface.** The wire-service treatment described under [Visual Identity](#visual-identity) is intentional and load-bearing for this route's identity. Per-class background tints applied to event rows and digest recaps (`src/lib/tape-class-style.ts`) are part of that treatment, not a violation — they signal class via hue while severity remains text-color. The matching carve-out lives in [design-language.md](./design-language.md) under `### Tape (Special)`; the lock holds from either entry point.
 
 Specifically:
 
@@ -174,4 +178,4 @@ Specifically:
 - Geist Mono as the dominant stream typeface is a third deliberate carve-out alongside Digest (Newsreader + Courier) and the detail-page `AiSummary` (Georgia).
 - Severity-as-text-color (no left rail, no fill) is part of the wire-service identity. Restoring the `border-l-[3px]` rail regresses the design.
 
-Future "harmonize /tape with the rest of the site" suggestions should be rejected unless the user explicitly asks to retire the wire-service treatment.
+Future "harmonize /timeline with the rest of the site" suggestions should be rejected unless the user explicitly asks to retire the wire-service treatment.

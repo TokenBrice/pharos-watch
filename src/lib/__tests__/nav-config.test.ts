@@ -51,7 +51,7 @@ describe("nav-config", () => {
 
     expect(monitorGroup?.label).toBe("MONITOR");
     expect(monitorGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
-      { href: "/tape", label: "The Tape" },
+      { href: "/timeline", label: "Timeline" },
       { href: "/upcoming", label: "Upcoming" },
       { href: "/digest", label: "Digest" },
       { href: "/status", label: "Pharos Status" },

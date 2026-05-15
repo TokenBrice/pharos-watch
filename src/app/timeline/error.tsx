@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load the tape", "TapeError");
+export default createPageError("Failed to load the timeline", "TimelineError");

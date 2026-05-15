@@ -281,7 +281,7 @@ describe("HomepageTape", () => {
     expect(screen.queryByText(/×\d/)).toBeNull();
   });
 
-  it("appends a single non-duplicated 'View all events' terminator linking to /tape/", () => {
+  it("appends a single non-duplicated 'View all events' terminator linking to /timeline/", () => {
     mockLatestEvents({
       data: {
         events: [
@@ -304,6 +304,6 @@ describe("HomepageTape", () => {
     expect(screen.getAllByText("View all events")).toHaveLength(1);
     const tapeLink = screen.getByText("View all events").closest("a");
     // Next.js Link may normalize trailing slash; accept either.
-    expect(tapeLink?.getAttribute("href")).toMatch(/^\/tape\/?$/);
+    expect(tapeLink?.getAttribute("href")).toMatch(/^\/timeline\/?$/);
   });
 });

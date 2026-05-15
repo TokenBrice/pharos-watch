@@ -49,7 +49,7 @@ export function useSidebarNavSignals() {
   return useMemo<Record<string, SidebarNavSignal | null>>(
     () => ({
       "/depeg": getDepegNavSignal(pegSummary),
-      "/tape": getTapeNavSignal(pegSummary),
+      "/timeline": getTapeNavSignal(pegSummary),
       "/stability-index": getStabilityIndexNavSignal(stabilityIndex),
       "/freezewatch": getBlacklistNavSignal(blacklistSummary),
       "/status": getStatusNavSignal(health),

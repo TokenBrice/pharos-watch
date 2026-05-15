@@ -197,10 +197,10 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
 
       <div className="flex justify-end">
         <Link
-          href="/tape/?type=mint_burn.*"
+          href="/timeline/?type=mint_burn.*"
           className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
         >
-          See all mint/burn events on the Tape →
+          See all mint/burn events on the Timeline →
         </Link>
       </div>
     </FeaturePageShell>

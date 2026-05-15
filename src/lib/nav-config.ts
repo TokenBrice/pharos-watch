@@ -93,7 +93,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "monitor",
     label: "MONITOR",
     items: [
-      { href: "/tape", label: "The Tape", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
+      { href: "/timeline", label: "Timeline", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
       { href: "/status", label: "Pharos Status", icon: Activity, description: "Live health of every data pipeline and cron sync" },

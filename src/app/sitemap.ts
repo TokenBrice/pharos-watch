@@ -147,7 +147,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${SITE_URL}/tape/`,
+      url: `${SITE_URL}/timeline/`,
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.75,

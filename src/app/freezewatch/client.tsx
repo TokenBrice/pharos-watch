@@ -208,10 +208,10 @@ export default function FreezeWatchClient() {
 
         <div className="flex justify-end">
           <Link
-            href="/tape/?type=freeze.*"
+            href="/timeline/?type=freeze.*"
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
           >
-            See all freeze events on the Tape →
+            See all freeze events on the Timeline →
           </Link>
         </div>
       </FreezeWatchSection>
