@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
@@ -167,8 +166,6 @@ export function ExploreNextSection({
           </div>
         </div>
       </div>
-
-      <TapeForCoinTeaser coinId={coin.id} />
     </section>
   );
 }
