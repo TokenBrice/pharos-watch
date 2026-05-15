@@ -1,5 +1,76 @@
 import { CRON_TIMEOUT_MS, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS, runWithOverloadRetry } from "./cron-lease";
 
+// --- Cron failure recording ---
+// `recordCronFailure` replaces ad-hoc `console.error(...)` in cron catch blocks
+// where the job decides to swallow an exception (e.g. degrade rather than throw).
+// It emits a single structured JSON line plus a human-readable prefix, and
+// increments a per-isolate in-memory counter so callers can sample severity
+// without touching D1. DB-backed failure tracking (e.g. a `cron_failures` table
+// or a column on `cron_runs`) is a follow-up — the current `logCronRun`
+// catch-all already records terminal exceptions via the `error` column.
+
+const cronFailureCounts = new Map<string, number>();
+
+export interface CronFailureContext {
+  /** Optional free-form metadata attached to the structured log. */
+  metadata?: Record<string, unknown>;
+}
+
+export interface CronFailureRecord {
+  job: string;
+  errorName: string;
+  errorMessage: string;
+  failureCount: number;
+}
+
+function classifyError(error: unknown): { name: string; message: string; stack?: string } {
+  if (error instanceof Error) {
+    return {
+      name: error.name || "Error",
+      message: error.message || String(error),
+      stack: error.stack,
+    };
+  }
+  return { name: "NonError", message: String(error) };
+}
+
+/**
+ * Records a swallowed cron failure with a structured log line and in-memory
+ * counter. Intended for `catch` blocks where the job chooses to degrade rather
+ * than rethrow; for terminal exceptions, `logCronRun` already persists an
+ * error row to `cron_runs`.
+ */
+export function recordCronFailure(
+  jobName: string,
+  error: unknown,
+  context?: CronFailureContext,
+): CronFailureRecord {
+  const { name, message, stack } = classifyError(error);
+  const failureCount = (cronFailureCounts.get(jobName) ?? 0) + 1;
+  cronFailureCounts.set(jobName, failureCount);
+
+  const payload: Record<string, unknown> = {
+    event: "cron_failure",
+    job: jobName,
+    errorName: name,
+    errorMessage: message.slice(0, 500),
+    failureCount,
+  };
+  if (stack) payload.stack = stack.slice(0, 800);
+  if (context?.metadata && Object.keys(context.metadata).length > 0) {
+    payload.metadata = context.metadata;
+  }
+
+  console.error(`[cron-failure:${jobName}] ${name}: ${message.slice(0, 200)}`, JSON.stringify(payload));
+
+  return { job: jobName, errorName: name, errorMessage: message, failureCount };
+}
+
+/** Test-only: reset the in-memory failure counter. */
+export function __resetCronFailureCountsForTests(): void {
+  cronFailureCounts.clear();
+}
+
 // --- Cron run logging types ---
 
 export interface CronResult {

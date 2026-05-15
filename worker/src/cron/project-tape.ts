@@ -17,7 +17,7 @@
  * Runs on the `26,56 * * * *` DEWS/PSI DB-only lane (purely D1-bound, no
  * outbound fetches), so it adds zero connection budget to the trigger.
  */
-import type { CronResult } from "../lib/cron-logger";
+import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import {
   projectDepegOpened,
   projectDepegPeakWorsened,
@@ -76,7 +76,7 @@ export async function projectTape(db: D1Database, signal?: AbortSignal): Promise
       total += result.projected;
       if (result.advanced != null) advancedAny = true;
     } catch (err) {
-      console.error(`[project-tape] class ${job.name} failed:`, err);
+      recordCronFailure("project-tape", err, { metadata: { class: job.name } });
       perClass[job.name] = -1;
     }
   }

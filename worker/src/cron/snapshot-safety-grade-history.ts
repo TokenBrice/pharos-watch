@@ -2,7 +2,7 @@ import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { batchExecute } from "../lib/db";
 import { writeReportCardCache } from "../lib/report-card-cache";
-import type { CronResult } from "../lib/cron-logger";
+import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins";
 
@@ -29,7 +29,7 @@ export async function snapshotSafetyGradeHistory(
   try {
     snapshot = await buildReportCardsSnapshot(db);
   } catch (err) {
-    console.error("[snapshot-safety-grade-history] buildReportCardsSnapshot failed:", err);
+    recordCronFailure("snapshot-safety-grade-history", err, { metadata: { stage: "buildReportCardsSnapshot" } });
     return {
       status: "error" as const,
       itemCount: 0,

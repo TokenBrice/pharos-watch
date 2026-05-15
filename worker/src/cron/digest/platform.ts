@@ -5,6 +5,7 @@ import type {
 } from "../daily-digest/response";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE } from "../../lib/constants";
+import { recordCronFailure } from "../../lib/cron-logger";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   formatDigestValidationIssues,
@@ -243,7 +244,9 @@ export async function runDigestChannelDelivery<TCreds>(
     return result ?? "ok";
   } catch (err) {
     await recordOutcomeSafe(options.db, options.circuitSource, false);
-    console.error(`[${options.logPrefix}] Failed to post to ${options.channelLabel} (non-fatal):`, err);
+    recordCronFailure(options.logPrefix, err, {
+      metadata: { stage: "channel-delivery", channel: options.channelLabel, fatal: false },
+    });
     return `failed: ${String(err).slice(0, 100)}`;
   }
 }

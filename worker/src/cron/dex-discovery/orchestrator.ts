@@ -1,4 +1,4 @@
-import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment } from "@shared/types/core";
@@ -303,7 +303,7 @@ export async function syncDexDiscovery(
     };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    console.error("[dex-discovery] fatal", err);
+    recordCronFailure("dex-discovery", err, { metadata: { stage: "orchestrator", fatal: true, runSeq } });
     return {
       status: "error",
       itemCount: coinsCrawled,
