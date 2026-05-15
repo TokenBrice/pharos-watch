@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/infrastructure";
@@ -201,6 +202,11 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Peg Stability
                 </p>
+                {meta.mechanismArchetype ? (
+                  <div className="mb-3 flex justify-start">
+                    {mechanismDiagramFor(meta.mechanismArchetype, meta.symbol)}
+                  </div>
+                ) : null}
                 <p className="text-base leading-relaxed">{meta.pegMechanism}</p>
               </div>
             )}
