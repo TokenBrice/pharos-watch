@@ -6,6 +6,11 @@ import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import {
+  collapseByCoinClass,
+  eventClassSlug,
+  type CollapsedTapeEntry,
+} from "@/lib/tape-collapse";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 const SEVERITY_DOT_CLASS: Record<TapeEventSeverity, string> = {
@@ -44,9 +49,7 @@ const CLASS_BG: Record<string, string> = {
 };
 
 function eventTypeClass(type: string): string {
-  const dot = type.indexOf(".");
-  const cls = dot === -1 ? type : type.slice(0, dot);
-  return CLASS_BG[cls] ?? "";
+  return CLASS_BG[eventClassSlug(type)] ?? "";
 }
 
 function formatRelativeTime(tsMs: number): string {
@@ -64,7 +67,7 @@ function durationFromCount(count: number): string {
 }
 
 interface TapeItemProps {
-  event: TapeEvent;
+  entry: CollapsedTapeEntry;
   logoSrc: string | undefined;
 }
 
@@ -86,7 +89,8 @@ function resolveEventHref(event: TapeEvent): string {
   return event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
 }
 
-function TapeItem({ event, logoSrc }: TapeItemProps) {
+function TapeItem({ entry, logoSrc }: TapeItemProps) {
+  const { event, count } = entry;
   const bgClass = eventTypeClass(event.type);
   const logoName = event.coinId ?? event.title;
 
@@ -104,6 +108,14 @@ function TapeItem({ event, logoSrc }: TapeItemProps) {
         />
       )}
       <span className="text-foreground">{event.title}</span>
+      {count > 1 ? (
+        <span
+          aria-label={`${count} similar events`}
+          className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-foreground/80"
+        >
+          ×{count}
+        </span>
+      ) : null}
       <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
     </Link>
   );
@@ -122,12 +134,17 @@ function TapeTerminator() {
 }
 
 export function HomepageTape({ placement = "inline" }: { placement?: HomepageTapePlacement }) {
-  const { data, isLoading, error } = useLatestEvents({ limit: 20 });
+  // `severityFloor: "notice"` drops routine info-tier bookkeeping (issuer
+  // freeze.unblocked actions) so the strip stays signal-rich. The collapse
+  // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
+  // into a single cell with a count badge.
+  const { data, isLoading, error } = useLatestEvents({ limit: 20, severityFloor: "notice" });
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
-  const duplicated = useMemo(() => events.concat(events), [events]);
+  const collapsed = useMemo(() => collapseByCoinClass(events), [events]);
+  const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);
 
-  if (error || (!isLoading && events.length === 0)) {
+  if (error || (!isLoading && collapsed.length === 0)) {
     return null;
   }
 
@@ -135,7 +152,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     <section
       aria-label="Recent events tape"
       className={TAPE_SHELL_CLASS[placement]}
-      style={{ ["--pharos-tape-duration" as string]: durationFromCount(events.length) }}
+      style={{ ["--pharos-tape-duration" as string]: durationFromCount(collapsed.length) }}
     >
       <div className="relative flex items-stretch">
         <div className="pointer-events-none sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:flex">
@@ -149,11 +166,11 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
             </div>
           ) : (
             <div className="pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5" aria-live="off">
-              {duplicated.map((event, idx) => (
+              {duplicated.map((entry, idx) => (
                 <TapeItem
-                  key={`${event.id}-${idx}`}
-                  event={event}
-                  logoSrc={logos[resolveEventLogoId(event) ?? ""]}
+                  key={`${entry.key}-${idx}`}
+                  entry={entry}
+                  logoSrc={logos[resolveEventLogoId(entry.event) ?? ""]}
                 />
               ))}
               <TapeTerminator />

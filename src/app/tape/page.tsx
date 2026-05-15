@@ -7,7 +7,7 @@ import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { TapeClient } from "./client";
 
 const TAPE_DESCRIPTION =
-  "The unified time axis of Pharos: every confirmed depeg, freeze, redemption-route change, PSI band shift, and methodology update across tracked stablecoins on one feed.";
+  "Cross-class chronological feed of stablecoin events: depegs, freezes, score changes, and methodology bumps on one timeline. Defaults to notice-and-above severity; drop the floor or filter by class to widen the lens.";
 
 // The /tape/ OG image is intentionally served from the standard static
 // /og-card.png. A dynamic /api/og/tape generator lives in worker territory
@@ -67,7 +67,8 @@ export default function TapePage() {
         </>
       )}
       leadParagraphs={[
-        "The unified time axis of Pharos: every confirmed depeg, address freeze, redemption-route change, PSI band shift, and methodology update on one tape.",
+        "A cross-class chronological view of stablecoin events: depegs, freezes, score changes, and methodology bumps on one timeline.",
+        "Use this when you want everything for one coin, everything in one severity tier, or a unified view across event classes. The dedicated trackers go deeper for any single class.",
       ]}
     >
       <TapeClient />

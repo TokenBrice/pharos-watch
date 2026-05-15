@@ -159,14 +159,16 @@ export interface UseLatestEventsOptions {
   since?: number;
   /** Event type slugs (exact or `prefix.*`). */
   type?: readonly string[];
+  /** Severity floor (inclusive). */
+  severityFloor?: TapeEventSeverity;
   enabled?: boolean;
 }
 
 export function useLatestEvents(options: UseLatestEventsOptions = {}) {
-  const { limit = 20, coin, classSlug, since, type, enabled = true } = options;
+  const { limit = 20, coin, classSlug, since, type, severityFloor, enabled = true } = options;
   const typeFilters = classSlug ? [`${classSlug}.*`] : type;
   const path = buildEventsPath(
-    { coin, since, type: typeFilters },
+    { coin, since, type: typeFilters, severityFloor },
     { limit },
   );
   const result = useApiQueryWithMeta<TapeEventsResponseBody>(
@@ -178,6 +180,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
         coin: coin ?? null,
         since: since ?? null,
         type: typeFilters ? [...typeFilters].sort() : null,
+        severityFloor: severityFloor ?? null,
       },
     ],
     path,

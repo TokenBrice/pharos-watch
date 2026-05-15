@@ -14,11 +14,16 @@ import {
   Rocket,
   Skull,
   TrendingDown,
+  TrendingUp,
   Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { severityToAccent } from "@/lib/severity-colors";
+import {
+  deviationBgClass,
+  deviationColorClass,
+  severityToAccent,
+} from "@/lib/severity-colors";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 function eventClass(type: string): string {
@@ -87,6 +92,137 @@ function formatAbsoluteDate(tsMs: number): string {
   return new Date(tsMs).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 }
 
+// ---------------------------------------------------------------------------
+// Per-class body enrichment
+//
+// One internal switch component, three small renderers — kept inline rather
+// than extracted to a registry so we mirror the existing `ClassIcon` pattern
+// (no static-component lint hits, no bundle indirection).
+//
+// Phase 1 covers depeg + score + methodology — the three classes whose payload
+// holds non-redundant detail today. Other classes fall through and render
+// the title/summary baseline only.
+// ---------------------------------------------------------------------------
+
+const DEPEG_BAR_MAX_BPS = 500;
+
+interface DepegPayload {
+  absBps: number;
+  signedBps: number;
+  direction: "above" | "below";
+  prevAbsBps: number | null;
+}
+
+function readDepegPayload(event: TapeEvent): DepegPayload | null {
+  const p = event.payload;
+  const abs = p?.absDeviationBps;
+  const dir = p?.direction;
+  if (typeof abs !== "number") return null;
+  if (dir !== "above" && dir !== "below") return null;
+  const signed = typeof p.signedDeviationBps === "number" ? p.signedDeviationBps : abs;
+  const prev = typeof p.prevAbsDeviationBps === "number" ? p.prevAbsDeviationBps : null;
+  return { absBps: abs, signedBps: signed, direction: dir, prevAbsBps: prev };
+}
+
+function DepegEnrichment({ event }: { event: TapeEvent }) {
+  const data = readDepegPayload(event);
+  if (!data) return null;
+  const { absBps, direction, prevAbsBps } = data;
+  const sign = direction === "below" ? "−" : "+";
+  const ArrowIcon = direction === "below" ? TrendingDown : TrendingUp;
+  const fillPct = Math.min(100, Math.round((absBps / DEPEG_BAR_MAX_BPS) * 100));
+  const barColor = deviationBgClass(absBps);
+  const textColor = deviationColorClass(absBps);
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+      <span aria-hidden="true" className="relative inline-block h-1.5 w-10 overflow-hidden rounded-full bg-muted">
+        <span className={`absolute left-0 top-0 h-full ${barColor}`} style={{ width: `${fillPct}%` }} />
+      </span>
+      <span className={`inline-flex items-center gap-1 tabular-nums ${textColor}`}>
+        <ArrowIcon className="h-3 w-3" aria-hidden="true" />
+        {sign}
+        {absBps} bps
+      </span>
+      {prevAbsBps != null ? (
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {sign}
+          {prevAbsBps} → {sign}
+          {absBps}
+        </span>
+      ) : null}
+      <span className="sr-only">
+        Deviation: {sign}
+        {absBps} basis points, {direction} peg
+      </span>
+    </div>
+  );
+}
+
+const SCORE_PILL_CLASS =
+  "inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums";
+
+function ScoreEnrichment({ event }: { event: TapeEvent }) {
+  const p = event.payload;
+  const prev = typeof p?.prevGrade === "string" ? p.prevGrade : null;
+  const next = typeof p?.newGrade === "string" ? p.newGrade : null;
+  if (!prev || !next) return null;
+  const prevScore = typeof p.prevScore === "number" ? p.prevScore : null;
+  const newScore = typeof p.newScore === "number" ? p.newScore : null;
+  const isUpgrade = event.type === "score.upgraded";
+  const ArrowIcon = isUpgrade ? TrendingUp : TrendingDown;
+  const arrowColor = isUpgrade
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-red-600 dark:text-red-400";
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className={`${SCORE_PILL_CLASS} text-muted-foreground`}>{prev}</span>
+      <ArrowIcon className={`h-3 w-3 ${arrowColor}`} aria-hidden="true" />
+      <span className={`${SCORE_PILL_CLASS} text-foreground`}>{next}</span>
+      {prevScore != null && newScore != null ? (
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+          {prevScore} → {newScore}
+          <span className={`ml-1 ${arrowColor}`}>
+            ({newScore - prevScore > 0 ? "+" : ""}
+            {newScore - prevScore})
+          </span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+const METHODOLOGY_BULLET_LIMIT = 2;
+
+function MethodologyEnrichment({ event }: { event: TapeEvent }) {
+  const raw = event.payload?.impact;
+  if (!Array.isArray(raw)) return null;
+  const visible: string[] = [];
+  for (const item of raw) {
+    if (typeof item === "string" && item.length > 0) visible.push(item);
+    if (visible.length >= METHODOLOGY_BULLET_LIMIT) break;
+  }
+  if (visible.length === 0) return null;
+  return (
+    <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
+      {visible.map((bullet, i) => (
+        <li key={i} className="flex gap-1.5">
+          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+          <span className="line-clamp-2">{bullet}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EventCardEnrichment({ event }: { event: TapeEvent }) {
+  switch (eventClass(event.type)) {
+    case "depeg":       return <DepegEnrichment event={event} />;
+    case "score":       return <ScoreEnrichment event={event} />;
+    case "methodology": return <MethodologyEnrichment event={event} />;
+    default:            return null;
+  }
+}
+
 interface EventCardProps {
   event: TapeEvent;
   /** Optional stablecoin logo lookup for `event.coinId`. */
@@ -95,9 +231,11 @@ interface EventCardProps {
   highlighted?: boolean;
   /** Optional id attribute for scroll-into-view targeting. */
   domId?: string;
+  /** When >1, renders an `×N` badge to indicate collapsed sibling events. */
+  count?: number;
 }
 
-export function EventCard({ event, logoSrc, highlighted = false, domId }: EventCardProps) {
+export function EventCard({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
   const accent = severityToAccent(event.severity);
   const severityLabel = SEVERITY_LABEL[event.severity];
   const severityText = SEVERITY_TEXT[event.severity];
@@ -134,6 +272,15 @@ export function EventCard({ event, logoSrc, highlighted = false, domId }: EventC
             <ClassIcon type={event.type} className="mr-1 h-3 w-3" />
             {event.type}
           </Badge>
+          {count > 1 ? (
+            <Badge
+              variant="outline"
+              aria-label={`${count} similar events grouped`}
+              className="text-[10px] tabular-nums text-foreground/80"
+            >
+              ×{count}
+            </Badge>
+          ) : null}
           {event.chain ? (
             <span className="text-[11px] text-muted-foreground">{event.chain}</span>
           ) : null}
@@ -141,6 +288,7 @@ export function EventCard({ event, logoSrc, highlighted = false, domId }: EventC
         {event.summary ? (
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{event.summary}</p>
         ) : null}
+        <EventCardEnrichment event={event} />
       </div>
       <time
         dateTime={new Date(event.ts).toISOString()}

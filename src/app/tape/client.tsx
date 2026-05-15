@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -15,11 +15,22 @@ import {
   TapeFilters,
   readTapeFilterState,
   tapeWindowSince,
+  TAPE_DEFAULT_SEVERITY,
+  type TapeWindowKey,
 } from "@/components/tape/tape-filters";
-import { TapeKpiStrip } from "@/components/tape/tape-kpi-strip";
+import { collapseByCoinClass, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import type { TapeEvent } from "@shared/types/tape-event";
 
 const HIGHLIGHT_DURATION_MS = 2000;
+const DAY_MS = 86_400_000;
+
+const WINDOW_LABEL: Record<TapeWindowKey, string> = {
+  "24h": "last 24h",
+  "7d": "last 7 days",
+  "30d": "last 30 days",
+  "90d": "last 90 days",
+  all: "all time",
+};
 
 function EventSkeleton() {
   return (
@@ -36,9 +47,9 @@ function EmptyState({ onClear }: { onClear: () => void }) {
     <div className="rounded-xl border border-border/60 bg-card/40 px-6 py-12 text-center text-sm text-muted-foreground">
       <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground" aria-hidden="true" />
       <p className="font-medium text-foreground">No events match these filters.</p>
-      <p className="mt-1">Try widening the time window or clearing the type chips.</p>
+      <p className="mt-1">Try widening the time window, dropping the severity floor, or clearing the type chips.</p>
       <Button variant="outline" size="sm" className="mt-4" onClick={onClear}>
-        Clear filters
+        Reset filters
       </Button>
     </div>
   );
@@ -63,25 +74,184 @@ function passesPegFilter(event: TapeEvent, peg: string): boolean {
   return event.pegCurrency === peg;
 }
 
+function utcDayKey(tsMs: number): string {
+  return new Date(tsMs).toISOString().slice(0, 10);
+}
+
+function formatDayLabel(dayKey: string, nowMs: number): { primary: string; secondary: string } {
+  const todayKey = utcDayKey(nowMs);
+  const yesterdayKey = utcDayKey(nowMs - DAY_MS);
+  const date = new Date(`${dayKey}T00:00:00Z`);
+  const absolute = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  if (dayKey === todayKey) return { primary: "Today", secondary: absolute };
+  if (dayKey === yesterdayKey) return { primary: "Yesterday", secondary: absolute };
+  const weekday = date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  return { primary: weekday, secondary: absolute };
+}
+
+interface DayGroup {
+  dayKey: string;
+  collapsed: CollapsedTapeEntry[];
+}
+
+function groupAndCollapse(events: readonly TapeEvent[]): DayGroup[] {
+  const groups: { dayKey: string; events: TapeEvent[] }[] = [];
+  const indexByKey = new Map<string, number>();
+  for (const event of events) {
+    const key = utcDayKey(event.ts);
+    const idx = indexByKey.get(key);
+    if (idx != null) {
+      groups[idx]!.events.push(event);
+    } else {
+      indexByKey.set(key, groups.length);
+      groups.push({ dayKey: key, events: [event] });
+    }
+  }
+  return groups.map((g) => ({ dayKey: g.dayKey, collapsed: collapseByCoinClass(g.events) }));
+}
+
+// Pair `depeg.opened` events against `depeg.resolved` events with the same
+// `sourceRowId` within the same dataset; an unmatched opened row is treated
+// as currently active. Window-scoped: depegs whose opened/resolved rows fall
+// outside the current view will be missed. Dedupes per-coin to keep the
+// banner glanceable.
+function deriveOpenIncidents(events: readonly TapeEvent[]): TapeEvent[] {
+  const resolvedSourceRowIds = new Set<string>();
+  for (const e of events) {
+    if (e.type === "depeg.resolved") resolvedSourceRowIds.add(e.sourceRowId);
+  }
+  const seenCoins = new Set<string>();
+  const out: TapeEvent[] = [];
+  for (const e of events) {
+    if (e.type !== "depeg.opened") continue;
+    if (resolvedSourceRowIds.has(e.sourceRowId)) continue;
+    const coin = e.coinId ?? "";
+    if (coin && seenCoins.has(coin)) continue;
+    if (coin) seenCoins.add(coin);
+    out.push(e);
+  }
+  return out;
+}
+
+interface SummaryBandProps {
+  eventCount: number;
+  openCount: number;
+  windowLabel: string;
+  severityLabel: string;
+}
+
+function SummaryBand({ eventCount, openCount, windowLabel, severityLabel }: SummaryBandProps) {
+  const parts: React.ReactNode[] = [
+    <span key="count" className="font-medium text-foreground">
+      {eventCount} {eventCount === 1 ? "event" : "events"}
+    </span>,
+    <span key="window">{windowLabel}</span>,
+    <span key="severity">{severityLabel}</span>,
+  ];
+  if (openCount > 0) {
+    parts.splice(1, 0, (
+      <span key="open" className="font-medium text-amber-700 dark:text-amber-400">
+        {openCount} currently open
+      </span>
+    ));
+  }
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      {parts.map((part, i) => (
+        <span key={i} className="contents">
+          {i > 0 ? <span aria-hidden="true">·</span> : null}
+          {part}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+interface OpenIncidentsSectionProps {
+  incidents: readonly TapeEvent[];
+  logos: Record<string, string>;
+}
+
+function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
+  return (
+    <section
+      aria-labelledby="tape-open-incidents-heading"
+      className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3"
+    >
+      <h2
+        id="tape-open-incidents-heading"
+        className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400"
+      >
+        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+        Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
+      </h2>
+      <div className="space-y-2">
+        {incidents.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            logoSrc={event.coinId ? logos[event.coinId] : undefined}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface DayGroupSectionProps {
+  group: DayGroup;
+  nowMs: number;
+  logos: Record<string, string>;
+  highlightedId: string | null;
+}
+
+function DayGroupSection({ group, nowMs, logos, highlightedId }: DayGroupSectionProps) {
+  const { primary, secondary } = formatDayLabel(group.dayKey, nowMs);
+  return (
+    <section aria-label={`${primary} ${secondary}`} className="space-y-2">
+      <div className="flex items-baseline justify-between border-b border-border/50 pb-1.5">
+        <h3 className="text-sm font-semibold text-foreground">{primary}</h3>
+        <span className="text-[11px] tabular-nums text-muted-foreground">{secondary}</span>
+      </div>
+      <div className="space-y-2">
+        {group.collapsed.map(({ key, event, count }) => (
+          <EventCard
+            key={key}
+            event={event}
+            count={count}
+            logoSrc={event.coinId ? logos[event.coinId] : undefined}
+            highlighted={highlightedId === event.id}
+            domId={eventDomId(event.id)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function TapeClient() {
   const { getParam, setParam, setParams } = useUrlFilters();
   const filters = readTapeFilterState(getParam);
   const { data: logos } = useLogos();
+  const [nowMs] = useState(() => Date.now());
 
-  // Convert window → since (ms).
   const since = useMemo(
     () => tapeWindowSince(filters.window),
     [filters.window],
   );
 
-  // `type` is a multi-select wildcard list; pass through directly.
   const events = useEvents(
     {
       type: filters.type.length > 0 ? filters.type : undefined,
       coin: filters.coin || undefined,
       pegCurrency: filters.peg !== "all" ? filters.peg : undefined,
       chain: filters.chain !== "all" ? filters.chain : undefined,
-      severityFloor: filters.severity ?? undefined,
+      severityFloor: filters.severity,
       since,
     },
     { autoLoadAll: false },
@@ -105,12 +275,11 @@ export function TapeClient() {
     [rawEvents, filters.peg, filters.q],
   );
 
-  // Permalink: `?event=<id>` deep-link. Fetch a small recent window first; if
-  // the id is not present, surface a notice and fall back to the loaded view.
+  const openIncidents = useMemo(() => deriveOpenIncidents(visibleEvents), [visibleEvents]);
+  const dayGroups = useMemo(() => groupAndCollapse(visibleEvents), [visibleEvents]);
+
   const permalinkId = getParam("event", "");
   const [autoLoadEnabled, setAutoLoadEnabled] = useState(false);
-  // The currently-lit event id. We mark it lit when scroll lands and clear it
-  // ~2s later. Single state owned by the timer effect — no derive-from-prop.
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const permalinkBuffer = useLatestEvents({
@@ -128,15 +297,11 @@ export function TapeClient() {
   }, [permalinkId, isInLoadedFeed, permalinkBuffer.data]);
   const permalinkResolved = !!permalinkId && (isInLoadedFeed || bufferEvent != null);
 
-  // Scroll-into-view + 2s highlight. The effect keys on the resolved id so
-  // changing the URL param naturally restarts the timer.
   useEffect(() => {
     if (!permalinkResolved || !permalinkId) {
       return undefined;
     }
     if (typeof window === "undefined") return undefined;
-    // Light the row up after paint; cleared by the timer below. The
-    // permalink-id dependency means this only fires when the URL changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHighlightedId(permalinkId);
     const rafId = window.requestAnimationFrame(() => {
@@ -146,8 +311,6 @@ export function TapeClient() {
       }
     });
     const timeoutId = window.setTimeout(() => {
-      // Clear after the highlight duration. Using a functional setter keeps
-      // the effect dependency-free of `highlightedId`.
       setHighlightedId((current) => (current === permalinkId ? null : current));
     }, HIGHLIGHT_DURATION_MS);
     return () => {
@@ -156,7 +319,6 @@ export function TapeClient() {
     };
   }, [permalinkResolved, permalinkId]);
 
-  // Intersection-observer autoload after first manual click.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!autoLoadEnabled) return;
@@ -196,16 +358,23 @@ export function TapeClient() {
 
   const hasActiveFilters =
     filters.type.length > 0 ||
-    filters.severity != null ||
+    filters.severity !== TAPE_DEFAULT_SEVERITY ||
     filters.coin !== "" ||
     filters.peg !== "all" ||
     filters.chain !== "all" ||
     filters.q !== "" ||
     filters.window !== "7d";
 
+  const severityLabel = filters.severity === "info" ? "all severities" : `${filters.severity}+ severity`;
+
   return (
     <div className="space-y-6">
-      <TapeKpiStrip />
+      <SummaryBand
+        eventCount={visibleEvents.length}
+        openCount={openIncidents.length}
+        windowLabel={WINDOW_LABEL[filters.window]}
+        severityLabel={severityLabel}
+      />
 
       <TapeFilters state={filters} setParam={setParam} />
 
@@ -244,19 +413,23 @@ export function TapeClient() {
         </div>
       ) : null}
 
+      {openIncidents.length > 0 ? (
+        <OpenIncidentsSection incidents={openIncidents} logos={logos} />
+      ) : null}
+
       {isLoading ? (
         <EventSkeleton />
       ) : visibleEvents.length === 0 ? (
         <EmptyState onClear={hasActiveFilters ? handleClearFilters : () => setParam("window", "all")} />
       ) : (
-        <div className="space-y-2" aria-live="polite">
-          {visibleEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              logoSrc={event.coinId ? logos[event.coinId] : undefined}
-              highlighted={highlightedId === event.id}
-              domId={eventDomId(event.id)}
+        <div className="space-y-6" aria-live="polite">
+          {dayGroups.map((group) => (
+            <DayGroupSection
+              key={group.dayKey}
+              group={group}
+              nowMs={nowMs}
+              logos={logos}
+              highlightedId={highlightedId}
             />
           ))}
           {hasNextPage ? (

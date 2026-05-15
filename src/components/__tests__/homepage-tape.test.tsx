@@ -206,6 +206,81 @@ describe("HomepageTape", () => {
     expect(root?.className).not.toContain("-mx-3");
   });
 
+  it("collapses repeated same-coin same-class events into one cell with a count badge", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-3",
+            ts: Date.now() - 60_000,
+            type: "depeg.peak_worsened",
+            title: "USDXL depeg peak worsened (−112 bps)",
+            coinId: "usdxl-last",
+          }),
+          makeTapeEvent({
+            id: "evt-2",
+            ts: Date.now() - 600_000,
+            type: "depeg.opened",
+            title: "USDXL depeg opened (−109 bps)",
+            coinId: "usdxl-last",
+          }),
+          makeTapeEvent({
+            id: "evt-1",
+            ts: Date.now() - 1_200_000,
+            type: "depeg.resolved",
+            title: "USDXL depeg resolved",
+            coinId: "usdxl-last",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // The most recent event's title is kept; the two older same-(coin,class)
+    // events are collapsed into the single cell.
+    expect(screen.getAllByText("USDXL depeg peak worsened (−112 bps)")).toHaveLength(2);
+    expect(screen.queryByText("USDXL depeg opened (−109 bps)")).toBeNull();
+    expect(screen.queryByText("USDXL depeg resolved")).toBeNull();
+    // ×N badge reflects the total event count in the collapsed group, doubled
+    // by the marquee loop.
+    expect(screen.getAllByText("×3")).toHaveLength(2);
+    expect(screen.getAllByLabelText("3 similar events")).toHaveLength(2);
+  });
+
+  it("does not collapse different-class events for the same coin", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-d",
+            type: "depeg.opened",
+            title: "USDT depeg opened (−110 bps)",
+            coinId: "usdt-tether",
+          }),
+          makeTapeEvent({
+            id: "evt-s",
+            type: "score.downgraded",
+            title: "USDT grade A → B+",
+            coinId: "usdt-tether",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    expect(screen.getAllByText("USDT depeg opened (−110 bps)")).toHaveLength(2);
+    expect(screen.getAllByText("USDT grade A → B+")).toHaveLength(2);
+    expect(screen.queryByText(/×\d/)).toBeNull();
+  });
+
   it("appends a single non-duplicated 'View all events' terminator linking to /tape/", () => {
     mockLatestEvents({
       data: {

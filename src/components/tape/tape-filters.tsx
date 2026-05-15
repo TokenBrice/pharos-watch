@@ -21,12 +21,17 @@ const WINDOW_OPTIONS: { value: TapeWindowKey; label: string }[] = [
 ];
 
 const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
-  info: "Info+",
+  info: "All",
   notice: "Notice+",
   warning: "Warning+",
   severe: "Severe+",
   critical: "Critical",
 };
+
+// `notice` is the page-level default. Routine info-tier bookkeeping (e.g.
+// USDT issuer freeze.unblocked actions) drowns the feed otherwise; users
+// can drop the floor by clicking the "All" chip.
+const DEFAULT_SEVERITY: TapeEventSeverity = "notice";
 
 const CHAIN_OPTIONS = Object.entries(CHAIN_META)
   .map(([id, meta]) => ({ value: id, label: meta.name }))
@@ -36,13 +41,16 @@ export interface TapeFilterState {
   /** Comma-joined or empty string — the URL representation. */
   typeRaw: string;
   type: string[];
-  severity: TapeEventSeverity | null;
+  /** Always set; defaults to `notice`. Use `info` to drop the floor entirely. */
+  severity: TapeEventSeverity;
   coin: string;
   peg: string;
   chain: string;
   window: TapeWindowKey;
   q: string;
 }
+
+export { DEFAULT_SEVERITY as TAPE_DEFAULT_SEVERITY };
 
 function parseTapeWindow(value: string): TapeWindowKey {
   if (value === "24h" || value === "7d" || value === "30d" || value === "90d" || value === "all") {
@@ -68,12 +76,12 @@ function parseTapeTypes(raw: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-function parseSeverity(raw: string): TapeEventSeverity | null {
-  if (!raw || isUrlFilterClearValue(raw)) return null;
+function parseSeverity(raw: string): TapeEventSeverity {
+  if (!raw || isUrlFilterClearValue(raw)) return DEFAULT_SEVERITY;
   if ((TAPE_FILTER_SEVERITY_VALUES as readonly string[]).includes(raw)) {
     return raw as TapeEventSeverity;
   }
-  return null;
+  return DEFAULT_SEVERITY;
 }
 
 export function readTapeFilterState(getParam: (key: string, defaultValue?: string) => string): TapeFilterState {
@@ -113,39 +121,53 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   );
 
   const activeClassSet = useMemo(() => new Set(state.type), [state.type]);
+  const activeClassCount = state.type.length;
 
   return (
     <div className="space-y-3 rounded-xl border border-border/60 bg-card/30 p-3">
-      <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
-        {TAPE_CLASSES.map((cls) => {
-          const slug = `${cls.slug}.*`;
-          const active = activeClassSet.has(slug);
-          return (
+      <details
+        className="group"
+        // `open` re-evaluates when the URL/state changes, which keeps the
+        // class chips visible whenever the user has at least one active.
+        open={activeClassCount > 0}
+      >
+        <summary className="pharos-focus-ring inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+          <span className="inline-block transition-transform group-open:rotate-90" aria-hidden="true">▸</span>
+          {activeClassCount > 0
+            ? `Filter by class · ${activeClassCount} active`
+            : `Filter by class`}
+        </summary>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
+          {TAPE_CLASSES.map((cls) => {
+            const slug = `${cls.slug}.*`;
+            const active = activeClassSet.has(slug);
+            return (
+              <button
+                key={cls.slug}
+                type="button"
+                onClick={() => onToggleClass(cls.slug)}
+                aria-pressed={active}
+                className={`pharos-focus-ring inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                  active
+                    ? "border-primary/60 bg-primary/15 text-foreground"
+                    : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {cls.label}
+              </button>
+            );
+          })}
+          {state.type.length > 0 ? (
             <button
-              key={cls.slug}
               type="button"
-              onClick={() => onToggleClass(cls.slug)}
-              aria-pressed={active}
-              className={`pharos-focus-ring inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => setParam("type", "")}
+              className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
             >
-              {cls.label}
+              Clear classes
             </button>
-          );
-        })}
-        {state.type.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setParam("type", "")}
-            className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Clear types
-          </button>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      </details>
 
       <div className="flex flex-wrap items-center gap-3">
         <ToggleGroup
@@ -164,14 +186,11 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
 
         <ToggleGroup
           type="single"
-          value={state.severity ?? "all"}
-          onValueChange={(v) => setParam("severity", v && v !== "all" ? v : "")}
+          value={state.severity}
+          onValueChange={(v) => v && setParam("severity", v === DEFAULT_SEVERITY ? "" : v)}
           aria-label="Filter by severity floor"
           className="flex gap-1"
         >
-          <ToggleGroupItem value="all" variant="outline" size="sm" className="text-xs">
-            Any
-          </ToggleGroupItem>
           {TAPE_FILTER_SEVERITY_VALUES.map((sev) => (
             <ToggleGroupItem key={sev} value={sev} variant="outline" size="sm" className="text-xs">
               {SEVERITY_LABELS[sev]}

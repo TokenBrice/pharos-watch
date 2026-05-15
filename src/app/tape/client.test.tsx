@@ -39,10 +39,6 @@ vi.mock("@/hooks/use-logos", () => ({
   useLogos: () => ({ data: {} }),
 }));
 
-vi.mock("@/components/tape/tape-kpi-strip", () => ({
-  TapeKpiStrip: () => <div data-testid="tape-kpi-strip" />,
-}));
-
 import { TapeClient } from "@/app/tape/client";
 
 afterEach(() => {
@@ -135,10 +131,125 @@ describe("TapeClient", () => {
 
     render(<TapeClient />);
 
-    expect(screen.getByText("USDC depeg opened (-1200 bps)")).toBeTruthy();
+    // The unmatched depeg.opened renders in the day feed and in the
+    // Currently-open banner — getAllByText covers both.
+    expect(screen.getAllByText("USDC depeg opened (-1200 bps)").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/USDT \$150\.0M destroyed/)).toBeTruthy();
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
+  });
+
+  it("collapses repeated same-coin same-class events within a day", () => {
+    const now = Date.now();
+    // Use peak_worsened only so the open-incidents banner stays out of the
+    // way and the assertion isolates the collapse behavior.
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-3",
+        ts: now - 60_000,
+        type: "depeg.peak_worsened",
+        title: "USDXL depeg peak worsened (−112 bps)",
+        coinId: "usdxl-last",
+      }),
+      makeTapeEvent({
+        id: "evt-2",
+        ts: now - 600_000,
+        type: "depeg.peak_worsened",
+        title: "USDXL depeg peak worsened (−109 bps)",
+        coinId: "usdxl-last",
+      }),
+      makeTapeEvent({
+        id: "evt-1",
+        ts: now - 1_200_000,
+        type: "depeg.peak_worsened",
+        title: "USDXL depeg peak worsened (−104 bps)",
+        coinId: "usdxl-last",
+      }),
+    ]);
+
+    render(<TapeClient />);
+
+    expect(screen.getByText("USDXL depeg peak worsened (−112 bps)")).toBeTruthy();
+    expect(screen.queryByText("USDXL depeg peak worsened (−109 bps)")).toBeNull();
+    expect(screen.queryByText("USDXL depeg peak worsened (−104 bps)")).toBeNull();
+    expect(screen.getByLabelText("3 similar events grouped")).toBeTruthy();
+  });
+
+  it("renders the Currently open banner for unmatched depeg.opened events", () => {
+    const now = Date.now();
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-open-resolved",
+        ts: now - 3_600_000,
+        type: "depeg.opened",
+        title: "USDC depeg opened (-200 bps)",
+        coinId: "usdc-circle",
+        sourceRowId: "100",
+      }),
+      makeTapeEvent({
+        id: "evt-resolved",
+        ts: now - 1_800_000,
+        type: "depeg.resolved",
+        severity: "info",
+        title: "USDC depeg resolved",
+        coinId: "usdc-circle",
+        sourceRowId: "100",
+      }),
+      makeTapeEvent({
+        id: "evt-open-still",
+        ts: now - 60_000,
+        type: "depeg.opened",
+        title: "EURS depeg opened (+589 bps)",
+        coinId: "eurs-stasis",
+        sourceRowId: "200",
+      }),
+    ]);
+
+    render(<TapeClient />);
+
+    expect(screen.getByText(/Currently open · 1 incident/i)).toBeTruthy();
+    // The unmatched EURS open appears both in the banner and in the day feed.
+    expect(screen.getAllByText("EURS depeg opened (+589 bps)").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not render the Currently open banner when no depegs are unmatched", () => {
+    const now = Date.now();
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-1",
+        ts: now - 1_800_000,
+        type: "depeg.opened",
+        title: "USDC depeg opened (-200 bps)",
+        coinId: "usdc-circle",
+        sourceRowId: "100",
+      }),
+      makeTapeEvent({
+        id: "evt-2",
+        ts: now - 600_000,
+        type: "depeg.resolved",
+        severity: "info",
+        title: "USDC depeg resolved",
+        coinId: "usdc-circle",
+        sourceRowId: "100",
+      }),
+    ]);
+
+    render(<TapeClient />);
+
+    expect(screen.queryByText(/Currently open/i)).toBeNull();
+  });
+
+  it("renders the summary band with event count and window", () => {
+    mockEvents([
+      makeTapeEvent({ id: "evt-1", title: "Event one" }),
+      makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
+    ]);
+
+    render(<TapeClient />);
+
+    expect(screen.getByText("2 events")).toBeTruthy();
+    expect(screen.getByText("last 7 days")).toBeTruthy();
+    expect(screen.getByText("notice+ severity")).toBeTruthy();
   });
 });
