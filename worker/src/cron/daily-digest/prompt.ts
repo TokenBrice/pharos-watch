@@ -1,6 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { formatCurrency } from "@shared/lib/format";
-import { SYSTEM_PROMPT } from "./prompt/policy";
 import { classifyRegime } from "./prompt/regime";
 import {
   formatDigestUsdPrice,
