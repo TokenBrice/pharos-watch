@@ -76,7 +76,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX depth, durability, and market support" },
       { href: "/depeg", label: "Depeg", icon: Activity, description: "Live incident board for peg stress and early warnings" },
       { href: "/flows", label: "Mint/Burn Flows", icon: ArrowUpDown, description: "Configured issuance-chain mint and burn pressure" },
-      { href: "/tape", label: "The Tape", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Chain-by-chain stablecoin share, mix, and health" },
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Failed stablecoins and the lessons they left behind" },
     ],
@@ -94,6 +93,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "monitor",
     label: "MONITOR",
     items: [
+      { href: "/tape", label: "The Tape", icon: ScrollText, description: "Unified chronological event feed across depeg, freeze, and grade transitions" },
       { href: "/upcoming", label: "Upcoming", icon: Rocket, description: "Pre-launch stablecoins and launch-watch context" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily editorial recap of the stablecoin market" },
       { href: "/status", label: "Pharos Status", icon: Activity, description: "Live health of every data pipeline and cron sync" },

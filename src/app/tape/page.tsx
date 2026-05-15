@@ -3,6 +3,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { TAPE_PROJECTOR_VERSION_LABEL } from "@shared/lib/tape-version";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { TapeClient } from "./client";
 
@@ -59,7 +60,7 @@ export default function TapePage() {
       breadcrumbName="The Tape"
       path="/tape/"
       title="The Tape"
-      statusBadge={{ status: "beta" }}
+      statusBadge={{ status: "beta", version: TAPE_PROJECTOR_VERSION_LABEL }}
       preface={(
         <>
           <script

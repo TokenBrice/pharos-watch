@@ -16,6 +16,7 @@ import {
   getDigestNavSignal,
   getStabilityIndexNavSignal,
   getStatusNavSignal,
+  getTapeNavSignal,
   parseSidebarDigestSeenAt,
   SIDEBAR_DIGEST_SEEN_STORAGE_KEY,
   type SidebarNavSignal,
@@ -48,6 +49,7 @@ export function useSidebarNavSignals() {
   return useMemo<Record<string, SidebarNavSignal | null>>(
     () => ({
       "/depeg": getDepegNavSignal(pegSummary),
+      "/tape": getTapeNavSignal(pegSummary),
       "/stability-index": getStabilityIndexNavSignal(stabilityIndex),
       "/freezewatch": getBlacklistNavSignal(blacklistSummary),
       "/status": getStatusNavSignal(health),

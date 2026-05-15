@@ -59,6 +59,20 @@ export function getDepegNavSignal(pegSummary: PegSummaryResponse | null | undefi
   };
 }
 
+export function getTapeNavSignal(pegSummary: PegSummaryResponse | null | undefined): SidebarNavSignal | null {
+  // /tape reuses the active-depeg count as its open-incident heartbeat: every
+  // unresolved depeg in the latest window surfaces on the unified feed as a
+  // currently-open card. A dot (not a count) keeps the signal distinct from
+  // /depeg, which already shows the exact count badge.
+  const activeDepegCount = pegSummary?.summary?.activeDepegCount ?? 0;
+  if (activeDepegCount <= 0) return null;
+  return {
+    kind: "dot",
+    title: `${activeDepegCount} open incident${activeDepegCount === 1 ? "" : "s"} on the tape`,
+    tone: "warning",
+  };
+}
+
 export function getStabilityIndexNavSignal(stabilityIndex: StabilityIndexResponse | null | undefined): SidebarNavSignal | null {
   const current = stabilityIndex?.current;
   if (!current) return null;
