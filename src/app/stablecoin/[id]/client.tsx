@@ -13,6 +13,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { LazySection } from "@/components/lazy-section";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
@@ -393,6 +394,7 @@ export default function StablecoinDetailClient({
             {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
           </div>
         )}
+        <ContagionSnapshot stablecoinId={viewModel.id} />
       </div>
 
       {/* ── Yield zone ── */}

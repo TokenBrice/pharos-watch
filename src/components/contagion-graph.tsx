@@ -18,10 +18,11 @@ interface ContagionGraphProps {
   dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
+  focusCoinId?: string;
 }
 
-export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos }: ContagionGraphProps) {
-  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap });
+export function ContagionGraph({ cards, dependencyEdges, mcapMap, logos, focusCoinId }: ContagionGraphProps) {
+  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId });
 
   if (graph.nodes.length === 0) return null;
 
