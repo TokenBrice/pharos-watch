@@ -1,4 +1,4 @@
-import { DiagramStep, DiagramArrow } from "./index";
+import { DiagramStep, DiagramArrow } from "./primitives";
 
 export function FiatCashDiagram({ symbol }: { symbol: string }) {
   return (
