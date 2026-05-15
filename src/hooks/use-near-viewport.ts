@@ -20,7 +20,10 @@ export function useNearViewport<T extends HTMLElement>(rootMargin = "300px") {
     const el = ref.current;
     if (!el) return;
     if (typeof window === "undefined" || typeof window.IntersectionObserver === "undefined") {
-      // Defensive — older browsers + jsdom. Mount immediately.
+      // Defensive — older browsers + jsdom mount immediately. The setState
+      // here is one-shot at first mount (the `near` dep returns early on the
+      // next render), so the "cascade" lint warning is a false positive.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNear(true);
       return;
     }

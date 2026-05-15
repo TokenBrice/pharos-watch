@@ -54,6 +54,9 @@ export function useRecentBlacklist7d(symbol: string): RecentBlacklistAggregate |
 
   return useMemo(() => {
     if (!isEnabled || !data?.events) return null;
+    // Date.now() is intentional: the cutoff slides as the 30-min refetch
+    // window advances, so the banner reflects the actual last 7 days.
+    // eslint-disable-next-line react-hooks/purity
     const cutoffSec = Math.floor(Date.now() / 1000) - SEVEN_DAYS_SEC;
     let freezes = 0;
     let destroys = 0;
