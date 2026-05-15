@@ -10,7 +10,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { EventCard } from "@/components/tape/event-card";
+import { EventCard, SEVERITY_LABEL } from "@/components/tape/event-card";
 import {
   TapeFilters,
   readTapeFilterState,
@@ -180,11 +180,11 @@ function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
   return (
     <section
       aria-labelledby="tape-open-incidents-heading"
-      className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3"
+      className="pharos-card-shell p-3 space-y-2"
     >
       <h2
         id="tape-open-incidents-heading"
-        className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400"
+        className="pharos-kicker flex items-center gap-1.5 text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
@@ -365,7 +365,7 @@ export function TapeClient() {
     filters.q !== "" ||
     filters.window !== "7d";
 
-  const severityLabel = filters.severity === "info" ? "all severities" : `${filters.severity}+ severity`;
+  const severityLabel = `${SEVERITY_LABEL[filters.severity]} severity`;
 
   return (
     <div className="space-y-6">

@@ -252,7 +252,7 @@ describe("TapeClient", () => {
 
     expect(screen.getByText("2 events")).toBeTruthy();
     expect(screen.getByText("last 7 days")).toBeTruthy();
-    expect(screen.getByText("notice+ severity")).toBeTruthy();
+    expect(screen.getByText("Notice+ severity")).toBeTruthy();
   });
 
   it("summary band shows partial-load count when total exceeds loaded events", () => {

@@ -173,7 +173,7 @@ export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThresho
 // ---------------------------------------------------------------------------
 
 const TAPE_SEVERITY_ACCENT: Record<string, string> = {
-  info: "border-l-emerald-500",
+  info: "border-l-zinc-500",
   notice: "border-l-sky-500",
   warning: "border-l-amber-500",
   severe: "border-l-orange-500",

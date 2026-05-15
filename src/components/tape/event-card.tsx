@@ -57,16 +57,16 @@ function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
   }
 }
 
-const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
-  info: "Info",
-  notice: "Notice",
-  warning: "Warning",
-  severe: "Severe",
+export const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
+  info: "Info+",
+  notice: "Notice+",
+  warning: "Warning+",
+  severe: "Severe+",
   critical: "Critical",
 };
 
 const SEVERITY_TEXT: Record<TapeEventSeverity, string> = {
-  info: "text-emerald-700 dark:text-emerald-400",
+  info: "text-zinc-700 dark:text-zinc-400",
   notice: "text-sky-700 dark:text-sky-400",
   warning: "text-amber-700 dark:text-amber-400",
   severe: "text-orange-700 dark:text-orange-400",
@@ -74,7 +74,7 @@ const SEVERITY_TEXT: Record<TapeEventSeverity, string> = {
 };
 
 const SEVERITY_BORDER: Record<TapeEventSeverity, string> = {
-  info: "border-emerald-500/40",
+  info: "border-zinc-500/40",
   notice: "border-sky-500/40",
   warning: "border-amber-500/40",
   severe: "border-orange-500/40",
@@ -328,11 +328,11 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
       href={href}
       aria-labelledby={titleId}
       data-event-id={event.id}
-      className={`pharos-focus-ring group relative flex items-start gap-3 rounded-lg border border-border/60 border-l-4 bg-card/40 p-3 transition-colors hover:bg-accent/40 ${accent}${
+      className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group relative flex items-start gap-3 border-l-[3px] p-3 ${accent}${
         highlighted ? " ring-2 ring-primary/60 ring-offset-2 ring-offset-background" : ""
       }`}
     >
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-background/60 text-muted-foreground">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/80 text-muted-foreground">
         {event.coinId ? (
           <StablecoinLogo src={logoSrc} name={event.coinId} size={24} />
         ) : (
@@ -346,10 +346,6 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
           </span>
           <Badge variant="outline" className={`text-[10px] uppercase tracking-wide ${severityBorder} ${severityText}`}>
             {severityLabel}
-          </Badge>
-          <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            <ClassIcon type={event.type} className="mr-1 h-3 w-3" />
-            {event.type}
           </Badge>
           {count > 1 ? (
             <Badge

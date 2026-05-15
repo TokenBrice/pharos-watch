@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { FilterCombobox } from "@/components/filter-combobox";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
@@ -22,7 +23,7 @@ const WINDOW_OPTIONS: { value: TapeWindowKey; label: string }[] = [
 ];
 
 const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
-  info: "All",
+  info: "Info+",
   notice: "Notice+",
   warning: "Warning+",
   severe: "Severe+",
@@ -31,7 +32,7 @@ const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
 
 // `notice` is the page-level default. Routine info-tier bookkeeping (e.g.
 // USDT issuer freeze.unblocked actions) drowns the feed otherwise; users
-// can drop the floor by clicking the "All" chip.
+// can drop the floor by clicking the "Info+" chip.
 const DEFAULT_SEVERITY: TapeEventSeverity = "notice";
 
 const CHAIN_OPTIONS = Object.entries(CHAIN_META)
@@ -185,19 +186,28 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
           ))}
         </ToggleGroup>
 
-        <ToggleGroup
-          type="single"
-          value={state.severity}
-          onValueChange={(v) => v && setParam("severity", v === DEFAULT_SEVERITY ? "" : v)}
-          aria-label="Filter by severity floor"
-          className="flex gap-1"
-        >
-          {TAPE_FILTER_SEVERITY_VALUES.map((sev) => (
-            <ToggleGroupItem key={sev} value={sev} variant="outline" size="sm" className="text-xs">
-              {SEVERITY_LABELS[sev]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ToggleGroup
+                type="single"
+                value={state.severity}
+                onValueChange={(v) => v && setParam("severity", v === DEFAULT_SEVERITY ? "" : v)}
+                aria-label="Filter by severity floor"
+                className="flex gap-1"
+              >
+                {TAPE_FILTER_SEVERITY_VALUES.map((sev) => (
+                  <ToggleGroupItem key={sev} value={sev} variant="outline" size="sm" className="text-xs">
+                    {SEVERITY_LABELS[sev]}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              info → notice → warning → severe → critical. The selected tier and above are shown.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <FilterCombobox
           label="Peg"
