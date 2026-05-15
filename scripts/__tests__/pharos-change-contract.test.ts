@@ -404,4 +404,24 @@ describe("upsert GitHub PR comment", () => {
       url: "https://api.github.com/repos/owner/repo/issues/comments/44",
     });
   });
+
+  it("skips comment upserts when the GitHub token cannot write comments", async () => {
+    const fetchImpl = async () =>
+      new Response(
+        JSON.stringify({
+          message: "Resource not accessible by integration",
+          status: "403",
+        }),
+        { status: 403 },
+      );
+
+    await expect(
+      upsertPrComment({
+        body: "<!-- pharos-change-contract -->\nbody",
+        prNumber: "12",
+        repo: "owner/repo",
+        token: "token",
+      }, { fetchImpl }),
+    ).resolves.toEqual({ action: "skipped", reason: "forbidden" });
+  });
 });
