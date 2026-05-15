@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   getDepegThresholdBps,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -14,17 +13,7 @@ import {
   POOL_CHALLENGE_CONFIRM_MIN,
   POOL_CHALLENGE_HIGH_TVL_USD,
 } from "../lib/constants";
-
-const CoinGeckoPriceSchema = z.record(z.string(), z.object({
-  usd: z.number().optional(),
-  last_updated_at: z.number().optional(),
-}));
-const DefiLlamaPriceSchema = z.object({
-  coins: z.record(z.string(), z.object({
-    price: z.number().optional(),
-    timestamp: z.number().optional(),
-  })).optional(),
-});
+import { CoinGeckoSimplePriceSchema, DefiLlamaCoinsPriceSchema } from "../lib/upstream-schemas";
 import { batchExecute } from "../lib/db";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -544,12 +533,12 @@ export async function confirmPendingDepegs(
             let offchainPrice: number | undefined;
             let observedAt: number | undefined;
             if (useDefiLlamaSecondary) {
-              const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
+              const parsed = DefiLlamaCoinsPriceSchema.safeParse(await offchainRes.json());
               const coin = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`] : undefined;
               offchainPrice = coin?.price;
               observedAt = coin?.timestamp;
             } else {
-              const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
+              const parsed = CoinGeckoSimplePriceSchema.safeParse(await offchainRes.json());
               const coin = parsed.success ? parsed.data[geckoId] : undefined;
               offchainPrice = coin?.usd;
               observedAt = coin?.last_updated_at;
