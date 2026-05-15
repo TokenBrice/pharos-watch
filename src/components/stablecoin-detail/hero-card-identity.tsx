@@ -47,7 +47,7 @@ function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   );
 }
 
-export function InfrastructureBadge({ value }: { value: Infrastructure }) {
+function InfrastructureBadge({ value }: { value: Infrastructure }) {
   const label = getInfrastructureLabel(value);
   const isM0 = value === "m0";
   const colorClass = isM0
