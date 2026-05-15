@@ -48,6 +48,7 @@ import { getVariantParent, getVariantRelationship, getVariants } from "@shared/l
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getVariantDisplay } from "@/lib/variant-display";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
@@ -476,6 +477,12 @@ export interface BuildHeroCardViewModelParams {
 
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
   if (!hasPreviousValue) return HERO_MUTED_CLASS;
+  if (isQuietDeviationsEnabled()) {
+    if (previousValue <= 0) return HERO_MUTED_CLASS;
+    const pctChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
+    if (pctChange < 0.5) return HERO_MUTED_CLASS;
+    return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
+  }
   return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
 }
 

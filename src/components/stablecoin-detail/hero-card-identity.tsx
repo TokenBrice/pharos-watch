@@ -51,23 +51,13 @@ export function InfrastructureBadge({ value }: { value: Infrastructure }) {
     : "border-frost-blue/30 bg-frost-blue/10";
 
   return (
-    <div className={`flex items-center gap-2 rounded-lg border ${borderClass} px-2.5 py-1.5`}>
+    <div className={`flex items-center gap-2 rounded-full border ${borderClass} px-2.5 py-0.5 text-[11px]`}>
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Infrastructure
       </span>
-      <span className={`text-base font-bold font-mono ${colorClass}`}>{label}</span>
+      <span className={`text-[11px] font-semibold font-mono ${colorClass}`}>{label}</span>
     </div>
   );
-}
-
-function InfrastructureChip({ value }: { value: Infrastructure }) {
-  const label = getInfrastructureLabel(value);
-  const isM0 = value === "m0";
-  const className = isM0
-    ? "inline-flex items-center rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:text-violet-400"
-    : "inline-flex items-center rounded-full border border-frost-blue/30 bg-frost-blue/10 px-2.5 py-0.5 text-[11px] font-semibold text-frost-blue";
-
-  return <span className={className}>{label}</span>;
 }
 
 function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
@@ -216,7 +206,7 @@ export function HeroMobileIdentity({
         />
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {infrastructures.map((value) => (
-            <InfrastructureChip key={value} value={value} />
+            <InfrastructureBadge key={value} value={value} />
           ))}
           <HeroTagList tags={coin.tags} />
         </div>
@@ -254,7 +244,7 @@ export function HeroDesktopIdentity({
         ) : null}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {infrastructures.map((value) => (
-            <InfrastructureChip key={value} value={value} />
+            <InfrastructureBadge key={value} value={value} />
           ))}
           <HeroTagList tags={coin.tags} />
         </div>

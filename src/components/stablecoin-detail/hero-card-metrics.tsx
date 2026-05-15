@@ -54,7 +54,7 @@ function MetricChip({
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-lg border border-border/40 bg-background/40 px-2.5 py-1.5 ${accentClass ?? ""}`}
+      className={`pharos-control-pill flex items-center gap-2 ${accentClass ?? ""}`}
     >
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
@@ -106,7 +106,7 @@ export function HeroTertiaryMetrics({
             <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-background/30 px-3 py-1.5">
+          <div className="pharos-control-pill flex items-center gap-2">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Chains
             </span>
@@ -208,7 +208,7 @@ export function HeroPriceCard({
       className={
         mobile
           ? "rounded-xl border border-border/60 bg-background/45 px-3 py-2.5"
-          : "rounded-xl border border-border/60 bg-background/45 px-4 py-3"
+          : "rounded-xl bg-background/30 px-4 py-3"
       }
     >
       <div className={`flex items-center ${mobile ? "gap-2" : "gap-3"}`}>
@@ -262,7 +262,7 @@ export function HeroMarketCapCard({
       className={
         mobile
           ? "rounded-xl border border-border/60 bg-background/45 px-3 py-2.5"
-          : "rounded-xl border border-border/60 bg-background/45 px-4 py-3"
+          : "rounded-xl bg-background/30 px-4 py-3"
       }
     >
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -331,7 +331,7 @@ export function HeroSupplyCard({
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
+    <div className="rounded-xl bg-background/30 px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Supply
       </p>
