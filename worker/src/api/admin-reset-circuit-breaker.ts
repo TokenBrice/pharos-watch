@@ -4,10 +4,8 @@ import {
   type AdminUrlRouteContext,
   makeIdempotentAdminRoute,
 } from "../lib/route-wrappers";
-import { CIRCUIT_SOURCE } from "../lib/constants";
+import { isActiveCircuitSource } from "../lib/circuit-breaker";
 import { logAdminAction } from "../lib/admin-action-audit";
-
-const VALID_CIRCUITS = new Set<string>(Object.values(CIRCUIT_SOURCE));
 
 export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminUrlRouteContext>(
   "route-reset-circuit-breaker",
@@ -15,7 +13,7 @@ export const handleResetCircuitBreaker = makeIdempotentAdminRoute<AdminUrlRouteC
   async ({ db, url, request }) => {
     const circuit = url.searchParams.get("circuit")?.trim();
     if (!circuit) return adminErrorResponse(400, "Missing required query param: circuit");
-    if (!VALID_CIRCUITS.has(circuit)) return adminErrorResponse(400, `Unknown circuit: ${circuit}`);
+    if (!isActiveCircuitSource(circuit)) return adminErrorResponse(400, `Unknown circuit: ${circuit}`);
 
     // Breaker state is persisted in the `cache` table under "circuit:<source>"
     // (worker/src/lib/circuit-breaker.ts). Deleting the row forces the next

@@ -4363,7 +4363,7 @@ Deletes the `cron_leases` row for the named job so the next scheduled tick can c
 
 ### `POST /api/reset-circuit-breaker`
 
-Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against `CIRCUIT_SOURCE`.
+Clears the cached state for a named circuit breaker so the next call re-probes with a closed breaker. The circuit name is whitelisted against active source-wide `CIRCUIT_SOURCE` values plus configured scoped live-reserve breakers such as `live-reserves:<scope>`.
 
 **Authentication:** admin. **Required query:** `?circuit=<circuit-source>`.
 

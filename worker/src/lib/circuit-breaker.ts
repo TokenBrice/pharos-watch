@@ -217,6 +217,10 @@ function getActiveCircuitSources(): Set<string> {
   ]);
 }
 
+export function isActiveCircuitSource(source: string): boolean {
+  return getActiveCircuitSources().has(source);
+}
+
 export function filterStaleLiveReserveCircuitStates(
   circuits: Record<string, CircuitRecord>,
 ): Record<string, CircuitRecord> {

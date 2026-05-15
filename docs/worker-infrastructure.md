@@ -811,6 +811,7 @@ Primary-oracle implementation notes:
 - `REDSTONE_PRICES` only counts as healthy when it returns at least one usable symbol. The worker queries an exact-case tracked-symbol allowlist in sequential batches of 10 and retries batch-dropped symbols individually once.
 - dRPC is an upstream RPC provider for some blacklist balance reads, but it is not a `CIRCUIT_SOURCE` key today.
 - `/api/health` completes the circuit list from active `CIRCUIT_SOURCE` values plus configured `live-reserves:*` scopes, and filters retired/stale cache rows so old breaker keys do not keep surfacing as active incidents after a source is removed.
+- `POST /api/reset-circuit-breaker?circuit=<source>` uses the same active-source whitelist, so operators can reset both source-wide breakers and configured scoped live-reserve breakers such as `live-reserves:usdgo-osl`.
 - Scheduled handlers that write breaker state from cron outcomes now treat `degraded` and `skipped_locked` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
 
 ---

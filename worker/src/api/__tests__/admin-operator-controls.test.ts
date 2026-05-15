@@ -75,6 +75,19 @@ describe("handleResetCircuitBreaker", () => {
     expect(res.status).toBe(400);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
+
+  it("deletes scoped live-reserve circuit rows when configured", async () => {
+    const db = mockD1([
+      { match: "DELETE FROM cache", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT INTO admin_action_audit", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const url = new URL("https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=live-reserves:usdgo-osl");
+    const res = await handleResetCircuitBreaker({ db, url, request: adminRequest(url.toString()), trustedAdmin: true });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; cleared: number };
+    expect(body.ok).toBe(true);
+    expect(body.cleared).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
