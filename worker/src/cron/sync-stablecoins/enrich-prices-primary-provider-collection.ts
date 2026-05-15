@@ -4,6 +4,7 @@ import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/consta
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
 import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchPythPrices } from "../../lib/pyth";
 import {
@@ -485,25 +486,26 @@ export async function collectPrimaryProviderQuotes(params: {
   let krakenObservedAt: number | null = null;
 
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
-  const fetches: Promise<void>[] = [];
+  // Push thunks (not started promises) so the bounded `mapWithConcurrency`
+  // run below actually caps in-flight outbound requests against the
+  // Cloudflare 6-connection-per-trigger pool.
+  const fetches: Array<() => Promise<void>> = [];
 
   if (navPriceIds.length > 0) {
-    fetches.push(
-      (async () => {
-        const quotes = await loadReserveNavPriceQuotes({
-          db,
-          candidates: plan.candidates,
-          references,
-        });
-        for (const [coinId, quote] of quotes) {
-          navPrices.set(coinId, quote);
-        }
-      })(),
-    );
+    fetches.push(async () => {
+      const quotes = await loadReserveNavPriceQuotes({
+        db,
+        candidates: plan.candidates,
+        references,
+      });
+      for (const [coinId, quote] of quotes) {
+        navPrices.set(coinId, quote);
+      }
+    });
   }
 
   if (sourceAllowed.cg) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_PRICES, "CG price API", async () => {
         const outcome = await fetchCoingeckoSimplePrices(geckoIds, coingeckoApiKey ?? null, signal, nowSec);
         for (const [geckoId, entry] of outcome.value) {
@@ -522,7 +524,7 @@ export async function collectPrimaryProviderQuotes(params: {
   }
 
   if (sourceAllowed.cgTicker && CG_TICKER_COINS.length > 0) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CG_TICKER, "CG ticker API", async () => {
         const { prices, successfulResponses } = await fetchCgTickerPricesDetailed(
           CG_TICKER_COINS,
@@ -541,7 +543,7 @@ export async function collectPrimaryProviderQuotes(params: {
   }
 
   if (sourceAllowed.pyth && pythFeedIds.size > 0) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.PYTH_PRICES, "Pyth Hermes API", async () => {
         const outcome = await fetchPythPrices(pythFeedIds, signal);
         for (const [coinId, result] of outcome.value) {
@@ -557,80 +559,78 @@ export async function collectPrimaryProviderQuotes(params: {
   }
 
   if (sourceAllowed.binance || sourceAllowed.kraken || sourceAllowed.bitstamp || sourceAllowed.coinbase) {
-    fetches.push(
-      (async () => {
-        if (sourceAllowed.binance) {
-          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
-            const outcome = await fetchBinancePricesDetailed(signal);
-            const { prices, diagnostics } = outcome.value;
-            providerDiagnostics.push(...diagnostics);
-            for (const [symbol, price] of prices) {
-              binancePrices.set(symbol, price);
-            }
-            if (prices.size > 0) {
-              binanceObservedAt = Math.floor(Date.now() / 1000);
-            }
-            return isSuccessfulOutcome(outcome);
-          });
-        }
+    fetches.push(async () => {
+      if (sourceAllowed.binance) {
+        await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BINANCE_PRICES, "Binance ticker", async () => {
+          const outcome = await fetchBinancePricesDetailed(signal);
+          const { prices, diagnostics } = outcome.value;
+          providerDiagnostics.push(...diagnostics);
+          for (const [symbol, price] of prices) {
+            binancePrices.set(symbol, price);
+          }
+          if (prices.size > 0) {
+            binanceObservedAt = Math.floor(Date.now() / 1000);
+          }
+          return isSuccessfulOutcome(outcome);
+        });
+      }
 
-        if (sourceAllowed.kraken && krakenSymbols.length > 0) {
-          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
-            const outcome = await fetchKrakenPrices(krakenSymbols, signal);
-            for (const [symbol, price] of outcome.value) {
-              krakenPrices.set(symbol, price);
-            }
-            if (outcome.value.size > 0) {
-              krakenObservedAt = Math.floor(Date.now() / 1000);
-            }
-            return isSuccessfulOutcome(outcome);
-          });
-        }
+      if (sourceAllowed.kraken && krakenSymbols.length > 0) {
+        await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
+          const outcome = await fetchKrakenPrices(krakenSymbols, signal);
+          for (const [symbol, price] of outcome.value) {
+            krakenPrices.set(symbol, price);
+          }
+          if (outcome.value.size > 0) {
+            krakenObservedAt = Math.floor(Date.now() / 1000);
+          }
+          return isSuccessfulOutcome(outcome);
+        });
+      }
 
-        if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
-          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
-            const outcome = await fetchBitstampPrices(signal);
-            for (const [symbol, price] of outcome.value.prices) {
-              bitstampPrices.set(symbol, price);
-            }
-            for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
-              bitstampObservedAtBySymbol.set(symbol, observedAt);
-            }
-            return isSuccessfulOutcome(outcome);
-          });
-        }
+      if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
+        await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
+          const outcome = await fetchBitstampPrices(signal);
+          for (const [symbol, price] of outcome.value.prices) {
+            bitstampPrices.set(symbol, price);
+          }
+          for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
+            bitstampObservedAtBySymbol.set(symbol, observedAt);
+          }
+          return isSuccessfulOutcome(outcome);
+        });
+      }
 
-        if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
-          await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
-            const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
-            for (const [symbol, price] of outcome.value.prices) {
-              coinbasePrices.set(symbol, price);
-            }
-            for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
-              coinbaseObservedAtBySymbol.set(symbol, observedAt);
-            }
-            return isSuccessfulOutcome(outcome);
-          });
-        }
-      })(),
-    );
+      if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
+        await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
+          const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
+          for (const [symbol, price] of outcome.value.prices) {
+            coinbasePrices.set(symbol, price);
+          }
+          for (const [symbol, observedAt] of outcome.value.observedAtBySymbol) {
+            coinbaseObservedAtBySymbol.set(symbol, observedAt);
+          }
+          return isSuccessfulOutcome(outcome);
+        });
+      }
+    });
   }
 
   // Breaker-recovery path: when a provider has zero tracked candidates
   // there is nothing to probe, so mirror the Jupiter pass and coax an
   // open/half-open breaker toward closed instead of leaving it stuck.
   if (krakenSymbols.length === 0) {
-    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.KRAKEN_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.KRAKEN_PRICES));
   }
   if (!shouldFetchBitstamp) {
-    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.BITSTAMP_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.BITSTAMP_PRICES));
   }
   if (coinbaseSymbols.length === 0) {
-    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.COINBASE_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.COINBASE_PRICES));
   }
 
   if (sourceAllowed.redstone && redstoneSymbols.length > 0) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.REDSTONE_PRICES, "RedStone API", async () => {
         const outcome = await fetchRedstonePrices(redstoneSymbols, signal);
         for (const [symbol, result] of outcome.value) {
@@ -645,11 +645,11 @@ export async function collectPrimaryProviderQuotes(params: {
       }),
     );
   } else if (redstoneSymbols.length === 0) {
-    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.REDSTONE_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.REDSTONE_PRICES));
   }
 
   if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
         const outcome = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS, signal, chainRpcs);
         for (const [id, price] of outcome.value.prices) {
@@ -662,11 +662,11 @@ export async function collectPrimaryProviderQuotes(params: {
       }),
     );
   } else if (CURVE_POOL_CONFIGS.length === 0) {
-    fetches.push(recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
+    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
   }
 
   if (sourceAllowed.curveOracle) {
-    fetches.push(
+    fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ORACLE, "crvUSD oracle", async () => {
         const quote = await fetchCurveOracleEma(
           "ethereum",
@@ -685,7 +685,10 @@ export async function collectPrimaryProviderQuotes(params: {
     );
   }
 
-  await Promise.all(fetches);
+  // Cloudflare Workers cap each cron trigger at 6 outbound subrequests
+  // in flight. Cap primary-provider fetches at 4 to leave headroom for
+  // sidecar work (alerts, audit writes, address-provider follow-ups).
+  await mapWithConcurrency(fetches, 4, (run) => run());
   throwIfAborted(signal);
 
   if (plan.addressProviders.length > 0 && plan.addressProviderConfig) {
