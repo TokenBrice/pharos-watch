@@ -13,7 +13,6 @@ Historical plans, one-off audits, exploratory research, screenshots, and handoff
 | Material | Destination |
 | --- | --- |
 | Repeatable process guidance | `docs/process/` |
-| Long-lived execution tracker | `docs/trackers/` |
 | Route-specific maintenance guidance | Route doc or a dedicated subdirectory under `docs/` |
 | Operator remediation procedure | `docs/runbooks/` |
 | Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus timeline when applicable |

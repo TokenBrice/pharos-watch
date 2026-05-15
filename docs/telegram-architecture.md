@@ -115,7 +115,7 @@ The audit asked for 6–7 seams. "Outbound transport" got its own seam because b
   - `index.ts` — `COMMAND_HANDLERS` dispatch table
   - `context.ts` — `WebhookCommandContext` shape passed to every handler
   - `action-runner.ts` — shared `/subscribe`, `/unsubscribe`, `/set` coin-resolution + bulk-confirm flow (also used by Ingress's disambiguation reply path)
-  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
+  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
 - `worker/src/api/telegram-webhook-messages.ts` (message builders shared across handlers)
 - `worker/src/api/telegram-webhook-insights.ts` (`/top`, `/why`, `/coverage` data-loading and rendering)
 - `worker/src/api/telegram-webhook-status.ts` (the `/status` data loader)
