@@ -63,6 +63,19 @@ vi.mock("@/components/exploit-notice-banner", () => ({
   ExploitNoticeBanner: () => null,
 }));
 
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
+  RecentBlacklistBanner: () => null,
+}));
+
+vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
+  // Render the `variantRelationshipCard` child so tests can still assert it
+  // exists outside the overview section; suppress the inner contagion graph
+  // which would otherwise pull in the live useReportCards query.
+  ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
+    <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
+  ),
+}));
+
 vi.mock("@/components/report-card", () => ({
   ReportCardDetail: () => <div data-testid="report-card" />,
 }));
