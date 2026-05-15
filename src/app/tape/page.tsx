@@ -31,14 +31,20 @@ const collectionJsonLd = {
   isPartOf: { "@id": `${SITE_URL}#website` },
 };
 
+// Only advertise classes that currently have a projector. Reserved chip slots
+// (dews, psi, mint_burn, reserve, redemption, yield, liquidity) return empty
+// feeds today; including them in the ItemList would point crawlers at empty
+// search results.
+const SHIPPED_TAPE_CLASSES = TAPE_CLASSES.filter((cls) => cls.hasProjector);
+
 const itemListJsonLd = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   "@id": `${TAPE_URL}#class-index`,
   name: "Event classes covered by the Tape",
   itemListOrder: "https://schema.org/ItemListUnordered",
-  numberOfItems: TAPE_CLASSES.length,
-  itemListElement: TAPE_CLASSES.map((cls, index) => ({
+  numberOfItems: SHIPPED_TAPE_CLASSES.length,
+  itemListElement: SHIPPED_TAPE_CLASSES.map((cls, index) => ({
     "@type": "ListItem",
     position: index + 1,
     name: cls.label,

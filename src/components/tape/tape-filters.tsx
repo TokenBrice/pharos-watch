@@ -141,15 +141,18 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
       {TAPE_CLASSES.map((cls) => {
         const slug = `${cls.slug}.*`;
         const active = activeClassSet.has(slug);
+        const planned = !cls.hasProjector;
         return (
           <button
             key={cls.slug}
             type="button"
             onClick={() => onToggleClass(cls.slug)}
             aria-pressed={active}
-            className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""}`}
+            title={planned ? `${cls.label}: projector ships when the source pipeline matures.` : undefined}
+            className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${planned ? "border-dashed opacity-60" : ""}`}
           >
             {cls.label}
+            {planned ? <span className="ml-1 text-muted-foreground/70">· soon</span> : null}
           </button>
         );
       })}
