@@ -301,11 +301,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chain-health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT
 - `shared/lib/chain-provider-registry.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_REGISTRY, DEXPAPRIKA_CHAIN_MAP
 - `shared/lib/chains/index.ts` - CHAIN_META, CHAIN_RESILIENCE_TIER, ChainResilienceTier, getActiveChainIds, getChainResilienceTier, resolveChainId
-- `shared/lib/classification-badges.ts` - BACKING_BADGE_STYLES, BACKING_COLORS, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES
-- `shared/lib/classification-common.ts`
-- `shared/lib/classification-domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT, getBackingLabelShort
-- `shared/lib/classification-pegs.ts` - PEG_CURRENCY_COUNT, PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA
-- `shared/lib/classification-risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, FEATURE_STATUS_CONFIG, FeatureStatus
+- `shared/lib/classification/badges.ts` - BACKING_BADGE_STYLES, BACKING_COLORS, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES
+- `shared/lib/classification/common.ts`
+- `shared/lib/classification/domain.ts` - BACKING_LABELS, BACKING_LABELS_SHORT, GOVERNANCE_FILTER_OPTIONS, GOVERNANCE_LABELS, GOVERNANCE_LABELS_SHORT, getBackingLabelShort
+- `shared/lib/classification/pegs.ts` - PEG_CURRENCY_COUNT, PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA
+- `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, FEATURE_STATUS_CONFIG, FeatureStatus
 - `shared/lib/classification.ts`
 - `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries

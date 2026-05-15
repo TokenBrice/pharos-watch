@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.25 (2026-02-25 → 2026-05-15). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.25 (2026-02-25 → 2026-05-15). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
 
 ## v7.25 — Wrapper decentralization inherits from tracked parent assets (2026-05-15)
 
@@ -348,7 +348,7 @@ New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred f
 
 **Commit:** `69ea4c9`
 
-Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/safety-score-version-data.ts`.
+Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/methodology-versions/safety-score-data.ts`.
 
 ### v3.2 — Dependency type ceilings (Feb 27)
 
