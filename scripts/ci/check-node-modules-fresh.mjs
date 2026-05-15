@@ -27,9 +27,8 @@ function warn(msg) {
 }
 
 // node_modules/ missing — always fatal, environment is broken
-let nmStat;
 try {
-  nmStat = statSync(nmDir);
+  statSync(nmDir);
 } catch {
   warn("node_modules/ not found. Run `npm ci` before invoking the merge gate.");
   process.exit(1);

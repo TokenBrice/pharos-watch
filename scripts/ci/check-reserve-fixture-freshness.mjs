@@ -10,7 +10,7 @@ import path from "path";
 
 const MAX_AGE_DAYS = 90;
 const FIXTURES_DIR = new URL(
-  "../worker/src/cron/reserve-adapters/__tests__/fixtures",
+  "../../worker/src/cron/reserve-adapters/__tests__/fixtures",
   import.meta.url,
 ).pathname;
 
