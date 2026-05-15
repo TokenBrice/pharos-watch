@@ -806,7 +806,9 @@ export function buildStablecoinDetailHeroViewModel({
       activeDepeg: pegScoreResult?.activeDepeg === true,
     },
     tertiaryMetrics,
-    desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => metric.key !== "dews" && metric.key !== "liquidity"),
+    desktopTertiaryMetrics: tertiaryMetrics.filter(
+      (metric) => metric.key !== "dews" && metric.key !== "liquidity" && metric.key !== "peg-score",
+    ),
     signalRailItems,
   };
 }
