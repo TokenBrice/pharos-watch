@@ -128,7 +128,18 @@ function buildPayloadWithObservedAt(sourceObservedAt: number, overrides: Partial
   const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
   const source = makeEvaluatedSource(overrides);
   const benchmark = makeBenchmarkMeta();
-  const benchmarks: ParsedYieldBenchmarkRegistry = { USD: benchmark, EUR: null, CHF: null };
+  const benchmarks: ParsedYieldBenchmarkRegistry = {
+    USD: benchmark,
+    EUR: null,
+    CHF: null,
+    GBP: null,
+    JPY: null,
+    MXN: null,
+    BRL: null,
+    AUD: null,
+    CAD: null,
+    SGD: null,
+  };
 
   return buildYieldRankingsPayloadFromEvaluatedSources({
     evaluatedSources: [source],
@@ -271,7 +282,7 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     });
 
     expect(payload.rankings[0]?.sourceRisk).toMatchObject({
-      sourceRiskScore: null,
+      sourceRiskScore: 0,
       sourceRiskPenalty: 1,
       sourceDepthRatio: 0.25,
       rewardShare: 0.2,
