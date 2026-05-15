@@ -21,6 +21,7 @@ import {
   BLACKLIST_STABLECOINS,
   type BlacklistEvent,
   type BlacklistQuarterlyEventTypePoint,
+  type BlacklistRecentEventTypeCounts,
   type BlacklistStablecoin,
 } from "@shared/types/market";
 import {
@@ -410,6 +411,23 @@ export const handleBlacklistSummary = withErrorHandler(
       )
       .all<{ stablecoin: string; quarter_sort_key: number; event_type: string; n: number }>();
 
+    // Per-coin, per-event-type counts for the last 7 days. Powers the detail-page
+    // RecentBlacklistBanner without forcing the client to fetch a 250-row event
+    // payload just to compute three counters. Time window mirrors the 7d cutoff
+    // applied client-side previously.
+    const sevenDayCutoffSec = Math.floor(Date.now() / 1000) - 7 * 86400;
+    const perCoinRecentResult = await db
+      .prepare(
+        `/* per_coin_recent_7d */
+         SELECT stablecoin, event_type, COUNT(*) AS n
+         FROM blacklist_events
+         WHERE suppression_reason IS NULL
+           AND timestamp >= ?
+         GROUP BY stablecoin, event_type`,
+      )
+      .bind(sevenDayCutoffSec)
+      .all<{ stablecoin: string; event_type: string; n: number }>();
+
     // Collapse total / max(timestamp) / recoverable-gap / recent-30d / recent-24h
     // into a single aggregate pass so we don't hit the public-events table five
     // separate times under the WHERE suppression_reason IS NULL predicate.
@@ -541,6 +559,19 @@ export const handleBlacklistSummary = withErrorHandler(
       perCoinQuarterlyEventTypes[symbol] = points;
     }
 
+    // Build per-coin 7d event-type buckets so every supported coin has a defined
+    // record (zero defaults) — clients can read without presence checks.
+    const perCoinRecentEventTypes = Object.fromEntries(
+      BLACKLIST_STABLECOINS.map((s) => [s, { freezes: 0, destroys: 0, releases: 0 }]),
+    ) as Record<BlacklistStablecoin, BlacklistRecentEventTypeCounts>;
+    for (const row of perCoinRecentResult.results ?? []) {
+      if (!BLACKLIST_STABLECOINS.includes(row.stablecoin as BlacklistStablecoin)) continue;
+      const symbol = row.stablecoin as BlacklistStablecoin;
+      if (row.event_type === "blacklist") perCoinRecentEventTypes[symbol].freezes += row.n;
+      else if (row.event_type === "destroy") perCoinRecentEventTypes[symbol].destroys += row.n;
+      else if (row.event_type === "unblacklist") perCoinRecentEventTypes[symbol].releases += row.n;
+    }
+
     const chart = buildBlacklistQuarterlyChartFromSnapshots(currentBalances, activeRecordEvents);
 
     const chainOptions = [
@@ -574,6 +605,7 @@ export const handleBlacklistSummary = withErrorHandler(
           perCoinFrozenTotal,
           perCoinDestroyedTotal,
           perCoinQuarterlyEventTypes,
+          perCoinRecentEventTypes,
         },
         chart,
         chains: chainOptions,

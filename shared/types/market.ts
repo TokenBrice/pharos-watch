@@ -624,6 +624,13 @@ export const BlacklistQuarterlyEventTypePointSchema = z.object({
 });
 export type BlacklistQuarterlyEventTypePoint = z.infer<typeof BlacklistQuarterlyEventTypePointSchema>;
 
+export const BlacklistRecentEventTypeCountsSchema = z.object({
+  freezes: z.number(),
+  destroys: z.number(),
+  releases: z.number(),
+});
+export type BlacklistRecentEventTypeCounts = z.infer<typeof BlacklistRecentEventTypeCountsSchema>;
+
 const BlacklistSummaryStatsSchema = z.object({
   usdcBlacklisted: z.number(),
   usdtBlacklisted: z.number(),
@@ -645,6 +652,7 @@ const BlacklistSummaryStatsSchema = z.object({
   perCoinFrozenTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinDestroyedTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
+  perCoinRecentEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), BlacklistRecentEventTypeCountsSchema),
 });
 
 const BlacklistChainOptionSchema = z.object({
