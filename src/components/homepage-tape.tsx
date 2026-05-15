@@ -8,6 +8,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   collapseByCoinClass,
+  eventClassSlug,
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
 import { tapeClassChipBg } from "@/lib/tape-class-style";
@@ -118,7 +119,10 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   const { data, isLoading, error } = useLatestEvents({ limit: 20, severityFloor: "notice" });
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
-  const collapsed = useMemo(() => collapseByCoinClass(events), [events]);
+  const collapsed = useMemo(
+    () => collapseByCoinClass(events.filter((event) => eventClassSlug(event.type) !== "score")),
+    [events],
+  );
   const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);
 
   if (error || (!isLoading && collapsed.length === 0)) {

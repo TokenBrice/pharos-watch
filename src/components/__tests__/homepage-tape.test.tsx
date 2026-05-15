@@ -92,7 +92,7 @@ describe("HomepageTape", () => {
     expect(screen.getByText(/loading recent events/i)).toBeTruthy();
   });
 
-  it("renders depeg, freeze, and score events with links and stablecoin logos", () => {
+  it("renders depeg and freeze events with links and stablecoin logos, dropping score events", () => {
     mockLatestEvents({
       data: {
         events: [
@@ -135,18 +135,15 @@ describe("HomepageTape", () => {
     // Items are duplicated for the scrolling loop; expect 2 occurrences per event.
     expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
-    expect(screen.getAllByText("USDT grade A -> B+")).toHaveLength(2);
-    // Events use stablecoin logos when `coinId` is set. Logos resolve to a
-    // letter-fallback (aria-label) when no image src is provided by the
-    // mocked useLogos hook.
+    // Score grade changes are intentionally hidden from the homepage strip.
+    expect(screen.queryByText("USDT grade A -> B+")).toBeNull();
     expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
-    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(4);
-    // Source links are present.
+    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(2);
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
-    expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether"))).toBe(true);
+    expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether/#report-card"))).toBe(false);
   });
 
   it("keeps a severity dot fallback when an event is not tied to a stablecoin", () => {
@@ -262,9 +259,9 @@ describe("HomepageTape", () => {
             coinId: "usdt-tether",
           }),
           makeTapeEvent({
-            id: "evt-s",
-            type: "score.downgraded",
-            title: "USDT grade A → B+",
+            id: "evt-f",
+            type: "freeze.address.blocked",
+            title: "USDT freeze blocked",
             coinId: "usdt-tether",
           }),
         ],
@@ -277,7 +274,7 @@ describe("HomepageTape", () => {
     render(<HomepageTape />);
 
     expect(screen.getAllByText("USDT depeg opened (−110 bps)")).toHaveLength(2);
-    expect(screen.getAllByText("USDT grade A → B+")).toHaveLength(2);
+    expect(screen.getAllByText("USDT freeze blocked")).toHaveLength(2);
     expect(screen.queryByText(/×\d/)).toBeNull();
   });
 
