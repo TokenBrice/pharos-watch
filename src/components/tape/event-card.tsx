@@ -204,6 +204,99 @@ function ScoreEnrichment({ event }: { event: TapeEvent }) {
   );
 }
 
+const BAND_PILL_CLASS =
+  "inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide";
+
+function BandTransitionEnrichment({ event }: { event: TapeEvent }) {
+  const p = event.payload;
+  const prev = typeof p?.prevBand === "string" ? p.prevBand : null;
+  const next = typeof p?.newBand === "string" ? p.newBand : null;
+  if (!prev || !next) return null;
+  const prevScore = typeof p.prevScore === "number" ? p.prevScore : null;
+  const newScore = typeof p.newScore === "number" ? p.newScore : null;
+  const isEscalation = event.type.endsWith(".shifted_down") || event.type === "dews.escalated";
+  const ArrowIcon = isEscalation ? TrendingDown : TrendingUp;
+  const arrowColor = isEscalation
+    ? "text-red-600 dark:text-red-400"
+    : "text-emerald-600 dark:text-emerald-400";
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      <span className={`${BAND_PILL_CLASS} text-muted-foreground`}>{prev}</span>
+      <ArrowIcon className={`h-3 w-3 ${arrowColor}`} aria-hidden="true" />
+      <span className={`${BAND_PILL_CLASS} text-foreground`}>{next}</span>
+      {prevScore != null && newScore != null ? (
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+          {prevScore.toFixed(1)} → {newScore.toFixed(1)}
+          <span className={`ml-1 ${arrowColor}`}>
+            ({newScore - prevScore > 0 ? "+" : ""}
+            {(newScore - prevScore).toFixed(1)})
+          </span>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function YieldEnrichment({ event }: { event: TapeEvent }) {
+  const p = event.payload;
+  if (event.type === "yield.pys_dropped") {
+    const prev = typeof p?.prevScore === "number" ? p.prevScore : null;
+    const next = typeof p?.newScore === "number" ? p.newScore : null;
+    if (prev == null || next == null) return null;
+    const delta = next - prev;
+    return (
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+        <span className={`${SCORE_PILL_CLASS} text-muted-foreground`}>{Math.round(prev)}</span>
+        <TrendingDown className="h-3 w-3 text-red-600 dark:text-red-400" aria-hidden="true" />
+        <span className={`${SCORE_PILL_CLASS} text-foreground`}>{Math.round(next)}</span>
+        <span className="font-mono text-[11px] tabular-nums text-red-600 dark:text-red-400">
+          ({delta > 0 ? "+" : ""}{Math.round(delta)})
+        </span>
+      </div>
+    );
+  }
+  // yield.warning_emitted
+  const signals = Array.isArray(p?.newSignals) ? p.newSignals : Array.isArray(p?.signals) ? p.signals : null;
+  if (!signals || signals.length === 0) return null;
+  const visible = signals.slice(0, 3).filter((s): s is string => typeof s === "string");
+  if (visible.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+      {visible.map((signal) => (
+        <span
+          key={signal}
+          className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400"
+        >
+          {signal}
+        </span>
+      ))}
+      {signals.length > visible.length ? (
+        <span className="font-mono text-[10px] text-muted-foreground">+{signals.length - visible.length} more</span>
+      ) : null}
+    </div>
+  );
+}
+
+function MintBurnFlowEnrichment({ event }: { event: TapeEvent }) {
+  const amount = event.payload?.amountUsd;
+  if (typeof amount !== "number" || amount <= 0) return null;
+  const direction = event.payload?.direction;
+  const verb = direction === "mint" ? "minted" : direction === "burn" ? "burned" : "flow";
+  const ArrowIcon = direction === "mint" ? TrendingUp : TrendingDown;
+  const arrowColor = direction === "mint"
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-orange-600 dark:text-orange-400";
+  return (
+    <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+      <ArrowIcon className={`h-3 w-3 ${arrowColor}`} aria-hidden="true" />
+      <span className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground/80">
+        {formatCompactUsd(amount)}
+      </span>
+      <span className="text-[11px] text-muted-foreground">{verb}</span>
+    </div>
+  );
+}
+
 const METHODOLOGY_BULLET_LIMIT = 2;
 
 function MethodologyEnrichment({ event }: { event: TapeEvent }) {
@@ -323,6 +416,10 @@ function EventCardEnrichment({ event }: { event: TapeEvent }) {
     case "freeze":      return <FreezeEnrichment event={event} />;
     case "cemetery":    return <CemeteryEnrichment event={event} />;
     case "lifecycle":   return <LifecycleEnrichment event={event} />;
+    case "psi":         return <BandTransitionEnrichment event={event} />;
+    case "dews":        return <BandTransitionEnrichment event={event} />;
+    case "mint_burn":   return <MintBurnFlowEnrichment event={event} />;
+    case "yield":       return <YieldEnrichment event={event} />;
     default:            return null;
   }
 }

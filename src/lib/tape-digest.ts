@@ -117,6 +117,70 @@ function methodologySummary(events: readonly TapeEvent[]): string {
   return Array.from(domains).slice(0, 3).join(" · ");
 }
 
+function psiSummary(events: readonly TapeEvent[]): string {
+  // PSI is a single global series — recap reads the worst band touched and
+  // the latest transition direction.
+  let worstBand = "";
+  for (const e of events) {
+    const newBand = e.payload?.newBand;
+    if (typeof newBand === "string" && newBand.length > 0) {
+      if (!worstBand || severityForBand(newBand) > severityForBand(worstBand)) {
+        worstBand = newBand;
+      }
+    }
+  }
+  if (!worstBand) return "";
+  return `worst band ${worstBand}`;
+}
+
+function severityForBand(band: string): number {
+  const order = ["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"];
+  return order.indexOf(band);
+}
+
+function yieldSummary(events: readonly TapeEvent[]): string {
+  let warnings = 0;
+  let drops = 0;
+  let worstDrop = 0;
+  for (const e of events) {
+    if (e.type === "yield.warning_emitted") warnings += 1;
+    else if (e.type === "yield.pys_dropped") {
+      drops += 1;
+      const delta = e.payload?.delta;
+      if (typeof delta === "number" && delta < worstDrop) worstDrop = delta;
+    }
+  }
+  const parts: string[] = [];
+  if (warnings > 0) parts.push(`${warnings} warning${warnings === 1 ? "" : "s"}`);
+  if (drops > 0) parts.push(`${drops} PYS drop${drops === 1 ? "" : "s"}`);
+  if (worstDrop < 0) parts.push(`worst ${Math.round(worstDrop)} pts`);
+  const tickers = formatTopTickers(events);
+  return [parts.join(" · "), tickers].filter(Boolean).join(" · ");
+}
+
+function mintBurnSummary(events: readonly TapeEvent[]): string {
+  let mintUsd = 0;
+  let burnUsd = 0;
+  let mintCount = 0;
+  let burnCount = 0;
+  for (const e of events) {
+    const amt = e.payload?.amountUsd;
+    if (typeof amt !== "number" || amt <= 0) continue;
+    if (e.type === "mint_burn.large_mint") {
+      mintUsd += amt;
+      mintCount += 1;
+    } else if (e.type === "mint_burn.large_burn") {
+      burnUsd += amt;
+      burnCount += 1;
+    }
+  }
+  const parts: string[] = [];
+  if (mintCount > 0) parts.push(`${formatCompactUsd(mintUsd)} minted`);
+  if (burnCount > 0) parts.push(`${formatCompactUsd(burnUsd)} burned`);
+  const tickers = formatTopTickers(events);
+  return [parts.join(" · "), tickers].filter(Boolean).join(" · ");
+}
+
 function defaultSummary(events: readonly TapeEvent[]): string {
   return formatTopTickers(events);
 }
@@ -127,6 +191,10 @@ function classSummary(classSlug: string, events: readonly TapeEvent[]): string {
     case "freeze": return freezeSummary(events);
     case "score": return scoreSummary(events);
     case "methodology": return methodologySummary(events);
+    case "psi": return psiSummary(events);
+    case "dews": return defaultSummary(events);
+    case "mint_burn": return mintBurnSummary(events);
+    case "yield": return yieldSummary(events);
     default: return defaultSummary(events);
   }
 }
