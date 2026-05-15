@@ -1,7 +1,7 @@
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { CG_CHAIN_MAP, CHAIN_REGISTRY } from "../../lib/chain-registry";
+import { CG_CHAIN_MAP, CHAIN_REGISTRY, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { fetchCgTokenPoolsWithStatus } from "../../lib/coingecko-onchain";
 import { RATE_LIMITS } from "../../lib/rate-limit";
@@ -83,8 +83,12 @@ export async function crawlCoinGeckoPoolsStage({
     const registry = CHAIN_REGISTRY[chain];
     const cgNetwork = CG_CHAIN_MAP[chain] ?? registry?.coingecko;
     if (!cgNetwork) {
-      console.warn(`[dex-discovery] Chain "${chain}" not in CG registry for ${context.stablecoinId}, skipping`);
-      unresolvedChains.push(chain);
+      const gtNetwork = GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal;
+      const dsNetwork = DS_CHAIN_MAP[chain] ?? registry?.dexscreener;
+      if (!gtNetwork && !dsNetwork) {
+        console.warn(`[dex-discovery] Chain "${chain}" not in discovery provider registry for ${context.stablecoinId}, skipping`);
+        unresolvedChains.push(chain);
+      }
       continue;
     }
 

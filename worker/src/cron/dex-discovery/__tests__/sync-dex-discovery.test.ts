@@ -106,7 +106,7 @@ describe("syncDexDiscovery", () => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map());
-    vi.mocked(incrementRunSeq).mockResolvedValue(1);
+    vi.mocked(incrementRunSeq).mockResolvedValue(2);
     vi.mocked(crawlCoin).mockResolvedValue({
       pools: [
         makeStagedPool("ethereum:0xpool1"),
@@ -132,7 +132,7 @@ describe("syncDexDiscovery", () => {
       coinsCrawled: 1,
       poolsDiscovered: 2,
       budgetExhausted: false,
-      runSeq: 1,
+      runSeq: 2,
       failedCoins: [],
       tierBreakdown: {
         t1: 1,
@@ -145,7 +145,7 @@ describe("syncDexDiscovery", () => {
   });
 
   it("returns degraded when the run budget is exhausted before the queue completes", async () => {
-    vi.mocked(incrementRunSeq).mockResolvedValue(3);
+    vi.mocked(incrementRunSeq).mockResolvedValue(1);
 
     let nowMs = 1_700_000_000_000;
     const dateNowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
@@ -169,7 +169,7 @@ describe("syncDexDiscovery", () => {
       coinsCrawled: 1,
       poolsDiscovered: 1,
       budgetExhausted: true,
-      runSeq: 3,
+      runSeq: 1,
       tierBreakdown: {
         t1: 1,
         t2: 1,

@@ -333,7 +333,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result).toEqual({
       pools: [],
       priceObs: [],
-      unresolvedChains: ["plasma"],
+      unresolvedChains: [],
     });
     expect(events).toEqual([
       "cg:eth",
@@ -342,8 +342,28 @@ describe("crawlCoin DexScreener hardening", () => {
       "ds:plasma",
       "tickers",
     ]);
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('Chain "plasma"'),
+    );
+  });
+
+  it("reports chains unsupported by every discovery pool provider", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({ ok: true, pools: [] });
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({ tickers: [] }), { status: 200 }));
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "unsupported-chain", address: "0xabc", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.unresolvedChains).toEqual(["unsupported-chain"]);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Chain "plasma" not in CG registry for usdc-circle, skipping'),
+      expect.stringContaining('Chain "unsupported-chain" not in discovery provider registry for usdc-circle, skipping'),
     );
   });
 

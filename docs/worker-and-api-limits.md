@@ -132,7 +132,7 @@ Cron persistence helpers retry transient D1 queue pressure through `runWithOverl
 ### What this means operationally
 
 - `sync-dex-liquidity` no longer owns discovery. It consumes staged output written by `sync-dex-discovery`.
-- `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation.
+- `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation. Lower-priority tier-2/tier-3 candidates are deterministically sharded across their cadence windows so one modulo run does not inherit the entire tier queue at once.
 - Missing-price fallback is intentionally time-bounded so a bad upstream day cannot consume the whole `sync-stablecoins` slot.
 - Any new provider added to discovery or price enrichment should come with both a throttle and a hard stop budget.
 
