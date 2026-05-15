@@ -25,6 +25,7 @@ export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
 export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
+export type YieldTrendingFilter = "all" | "rising";
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -38,6 +39,7 @@ export interface YieldViewModelUrlParams {
   opportunity?: string | null;
   depth?: string | null;
   sourceChanged?: string | null;
+  trending?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -58,6 +60,7 @@ export interface YieldViewModelFilters {
   opportunity: YieldOpportunityFilter;
   depth: YieldDepthFilter;
   sourceChanged: YieldSourceChangedFilter;
+  trending: YieldTrendingFilter;
 }
 
 export interface YieldViewModelOptions {
@@ -71,6 +74,22 @@ export interface YieldViewModelOptions {
   opportunity: YieldFilterOption<YieldOpportunityFilter>[];
   depth: YieldFilterOption<YieldDepthFilter>[];
   sourceChanged: YieldFilterOption<YieldSourceChangedFilter>[];
+}
+
+export type YieldPresetKey =
+  | "treasury-grade"
+  | "best-dollar"
+  | "non-usd"
+  | "new-rising"
+  | "watchlist-warnings";
+
+export interface YieldPresetState {
+  key: YieldPresetKey;
+  label: string;
+  description: string;
+  count: number;
+  active: boolean;
+  overrides: Partial<YieldViewModelFilters>;
 }
 
 export interface YieldComparableSet {
@@ -117,6 +136,8 @@ export interface YieldViewModel {
   comparableSets: YieldComparableSet[];
   comparisonLabel: string;
   stats: YieldViewModelStats;
+  presets: YieldPresetState[];
+  matchingPreset: YieldPresetKey | null;
 }
 
 export interface BuildYieldViewModelOptions {
@@ -170,7 +191,52 @@ const DEFAULT_FILTERS: YieldViewModelFilters = {
   opportunity: "all",
   depth: "all",
   sourceChanged: "all",
+  trending: "all",
 };
+
+interface YieldPresetSpec {
+  key: YieldPresetKey;
+  label: string;
+  description: string;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+// Treasury-grade approximates "rate-derived, NAV, lending vaults, lending opportunities"
+// via safety+depth+confidence instead of multi-value yieldType (which is single-select).
+// Best-dollar approximates ">5% APY" via PYS ranking + safety floor; the leaderboard
+// is already sorted by PYS which correlates with APY for safe rows.
+export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
+  {
+    key: "treasury-grade",
+    label: "Treasury-grade picks",
+    description: "A- safety, non-thin depth, deterministic source",
+    overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" },
+  },
+  {
+    key: "best-dollar",
+    label: "Best dollar yields",
+    description: "USD-pegged, A- safety, ranked by PYS",
+    overrides: { peg: "USD", minSafety: 80 },
+  },
+  {
+    key: "non-usd",
+    label: "Non-USD opportunities",
+    description: "EUR, GBP, JPY, MXN, BRL and other non-USD pegs",
+    overrides: { peg: "non-usd" },
+  },
+  {
+    key: "new-rising",
+    label: "New & rising",
+    description: "Current APY above 30d average, 7+ daily observations",
+    overrides: { trending: "rising" },
+  },
+  {
+    key: "watchlist-warnings",
+    label: "Watchlist warnings",
+    description: "Rows surfacing one or more warning signals",
+    overrides: { warnings: "only" },
+  },
+];
 
 function formatCountLabel(label: string, count: number): string {
   return `${label} (${count})`;
@@ -235,6 +301,11 @@ function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
     sourceRisk: row.sourceRisk,
     sourceTvlUsd: row.sourceTvlUsd,
   });
+}
+
+function isRowRising(row: YieldRanking): boolean {
+  const observations = row.sourceRisk?.observationCount30d;
+  return row.currentApy > row.apy30d && observations != null && observations >= 7;
 }
 
 function matchesSearch(row: YieldRanking, query: string): boolean {
@@ -376,6 +447,14 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
   };
 }
 
+function countRowsMatchingFilters(rows: readonly YieldRanking[], filters: YieldViewModelFilters): number {
+  let count = 0;
+  for (const row of rows) {
+    if (rowMatchesFilters(row, filters)) count += 1;
+  }
+  return count;
+}
+
 function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewModelOptions): {
   filters: YieldViewModelFilters;
   normalizedParams: Record<keyof YieldViewModelUrlParams, string | null>;
@@ -389,6 +468,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   const validOpportunities = new Set(options.opportunity.map((option) => option.value));
   const validDepth = new Set(options.depth.map((option) => option.value));
   const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
+  const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -402,6 +482,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity),
     depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
     sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
+    trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
@@ -416,6 +497,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     opportunity: filters.opportunity === DEFAULT_FILTERS.opportunity ? null : filters.opportunity,
     depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
     sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
+    trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
   };
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
@@ -445,6 +527,7 @@ function rowMatchesFilters(row: YieldRanking, filters: YieldViewModelFilters): b
   if (filters.depth !== "all" && filters.depth !== "hide-thin" && getSourceDepthLens(row) !== filters.depth) return false;
   if (filters.sourceChanged === "only" && !row.provenance?.sourceSwitch) return false;
   if (filters.sourceChanged === "none" && row.provenance?.sourceSwitch) return false;
+  if (filters.trending === "rising" && !isRowRising(row)) return false;
 
   return true;
 }
@@ -572,6 +655,37 @@ function buildEmptyState(totalRows: number, visibleRows: readonly YieldViewModel
   };
 }
 
+function presetFilters(spec: YieldPresetSpec): YieldViewModelFilters {
+  return { ...DEFAULT_FILTERS, ...spec.overrides };
+}
+
+function filtersMatchPreset(filters: YieldViewModelFilters, spec: YieldPresetSpec): boolean {
+  const target = presetFilters(spec);
+  return (Object.keys(DEFAULT_FILTERS) as Array<keyof YieldViewModelFilters>).every(
+    (key) => filters[key] === target[key],
+  );
+}
+
+function buildPresets(
+  rows: readonly YieldRanking[],
+  filters: YieldViewModelFilters,
+): { presets: YieldPresetState[]; matchingPreset: YieldPresetKey | null } {
+  let matchingPreset: YieldPresetKey | null = null;
+  const presets = YIELD_PRESET_SPECS.map((spec) => {
+    const active = filtersMatchPreset(filters, spec);
+    if (active) matchingPreset = spec.key;
+    return {
+      key: spec.key,
+      label: spec.label,
+      description: spec.description,
+      count: countRowsMatchingFilters(rows, presetFilters(spec)),
+      active,
+      overrides: spec.overrides,
+    } satisfies YieldPresetState;
+  });
+  return { presets, matchingPreset };
+}
+
 export function buildYieldViewModel(
   rows: readonly YieldRanking[],
   params: YieldViewModelUrlParams,
@@ -581,6 +695,7 @@ export function buildYieldViewModel(
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
   const visibleRows = rankRows(rows.filter((row) => rowMatchesFilters(row, filters)), filters);
   const comparisonLabel = getComparisonLabel(filters);
+  const { presets, matchingPreset } = buildPresets(rows, filters);
 
   return {
     filters,
@@ -593,6 +708,8 @@ export function buildYieldViewModel(
     comparableSets: buildComparableSets(visibleRows),
     comparisonLabel,
     stats: buildStats(visibleRows, buildOptionsParams),
+    presets,
+    matchingPreset,
   };
 }
 

@@ -210,4 +210,52 @@ describe("buildYieldViewModel", () => {
       "usdt-tether",
     ]);
   });
+
+  it("filters rising rows by current vs 30d APY with observation floor", () => {
+    const trendingRows = [
+      makeYieldRanking({
+        id: "rising-row",
+        symbol: "RISE",
+        name: "Rising",
+        currentApy: 8,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 12 },
+      }),
+      makeYieldRanking({
+        id: "flat-row",
+        symbol: "FLAT",
+        name: "Flat",
+        currentApy: 5,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 12 },
+      }),
+      makeYieldRanking({
+        id: "thin-history-row",
+        symbol: "THIN",
+        name: "Thin History",
+        currentApy: 9,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 3 },
+      }),
+    ];
+
+    const model = buildYieldViewModel(trendingRows, { trending: "rising" });
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["rising-row"]);
+  });
+
+  it("marks the active preset and counts its matching rows", () => {
+    const warningsModel = buildYieldViewModel(rows, { warnings: "only" });
+    expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
+    const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
+    expect(watchlist?.active).toBe(true);
+    expect(watchlist?.count).toBe(2);
+
+    const defaultModel = buildYieldViewModel(rows, {});
+    expect(defaultModel.matchingPreset).toBeNull();
+  });
+
+  it("deactivates the preset when an additional filter is toggled", () => {
+    const model = buildYieldViewModel(rows, { warnings: "only", minSafety: "70" });
+    expect(model.matchingPreset).toBeNull();
+  });
 });

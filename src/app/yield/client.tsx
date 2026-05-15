@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
@@ -17,10 +18,16 @@ import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
-import { buildYieldViewModel, type YieldViewModel } from "@/lib/yield-view-model";
+import {
+  buildYieldViewModel,
+  YIELD_PRESET_SPECS,
+  type YieldPresetKey,
+  type YieldViewModel,
+} from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import type { YieldRankingsResponse } from "@shared/types";
 
 interface YieldScatterCardProps {
@@ -114,6 +121,7 @@ export function YieldClient() {
       opportunity: searchParams.get("opportunity"),
       depth: searchParams.get("depth"),
       sourceChanged: searchParams.get("sourceChanged"),
+      trending: searchParams.get("trending"),
     }),
     [searchParams],
   );
@@ -125,6 +133,36 @@ export function YieldClient() {
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams],
   );
   const visibleRows = viewModel.visibleRows;
+  const storyCallouts = useMemo(() => {
+    if (visibleRows.length === 0) return null;
+
+    const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+
+    const topYield = [...visibleRows].sort(
+      (a, b) => b.apy30d - a.apy30d || byId(a, b),
+    )[0] ?? null;
+
+    const stableAplusRows = visibleRows
+      .filter((r) => (r.safetyGrade === "A+" || r.safetyGrade === "A") && r.apy30d > 0)
+      .sort((a, b) => {
+        const sa = a.yieldStability ?? -1;
+        const sb = b.yieldStability ?? -1;
+        return sb - sa || b.apy30d - a.apy30d || byId(a, b);
+      });
+    const mostStable = stableAplusRows[0] ?? null;
+
+    const largestMarket = [...visibleRows]
+      .filter((r) => (r.sourceTvlUsd ?? 0) > 0)
+      .sort((a, b) => (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0) || byId(a, b))[0] ?? null;
+
+    return { topYield, mostStable, largestMarket };
+  }, [visibleRows]);
+
+  const handleScrollToRow = useCallback((id: string) => {
+    const el = document.getElementById(`yield-row-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
   const sourceBoardModel = useMemo(
     () => buildYieldSourceBoardModel(visibleRows, {
       benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
@@ -155,6 +193,24 @@ export function YieldClient() {
       }
     });
   }, [replaceParams, viewModel.normalizedParams]);
+
+  const handleApplyPreset = useCallback(
+    (presetKey: YieldPresetKey) => {
+      const spec = YIELD_PRESET_SPECS.find((entry) => entry.key === presetKey);
+      if (!spec) return;
+      replaceParams((params) => {
+        for (const key of Object.keys(viewModel.normalizedParams)) {
+          params.delete(key);
+        }
+        if (viewModel.matchingPreset === presetKey) return;
+        for (const [key, value] of Object.entries(spec.overrides)) {
+          if (value == null) continue;
+          params.set(key, String(value));
+        }
+      });
+    },
+    [replaceParams, viewModel.matchingPreset, viewModel.normalizedParams],
+  );
 
   const handleNavigate = useCallback(
     (id: string) => {
@@ -220,45 +276,81 @@ export function YieldClient() {
       ) : null}
 
       <div className="flex flex-col gap-6">
-        <section aria-label="Yield view trust rail" className="order-1 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Visible Rows</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">
-              {visibleRows.length}
-              <span className="text-sm font-normal text-muted-foreground">/{rankings.length}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">{viewModel.comparisonLabel}</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Avg Yield</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">{formatPercent(stats.avgApy)}</p>
-            <p className="text-xs text-muted-foreground">TVL-weighted when available</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Best PYS</p>
-            <p className="text-xl font-semibold text-foreground">
-              {stats.bestPys ? stats.bestPys.symbol : "—"}
-            </p>
-            <p className="font-mono text-xs tabular-nums text-muted-foreground">
-              {stats.bestPys ? `PYS ${stats.bestPys.score.toFixed(1)}` : "No scored row"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Warnings</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">{stats.warningRowCount}</p>
-            <p className="text-xs text-muted-foreground">
-              {visibleRows.length > 0 ? `${Math.round((stats.warningRowCount / visibleRows.length) * 100)}% of view` : "No visible rows"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Safety Coverage</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">
-              {data.provenance ? `${(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}%` : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {stats.nullSafetyCount > 0 ? `${stats.nullSafetyCount} visible unscored` : "Visible rows scored"}
-            </p>
-          </div>
+        <section aria-label="Yield view highlights" className="order-1">
+          {storyCallouts === null ? (
+            <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-5 text-center text-sm text-muted-foreground">
+              No rows match your filters
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {storyCallouts.topYield ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(storyCallouts.topYield!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <p className="pharos-kicker mb-2">Top yield this week</p>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[storyCallouts.topYield.id]} name={storyCallouts.topYield.name} size={20} />
+                    <span className="font-semibold text-foreground">{storyCallouts.topYield.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{storyCallouts.topYield.name}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatPercent(storyCallouts.topYield.apy30d)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {storyCallouts.topYield.warningSignals.length > 0
+                      ? `⚠ ${formatYieldWarningSignal(storyCallouts.topYield.warningSignals[0]!)}`
+                      : storyCallouts.topYield.yieldStability !== null && storyCallouts.topYield.yieldStability >= 80
+                        ? "Stable 30d range"
+                        : "30d avg APY"}
+                  </p>
+                </button>
+              ) : null}
+              {storyCallouts.mostStable ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(storyCallouts.mostStable!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <p className="pharos-kicker mb-2">Most stable A+ yield</p>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[storyCallouts.mostStable.id]} name={storyCallouts.mostStable.name} size={20} />
+                    <span className="font-semibold text-foreground">{storyCallouts.mostStable.symbol}</span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{storyCallouts.mostStable.safetyGrade}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatPercent(storyCallouts.mostStable.apy30d)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {storyCallouts.mostStable.yieldStability !== null
+                      ? `${Math.round(storyCallouts.mostStable.yieldStability)}% consistency`
+                      : "Yield stability unscored"}
+                  </p>
+                </button>
+              ) : null}
+              {storyCallouts.largestMarket ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(storyCallouts.largestMarket!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <p className="pharos-kicker mb-2">Largest market</p>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[storyCallouts.largestMarket.id]} name={storyCallouts.largestMarket.name} size={20} />
+                    <span className="font-semibold text-foreground">{storyCallouts.largestMarket.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{storyCallouts.largestMarket.name}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatCurrency(storyCallouts.largestMarket.sourceTvlUsd!)} TVL
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatPercent(storyCallouts.largestMarket.apy30d)} APY
+                  </p>
+                </button>
+              ) : null}
+            </div>
+          )}
         </section>
 
         <section className="order-2" aria-label="Yield filters">
@@ -266,6 +358,7 @@ export function YieldClient() {
             viewModel={viewModel}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
+            onApplyPreset={handleApplyPreset}
           />
         </section>
 
