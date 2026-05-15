@@ -44,8 +44,8 @@ export function FilterCombobox({
           type="button"
           aria-label={label}
           className={cn(
-            "pharos-control-pill pharos-focus-ring gap-1.5 text-xs",
-            triggerClassName,
+            "pharos-focus-ring inline-flex items-center gap-1.5",
+            triggerClassName ?? "pharos-control-pill text-xs",
           )}
         >
           <span className="text-muted-foreground">{label}</span>

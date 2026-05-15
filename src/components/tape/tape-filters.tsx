@@ -106,12 +106,15 @@ interface TapeFiltersProps {
   eventsForCoinDirectory?: TapeEvent[];
 }
 
-function segmentedCornerClass(index: number, total: number): string {
-  if (total <= 1) return "";
-  if (index === 0) return "rounded-r-none";
-  if (index === total - 1) return "rounded-l-none";
-  return "rounded-none";
-}
+// Wire-service chip primitives (see docs/tape-page.md Aesthetic Lock).
+// Square borders, mono uppercase, active state via foreground color.
+const CHIP_BASE =
+  "pharos-focus-ring inline-flex items-center border px-2 py-0.5 text-xs uppercase tracking-wide transition-colors";
+const CHIP_INACTIVE = "border-border/50 text-muted-foreground hover:border-foreground/40 hover:text-foreground";
+const CHIP_ACTIVE = "border-foreground bg-foreground/10 text-foreground";
+
+const COMBOBOX_TRIGGER =
+  "border border-border/50 px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground hover:border-foreground/40 hover:text-foreground";
 
 // `q` is server-driven (`/api/events?q=`) so each keystroke would refetch.
 // Debounce 200ms locally and only push to the URL after the user stops
@@ -163,7 +166,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   const [mobileClassesOpen, setMobileClassesOpen] = useState(activeClassCount > 0);
 
   const classChips = (
-    <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
+    <div className="flex flex-wrap items-center gap-1" aria-label="Filter by event type">
       {TAPE_CLASSES.map((cls) => {
         const slug = `${cls.slug}.*`;
         const active = activeClassSet.has(slug);
@@ -175,10 +178,10 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
             onClick={() => onToggleClass(cls.slug)}
             aria-pressed={active}
             title={planned ? `${cls.label}: projector ships when the source pipeline matures.` : undefined}
-            className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${planned ? "border-dashed opacity-60" : ""}`}
+            className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE} ${planned ? "border-dashed opacity-60" : ""}`}
           >
             {cls.label}
-            {planned ? <span className="ml-1 text-muted-foreground/70">· soon</span> : null}
+            {planned ? <span className="ml-1 text-muted-foreground/70">·soon</span> : null}
           </button>
         );
       })}
@@ -186,7 +189,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
         <button
           type="button"
           onClick={() => setParam("type", "")}
-          className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+          className={`${CHIP_BASE} border-dashed ${CHIP_INACTIVE}`}
         >
           Clear classes
         </button>
@@ -195,13 +198,13 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   );
 
   return (
-    <div className="pharos-card-shell space-y-3 p-3">
+    <div className="border-y border-border/30 px-3 py-3 space-y-3 font-mono text-xs">
       <button
         type="button"
         onClick={() => setMobileClassesOpen((v) => !v)}
         aria-expanded={mobileClassesOpen}
         aria-controls="tape-class-chips-mobile"
-        className="pharos-focus-ring inline-flex cursor-pointer items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground sm:hidden"
+        className="pharos-focus-ring inline-flex cursor-pointer items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground sm:hidden"
       >
         <span className={`inline-block transition-transform ${mobileClassesOpen ? "rotate-90" : ""}`} aria-hidden="true">▸</span>
         {activeClassCount > 0 ? `Filter by class · ${activeClassCount} active` : `Filter by class`}
@@ -215,9 +218,9 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
 
       <div className="hidden sm:block">{classChips}</div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex isolate">
-          {WINDOW_OPTIONS.map((opt, i) => {
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex flex-wrap gap-1">
+          {WINDOW_OPTIONS.map((opt) => {
             const active = state.window === opt.value;
             return (
               <button
@@ -226,7 +229,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
                 role="radio"
                 aria-checked={active}
                 onClick={() => setParam("window", opt.value)}
-                className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${segmentedCornerClass(i, WINDOW_OPTIONS.length)}`}
+                className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
               >
                 {opt.label}
               </button>
@@ -237,8 +240,8 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap isolate">
-                {TAPE_FILTER_SEVERITY_VALUES.map((sev, i) => {
+              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap gap-1">
+                {TAPE_FILTER_SEVERITY_VALUES.map((sev) => {
                   const active = state.severity === sev;
                   return (
                     <button
@@ -247,7 +250,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
                       role="radio"
                       aria-checked={active}
                       onClick={() => setParam("severity", sev === DEFAULT_SEVERITY ? "" : sev)}
-                      className={`pharos-focus-ring pharos-control-pill ${active ? "pharos-control-pill-active" : ""} ${segmentedCornerClass(i, TAPE_FILTER_SEVERITY_VALUES.length)}`}
+                      className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
                     >
                       {SEVERITY_LABELS[sev]}
                     </button>
@@ -267,6 +270,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
           value={state.peg}
           onValueChange={(v) => setParam("peg", v)}
           options={PEG_FILTER_OPTIONS}
+          triggerClassName={COMBOBOX_TRIGGER}
         />
 
         <FilterCombobox
@@ -274,6 +278,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
           value={state.chain}
           onValueChange={(v) => setParam("chain", v)}
           options={[{ value: "all", label: "All chains" }, ...CHAIN_OPTIONS]}
+          triggerClassName={COMBOBOX_TRIGGER}
         />
 
         <DebouncedSearchInput
