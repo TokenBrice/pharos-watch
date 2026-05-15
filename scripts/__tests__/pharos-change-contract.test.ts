@@ -17,8 +17,8 @@ import {
   formatContract,
   formatContractMarkdown,
   normalizeChangedFiles,
-} from "../pharos-change-contract.mjs";
-import { findExistingComment, upsertPrComment } from "../upsert-github-pr-comment.mjs";
+} from "../ci/pharos-change-contract.mjs";
+import { findExistingComment, upsertPrComment } from "../ci/upsert-github-pr-comment.mjs";
 
 describe("normalizeChangedFiles", () => {
   it("normalizes path separators, blanks, and duplicates", () => {

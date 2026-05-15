@@ -73,8 +73,8 @@ WHERE status = 'complete'
 
 function printUsage() {
   console.log(`Usage:
-  node scripts/check-depeg-operational-integrity.mjs --print-sql
-  node scripts/check-depeg-operational-integrity.mjs --database stablecoin-db [--remote]
+  node scripts/ci/check-depeg-operational-integrity.mjs --print-sql
+  node scripts/ci/check-depeg-operational-integrity.mjs --database stablecoin-db [--remote]
 
 The wrangler mode is operator-run first and exits non-zero when any check returns rows.`);
 }

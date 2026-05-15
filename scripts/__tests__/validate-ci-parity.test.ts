@@ -25,8 +25,8 @@ import {
   buildPostPrebuildExecutionUnits,
   getPostPrebuildCommandEnv,
   runPostPrebuildValidation,
-} from "../run-validate-postbuild.mjs";
-import { buildGeneratedArtifactExecutionBatches } from "../run-generated-artifacts.mjs";
+} from "../maintenance/run-validate-postbuild.mjs";
+import { buildGeneratedArtifactExecutionBatches } from "../maintenance/run-generated-artifacts.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -147,11 +147,11 @@ describe("validate-ci parity", () => {
       scripts: Record<string, string>;
     };
 
-    expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
-    expect(packageJson.scripts.prebuild).toBe("node scripts/run-generated-artifacts.mjs");
-    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/run-generated-artifacts.mjs --check");
-    expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/run-noncritical-tests.mjs");
-    expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/run-critical-coverage.mjs");
+    expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/maintenance/run-validate-prebuild.mjs");
+    expect(packageJson.scripts.prebuild).toBe("node scripts/maintenance/run-generated-artifacts.mjs");
+    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/maintenance/run-generated-artifacts.mjs --check");
+    expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
+    expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
@@ -232,7 +232,7 @@ describe("validate-ci parity", () => {
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
       devDependencies: Record<string, string>;
     };
-    const runner = readFileSync(resolve(process.cwd(), "scripts/run-validate-prebuild.mjs"), "utf8");
+    const runner = readFileSync(resolve(process.cwd(), "scripts/maintenance/run-validate-prebuild.mjs"), "utf8");
 
     expect(packageJson.devDependencies).not.toHaveProperty("npm-run-all2");
     expect(runner).toContain("runParallelExecutionUnits");

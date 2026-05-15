@@ -143,7 +143,7 @@ function main() {
   console.error("phishing kits and will trip Google Safe Browsing's social-engineering");
   console.error("classifier. Move the logic into a route-scoped client component, or");
   console.error("if the pattern is genuinely required, add an explicit allowlist entry");
-  console.error("in scripts/check-phishing-signatures.mjs documenting why.");
+  console.error("in scripts/ci/check-phishing-signatures.mjs documenting why.");
   console.error("");
   console.error(`Total: ${violations.length} file(s) with violations.`);
   process.exit(1);

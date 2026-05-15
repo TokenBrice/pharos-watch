@@ -8,7 +8,7 @@ describe("check-redemption-backstops CLI", () => {
   it("writes deterministic JSON report data", () => {
     const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-")), "report.json");
 
-    execFileSync("npx", ["tsx", "scripts/check-redemption-backstops.ts", "--report", reportPath], {
+    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],

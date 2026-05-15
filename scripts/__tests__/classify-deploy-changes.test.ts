@@ -8,7 +8,7 @@ import {
   hasWorkerDeployImpact,
   hasWorkerPromotionImpact,
   normalizeChangedFiles,
-} from "../classify-deploy-changes.mjs";
+} from "../ci/classify-deploy-changes.mjs";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 describe("normalizeChangedFiles", () => {

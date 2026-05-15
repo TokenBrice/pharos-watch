@@ -94,9 +94,9 @@ const EXPORT_ALLOWLIST = new Set([
   "src/hooks/use-api-query.ts::createApiQueryFnWithMeta",
   "src/hooks/use-preferences.ts::isColumnId",
   "src/lib/compare-config.ts::ID_TO_COMPARE_COIN",
-  // Consumed by scripts/check-frozen-invariants.ts (out-of-scan-scope).
+  // Consumed by scripts/ci/check-frozen-invariants.ts (out-of-scan-scope).
   "src/lib/compare-pages.ts::STATIC_COMPARE_PAIRS",
-  // Consumed by scripts/check-cron-connection-budget.ts (out-of-scan-scope).
+  // Consumed by scripts/ci/check-cron-connection-budget.ts (out-of-scan-scope).
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET",
   "shared/lib/cron-jobs.ts::CRON_CONNECTION_BUDGET_ENTRIES",
   "src/lib/coverage.ts::resolveSafetyCoverage",

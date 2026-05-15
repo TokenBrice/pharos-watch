@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const checkerPath = resolve(process.cwd(), "scripts/check-worker-import-boundary.mjs");
+const checkerPath = resolve(process.cwd(), "scripts/ci/check-worker-import-boundary.mjs");
 const docPath = resolve(process.cwd(), "docs/process/boundary-waivers.md");
-const frozenInvariantPath = resolve(process.cwd(), "scripts/check-frozen-invariants.ts");
+const frozenInvariantPath = resolve(process.cwd(), "scripts/ci/check-frozen-invariants.ts");
 
 function parseWaivers(checkerSource: string): { id: string; file: string }[] {
   const ids = [...checkerSource.matchAll(/id:\s+"([^"]+)"/g)].map((match) => match[1]);
@@ -32,7 +32,7 @@ describe("worker boundary waivers", () => {
 
   it("matches the published frozen-invariant waiver fingerprint", () => {
     expect(waivers).toEqual([
-      { id: "frozen-invariants-lifecycle-registry-check", file: "scripts/check-frozen-invariants.ts" },
+      { id: "frozen-invariants-lifecycle-registry-check", file: "scripts/ci/check-frozen-invariants.ts" },
     ]);
     expect(frozenInvariantCheck).toContain("Boundary waiver: frozen-invariants-lifecycle-registry-check");
   });

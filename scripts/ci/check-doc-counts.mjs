@@ -11,7 +11,7 @@
  *   - Bluechip slugs (BLUECHIP_SLUG_MAP)
  *   - Live-enabled stablecoins (liveReservesConfig declarations)
  *
- * Usage: node scripts/check-doc-counts.mjs
+ * Usage: node scripts/ci/check-doc-counts.mjs
  * Exits 0 if all counts match, 1 if any are stale.
  */
 import { readFileSync } from "node:fs";

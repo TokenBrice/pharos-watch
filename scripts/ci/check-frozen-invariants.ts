@@ -46,7 +46,7 @@ for (const coin of FROZEN_STABLECOINS) {
 for (const coin of FROZEN_STABLECOINS) {
   if (!FROZEN_SNAPSHOTS_BY_ID.has(coin.id)) {
     failures.push(
-      `${coin.id}: missing entry in shared/data/stablecoins/frozen-snapshots.json — run scripts/freeze-stablecoin.ts to generate the snapshot`,
+      `${coin.id}: missing entry in shared/data/stablecoins/frozen-snapshots.json — run scripts/maintenance/freeze-stablecoin.ts to generate the snapshot`,
     );
   }
 }
