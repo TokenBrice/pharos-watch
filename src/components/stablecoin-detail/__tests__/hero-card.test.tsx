@@ -467,7 +467,7 @@ describe("HeroCard", () => {
       />,
     );
 
-    expect(html).toContain("Variant of USDS");
+    expect(html).toContain("Wraps USDS");
   });
 
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {

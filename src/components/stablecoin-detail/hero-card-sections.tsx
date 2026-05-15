@@ -132,6 +132,7 @@ export function HeroCardMobileSection({
           variantParent={variantParent}
           variantChipClass={variantChipClass}
           infrastructures={infrastructures}
+          reportCard={reportCard}
         />
         <SafetyGradeHero reportCard={reportCard} mobile />
       </div>
@@ -185,6 +186,7 @@ export function HeroCardDesktopSection({
   coin,
   coinData,
   logoSrc,
+  reportCard,
   variantParent,
   variantChipClass,
   infrastructures,
@@ -209,6 +211,7 @@ export function HeroCardDesktopSection({
   trackingSpanDays,
   activeDepeg,
 }: HeroSectionBaseProps & {
+  reportCard: ReportCard | null;
   signalRailItems: import("./hero-card-metrics").HeroSignalRailItem[];
   tertiaryMetrics: import("./hero-card-metrics").HeroTertiaryMetricConfig[];
 }) {
@@ -223,6 +226,7 @@ export function HeroCardDesktopSection({
               variantParent={variantParent}
               variantChipClass={variantChipClass}
               infrastructures={infrastructures}
+              reportCard={reportCard}
             />
 
             <div className="mt-5 grid grid-cols-3 gap-4">

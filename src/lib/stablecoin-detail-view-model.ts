@@ -815,7 +815,11 @@ export function buildStablecoinDetailHeroViewModel({
     },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter(
-      (metric) => metric.key !== "dews" && metric.key !== "liquidity" && metric.key !== "peg-score",
+      (metric) =>
+        metric.key !== "dews"
+        && metric.key !== "liquidity"
+        && metric.key !== "peg-score"
+        && metric.key !== "blacklistable",
     ),
     signalRailItems,
   };

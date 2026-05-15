@@ -147,6 +147,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         coin={coin}
         coinData={coinData}
         logoSrc={logoSrc}
+        reportCard={reportCard}
         variantParent={variantParent}
         variantChipClass={variantChipClass}
         infrastructures={infrastructures}

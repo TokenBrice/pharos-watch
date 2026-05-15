@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Snowflake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -13,6 +14,7 @@ import {
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type {
   Infrastructure,
   ReportCard,
@@ -186,6 +188,37 @@ interface HeroIdentityProps {
   variantParent?: StablecoinMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
+  reportCard?: ReportCard | null;
+}
+
+function FreezablePill({
+  coin,
+  reportCard,
+}: {
+  coin: StablecoinMeta;
+  reportCard?: ReportCard | null;
+}) {
+  if (!reportCard) return null;
+  const status = reportCard.rawInputs.canBeBlacklisted;
+  const isFreezable =
+    status === true ||
+    status === "possible" ||
+    status === "dilutable" ||
+    status === "inherited";
+  if (!isFreezable) return null;
+  const href = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
+    ? "#blacklist"
+    : `/blacklist?coin=${coin.symbol}`;
+  return (
+    <Link
+      href={href}
+      aria-label="Freezable — issuer can freeze, block, or seize balances"
+      className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400"
+    >
+      <Snowflake className="h-3 w-3" aria-hidden />
+      Freezable
+    </Link>
+  );
 }
 
 export function HeroMobileIdentity({
@@ -194,6 +227,7 @@ export function HeroMobileIdentity({
   variantParent,
   variantChipClass,
   infrastructures,
+  reportCard,
 }: HeroIdentityProps) {
   return (
     <>
@@ -204,6 +238,7 @@ export function HeroMobileIdentity({
           <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
+          <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <HeroClassificationLine coin={coin} />
         {coin.flags.pegCurrency !== "USD"
@@ -235,6 +270,7 @@ export function HeroDesktopIdentity({
   variantParent,
   variantChipClass,
   infrastructures,
+  reportCard,
 }: HeroIdentityProps) {
   return (
     <div className="flex items-start gap-3">
@@ -245,6 +281,7 @@ export function HeroDesktopIdentity({
           <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
+          <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} />
