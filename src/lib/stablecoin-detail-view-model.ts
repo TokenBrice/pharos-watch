@@ -467,7 +467,6 @@ export interface BuildHeroCardViewModelParams {
   deviationBps: number;
   gaugeDeviationBps: number;
   pegScoreResult: PegSummaryCoin | null;
-  recordedDepegEventCount: number | null;
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
@@ -515,7 +514,6 @@ export function buildStablecoinDetailHeroViewModel({
   deviationBps,
   gaugeDeviationBps,
   pegScoreResult,
-  recordedDepegEventCount,
   liquidityData,
   yieldRanking,
   stressSignal,
@@ -523,6 +521,7 @@ export function buildStablecoinDetailHeroViewModel({
   variantParent,
   variantKind,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
+  const recordedDepegEventCount = reportCard?.rawInputs.depegEventCount ?? null;
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);

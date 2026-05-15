@@ -4,22 +4,23 @@ import Link from "next/link";
 import { Snowflake } from "lucide-react";
 import { useRecentBlacklist7d } from "@/hooks/use-recent-blacklist-7d";
 import { isBlacklistBannerEnabled } from "@/lib/feature-flags";
+import type { StablecoinMeta } from "@shared/types";
 
 const SEVEN_DAY_THRESHOLD = 5;
 
 interface RecentBlacklistBannerProps {
   symbol: string;
-  frozenStatus?: "frozen" | "active";
+  coinStatus?: StablecoinMeta["status"];
 }
 
-export function RecentBlacklistBanner({ symbol, frozenStatus }: RecentBlacklistBannerProps) {
+export function RecentBlacklistBanner({ symbol, coinStatus }: RecentBlacklistBannerProps) {
   const flagOn = isBlacklistBannerEnabled();
-  const isFrozen = frozenStatus === "frozen";
+  const isDefunct = coinStatus === "frozen";
   // Always call the hook — gating happens inside via `isEnabled`.
   const recent = useRecentBlacklist7d(symbol);
-  if (!flagOn || isFrozen || !recent) return null;
+  if (!flagOn || isDefunct || !recent) return null;
   const { freezes, destroys, releases } = recent;
-  if (freezes + destroys < SEVEN_DAY_THRESHOLD && destroys === 0) return null;
+  if (destroys === 0 && freezes < SEVEN_DAY_THRESHOLD) return null;
   return (
     <Link
       href="#blacklist"

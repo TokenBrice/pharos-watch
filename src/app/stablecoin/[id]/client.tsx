@@ -24,7 +24,6 @@ import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-varian
 import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
-import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -109,6 +108,7 @@ const DETAIL_SECTION_DEFS = {
   flows: { id: "flows", label: "Flows" },
   blacklist: { id: "blacklist", label: "Blacklist" },
   history: { id: "history", label: "History" },
+  timeline: { id: "coin-timeline", label: "Timeline" },
   explore: { id: "explore-next", label: "Explore" },
 } as const;
 
@@ -178,11 +178,6 @@ export default function StablecoinDetailClient({
   const heroRef = useRef<HTMLDivElement>(null);
   const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
-  const { data: depegHistoryData } = useInfiniteDepegEvents({
-    stablecoinId: id,
-    enabled: viewModel.status === "ready" && !viewModel.isNavToken,
-    autoLoadAll: viewModel.status === "ready" && !viewModel.isNavToken,
-  });
 
   if (viewModel.status === "loading") {
     return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} staticProfileContent={staticProfileContent} />;
@@ -236,7 +231,6 @@ export default function StablecoinDetailClient({
     deviationBps: viewModel.deviationBps,
     gaugeDeviationBps: viewModel.gaugeDeviationBps,
     pegScoreResult: viewModel.pegScoreResult,
-    recordedDepegEventCount: depegHistoryData?.total ?? null,
     liquidityData: viewModel.liquidityData,
     yieldRanking: viewModel.yieldRanking,
     stressSignal: viewModel.stressSignal,
@@ -265,6 +259,7 @@ export default function StablecoinDetailClient({
     ...(viewModel.hasFlows ? [s.flows] : []),
     ...(viewModel.hasBlacklist ? [s.blacklist] : []),
     s.history,
+    s.timeline,
     s.explore,
   ];
 
@@ -287,7 +282,7 @@ export default function StablecoinDetailClient({
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
         <RecentBlacklistBanner
           symbol={viewModel.coin.symbol}
-          frozenStatus={viewModel.coin.status === "frozen" ? "frozen" : "active"}
+          coinStatus={viewModel.coin.status}
         />
 
         {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (

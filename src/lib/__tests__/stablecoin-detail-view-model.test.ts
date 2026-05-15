@@ -626,7 +626,6 @@ describe("stablecoin detail hero view-model builder", () => {
         activeDepeg: true,
         depegEventCoverageLimited: true,
       },
-      recordedDepegEventCount: 3,
       liquidityData: {
         liquidityScore: 28,
         poolCount: 4,
@@ -650,6 +649,7 @@ describe("stablecoin detail hero view-model builder", () => {
         overallScore: 79,
         rawInputs: {
           canBeBlacklisted: true,
+          depegEventCount: 3,
         },
       } as never,
     });
@@ -718,7 +718,6 @@ describe("stablecoin detail hero view-model builder", () => {
         trackingSpanDays: 3,
         activeDepeg: false,
       },
-      recordedDepegEventCount: null,
       liquidityData: undefined,
       yieldRanking: null,
       stressSignal: null,
