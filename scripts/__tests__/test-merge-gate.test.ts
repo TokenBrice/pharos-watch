@@ -145,7 +145,7 @@ describe("buildCommandPlan", () => {
     await runExecutionBatches(
       plan,
       ["shared/lib/classification.ts"],
-      {},
+      { MERGE_GATE_PARALLEL: "1" },
       {
         exit: (status) => {
           exitStatus = status;

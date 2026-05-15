@@ -213,8 +213,12 @@ export async function runExecutionBatches(
   env = process.env,
   { runCommandImpl = runShellCommand, exit = process.exit } = {},
 ) {
-  const serialMode = env.MERGE_GATE_SERIAL === "1";
-  const batches = serialMode ? plan.map((item) => [createExecutionUnit([item])]) : buildExecutionBatches(plan);
+  // Default to serial execution to avoid local CPU contention from the
+  // 3-shard parallel matrix (which is intended for CI runners with one shard
+  // per machine). Opt back in with MERGE_GATE_PARALLEL=1. The legacy
+  // MERGE_GATE_SERIAL=1 is honored as a no-op for backwards compat.
+  const parallelMode = env.MERGE_GATE_PARALLEL === "1" && env.MERGE_GATE_SERIAL !== "1";
+  const batches = parallelMode ? buildExecutionBatches(plan) : plan.map((item) => [createExecutionUnit([item])]);
 
   await runCommandBatches(batches, {
     exit,
