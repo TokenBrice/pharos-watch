@@ -129,7 +129,7 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 **Frontend-only (`npm run dev`)**
 Use one of these paths:
 
-- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
+- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/maintenance/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
 - Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` and run `npm run dev:next` when you are also running a configured local Worker with `cd worker && npx wrangler dev`; `npm run dev` always starts the local site-data proxy as well.
 - `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 

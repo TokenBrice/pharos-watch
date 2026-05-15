@@ -344,7 +344,7 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 
 ## Static Generation Pipeline
 
-**Script:** `scripts/sync-digests.ts`
+**Script:** `scripts/maintenance/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
 Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
@@ -352,7 +352,7 @@ Fetches `GET /api/digest-archive` from an explicit API source, transforms it to 
 For local/manual use, point it at the intended environment explicitly:
 
 ```bash
-npx tsx scripts/sync-digests.ts --api-url https://ops-api.example.com
+npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.com
 ```
 
 CI now runs digest sync inside `.github/workflows/pages-prepare.yml`:
@@ -408,7 +408,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `src/app/digest/page.tsx` | Archive page route shell (static export) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
-| `scripts/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
+| `scripts/maintenance/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
 | `.github/workflows/pages-prepare.yml` | CI predeploy path: syncs digests, builds Pages export, runs local browser smoke |
 | `.github/workflows/pages-publish.yml` | CI publish path: deploys the verified artifact and runs live browser smoke |
 | `.github/workflows/pages-release.yml` | Wrapper workflow that composes the prepare + publish paths for scheduled/manual rebuilds |

@@ -13,7 +13,7 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 | File | Purpose |
 |------|---------|
 | `shared/data/stablecoins/coins/*.json` | Editable source of truth for active and pre-launch stablecoin metadata |
-| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries |
 | `shared/data/stablecoins/canonical-order.json` | Canonical tracked order used to build `TRACKED_STABLECOINS` |
 | `shared/data/stablecoins/AGENTS.md` | Agent notes pinned to the registry directory |
@@ -48,7 +48,7 @@ Useful repo references before editing:
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
 - Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
-- Use only chain IDs that already exist in `shared/lib/chains.ts`.
+- Use only chain IDs that already exist in `shared/lib/chains/index.ts`.
 - If you add a new upstream source, new adapter family, or change a methodology surface, update the relevant verified docs and the about page in the same change.
 
 ---
@@ -334,7 +334,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
 ### Current registry editing checklist
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
@@ -483,7 +483,7 @@ Example:
 Notes:
 
 - `data/logos.json` currently contains legacy numeric keys. Ignore that for new work.
-- `scripts/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
+- `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
 
 ### 6b. Editorial summary
@@ -529,7 +529,7 @@ Before running commands, confirm the addition-specific artifacts:
 For a normal stablecoin addition, run at least:
 
 ```bash
-tsx scripts/generate-stablecoin-per-coin-asset.ts
+tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run validate:prebuild
 npm test

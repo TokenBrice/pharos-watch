@@ -7,7 +7,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 | Surface | Source |
 | --- | --- |
 | Editable catalog source of truth | `shared/data/stablecoins/coins/*.json` |
-| Generated runtime aggregate | `shared/data/stablecoins/coins.generated.json`, regenerated with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| Generated runtime aggregate | `shared/data/stablecoins/coins.generated.json`, regenerated with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | Legacy compatibility shells | `shared/data/stablecoins/usd-major.json`, `shared/data/stablecoins/usd-minor.json`, `shared/data/stablecoins/non-usd.json`, `shared/data/stablecoins/commodity.json`, `shared/data/stablecoins/pre-launch.json` |
 | Canonical display/order list | `shared/data/stablecoins/canonical-order.json` |
 | Loader and active/pre-launch splits | `shared/lib/stablecoins/index.ts` |
@@ -22,7 +22,7 @@ Stablecoin metadata is the checked-in source of truth for the asset universe. Us
 The editable stablecoin catalog lives in per-coin files under `shared/data/stablecoins/coins/*.json`. `shared/data/stablecoins/coins.generated.json` is the checked-in generated/runtime aggregate; do not edit it by hand. Regenerate it after catalog edits with:
 
 ```bash
-tsx scripts/generate-stablecoin-per-coin-asset.ts
+tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 ```
 
 Legacy category shards remain only as read-only compatibility shells. Do not add or move entries into `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, or `pre-launch.json`; they should remain empty, and `npm run check:stablecoin-data` guards that source layout.
@@ -45,7 +45,7 @@ Legacy category shards remain only as read-only compatibility shells. Do not add
 Run these after metadata edits:
 
 ```bash
-tsx scripts/generate-stablecoin-per-coin-asset.ts
+tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run check:doc-counts
 npm test -- shared/lib/__tests__/stablecoin-id-registry.test.ts
@@ -55,7 +55,7 @@ If the change affects page counts, feature coverage, reserve coverage, source fa
 
 ## Cache Admission
 
-`scripts/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, duplicate IDs, legacy-shell emptiness, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
+`scripts/ci/check-stablecoin-data.ts` validates schema shape, canonical-order consistency, duplicate IDs, legacy-shell emptiness, `coins.generated.json` freshness, wrapper-variant invariants, and whether active assets have a static path into `/api/stablecoins` cache admission. If that check fails, fix metadata or pipeline support rather than bypassing the guard.
 
 Common admission fields:
 

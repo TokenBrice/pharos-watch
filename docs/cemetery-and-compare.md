@@ -19,7 +19,7 @@ Primary files:
 - `shared/lib/cemetery-merged.ts`
 - `shared/lib/dead-stablecoins.ts`
 - `shared/data/dead-stablecoins.json`
-- `scripts/generate-cemetery-dataset.ts`
+- `scripts/maintenance/generate-cemetery-dataset.ts`
 - `public/datasets/stablecoin-cemetery.json`
 - `public/datasets/stablecoin-cemetery.csv`
 
@@ -38,7 +38,7 @@ Cause metadata (labels + colors) is centralized in `CAUSE_META` / `CAUSE_HEX`.
 
 ### Public dataset export
 
-`scripts/generate-cemetery-dataset.ts` publishes the curated cemetery dataset to static export files:
+`scripts/maintenance/generate-cemetery-dataset.ts` publishes the curated cemetery dataset to static export files:
 
 - `/datasets/stablecoin-cemetery.json`
 - `/datasets/stablecoin-cemetery.csv`
@@ -61,7 +61,7 @@ Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into
 
 The static cemetery dataset export reflects the same merge:
 
-- `scripts/generate-cemetery-dataset.ts` consumes `CEMETERY_ENTRIES` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
+- `scripts/maintenance/generate-cemetery-dataset.ts` consumes `CEMETERY_ENTRIES` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
 - `archivedDataAvailable` is exposed as a row field, with a schema description, and `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the cemetery anchor otherwise.
 - `npm run check:cemetery-dataset` continues to guard drift across both sources.
 

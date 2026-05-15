@@ -35,7 +35,7 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 | Factor | Weight | Source | Semantics |
 | --- | ---: | --- | --- |
 | `quality` | 30% | report-card cache | Supply-weighted Safety Score average. Unrated coins default to `40`, but the factor returns `null` when rated supply is below 50% of chain supply. |
-| `chainEnvironment` | 20% | `shared/lib/chains.ts` resilience tier | Tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
+| `chainEnvironment` | 20% | `shared/lib/chains/index.ts` resilience tier | Tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration` | 20% | chain supply shares | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`. |
 | `pegStability` | 20% | cached prices + peg rates | Supply-weighted peg proximity. Missing prices contribute neutral `50`. |
 | `backingDiversity` | 10% | active stablecoin backing flags | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded. |

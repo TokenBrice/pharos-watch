@@ -45,7 +45,7 @@ Metadata is authored directly in `src/app/upcoming/page.tsx` with canonical `/up
 | ------------------------ | ------------------------------------------------------------------------------------------------- |
 | `PRE_LAUNCH_STABLECOINS` | the route's full card/filter universe                                                             |
 | `shared/data/stablecoins/coins/*.json` | editable stablecoin catalog source of truth; pre-launch membership comes from `status: "pre-launch"` |
-| `shared/data/stablecoins/coins.generated.json` | generated/runtime aggregate regenerated with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/coins.generated.json` | generated/runtime aggregate regenerated with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `data/logos.json`        | per-coin logo display                                                                             |
 | `data/ai-summaries.json` | teaser copy shown on cards when available                                                         |
 | `src/lib/pre-launch.ts`  | launch-phase labels, drift heuristics, fuzzy-date formatting, teaser truncation, and sort scoring |

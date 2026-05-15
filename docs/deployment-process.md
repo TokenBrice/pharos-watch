@@ -57,7 +57,7 @@ Hook behavior:
 
 ## What `test:merge-gate` Does
 
-`scripts/test-merge-gate.mjs` compares `MERGE_GATE_BASE_REF...MERGE_GATE_HEAD_REF` (default `origin/main...HEAD`) and mirrors the deploy-path validate policy locally. The pre-push hook sets those refs from Git's pushed main ref update so the local changed-file set matches the deploy workflow's push classifier.
+`scripts/maintenance/test-merge-gate.mjs` compares `MERGE_GATE_BASE_REF...MERGE_GATE_HEAD_REF` (default `origin/main...HEAD`) and mirrors the deploy-path validate policy locally. The pre-push hook sets those refs from Git's pushed main ref update so the local changed-file set matches the deploy workflow's push classifier.
 
 Default policy:
 
@@ -128,7 +128,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - always includes `npm run audit:deps`, `npm run audit:pricing-providers`, lint, policy/guardrail checks (including verified-doc link and env-contract validation), `npm run test:noncritical`, and `npm run coverage:critical`
    - includes `npm run build`, `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy` only when `pages_changed=true` (pull-request validation only; the push/manual production deploy path runs Pages build/SEO/classifier guardrails inside `pages-release`, not the validate gate)
    - includes `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
-   - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, `coverage-critical`, `typecheck-worker`, and `typecheck-worker-scripts` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all of them; `npm run build` still precedes `npm run seo:check` and the built-artifact classifier guardrails inside `pages-build`. The local merge gate provides the equivalent fan-out through `scripts/run-validate-postbuild.mjs`, with `VALIDATE_POSTBUILD_SERIAL=1` to fall back to serial execution
+   - CI runs `validate-prebuild`, `pages-build`, `test-noncritical`, `coverage-critical`, `typecheck-worker`, and `typecheck-worker-scripts` as independent parallel GitHub jobs, with the aggregate `validate` job waiting on all of them; `npm run build` still precedes `npm run seo:check` and the built-artifact classifier guardrails inside `pages-build`. The local merge gate provides the equivalent fan-out through `scripts/maintenance/run-validate-postbuild.mjs`, with `VALIDATE_POSTBUILD_SERIAL=1` to fall back to serial execution
    - installs Node 24.x, matching the repo engine baseline; there is no separate LTS proof lane because Node 24 is the primary contract
    - pull requests call the same reusable workflow with diff-derived `pages_changed` and `worker_changed` inputs, so PR Pages build/SEO and worker typecheck coverage follows the deploy-surface classifier while the shared non-deploy guardrails and tests still run on every PR
 3. `no-deploy-required`
@@ -153,7 +153,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - uses `SMOKE_UI_BROWSER_CHANNEL=chrome` and `SMOKE_UI_OVERFLOW_WORKERS=6` for the local smoke so the full local overflow route set remains covered without downloading a Playwright-managed browser in the release job
    - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish, and on combined Worker + Pages deploys also waits for `deploy-worker` to finish successfully before publishing Pages
    - captures the current Cloudflare Pages production deployment id as a best-effort rollback target, publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, ops, and transport smokes in parallel in the same job; the live public UI check skips overflow because the full overflow sweep already ran against the exact local artifact before publish, but still verifies homepage data-state and the Live Tape `/_site-data/recent-events` contract
-   - calls `scripts/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but the live public UI smoke failed and a previous deployment id is available; the overall workflow still surfaces as failed so the incident is visible
+   - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but the live public UI smoke failed and a previous deployment id is available; the overall workflow still surfaces as failed so the incident is visible
 6. `smoke-ui-live`
    - worker-only deploy path runs inside `deploy-worker` after production API smoke
    - Pages-including deploy path runs inside `pages-release` after `deploy-pages`

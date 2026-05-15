@@ -18,9 +18,9 @@ Contract for the public chain analytics surfaces:
 - **Profile coordination hook:** `src/hooks/use-chain-profile-data.ts`
 - **Primary API:** `GET /api/chains`
 - **Methodology version source:** `shared/lib/chain-health-version.ts`
-- **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains.ts`
+- **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains/index.ts`
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
-- **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains.ts`
+- **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`
 
 The leaderboard is public and indexable. The profile routes are statically generated from `getActiveChainIds()`, which currently returns the sorted `CHAIN_META` key set.
 
@@ -105,7 +105,7 @@ Current live methodology version is `1.2`.
 Factors:
 
 - `quality`: supply-weighted Safety Score average; unrated coins default to `40`, but the factor returns `null` if rated supply is below 50% of chain supply
-- `chainEnvironment`: resilience tier mapping from `shared/lib/chains.ts` (`1 -> 100`, `2 -> 60`, `3 -> 20`)
+- `chainEnvironment`: resilience tier mapping from `shared/lib/chains/index.ts` (`1 -> 100`, `2 -> 60`, `3 -> 20`)
 - `concentration`: `100 * (1 - HHI)`
 - `pegStability`: supply-weighted peg proximity; missing prices contribute a neutral `50`
 - `backingDiversity`: normalized Shannon entropy across the two active backing cohorts, `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded from the distribution (not defaulted to `rwa-backed`). Weight constants are exported from `chain-health.ts`.

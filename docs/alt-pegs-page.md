@@ -96,7 +96,7 @@ Current Release 1 behavior:
 - `src/app/sitemap.ts` includes `/alt-pegs/`.
 - `src/lib/nav-config.ts` includes `/alt-pegs` in the primary nav block immediately after `/yield`, labeled `Non-USD Stables`.
 - The command palette picks the route up automatically through shared nav config.
-- `scripts/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
+- `scripts/maintenance/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
 - The visible atlas lives in `AltPegsClient` as `FiatWorldAtlas`: Gold, Silver, and CPI/Index reference markers sit on the same geography-driven visual surface used by the live route, while the downstream cohort directory provides the visible cohort details and the stacked `MobileRegionList` on narrower viewports.
 
 ---
