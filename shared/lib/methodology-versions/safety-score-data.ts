@@ -1,10 +1,10 @@
-import { SAFETY_SCORE_V1 } from "@shared/data/methodology-changelogs/safety-score/v1";
-import { SAFETY_SCORE_V2 } from "@shared/data/methodology-changelogs/safety-score/v2";
-import { SAFETY_SCORE_V3 } from "@shared/data/methodology-changelogs/safety-score/v3";
-import { SAFETY_SCORE_V4 } from "@shared/data/methodology-changelogs/safety-score/v4";
-import { SAFETY_SCORE_V5 } from "@shared/data/methodology-changelogs/safety-score/v5";
-import { SAFETY_SCORE_V6 } from "@shared/data/methodology-changelogs/safety-score/v6";
-import { SAFETY_SCORE_V7 } from "@shared/data/methodology-changelogs/safety-score/v7";
+import { SAFETY_SCORE_V1 } from "../../data/methodology-changelogs/safety-score/v1";
+import { SAFETY_SCORE_V2 } from "../../data/methodology-changelogs/safety-score/v2";
+import { SAFETY_SCORE_V3 } from "../../data/methodology-changelogs/safety-score/v3";
+import { SAFETY_SCORE_V4 } from "../../data/methodology-changelogs/safety-score/v4";
+import { SAFETY_SCORE_V5 } from "../../data/methodology-changelogs/safety-score/v5";
+import { SAFETY_SCORE_V6 } from "../../data/methodology-changelogs/safety-score/v6";
+import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/v7";
 import type { MethodologyVersionConfig } from "./base";
 
 export const SAFETY_SCORE_VERSION_CONFIG: MethodologyVersionConfig = {

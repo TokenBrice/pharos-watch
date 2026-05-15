@@ -1,9 +1,9 @@
-import { PRICING_PIPELINE_V1 } from "@shared/data/methodology-changelogs/pricing-pipeline/v1";
-import { PRICING_PIPELINE_V2 } from "@shared/data/methodology-changelogs/pricing-pipeline/v2";
-import { PRICING_PIPELINE_V3 } from "@shared/data/methodology-changelogs/pricing-pipeline/v3";
-import { PRICING_PIPELINE_V4 } from "@shared/data/methodology-changelogs/pricing-pipeline/v4";
-import { PRICING_PIPELINE_V5 } from "@shared/data/methodology-changelogs/pricing-pipeline/v5";
-import { PRICING_PIPELINE_V6 } from "@shared/data/methodology-changelogs/pricing-pipeline/v6";
+import { PRICING_PIPELINE_V1 } from "../../data/methodology-changelogs/pricing-pipeline/v1";
+import { PRICING_PIPELINE_V2 } from "../../data/methodology-changelogs/pricing-pipeline/v2";
+import { PRICING_PIPELINE_V3 } from "../../data/methodology-changelogs/pricing-pipeline/v3";
+import { PRICING_PIPELINE_V4 } from "../../data/methodology-changelogs/pricing-pipeline/v4";
+import { PRICING_PIPELINE_V5 } from "../../data/methodology-changelogs/pricing-pipeline/v5";
+import { PRICING_PIPELINE_V6 } from "../../data/methodology-changelogs/pricing-pipeline/v6";
 import { createMethodologyVersion } from "./base";
 
 const pricing = createMethodologyVersion({

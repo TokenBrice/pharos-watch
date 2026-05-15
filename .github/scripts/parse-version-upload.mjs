@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 const outputPath = process.env.WRANGLER_OUTPUT_FILE_PATH ?? "/tmp/wrangler-output.jsonl";
 
+// eslint-disable-next-line security/detect-non-literal-fs-filename -- CI-trusted path from workflow env (Wrangler output)
 const entries = fs
   .readFileSync(outputPath, "utf8")
   .split("\n")

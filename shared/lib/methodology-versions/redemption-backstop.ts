@@ -1,7 +1,7 @@
-import { REDEMPTION_BACKSTOP_V1 } from "@shared/data/methodology-changelogs/redemption-backstop/v1";
-import { REDEMPTION_BACKSTOP_V2 } from "@shared/data/methodology-changelogs/redemption-backstop/v2";
-import { REDEMPTION_BACKSTOP_V3 } from "@shared/data/methodology-changelogs/redemption-backstop/v3";
-import { REDEMPTION_BACKSTOP_V4 } from "@shared/data/methodology-changelogs/redemption-backstop/v4";
+import { REDEMPTION_BACKSTOP_V1 } from "../../data/methodology-changelogs/redemption-backstop/v1";
+import { REDEMPTION_BACKSTOP_V2 } from "../../data/methodology-changelogs/redemption-backstop/v2";
+import { REDEMPTION_BACKSTOP_V3 } from "../../data/methodology-changelogs/redemption-backstop/v3";
+import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemption-backstop/v4";
 import { createMethodologyVersion, toMethodologyVersionLabel } from "./base";
 
 const redemptionBackstop = createMethodologyVersion({

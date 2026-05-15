@@ -1,11 +1,11 @@
-import { YIELD_METHODOLOGY_V1 } from "@shared/data/methodology-changelogs/yield-methodology/v1";
-import { YIELD_METHODOLOGY_V2 } from "@shared/data/methodology-changelogs/yield-methodology/v2";
-import { YIELD_METHODOLOGY_V3 } from "@shared/data/methodology-changelogs/yield-methodology/v3";
-import { YIELD_METHODOLOGY_V4 } from "@shared/data/methodology-changelogs/yield-methodology/v4";
-import { YIELD_METHODOLOGY_V5 } from "@shared/data/methodology-changelogs/yield-methodology/v5";
-import { YIELD_METHODOLOGY_V6 } from "@shared/data/methodology-changelogs/yield-methodology/v6";
-import { YIELD_METHODOLOGY_V7 } from "@shared/data/methodology-changelogs/yield-methodology/v7";
-import { YIELD_METHODOLOGY_V8 } from "@shared/data/methodology-changelogs/yield-methodology/v8";
+import { YIELD_METHODOLOGY_V1 } from "../../data/methodology-changelogs/yield-methodology/v1";
+import { YIELD_METHODOLOGY_V2 } from "../../data/methodology-changelogs/yield-methodology/v2";
+import { YIELD_METHODOLOGY_V3 } from "../../data/methodology-changelogs/yield-methodology/v3";
+import { YIELD_METHODOLOGY_V4 } from "../../data/methodology-changelogs/yield-methodology/v4";
+import { YIELD_METHODOLOGY_V5 } from "../../data/methodology-changelogs/yield-methodology/v5";
+import { YIELD_METHODOLOGY_V6 } from "../../data/methodology-changelogs/yield-methodology/v6";
+import { YIELD_METHODOLOGY_V7 } from "../../data/methodology-changelogs/yield-methodology/v7";
+import { YIELD_METHODOLOGY_V8 } from "../../data/methodology-changelogs/yield-methodology/v8";
 import { createMethodologyVersion } from "./base";
 
 const yieldMethodology = createMethodologyVersion({
