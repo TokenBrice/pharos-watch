@@ -7,6 +7,7 @@ import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/infrastructure";
 import { formatAddress } from "@shared/lib/format";
@@ -139,20 +140,44 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             {!isDecentralized &&
               (meta.proofOfReserves ? (
                 meta.proofOfReserves.attestorTier ? (
-                  <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_TIER_STYLES[meta.proofOfReserves.attestorTier].cls}`}
-                    title={[
-                      meta.proofOfReserves.provider,
-                      meta.proofOfReserves.cadence,
-                      meta.proofOfReserves.attestorJurisdiction,
-                      meta.proofOfReserves.attestorLicense,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  >
-                    {POR_TIER_STYLES[meta.proofOfReserves.attestorTier].label}
-                    {meta.proofOfReserves.provider ? ` · ${meta.proofOfReserves.provider}` : ""}
-                  </span>
+                  (() => {
+                    const tierStyle = POR_TIER_STYLES[meta.proofOfReserves.attestorTier];
+                    const pillClass = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tierStyle.cls}`;
+                    const pillText = `${tierStyle.label}${meta.proofOfReserves.provider ? ` · ${meta.proofOfReserves.provider}` : ""}`;
+                    const details: Array<{ label: string; value: string }> = [];
+                    if (meta.proofOfReserves.provider) details.push({ label: "Provider", value: meta.proofOfReserves.provider });
+                    if (meta.proofOfReserves.cadence) details.push({ label: "Cadence", value: meta.proofOfReserves.cadence });
+                    if (meta.proofOfReserves.attestorJurisdiction) details.push({ label: "Jurisdiction", value: meta.proofOfReserves.attestorJurisdiction });
+                    if (meta.proofOfReserves.attestorLicense) details.push({ label: "License", value: meta.proofOfReserves.attestorLicense });
+                    if (details.length === 0) {
+                      return <span className={pillClass}>{pillText}</span>;
+                    }
+                    return (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={`pharos-focus-ring ${pillClass}`}
+                            aria-label={`Show attestor details for ${tierStyle.label}`}
+                          >
+                            {pillText}
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto max-w-[280px] border-border/70 p-3 text-sm">
+                          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+                            {details.map((row) => (
+                              <div key={row.label} className="contents">
+                                <dt className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                  {row.label}
+                                </dt>
+                                <dd className="text-sm leading-snug">{row.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  })()
                 ) : (
                   <span
                     className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
