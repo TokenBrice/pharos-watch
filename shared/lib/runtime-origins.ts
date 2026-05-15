@@ -20,6 +20,7 @@ export function normalizeOrigin(input: string): string {
   return new URL(normalized).origin;
 }
 
+/** Returns the normalized origin for `input`, or `fallbackOrigin` when input is empty/invalid. Never throws. */
 export function resolveOrigin(
   input: string | null | undefined,
   fallbackOrigin: string,
@@ -36,6 +37,11 @@ export function resolveOrigin(
   }
 }
 
+/**
+ * Resolve the public-API base for a given hostname. Returns the explicit env
+ * override if set; otherwise the canonical API_ORIGIN for canonical site/pages
+ * hostnames, else "" so callers use same-origin (e.g. local dev).
+ */
 export function resolvePublicApiBase(
   hostname?: string | null,
   envBase?: string | null,
@@ -50,6 +56,7 @@ export function resolvePublicApiBase(
   return isCanonicalSiteHostname(hostname) ? API_ORIGIN : "";
 }
 
+/** True for the canonical pharos.watch site hostname, its subdomains, the Pages preview app, and its subdomains. Used to gate cross-origin API base resolution. */
 export function isCanonicalSiteHostname(hostname: string): boolean {
   return hostname === SITE_HOSTNAME ||
     hostname.endsWith(`.${SITE_HOSTNAME}`) ||
@@ -57,10 +64,12 @@ export function isCanonicalSiteHostname(hostname: string): boolean {
     hostname.endsWith(`.${PAGES_APP_HOSTNAME}`);
 }
 
+/** True for the Cloudflare Pages app hostname or any of its preview subdomains. */
 export function isPagesAppHostname(hostname: string): boolean {
   return hostname === PAGES_APP_HOSTNAME || hostname.endsWith(`.${PAGES_APP_HOSTNAME}`);
 }
 
+/** True when the hostname is an authorized UI consumer of site-data endpoints (canonical site, ops UI, or Pages preview). */
 export function isSiteDataUiHostname(hostname: string): boolean {
   return hostname === SITE_HOSTNAME ||
     hostname === OPS_UI_HOSTNAME ||

@@ -4,15 +4,24 @@ import { SHADOW_STABLECOINS } from "./shadow-stablecoins";
 import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins";
 import type { StablecoinMeta } from "../types";
 
+/** All live coin metadata: tracked + shadow assets. Excludes dead/pre-launch. Use this as the seed for cross-provider id maps. */
 export const ALL_LIVE_COINS: StablecoinMeta[] = [...TRACKED_STABLECOINS, ...SHADOW_STABLECOINS];
 
+/** Lookup of every live coin (tracked + shadow) by canonical id. Includes shadow assets that are NOT in the public readback. */
 export const REGISTRY_BY_ID: Map<string, StablecoinMeta> = new Map();
+/** Tracked-only registry: active + frozen + pre-launch, no shadow assets. */
 export const TRACKED_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = TRACKED_META_BY_ID;
+/** Public-readback registry: active + frozen tracked coins. Excludes pre-launch and shadow-only ids. */
 export const READABLE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = READABLE_META_BY_ID;
+/** PSI universe: active tracked coins plus PSI-only shadow assets (used for systemic-importance calculations). */
 export const PSI_INCLUSIVE_REGISTRY_BY_ID: ReadonlyMap<string, StablecoinMeta> = PSI_ELIGIBLE_META_BY_ID;
+/** Reverse index: DefiLlama numeric id → meta. Guaranteed unique (throws at module load on collision). */
 export const REGISTRY_BY_LLAMA_ID: Map<string, StablecoinMeta> = new Map();
+/** Reverse index: CoinGecko id → meta. May have collisions if two coins share a geckoId; later wins. */
 export const REGISTRY_BY_GECKO_ID: Map<string, StablecoinMeta> = new Map();
+/** Reverse index: CoinMarketCap slug → meta. */
 export const REGISTRY_BY_CMC_SLUG: Map<string, StablecoinMeta> = new Map();
+/** Dead-coin lookup by DefiLlama id. Values are display names for UI labels on archived assets. */
 export const DEAD_BY_LLAMA_ID: Map<string, string> = new Map();
 
 for (const meta of ALL_LIVE_COINS) {
@@ -120,6 +129,7 @@ export function resolveStablecoinId(
   return resolveReadableStablecoinId(input);
 }
 
+/** Look up the DefiLlama id for a canonical stablecoin id. Returns null for unknown ids and for coins without a llamaId (e.g. pre-listing shadow assets). */
 export function getLlamaId(canonicalId: string): string | null {
   const meta = REGISTRY_BY_ID.get(canonicalId);
   return meta?.llamaId ?? null;

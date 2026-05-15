@@ -28,24 +28,29 @@ export function getCirculatingRaw(c: { circulating?: PegBucketRecord }): number 
   return sumPegBuckets(c.circulating);
 }
 
+/** Previous-day USD circulating, with missing buckets coerced to 0. Use the `*OrNull` variant when you need to distinguish "no data" from "zero". */
 export function getPrevDayRaw(c: { circulatingPrevDay?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulatingPrevDay);
 }
 
+/** Returns null when the prev-day bucket is entirely absent/empty, so callers can avoid plotting a false 0 in deltas/sparklines. */
 export function getPrevDayRawOrNull(c: { circulatingPrevDay?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevDay);
   return val === 0 && !hasAnyBucket(c.circulatingPrevDay) ? null : val;
 }
 
+/** Previous-week USD circulating, with missing buckets coerced to 0. Use `getPrevWeekRawOrNull` for "no data" vs "zero" disambiguation. */
 export function getPrevWeekRaw(c: { circulatingPrevWeek?: PegBucketRecord }): number {
   return sumPegBuckets(c.circulatingPrevWeek);
 }
 
+/** Returns null when the prev-week bucket is entirely absent/empty. */
 export function getPrevWeekRawOrNull(c: { circulatingPrevWeek?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevWeek);
   return val === 0 && !hasAnyBucket(c.circulatingPrevWeek) ? null : val;
 }
 
+/** Returns null when the prev-month bucket is entirely absent/empty. No 0-defaulting variant exists because monthly callers always need the absent/zero distinction. */
 export function getPrevMonthRawOrNull(c: { circulatingPrevMonth?: PegBucketRecord }): number | null {
   const val = sumPegBuckets(c.circulatingPrevMonth);
   return val === 0 && !hasAnyBucket(c.circulatingPrevMonth) ? null : val;
