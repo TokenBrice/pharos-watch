@@ -22,6 +22,7 @@ const SECRET = process.env.SITE_API_SHARED_SECRET?.trim();
 const DEFAULT_UPSTREAM_ORIGIN = "https://site-api.pharos.watch";
 const PORT = parseInt(process.env.DEV_PROXY_PORT || "3001", 10);
 const ALLOWED_UPSTREAM_HOSTS = new Set(["site-api.pharos.watch", "localhost", "127.0.0.1", "[::1]"]);
+const ALLOWED_PATH_PREFIX = "/api/";
 
 function resolveUpstreamOrigin(rawOrigin) {
   const parsed = new URL(rawOrigin || DEFAULT_UPSTREAM_ORIGIN);
@@ -30,6 +31,28 @@ function resolveUpstreamOrigin(rawOrigin) {
     throw new Error(`DEV_PROXY_UPSTREAM must target ${DEFAULT_UPSTREAM_ORIGIN} or a local development server`);
   }
   return parsed.origin;
+}
+
+function resolveProxyPath(rawUrl) {
+  const local = new URL(rawUrl || "/", `http://localhost:${PORT}`);
+  if (!local.pathname.startsWith(ALLOWED_PATH_PREFIX)) {
+    throw new Error("Dev proxy only forwards /api/* requests");
+  }
+
+  let decodedSegments;
+  try {
+    decodedSegments = local.pathname
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => decodeURIComponent(segment));
+  } catch {
+    throw new Error("Dev proxy request path must use valid URL encoding");
+  }
+  if (decodedSegments.some((segment) => segment === "." || segment === "..")) {
+    throw new Error("Dev proxy request path must not contain path traversal segments");
+  }
+
+  return `${local.pathname}${local.search}`;
 }
 
 let UPSTREAM_ORIGIN;
@@ -64,10 +87,9 @@ if (!SECRET) {
 }
 
 const server = createServer(async (req, res) => {
-  const local = new URL(req.url || "/", `http://localhost:${PORT}`);
-  const upstream = new URL(local.pathname + local.search, UPSTREAM_ORIGIN);
-
   try {
+    const upstream = new URL(resolveProxyPath(req.url), UPSTREAM_ORIGIN);
+    // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted above, and resolveProxyPath only permits normalized /api/* paths.
     const upstreamRes = await fetch(upstream.toString(), {
       method: "GET",
       headers: {
@@ -86,7 +108,18 @@ const server = createServer(async (req, res) => {
     res.writeHead(upstreamRes.status, headers);
     res.end(body);
   } catch (err) {
-    console.error(`[dev-proxy] ${req.url} → ${err.message}`);
+    if (err instanceof Error && err.message.startsWith("Dev proxy request path")) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid dev proxy path" }));
+      return;
+    }
+    if (err instanceof Error && err.message.startsWith("Dev proxy only forwards")) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Unsupported dev proxy path" }));
+      return;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[dev-proxy] ${req.url} → ${message}`);
     res.writeHead(502, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Dev proxy upstream error" }));
   }
