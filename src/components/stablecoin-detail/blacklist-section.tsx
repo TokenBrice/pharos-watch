@@ -52,7 +52,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
         </Card>
       </section>
 
-      <section id="blacklist-history">
+      <section id="blacklist-history" className="mt-6">
         <Card className="p-4">
           <div className="mb-3">
             <DetailSectionTitle>
