@@ -226,7 +226,7 @@ function FreezablePill({
 }) {
   if (!reportCard) return null;
   const status = reportCard.rawInputs.canBeBlacklisted;
-  const label = getFreezableLabel(status);
+  const label = status === false ? "Unfreezable" : getFreezableLabel(status);
   if (label === null) return null;
   let ariaLabel: string;
   let toneClass: string;
@@ -247,6 +247,10 @@ function FreezablePill({
     case "inherited":
       ariaLabel = "Upstream freeze — freezing is inherited from an upstream issuer or collateral asset";
       toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+      break;
+    case false:
+      ariaLabel = "Unfreezable — no issuer-level freeze, block, or seize capability";
+      toneClass = "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
       break;
     default:
       return null;
