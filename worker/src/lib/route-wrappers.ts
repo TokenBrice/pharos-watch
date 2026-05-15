@@ -1,4 +1,4 @@
-import { withAdmin } from "./auth";
+import { requireAdmin, withAdmin } from "./auth";
 import { runIdempotentAdminAction } from "./idempotency";
 import { errorResponse, jsonResponse, withErrorHandler } from "./api-utils";
 import type { JsonResponseOptions } from "./api-response";
@@ -125,4 +125,38 @@ export function makeConditionalIdempotentAdminRoute<TContext extends AdminRouteC
       },
       () => handler(context),
     );
+}
+
+/**
+ * Wrap an admin mutation handler so all uncaught throws are captured and
+ * shaped into a uniform JSON response. Use for admin endpoints that perform
+ * D1 writes or external mutations; do NOT use for read-only endpoints.
+ *
+ * Returns the handler's Response on success (including its own controlled
+ * error responses like 400/404/500). If the handler throws, logs the error
+ * and returns 503 with `{ error: <error.name>, message: "Admin mutation failed" }`
+ * — never leaks raw `error.message` (which may contain SQL or other internals).
+ *
+ * Composes admin auth gating so callers don't need to layer `withAdmin`
+ * separately: requireAdmin runs first and short-circuits on a missing
+ * credential, mirroring the upstream `runAdminRoute` contract.
+ */
+export async function withAdminMutation(
+  request: Request | undefined,
+  trustedAdmin: boolean | undefined,
+  handler: () => Promise<Response>,
+): Promise<Response> {
+  const authError = await requireAdmin(request, trustedAdmin);
+  if (authError) return authError;
+
+  try {
+    return await handler();
+  } catch (error) {
+    const name = error instanceof Error ? error.name : "UnknownError";
+    console.error(`[admin-mutation] uncaught ${name}:`, error);
+    return jsonResponse(
+      { error: name, message: "Admin mutation failed" },
+      { status: 503, noStore: true },
+    );
+  }
 }

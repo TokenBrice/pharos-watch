@@ -1,5 +1,6 @@
 import { requireAdmin } from "../lib/auth";
 import { jsonResponse, parseOptionalNonNegativeIntegerParam } from "../lib/api-utils";
+import { withAdminMutation } from "../lib/route-wrappers";
 import { batchExecute } from "../lib/db";
 import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
@@ -68,88 +69,90 @@ export async function handleReclassifyAtomicRoundtripsTrusted(
   db: D1Database,
   url: URL,
 ): Promise<Response> {
-  const since = resolveSince(url);
-  if (since instanceof Response) return since;
-  const stablecoinId = resolveStablecoinId(url);
-  const coinFilterSql = stablecoinId ? " AND stablecoin_id = ?" : "";
-  const buildBindArgs = (base: (string | number)[]): (string | number)[] =>
-    stablecoinId ? [...base, stablecoinId] : base;
+  return withAdminMutation(undefined, true, async () => {
+    const since = resolveSince(url);
+    if (since instanceof Response) return since;
+    const stablecoinId = resolveStablecoinId(url);
+    const coinFilterSql = stablecoinId ? " AND stablecoin_id = ?" : "";
+    const buildBindArgs = (base: (string | number)[]): (string | number)[] =>
+      stablecoinId ? [...base, stablecoinId] : base;
 
-  // --- Forward pass: standard → atomic_roundtrip ---
-  const { results: forwardTxs } = await db
-    .prepare(
-      `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
-       FROM mint_burn_events
-       WHERE flow_type = 'standard' AND timestamp >= ?${coinFilterSql}
-       GROUP BY tx_hash, stablecoin_id, chain_id
-       HAVING COUNT(DISTINCT direction) > 1
-       ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
-       LIMIT ?`,
-    )
-    .bind(...buildBindArgs([since]), BATCH_SIZE)
-    .all<RoundtripDiscoveryRow>();
+    // --- Forward pass: standard → atomic_roundtrip ---
+    const { results: forwardTxs } = await db
+      .prepare(
+        `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
+         FROM mint_burn_events
+         WHERE flow_type = 'standard' AND timestamp >= ?${coinFilterSql}
+         GROUP BY tx_hash, stablecoin_id, chain_id
+         HAVING COUNT(DISTINCT direction) > 1
+         ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
+         LIMIT ?`,
+      )
+      .bind(...buildBindArgs([since]), BATCH_SIZE)
+      .all<RoundtripDiscoveryRow>();
 
-  const affectedHours = new Map<string, MintBurnAffectedHour>();
-  let toRoundtrip = 0;
-  if (forwardTxs.length > 0) {
-    collectAffectedHours(forwardTxs, affectedHours);
-    const forwardStmts = forwardTxs.map((row) =>
-      db
-        .prepare(
-          `UPDATE mint_burn_events
-           SET flow_type = 'atomic_roundtrip'
-           WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
-        )
-        .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
-    );
-    toRoundtrip = await batchExecute(db, forwardStmts);
-  }
+    const affectedHours = new Map<string, MintBurnAffectedHour>();
+    let toRoundtrip = 0;
+    if (forwardTxs.length > 0) {
+      collectAffectedHours(forwardTxs, affectedHours);
+      const forwardStmts = forwardTxs.map((row) =>
+        db
+          .prepare(
+            `UPDATE mint_burn_events
+             SET flow_type = 'atomic_roundtrip'
+             WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'standard'`,
+          )
+          .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
+      );
+      toRoundtrip = await batchExecute(db, forwardStmts);
+    }
 
-  // --- Reverse pass: atomic_roundtrip → standard for tolerance-violating groups.
-  // The HAVING fragment is the inverse of ROUNDTRIP_TOLERANCE_HAVING_SQL — a
-  // group survives the filter only when mint and burn sides are both non-zero
-  // AND the two totals diverge by more than the shared 0.5% tolerance.
-  const { results: reverseTxs } = await db
-    .prepare(
-      `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
-       FROM mint_burn_events
-       WHERE flow_type = 'atomic_roundtrip' AND timestamp >= ?${coinFilterSql}
-       GROUP BY tx_hash, stablecoin_id, chain_id
-       HAVING SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) > 0
-          AND SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) > 0
-          AND NOT (${ROUNDTRIP_TOLERANCE_HAVING_SQL})
-       ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
-       LIMIT ?`,
-    )
-    .bind(...buildBindArgs([since]), BATCH_SIZE)
-    .all<RoundtripDiscoveryRow>();
+    // --- Reverse pass: atomic_roundtrip → standard for tolerance-violating groups.
+    // The HAVING fragment is the inverse of ROUNDTRIP_TOLERANCE_HAVING_SQL — a
+    // group survives the filter only when mint and burn sides are both non-zero
+    // AND the two totals diverge by more than the shared 0.5% tolerance.
+    const { results: reverseTxs } = await db
+      .prepare(
+        `SELECT tx_hash, stablecoin_id, chain_id, MIN(timestamp) as timestamp
+         FROM mint_burn_events
+         WHERE flow_type = 'atomic_roundtrip' AND timestamp >= ?${coinFilterSql}
+         GROUP BY tx_hash, stablecoin_id, chain_id
+         HAVING SUM(CASE WHEN direction='mint' THEN amount ELSE 0 END) > 0
+            AND SUM(CASE WHEN direction='burn' THEN amount ELSE 0 END) > 0
+            AND NOT (${ROUNDTRIP_TOLERANCE_HAVING_SQL})
+         ORDER BY MIN(timestamp) ASC, stablecoin_id ASC, tx_hash ASC
+         LIMIT ?`,
+      )
+      .bind(...buildBindArgs([since]), BATCH_SIZE)
+      .all<RoundtripDiscoveryRow>();
 
-  let toStandard = 0;
-  if (reverseTxs.length > 0) {
-    collectAffectedHours(reverseTxs, affectedHours);
-    const reverseStmts = reverseTxs.map((row) =>
-      db
-        .prepare(
-          `UPDATE mint_burn_events
-           SET flow_type = 'standard'
-           WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'atomic_roundtrip'`,
-        )
-        .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
-    );
-    toStandard = await batchExecute(db, reverseStmts);
-  }
+    let toStandard = 0;
+    if (reverseTxs.length > 0) {
+      collectAffectedHours(reverseTxs, affectedHours);
+      const reverseStmts = reverseTxs.map((row) =>
+        db
+          .prepare(
+            `UPDATE mint_burn_events
+             SET flow_type = 'standard'
+             WHERE tx_hash = ? AND stablecoin_id = ? AND chain_id = ? AND flow_type = 'atomic_roundtrip'`,
+          )
+          .bind(row.tx_hash, row.stablecoin_id, row.chain_id),
+      );
+      toStandard = await batchExecute(db, reverseStmts);
+    }
 
-  await recalcAffectedHours(db, affectedHours);
+    await recalcAffectedHours(db, affectedHours);
 
-  return jsonResponse({
-    done: forwardTxs.length < BATCH_SIZE && reverseTxs.length < BATCH_SIZE,
-    since,
-    stablecoinId,
-    // Legacy field: sum of both directions so callers can monitor any activity.
-    updated: toRoundtrip + toStandard,
-    toRoundtrip,
-    toStandard,
-    hoursRecalculated: affectedHours.size,
-    batchSize: BATCH_SIZE,
+    return jsonResponse({
+      done: forwardTxs.length < BATCH_SIZE && reverseTxs.length < BATCH_SIZE,
+      since,
+      stablecoinId,
+      // Legacy field: sum of both directions so callers can monitor any activity.
+      updated: toRoundtrip + toStandard,
+      toRoundtrip,
+      toStandard,
+      hoursRecalculated: affectedHours.size,
+      batchSize: BATCH_SIZE,
+    });
   });
 }

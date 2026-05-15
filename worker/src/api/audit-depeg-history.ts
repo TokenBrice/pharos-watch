@@ -1,5 +1,5 @@
 import { parseQueryParams, jsonResponse, errorResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
+import { withAdminMutation } from "../lib/route-wrappers";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -755,46 +755,42 @@ export async function handleAuditDepegHistory(
   trustedAdmin?: boolean,
   request?: Request,
 ): Promise<Response> {
-  return withAdmin(
-    request,
-    async () => {
-      try {
-        const auditRequest = parseAuditRequest(url, request);
-        if (auditRequest instanceof Response) return auditRequest;
+  return withAdminMutation(request, trustedAdmin, async () => {
+    try {
+      const auditRequest = parseAuditRequest(url, request);
+      if (auditRequest instanceof Response) return auditRequest;
 
-        if (auditRequest.repairMode === "synthetic-splits") {
-          return await executeSyntheticSplitRepair(db, auditRequest);
-        }
-
-        const events = await loadClosedDepegEvents(db);
-
-        if (auditRequest.deleteIds) {
-          return await executeDirectDelete(db, events, auditRequest.deleteIds, auditRequest.dryRun);
-        }
-
-        if (auditRequest.repairMode === "contradictory-recovery-price") {
-          return await executeContradictoryRecoveryRepair(db, events, auditRequest);
-        }
-
-        const result = await auditEvents(db, {
-          events,
-          minSupply: auditRequest.minSupply,
-          symbolFilter: auditRequest.symbolFilter,
-          offset: auditRequest.offset,
-          limit: auditRequest.limit,
-          dryRun: auditRequest.dryRun,
-        });
-
-        return jsonResponse(result);
-      } catch (error) {
-        if (error instanceof AuditMutationCommitError) {
-          return errorResponse(500, error.message);
-        }
-        throw error;
+      if (auditRequest.repairMode === "synthetic-splits") {
+        return await executeSyntheticSplitRepair(db, auditRequest);
       }
-    },
-    trustedAdmin,
-  );
+
+      const events = await loadClosedDepegEvents(db);
+
+      if (auditRequest.deleteIds) {
+        return await executeDirectDelete(db, events, auditRequest.deleteIds, auditRequest.dryRun);
+      }
+
+      if (auditRequest.repairMode === "contradictory-recovery-price") {
+        return await executeContradictoryRecoveryRepair(db, events, auditRequest);
+      }
+
+      const result = await auditEvents(db, {
+        events,
+        minSupply: auditRequest.minSupply,
+        symbolFilter: auditRequest.symbolFilter,
+        offset: auditRequest.offset,
+        limit: auditRequest.limit,
+        dryRun: auditRequest.dryRun,
+      });
+
+      return jsonResponse(result);
+    } catch (error) {
+      if (error instanceof AuditMutationCommitError) {
+        return errorResponse(500, error.message);
+      }
+      throw error;
+    }
+  });
 }
 
 export interface AuditEventsOptions {
