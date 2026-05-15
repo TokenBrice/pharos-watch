@@ -78,6 +78,13 @@ export async function loadRiskFreeRateRegistry(
         USD: parsedUsd,
         EUR: null,
         CHF: null,
+        GBP: null,
+        JPY: null,
+        MXN: null,
+        BRL: null,
+        AUD: null,
+        CAD: null,
+        SGD: null,
       };
     }
   }
@@ -88,6 +95,13 @@ export async function loadRiskFreeRateRegistry(
     ),
     EUR: null,
     CHF: null,
+    GBP: null,
+    JPY: null,
+    MXN: null,
+    BRL: null,
+    AUD: null,
+    CAD: null,
+    SGD: null,
   };
 }
 

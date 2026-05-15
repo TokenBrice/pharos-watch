@@ -399,6 +399,13 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `USD` | USD 3M T-Bill | FRED `DGS3MO`, then Treasury.gov yield curve XML | Default benchmark and backward-compatible top-level `riskFreeRate`; Treasury.gov is used as a fallback when FRED is unavailable |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
+| `GBP` | GBP SONIA (overnight, proxy) | FRED `IUDSOIA` mirror | Used as a proxy for "3M compounded SONIA"; full compounding can be added later |
+| `JPY` | JPY overnight call (TONA proxy) | FRED `IRSTCB01JPM156N` (uncollateralized overnight call rate) | Used as a TONA-equivalent proxy |
+| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`) | Requires `BANXICO_TOKEN` worker env; weekly auction. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
+| `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
+| `AUD` | AUD 3M interbank (RBA proxy) | FRED `IR3TIB01AUM156N` | 3-month interbank as a proxy for the RBA cash rate target |
+| `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
+| `SGD` | SGD SORA (unavailable) | — | Reserved for a future MAS SORA feed; SGD pegs fall back to USD until a stable public source is wired |
 
 **Source URLs:**
 
@@ -409,11 +416,21 @@ https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservati
 https://indexdata.six-group.com/pro/oauth/token
 https://indexdata.six-group.com/pro/api/report-download
 https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N
+https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
+https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
+https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. EUR and CHF prefer a retained last-known market benchmark when available; otherwise they remain unavailable and rows fall back to USD when selection requires it.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known market value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it.
+
+**Self-reference caveat (CETES):** Benchmarking the CETES (Etherfuse) yield against the MXN CETES rate produces a ~0% spread, which under-rewards the asset. The MXN benchmark is wired here; a future tokenized-treasury rule can override per-source by selecting the next-tier-up safe rate in the same currency. The same pattern applies to EUTBL (vs €STR) and to any future UKTBL (vs SONIA).
+
+**Currencies still falling back to USD:** AED, IDR, TRY, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
 
 **Selection rules:**
 

@@ -24,7 +24,7 @@ export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promis
     ),
     runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)),
     (async () => {
-      const tbillResult = await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal));
+      const tbillResult = await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal, runtime.env));
       if (tbillResult?.status === "error" || tbillResult == null) {
         console.warn("[cron] fetch-tbill-rate did not complete cleanly — continuing to sync-usds-status");
       }

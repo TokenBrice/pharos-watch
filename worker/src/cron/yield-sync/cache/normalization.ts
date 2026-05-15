@@ -129,6 +129,13 @@ interface RiskFreeRatesCachePayload {
     USD: RiskFreeRateCachePayload;
     EUR: RiskFreeRateCachePayload | null;
     CHF: RiskFreeRateCachePayload | null;
+    GBP: RiskFreeRateCachePayload | null;
+    JPY: RiskFreeRateCachePayload | null;
+    MXN: RiskFreeRateCachePayload | null;
+    BRL: RiskFreeRateCachePayload | null;
+    AUD: RiskFreeRateCachePayload | null;
+    CAD: RiskFreeRateCachePayload | null;
+    SGD: RiskFreeRateCachePayload | null;
   };
 }
 
@@ -283,17 +290,25 @@ export function parseRiskFreeRatesCache(
     );
     if (!usd) return null;
 
-    const eur = benchmarks.EUR == null
-      ? null
-      : parseRiskFreeRateCache(JSON.stringify(benchmarks.EUR), cacheUpdatedAt, nowSec, { key: "EUR" });
-    const chf = benchmarks.CHF == null
-      ? null
-      : parseRiskFreeRateCache(JSON.stringify(benchmarks.CHF), cacheUpdatedAt, nowSec, { key: "CHF" });
+    const parseOptional = (
+      key: YieldBenchmarkKey,
+    ): ParsedYieldBenchmarkMeta | null => {
+      const raw = benchmarks[key];
+      if (raw == null) return null;
+      return parseRiskFreeRateCache(JSON.stringify(raw), cacheUpdatedAt, nowSec, { key });
+    };
 
     return {
       USD: usd,
-      EUR: eur,
-      CHF: chf,
+      EUR: parseOptional("EUR"),
+      CHF: parseOptional("CHF"),
+      GBP: parseOptional("GBP"),
+      JPY: parseOptional("JPY"),
+      MXN: parseOptional("MXN"),
+      BRL: parseOptional("BRL"),
+      AUD: parseOptional("AUD"),
+      CAD: parseOptional("CAD"),
+      SGD: parseOptional("SGD"),
     };
   } catch (err) {
     console.warn(`[yield-sync] Failed to parse bundled benchmarks cache: ${err instanceof Error ? err.message : String(err)}`);

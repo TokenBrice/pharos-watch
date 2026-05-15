@@ -4,7 +4,19 @@ import type { MethodologyEnvelope, YieldType } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 import type { ReportCardGrade } from "./report-cards";
 
-export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
+export const YIELD_BENCHMARK_KEY_VALUES = [
+  "USD",
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "MXN",
+  "BRL",
+  "AUD",
+  "CAD",
+  "SGD",
+] as const;
+export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
 export type YieldPublicationStatus = "staged" | "published" | "failed";
@@ -111,6 +123,13 @@ export interface YieldBenchmarkRegistry {
   USD: YieldBenchmarkMeta;
   EUR?: YieldBenchmarkMeta | null;
   CHF?: YieldBenchmarkMeta | null;
+  GBP?: YieldBenchmarkMeta | null;
+  JPY?: YieldBenchmarkMeta | null;
+  MXN?: YieldBenchmarkMeta | null;
+  BRL?: YieldBenchmarkMeta | null;
+  AUD?: YieldBenchmarkMeta | null;
+  CAD?: YieldBenchmarkMeta | null;
+  SGD?: YieldBenchmarkMeta | null;
 }
 
 export interface YieldSourceInputMeta {
@@ -258,7 +277,7 @@ const AltYieldSourceSchema = z.object({
 });
 
 const YieldBenchmarkMetaSchema = z.object({
-  key: z.enum(["USD", "EUR", "CHF"]).optional(),
+  key: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   label: z.string().optional(),
   currency: z.string().optional(),
   rate: z.number(),
@@ -275,6 +294,13 @@ const YieldBenchmarkRegistrySchema = z.object({
   USD: YieldBenchmarkMetaSchema,
   EUR: YieldBenchmarkMetaSchema.nullable().optional(),
   CHF: YieldBenchmarkMetaSchema.nullable().optional(),
+  GBP: YieldBenchmarkMetaSchema.nullable().optional(),
+  JPY: YieldBenchmarkMetaSchema.nullable().optional(),
+  MXN: YieldBenchmarkMetaSchema.nullable().optional(),
+  BRL: YieldBenchmarkMetaSchema.nullable().optional(),
+  AUD: YieldBenchmarkMetaSchema.nullable().optional(),
+  CAD: YieldBenchmarkMetaSchema.nullable().optional(),
+  SGD: YieldBenchmarkMetaSchema.nullable().optional(),
 });
 
 const YieldSourceInputMetaSchema = z.object({
@@ -307,7 +333,7 @@ const YieldRankingProvenanceSchema = z.object({
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
   safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety"]).optional(),
-  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
   benchmarkRate: z.number().optional(),
@@ -388,7 +414,7 @@ const YieldRankingSchema = z.object({
   safetyGrade: ReportCardGradeSchema.nullable(),
   yieldToRisk: z.number().nullable(),
   excessYield: z.number().nullable(),
-  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
   benchmarkRate: z.number().optional(),
