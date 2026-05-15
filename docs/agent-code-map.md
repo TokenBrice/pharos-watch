@@ -97,6 +97,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/status/client.tsx` - default:StatusClient
 - `src/app/status/error.tsx`
 - `src/app/status/page.tsx` - route /status; default:StatusPage, metadata
+- `src/app/tape/client.tsx` - TapeClient
+- `src/app/tape/error.tsx`
+- `src/app/tape/page.tsx` - route /tape; default:TapePage, metadata
 - `src/app/upcoming/page.tsx` - route /upcoming; default:UpcomingPage, metadata
 - `src/app/yield/client.tsx` - YieldClient
 - `src/app/yield/error.tsx`
@@ -128,6 +131,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-depeg-events.ts` - depegEventsInfiniteQueryOptions, useActiveDepegEvents, useInfiniteDepegEvents
 - `src/hooks/use-endpoint-probes.ts` - ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY, collectEndpointProbes, useEndpointProbes, usePublicEndpointProbes
 - `src/hooks/use-entrance-sequence.ts` - useEntranceSequence
+- `src/hooks/use-events.ts` - TAPE_FILTER_SEVERITY_VALUES, UseEventsFilter, UseEventsOptions, UseLatestEventsOptions, useEvents, useLatestEvents
 - `src/hooks/use-homepage-filters.ts` - FILTER_GROUPS, useHomepageFilters
 - `src/hooks/use-hydrated.ts` - useHydrated
 - `src/hooks/use-is-mobile.ts` - useIsMobile
@@ -153,7 +157,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-start-here-callout.ts` - useStartHereCallout
 - `src/hooks/use-start-here-nav-visibility.ts` - useStartHereNavVisibility
 - `src/hooks/use-status-dashboard-model.ts` - useStatusDashboardModel
-- `src/hooks/use-status-history.ts` - StatusHistoryWindow, useStatusHistory
 - ... 11 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
@@ -164,7 +167,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/alt-peg-market.ts` - AltPegDistributionRow, AltPegLinkHubGroup, AltPegLinkHubItem, AltPegRegion, AltPegSnapshot, AltPegTrendPoint
 - `src/lib/alt-peg-packing.ts` - PackedCoin, PackingInput, arrangeClusterCoins, resolvePackedCoinOverlaps
 - `src/lib/alt-peg-sizing.ts` - FIAT_MAP_SIZE_CAP_MARKET_CAP, FIAT_MAP_SIZE_CEIL, SIZE_CEIL, SIZE_FLOOR, SKY_COHORT_SIZE_CEIL, coinEmblemSize
+- `src/lib/analytics-dataset-json-ld.ts` - buildCoverageDatasetJsonLd
 - `src/lib/analytics.ts` - trackEvent, trackSearch
+- `src/lib/api-artifact-json-ld.ts` - buildApiArtifactCatalogJsonLd
 - `src/lib/api-key-admin-view-model.ts` - ApiKeySummaryItem, CreateExpiryMode, CreateKeyState, DEFAULT_CREATE_KEY_STATE, EditableKeyState, buildApiKeyInventorySummary
 - `src/lib/api-key-request-admin-view-model.ts` - API_KEY_REQUEST_ACTION_LABELS, API_KEY_REQUEST_STATUS_FILTERS, API_KEY_REQUEST_STATUS_LABELS, ApiKeyRequestAction, ApiKeyRequestCardViewModel, ApiKeyRequestSummaryItem
 - `src/lib/api-key-request-form-view-model.ts` - API_KEY_REQUEST_CADENCE_OPTIONS, API_KEY_REQUEST_ENDPOINT_OPTIONS, API_KEY_REQUEST_EXPIRY_DAYS, API_KEY_REQUEST_OWNERSHIP_LIMIT_LABEL, API_KEY_REQUEST_SAMPLE_PATH, ApiKeyRequestWorkflowAction
@@ -177,7 +182,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/blacklist-status.ts` - getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel
 - `src/lib/bluechip.ts` - BLUECHIP_REPORT_BASE, GRADE_ORDER
 - `src/lib/browser-storage.ts` - getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem
+- `src/lib/cemetery-json-ld.ts` - buildCemeteryDatasetJsonLd
 - `src/lib/cemetery.ts` - CemeteryYearSection, buildCemeteryYearSections, sortCemeteryCoins
+- `src/lib/chain-json-ld.ts` - ChainJsonLdDeployment, ChainJsonLdDirectoryEntry, ChainJsonLdMeta, buildChainDirectoryJsonLd, buildChainProfileJsonLd
 - `src/lib/chain-ui.ts` - HEALTH_BADGE_CLASSES, HEALTH_BAND_ORDER, HEALTH_FILL_CLASSES, HEALTH_HEX_FILL, HEALTH_TEXT_CLASSES, chainAccentHex
 - `src/lib/chart-animation.ts` - CHART_DRAW_IN, CHART_NO_ANIM
 - `src/lib/chart-colors.ts` - CHART_AMBER, CHART_BLUE, CHART_GREEN, CHART_HEIGHT, CHART_ORANGE, CHART_PALETTE
@@ -204,11 +211,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/csv-export.ts` - downloadCsv
 - `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
 - `src/lib/data-health.ts` - DataHealthInfo, deriveDataHealth, formatDataHealthTimestamp, mergeHealthStates
-- `src/lib/depeg-incident-utils.ts` - PendingDepegIncident, extractPendingDepegIncidents, mapPendingIncidentsByCoin
-- `src/lib/depeg-sort.ts` - DepegTrackerRow, attentionScore
-- `src/lib/dews-radar-utils.ts` - deterministicOffset, deterministicRadiusOffset, distributeAngles, highestBand, pulseDuration, scoreToRadius
-- `src/lib/dews-signal-utils.ts` - DewsAmplifier, DewsContributor, DewsFreshness, getDewsAmplifiers, getDewsFreshness, getDewsSignalLabel
-- ... 64 more files omitted; use `rg --files src/lib` for the full list.
+- ... 69 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -247,12 +250,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/compare-empty-state.tsx` - CompareEmptyState
 - `src/components/comparison-chart.tsx` - ComparisonChart
 - `src/components/comparison-table.tsx` - ComparisonTable
-- `src/components/contagion-graph-graph.ts` - FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph, findDirectionalNeighbor
+- `src/components/contagion-graph-graph.ts` - EdgeTypeFilter, FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
 - `src/components/contagion-graph.tsx` - ContagionGraph
 - `src/components/contagion-graph/contagion-graph-controls.tsx` - ContagionGraphControls
-- ... 236 more files omitted; use `rg --files src/components` for the full list.
+- ... 247 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -466,6 +469,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/backfill-price-sources.ts` - HistoricalMarketBackfillGranularity, HistoricalMarketBackfillRange, HistoricalMarketMergeReason, HistoricalMarketPolicyAdjustment, HistoricalMarketPriceSeriesResult, HistoricalMarketSeriesStats
 - `worker/src/api/backfill-stability-index.ts` - handleBackfillStabilityIndex
 - `worker/src/api/backfill-supply-history.ts` - handleBackfillSupplyHistory
+- `worker/src/api/backfill-tape.ts` - handleBackfillTape
 - `worker/src/api/backfill-yield-history.ts` - handleBackfillYieldHistory
 - `worker/src/api/blacklist-summary.ts` - handleBlacklistSummary
 - `worker/src/api/blacklist.ts` - handleBlacklist
@@ -481,13 +485,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/digest-risk-summary.ts` - selectDigestRiskSignal
 - `worker/src/api/digest-snapshot.ts` - handleDigestSnapshot
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
+- `worker/src/api/events.ts` - handleEvents
 - `worker/src/api/feedback.ts` - handleFeedback
 - `worker/src/api/feedback/format.ts` - buildIssueSubmission
 - `worker/src/api/feedback/github.ts` - createGitHubIssue
 - `worker/src/api/feedback/request.ts` - parseFeedbackRequest, prepareFeedbackSubmission
-- `worker/src/api/feedback/submission.ts` - submitFeedback
-- `worker/src/api/feedback/types.ts` - FeedbackBody, FeedbackBodySchema, FeedbackEnv, GITHUB_OWNER, GITHUB_REPO, PreparedFeedbackSubmission
-- ... 80 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 82 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -571,16 +574,16 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/geckoterminal-shared.ts` - fetchGtTokenPools, getGtPoolKind, getGtPoolType, parseGtPool
 - `worker/src/cron/dex-liquidity/orchestrator-analysis.ts` - DexLiquidityPostScoreAnalysis, analyzeDexLiquidityPostScoring
 - `worker/src/cron/dex-liquidity/orchestrator-drift.ts` - DRIFT_WATCHLIST, DexLiquidityDriftSummary, DexLiquidityDriftWatchlistDelta, PreviousDexLiquiditySummary, computeDexLiquidityDriftSummary, readPreviousDexLiquiditySummary
-- ... 258 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 260 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
 - `worker/src/lib/abort.ts` - abortError, rethrowIfAborted, runWithAbort, sleepWithSignal, throwIfAborted
 - `worker/src/lib/address-price-providers/alchemy.ts` - runAlchemyAddressProvider
 - `worker/src/lib/address-price-providers/birdeye.ts` - runBirdeyeAddressProvider
+- `worker/src/lib/address-price-providers/coingecko-onchain.ts` - runCoingeckoOnchainAddressProvider
 - `worker/src/lib/address-price-providers/dexpaprika.ts` - runDexPaprikaAddressProvider
 - `worker/src/lib/address-price-providers/dexscreener.ts` - runDexScreenerAddressProvider
-- `worker/src/lib/address-price-providers/coingecko-onchain.ts` - runCoingeckoOnchainAddressProvider
 - `worker/src/lib/address-price-providers/index.ts` - ADDRESS_PROVIDER_CIRCUIT_SOURCE, buildAddressPriceTargetsByProvider, collectAddressPriceProviderQuotes, resolveEnabledAddressPriceProviders
 - `worker/src/lib/address-price-providers/moralis.ts` - runMoralisAddressProvider
 - `worker/src/lib/address-price-providers/shared.ts` - ADDRESS_PROVIDER_MIN_LIQUIDITY_USD, ADDRESS_PROVIDER_RUN_BUDGET_MS, chunk, emptyProviderResult, fetchProviderJson, getTokenAddressFromRecord
@@ -624,7 +627,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
 - `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
 - `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
-- `worker/src/lib/circuit-breaker.ts` - CircuitOutcomeDecision, CircuitRecord, CircuitState, filterStaleLiveReserveCircuitStates, getCircuitRecord, getCircuitStates
+- `worker/src/lib/circuit-breaker.ts` - CircuitOutcomeDecision, CircuitRecord, CircuitState, filterInactiveCircuitStates, filterStaleLiveReserveCircuitStates, getCircuitRecord
 - `worker/src/lib/circuit-config.ts`
 - `worker/src/lib/coingecko-market-history.ts` - CoinGeckoMarketHistorySnapshot, fetchCoinGeckoMarketHistory
 - `worker/src/lib/coingecko-onchain.ts` - CG_CHAIN_MAP, CG_CHAIN_REVERSE, CgFetchOptions, CgPool, CgPoolAttributes, CgPoolRelationships
@@ -635,7 +638,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/constants.ts` - ANTHROPIC_TIMEOUT_MS, BACKTEST_LOOKBACK_DAYS, BENCHMARK_FETCH_MAX_RETRIES, BENCHMARK_FETCH_TIMEOUT_MS, CACHE_FRESHNESS_THRESHOLDS, CACHE_PROFILES
 - `worker/src/lib/cron-lease.ts` - CRON_TIMEOUT_MS, CronLeaseLostError, CronLeaseOptions, CronLeaseRunResult, CronTimeoutError, DEFAULT_CRON_TIMEOUT_MS
 - `worker/src/lib/cron-logger.ts` - CronProgressReporter, CronProgressUpdate, CronResult, CronRunLoggerOptions, logCronRun
-- ... 167 more files omitted; use `rg --files worker/src/lib` for the full list.
+- ... 179 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 
