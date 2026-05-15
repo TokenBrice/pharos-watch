@@ -21,3 +21,4 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm audit --audit-level=high
+      - run: npm audit signatures
