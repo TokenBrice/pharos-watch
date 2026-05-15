@@ -24,6 +24,10 @@ const MODULE_ALLOWLIST = new Set([
   "worker/src/__mocks__/wasm-module-stub.ts",
 ]);
 const EXPORT_ALLOWLIST = new Set([
+  // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
+  "worker/src/__mocks__/satori-stub.ts::__stub",
+  "worker/src/__mocks__/wasm-module-stub.ts::__stub",
+  "worker/src/__mocks__/resvg-stub.ts::__stub",
   "shared/lib/api-endpoints/index.ts::buildQueryPath",
   "shared/lib/api-endpoints/index.ts::getStrictContractPaths",
   "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",

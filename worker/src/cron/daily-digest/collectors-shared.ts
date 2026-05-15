@@ -73,7 +73,7 @@ export interface RollupSummary {
  * (server-side incident timestamp) when present and falls back to the
  * symbol/direction/bps tuple otherwise.
  */
-export function depegSignalKey(
+function depegSignalKey(
   depeg: {
     stablecoinId?: string;
     symbol: string;
