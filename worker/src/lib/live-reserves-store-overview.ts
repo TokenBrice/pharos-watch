@@ -11,7 +11,7 @@ import {
   type ReserveSyncStateRecord,
 } from "./live-reserves-store-shared";
 import { loadReserveCompositionRowMap, loadReserveSyncStateMap } from "./live-reserves-store-read";
-import { hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState } from "./live-reserves-store-legacy";
+import { hasConsistentSnapshotState, hasScoringEligibleLiveReserveFreshness, hasUncertainWriteState } from "./live-reserves-store-snapshot-state";
 import { parseReserveCompositionRow } from "./live-reserves-store-row-decoding";
 
 function isPersistentlyStaleIndependentStatus(syncState: ReserveSyncStateRecord): boolean {

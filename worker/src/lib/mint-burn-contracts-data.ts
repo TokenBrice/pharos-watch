@@ -1,4 +1,4 @@
-import { chainConfig } from "./blacklist-contracts";
+import { chainConfig } from "./chain-config";
 import type {
   MintBurnBridgeDetectionConfig,
   MintBurnContractConfigSpec,

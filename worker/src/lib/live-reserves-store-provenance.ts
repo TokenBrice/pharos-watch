@@ -9,7 +9,7 @@ import type {
   ReserveProvenanceView,
 } from "@shared/types/live-reserves";
 import type { ReserveCompositionRecord, ReserveSyncStateRecord } from "./live-reserves-store-shared";
-import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves-store-legacy";
+import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves-store-snapshot-state";
 
 export function buildReserveProvenanceView(
   record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,

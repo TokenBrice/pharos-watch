@@ -331,7 +331,7 @@ function encodeUint256(value: bigint): string {
   return value.toString(16).padStart(64, "0");
 }
 
-function decodeUint256Word(result: `0x${string}`, wordIndex = 0): bigint | null {
+function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): bigint | null {
   const start = 2 + wordIndex * 64;
   const end = start + 64;
   if (result.length < end) return null;
@@ -600,7 +600,7 @@ async function fetchCapRedeemQuote(
     return null;
   }
 
-  const outputAmount = decodeUint256Word(quoteHex, 0);
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
     console.warn(`[authoritative-price-sources] cusd-cap: contract returned zero or invalid output`);
     return null;
@@ -661,7 +661,7 @@ async function fetchInfiniFiRedeemQuote(
     return null;
   }
 
-  const outputAmount = decodeUint256Word(quoteHex, 0);
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
     console.warn(`[authoritative-price-sources] iusd-infinifi: contract returned zero or invalid output`);
     return null;
@@ -842,7 +842,7 @@ async function fetchErc4626AssetsPerShare(
     console.warn(`[authoritative-price-sources] ${config.id}: convertToAssets() returned null`);
     return null;
   }
-  const outputAmount = decodeUint256Word(quoteHex, 0);
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
     console.warn(`[authoritative-price-sources] ${config.id}: convertToAssets() returned zero or invalid output`);
     return null;
@@ -901,7 +901,7 @@ async function fetchPreviewRedeemAssetsPerShare(
     console.warn(`[authoritative-price-sources] ${config.id}: previewRedeem() returned null`);
     return null;
   }
-  const outputAmount = decodeUint256Word(quoteHex, 0);
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
     console.warn(`[authoritative-price-sources] ${config.id}: previewRedeem() returned zero or invalid output`);
     return null;
@@ -959,7 +959,7 @@ async function fetchIdleCdoTrancheAssetsPerShare(
     console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned null`);
     return null;
   }
-  const outputAmount = decodeUint256Word(quoteHex, 0);
+  const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
     console.warn(`[authoritative-price-sources] ${config.id}: virtualPrice() returned zero or invalid output`);
     return null;
