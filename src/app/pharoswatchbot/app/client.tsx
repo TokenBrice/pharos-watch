@@ -10,6 +10,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints";
 import { formatCoveragePayload, formatWhyPayload, miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { applyTelegramTheme, bindTelegramViewportAndTheme, getTelegramLaunchContext, type TelegramWebAppSdk } from "./telegram-sdk";
 import type { TelegramAlertType, TelegramCoinSnoozeDurationToken, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState, TelegramSnoozeDurationToken } from "./types";
+import { useTelegramMainButton } from "./use-telegram-main-button";
 
 const SESSION_ENDPOINT = API_PATHS.telegramMiniAppSession();
 const MUTATE_ENDPOINT = API_PATHS.telegramMiniAppMutation();
@@ -1851,50 +1852,21 @@ export function PharosWatchBotMiniAppClient() {
     });
   }, [webApp]);
 
-  // MainButton — track the currently-attached handler via ref so transitions
-  // to a no-handler render still detach the prior handler. Without this, the
-  // else branch only hides the button and leaves listeners stacked.
-  const mainButtonHandlerRef = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    const mb = webApp?.MainButton;
-    if (!mb) return;
-
-    let handler: (() => void) | null = null;
-    let text: string | null = null;
+  // MainButton — derive `text` and `handler` from the current view/state and
+  // delegate the Telegram lifecycle (attach/detach, setParams, show/hide) to
+  // the shared hook. See `use-telegram-main-button.ts` for the cleanup contract.
+  const { text: mainButtonText, handler: mainButtonHandler } = useMemo<{ text: string | null; handler: (() => void) | null }>(() => {
     if (view === "home") {
       if (state && !state.subscriber.exists) {
-        text = "Use recommended setup";
-        handler = () => mutate(RECOMMENDED_OPERATION);
-      } else if (state?.subscriber.snoozeUntilTs != null) {
-        text = "Clear snooze";
-        handler = () => mutate({ kind: "clear-snooze" });
+        return { text: "Use recommended setup", handler: () => mutate(RECOMMENDED_OPERATION) };
+      }
+      if (state?.subscriber.snoozeUntilTs != null) {
+        return { text: "Clear snooze", handler: () => mutate({ kind: "clear-snooze" }) };
       }
     }
-
-    // Detach any previously attached handler before attaching a new one or hiding.
-    if (mainButtonHandlerRef.current) {
-      mb.offClick?.(mainButtonHandlerRef.current);
-      mainButtonHandlerRef.current = null;
-    }
-
-    if (handler && text) {
-      const buttonColor = webApp?.themeParams?.button_color;
-      mb.setParams?.({ text, is_visible: true, is_active: true, ...(buttonColor ? { color: buttonColor } : {}) });
-      mb.onClick?.(handler);
-      mb.show?.();
-      mainButtonHandlerRef.current = handler;
-      const localHandler = handler;
-      return () => {
-        mb.offClick?.(localHandler);
-        if (mainButtonHandlerRef.current === localHandler) {
-          mainButtonHandlerRef.current = null;
-        }
-        mb.hide?.();
-      };
-    }
-    mb.hide?.();
-    return undefined;
-  }, [mutate, state, view, webApp]);
+    return { text: null, handler: null };
+  }, [mutate, state, view]);
+  useTelegramMainButton({ webApp, text: mainButtonText, handler: mainButtonHandler });
 
   useEffect(() => () => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
