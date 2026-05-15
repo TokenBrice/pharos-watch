@@ -12,6 +12,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
   fullDeployGuardrails: {
     exactPaths: [
       "scripts/maintenance/audit-pricing-provider-config.ts",
+      "scripts/ci/check-attestor-tier-coverage.ts",
       "scripts/ci/check-critical-coverage.mjs",
       "scripts/ci/check-cron-abort-contract.mjs",
       "scripts/ci/check-cron-connection-budget.ts",

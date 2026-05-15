@@ -78,6 +78,8 @@
     "check:telegram-load": "tsx scripts/ci/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node scripts/ci/check-sql-interpolation-safety.mjs",
     "check:stablecoin-data": "tsx scripts/ci/check-stablecoin-data.ts",
+    "check:attestor-tier-coverage": "tsx scripts/ci/check-attestor-tier-coverage.ts",
+    "check:glossary-coverage": "tsx scripts/ci/check-glossary-coverage.ts",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
     "check:phishing-signatures": "node scripts/ci/check-phishing-signatures.mjs",
     "check:classifier-sensitive-copy": "node scripts/ci/check-classifier-sensitive-copy.mjs",
