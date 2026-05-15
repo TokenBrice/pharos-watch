@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { FilterCombobox } from "@/components/filter-combobox";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { isUrlFilterClearValue } from "@/hooks/use-url-filters";
@@ -198,38 +199,20 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
           ))}
         </ToggleGroup>
 
-        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Peg</span>
-          <select
-            value={state.peg}
-            onChange={(e) => setParam("peg", e.target.value)}
-            aria-label="Filter by peg currency"
-            className="pharos-focus-ring h-8 rounded-md border border-border/60 bg-background/40 px-2 text-xs"
-          >
-            {PEG_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterCombobox
+          label="Peg"
+          searchable={false}
+          value={state.peg}
+          onValueChange={(v) => setParam("peg", v)}
+          options={PEG_FILTER_OPTIONS}
+        />
 
-        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Chain</span>
-          <select
-            value={state.chain}
-            onChange={(e) => setParam("chain", e.target.value)}
-            aria-label="Filter by chain"
-            className="pharos-focus-ring h-8 rounded-md border border-border/60 bg-background/40 px-2 text-xs"
-          >
-            <option value="all">All chains</option>
-            {CHAIN_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterCombobox
+          label="Chain"
+          value={state.chain}
+          onValueChange={(v) => setParam("chain", v)}
+          options={[{ value: "all", label: "All chains" }, ...CHAIN_OPTIONS]}
+        />
 
         <FilterSearchInput
           value={state.q}

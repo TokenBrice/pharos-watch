@@ -418,7 +418,7 @@ export const PEG_FILTER_TAG_LABELS = Object.fromEntries(
 ) as Record<PegCurrencyFilterTag, string>;
 
 export const PEG_FILTER_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
-  { value: "all", label: "All Pegs" },
+  { value: "all", label: "All pegs" },
   { value: "USD", label: PEG_METADATA.USD.filterLabel },
   { value: "EUR", label: PEG_METADATA.EUR.filterLabel },
   { value: "GOLD", label: PEG_METADATA.GOLD.filterLabel },

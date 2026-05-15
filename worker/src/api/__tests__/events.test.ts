@@ -159,4 +159,30 @@ describe("handleEvents", () => {
     const res = await handleEvents(mockD1([]), new URL("https://x/api/events?limit=501"));
     expect(res.status).toBe(400);
   });
+
+  it("applies q as a parameterized LIKE across title/summary/coin_id", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [makeRow()] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?q=PYUSD"));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.sql).toContain("LOWER(title) LIKE ?");
+    expect(dataQuery?.sql).toContain("LOWER(summary) LIKE ?");
+    expect(dataQuery?.sql).toContain("LOWER(coin_id) LIKE ?");
+    // q is lowercased and wrapped with % wildcards.
+    expect(dataQuery?.binds).toContain("%pyusd%");
+  });
+
+  it("skips the q clause when empty", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(db, new URL("https://x/api/events?q="));
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.sql).not.toContain("LOWER(title) LIKE ?");
+  });
 });

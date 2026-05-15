@@ -59,16 +59,6 @@ function eventDomId(eventId: string): string {
   return `tape-event-card-${eventId}`;
 }
 
-function passesClientFilters(event: TapeEvent, query: string): boolean {
-  if (!query) return true;
-  const q = query.toLowerCase();
-  return (
-    event.title.toLowerCase().includes(q) ||
-    event.summary.toLowerCase().includes(q) ||
-    (event.coinId ?? "").toLowerCase().includes(q)
-  );
-}
-
 function passesPegFilter(event: TapeEvent, peg: string): boolean {
   if (peg === "all" || !peg) return true;
   return event.pegCurrency === peg;
@@ -262,6 +252,7 @@ export function TapeClient() {
       chain: filters.chain !== "all" ? filters.chain : undefined,
       severityFloor: filters.severity,
       since,
+      q: filters.q || undefined,
     },
     { autoLoadAll: false },
   );
@@ -280,9 +271,8 @@ export function TapeClient() {
   } = events;
 
   const visibleEvents = useMemo(
-    () =>
-      rawEvents.filter((event) => passesPegFilter(event, filters.peg) && passesClientFilters(event, filters.q)),
-    [rawEvents, filters.peg, filters.q],
+    () => rawEvents.filter((event) => passesPegFilter(event, filters.peg)),
+    [rawEvents, filters.peg],
   );
 
   const openIncidents = useMemo(() => deriveOpenIncidents(visibleEvents), [visibleEvents]);

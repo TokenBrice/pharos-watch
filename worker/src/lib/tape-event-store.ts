@@ -80,6 +80,7 @@ export interface TapeEventQueryFilters {
   severitiesAllowed?: string[];   // already expanded from the floor
   since?: number | null;          // epoch ms inclusive
   until?: number | null;          // epoch ms inclusive
+  q?: string | null;              // lowercase substring; matched against title/summary/coin_id
 }
 
 export interface TapeEventQueryOptions {
@@ -137,6 +138,11 @@ function buildWhereClause(
   if (filters.until != null) {
     conditions.push("ts <= ?");
     bindings.push(filters.until);
+  }
+  if (filters.q && filters.q.length > 0) {
+    const like = `%${filters.q}%`;
+    conditions.push("(LOWER(title) LIKE ? OR LOWER(summary) LIKE ? OR LOWER(coin_id) LIKE ?)");
+    bindings.push(like, like, like);
   }
   if (cursor) {
     // (ts, id) DESC keyset.

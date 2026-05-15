@@ -38,6 +38,8 @@ export interface UseEventsFilter {
   since?: number;
   /** Epoch ms — inclusive upper bound. */
   until?: number;
+  /** Free-text query matched against title/summary/coin_id. */
+  q?: string;
 }
 
 function eventsQueryKeyFilters(filter: UseEventsFilter): Record<string, unknown> {
@@ -51,6 +53,7 @@ function eventsQueryKeyFilters(filter: UseEventsFilter): Record<string, unknown>
     severityFloor: filter.severityFloor ?? null,
     since: filter.since ?? null,
     until: filter.until ?? null,
+    q: filter.q ?? null,
   };
 }
 
@@ -77,6 +80,7 @@ function buildEventsParams(
   if (filter.severityFloor) params.set("severityFloor", filter.severityFloor);
   if (filter.since != null) params.set("since", String(filter.since));
   if (filter.until != null) params.set("until", String(filter.until));
+  if (filter.q) params.set("q", filter.q);
   params.set("limit", String(options.limit));
   if (options.cursor) params.set("cursor", options.cursor);
   if (options.includeTotal) params.set("includeTotal", "true");
