@@ -119,6 +119,27 @@ function YieldLeaderboardTableRowBase({
   const apyLabel = formatPercent(row.apy30d);
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
 
+  // sr-only descriptions: numeric cells render bare values for sight readers; screen readers
+  // need the column context restored ("30-day APY: 12.4 percent" instead of "12.4 percent").
+  const apySrLabel = `30-day APY: ${row.apy30d.toFixed(1)} percent`;
+  const safetySrLabel =
+    grade && grade !== "NR"
+      ? safetyScore !== null
+        ? `Safety grade: ${grade}, score ${Math.round(safetyScore)} out of 100`
+        : `Safety grade: ${grade}`
+      : safetyScore !== null
+      ? `Safety score: ${Math.round(safetyScore)} out of 100, grade unavailable`
+      : "Safety unavailable";
+  const pysSrLabel =
+    row.pharosYieldScore !== null
+      ? `Pharos Yield Score ${formatScore(row.pharosYieldScore)} out of 100`
+      : "Pharos Yield Score unavailable";
+  const tvlSrLabel = row.sourceTvlUsd !== null ? `TVL: ${tvlLabel}` : "TVL unavailable";
+  const stabilitySrLabel =
+    stabilityPct !== null
+      ? `30-day stability: ${stabilityPct} percent`
+      : "30-day stability unavailable";
+
   const pysCell = row.pharosYieldScore !== null ? (
     <span className="inline-flex items-center gap-1">
       <Tooltip>
@@ -195,17 +216,22 @@ function YieldLeaderboardTableRowBase({
                 </div>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-0.5">
-                <span className="font-mono text-sm tabular-nums">{apyLabel}</span>
+                <span className="font-mono text-sm tabular-nums" aria-label={apySrLabel}>
+                  <span aria-hidden="true">{apyLabel}</span>
+                </span>
                 <span className="inline-flex items-center gap-1">
-                  <span className={`font-mono text-xs tabular-nums ${pysColor}`}>
-                    {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"}
+                  <span className={`font-mono text-xs tabular-nums ${pysColor}`} aria-label={pysSrLabel}>
+                    <span aria-hidden="true">
+                      {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"}
+                    </span>
                   </span>
                   {grade && grade !== "NR" ? (
                     <Badge
                       variant="outline"
                       className={`px-1 py-0 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+                      aria-label={safetySrLabel}
                     >
-                      {grade}
+                      <span aria-hidden="true">{grade}</span>
                     </Badge>
                   ) : null}
                   {isCurrencyMismatchedBenchmark ? (
@@ -218,9 +244,13 @@ function YieldLeaderboardTableRowBase({
               <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
                 {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
               </Badge>
-              <span>TVL <span className="font-mono tabular-nums text-foreground">{tvlLabel}</span></span>
+              <span aria-label={tvlSrLabel}>
+                <span aria-hidden="true">TVL <span className="font-mono tabular-nums text-foreground">{tvlLabel}</span></span>
+              </span>
               {stabilityPct !== null ? (
-                <span>Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span></span>
+                <span aria-label={stabilitySrLabel}>
+                  <span aria-hidden="true">Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span></span>
+                </span>
               ) : null}
               <span>
                 {warningSignalCount > 0
@@ -243,8 +273,13 @@ function YieldLeaderboardTableRowBase({
             </div>
           </div>
         </TableCell>
-        <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">{apyLabel}</TableCell>
-        <TableCell className="hidden text-center md:table-cell">
+        <TableCell
+          className="hidden text-right font-mono tabular-nums md:table-cell"
+          aria-label={apySrLabel}
+        >
+          {apyLabel}
+        </TableCell>
+        <TableCell className="hidden text-center md:table-cell" aria-label={safetySrLabel}>
           {grade && grade !== "NR" ? (
             <Badge
               variant="outline"
@@ -265,7 +300,10 @@ function YieldLeaderboardTableRowBase({
             <span className="text-muted-foreground">{"—"}</span>
           )}
         </TableCell>
-        <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">
+        <TableCell
+          className="hidden text-right font-mono tabular-nums md:table-cell"
+          aria-label={pysSrLabel}
+        >
           {pysCell}
         </TableCell>
         <TableCell className="hidden max-w-[160px] text-left text-sm text-muted-foreground md:table-cell">
@@ -291,10 +329,16 @@ function YieldLeaderboardTableRowBase({
             {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
           </Badge>
         </TableCell>
-        <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
+        <TableCell
+          className="hidden text-right font-mono tabular-nums lg:table-cell"
+          aria-label={tvlSrLabel}
+        >
           {tvlLabel}
         </TableCell>
-        <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
+        <TableCell
+          className="hidden text-right font-mono tabular-nums lg:table-cell"
+          aria-label={stabilitySrLabel}
+        >
           {stabilityPct !== null ? (
             <span className="text-xs text-muted-foreground">
               {stabilityPct}%

@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.13",
+    title: "Benchmark Registry Expansion + First Venue Tier Batch",
+    date: "2026-05-15",
+    effectiveAt: 1778871300,
+    summary:
+      "Benchmark registry adds GBP, JPY, MXN, BRL, AUD, and CAD rate feeds, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. `sourceRiskScore` is now derived from the resolved source-risk penalty so the 0–100 display field stops being universally null, and the first reviewed venue tier batch lands for Aave V3, Compound V3, Spark, and Morpho Blue.",
+    impact: [
+      "EUR/CHF retain their existing native benchmarks; GBP now uses FRED `IUDSOIA` (SONIA proxy), JPY uses FRED `IRSTCB01JPM156N` (TONA-equivalent overnight call rate proxy), MXN uses Banxico SIE `SF43936` (CETES 28d, requires `BANXICO_TOKEN`), BRL uses BCB SGS series `11` (SELIC), AUD uses FRED `IR3TIB01AUM156N` (3M interbank, RBA cash rate proxy), and CAD uses Bank of Canada Valet series `V122530` (CORRA proxy)",
+      "AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired; SGD is registered in the type but no fetcher landed in this batch",
+      "CETES self-reference caveat is now explicit: benchmarking the Etherfuse CETES tokenization against the MXN CETES rate yields ≈0% spread, so PYS now under-rewards the asset rather than the prior over-reward; a tokenized-treasury rule can override per-source to the next-tier-up rate later",
+      "`sourceRiskScore` is now derived from the resolved source-risk penalty via `computeSourceRiskScoreFromPenalty` when no upstream value is provided, normalizing `penalty=1` to `0` and `penalty=2.5` to `100`, ending the 100% null rate documented in the v8 production-sample calibration",
+      "First reviewed venue tier batch in `YIELD_RISK_CONFIG`: `aave-v3`, `compound-v3`, and `sparklend` move to `low` (currently a no-op penalty); `morpho-blue` moves to `medium` (+0.15 penalty contribution); remaining tracked venues stay `unknown` with rationale/evidence fields until the next monthly coverage audit",
+      "Rollback compatibility is preserved: missing or invalid source-risk inputs continue to resolve to the neutral source-risk penalty, and v7.48-shaped payloads remain schema-valid",
+    ],
+    commits: ["10e469cf4", "e70720a3c"],
+    reconstructed: false,
+  },
+  {
     version: "8.12",
     title: "Tradable Private-Credit Yield Gaps",
     date: "2026-05-14",

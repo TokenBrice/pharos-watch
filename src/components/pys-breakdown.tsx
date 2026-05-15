@@ -52,48 +52,67 @@ function PysBreakdownBody({
   const benchmarkRefLabel = benchmarkLabel ?? "benchmark";
 
   return (
-    <div className="space-y-2 text-xs">
+    <div className="space-y-2 text-xs" role="group" aria-label="PYS breakdown">
       <div className="space-y-0.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground">Base APY</span>
-          <span className="font-mono tabular-nums">{apy30d.toFixed(1)}%</span>
+        <div
+          className="flex items-baseline justify-between gap-3"
+          aria-label={`Base APY ${apy30d.toFixed(1)} percent`}
+        >
+          <span aria-hidden="true" className="text-muted-foreground">Base APY</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{apy30d.toFixed(1)}%</span>
         </div>
         {benchmarkSpread !== null ? (
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="flex items-center gap-1 text-muted-foreground">
+          <div
+            className="flex items-baseline justify-between gap-3"
+            aria-label={`Plus benchmark adjustment ${formatSignedPercent(benchmarkAdjustment, 1)} (${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)} percent of ${formatSignedPercent(benchmarkSpread, 1)} spread versus ${benchmarkRefLabel})`}
+          >
+            <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
               <span>+ benchmark adj.</span>
               <span
-                aria-label="Benchmark adjustment detail"
                 title={`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatSignedPercent(benchmarkSpread, 1)} spread vs ${benchmarkRefLabel}`}
                 className="inline-flex h-3 w-3 cursor-help items-center justify-center rounded-full text-muted-foreground/70"
               >
                 <Info className="h-3 w-3" aria-hidden="true" />
               </span>
             </span>
-            <span className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
+            <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
           </div>
         ) : null}
         <div className="h-px bg-border/60" aria-hidden="true" />
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-foreground">= Effective yield</span>
-          <span className="font-mono tabular-nums">{effectiveYield.toFixed(1)}%</span>
+        <div
+          className="flex items-baseline justify-between gap-3"
+          aria-label={`Effective yield ${effectiveYield.toFixed(1)} percent`}
+        >
+          <span aria-hidden="true" className="text-foreground">= Effective yield</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{effectiveYield.toFixed(1)}%</span>
         </div>
       </div>
 
       <div className="space-y-0.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground">{"÷"} source-risk penalty</span>
-          <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}{"×"}</span>
+        <div
+          className="flex items-baseline justify-between gap-3"
+          aria-label={`Divided by source-risk penalty ${sourceRiskPenalty.toFixed(2)} times`}
+        >
+          <span aria-hidden="true" className="text-muted-foreground">{"÷"} source-risk penalty</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}{"×"}</span>
         </div>
         {sourceRiskDrivers.length === 0 ? (
-          <div className="text-[11px] text-muted-foreground">{"✓"} Source risk neutral</div>
+          <div className="text-[11px] text-muted-foreground" aria-label="Source risk neutral">
+            <span aria-hidden="true">{"✓"} Source risk neutral</span>
+          </div>
         ) : (
-          <div className="flex flex-wrap gap-1">
+          <div
+            className="flex flex-wrap gap-1"
+            role="list"
+            aria-label="Active source-risk drivers"
+          >
             {sourceRiskDrivers.map((driver) => (
               <span
                 key={driver.key}
+                role="listitem"
                 className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
                 title={driver.description}
+                aria-label={`${driver.label}: ${driver.description}`}
               >
                 {driver.label}
               </span>
@@ -103,26 +122,38 @@ function PysBreakdownBody({
       </div>
 
       <div className="space-y-0.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground">{"÷"} safety penalty</span>
-          <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
+        <div
+          className="flex items-baseline justify-between gap-3"
+          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(1)} times`}
+        >
+          <span aria-hidden="true" className="text-muted-foreground">{"÷"} safety penalty</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
         </div>
         <div className="text-[11px] text-muted-foreground">{safetyLabel}</div>
       </div>
 
       <div className="space-y-0.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-muted-foreground">{"×"} consistency</span>
-          <span className="font-mono tabular-nums">{consistencyPct}%</span>
+        <div
+          className="flex items-baseline justify-between gap-3"
+          aria-label={`Multiplied by consistency ${consistencyPct} percent (30-day APY variance)`}
+        >
+          <span aria-hidden="true" className="text-muted-foreground">{"×"} consistency</span>
+          <span aria-hidden="true" className="font-mono tabular-nums">{consistencyPct}%</span>
         </div>
-        <div className="text-[11px] text-muted-foreground">30d APY variance</div>
+        <div className="text-[11px] text-muted-foreground" aria-hidden="true">30d APY variance</div>
       </div>
 
       <div className="h-px bg-border/60" aria-hidden="true" />
 
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="font-medium text-foreground">PYS</span>
-        <span className={cn("font-mono text-sm font-semibold tabular-nums", toneClass)}>
+      <div
+        className="flex items-baseline justify-between gap-3"
+        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100`}
+      >
+        <span aria-hidden="true" className="font-medium text-foreground">PYS</span>
+        <span
+          aria-hidden="true"
+          className={cn("font-mono text-sm font-semibold tabular-nums", toneClass)}
+        >
           {formatScore(score)}
         </span>
       </div>
@@ -133,8 +164,9 @@ function PysBreakdownBody({
           href="/methodology/yield-changelog/"
           className="pharos-focus-ring shrink-0 underline decoration-dashed underline-offset-2 hover:text-foreground"
           onClick={(event) => event.stopPropagation()}
+          aria-label="Yield methodology changelog"
         >
-          {"▸"} Methodology
+          <span aria-hidden="true">{"▸"} Methodology</span>
         </Link>
       </div>
     </div>

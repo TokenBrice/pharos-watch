@@ -1,6 +1,19 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.12` (2026-03-01 -> 2026-05-14).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.13` (2026-03-01 -> 2026-05-15).
+
+---
+
+## v8.13 - Benchmark Registry Expansion + First Venue Tier Batch (May 15, 2026)
+
+- Benchmark registry adds `GBP`, `JPY`, `MXN`, `BRL`, `AUD`, and `CAD` rate feeds with retained-last-market fallback on transient outages; the universal USD T-Bill fallback for those non-USD-pegged stablecoins is no longer the default path
+- New endpoint choices: GBP via FRED `IUDSOIA` (SONIA proxy), JPY via FRED `IRSTCB01JPM156N` (TONA-equivalent overnight call rate proxy), MXN via Banxico SIE `SF43936` (CETES 28d, requires `BANXICO_TOKEN` worker env), BRL via BCB SGS series `11` (SELIC), AUD via FRED `IR3TIB01AUM156N` (3M interbank, RBA cash rate proxy), and CAD via Bank of Canada Valet series `V122530` (CORRA proxy)
+- `SGD` is registered in the `YieldBenchmarkKey` type but no fetcher landed; SGD pegs continue to fall back to USD. `AED`, `IDR`, `TRY`, and `ZAR` also remain on USD fallback per task scope
+- CETES self-reference: the Etherfuse CETES tokenization is now benchmarked against the MXN CETES rate, producing ≈0% spread; PYS now under-rewards CETES (rank no longer overstated at 155% APY vs USD T-Bills) rather than over-rewarding it. A future tokenized-treasury rule can override per-source to the next-tier-up rate in the same currency
+- `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty via `computeSourceRiskScoreFromPenalty` when no upstream value is provided (`penalty = 1.0` → `0`; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) → `100`). This ends the 100% null rate documented in the v8 production-sample calibration without changing PYS, which continues to consume the penalty directly
+- First reviewed venue tier batch lands in `YIELD_RISK_CONFIG`: `aave-v3` → `low`, `compound-v3` → `low`, `sparklend` → `low`, `morpho-blue` → `medium`. `low` is currently a no-op penalty (no negative bonus exists today); `medium` adds `+0.15` to the source-risk penalty on affected rows
+- Maple, Yearn, Pendle, and Beefy remain `unknown` with rationale/evidence fields until the next monthly coverage audit assigns a non-unknown tier with reviewed evidence
+- Rollback compatibility preserved: missing or invalid source-risk inputs continue to resolve to the neutral source-risk penalty, and v7.48-shaped payloads remain schema-valid
 
 ---
 

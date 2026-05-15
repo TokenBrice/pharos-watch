@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.12`
+- **Current methodology version:** `v8.13`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
@@ -15,6 +15,8 @@ Yield versions are bumped when APY source resolution, source arbitration, histor
 The `/yield` route-level Yield Sources board is presentation-only: it derives chosen sources and retained alternate source observations from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
 
 Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, source changes, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
+
+Yield v8.13 expands the benchmark registry to GBP, JPY, MXN, BRL, AUD, and CAD, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. The same release derives `sourceRisk.sourceRiskScore` from the resolved source-risk penalty when no upstream value is provided (ending the 100% null rate documented in the v8 production-sample calibration) and lands the first reviewed venue tier batch: Aave V3, Compound V3, and Spark move to `low` (currently a no-op penalty), and Morpho Blue moves to `medium` (+0.15 penalty contribution). Remaining tracked venue families stay `unknown` with rationale/evidence fields until the next monthly coverage audit. AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired for each.
 
 Rankings provenance now carries source-native freshness for derived sources:
 
@@ -363,9 +365,10 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - The `/yield` depth lens is explanatory context, not guaranteed executable capacity. It classifies rows only when both `sourceRisk.sourceDepthRatio` and `sourceTvlUsd` are present: `deep` is `>= 1%` of tracked stablecoin supply, `moderate` is `0.1%` to `< 1%`, `thin` is `< 0.1%`, and missing TVL or supply-relative depth is `unknown`.
 - DeFiLlama rows use the shared DeFiLlama input metadata timestamp/age when an individual resolved row does not carry `sourceObservedAt`, so provenance and PYS source-age penalties are based on the same freshness evidence.
 - `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
-- `worker/src/cron/yield-sync/source-risk.ts` owns the sparse typed `yieldRiskConfig` home for reviewed venue tiers. The current entries for Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy remain `unknown` with rationale/evidence fields until approved methodology evidence assigns a non-unknown tier. Review is tied to the monthly yield coverage audit; guessed venue penalties are explicitly out of scope.
-- `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
-- v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the current `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts.
+- `worker/src/cron/yield-sync/source-risk.ts` owns the sparse typed `yieldRiskConfig` home for reviewed venue tiers. The first reviewed batch (v8.13) assigns `aave-v3`, `compound-v3`, and `sparklend` to `low` (currently a no-op on penalty derivation because no negative bonus exists today) and `morpho-blue` to `medium` (+0.15 contribution on affected rows). Maple, Yearn, Pendle, and Beefy remain `unknown` with rationale/evidence fields until approved methodology evidence assigns a non-unknown tier. Review is tied to the monthly yield coverage audit; guessed venue penalties are explicitly out of scope.
+- `sourceRisk.sourceRiskScore` is the 0–100 display normalization of the resolved source-risk penalty. As of v8.13, when no upstream score is provided, the publisher fills it via `computeSourceRiskScoreFromPenalty` (`penalty = 1.0` → `0`; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) → `100`). The score is informational and does not change PYS — PYS continues to consume the `sourceRiskPenalty` directly. Rollback compatibility: legacy v7.48 payloads still resolve to a neutral penalty when source-risk is absent, and an explicit upstream `sourceRiskScore` value still wins over derivation.
+- `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
+- v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the prior `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts. The v8.13 delta — benchmark registry expansion, `sourceRiskScore` derivation rule, and the first venue tier batch — is documented in `docs/process/yield-pys-v8-13-calibration-2026-05-15.md`.
 - External `lending-opportunity` rows do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may inform opportunity-level yield risk labels or DEWS yield anomaly inputs only through explicitly versioned consumer methodology; report-card modifiers still require a separate report-card methodology update.
 - Report-card consumers treat yield source-risk as no-op today. `shared/lib/report-card-yield-risk.ts` names the no-op reasons as `external-lending-opportunity`, `missing-yield-config`, `missing-source-risk`, and `source-risk-unconsumed`; the helper may normalize the source-risk payload, but it does not emit score modifiers, Resilience caps, or Dependency Risk caps.
 - Any future report-card score impact from yield source-risk requires a report-card methodology update and matching report-card timeline entry before runtime scoring can consume those fields.
@@ -739,8 +742,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.12",
-    "currentVersion": "8.12",
+    "version": "8.13",
+    "currentVersion": "8.13",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
