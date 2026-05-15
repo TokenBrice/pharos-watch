@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { CRON_24H } from "@/lib/cron-intervals";
 
 // ---------------------------------------------------------------------------
 // Grade Glow Component
@@ -238,13 +240,14 @@ interface ReportCardDetailProps {
     durability: number;
     pairDiversity: number;
   } | null;
+  updatedAtMs?: number | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetailProps) {
+export function ReportCardDetail({ card, liquidityComponents, updatedAtMs }: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
@@ -289,10 +292,19 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
     >
       <CardHeader>
         <CardTitle as="h2" className="text-xl font-bold tracking-tight">
-          <span className="flex items-center justify-between">
+          <span className="flex items-center justify-between gap-2">
             <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-            <span className="text-xs font-normal text-muted-foreground">
-              v{METHODOLOGY_VERSION}
+            <span className="flex items-center gap-2">
+              {updatedAtMs != null ? (
+                <FreshnessIndicator
+                  updatedAtMs={updatedAtMs}
+                  staleAfterMs={CRON_24H}
+                  labelPrefix="Updated"
+                />
+              ) : null}
+              <span className="text-xs font-normal text-muted-foreground">
+                v{METHODOLOGY_VERSION}
+              </span>
             </span>
           </span>
         </CardTitle>

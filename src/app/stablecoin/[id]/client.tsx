@@ -335,6 +335,7 @@ export default function StablecoinDetailClient({
             <ReportCardDetail
               card={viewModel.reportCard}
               liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
+              updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
             />
           )}
           <div className="mt-4">

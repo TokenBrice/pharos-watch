@@ -312,6 +312,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: ReportCard | undefined;
+  reportCardUpdatedAt: number | null;
   variantParent: StablecoinMeta | null;
   variantSiblings: StablecoinMeta[];
   childVariants: StablecoinMeta[];
@@ -871,6 +872,7 @@ export function buildStablecoinDetailViewModel({
     summary,
     logoSrc,
     reportCard,
+    reportCardUpdatedAt: reportCards.dataUpdatedAt > 0 ? reportCards.dataUpdatedAt : null,
     variantParent,
     variantSiblings: variantRelationship?.siblings ?? [],
     childVariants,
