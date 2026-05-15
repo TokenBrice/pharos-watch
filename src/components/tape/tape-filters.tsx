@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { FilterCombobox } from "@/components/filter-combobox";
@@ -111,6 +111,32 @@ function segmentedCornerClass(index: number, total: number): string {
   if (index === 0) return "rounded-r-none";
   if (index === total - 1) return "rounded-l-none";
   return "rounded-none";
+}
+
+// `q` is server-driven (`/api/events?q=`) so each keystroke would refetch.
+// Debounce 200ms locally and only push to the URL after the user stops
+// typing. The parent reads from URL state so the local-vs-URL drift heals
+// itself when the timer fires.
+function DebouncedSearchInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  useEffect(() => {
+    if (local === value) return;
+    const id = setTimeout(() => onCommit(local), 200);
+    return () => clearTimeout(id);
+  }, [local, value, onCommit]);
+  return (
+    <FilterSearchInput
+      value={local}
+      onValueChange={setLocal}
+      placeholder="Search events..."
+      className="relative w-full sm:w-56"
+      inputClassName="pl-8 h-8 text-xs"
+      ariaLabel="Search events by title or summary"
+    />
+  );
 }
 
 export function TapeFilters({ state, setParam }: TapeFiltersProps) {
@@ -250,13 +276,9 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
           options={[{ value: "all", label: "All chains" }, ...CHAIN_OPTIONS]}
         />
 
-        <FilterSearchInput
+        <DebouncedSearchInput
           value={state.q}
-          onValueChange={(v) => setParam("q", v)}
-          placeholder="Search events..."
-          className="relative w-full sm:w-56"
-          inputClassName="pl-8 h-8 text-xs"
-          ariaLabel="Search events by title or summary"
+          onCommit={(v) => setParam("q", v)}
         />
       </div>
     </div>
