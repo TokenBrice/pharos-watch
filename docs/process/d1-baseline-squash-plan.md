@@ -41,10 +41,10 @@ Reference: prior squash commit `fb267826d` (`chore: squash D1 migrations 0001-00
 - **Risk: archived migration files become unreferenceable.** Mitigation: the MANIFEST keeps the full historical filename list, and the off-Cloudflare backup plan (see [`d1-backup-plan.md`](./d1-backup-plan.md)) provides a second recovery path that does not depend on replay from the migration tree.
 - **Rollback path:** revert the squash commit, restore production via Time Travel to the pre-squash bookmark, redeploy the previous Worker version. The migration ledger on production is untouched by the squash itself (no rows execute), so revert is a code-only operation in the common case.
 
-## Open questions for the operator
+## Settled decisions (2026-05-15)
 
-- **Target date.** Q1 2027 cadence-trigger vs. earlier count-triggered squash; depends on migration velocity through 2026 H2.
-- **Deploy window.** Preference for a weekend low-traffic window vs. weekday with full on-call coverage.
-- **Recoverability SLO during the squash window.** How aggressive should the migration freeze be — strict block, or soft freeze with a documented exception path for incident-driven fixes?
-- **Preview rehearsal scope.** Smoke set sufficient, or run a full cron tick on the rehearsal DB before signing off?
-- **Backup interaction.** Confirm an off-Cloudflare backup (see [`d1-backup-plan.md`](./d1-backup-plan.md)) is captured immediately pre-squash so recovery beyond Time Travel retention is available if the squash needs to be undone weeks later.
+- **Target date:** **Q1 2027** (≈12 months after the first squash, which landed 2026-03-25). Revisit if the active post-baseline migration count crosses 80 files before then — at that point the count threshold pulls the schedule forward.
+- **Deploy window:** **Sunday early-morning UTC** (≈03:00–05:00 UTC). Catches EU and US in deep off-hours and matches the existing low-traffic deploy pattern.
+- **Migration-freeze rigor:** **Soft freeze with a documented incident-exception path.** Default policy: no PRs touch `worker/migrations/` between the freeze announcement and the squash deploy. Exception: an incident-driven hotfix may land with an explicit announce and a post-squash reconciliation pass against the rehearsal output.
+- **Rehearsal scope:** **Smoke set + one full cron tick** against the rehearsal D1. Existing preview smoke alone is not enough — the cron tick confirms migration-name-drift is invisible to live code (cron_runs / cron_slot_executions ledgers), not just to smoke endpoints. 24h soak is not required; sign-off on a green cron tick.
+- **Off-Cloudflare backup precondition:** The weekly backup (see [`d1-backup-plan.md`](./d1-backup-plan.md)) is enabled independently and on its own schedule — **the squash is NOT blocked on the first backup landing**, but the most recent successful snapshot taken before the squash window opens must be verified-restorable in scratch storage as part of step 4. Recovery beyond Time Travel retention then has a working path.

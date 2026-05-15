@@ -83,10 +83,10 @@ Restore path is a one-off Worker script (or local `wrangler d1 execute` driver) 
 
 Rehearsal results are recorded in an operator log entry. A failed rehearsal blocks future snapshots from being trusted as recovery evidence until the failure is diagnosed.
 
-## Open questions
+## Settled decisions (2026-05-15)
 
-- **Storage destination choice.** S3 vs. B2 vs. self-hosted — depends on operator preference, billing setup, and existing infrastructure familiarity.
-- **Key management.** Where the encryption key lives — operator-side password manager, dedicated secret store, or HSM. Affects rehearsal automation feasibility.
-- **Cost ownership.** Storage cost is small (kilobytes to low megabytes per snapshot for the critical tables list) but non-zero. Confirm the funding line.
-- **When to enable.** Likely a precondition for the second baseline squash (see [`d1-baseline-squash-plan.md`](./d1-baseline-squash-plan.md)) so a pre-squash snapshot exists before that migration freeze begins.
-- **Pause behavior.** Whether the export Worker should self-pause on consecutive upload failures rather than spamming the dead-letter path; ties into the existing scheduled-runner retry conventions.
+- **Storage destination:** **Backblaze B2** (S3-compatible API). Truly off-Cloudflare, cheapest option for the critical-tables footprint. Falls in the "kilobytes to low megabytes per snapshot" range; B2's free tier easily covers the rolling 90-day retention.
+- **Key custody:** **Operator's personal password manager (1Password / Bitwarden)**. Key never enters the Worker environment; encryption happens with a key fetched at upload time via a Cloudflare secret that's rotated independently of the password-manager record. Restore requires a human operator to retrieve the key — acceptable for the quarterly rehearsal cadence.
+- **Cost ownership:** **Personal (TokenBrice) billing**. Storage cost is low single-digit USD/month and is handled outside the public funding wallet to keep the donations ledger focused on Pharos-the-product line items.
+- **When to enable:** **ASAP**. Backup is independently valuable and accumulates snapshots before the next baseline squash. Not coupled to the squash schedule — the squash will simply benefit from whatever backup state exists at that point.
+- **Pause behavior:** **Self-pause after 3 consecutive upload failures**, with a Telegram-alert ping to the operator. Matches the existing scheduled-runner retry conventions; avoids spamming the dead-letter path on transient destination outages.
