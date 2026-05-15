@@ -14,11 +14,23 @@ vi.mock("@shared/lib/stablecoins", async (importOriginal) => {
     cmcSlug: "nav-token",
     flags: { navToken: true },
   } as never);
+  TRACKED_META_BY_ID.set("usg-tangent-test", {
+    flags: { navToken: false },
+    contracts: [
+      { chain: "ethereum", address: "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1", decimals: 18 },
+    ],
+  } as never);
+  // Frozen-style entry: present in TRACKED but not ACTIVE.
+  const ACTIVE_META_BY_ID = new Map(TRACKED_META_BY_ID);
+  TRACKED_META_BY_ID.set("frozen-with-contracts-test", {
+    flags: { navToken: false },
+    contracts: [{ chain: "ethereum", address: "0xfeed", decimals: 6 }],
+  } as never);
 
   return {
     ...actual,
     TRACKED_META_BY_ID,
-    ACTIVE_META_BY_ID: TRACKED_META_BY_ID,
+    ACTIVE_META_BY_ID,
   };
 });
 
@@ -92,6 +104,28 @@ describe("sync-stablecoins stage helpers", () => {
     expect(usdt.cmcSlug).toBe("tether");
     expect(nav.navToken).toBe(true);
     expect(patchedAddress.address).toBe("0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b");
+  });
+
+  it("attaches curated contracts from active and frozen tracked metadata", () => {
+    const assets = [
+      { id: "usg-tangent-test" },
+      { id: "frozen-with-contracts-test" },
+      { id: "no-meta-test" },
+    ] as unknown as never[];
+
+    applyTrackedAssetOverrides(assets);
+
+    const [active, frozen, untracked] = assets as unknown as Array<{
+      contracts?: { chain: string; address: string; decimals: number }[];
+    }>;
+
+    expect(active.contracts).toEqual([
+      { chain: "ethereum", address: "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1", decimals: 18 },
+    ]);
+    expect(frozen.contracts).toEqual([
+      { chain: "ethereum", address: "0xfeed", decimals: 6 },
+    ]);
+    expect(untracked.contracts).toBeUndefined();
   });
 
   it("dedupes canonical ID collisions by keeping the richer asset row", () => {

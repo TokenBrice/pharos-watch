@@ -7,6 +7,7 @@ import {
   PriceConfidenceSchema,
   PriceObservedAtModeSchema,
 } from "./core";
+import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
 const PriceSourceConfidenceProfileSchema = z.object({
@@ -49,6 +50,7 @@ const StablecoinDataRawSchema = z.object({
   circulatingPrevMonth: PegBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
+  contracts: z.array(ContractDeploymentSchema).optional(),
   frozen: z.boolean().optional(),
   frozenAt: z.string().optional(),
 });
@@ -79,6 +81,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
   chainCirculating: asset.chainCirculating,
   chains: asset.chains,
+  ...(asset.contracts && asset.contracts.length > 0 ? { contracts: asset.contracts } : {}),
   ...(asset.frozen != null ? { frozen: asset.frozen } : {}),
   ...(asset.frozenAt != null ? { frozenAt: asset.frozenAt } : {}),
 }));

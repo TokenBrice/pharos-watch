@@ -45,3 +45,34 @@ describe("/api/stablecoins payload shape — frozen fields", () => {
     expect(entry.frozenAt).toBeUndefined();
   });
 });
+
+describe("/api/stablecoins payload shape — contracts field", () => {
+  it("passes through curated contracts with chain/address/decimals", () => {
+    const parsed = StablecoinListResponseSchema.parse({
+      peggedAssets: [
+        makeRawAsset({
+          contracts: [
+            { chain: "ethereum", address: "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1", decimals: 18 },
+          ],
+        }),
+      ],
+    });
+    const entry = parsed.peggedAssets[0] as {
+      contracts?: { chain: string; address: string; decimals: number }[];
+    };
+    expect(entry.contracts).toEqual([
+      { chain: "ethereum", address: "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1", decimals: 18 },
+    ]);
+  });
+
+  it("omits contracts when not present or empty", () => {
+    const withoutContracts = StablecoinListResponseSchema.parse({
+      peggedAssets: [makeRawAsset()],
+    });
+    const withEmpty = StablecoinListResponseSchema.parse({
+      peggedAssets: [makeRawAsset({ contracts: [] })],
+    });
+    expect((withoutContracts.peggedAssets[0] as { contracts?: unknown }).contracts).toBeUndefined();
+    expect((withEmpty.peggedAssets[0] as { contracts?: unknown }).contracts).toBeUndefined();
+  });
+});
