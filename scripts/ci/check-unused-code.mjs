@@ -35,8 +35,10 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/api-endpoints/index.ts::EndpointProbeGroup",
   "shared/lib/api-endpoints/index.ts::EndpointPublicApiAccess",
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
-  "shared/lib/chain-health-version.ts::getChainHealthMethodologyVersionAt",
-  "shared/lib/chains.ts::CHAIN_RESILIENCE_TIER",
+  "shared/lib/chains/health-version.ts::getChainHealthMethodologyVersionAt",
+  "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER",
+  // Owned by the /tape agent; consumer was removed mid-development.
+  "src/lib/severity-colors.ts::severityToAccent",
   // Backward-compatible type export for callers that imported the old lib path.
   "shared/lib/cause-of-death.ts::CauseOfDeath",
   "shared/lib/mint-burn-signals.ts::COIN_FLOW_COMPOSITE_STATE_VALUES",

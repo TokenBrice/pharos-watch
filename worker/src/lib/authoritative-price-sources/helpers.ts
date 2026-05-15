@@ -132,7 +132,7 @@ export function ratioToNumber(
   return Number(numerator / denominator) / 10 ** precision;
 }
 
-export function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): number | null {
+function getFinitePositivePrice(asset: Pick<PeggedAsset, "price"> | undefined): number | null {
   const price = asset?.price;
   return typeof price === "number" && Number.isFinite(price) && price > 0 ? price : null;
 }
