@@ -7,9 +7,9 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
-  "worker/src/lib/authoritative-price-sources.ts": {
+  "worker/src/lib/telegram/usage-analytics.ts": {
     "disposition": "queued-p4",
-    "notes": "Authoritative price overrides centralize per-protocol live and historical readers (Cap, infiniFi, ERC-4626 NAV, Idle CDO tranche, tracked-base inheritance). The shared shape — selector + provider record + parent-trust gating — is easier to audit in one file while new vault families are still being added. Split per-protocol providers into separate modules once the catalog stabilizes."
+    "notes": "Telegram usage-analytics aggregation now spans event ingestion, retention windowing, redaction, and digest-friendly projection. Surfaced as a hotspot after the worker/lib telegram cluster reorg (commit c900c7b9). Split projection vs. retention/redaction in a follow-up telegram analytics cleanup."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
