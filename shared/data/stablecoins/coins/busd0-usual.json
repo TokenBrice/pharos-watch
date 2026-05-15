@@ -16,6 +16,7 @@
   "pegReferenceId": "usd0-usual",
   "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++",
   "pegMechanism": "Depositing 1 USD0 mints 1 bUSD0 plus 1 rt-bUSD0 early-exit right; before June 11, 2028 par redemption requires both tokens, while bUSD0 alone redeems 1:1 for USD0 at maturity and may trade below par before then",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "usd0-liquid-bond",
   "cmcSlug": "usd0-liquid-bond",

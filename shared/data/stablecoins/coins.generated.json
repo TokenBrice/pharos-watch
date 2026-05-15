@@ -973,6 +973,7 @@
     "pegReferenceId": "usdf-astherus",
     "collateral": "USDF deposited into the Aster Earn asToken wrapper; upstream USDF is backed by USDT held through Ceffu and delta-neutral Binance / MirrorX strategies.",
     "pegMechanism": "Users stake USDF to mint asUSDF. asUSDF APY is reflected in NAV from delta-neutral and funding-fee strategies; withdrawals return USDF after Aster's documented T+1 hour / two-hour waiting period with no mint or withdrawal fee.",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "astherus-staked-usdf",
     "links": [
       {
@@ -1176,6 +1177,7 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.forteaud.com/new-page",
+      "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "Australia"
     },
@@ -1904,6 +1906,7 @@
     },
     "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
     "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "avant-usd",
     "links": [
       {
@@ -3401,6 +3404,7 @@
     },
     "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
     "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit BRLm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-real-creal",
     "proofOfReserves": {
       "type": "real-time",
@@ -4174,6 +4178,7 @@
     "pegReferenceId": "usd0-usual",
     "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++",
     "pegMechanism": "Depositing 1 USD0 mints 1 bUSD0 plus 1 rt-bUSD0 early-exit right; before June 11, 2028 par redemption requires both tokens, while bUSD0 alone redeems 1:1 for USD0 at maturity and may trade below par before then",
+    "mechanismArchetype": "tbill",
     "geckoId": "usd0-liquid-bond",
     "cmcSlug": "usd0-liquid-bond",
     "links": [
@@ -4495,6 +4500,7 @@
     },
     "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
     "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit CADm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-canadian-dollar",
     "proofOfReserves": {
       "type": "real-time",
@@ -4991,6 +4997,7 @@
     },
     "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-euro",
     "proofOfReserves": {
       "type": "real-time",
@@ -5661,6 +5668,7 @@
     },
     "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
     "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit COPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "mechanismArchetype": "cdp",
     "geckoId": "ccop",
     "proofOfReserves": {
       "type": "real-time",
@@ -6208,6 +6216,7 @@
     },
     "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
     "pegMechanism": "Mento AMM: users mint USDm (formerly cUSD) by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
     "proofOfReserves": {
@@ -6338,6 +6347,7 @@
     "pegReferenceId": "usdo-openeden",
     "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
     "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
+    "mechanismArchetype": "tbill",
     "geckoId": "compounding-open-dollar",
     "links": [
       {
@@ -8167,6 +8177,7 @@
       "type": "independent-audit",
       "url": "https://www.circle.com/transparency",
       "provider": "Deloitte",
+      "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "European Union",
       "attestorLicense": "EMI (MiCA)"
@@ -8676,6 +8687,7 @@
       "type": "independent-audit",
       "url": "https://www.euroe.com/transparency-and-regulation",
       "provider": "Membrane Finance attestations",
+      "attestorTier": "self",
       "cadence": "monthly",
       "attestorJurisdiction": "Finland",
       "attestorLicense": "Electronic Money Institution"
@@ -8788,6 +8800,7 @@
       "type": "independent-audit",
       "url": "https://schuman.io/reserve-audits/",
       "provider": "KPMG",
+      "attestorTier": "big4",
       "cadence": "monthly",
       "attestorJurisdiction": "France",
       "attestorLicense": "EMI (MiCA)"
@@ -11662,7 +11675,8 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://github.com/aave-dao/gho-origin/tree/main/audits",
-      "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora"
+      "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora",
+      "attestorTier": "self"
     },
     "links": [
       {
@@ -11820,6 +11834,7 @@
     },
     "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
     "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "mechanismArchetype": "cdp",
     "geckoId": "cghs",
     "proofOfReserves": {
       "type": "real-time",
@@ -12225,6 +12240,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho vault on Morpho Blue; the curator allocates across conservative USDC lending markets backed by blue-chip crypto and real-world asset collateral",
     "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "links": [
       {
@@ -12319,6 +12335,7 @@
     "pegReferenceId": "usdc-circle",
     "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
     "pegMechanism": "ERC-4626 MetaMorpho V2 vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime",
     "links": [
       {
@@ -12793,6 +12810,7 @@
     "pegReferenceId": "usdt-tether",
     "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
     "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "hyperbeat-usdt",
     "proofOfReserves": {
       "type": "real-time",
@@ -14491,6 +14509,7 @@
     },
     "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
     "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "iusd-2",
     "links": [
       {
@@ -15743,6 +15762,7 @@
     },
     "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
     "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit KESm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+    "mechanismArchetype": "cdp",
     "geckoId": "celo-kenyan-shilling",
     "proofOfReserves": {
       "type": "real-time",
@@ -18396,6 +18416,7 @@
     },
     "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
     "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "main-street-usd",
     "cmcSlug": "main-street-usd",
     "links": [
@@ -21957,6 +21978,7 @@
     },
     "collateral": "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
     "pegMechanism": "NAV-based token price recalculated daily at UTC 00:00 via Chainlink price feed; yield accrues from delta-neutral ETH basis trade or T-bill returns plus 250 bps protocol spread; atomic redemptions when instant liquidity available, otherwise queue mode",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "re-protocol-reusd",
     "cmcSlug": "re-protocol-reusd",
     "proofOfReserves": {
@@ -26935,6 +26957,8 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://openeden.com/tbill/transparency",
+      "provider": "Ernst & Young",
+      "attestorTier": "big4",
       "cadence": "daily-nav",
       "attestorJurisdiction": "British Virgin Islands",
       "attestorLicense": "BVI FSC Registered Professional Fund"
@@ -27628,6 +27652,7 @@
     },
     "collateral": "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
     "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "united-stables",
     "links": [
       {

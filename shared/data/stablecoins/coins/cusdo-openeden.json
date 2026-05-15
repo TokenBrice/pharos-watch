@@ -23,6 +23,7 @@
   "pegReferenceId": "usdo-openeden",
   "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
   "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "compounding-open-dollar",
   "links": [

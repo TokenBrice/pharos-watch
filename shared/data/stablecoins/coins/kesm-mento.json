@@ -15,6 +15,7 @@
   },
   "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
   "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit KESm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+  "mechanismArchetype": "cdp",
   "geckoId": "celo-kenyan-shilling",
   "proofOfReserves": {
     "type": "real-time",

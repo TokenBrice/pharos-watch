@@ -13,6 +13,7 @@
   },
   "collateral": "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
   "pegMechanism": "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
+  "mechanismArchetype": "cdp",
   "llamaId": "52",
   "detailProvider": "defillama",
   "geckoId": "celo-euro",

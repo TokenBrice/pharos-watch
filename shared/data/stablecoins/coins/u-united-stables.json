@@ -13,6 +13,7 @@
   },
   "collateral": "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
   "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "336",
   "detailProvider": "defillama",
   "geckoId": "united-stables",

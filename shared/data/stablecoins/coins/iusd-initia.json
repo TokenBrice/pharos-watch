@@ -13,6 +13,7 @@
   },
   "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
   "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "388",
   "detailProvider": "defillama",
   "geckoId": "iusd-2",

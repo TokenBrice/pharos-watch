@@ -14,6 +14,7 @@
   "pegReferenceId": "usdf-astherus",
   "collateral": "USDF deposited into the Aster Earn asToken wrapper; upstream USDF is backed by USDT held through Ceffu and delta-neutral Binance / MirrorX strategies.",
   "pegMechanism": "Users stake USDF to mint asUSDF. asUSDF APY is reflected in NAV from delta-neutral and funding-fee strategies; withdrawals return USDF after Aster's documented T+1 hour / two-hour waiting period with no mint or withdrawal fee.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "astherus-staked-usdf",
   "links": [

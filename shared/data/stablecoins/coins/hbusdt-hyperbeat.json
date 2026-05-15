@@ -16,6 +16,7 @@
   "pegReferenceId": "usdt-tether",
   "collateral": "USDT deposited into Hyperbeat's HyperEVM yield vault, with returns sourced from HyperEVM DeFi lending and strategy allocation",
   "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "hyperbeat-usdt",
   "proofOfReserves": {
