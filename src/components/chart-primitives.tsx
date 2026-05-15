@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { CartesianGrid, ReferenceDot, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type {
   ChartAnnotation,
@@ -140,28 +140,29 @@ const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
   "methodology-change": "#facc15", // amber-400
 };
 
-interface ChartAnnotationDotsProps {
+interface ChartAnnotationLinesProps {
   annotations: readonly ChartAnnotation[];
 }
 
 /**
- * Renders Recharts `<ReferenceDot>` markers for event annotations on
- * `McapChart` / `PegDeviationChart`. `ifOverflow="hidden"` keeps out-of-range
- * markers from extending the chart's data domain.
+ * Renders Recharts `<ReferenceLine>` markers for event annotations on
+ * `McapChart` / `PegDeviationChart`. Vertical lines read clearly across the
+ * full chart height and don't require a per-series y-value lookup.
+ * `ifOverflow="hidden"` keeps out-of-range markers from extending the chart's
+ * data domain (defence in depth with hook-side clamping).
  */
-export function ChartAnnotationDots({ annotations }: ChartAnnotationDotsProps) {
+export function ChartAnnotationLines({ annotations }: ChartAnnotationLinesProps) {
   if (annotations.length === 0) return null;
   return (
     <>
       {annotations.map((a) => (
-        <ReferenceDot
+        <ReferenceLine
           key={`${a.ts}-${a.kind}`}
           x={a.ts}
           ifOverflow="hidden"
-          r={4}
-          fill={ANNOTATION_HEX_COLORS[a.kind]}
-          stroke="#ffffff"
-          strokeWidth={2}
+          stroke={ANNOTATION_HEX_COLORS[a.kind]}
+          strokeWidth={1.5}
+          strokeDasharray="3 3"
         />
       ))}
     </>

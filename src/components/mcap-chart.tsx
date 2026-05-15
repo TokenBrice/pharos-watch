@@ -11,7 +11,7 @@ import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
-  ChartAnnotationDots,
+  ChartAnnotationLines,
   DateTooltip,
   MonoYAxis,
   TimeGrid,
@@ -195,7 +195,7 @@ export function McapChart({ data, stablecoinId }: McapChartProps) {
                   formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
                 />
                 <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
-                <ChartAnnotationDots annotations={annotations} />
+                <ChartAnnotationLines annotations={annotations} />
               </AreaChart>
             ) : (
               <ChartSkeleton className="h-full w-full" />

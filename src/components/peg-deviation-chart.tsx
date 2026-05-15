@@ -11,7 +11,7 @@ import { formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
-  ChartAnnotationDots,
+  ChartAnnotationLines,
   DateTooltip,
   MonoYAxis,
   TimeGrid,
@@ -215,7 +215,7 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
                   dot={false}
                   isAnimationActive={false}
                 />
-                <ChartAnnotationDots annotations={annotations} />
+                <ChartAnnotationLines annotations={annotations} />
               </LineChart>
             ) : (
               <ChartSkeleton className="h-full w-full" />
