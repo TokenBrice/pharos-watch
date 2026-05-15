@@ -1,7 +1,9 @@
 "use client";
 
+import { AiSummary } from "@/components/ai-summary";
 import { CoinNotices } from "@/components/coin-notice";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
+import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type {
   PegSummaryCoin,
@@ -38,12 +40,18 @@ export function NoticesAndSummarySection({
   agreeSources,
   dexPriceCheck,
 }: NoticesAndSummarySectionProps) {
+  const heroVerdictEnabled = isHeroVerdictEnabled();
   return (
     <>
+      {heroVerdictEnabled && summary ? (
+        <div className="mb-6">
+          <AiSummary {...summary} />
+        </div>
+      ) : null}
       <OverviewSection
         stablecoinId={stablecoinId}
         coin={coin}
-        summary={summary}
+        summary={heroVerdictEnabled ? null : summary}
         reserves={reserves}
         reserveFetchError={reserveFetchError}
         redemptionBackstop={redemptionBackstop}

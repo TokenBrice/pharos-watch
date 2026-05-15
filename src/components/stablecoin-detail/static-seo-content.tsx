@@ -142,6 +142,12 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
           : `${coin.name} (${coin.symbol}) stablecoin analytics`}
       </h1>
 
+      {coin.oneLiner ? (
+        <p className="text-base italic leading-relaxed text-muted-foreground">
+          {coin.oneLiner}
+        </p>
+      ) : null}
+
       <section
         aria-labelledby="stablecoin-static-profile-title"
         className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5"

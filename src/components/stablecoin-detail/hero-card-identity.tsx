@@ -27,6 +27,7 @@ import {
 } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
+import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -229,11 +230,19 @@ export function HeroMobileIdentity({
   infrastructures,
   reportCard,
 }: HeroIdentityProps) {
+  const heroVerdictEnabled = isHeroVerdictEnabled();
+  const verdictId = `hero-verdict-${coin.id}`;
+  const showVerdict = heroVerdictEnabled && !!coin.oneLiner;
   return (
     <>
       <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
       <div className="min-w-0 flex-1">
-        <h2 className="text-2xl font-black tracking-tighter">{coin.name}</h2>
+        <h2
+          className="text-2xl font-black tracking-tighter"
+          {...(showVerdict ? { "aria-describedby": verdictId } : {})}
+        >
+          {coin.name}
+        </h2>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
@@ -241,6 +250,14 @@ export function HeroMobileIdentity({
           <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <HeroClassificationLine coin={coin} />
+        {showVerdict ? (
+          <p
+            id={verdictId}
+            className="mt-2 text-sm italic leading-snug text-foreground/80 max-w-prose"
+          >
+            {coin.oneLiner}
+          </p>
+        ) : null}
         {coin.flags.pegCurrency !== "USD"
          && coin.flags.pegCurrency !== "VAR"
          && coin.flags.pegCurrency !== "OTHER"
@@ -272,12 +289,20 @@ export function HeroDesktopIdentity({
   infrastructures,
   reportCard,
 }: HeroIdentityProps) {
+  const heroVerdictEnabled = isHeroVerdictEnabled();
+  const verdictId = `hero-verdict-${coin.id}`;
+  const showVerdict = heroVerdictEnabled && !!coin.oneLiner;
   return (
     <div className="flex items-start gap-3">
       <StablecoinLogo src={logoSrc} name={coin.name} size={64} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-3xl font-black tracking-tighter">{coin.name}</h2>
+          <h2
+            className="text-3xl font-black tracking-tighter"
+            {...(showVerdict ? { "aria-describedby": verdictId } : {})}
+          >
+            {coin.name}
+          </h2>
           <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
@@ -286,6 +311,14 @@ export function HeroDesktopIdentity({
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} />
         </div>
+        {showVerdict ? (
+          <p
+            id={verdictId}
+            className="mt-2 text-sm italic leading-snug text-foreground/80 max-w-prose"
+          >
+            {coin.oneLiner}
+          </p>
+        ) : null}
         {coin.flags.pegCurrency !== "USD"
          && coin.flags.pegCurrency !== "VAR"
          && coin.flags.pegCurrency !== "OTHER"
