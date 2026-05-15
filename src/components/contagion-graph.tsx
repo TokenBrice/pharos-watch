@@ -20,6 +20,7 @@ interface ContagionGraphProps {
   logos?: Record<string, string>;
   focusCoinId?: string;
   minimalChrome?: boolean;
+  maxNodes?: number;
 }
 
 export function ContagionGraph({
@@ -29,8 +30,9 @@ export function ContagionGraph({
   logos,
   focusCoinId,
   minimalChrome,
+  maxNodes,
 }: ContagionGraphProps) {
-  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId });
+  const graph = useContagionGraphModel({ cards, dependencyEdges, mcapMap, focusCoinId, maxNodes });
 
   if (graph.nodes.length === 0) return null;
 

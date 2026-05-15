@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -20,14 +19,12 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
   if (variants.length === 0) return null;
 
   return (
-    <Card className="rounded-xl border-border/60">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <DetailSectionTitle>Variants</DetailSectionTitle>
-          <Badge variant="outline" className="text-[11px]">{variants.length}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-2">
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <DetailSectionTitle>Variants</DetailSectionTitle>
+        <Badge variant="outline" className="text-[11px]">{variants.length}</Badge>
+      </div>
+      <div className="grid gap-2">
         {variants.map((variant) => {
           const display = variant.variantKind ? getVariantDisplay(variant.variantKind) : null;
 
@@ -52,13 +49,13 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
             </Link>
           );
         })}
-        <Link
-          href={buildHomepageVariantBrowseUrl()}
-          className="pharos-focus-ring mt-1 inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
-          Browse all tracked variants
-        </Link>
-      </CardContent>
-    </Card>
+      </div>
+      <Link
+        href={buildHomepageVariantBrowseUrl()}
+        className="pharos-focus-ring inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+      >
+        Browse all tracked variants
+      </Link>
+    </section>
   );
 }

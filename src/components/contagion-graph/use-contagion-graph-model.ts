@@ -32,6 +32,7 @@ interface UseContagionGraphModelOptions {
   dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
   focusCoinId?: string;
+  maxNodes?: number;
 }
 
 const FOCUS_NEIGHBOR_RADIUS_X = 240;
@@ -136,17 +137,19 @@ export function useContagionGraphModel({
   dependencyEdges,
   mcapMap,
   focusCoinId,
+  maxNodes,
 }: UseContagionGraphModelOptions) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
   const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
+  const effectiveNodeLimit = maxNodes ?? nodeLimit;
 
   const { nodes, links } = useMemo(() => {
-    const built = buildGraphData(cards, mcapMap, dependencyEdges, nodeLimit);
+    const built = buildGraphData(cards, mcapMap, dependencyEdges, effectiveNodeLimit);
     if (!focusCoinId) return built;
     return filterToFocusNeighborhood(built.nodes, built.links, focusCoinId);
-  }, [cards, dependencyEdges, mcapMap, nodeLimit, focusCoinId]);
+  }, [cards, dependencyEdges, mcapMap, effectiveNodeLimit, focusCoinId]);
 
   const supernodeState = useMemo<SupernodeState>(() => {
     // eslint-disable-next-line react-hooks/refs -- read-only hysteresis snapshot from previous render

@@ -17,6 +17,8 @@ interface ContagionSnapshotProps {
   hasCollateralUsage?: boolean;
 }
 
+const DETAIL_NODE_LIMIT = 500;
+
 export function ContagionSnapshot({
   stablecoinId,
   variantRelationshipCard,
@@ -29,8 +31,13 @@ export function ContagionSnapshot({
   const focus = rc.cards.find((c) => c.id === stablecoinId);
   if (!focus) return null;
   const edges = rc.dependencyGraph?.edges ?? [];
-  const touches = edges.filter((e) => e.from === stablecoinId || e.to === stablecoinId);
-  const hasContagion = touches.length > 0;
+  const liveCardIds = new Set(rc.cards.filter((c) => !c.isDefunct).map((c) => c.id));
+  const hasContagion = edges.some(
+    (e) =>
+      liveCardIds.has(e.from)
+      && liveCardIds.has(e.to)
+      && (e.from === stablecoinId || e.to === stablecoinId),
+  );
   const hasRightColumn = Boolean(variantRelationshipCard) || Boolean(hasCollateralUsage);
 
   if (!hasContagion && !hasRightColumn) {
@@ -43,7 +50,7 @@ export function ContagionSnapshot({
   }
 
   const rightColumn = (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {variantRelationshipCard}
       {hasCollateralUsage ? <CollateralUsageSection stablecoinId={stablecoinId} /> : null}
     </div>
@@ -69,6 +76,7 @@ export function ContagionSnapshot({
               logos={logos}
               focusCoinId={stablecoinId}
               minimalChrome
+              maxNodes={DETAIL_NODE_LIMIT}
             />
           ) : null}
           {hasRightColumn ? rightColumn : null}
