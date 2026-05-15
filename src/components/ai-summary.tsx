@@ -1,6 +1,28 @@
+import type { ReactNode } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { Term } from "@/components/term";
 import type { StablecoinAiSummary } from "@shared/types";
+
+function renderWithTerms(text: string): ReactNode[] {
+  const tokens: ReactNode[] = [];
+  const regex = /\{\{term:([a-z][a-z0-9-]*)\}\}([\s\S]*?)\{\{\/term\}\}/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) tokens.push(text.slice(lastIndex, match.index));
+    const [, slug, label] = match;
+    tokens.push(
+      <Term key={`term-${key++}`} slug={slug}>
+        {label}
+      </Term>,
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) tokens.push(text.slice(lastIndex));
+  return tokens;
+}
 
 export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
   const isoDate = updatedAt;
@@ -23,7 +45,7 @@ export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
       </CardHeader>
       <CardContent>
         <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
-          {text}
+          {renderWithTerms(text)}
         </p>
       </CardContent>
     </Card>
