@@ -10,14 +10,14 @@ import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import YieldAnalysisClient from "./client";
 
 export function generateStaticParams() {
-  return TRACKED_STABLECOINS.map((coin) => ({ id: coin.id }));
+  return TRACKED_STABLECOINS.filter((coin) => coin.flags?.yieldBearing).map((coin) => ({ id: coin.id }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
 
-  if (!coin) {
+  if (!coin || !coin.flags?.yieldBearing) {
     return { title: "Stablecoin Not Found", robots: { index: false } };
   }
 
@@ -32,7 +32,7 @@ export default async function StablecoinYieldDetailPage({ params }: { params: Pr
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
 
-  if (!coin) {
+  if (!coin || !coin.flags?.yieldBearing) {
     notFound();
   }
 

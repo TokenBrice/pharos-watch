@@ -324,7 +324,7 @@ export function YieldClient() {
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {storyCallouts.mostStable.yieldStability !== null
-                      ? `${Math.round(storyCallouts.mostStable.yieldStability)}% consistency`
+                      ? `${Math.round(storyCallouts.mostStable.yieldStability * 100)}% consistency`
                       : "Yield stability unscored"}
                   </p>
                 </button>

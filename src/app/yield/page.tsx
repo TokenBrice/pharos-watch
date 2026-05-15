@@ -3,11 +3,13 @@ import { FaqSection } from "@/components/faq-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { FaqItem } from "@/lib/faq";
 
 const desc =
@@ -65,6 +67,31 @@ const YIELD_STATIC_SECTION = (
   </section>
 );
 
+const YIELD_BEARING_COINS = TRACKED_STABLECOINS.filter((coin) => coin.flags?.yieldBearing).sort((a, b) =>
+  a.symbol.localeCompare(b.symbol),
+);
+
+const YIELD_COIN_INDEX = (
+  <section className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+    <p className="pharos-kicker">Per-coin yield analysis</p>
+    <p className="mt-2 text-sm text-muted-foreground">
+      Deeper history, source comparison, warning timeline, and source-switch trail for each yield-bearing stablecoin.
+    </p>
+    <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
+      {YIELD_BEARING_COINS.map((coin) => (
+        <li key={coin.id}>
+          <Link
+            href={`${buildStablecoinUrl(coin.id)}yield/`}
+            className="pharos-focus-ring rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            {coin.symbol}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  </section>
+);
+
 export default createClientFeaturePage({
   loadClient: () => import("./client").then((m) => ({ default: m.YieldClient })),
   loading: <Skeleton className="h-[600px] w-full rounded-xl" />,
@@ -83,5 +110,10 @@ export default createClientFeaturePage({
     ],
   },
   beforeClient: YIELD_STATIC_SECTION,
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+  afterClient: (
+    <>
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
+      {YIELD_COIN_INDEX}
+    </>
+  ),
 });

@@ -281,6 +281,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
+  const stablecoinYieldPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.filter((coin) => coin.flags?.yieldBearing).map(
+    (coin) => ({
+      url: `${SITE_URL}${buildStablecoinUrl(coin.id)}yield/`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.5,
+    }),
+  );
+
   const chainPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/chains/`,
@@ -346,6 +355,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticPages,
     ...stablecoinPages,
+    ...stablecoinYieldPages,
     ...chainPages,
     ...pegPages,
     ...taxonomyPages,

@@ -216,7 +216,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     return (
       <div className="space-y-6">
         {backLink}
-        <Skeleton className="h-[160px] w-full rounded-xl" />
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
         <Skeleton className="h-[420px] w-full rounded-xl" />
         <Skeleton className="h-[260px] w-full rounded-xl" />
       </div>
