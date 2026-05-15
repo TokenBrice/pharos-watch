@@ -4,7 +4,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
-import yzusd from "../../../../../shared/data/stablecoins/coins/yzusd-yuzu.json";
+import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 
 const signal = AbortSignal.timeout(5_000);
 

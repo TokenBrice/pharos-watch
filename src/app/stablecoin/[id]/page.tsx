@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
-import aiSummaries from "../../../../data/ai-summaries.json";
+import aiSummaries from "@data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
