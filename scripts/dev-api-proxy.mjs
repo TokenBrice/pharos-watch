@@ -52,7 +52,11 @@ function resolveProxyPath(rawUrl) {
     throw new Error("Dev proxy request path must not contain path traversal segments");
   }
 
-  return `${local.pathname}${local.search}`;
+  const pathname = `/${decodedSegments.map((segment) => encodeURIComponent(segment)).join("/")}`;
+  const query = [...local.searchParams.entries()]
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 let UPSTREAM_ORIGIN;
@@ -92,6 +96,7 @@ const server = createServer(async (req, res) => {
     // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted above, and resolveProxyPath only permits normalized /api/* paths.
     const upstreamRes = await fetch(upstream.toString(), {
       method: "GET",
+      redirect: "error",
       headers: {
         "X-Pharos-Site-Proxy-Secret": SECRET,
         Accept: req.headers.accept || "application/json",

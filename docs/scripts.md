@@ -169,6 +169,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Use `npm run dev:proxy` to run only the local API proxy, or `npm run dev:next` to run only Next.js when the proxy is already running elsewhere.
 - Loads `.env.local` through `process.loadEnvFile()`, so existing shell environment values keep precedence.
 - Accepts `DEV_PROXY_UPSTREAM` and forwards `SITE_API_SHARED_SECRET` to the upstream site-data host.
+- Forwards only normalized `/api/*` paths, rejects traversal segments, and treats upstream redirects as proxy errors.
 - `DEV_PROXY_PORT` changes both the proxy process port and the `next dev` `/api/*` rewrite target when `SITE_API_SHARED_SECRET` is set.
 
 ### `worker/scripts/repair-non-usd-fiat-depeg-history.ts`
