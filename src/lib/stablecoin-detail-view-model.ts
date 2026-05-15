@@ -47,7 +47,7 @@ import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatB
 import { getVariantParent, getVariantRelationship, getVariants } from "@shared/lib/stablecoins";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getFreezableLabel, getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getVariantDisplay } from "@/lib/variant-display";
@@ -586,14 +586,14 @@ export function buildStablecoinDetailHeroViewModel({
       case true:
         return {
           status: blacklistStatus,
-          value: "Yes",
+          value: getFreezableLabel(blacklistStatus) ?? "Freezable",
           color: HERO_NEGATIVE_TREND_CLASS,
           methodologyTopic: "freezable",
         };
       case "dilutable":
         return {
           status: blacklistStatus,
-          value: "Dilutable",
+          value: getFreezableLabel(blacklistStatus) ?? "Dilutable",
           color: "text-purple-700 dark:text-purple-400",
           source: blacklistSource,
           methodologyTopic: "freezableDilutable",
@@ -601,14 +601,14 @@ export function buildStablecoinDetailHeroViewModel({
       case "possible":
         return {
           status: blacklistStatus,
-          value: "Possible",
+          value: getFreezableLabel(blacklistStatus) ?? "Possible Freeze",
           color: "text-amber-700 dark:text-amber-400",
           methodologyTopic: "freezablePossible",
         };
       case "inherited":
         return {
           status: blacklistStatus,
-          value: "Upstream",
+          value: getFreezableLabel(blacklistStatus) ?? "Upstream Freeze",
           color: "text-amber-700 dark:text-amber-400",
           methodologyTopic: "freezableUpstream",
         };

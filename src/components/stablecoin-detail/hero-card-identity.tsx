@@ -20,6 +20,7 @@ import type {
   ReportCard,
   StablecoinMeta,
 } from "@shared/types";
+import { getFreezableLabel } from "@/lib/blacklist-status";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
   buildBackingTaxonomyUrl,
@@ -225,28 +226,25 @@ function FreezablePill({
 }) {
   if (!reportCard) return null;
   const status = reportCard.rawInputs.canBeBlacklisted;
-  let label: string;
+  const label = getFreezableLabel(status);
+  if (label === null) return null;
   let ariaLabel: string;
   let toneClass: string;
   switch (status) {
     case true:
-      label = "Freezable";
       ariaLabel = "Freezable — issuer can freeze, block, or seize balances";
       toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
       break;
     case "dilutable":
-      label = "Dilutable";
       ariaLabel = "Dilutable — issuer can mint or dilute balances rather than freeze them";
       toneClass = "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-400";
       break;
     case "possible":
-      label = "Possible Freeze";
       ariaLabel =
         "Possible freeze — admin surfaces could enable freezing but no active address-level freezing is confirmed";
       toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
       break;
     case "inherited":
-      label = "Upstream Freeze";
       ariaLabel = "Upstream freeze — freezing is inherited from an upstream issuer or collateral asset";
       toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
       break;
