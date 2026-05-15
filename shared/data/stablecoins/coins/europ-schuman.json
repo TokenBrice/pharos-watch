@@ -21,6 +21,7 @@
     "type": "independent-audit",
     "url": "https://schuman.io/reserve-audits/",
     "provider": "KPMG",
+    "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "France",
     "attestorLicense": "EMI (MiCA)"

@@ -21,7 +21,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://github.com/aave-dao/gho-origin/tree/main/audits",
-    "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora"
+    "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora",
+    "attestorTier": "self"
   },
   "links": [
     {

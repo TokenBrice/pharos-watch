@@ -22,6 +22,7 @@
     "type": "independent-audit",
     "url": "https://www.circle.com/transparency",
     "provider": "Deloitte",
+    "attestorTier": "big4",
     "cadence": "monthly",
     "attestorJurisdiction": "European Union",
     "attestorLicense": "EMI (MiCA)"

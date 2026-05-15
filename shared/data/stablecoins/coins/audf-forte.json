@@ -27,6 +27,7 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.forteaud.com/new-page",
+    "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Australia"
   },

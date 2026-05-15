@@ -20,6 +20,8 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://openeden.com/tbill/transparency",
+    "provider": "Ernst & Young",
+    "attestorTier": "big4",
     "cadence": "daily-nav",
     "attestorJurisdiction": "British Virgin Islands",
     "attestorLicense": "BVI FSC Registered Professional Fund"

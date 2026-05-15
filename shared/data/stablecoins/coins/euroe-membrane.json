@@ -20,6 +20,7 @@
     "type": "independent-audit",
     "url": "https://www.euroe.com/transparency-and-regulation",
     "provider": "Membrane Finance attestations",
+    "attestorTier": "self",
     "cadence": "monthly",
     "attestorJurisdiction": "Finland",
     "attestorLicense": "Electronic Money Institution"
