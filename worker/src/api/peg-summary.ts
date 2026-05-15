@@ -25,36 +25,37 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 
+const PEG_TYPE_BY_CURRENCY: Record<string, string> = {
+  USD: "peggedUSD",
+  EUR: "peggedEUR",
+  GBP: "peggedGBP",
+  CHF: "peggedCHF",
+  BRL: "peggedBRL",
+  RUB: "peggedRUB",
+  JPY: "peggedJPY",
+  IDR: "peggedIDR",
+  SGD: "peggedSGD",
+  TRY: "peggedTRY",
+  AUD: "peggedAUD",
+  ZAR: "peggedZAR",
+  CAD: "peggedCAD",
+  CNY: "peggedCNY",
+  CNH: "peggedCNH",
+  PHP: "peggedPHP",
+  MXN: "peggedMXN",
+  UAH: "peggedUAH",
+  ARS: "peggedARS",
+  KGS: "peggedKGS",
+  NGN: "peggedNGN",
+  XOF: "peggedXOF",
+  VND: "peggedVND",
+  GOLD: "peggedGOLD",
+  SILVER: "peggedSILVER",
+  VAR: "peggedVAR",
+};
+
 function pegTypeFromCurrency(pegCurrency: string): string | null {
-  switch (pegCurrency) {
-    case "USD": return "peggedUSD";
-    case "EUR": return "peggedEUR";
-    case "GBP": return "peggedGBP";
-    case "CHF": return "peggedCHF";
-    case "BRL": return "peggedBRL";
-    case "RUB": return "peggedRUB";
-    case "JPY": return "peggedJPY";
-    case "IDR": return "peggedIDR";
-    case "SGD": return "peggedSGD";
-    case "TRY": return "peggedTRY";
-    case "AUD": return "peggedAUD";
-    case "ZAR": return "peggedZAR";
-    case "CAD": return "peggedCAD";
-    case "CNY": return "peggedCNY";
-    case "CNH": return "peggedCNH";
-    case "PHP": return "peggedPHP";
-    case "MXN": return "peggedMXN";
-    case "UAH": return "peggedUAH";
-    case "ARS": return "peggedARS";
-    case "KGS": return "peggedKGS";
-    case "NGN": return "peggedNGN";
-    case "XOF": return "peggedXOF";
-    case "VND": return "peggedVND";
-    case "GOLD": return "peggedGOLD";
-    case "SILVER": return "peggedSILVER";
-    case "VAR": return "peggedVAR";
-    default: return null;
-  }
+  return PEG_TYPE_BY_CURRENCY[pegCurrency] ?? null;
 }
 
 function deriveDexDeviationBps(

@@ -110,14 +110,17 @@ interface ContradictoryRecoveryRepairResult {
   repairedEventCount: number;
 }
 
-interface ParsedAuditRequest {
+interface AuditPaginatedRequest {
   limit: number;
   offset: number;
+  dryRun: boolean;
+  symbolFilter: string | null;
+}
+
+interface ParsedAuditRequest extends AuditPaginatedRequest {
   minSupply: number;
   deleteIds: number[] | null;
   repairMode: RepairMode | null;
-  dryRun: boolean;
-  symbolFilter: string | null;
 }
 
 interface AuditMutationPlan {
@@ -667,7 +670,7 @@ function planSyntheticSplitRepair(
 
 async function executeSyntheticSplitRepair(
   db: D1Database,
-  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+  request: AuditPaginatedRequest,
 ): Promise<Response> {
   const allRows = await loadAllDepegEvents(db);
   const groupedCandidates = collectSyntheticSplitGroups(
@@ -718,7 +721,7 @@ function findContradictoryRecoveryCandidates(
 async function executeContradictoryRecoveryRepair(
   db: D1Database,
   events: DepegRow[],
-  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+  request: AuditPaginatedRequest,
 ): Promise<Response> {
   const filteredCandidates = findContradictoryRecoveryCandidates(events, request.symbolFilter);
   const paginatedCandidates = filteredCandidates.slice(request.offset, request.offset + request.limit);

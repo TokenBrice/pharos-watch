@@ -1,3 +1,4 @@
+import type { TelegramAlertType } from "@shared/types/status";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { batchExecute } from "../lib/db";
 import type {
@@ -276,8 +277,7 @@ export interface UpsertSubscriberInput {
     | { enabled: false };
 }
 
-const ALERT_KEYS = ["dews", "depeg", "safety", "launch"] as const;
-type AlertKey = (typeof ALERT_KEYS)[number];
+const ALERT_KEYS: readonly TelegramAlertType[] = ["dews", "depeg", "safety", "launch"];
 
 /**
  * Upserts a telegram_subscribers row. Any field left undefined preserves
@@ -339,7 +339,7 @@ export function prepareUpsertSubscriberRow(
   }
   if (input.globalAlertOverrides) {
     for (let i = 0; i < ALERT_KEYS.length; i += 1) {
-      const key: AlertKey = ALERT_KEYS[i];
+      const key: TelegramAlertType = ALERT_KEYS[i];
       const value = input.globalAlertOverrides[key];
       if (value != null) {
         updates.push(`global_alert_${key} = excluded.global_alert_${key}`);
