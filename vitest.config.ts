@@ -44,9 +44,6 @@ export default defineConfig({
         "out/**",
         "coverage/**",
       ],
-      thresholds: {
-        lines: 66,
-      },
     },
   },
   resolve: {

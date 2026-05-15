@@ -1,4 +1,5 @@
 // Stub for resvg WASM — prevents WASM loading in vitest
+export const __stub = true;
 export class Resvg {
   render() {
     return { asPng: () => new Uint8Array() };

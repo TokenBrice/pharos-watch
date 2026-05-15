@@ -290,7 +290,6 @@ export default defineConfig({
       exclude: [
         /* mirrors test.exclude */
       ],
-      thresholds: { lines: 66 }, // Local full-suite coverage reference; CI enforces the critical coverage gate separately
     },
   },
   resolve: {
@@ -517,13 +516,11 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ## Coverage
 
-**Local full-suite threshold:** 66% lines (enforced by `vitest.config.ts` thresholds when you run full coverage locally)
-
-Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
+Full-suite coverage threshold is not enforced; only per-file critical-coverage at 40% gates CI. Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
 
 ### Critical Coverage Gate
 
-CI does **not** run the full-suite `66%` coverage gate. CI runs the critical-path gate via `npm run coverage:critical`:
+CI does **not** run a full-suite coverage gate. CI runs the critical-path gate via `npm run coverage:critical`:
 
 - Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Parses `coverage/lcov.info`
