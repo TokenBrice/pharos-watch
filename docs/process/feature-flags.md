@@ -19,7 +19,7 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | off | 2026-09-01 |
 | `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | Idea 4 (curated + tape event-annotated charts) | off | 2026-09-01 |
 
-`expiresAt` is advisory — the corresponding gate in code carries the same date in a comment. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. `scripts/check-stale-flags.ts` is a planned follow-up that will warn at 30-day proximity.
+`expiresAt` is advisory — the corresponding gate in code carries the same date in a comment. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check is a planned follow-up (see `agents/stablecoin-detail-improvements-follow-up-plan.md` §6).
 
 ## Flip readiness gates
 
