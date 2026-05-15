@@ -66,7 +66,13 @@ export function InfrastructureBadge({ value }: { value: Infrastructure }) {
   );
 }
 
-function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
+function HeroClassificationLine({
+  coin,
+  infrastructures,
+}: {
+  coin: StablecoinMeta;
+  infrastructures: Infrastructure[];
+}) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
   const backingHref = buildBackingTaxonomyUrl(coin.flags.backing);
@@ -76,6 +82,13 @@ function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
 
   const pillClass =
     "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
+
+  const showPegBadge =
+    coin.flags.pegCurrency !== "USD"
+    && coin.flags.pegCurrency !== "VAR"
+    && coin.flags.pegCurrency !== "OTHER"
+    && coin.flags.pegCurrency !== "GOLD"
+    && coin.flags.pegCurrency !== "SILVER";
 
   return (
     <p className="flex flex-wrap items-center gap-1.5">
@@ -100,6 +113,17 @@ function HeroClassificationLine({ coin }: { coin: StablecoinMeta }) {
       ) : (
         <span className={pillClass}>{pegLabel}</span>
       )}
+      {showPegBadge && (
+        <span
+          aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
+          className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
+        >
+          Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
+        </span>
+      )}
+      {infrastructures.map((value) => (
+        <InfrastructureBadge key={value} value={value} />
+      ))}
     </p>
   );
 }
@@ -201,23 +225,45 @@ function FreezablePill({
 }) {
   if (!reportCard) return null;
   const status = reportCard.rawInputs.canBeBlacklisted;
-  const isFreezable =
-    status === true ||
-    status === "possible" ||
-    status === "dilutable" ||
-    status === "inherited";
-  if (!isFreezable) return null;
+  let label: string;
+  let ariaLabel: string;
+  let toneClass: string;
+  switch (status) {
+    case true:
+      label = "Freezable";
+      ariaLabel = "Freezable — issuer can freeze, block, or seize balances";
+      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+      break;
+    case "dilutable":
+      label = "Dilutable";
+      ariaLabel = "Dilutable — issuer can mint or dilute balances rather than freeze them";
+      toneClass = "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-400";
+      break;
+    case "possible":
+      label = "Possible Freeze";
+      ariaLabel =
+        "Possible freeze — admin surfaces could enable freezing but no active address-level freezing is confirmed";
+      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+      break;
+    case "inherited":
+      label = "Upstream Freeze";
+      ariaLabel = "Upstream freeze — freezing is inherited from an upstream issuer or collateral asset";
+      toneClass = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+      break;
+    default:
+      return null;
+  }
   const href = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol)
     ? "#blacklist"
     : `/blacklist?coin=${coin.symbol}`;
   return (
     <Link
       href={href}
-      aria-label="Freezable — issuer can freeze, block, or seize balances"
-      className="pharos-focus-ring inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400"
+      aria-label={ariaLabel}
+      className={`pharos-focus-ring inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${toneClass}`}
     >
       <Snowflake className="h-3 w-3" aria-hidden />
-      Freezable
+      {label}
     </Link>
   );
 }
@@ -249,7 +295,7 @@ export function HeroMobileIdentity({
           <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
           <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
-        <HeroClassificationLine coin={coin} />
+        <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         {showVerdict ? (
           <p
             id={verdictId}
@@ -258,22 +304,7 @@ export function HeroMobileIdentity({
             {coin.oneLiner}
           </p>
         ) : null}
-        {coin.flags.pegCurrency !== "USD"
-         && coin.flags.pegCurrency !== "VAR"
-         && coin.flags.pegCurrency !== "OTHER"
-         && coin.flags.pegCurrency !== "GOLD"
-         && coin.flags.pegCurrency !== "SILVER" && (
-          <span
-            aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
-            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
-          >
-            Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
-          </span>
-        )}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {infrastructures.map((value) => (
-            <InfrastructureBadge key={value} value={value} />
-          ))}
           <HeroTagList tags={coin.tags} />
         </div>
       </div>
@@ -309,7 +340,7 @@ export function HeroDesktopIdentity({
           <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <div className="mt-1 flex items-center gap-3">
-          <HeroClassificationLine coin={coin} />
+          <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
         {showVerdict ? (
           <p
@@ -319,22 +350,7 @@ export function HeroDesktopIdentity({
             {coin.oneLiner}
           </p>
         ) : null}
-        {coin.flags.pegCurrency !== "USD"
-         && coin.flags.pegCurrency !== "VAR"
-         && coin.flags.pegCurrency !== "OTHER"
-         && coin.flags.pegCurrency !== "GOLD"
-         && coin.flags.pegCurrency !== "SILVER" && (
-          <span
-            aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
-            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
-          >
-            Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
-          </span>
-        )}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {infrastructures.map((value) => (
-            <InfrastructureBadge key={value} value={value} />
-          ))}
           <HeroTagList tags={coin.tags} />
         </div>
       </div>

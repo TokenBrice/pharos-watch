@@ -16,7 +16,6 @@ import type {
 import { PegGauge } from "@/components/peg-gauge";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
-import { InfrastructureBadge } from "./hero-card-identity";
 
 export interface HeroTertiaryMetricConfig {
   key: string;
@@ -113,9 +112,6 @@ export function HeroTertiaryMetrics({
             <span className="text-base font-bold font-mono">{chainCount}</span>
           </div>
         )}
-        {infrastructures.map((value) => (
-          <InfrastructureBadge key={value} value={value} />
-        ))}
         {!mobile && earlyPegScore && (
           <span className="text-xs text-amber-600 dark:text-amber-400">
             Early peg score · {trackingSpanDays}d tracked
