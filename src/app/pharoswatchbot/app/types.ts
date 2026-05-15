@@ -67,3 +67,11 @@ export type TelegramMiniAppOperation =
   | { kind: "remove-coin"; stablecoinId: string }
   | { kind: "follow-preset"; presetId: string; alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>; depegStepBps?: TelegramDepegStepBps | null }
   | { kind: "unfollow-preset"; presetId: string };
+
+// Convenience aliases for cross-module sharing between client.tsx, panel components,
+// and the mutation hook. The base shape lives in TelegramMiniAppState above.
+export type SubscribedCoin = TelegramMiniAppState["subscriptions"][number];
+export type CatalogCoin = TelegramMiniAppState["catalog"]["searchableCoins"][number];
+export type CoinInsightKind = "why" | "coverage";
+export type CoinInsightTarget = { kind: CoinInsightKind; coinId: string };
+export type FollowedPreset = TelegramMiniAppState["presets"][number];
