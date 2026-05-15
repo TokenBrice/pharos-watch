@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatNativePrice } from "@shared/lib/format";
@@ -16,15 +16,16 @@ interface MobileStickySummaryProps {
   observeTarget: RefObject<HTMLElement | null>;
 }
 
+const STICKY_HEIGHT_VAR = "--pharos-sticky-summary-h";
+
 /**
  * Mobile-only compact summary that appears once the hero card scrolls out of
  * view. Sticks to top: 0; the scrollspy nav sticks to top: 3.5rem just below.
  *
- * KNOWN OFFSET: section anchors set their scrollMarginTop based on the
- * scrollspy rail only; this 36px summary slightly overlaps section heading
- * text when scrollspy pills are clicked. Acceptable for the initial ship.
- * A follow-up may extend `applyScrollMargins` in longform-scrollspy-nav.tsx
- * to add this summary's measured height when mounted.
+ * Publishes its measured height as `--pharos-sticky-summary-h` on
+ * `document.documentElement` so `LongformScrollspyNav` can include it in
+ * `scrollMarginTop` (via a `calc()`) without prop-drilling between sibling
+ * components. Variable is removed when the summary unmounts or hides.
  */
 export function MobileStickySummary({
   coin,
@@ -36,6 +37,8 @@ export function MobileStickySummary({
 }: MobileStickySummaryProps) {
   const enabled = isMobileStickySummaryEnabled();
   const [visible, setVisible] = useState(false);
+  const summaryRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!enabled) return;
     const el = observeTarget.current;
@@ -48,9 +51,32 @@ export function MobileStickySummary({
     io.observe(el);
     return () => io.disconnect();
   }, [enabled, observeTarget]);
+
+  useEffect(() => {
+    if (!enabled || !visible) return;
+    const node = summaryRef.current;
+    if (!node) return;
+    if (typeof window === "undefined" || typeof window.ResizeObserver === "undefined") return;
+    const publish = () => {
+      const h = node.getBoundingClientRect().height;
+      document.documentElement.style.setProperty(
+        STICKY_HEIGHT_VAR,
+        `${Math.round(h)}px`,
+      );
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(node);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty(STICKY_HEIGHT_VAR);
+    };
+  }, [enabled, visible]);
+
   if (!enabled || !visible) return null;
   return (
     <div
+      ref={summaryRef}
       aria-hidden={false}
       className="sticky top-0 z-40 -mx-4 flex items-center gap-2 border-b border-border/60 bg-background/95 px-4 py-1.5 lg:hidden"
     >

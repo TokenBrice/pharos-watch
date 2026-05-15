@@ -19,10 +19,23 @@ interface LongformScrollspyNavProps {
   showDepthHint?: boolean;
 }
 
-function getScrollOffset(railNode: HTMLDivElement | null) {
+const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
+
+function readStickySummaryHeight(): number {
+  if (typeof document === "undefined") return 0;
+  const raw = document.documentElement.style.getPropertyValue(STICKY_SUMMARY_VAR);
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getRailOffset(railNode: HTMLDivElement | null) {
   const railRect = railNode?.getBoundingClientRect();
   if (!railRect) return 16;
   return Math.ceil(railRect.height + Math.max(railRect.top, 0) + 16);
+}
+
+function getScrollOffset(railNode: HTMLDivElement | null) {
+  return getRailOffset(railNode) + readStickySummaryHeight();
 }
 
 function getHashSectionId() {
@@ -91,9 +104,12 @@ export function LongformScrollspyNav({
     if (!railNode || sectionNodes.length === 0) return;
 
     const applyScrollMargins = () => {
-      const scrollMarginTop = getScrollOffset(railNode);
+      const railOffset = getRailOffset(railNode);
+      // `calc(...)` lets the mobile sticky summary's CSS var feed back into
+      // scroll-margin reactively without a separate observer wiring.
+      const scrollMarginTop = `calc(${railOffset}px + var(${STICKY_SUMMARY_VAR}, 0px))`;
       for (const node of sectionNodes) {
-        node.style.scrollMarginTop = `${scrollMarginTop}px`;
+        node.style.scrollMarginTop = scrollMarginTop;
       }
     };
 
