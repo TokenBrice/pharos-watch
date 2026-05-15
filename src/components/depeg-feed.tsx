@@ -101,7 +101,7 @@ export function DepegFeed({
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
+      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 items-start gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
         {events.length === 0 ? (
           <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-3 text-sm text-emerald-700 dark:text-emerald-400 lg:col-span-3">
             {emptyMessage}
@@ -113,17 +113,17 @@ export function DepegFeed({
             <Link
               key={evt.id}
               href={buildStablecoinUrl(evt.stablecoinId)}
-              className="pharos-focus-ring flex items-center justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
+              className="pharos-focus-ring flex items-start justify-between gap-3 py-2 px-2 min-h-11 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(evt.stablecoinId)}
               style={newIndex != null ? {
                 animation: 'pharos-slide-in-right 300ms var(--motion-ease-standard) both',
                 animationDelay: `${newIndex * 100}ms`,
               } : undefined}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
                 <StablecoinLogo src={logos?.[evt.stablecoinId]} name={evt.symbol} size={20} />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-sm font-medium group-hover:underline">{evt.symbol}</span>
                     <span className={`font-mono text-xs font-semibold ${deviationColorClass(Math.abs(evt.peakDeviationBps))}`}>
                       {formatBps(evt.peakDeviationBps)}
