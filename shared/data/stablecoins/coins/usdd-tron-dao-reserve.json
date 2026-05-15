@@ -2,6 +2,7 @@
   "id": "usdd-tron-dao-reserve",
   "name": "USDD",
   "symbol": "USDD",
+  "oneLiner": "USDD is the Tron DAO Reserve's CDP-and-PSM stablecoin, designed as overcollateralized but historically traded below peg through multiple stress episodes.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
   "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
+  "mechanismArchetype": "algorithmic",
   "llamaId": "14",
   "detailProvider": "defillama",
   "geckoId": "usdd",
   "pythFeedId": "0x6d20210495d6518787b72e4ad06bc4df21e68d89a802cf6bced2fca6c29652a6",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://usdd.io/"
+    "url": "https://usdd.io/",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

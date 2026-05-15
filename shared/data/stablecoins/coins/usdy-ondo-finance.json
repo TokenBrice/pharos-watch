@@ -2,6 +2,7 @@
   "id": "usdy-ondo-finance",
   "name": "Ondo US Dollar Yield",
   "symbol": "USDY",
+  "oneLiner": "USDY is Ondo's yield-bearing dollar token, backed by short-term U.S. Treasuries and bank demand deposits; non-U.S. investor permissioned.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,6 +11,7 @@
     "rwa": true,
     "navToken": true
   },
+  "mechanismArchetype": "tbill",
   "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
   "pegMechanism": "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
   "llamaId": "129",
@@ -19,7 +21,10 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://ondo.finance/usdy",
-    "provider": "Ankura Trust"
+    "provider": "Ankura Trust",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

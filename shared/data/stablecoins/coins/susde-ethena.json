@@ -2,6 +2,8 @@
   "id": "susde-ethena",
   "name": "Ethena Staked USDe",
   "symbol": "sUSDe",
+  "oneLiner": "sUSDe is the yield-bearing wrapper of USDe; its value versus USDe rises as basis-trade yield accrues, with USDe-tier delta-neutral risk.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -18,6 +20,13 @@
   "detailProvider": "coingecko",
   "geckoId": "ethena-staked-usde",
   "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://app.ethena.fi/dashboards/transparency",
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+    "attestorTier": "niche",
+    "cadence": "real-time"
+  },
   "links": [
     {
       "label": "Website",

@@ -2,6 +2,7 @@
   "id": "dai-makerdao",
   "name": "Dai",
   "symbol": "DAI",
+  "oneLiner": "DAI is MakerDAO's decentralized dollar stablecoin, minted from overcollateralized vaults of crypto, RWA, and USDC via the PSM, governed by MKR holders.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
   "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+  "mechanismArchetype": "cdp",
   "llamaId": "5",
   "detailProvider": "defillama",
   "geckoId": "dai",

@@ -2,6 +2,8 @@
   "id": "susds-sky",
   "name": "Sky Savings USDS",
   "symbol": "sUSDS",
+  "oneLiner": "sUSDS is the yield-bearing wrapper of Sky's USDS; the exchange rate compounds with the Sky Savings Rate, with USDS-tier CDP risk underneath.",
+  "mechanismArchetype": "cdp",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

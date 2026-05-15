@@ -2,6 +2,7 @@
   "id": "frax-frax",
   "name": "Frax",
   "symbol": "FRAX",
+  "oneLiner": "FRAX is Frax's dollar stablecoin, fully collateralized since 2023 by short-dated U.S. Treasuries, repos, and USDC custodied off-chain by FinresPBC.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
   "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
+  "mechanismArchetype": "tbill",
   "llamaId": "6",
   "detailProvider": "defillama",
   "geckoId": "frax",

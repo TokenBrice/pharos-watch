@@ -2,6 +2,7 @@
   "id": "ustb-superstate",
   "name": "Superstate USTB",
   "symbol": "USTB",
+  "oneLiner": "USTB is Superstate's tokenized short-duration U.S. Treasury fund, available as a permissioned on-chain wrapper for accredited investors.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,6 +11,7 @@
     "rwa": true,
     "navToken": true
   },
+  "mechanismArchetype": "tbill",
   "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
   "detailProvider": "coingecko",
@@ -18,7 +20,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://superstate.com/assets/ustb",
-    "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency"
+    "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency",
+    "attestorTier": "big4",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "SEC-registered fund (Reg D 506(c))"
   },
   "links": [
     {

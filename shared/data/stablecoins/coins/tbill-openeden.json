@@ -2,6 +2,7 @@
   "id": "tbill-openeden",
   "name": "OpenEden TBILL",
   "symbol": "TBILL",
+  "oneLiner": "TBILL is OpenEden's tokenized short-term U.S. Treasury fund, structured as a BVI Registered Professional Fund custodied by BNY Mellon.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,6 +11,7 @@
     "rwa": true,
     "navToken": true
   },
+  "mechanismArchetype": "tbill",
   "collateral": "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer",
   "pegMechanism": "NAV-based pricing; institutional mint/redeem through regulated BVI fund structure",
   "llamaId": "257",
@@ -17,7 +19,10 @@
   "geckoId": "openeden-tbill",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://openeden.com/tbill/transparency"
+    "url": "https://openeden.com/tbill/transparency",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "British Virgin Islands",
+    "attestorLicense": "BVI FSC Registered Professional Fund"
   },
   "links": [
     {

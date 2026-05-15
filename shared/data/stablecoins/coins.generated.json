@@ -5614,6 +5614,7 @@
     "detailProvider": "defillama",
     "name": "crvUSD",
     "symbol": "crvUSD",
+    "oneLiner": "crvUSD is Curve's decentralized stablecoin minted against crypto collateral with LLAMMA soft-liquidation that arbitrages collateral instead of liquidating it.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -5624,6 +5625,7 @@
     },
     "collateral": "WBTC, cbBTC (majority), wstETH, sfrxETH, weETH, tBTC, and ETH deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations; WBTC/cbBTC custody by BitGo/Coinbase introduces centralized dependency",
     "pegMechanism": "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, frxUSD, and GHO to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
+    "mechanismArchetype": "cdp",
     "geckoId": "crvusd",
     "links": [
       {
@@ -6147,6 +6149,7 @@
     "detailProvider": "coingecko",
     "name": "Compounding OpenDollar",
     "symbol": "cUSDO",
+    "oneLiner": "cUSDO is OpenEden's non-rebasing wrapper of USDO that compounds T-Bill yield through price appreciation rather than balance changes.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -6258,6 +6261,7 @@
     "detailProvider": "defillama",
     "name": "Dai",
     "symbol": "DAI",
+    "oneLiner": "DAI is MakerDAO's decentralized dollar stablecoin, minted from overcollateralized vaults of crypto, RWA, and USDC via the PSM, governed by MKR holders.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -6268,6 +6272,7 @@
     },
     "collateral": "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
     "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+    "mechanismArchetype": "cdp",
     "geckoId": "dai",
     "pythFeedId": "0xb0948a5e5313200c632b51bb5ca32f6de0d36e9950a942d19751e833f70dabfd",
     "links": [
@@ -6906,6 +6911,7 @@
     "detailProvider": "defillama",
     "name": "Dola",
     "symbol": "DOLA",
+    "oneLiner": "DOLA is Inverse Finance's CDP-style stablecoin minted against overcollateralized loans in the FiRM lending protocol, with USDS as a peg backstop.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -6916,10 +6922,13 @@
     },
     "collateral": "Over-collateralized assets deposited in Inverse Finance's FiRM fixed-rate lending markets, currently dominated by DOLA paired stablecoin collateral markets; USDS in the PSM remains a peg backstop",
     "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
+    "mechanismArchetype": "cdp",
     "geckoId": "dola-usd",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://www.inverse.finance/transparency"
+      "url": "https://www.inverse.finance/transparency",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
     },
     "links": [
       {
@@ -7932,6 +7941,7 @@
     "detailProvider": "defillama",
     "name": "EURC",
     "symbol": "EURC",
+    "oneLiner": "EURC is Circle's centralized euro stablecoin, redeemable 1:1 by qualifying customers and backed by cash and short-term assets denominated in euros.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -7942,12 +7952,16 @@
     },
     "collateral": "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
     "pegMechanism": "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "euro-coin",
     "pythFeedId": "0x76fa85158bf14ede77087fe3ae472f66213f6ea2f5b411cb2de472794990fa5c",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.circle.com/transparency",
-      "provider": "Deloitte"
+      "provider": "Deloitte",
+      "cadence": "monthly",
+      "attestorJurisdiction": "European Union",
+      "attestorLicense": "EMI (MiCA)"
     },
     "links": [
       {
@@ -8047,6 +8061,7 @@
     "detailProvider": "defillama",
     "name": "EUR CoinVertible",
     "symbol": "EURCV",
+    "oneLiner": "EURCV is Societe Generale-FORGE's regulated euro stablecoin issued under the EU MiCA framework, designed for institutional on-chain settlement.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -8057,12 +8072,16 @@
     },
     "collateral": "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
     "pegMechanism": "Direct 1:1 redemption through SG-FORGE",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "societe-generale-forge-eurcv",
     "pythFeedId": "0x61162fa272ef591637241b80887bad05a3aac7590424541707171cc1dbea6e74",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.sgforge.com/product/coinvertible/",
-      "provider": "SG-FORGE"
+      "provider": "SG-FORGE",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "France",
+      "attestorLicense": "EMI (MiCA)"
     },
     "links": [
       {
@@ -8347,6 +8366,7 @@
     "detailProvider": "defillama",
     "name": "EURO3",
     "symbol": "EURO3",
+    "oneLiner": "EURO3 is 3A DAO's overcollateralized euro stablecoin, minted on Polygon and Linea against whitelisted crypto and stablecoin collateral in user-owned vaults.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "EUR",
@@ -8357,6 +8377,7 @@
     },
     "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
     "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
+    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -8419,6 +8440,7 @@
     "detailProvider": "defillama",
     "name": "EUROe",
     "symbol": "EUROe",
+    "oneLiner": "EUROe is Membrane Finance's regulated euro stablecoin issued from Finland under an EMI license, redeemable 1:1 against euro fiat reserves.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -8429,10 +8451,14 @@
     },
     "collateral": "Euro fiat reserves and euro-denominated assets held by Membrane Finance for issued EUROe",
     "pegMechanism": "Direct 1:1 euro issuance and redemption through Membrane's verified-customer platform, with public transparency and regulation pages describing reserve attestations",
+    "mechanismArchetype": "fiat-cash",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.euroe.com/transparency-and-regulation",
-      "provider": "Membrane Finance attestations"
+      "provider": "Membrane Finance attestations",
+      "cadence": "monthly",
+      "attestorJurisdiction": "Finland",
+      "attestorLicense": "Electronic Money Institution"
     },
     "links": [
       {
@@ -8525,6 +8551,7 @@
     "detailProvider": "defillama",
     "name": "Schuman EUROP",
     "symbol": "EUROP",
+    "oneLiner": "EUROP is Schuman Financial's MiCA-licensed euro stablecoin, redeemable 1:1 and backed by euro cash at EU banks with an additional reserve buffer.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -8535,11 +8562,15 @@
     },
     "collateral": "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
     "pegMechanism": "Direct 1:1 redemption through Schuman Financial",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "schuman-europ",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://schuman.io/reserve-audits/",
-      "provider": "KPMG"
+      "provider": "KPMG",
+      "cadence": "monthly",
+      "attestorJurisdiction": "France",
+      "attestorLicense": "EMI (MiCA)"
     },
     "links": [
       {
@@ -8631,6 +8662,7 @@
     "detailProvider": "coingecko",
     "name": "Euro Token",
     "symbol": "EUROT",
+    "oneLiner": "EUROT is Token Teknoloji's centralized euro stablecoin issued from Turkey, backed by euro bank reserves at Ziraat Participation Bank and Akbank.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -8641,11 +8673,14 @@
     },
     "collateral": "Euro bank reserves held by Token Teknoloji at Ziraat Participation Bank and Akbank",
     "pegMechanism": "Issuer-managed mint and burn process intended to keep each EUROT matched 1:1 with euro reserves; holders can trade EUROT through Bitlo, but no Pharos-reviewed direct redemption backstop is modeled",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "token-teknoloji-a-s-euro",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.token.com.tr/en/proof-of-reserves/",
-      "provider": "Token Teknoloji reserve proof page"
+      "provider": "Token Teknoloji reserve proof page",
+      "cadence": "ad-hoc",
+      "attestorJurisdiction": "Turkey"
     },
     "links": [
       {
@@ -9609,6 +9644,7 @@
     "detailProvider": "defillama",
     "name": "First Digital USD",
     "symbol": "FDUSD",
+    "oneLiner": "FDUSD is a BVI-issued dollar stablecoin from First Digital Labs, redeemable 1:1 and backed by U.S. Treasury bills, cash, and bank deposits.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -9619,12 +9655,15 @@
     },
     "collateral": "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
     "pegMechanism": "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "first-digital-usd",
     "pythFeedId": "0xccdc1a08923e2e4f4b1e6ea89de6acbc5fe1948e9706f5604b8cb50bc1ed3979",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.firstdigitallabs.com/transparency",
-      "provider": "IAPA International / Prism"
+      "provider": "IAPA International / Prism",
+      "attestorTier": "niche",
+      "cadence": "monthly"
     },
     "links": [
       {
@@ -10156,6 +10195,7 @@
     "detailProvider": "defillama",
     "name": "Frax",
     "symbol": "FRAX",
+    "oneLiner": "FRAX is Frax's dollar stablecoin, fully collateralized since 2023 by short-dated U.S. Treasuries, repos, and USDC custodied off-chain by FinresPBC.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -10166,6 +10206,7 @@
     },
     "collateral": "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
     "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
+    "mechanismArchetype": "tbill",
     "geckoId": "frax",
     "pythFeedId": "0x735f591e4fed988cd38df74d8fcedecf2fe8d9111664e0fd500db9aa78b316b1",
     "links": [
@@ -11298,6 +11339,7 @@
     "detailProvider": "defillama",
     "name": "GHO",
     "symbol": "GHO",
+    "oneLiner": "GHO is Aave's decentralized dollar stablecoin, minted by borrowing against any Aave V3 collateral, with peg defended by stablecoin-backed stability modules.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -11308,6 +11350,7 @@
     },
     "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
     "pegMechanism": "Overcollateralized minting via the Aave V3 facilitator model; live GSM redemption is centered on yield-bearing stability modules such as stataUSDC and stataUSDT, with steward-managed facilitator limits reinforcing the peg",
+    "mechanismArchetype": "cdp",
     "geckoId": "gho",
     "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
     "proofOfReserves": {
@@ -16217,6 +16260,7 @@
     "detailProvider": "defillama",
     "name": "Liquity USD",
     "symbol": "LUSD",
+    "oneLiner": "LUSD is Liquity's fully decentralized dollar stablecoin, minted only against ETH at a 110% collateral ratio, with on-chain redemption and immutable code.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -16227,6 +16271,7 @@
     },
     "collateral": "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
     "pegMechanism": "Overcollateralized ETH CDPs (Troves) with three peg mechanisms: (1) hard floor at $1 via direct on-chain redemption of LUSD for $1 of ETH from the riskiest Trove; (2) Stability Pool absorbs liquidations at 110% collateral ratio; (3) algorithmically adjusted borrowing and redemption fees throttle arbitrage volume",
+    "mechanismArchetype": "cdp",
     "geckoId": "liquity-usd",
     "pythFeedId": "0xc9dc99720306ef43fd301396a6f8522c8be89c6c77e8c27d87966918a943fd20",
     "links": [
@@ -21027,6 +21072,7 @@
     "detailProvider": "defillama",
     "name": "PayPal USD",
     "symbol": "PYUSD",
+    "oneLiner": "PYUSD is PayPal's regulated dollar stablecoin issued by Paxos, redeemable 1:1 and backed by U.S. Treasury reverse repos and cash deposits.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -21037,12 +21083,17 @@
     },
     "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
     "pegMechanism": "Direct 1:1 redemption through PayPal/Paxos",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "paypal-usd",
     "pythFeedId": "0xc1da1b73d7f01e7ddd54b3766cf7fcd644395ad14f70aa706ec5384c59e76692",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.paxos.com/pyusd-transparency",
-      "provider": "KPMG"
+      "provider": "KPMG",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -25363,6 +25414,7 @@
     "detailProvider": "coingecko",
     "name": "Ethena Staked USDe",
     "symbol": "sUSDe",
+    "oneLiner": "sUSDe is the yield-bearing wrapper of USDe; its value versus USDe rises as basis-trade yield accrues, with USDe-tier delta-neutral risk.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -25374,8 +25426,16 @@
     "pegReferenceId": "usde-ethena",
     "collateral": "USDe deposited into Ethena's ERC-4626 staking contract; the wrapper remains fully backed by USDe while additional USDe rewards accrue inside the vault",
     "pegMechanism": "Stake USDe to receive sUSDe; the exchange rate versus USDe rises as rewards are transferred into the staking contract, while unstaking burns sUSDe immediately and releases USDe after Ethena's documented 7-day cooldown",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-staked-usde",
     "pythFeedId": "0xca3ba9a619a4b3755c10ac7d5e760275aa95e9823d38a84fedd416856cdba37c",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://app.ethena.fi/dashboards/transparency",
+      "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+      "attestorTier": "niche",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -25469,6 +25529,7 @@
     "detailProvider": "coingecko",
     "name": "Sky Savings USDS",
     "symbol": "sUSDS",
+    "oneLiner": "sUSDS is the yield-bearing wrapper of Sky's USDS; the exchange rate compounds with the Sky Savings Rate, with USDS-tier CDP risk underneath.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -25480,6 +25541,7 @@
     "pegReferenceId": "usds-sky",
     "collateral": "USDS deposited into Sky's ERC-4626 savings vault; the wrapper remains fully backed by USDS while the exchange rate compounds with the Sky Savings Rate",
     "pegMechanism": "Deposit USDS to mint sUSDS and withdraw USDS directly from the vault with no protocol fee; sUSDS and sDAI are both savings wrappers but are not exchangeable 1:1 because they have accrued different amounts of yield",
+    "mechanismArchetype": "cdp",
     "geckoId": "susds",
     "pythFeedId": "0x6968a8641208463d17ae3b9cfa0e4841a7aa7a5d54122b9f692b84fe9ce3409f",
     "links": [
@@ -26196,6 +26258,7 @@
     "detailProvider": "defillama",
     "name": "OpenEden TBILL",
     "symbol": "TBILL",
+    "oneLiner": "TBILL is OpenEden's tokenized short-term U.S. Treasury fund, structured as a BVI Registered Professional Fund custodied by BNY Mellon.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -26206,10 +26269,14 @@
     },
     "collateral": "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer",
     "pegMechanism": "NAV-based pricing; institutional mint/redeem through regulated BVI fund structure",
+    "mechanismArchetype": "tbill",
     "geckoId": "openeden-tbill",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://openeden.com/tbill/transparency"
+      "url": "https://openeden.com/tbill/transparency",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "British Virgin Islands",
+      "attestorLicense": "BVI FSC Registered Professional Fund"
     },
     "links": [
       {
@@ -26744,6 +26811,7 @@
     "detailProvider": "defillama",
     "name": "TrueUSD",
     "symbol": "TUSD",
+    "oneLiner": "TUSD is a centralized dollar stablecoin from Techteryx with a Chainlink Proof-of-Reserve feed, though current reserves sit in opaque First Digital Trust funds.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -26754,12 +26822,17 @@
     },
     "collateral": "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
     "pegMechanism": "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "true-usd",
     "pythFeedId": "0x433faaa801ecdb6618e3897177a118b273a8e18cc3ff545aadfc207d58d028f7",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://tusd.io/transparency",
-      "provider": "Moore Hong Kong / Chainlink"
+      "provider": "Moore Hong Kong / Chainlink",
+      "attestorTier": "niche",
+      "cadence": "real-time",
+      "attestorJurisdiction": "Hong Kong",
+      "attestorLicense": "HK CPA"
     },
     "links": [
       {
@@ -27387,6 +27460,7 @@
     "detailProvider": "defillama",
     "name": "Usual USD",
     "symbol": "USD0",
+    "oneLiner": "USD0 is Usual's RWA-backed dollar, fully collateralized by tokenized U.S. T-bills (USYC, M, BUIDL, OUSG) plus a small USDC redemption reserve.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -27397,6 +27471,7 @@
     },
     "collateral": "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
     "pegMechanism": "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
+    "mechanismArchetype": "tbill",
     "geckoId": "usual-usd",
     "pythFeedId": "0x5e8c65917af89ed66d03d082b1ae5ac93b8ed8e32363a61842c33f7d66cb2e00",
     "links": [
@@ -27980,6 +28055,7 @@
     "detailProvider": "defillama",
     "name": "Avalon USDa",
     "symbol": "USDA",
+    "oneLiner": "USDa is Avalon's BTC-backed CDP stablecoin with 1:1 USDT convertibility, leveraging institutional credit lines and proprietary HFT liquidation logic.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -27990,6 +28066,7 @@
     },
     "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
     "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
+    "mechanismArchetype": "cdp",
     "geckoId": "usda-2",
     "cmcSlug": "avalon-usda",
     "links": [
@@ -28556,6 +28633,7 @@
     "detailProvider": "defillama",
     "name": "USD Coin",
     "symbol": "USDC",
+    "oneLiner": "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -28566,12 +28644,17 @@
     },
     "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
     "pegMechanism": "Direct 1:1 redemption through Circle",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "usd-coin",
     "pythFeedId": "0xeaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.circle.com/transparency",
-      "provider": "Deloitte"
+      "provider": "Deloitte",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -29037,6 +29120,7 @@
     "detailProvider": "defillama",
     "name": "USDD",
     "symbol": "USDD",
+    "oneLiner": "USDD is the Tron DAO Reserve's CDP-and-PSM stablecoin, designed as overcollateralized but historically traded below peg through multiple stress episodes.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -29047,11 +29131,14 @@
     },
     "collateral": "Current reserves are split across Smart Allocator stablecoin deployments, TRX and sTRX CDP vault collateral, and USDT held in PSM/direct vaults; Bitcoin was removed from reserves in August 2024",
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "usdd",
     "pythFeedId": "0x6d20210495d6518787b72e4ad06bc4df21e68d89a802cf6bced2fca6c29652a6",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://usdd.io/"
+      "url": "https://usdd.io/",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
     },
     "links": [
       {
@@ -29179,6 +29266,7 @@
     "detailProvider": "defillama",
     "name": "Ethena USDe",
     "symbol": "USDe",
+    "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -29189,12 +29277,15 @@
     },
     "collateral": "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-usde",
     "pythFeedId": "0x6ec879b1e9963de5ee97e9c8710b742d6228252a5e2ca12d4ae81d7fe5ee8c5d",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://app.ethena.fi/dashboards/transparency",
-      "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk"
+      "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+      "attestorTier": "niche",
+      "cadence": "real-time"
     },
     "links": [
       {
@@ -31154,6 +31245,7 @@
     "detailProvider": "coingecko",
     "name": "Ondo U.S. Dollar Token",
     "symbol": "USDon",
+    "oneLiner": "USDon is Ondo's regulated USD settlement token for tokenized assets on Ondo Global Markets, backed 1:1 by cash held at U.S. broker-dealers.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -31164,12 +31256,16 @@
     },
     "collateral": "U.S. dollar cash or cash equivalents held in Ondo Global Markets brokerage accounts at regulated U.S. custodial broker-dealers",
     "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "ondo-u-s-dollar-token",
     "cmcSlug": "us-dollar-tokenized-currency-ondo",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
-      "provider": "Ankura Trust Company daily verification"
+      "provider": "Ankura Trust Company daily verification",
+      "attestorTier": "niche",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
@@ -31420,6 +31516,7 @@
     "detailProvider": "defillama",
     "name": "Pax Dollar",
     "symbol": "USDP",
+    "oneLiner": "USDP is Paxos's regulated dollar stablecoin, redeemable 1:1 and backed by U.S. Treasury bills, overnight repos, and FDIC-insured cash.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -31430,13 +31527,18 @@
     },
     "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
     "pegMechanism": "Direct 1:1 redemption through Paxos",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "paxos-standard",
     "cmcSlug": "pax-dollar",
     "pythFeedId": "0xa6c8eca9aea31d6bb81fd6576638f30692d4afaa73237c097c193477aa5003b3",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.paxos.com/usdp-transparency",
-      "provider": "KPMG"
+      "provider": "KPMG",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "PCAOB-registered"
     },
     "links": [
       {
@@ -32151,6 +32253,7 @@
     "detailProvider": "defillama",
     "name": "Sky Dollar",
     "symbol": "USDS",
+    "oneLiner": "USDS is Sky's upgraded successor to DAI, minted 1:1 from DAI or against the same Maker vault system of RWA, USDC, and crypto collateral.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -32161,6 +32264,7 @@
     },
     "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
     "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
+    "mechanismArchetype": "cdp",
     "geckoId": "usds",
     "pythFeedId": "0x77f0971af11cc8bac224917275c1bf55f2319ed5c654a1ca955c82fa2d297ea1",
     "links": [
@@ -32477,6 +32581,7 @@
     "detailProvider": "defillama",
     "name": "Tether",
     "symbol": "USDT",
+    "oneLiner": "USDT (Tether) is the largest dollar stablecoin, mostly backed by short-term U.S. Treasuries with a centralized issuer and quarterly attestations.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -32487,12 +32592,16 @@
     },
     "collateral": "U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)",
     "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "tether",
     "pythFeedId": "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://tether.to/en/transparency",
-      "provider": "BDO Italia"
+      "provider": "BDO Italia",
+      "attestorTier": "regional",
+      "cadence": "quarterly",
+      "attestorJurisdiction": "Italy"
     },
     "links": [
       {
@@ -32761,6 +32870,7 @@
     "detailProvider": "defillama",
     "name": "Ethena USDtb",
     "symbol": "USDTB",
+    "oneLiner": "USDtb is Ethena's T-Bill-backed stablecoin, holding BlackRock's BUIDL fund as primary reserves; designed as a calmer alternative to USDe.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -32771,12 +32881,15 @@
     },
     "collateral": "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
     "pegMechanism": "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
+    "mechanismArchetype": "tbill",
     "geckoId": "usdtb",
     "pythFeedId": "0xe4731214382d8ed70a766930a7722c68064fc7ed4e6d70dbce3c84d4be81bc92",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-      "provider": "Big Four accounting firm via Anchorage Digital Bank"
+      "provider": "Big Four accounting firm via Anchorage Digital Bank",
+      "attestorTier": "big4",
+      "cadence": "daily-nav"
     },
     "links": [
       {
@@ -33391,6 +33504,7 @@
     "detailProvider": "defillama",
     "name": "Ondo US Dollar Yield",
     "symbol": "USDY",
+    "oneLiner": "USDY is Ondo's yield-bearing dollar token, backed by short-term U.S. Treasuries and bank demand deposits; non-U.S. investor permissioned.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -33401,12 +33515,16 @@
     },
     "collateral": "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
     "pegMechanism": "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
+    "mechanismArchetype": "tbill",
     "geckoId": "ondo-us-dollar-yield",
     "pythFeedId": "0xe393449f6aff8a4b6d3e1165a7c9ebec103685f3b41e60db4277b5b6d10e7326",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://ondo.finance/usdy",
-      "provider": "Ankura Trust"
+      "provider": "Ankura Trust",
+      "attestorTier": "niche",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
@@ -34189,6 +34307,7 @@
     "detailProvider": "defillama",
     "name": "Resolv USD",
     "symbol": "USR",
+    "oneLiner": "USR was Resolv Labs's delta-neutral synthetic dollar; it was frozen in 2026 after an EOA-minter exploit produced 80M unbacked tokens and depegged the asset.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -34199,12 +34318,15 @@
     },
     "collateral": "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
     "pegMechanism": "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "resolv-usr",
     "pythFeedId": "0x10b013adec14c0fe839ca0fe54cec9e4d0b6c1585ac6d7e70010dac015e57f9c",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://info.apostro.xyz/resolv-reserves",
-      "provider": "Apostro"
+      "provider": "Apostro",
+      "attestorTier": "niche",
+      "cadence": "real-time"
     },
     "links": [
       {
@@ -34320,6 +34442,7 @@
     "detailProvider": "coingecko",
     "name": "US Sonic Dollar",
     "symbol": "USSD",
+    "oneLiner": "USSD is Sonic Labs's permissionless 1:1 dollar built on Frax's frxUSD infrastructure, backed by tokenized U.S. Treasury products and approved stablecoins.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -34330,11 +34453,14 @@
     },
     "collateral": "Short-duration tokenized U.S. Treasury products held by approved custodians: BlackRock BUIDL (USD Institutional Digital Liquidity Fund), Superstate USTB (Short Duration U.S. Government Securities Fund), and WisdomTree WTGXX (Government Money Market Digital Fund); supported minting collateral also includes USDC, USDT, PYUSD, and USDB",
     "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
+    "mechanismArchetype": "tbill",
     "geckoId": "us-sonic-dollar",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://net.frax.com/embed/balance-sheet/0x000000000eCcFf26B795F73fb0A70d48da657fEf",
-      "provider": "Frax Finance"
+      "provider": "Frax Finance",
+      "attestorTier": "niche",
+      "cadence": "real-time"
     },
     "links": [
       {
@@ -34454,6 +34580,7 @@
     "detailProvider": "coingecko",
     "name": "Superstate USTB",
     "symbol": "USTB",
+    "oneLiner": "USTB is Superstate's tokenized short-duration U.S. Treasury fund, available as a permissioned on-chain wrapper for accredited investors.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -34464,12 +34591,17 @@
     },
     "collateral": "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
     "pegMechanism": "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
+    "mechanismArchetype": "tbill",
     "geckoId": "superstate-short-duration-us-government-securities-fund-ustb",
     "pythFeedId": "0xdea78edd10cd7ae4524cc1744216788746306623bc3553014eeab6062860795d",
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://superstate.com/assets/ustb",
-      "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency"
+      "provider": "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency",
+      "attestorTier": "big4",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "SEC-registered fund (Reg D 506(c))"
     },
     "links": [
       {
@@ -34560,6 +34692,7 @@
     "detailProvider": "coingecko",
     "name": "Spiko US T-Bills Money Market Fund",
     "symbol": "USTBL",
+    "oneLiner": "USTBL is Spiko's regulated short-term U.S. Treasury fund tokenized for EU and global investors under an AMF-authorized UCITS money market structure.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -34570,11 +34703,16 @@
     },
     "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
     "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+    "mechanismArchetype": "tbill",
     "geckoId": "spiko-us-t-bills-money-market-fund",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.spiko.io/",
-      "provider": "Spiko (daily NAV and fund holdings disclosures)"
+      "provider": "Spiko (daily NAV and fund holdings disclosures)",
+      "attestorTier": "self",
+      "cadence": "daily-nav",
+      "attestorJurisdiction": "France",
+      "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
     },
     "links": [
       {
@@ -34705,6 +34843,7 @@
     "detailProvider": "coingecko",
     "name": "dForce USD",
     "symbol": "USX",
+    "oneLiner": "USX is dForce's CDP-style stablecoin currently trading at a deep discount to USD, reflecting legacy debt on the dForce/Unitus lending protocol.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -34715,6 +34854,7 @@
     },
     "collateral": "dForce/Unitus stablecoin reserves and overcollateralized crypto positions; docs describe USDT, USDC, DAI and protocol collateral routes",
     "pegMechanism": "USX is minted and redeemed through dForce/Unitus stablecoin and lending routes, with sUSX as a separate yield-bearing wrapper",
+    "mechanismArchetype": "cdp",
     "geckoId": "token-dforce-usd",
     "cmcSlug": "dforce-usd",
     "protocolSlug": "dforce-lending",

@@ -2,6 +2,7 @@
   "id": "usda-avalon",
   "name": "Avalon USDa",
   "symbol": "USDA",
+  "oneLiner": "USDa is Avalon's BTC-backed CDP stablecoin with 1:1 USDT convertibility, leveraging institutional credit lines and proprietary HFT liquidation logic.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
   "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
+  "mechanismArchetype": "cdp",
   "llamaId": "220",
   "detailProvider": "defillama",
   "geckoId": "usda-2",
