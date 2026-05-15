@@ -7,8 +7,10 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
+  PEG_LABELS,
   PEG_LABELS_SHORT,
 } from "@shared/lib/classification";
+import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import type {
@@ -199,6 +201,18 @@ export function HeroMobileIdentity({
           <BluechipHeaderBadge stablecoinId={coin.id} />
         </div>
         <HeroClassificationLine coin={coin} />
+        {coin.flags.pegCurrency !== "USD"
+         && coin.flags.pegCurrency !== "VAR"
+         && coin.flags.pegCurrency !== "OTHER"
+         && coin.flags.pegCurrency !== "GOLD"
+         && coin.flags.pegCurrency !== "SILVER" && (
+          <span
+            aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
+          >
+            Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
+          </span>
+        )}
         <HeroVariantChip
           variantParent={variantParent}
           variantChipClass={variantChipClass}
@@ -234,6 +248,18 @@ export function HeroDesktopIdentity({
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} />
         </div>
+        {coin.flags.pegCurrency !== "USD"
+         && coin.flags.pegCurrency !== "VAR"
+         && coin.flags.pegCurrency !== "OTHER"
+         && coin.flags.pegCurrency !== "GOLD"
+         && coin.flags.pegCurrency !== "SILVER" && (
+          <span
+            aria-label={`Pegged to ${PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} — tracks 1.00 ${coin.flags.pegCurrency}`}
+            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
+          >
+            Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
+          </span>
+        )}
         {variantParent && variantChipClass ? (
           <div className="mt-1.5">
             <HeroVariantChip

@@ -217,7 +217,7 @@ export function HeroPriceCard({
         )}
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Price
+            Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
           </p>
           <p
             className={`font-extrabold font-mono tracking-tight ${confidenceClass(coinData.priceConfidence)} ${
@@ -247,11 +247,13 @@ export function HeroPriceCard({
 }
 
 export function HeroMarketCapCard({
+  coin,
   mcap,
   safePrevDay,
   prevDayTrendClass,
   mobile = false,
 }: {
+  coin: StablecoinMeta;
   mcap: number;
   safePrevDay: number | null;
   prevDayTrendClass: string;
@@ -271,6 +273,9 @@ export function HeroMarketCapCard({
       <p className={`font-bold font-mono tracking-tight ${mobile ? "text-lg" : "text-2xl"}`}>
         {formatCurrency(mcap)}
       </p>
+      {coin.flags.pegCurrency !== "USD" && (
+        <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>
+      )}
       <p className={`mt-1 text-xs font-mono ${prevDayTrendClass}`}>
         {safePrevDay == null ? "—" : formatPercentChange(mcap, safePrevDay)}{" "}
         <span className="text-muted-foreground">24h</span>
