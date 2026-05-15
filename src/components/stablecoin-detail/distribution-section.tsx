@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -121,7 +122,7 @@ function DonutCard({
   data,
   total,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle: string;
   ariaLabel: string;
   data: DonutDatum[];
@@ -237,7 +238,9 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <DetailSectionTitle>Supply by Chain</DetailSectionTitle>
+          <DetailSectionTitle>
+            <MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -250,7 +253,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title="Supply by Chain"
+      title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
       subtitle="Circulating"
       ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}

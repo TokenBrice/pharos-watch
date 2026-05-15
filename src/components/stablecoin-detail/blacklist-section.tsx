@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { BlacklistDetailStats } from "./blacklist-detail-stats";
 import { BlacklistDetailChart } from "./blacklist-detail-chart";
 import { BlacklistDetailEventFeed } from "./blacklist-detail-event-feed";
@@ -30,7 +31,9 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
       <section id="blacklist">
         <Card className="p-4">
           <div className="mb-3">
-            <DetailSectionTitle>Blacklist Activity</DetailSectionTitle>
+            <DetailSectionTitle>
+              <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
+            </DetailSectionTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               Addresses the issuer has frozen, released, or destroyed on this asset.
             </p>
@@ -52,7 +55,9 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
       <section id="blacklist-history">
         <Card className="p-4">
           <div className="mb-3">
-            <DetailSectionTitle>Recent Blacklist Events</DetailSectionTitle>
+            <DetailSectionTitle>
+              <MethodologyLabel topic="blacklistTracker">Recent Blacklist Events</MethodologyLabel>
+            </DetailSectionTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               Latest 10 freeze-ledger actions on this asset across all supported chains.
             </p>

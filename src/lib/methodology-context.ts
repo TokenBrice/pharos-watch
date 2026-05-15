@@ -77,7 +77,10 @@ export type MethodologyContextKey =
   | "chainHealthEnvironment"
   | "chainHealthConcentration"
   | "chainHealthPegStability"
-  | "chainHealthBackingDiversity";
+  | "chainHealthBackingDiversity"
+  | "blacklistTracker"
+  | "bluechip"
+  | "proofOfReserves";
 
 export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyContextItem> = {
   psi: {
@@ -428,5 +431,27 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     methodologyPath: "/methodology/#chain-health-score",
     versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
     changelogPath: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+  },
+  blacklistTracker: {
+    title: "Blacklist Tracker",
+    summary:
+      "Per-coin record of issuer-led freezes, releases, and destroys, drawn from on-chain freeze-ledger events on supported assets.",
+    detail:
+      "Centralized stablecoins with admin freeze functions are tracked; events outside the supported asset set are excluded.",
+    methodologyPath: "/methodology/#blacklist-tracker",
+  },
+  bluechip: {
+    title: "Bluechip Rating",
+    summary:
+      "Top-tier classification for stablecoins meeting Pharos's strictest safety, liquidity, and resilience thresholds.",
+    methodologyPath: "/methodology/#bluechip",
+  },
+  proofOfReserves: {
+    title: "Proof of Reserves",
+    summary:
+      "Issuer-published evidence — independent audit, real-time on-chain feed, or self-reported attestation — that circulating supply is matched by reserve assets.",
+    detail:
+      "Tier reflects attestor quality (Big-4 / regional CPA / niche / self / none) and cadence (daily-NAV / real-time / monthly / quarterly / ad-hoc).",
+    methodologyPath: "/methodology/#proof-of-reserves",
   },
 };

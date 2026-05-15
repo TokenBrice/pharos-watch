@@ -3,6 +3,7 @@
 import { FlowEventFeed } from "@/components/flow-event-feed";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { FlowSummaryCard } from "@/components/flow-summary-card";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { Card } from "@/components/ui/card";
 
 interface FlowsSectionProps {
@@ -22,7 +23,9 @@ export function FlowsSection({ stablecoinId, hasFlows }: FlowsSectionProps) {
       <section id="flow-history">
         <Card className="p-4">
           <div className="mb-3">
-            <DetailSectionTitle>Mint &amp; Burn Flow History</DetailSectionTitle>
+            <DetailSectionTitle>
+              <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>
+            </DetailSectionTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               Counted economic flow only. Excludes bridge transfers, review-required burns, and atomic roundtrips.
             </p>

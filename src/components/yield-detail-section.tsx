@@ -33,7 +33,7 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <DetailSectionTitle id="yield-intelligence-heading">
-                Yield Intelligence
+                <MethodologyLabel topic="pys">Yield Intelligence</MethodologyLabel>
               </DetailSectionTitle>
             </div>
             {headerEnd}
