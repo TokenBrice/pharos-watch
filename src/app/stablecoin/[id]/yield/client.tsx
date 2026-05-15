@@ -1,0 +1,432 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo } from "react";
+import { AlertTriangle, ArrowLeft, ArrowLeftRight } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { QueryErrorNotice } from "@/components/query-error-notice";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { YieldHistoryChart } from "@/components/yield-history-chart";
+import { PysBreakdown } from "@/components/pys-breakdown";
+import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
+import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
+import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
+import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
+import { buildStablecoinUrl } from "@/lib/urls";
+import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import { toTimestampMs } from "@/components/yield-history-chart-model";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { formatChartDate, formatPercent } from "@shared/lib/format";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
+
+interface YieldAnalysisClientProps {
+  id: string;
+  staticCoin: StablecoinStaticMeta;
+  logoSrc?: string;
+}
+
+interface WarningSignalEvent {
+  timestamp: number;
+  signal: string;
+  apy: number;
+  sourceLabel: string | null;
+}
+
+interface SourceSwitchEvent {
+  timestamp: number;
+  apy: number;
+  toSourceKey: string | null;
+  toSourceLabel: string | null;
+  fromSourceLabel: string | null;
+}
+
+function StablecoinYieldDetailHeader({
+  staticCoin,
+  logoSrc,
+  ranking,
+  sourceRiskDrivers,
+}: {
+  staticCoin: StablecoinStaticMeta;
+  logoSrc?: string;
+  ranking: YieldRanking | null;
+  sourceRiskDrivers: readonly YieldSourceRiskDriver[];
+}) {
+  const pysBreakdown = ranking
+    ? computePysBreakdown(
+        ranking.apy30d,
+        ranking.safetyScore,
+        ranking.yieldStability,
+        ranking.benchmarkRate,
+        ranking.sourceRisk?.sourceRiskPenalty ?? null,
+      )
+    : null;
+  const pysColor = ranking ? getPysColor(ranking.pharosYieldScore) : "text-muted-foreground";
+
+  return (
+    <section className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-start gap-3">
+            <StablecoinLogo src={logoSrc} name={staticCoin.name} size={56} />
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-extrabold tracking-tighter text-foreground sm:text-3xl">
+                  {staticCoin.name}
+                </h1>
+                <span className="font-mono text-base text-muted-foreground">{staticCoin.symbol}</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {GOVERNANCE_LABELS[staticCoin.flags.governance] ?? staticCoin.flags.governance} ·{" "}
+                {BACKING_LABELS[staticCoin.flags.backing] ?? staticCoin.flags.backing} ·{" "}
+                {PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency}
+              </p>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                Source comparison, warning signals timeline, and source-switch history for{" "}
+                {staticCoin.symbol}.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {ranking && pysBreakdown ? (
+          <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pharos Yield Score
+            </p>
+            <PysBreakdown
+              mode="inline"
+              score={ranking.pharosYieldScore}
+              toneClass={pysColor}
+              apy30d={ranking.apy30d}
+              effectiveYield={pysBreakdown.effectiveYield}
+              benchmarkAdjustment={pysBreakdown.benchmarkAdjustment}
+              benchmarkSpread={pysBreakdown.benchmarkSpread}
+              benchmarkLabel={ranking.benchmarkLabel}
+              benchmarkSelectionMode={ranking.benchmarkSelectionMode}
+              sourceRiskPenalty={pysBreakdown.sourceRiskPenalty}
+              adjustedRiskPenalty={pysBreakdown.adjustedRiskPenalty}
+              sustainabilityMult={pysBreakdown.sustainabilityMult}
+              grade={ranking.safetyGrade}
+              safetyScore={ranking.safetyScore}
+              sourceRiskDrivers={sourceRiskDrivers}
+            />
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function EmptyStateCard({ title, message }: { title: string; message: string }) {
+  return (
+    <Card className="rounded-xl">
+      <CardContent className="px-4 py-6">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalEvent[] {
+  const events: WarningSignalEvent[] = [];
+  for (const point of history) {
+    if (!point.warningSignals || point.warningSignals.length === 0) continue;
+    const timestamp = toTimestampMs(point.date);
+    if (!Number.isFinite(timestamp)) continue;
+    for (const signal of point.warningSignals) {
+      events.push({
+        timestamp,
+        signal,
+        apy: point.apy,
+        sourceLabel: point.yieldSource ?? null,
+      });
+    }
+  }
+  return events.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEvent[] {
+  const events: SourceSwitchEvent[] = [];
+  let previousSourceLabel: string | null = null;
+  for (const point of history) {
+    const currentSourceLabel = point.yieldSource ?? null;
+    if (point.sourceSwitch) {
+      const timestamp = toTimestampMs(point.date);
+      if (!Number.isFinite(timestamp)) continue;
+      events.push({
+        timestamp,
+        apy: point.apy,
+        toSourceKey: point.sourceKey ?? null,
+        toSourceLabel: currentSourceLabel,
+        fromSourceLabel: previousSourceLabel,
+      });
+    }
+    previousSourceLabel = currentSourceLabel;
+  }
+  return events.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAnalysisClientProps) {
+  const rankingsQuery = useYieldRankings();
+  const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
+
+  const coin = TRACKED_META_BY_ID.get(id);
+  const isPreLaunch = coin?.status === "pre-launch";
+  const isFrozen = coin?.status === "frozen";
+  const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
+
+  const ranking = useMemo(
+    () => rankingsQuery.data?.rankings.find((row) => row.id === id) ?? null,
+    [rankingsQuery.data, id],
+  );
+
+  const sourceExplorer = useMemo(() => (ranking ? buildYieldSourceExplorerModel(ranking) : null), [ranking]);
+
+  const warningEvents = useMemo(
+    () => deriveWarningEvents(historyQuery.data?.history ?? []),
+    [historyQuery.data],
+  );
+
+  const sourceSwitchEvents = useMemo(
+    () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
+    [historyQuery.data],
+  );
+
+  const allSourceKeys = useMemo(() => {
+    if (!sourceExplorer) return undefined;
+    const keys = sourceExplorer.allSources.map((source) => source.sourceKey);
+    return keys.length > 1 ? keys : undefined;
+  }, [sourceExplorer]);
+
+  const backLink = (
+    <Button variant="ghost" asChild className="w-fit">
+      <Link href={buildStablecoinUrl(id)}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to {staticCoin.symbol} detail
+      </Link>
+    </Button>
+  );
+
+  if (rankingsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <Skeleton className="h-[160px] w-full rounded-xl" />
+        <Skeleton className="h-[420px] w-full rounded-xl" />
+        <Skeleton className="h-[260px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (rankingsQuery.error && !ranking) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <QueryErrorNotice
+          error={rankingsQuery.error instanceof Error ? rankingsQuery.error : null}
+          hasData={false}
+        />
+      </div>
+    );
+  }
+
+  if (isPreLaunch) {
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <EmptyStateCard
+          title="Pre-launch — no yield data yet"
+          message={`${staticCoin.name} is in pre-launch tracking. Yield history will appear here once the stablecoin is live and the cron has observed source data.`}
+        />
+      </div>
+    );
+  }
+
+  if (!ranking) {
+    const reason = isFrozen
+      ? "This stablecoin is frozen — historical yield data is no longer being refreshed."
+      : shouldHaveYieldData
+      ? "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet."
+      : "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.";
+    return (
+      <div className="space-y-6">
+        {backLink}
+        <StablecoinYieldDetailHeader staticCoin={staticCoin} logoSrc={logoSrc} ranking={null} sourceRiskDrivers={[]} />
+        <EmptyStateCard title="No yield data available" message={reason} />
+      </div>
+    );
+  }
+
+  const benchmarkIsFallback =
+    ranking.benchmarkSelectionMode === "fallback-usd" || !!ranking.benchmarkIsFallback;
+  const benchmarkRate = ranking.benchmarkRate ?? rankingsQuery.data?.riskFreeRate ?? 0;
+  const medianApy = rankingsQuery.data?.medianApy ?? 0;
+  const historySources = sourceExplorer?.historySources ?? [];
+  const sourceSwitchCount30d = ranking.sourceRisk?.sourceSwitchCount30d ?? null;
+  const currentWarningSignals = ranking.warningSignals;
+
+  return (
+    <div className="space-y-6">
+      {backLink}
+
+      <StablecoinYieldDetailHeader
+        staticCoin={staticCoin}
+        logoSrc={logoSrc}
+        ranking={ranking}
+        sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
+      />
+
+      <Card id="source-comparison" className="rounded-xl border-l-[3px] border-l-emerald-500">
+        <CardHeader className="pb-2">
+          <DetailSectionTitle>Source comparison</DetailSectionTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            APY across every retained source over time, plotted against the benchmark hurdle rate
+            {medianApy > 0 ? " and peer median." : "."}
+          </p>
+          <YieldHistoryChart
+            stablecoinId={id}
+            benchmarkRate={benchmarkRate}
+            benchmarkLabel={ranking.benchmarkLabel}
+            benchmarkIsFallback={benchmarkIsFallback}
+            medianApy={medianApy}
+            availableSources={historySources}
+            hideSourceSelector
+            externalSourceKeys={allSourceKeys}
+          />
+        </CardContent>
+      </Card>
+
+      <Card id="warning-signals" className="rounded-xl">
+        <CardHeader className="pb-2">
+          <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
+        </CardHeader>
+        <CardContent>
+          {historyQuery.isLoading ? (
+            <Skeleton className="h-[160px] w-full rounded-xl" />
+          ) : warningEvents.length === 0 ? (
+            currentWarningSignals.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No warning signals recorded for this stablecoin in the past 90 days.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Historical signal occurrences are not exposed by the yield history API. Showing
+                  currently active signals only.
+                </p>
+                <ul className="space-y-2">
+                  {currentWarningSignals.map((signal) => (
+                    <li
+                      key={signal}
+                      className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2"
+                    >
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                      <div className="text-sm text-amber-800 dark:text-amber-200">
+                        <span className="font-medium">{formatYieldWarningSignal(signal)}</span>
+                        <span className="block text-xs text-amber-700/80 dark:text-amber-300/75">
+                          {formatYieldWarningSignalDescription(signal)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          ) : (
+            <ul className="space-y-2">
+              {warningEvents.map((event, index) => (
+                <li
+                  key={`${event.timestamp}-${event.signal}-${index}`}
+                  className="flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium">{formatYieldWarningSignal(event.signal)}</span>
+                      <span className="font-mono text-xs text-amber-700/80 dark:text-amber-300/75">
+                        {formatChartDate(event.timestamp, "with-time")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-700/80 dark:text-amber-300/75">
+                      {event.sourceLabel ? `${event.sourceLabel} at ` : "APY "}
+                      <span className="font-mono">{formatPercent(event.apy)}</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card id="source-switches" className="rounded-xl">
+        <CardHeader className="pb-2">
+          <DetailSectionTitle>Source-switch history</DetailSectionTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {historyQuery.isLoading ? (
+            <Skeleton className="h-[120px] w-full rounded-xl" />
+          ) : sourceSwitchEvents.length === 0 ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                No source switches recorded in the past 90 days.
+                {sourceSwitchCount30d != null
+                  ? ` (30-day switch count: ${sourceSwitchCount30d}.)`
+                  : ""}
+              </p>
+              {sourceExplorer?.sourceSwitch.changed ? (
+                <p>
+                  Latest published snapshot switched away from{" "}
+                  {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ?? "the previous source"}.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <>
+              {sourceSwitchCount30d != null ? (
+                <p className="text-xs text-muted-foreground">
+                  {sourceSwitchCount30d} source switch{sourceSwitchCount30d === 1 ? "" : "es"} in the past 30
+                  days.
+                </p>
+              ) : null}
+              <ul className="space-y-2">
+                {sourceSwitchEvents.map((event) => (
+                  <li
+                    key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
+                    className="flex items-start gap-3 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2"
+                  >
+                    <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
+                    <div className="min-w-0 flex-1 text-sm text-sky-800 dark:text-sky-200">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="font-medium">
+                          {event.fromSourceLabel
+                            ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
+                            : `Switched to ${event.toSourceLabel ?? "—"}`}
+                        </span>
+                        <span className="font-mono text-xs text-sky-700/80 dark:text-sky-300/75">
+                          {formatChartDate(event.timestamp, "with-time")}
+                        </span>
+                      </div>
+                      <p className="text-xs text-sky-700/80 dark:text-sky-300/75">
+                        APY at switch: <span className="font-mono">{formatPercent(event.apy)}</span>
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
