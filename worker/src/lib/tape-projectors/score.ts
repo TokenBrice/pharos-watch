@@ -2,6 +2,7 @@
  * score.upgraded / score.downgraded projectors. Source: `safety_grade_history`
  * (explicit transition table — rows are written ONLY on grade change).
  */
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import {
   buildTapeEventId,
   deriveIssuerId,
@@ -99,7 +100,7 @@ async function projectScoreByVariant(
       issuerId: deriveIssuerId(row.stablecoin_id),
       pegCurrency: null,
       chain: null,
-      title: `${row.stablecoin_id} grade ${row.prev_grade} → ${row.grade}`,
+      title: `${TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id} grade ${row.prev_grade} → ${row.grade}`,
       summary: `Safety grade ${isUpgrade ? "upgraded" : "downgraded"} from ${row.prev_grade} to ${row.grade}.`,
       payload: {
         prevGrade: row.prev_grade,
