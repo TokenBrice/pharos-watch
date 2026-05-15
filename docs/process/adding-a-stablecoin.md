@@ -164,6 +164,8 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 ### Collect when applicable
 
+- `oneLiner`
+- `mechanismArchetype`
 - `llamaId`
 - `detailProvider`
 - `geckoId`
@@ -172,7 +174,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `pythFeedId`
 - `pegReferenceId`
 - `commodityOunces`
-- `proofOfReserves`
+- `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`)
 - `jurisdiction`
 - `tradedContracts`
 - `dependencies`
@@ -234,6 +236,9 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `variantKind` | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity` |
 | `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
 | `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
+| `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` |
+| `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none` |
+| `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `monthly` \| `quarterly` \| `ad-hoc` \| `none` |
 | `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
 
 ### Classification rules that are easy to get wrong
@@ -278,6 +283,37 @@ Populate `reserves[]` with real slices, not generic prose.
 - Keep risk tiers aligned with `docs/report-cards.md`.
 - Even with `liveReservesConfig`, keep `reserves[]` up to date because fallback views and dependency logic still use it.
 
+### Hero verdict, mechanism archetype, and attestor-tier surfacing
+
+Three optional clusters on `StablecoinMeta` drive the detail-page hero verdict, mechanism schematic, and attestor-tier badge added in the May 2026 detail-page work (see methodology changelog `v3.12 (2026-05-15)` in `docs/methodology-page.md`). All are additive — omit when uncertain and the UI falls back cleanly.
+
+**`oneLiner` (top-level string, ≤160 chars)** — plain-language one-sentence verdict rendered as the hero TL;DR.
+
+- Active asset: present-tense, names issuer + backing + redemption shape. Example for USDC: "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund."
+- Synthetic / hedged asset: name the hedge shape and where yield comes from. Example for USDe: "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates."
+- Frozen / paused asset: use past tense and name the event. Example: "USR was Resolv Labs's delta-neutral synthetic dollar that paused issuance in 2026..."
+
+**`mechanismArchetype` (top-level enum)** — coarse mechanism class that drives the schematic diagram shown above the Peg Stability prose in `KeyInfoCard`.
+
+Mapping cheatsheet:
+
+- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD)
+- `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
+- `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
+- `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
+- `algorithmic`: algorithmic backing flag (USDD, historical FRAX)
+
+Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.
+
+**`proofOfReserves` extensions** — four additive fields inside the existing `proofOfReserves` object, used for the attestor-tier badge.
+
+- `attestorTier`: `"big4"` (Deloitte, EY, KPMG, PwC), `"regional"` (BDO, RSM, Grant Thornton, Crowe, Mazars, Moore Stephens, Baker Tilly, Withum), `"niche"` (smaller / jurisdictionally-thin firms; single-purpose attestors), `"self"` (self-reported, no third-party signoff), or `"none"` (PoR block exists but is unhelpful — usually omit the whole block instead).
+- `cadence`: `"daily-nav"` (daily NAV publications, T-Bill funds, BUIDL-style), `"real-time"` (live on-chain feeds, Chainlink PoR, on-chain dashboards), `"monthly"` (standard monthly attestations), `"quarterly"`, `"ad-hoc"` (irregular or one-off), or `"none"` (not actually published).
+- `attestorJurisdiction`: free-text country/region (e.g. `"United States"`).
+- `attestorLicense`: free-text license/registration (e.g. `"PCAOB-registered"`).
+
+The durable schema lives in `shared/types/core.ts` and `shared/types/stablecoin-meta-schemas.ts`; the originating implementation plan is in `/agents/stablecoin-detail-improvements-plan-2026-05-15.md` (scratch — refer to the schema files and methodology page for durable spec).
+
 ### When to override resilience/decentralization fields
 
 Default inference exists, but many real assets need explicit overrides.
@@ -304,6 +340,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
   "id": "ausd-acme",
   "name": "Acme USD",
   "symbol": "AUSD",
+  "oneLiner": "AUSD is Acme's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasury bills held in a bankruptcy-remote vehicle.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -317,6 +354,16 @@ Add the new object to the asset's per-coin JSON file using current field names a
   "geckoId": "acme-usd",
   "collateral": "Short-term U.S. Treasury bills held in a bankruptcy-remote vehicle",
   "pegMechanism": "1:1 mint and redemption against issuer-approved cash subscriptions",
+  "mechanismArchetype": "fiat-cash",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://acme.example/transparency",
+    "provider": "Deloitte",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
+  },
   "links": [
     { "label": "Website", "url": "https://acme.example" },
     { "label": "X", "url": "https://x.com/acme" },
@@ -330,6 +377,8 @@ Add the new object to the asset's per-coin JSON file using current field names a
   ]
 }
 ```
+
+`oneLiner`, `mechanismArchetype`, and the four `proofOfReserves` extension fields (`attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`) drive the hero verdict, mechanism schematic, and attestor-tier badge on the detail page. Omit when uncertain — they're optional and the UI falls back cleanly. See the Phase 3 "Hero verdict, mechanism archetype, and attestor-tier surfacing" subsection for full guidance.
 
 ### Current registry editing checklist
 
@@ -643,6 +692,31 @@ Do not hardcode direct pushes to `main` into the process. Follow the repo's norm
 - `independent-audit`
 - `real-time`
 - `self-reported`
+
+### Current proof-of-reserves attestor tiers
+
+- `big4`
+- `regional`
+- `niche`
+- `self`
+- `none`
+
+### Current proof-of-reserves cadences
+
+- `daily-nav`
+- `real-time`
+- `monthly`
+- `quarterly`
+- `ad-hoc`
+- `none`
+
+### Current mechanism archetypes
+
+- `fiat-cash`
+- `tbill`
+- `cdp`
+- `synthetic-delta-neutral`
+- `algorithmic`
 
 ### Current live-reserve semantics
 
