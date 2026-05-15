@@ -42,17 +42,8 @@ jobs:
         run: |
           cd worker
           npx --no-install wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json > /tmp/wrangler-pages-deployments.json
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require("node:fs");
-          const entries = JSON.parse(fs.readFileSync("/tmp/wrangler-pages-deployments.json", "utf8"));
-          const current = Array.isArray(entries) && entries.length > 0 ? entries[0] : null;
-          const rawId = current?.Id ?? current?.id ?? current?.deployment_id ?? "";
-          const id = typeof rawId === "string" ? rawId : "";
-          if (!id && current) {
-            console.warn("[capture] wrangler entry lacked a recognized deployment id field; keys:", Object.keys(current).join(","));
-          }
-          process.stdout.write(`deployment_id=${id}\n`);
-          NODE
+          cd ..
+          node .github/scripts/parse-pages-deployment-id.mjs >> "$GITHUB_OUTPUT"
       - if: ${{ steps.capture.outcome == 'failure' || steps.capture.outputs.deployment_id == '' }}
         name: Warn that automated rollback is disabled for this deploy
         run: |
@@ -155,4 +146,4 @@ jobs:
           cache-npm: "false"
           install-deps: "false"
       - name: Roll back Pages production to previous successful deployment
-        run: node scripts/rollback-pages-deployment.mjs
+        run: node scripts/maintenance/rollback-pages-deployment.mjs

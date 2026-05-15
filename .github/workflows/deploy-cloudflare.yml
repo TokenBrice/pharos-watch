@@ -30,7 +30,7 @@ jobs:
           DEPLOY_BASE_SHA: ${{ github.event.before }}
           DEPLOY_EVENT_NAME: ${{ github.event_name }}
           DEPLOY_HEAD_SHA: ${{ github.sha }}
-        run: node scripts/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+        run: node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
 
   validate:
     needs: detect-changes
@@ -88,23 +88,8 @@ jobs:
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
           npx --no-install wrangler versions upload --message "GitHub Actions candidate ${GITHUB_SHA}"
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require("node:fs");
-          const entries = fs
-            .readFileSync("/tmp/wrangler-output.jsonl", "utf8")
-            .split("\n")
-            .filter(Boolean)
-            .map((line) => JSON.parse(line));
-          const uploadEvent = [...entries].reverse().find((entry) => entry.type === "version-upload");
-          if (!uploadEvent?.version_id) {
-            throw new Error("Missing version-upload event in Wrangler output");
-          }
-          if (!uploadEvent?.preview_url) {
-            throw new Error("Missing preview URL in Wrangler version-upload output");
-          }
-          process.stdout.write(`version_id=${uploadEvent.version_id}\n`);
-          process.stdout.write(`preview_url=${uploadEvent.preview_url}\n`);
-          NODE
+          cd ..
+          node .github/scripts/parse-version-upload.mjs >> "$GITHUB_OUTPUT"
 
   deploy-worker:
     needs:
@@ -263,7 +248,7 @@ jobs:
           node-version: 24
           tooling-cache: "true"
       - name: Fetch digests from the target API environment
-        run: npx tsx scripts/sync-digests.ts --output data/digests.json
+        run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - run: npm run build
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
@@ -274,17 +259,8 @@ jobs:
         run: |
           cd worker
           npx --no-install wrangler pages deployment list --project-name=stablecoin-dashboard --environment=production --json > /tmp/wrangler-pages-deployments.json
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const fs = require("node:fs");
-          const entries = JSON.parse(fs.readFileSync("/tmp/wrangler-pages-deployments.json", "utf8"));
-          const current = Array.isArray(entries) && entries.length > 0 ? entries[0] : null;
-          const rawId = current?.Id ?? current?.id ?? current?.deployment_id ?? "";
-          const id = typeof rawId === "string" ? rawId : "";
-          if (!id && current) {
-            console.warn("[capture] wrangler entry lacked a recognized deployment id field; keys:", Object.keys(current).join(","));
-          }
-          process.stdout.write(`deployment_id=${id}\n`);
-          NODE
+          cd ..
+          node .github/scripts/parse-pages-deployment-id.mjs >> "$GITHUB_OUTPUT"
       - if: ${{ steps.capture-pages.outcome == 'failure' || steps.capture-pages.outputs.deployment_id == '' }}
         name: Warn that automated Pages rollback is disabled for this deploy
         run: |
@@ -447,7 +423,7 @@ jobs:
         env:
           CF_PAGES_PROJECT_NAME: stablecoin-dashboard
           CF_PAGES_DEPLOYMENT_ID: ${{ steps.capture-pages.outputs.deployment_id }}
-        run: node scripts/rollback-pages-deployment.mjs
+        run: node scripts/maintenance/rollback-pages-deployment.mjs
       - name: Fail after post-publish smoke failure
         if: ${{ steps.post-publish-smokes.outcome == 'failure' }}
         run: exit 1
