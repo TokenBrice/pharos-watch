@@ -202,15 +202,17 @@ function extractAttr(html, regex) {
 }
 
 function decodeHtml(value) {
-  return value
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([a-f0-9]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+  return value.replace(/&(#(\d+)|#x([a-f0-9]+)|quot|#39|apos|amp|lt|gt);/gi, (entity, token, decimal, hex) => {
+    if (decimal) return String.fromCodePoint(Number(decimal));
+    if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+    const named = token.toLowerCase();
+    if (named === "quot") return '"';
+    if (named === "#39" || named === "apos") return "'";
+    if (named === "amp") return "&";
+    if (named === "lt") return "<";
+    if (named === "gt") return ">";
+    return entity;
+  });
 }
 
 function parseAttributes(tag) {
@@ -283,9 +285,11 @@ function getRobotsConflicts(robotsTags) {
 
 function normalizeHref(href) {
   if (!href) return null;
-  if (href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) {
+  if (href.startsWith("#")) {
     return null;
   }
+  const scheme = /^[a-z][a-z0-9+.-]*:/i.exec(href)?.[0].toLowerCase();
+  if (scheme && scheme !== "http:" && scheme !== "https:") return null;
 
   try {
     let target = href;
@@ -316,18 +320,22 @@ function parseSitemapLocs(xml) {
 
 function extractJsonLdBlocks(html) {
   const blocks = [];
-  const scriptPattern = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
-  let match = scriptPattern.exec(html);
-  while (match) {
-    const scriptHtml = match[0];
-    const openTagEnd = scriptHtml.indexOf(">");
-    const openTag = scriptHtml.slice(0, openTagEnd + 1);
+  const lowerHtml = html.toLowerCase();
+  let offset = 0;
+  while (offset < html.length) {
+    const scriptStart = lowerHtml.indexOf("<script", offset);
+    if (scriptStart < 0) break;
+    const openTagEnd = html.indexOf(">", scriptStart);
+    if (openTagEnd < 0) break;
+    const closeTagStart = lowerHtml.indexOf("</script>", openTagEnd + 1);
+    if (closeTagStart < 0) break;
+    const openTag = html.slice(scriptStart, openTagEnd + 1);
     const attrs = parseAttributes(openTag);
     const type = (attrs.get("type") ?? "").split(";")[0].trim().toLowerCase();
     if (type === "application/ld+json") {
-      blocks.push(scriptHtml.slice(openTagEnd + 1, scriptHtml.length - "</script>".length));
+      blocks.push(html.slice(openTagEnd + 1, closeTagStart));
     }
-    match = scriptPattern.exec(html);
+    offset = closeTagStart + "</script>".length;
   }
   return blocks;
 }

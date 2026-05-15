@@ -10,6 +10,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { JSDOM } from "jsdom";
 
 const OUT_DIR = path.resolve("out");
 
@@ -31,11 +32,9 @@ const FORBIDDEN_COPY = [
 ];
 
 function stripHtml(html) {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ");
+  const document = new JSDOM(html).window.document;
+  document.querySelectorAll("script, style").forEach((node) => node.remove());
+  return (document.body?.textContent ?? document.documentElement.textContent ?? "").replace(/\s+/g, " ");
 }
 
 function preview(text, index) {

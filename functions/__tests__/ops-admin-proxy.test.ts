@@ -334,6 +334,38 @@ describe("ops admin proxy", () => {
     expect(await response.json()).toEqual({ error: "Operator API upstream auth failed" });
   });
 
+  it("does not treat spoofed Cloudflare Access substrings as auth redirects", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
+      status: 302,
+      headers: { Location: "https://example.com/login?next=pharos.cloudflareaccess.com" },
+    })));
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBeNull();
+  });
+
+  it("preserves malformed upstream redirect locations", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, {
+      status: 302,
+      headers: { Location: "not a valid URL with pharos.cloudflareaccess.com" },
+    })));
+
+    const response = await onRequest({
+      request: makeAuthedRequest("https://ops.pharos.watch/api/admin/status"),
+      env: BASE_ENV,
+      params: { path: "status" },
+    });
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBeNull();
+  });
+
   it("preserves upstream Retry-After headers on degraded admin responses", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "temporarily unavailable" }), {
       status: 503,

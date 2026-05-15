@@ -55,6 +55,15 @@ function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | n
   return resolveWildcardProxyPath(params.path, "/api/");
 }
 
+function isCloudflareAccessLocation(location: string | null): boolean {
+  if (!location) return false;
+  try {
+    const hostname = new URL(location).hostname;
+    return hostname === "cloudflareaccess.com" || hostname.endsWith(".cloudflareaccess.com");
+  } catch {
+    return false;
+  }
+}
 
 function resolveOpsAdminProxyTimeoutMs(upstreamPath: string): number {
   if (upstreamPath === "/api/audit-depeg-history") {
@@ -203,7 +212,7 @@ export const onRequest = async (context: OpsAdminProxyContext): Promise<Response
   if (
     upstreamResult.response.status >= 300 &&
     upstreamResult.response.status < 400 &&
-    redirectLocation?.includes(".cloudflareaccess.com")
+    isCloudflareAccessLocation(redirectLocation)
   ) {
     return withNoindex(jsonError(502, "Operator API upstream auth failed"));
   }

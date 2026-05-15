@@ -50,6 +50,16 @@ function ensureUrl(input) {
   return url.toString();
 }
 
+function isCloudflareAccessLocation(location) {
+  if (!location) return false;
+  try {
+    const hostname = new URL(location).hostname;
+    return hostname === "cloudflareaccess.com" || hostname.endsWith(".cloudflareaccess.com");
+  } catch {
+    return false;
+  }
+}
+
 async function fetchText(url, headers) {
   const response = await fetch(url, { headers, redirect: "manual" });
   const body = await response.text();
@@ -241,7 +251,7 @@ export function shouldSkipOpsUiProxyAssertion(response, cookieHeader) {
   return (
     response.status === 401 ||
     (response.status === 302 &&
-      location.includes(".cloudflareaccess.com") &&
+      isCloudflareAccessLocation(location) &&
       !hasOpsUiAccessSessionCookie(cookieHeader ?? ""))
   );
 }
@@ -310,7 +320,7 @@ export async function run() {
   } else {
     const location = ui.response.headers.get("Location") ?? "";
     assert(ui.response.status === 302, `Expected ops UI 200 or 302, got ${ui.response.status}`);
-    assert(location.includes(".cloudflareaccess.com"), "Ops UI redirect did not point to Cloudflare Access");
+    assert(isCloudflareAccessLocation(location), "Ops UI redirect did not point to Cloudflare Access");
     console.log("[smoke-ops] OK ops UI access gate");
   }
   const uiCookieHeader = mergeCookieHeader(extractCookiePairs(ui.response));
@@ -338,7 +348,7 @@ export async function run() {
   } else {
     const location = adminApi.response.headers.get("Location") ?? "";
     assert(adminApi.response.status === 302, `Expected /admin-api/ 200 or 302, got ${adminApi.response.status}`);
-    assert(location.includes(".cloudflareaccess.com"), "/admin-api/ redirect did not point to Cloudflare Access");
+    assert(isCloudflareAccessLocation(location), "/admin-api/ redirect did not point to Cloudflare Access");
     console.log("[smoke-ops] OK /admin-api/ access gate");
   }
 

@@ -1,0 +1,6 @@
+name: Pharos CodeQL config
+
+paths-ignore:
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"

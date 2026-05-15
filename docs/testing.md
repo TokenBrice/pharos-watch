@@ -150,6 +150,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - defined in `.github/workflows/codeql.yml`
 - runs on pushes to `main`, pull requests to `main`, and a weekly Monday schedule
 - analyzes the JavaScript/TypeScript codebase separately from the deploy pipeline
+- uses `.github/codeql/codeql-config.yml` to exclude Vitest/test fixtures from production security scanning
 
 11. `Dependency Audit`:
 

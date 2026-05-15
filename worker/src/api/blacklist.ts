@@ -103,7 +103,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings.push(eventType);
   }
   if (query) {
-    const escaped = query.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    const escaped = query.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
     conditions.push("LOWER(address) LIKE ? ESCAPE '\\'");
     filterBindings.push(`%${escaped}%`);
   }

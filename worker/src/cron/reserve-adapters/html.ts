@@ -101,9 +101,18 @@ export function extractLabeledSpanText(html: string, label: string): string | nu
 }
 
 function decodeEscapedJsonFragment(fragment: string): string {
-  return fragment
-    .replace(/\\\\/g, "\\")
-    .replace(/\\"/g, "\"");
+  let decoded = "";
+  for (let index = 0; index < fragment.length; index += 1) {
+    const char = fragment[index];
+    const next = fragment[index + 1];
+    if (char === "\\" && (next === "\\" || next === "\"")) {
+      decoded += next;
+      index += 1;
+      continue;
+    }
+    decoded += char;
+  }
+  return decoded;
 }
 
 export function extractEscapedJsonValueAfterKey(

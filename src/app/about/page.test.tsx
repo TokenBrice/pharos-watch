@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { JSDOM } from "jsdom";
 import AboutPage from "./page";
 
 vi.mock("next/image", () => ({
@@ -17,42 +18,32 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-function decodeHtml(value: string) {
-  return value
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([a-f0-9]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+function parseStaticDocument(html: string) {
+  return new JSDOM(html).window.document;
 }
 
-function extractJsonLd(html: string) {
-  const blocks: unknown[] = [];
-  const pattern = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
-  let match: RegExpExecArray | null = null;
-  while ((match = pattern.exec(html)) !== null) {
-    blocks.push(JSON.parse(decodeHtml(match[1])));
-  }
-  return blocks;
+function extractJsonLd(document: Document) {
+  return [...document.querySelectorAll('script[type="application/ld+json"]')].map((script) =>
+    JSON.parse(script.textContent ?? "null"),
+  );
 }
 
 describe("AboutPage", () => {
   it("renders visible FAQ content matching the emitted FAQPage JSON-LD", () => {
     const html = renderToStaticMarkup(<AboutPage />);
-    const visibleHtml = decodeHtml(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " "));
-    const faqJsonLd = extractJsonLd(html).find((block) => {
+    const document = parseStaticDocument(html);
+    document.querySelectorAll("script").forEach((script) => script.remove());
+    const visibleText = document.body.textContent ?? "";
+    const faqJsonLd = extractJsonLd(parseStaticDocument(html)).find((block) => {
       return Boolean(block && typeof block === "object" && (block as { "@type"?: string })["@type"] === "FAQPage");
     }) as { mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> } | undefined;
 
     expect(faqJsonLd).toBeDefined();
-    expect(visibleHtml).toContain("About Pharos FAQ");
+    expect(visibleText).toContain("About Pharos FAQ");
 
     for (const item of faqJsonLd?.mainEntity ?? []) {
-      expect(visibleHtml).toContain(item.name);
-      expect(visibleHtml).toContain(item.acceptedAnswer.text);
+      expect(visibleText).toContain(item.name);
+      expect(visibleText).toContain(item.acceptedAnswer.text);
     }
   });
 });

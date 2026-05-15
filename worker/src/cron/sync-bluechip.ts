@@ -48,7 +48,22 @@ const BluechipResponseSchema = z.object({
 });
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").trim();
+  let text = "";
+  let inTag = false;
+  for (const char of html) {
+    if (char === "<") {
+      inTag = true;
+      continue;
+    }
+    if (char === ">") {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) {
+      text += char;
+    }
+  }
+  return text.replace(/\s+/g, " ").trim();
 }
 
 function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {

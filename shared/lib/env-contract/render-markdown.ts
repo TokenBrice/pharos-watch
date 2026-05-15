@@ -5,7 +5,7 @@ import type {
 import { ENV_BINDINGS } from "./registry";
 
 function escapeMarkdownCell(value: string): string {
-  return value.replace(/\|/g, "\\|");
+  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 }
 
 function renderMarkdownTable(headers: readonly string[], rows: readonly (readonly string[])[]): string {

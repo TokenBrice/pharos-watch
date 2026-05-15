@@ -89,10 +89,6 @@ async function runCli() {
   const deploymentId = (process.env.CF_PAGES_DEPLOYMENT_ID ?? "").trim();
   const brokenSha = (process.env.GITHUB_SHA ?? "").trim();
 
-  const dashboardUrl = accountId && projectName
-    ? `https://dash.cloudflare.com/${accountId}/pages/view/${projectName}`
-    : null;
-
   try {
     const result = await rollbackPagesDeployment({
       accountId,
@@ -109,14 +105,12 @@ async function runCli() {
     console.log(`[rollback-pages]   project:         ${projectName}`);
     console.log(`[rollback-pages]   restored to:     ${restoredId}`);
     if (brokenSha) console.log(`[rollback-pages]   broken commit:   ${brokenSha}`);
-    if (dashboardUrl) console.log(`[rollback-pages]   dashboard:       ${dashboardUrl}`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[rollback-pages] failed after retries: ${message}`);
     console.error(`[rollback-pages]   project:         ${projectName}`);
     console.error(`[rollback-pages]   target to restore: ${deploymentId}`);
     if (brokenSha) console.error(`[rollback-pages]   broken commit:   ${brokenSha}`);
-    if (dashboardUrl) console.error(`[rollback-pages]   dashboard:       ${dashboardUrl}`);
     process.exit(1);
   }
 }

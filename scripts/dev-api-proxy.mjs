@@ -19,9 +19,26 @@ if (existsSync(envFile)) {
 }
 
 const SECRET = process.env.SITE_API_SHARED_SECRET?.trim();
-const UPSTREAM_ORIGIN =
-  process.env.DEV_PROXY_UPSTREAM || "https://site-api.pharos.watch";
+const DEFAULT_UPSTREAM_ORIGIN = "https://site-api.pharos.watch";
 const PORT = parseInt(process.env.DEV_PROXY_PORT || "3001", 10);
+const ALLOWED_UPSTREAM_HOSTS = new Set(["site-api.pharos.watch", "localhost", "127.0.0.1", "[::1]"]);
+
+function resolveUpstreamOrigin(rawOrigin) {
+  const parsed = new URL(rawOrigin || DEFAULT_UPSTREAM_ORIGIN);
+  const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "[::1]";
+  if (!ALLOWED_UPSTREAM_HOSTS.has(parsed.hostname) || (parsed.protocol !== "https:" && !isLocalhost)) {
+    throw new Error(`DEV_PROXY_UPSTREAM must target ${DEFAULT_UPSTREAM_ORIGIN} or a local development server`);
+  }
+  return parsed.origin;
+}
+
+let UPSTREAM_ORIGIN;
+try {
+  UPSTREAM_ORIGIN = resolveUpstreamOrigin(process.env.DEV_PROXY_UPSTREAM);
+} catch (err) {
+  console.error(`[dev-proxy] ${err.message}`);
+  process.exit(1);
+}
 
 if (!Number.isFinite(PORT) || PORT <= 0) {
   console.error(`[dev-proxy] Invalid DEV_PROXY_PORT: ${process.env.DEV_PROXY_PORT}`);

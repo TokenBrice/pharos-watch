@@ -45,7 +45,7 @@ function loadOpenapi() {
 
 function escapeCell(value) {
   // Escape pipe characters so markdown table cells stay valid.
-  return String(value).replace(/\|/g, "\\|");
+  return String(value).replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 }
 
 function formatParams(parameters) {

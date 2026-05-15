@@ -27,7 +27,7 @@ function coin(overrides: {
     consensusSources: [],
     agreeSources: [],
     supplySource: undefined,
-    circulating: { [pegType.replace(/^pegged/, "pegged") as string]: circulating },
+    circulating: { [pegType]: circulating },
     circulatingPrevDay: {},
     circulatingPrevWeek: {},
     circulatingPrevMonth: {},
