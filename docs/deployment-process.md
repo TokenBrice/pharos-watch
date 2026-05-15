@@ -211,8 +211,8 @@ Use dependency maintenance as a dedicated routine, not as incidental churn insid
 
 Current explicitly deferred major cohort:
 
-- `eslint@10`
-- `typescript@6`
+- `eslint@10` — next review: 2026-08-15
+- `typescript@6` — next review: 2026-08-15
 
 Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`:
 
@@ -225,9 +225,43 @@ This workflow intentionally skips `validate`, `deploy-worker`, and `smoke-api`; 
 
 GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
 
-Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`. The repo now uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions. Worker production releases now use Wrangler Versions plus Preview URLs: CI uploads a candidate version early, waits for validation before D1 mutation, smokes that preview inside `deploy-worker`, then promotes that exact version to production traffic. The validate and Pages release lanes also restore `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs so unchanged build/lint/typecheck work can be reused across runs. The repo engine floor is Node 24 LTS for the primary local/runtime baseline.
+### Wrangler and Workspace Layout
 
-Deployment stops on the first failed job. Pull requests run the shared validate gate with the same deploy-surface classifier used by push deploys: shared guardrails and the full deploy test surface always run, while Pages build/SEO and Worker runtime plus operational-script typechecks run only when the PR diff touches those surfaces. Push/manual deploy validation also skips Pages build/SEO on worker-only pushes, skips Worker typechecks on Pages-only pushes, and skips the production workflow entirely for non-deploy pushes. The Node 24 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional typechecks as independent jobs, then uses the aggregate `validate / validate` job to require every needed result. The deploy workflow no longer waits for all of that runner work before starting non-mutating Cloudflare preparation: it uploads the Worker candidate early and starts the Pages build/local-smoke job as soon as the preview URL is available. Production D1 mutation and Worker promotion still wait for the aggregate `validate / validate` result; Pages publish waits for that validation result and, on combined deploys, successful Worker promotion. The production Pages path fetches digests once inside `pages-release` and requires the local `smoke-ui` gate before `deploy-pages`, so a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint. On combined Worker-promotion + Pages deploys, the prepublish Pages path runs against the uploaded Worker preview URL in parallel with validation and Worker release preparation. After publish, `pages-release` runs a homepage/GA/data-state live public-host smoke against `https://pharos.watch`, while the broader overflow sweep remains on the local artifact smoke. The production ops smoke runs in canary scope on the deploy critical path, keeping shell/access and status coverage while leaving the slower deep admin probes for explicit full smoke runs. On `push`, Worker deploy and API smoke are skipped entirely when the diff does not touch deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files, or root package/lock entries that can affect the Worker bundle, even if broader Worker validation still runs for package/tooling changes. Pages build/deploy are skipped entirely when the diff does not touch Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, shared validate/guardrail infrastructure, or Pages/deploy workflow files). Both production-changing workflows also share one global `concurrency` group (`production-deploy`): push/manual deploys and Pages rebuilds queue behind any active production deploy instead of canceling or overlapping post-promotion smoke or rollback work, including manual dispatches from non-main refs. The worker release path still applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; the release runner reruns `check:migrations` immediately before remote apply and still requires a separate coordinated rollout for destructive cleanup after the new worker code is serving. Automatic worker rollback only changes traffic back to the previous Worker version; D1 schema/data rollback remains a separate D1 recovery step.
+- Cloudflare deployment intentionally uses the local Wrangler CLI instead of `cloudflare/wrangler-action`.
+- The repo uses a root npm workspace, so the workflows install the shared toolchain from the root `package-lock.json` and run Wrangler from the `worker` workspace with `npx --no-install`, keeping worker deploys insulated from GitHub Actions runtime deprecations in third-party JS actions.
+- Worker production releases use Wrangler Versions plus Preview URLs: CI uploads a candidate version early, waits for validation before D1 mutation, smokes that preview inside `deploy-worker`, then promotes that exact version to production traffic.
+- The validate and Pages release lanes restore `.next/cache`, `.cache/eslint`, and `*.tsbuildinfo` outputs so unchanged build/lint/typecheck work can be reused across runs.
+- The repo engine floor is Node 24 LTS for the primary local/runtime baseline.
+
+### Failure Stop and Surface Classification
+
+- Deployment stops on the first failed job.
+- Pull requests run the shared validate gate with the same deploy-surface classifier used by push deploys: shared guardrails and the full deploy test surface always run, while Pages build/SEO and Worker runtime plus operational-script typechecks run only when the PR diff touches those surfaces.
+- Push/manual deploy validation skips Pages build/SEO on worker-only pushes, skips Worker typechecks on Pages-only pushes, and skips the production workflow entirely for non-deploy pushes.
+
+### Validate Lane Fan-out and Deploy Ordering
+
+- The Node 24 validate lane starts `validate:prebuild`, non-critical-test shards, critical coverage, and conditional typechecks as independent jobs, then uses the aggregate `validate / validate` job to require every needed result.
+- The deploy workflow no longer waits for all of that runner work before starting non-mutating Cloudflare preparation: it uploads the Worker candidate early and starts the Pages build/local-smoke job as soon as the preview URL is available.
+- Production D1 mutation and Worker promotion still wait for the aggregate `validate / validate` result; Pages publish waits for that validation result and, on combined deploys, successful Worker promotion.
+
+### Pages Path Behavior
+
+- The production Pages path fetches digests once inside `pages-release` and requires the local `smoke-ui` gate before `deploy-pages`, so a bad static export is blocked before Cloudflare Pages production publish and the build itself no longer depends on the live production digest endpoint.
+- On combined Worker-promotion + Pages deploys, the prepublish Pages path runs against the uploaded Worker preview URL in parallel with validation and Worker release preparation.
+- After publish, `pages-release` runs a homepage/GA/data-state live public-host smoke against `https://pharos.watch`, while the broader overflow sweep remains on the local artifact smoke.
+- The production ops smoke runs in canary scope on the deploy critical path, keeping shell/access and status coverage while leaving the slower deep admin probes for explicit full smoke runs.
+
+### Skip Rules
+
+- On `push`, Worker deploy and API smoke are skipped entirely when the diff does not touch deployed Worker runtime/config, D1 migrations, Worker assets, shared runtime files, or root package/lock entries that can affect the Worker bundle, even if broader Worker validation still runs for package/tooling changes.
+- Pages build/deploy are skipped entirely when the diff does not touch Pages-impacting paths (`src/`, `shared/`, `functions/`, `public/`, `data/`, selected build/config scripts, shared validate/guardrail infrastructure, or Pages/deploy workflow files).
+
+### Concurrency and Rollback Scope
+
+- Both production-changing workflows share one global `concurrency` group (`production-deploy`): push/manual deploys and Pages rebuilds queue behind any active production deploy instead of canceling or overlapping post-promotion smoke or rollback work, including manual dispatches from non-main refs.
+- The worker release path applies D1 migrations before preview smoke and production promotion, so the normal path explicitly supports only backward-compatible D1 migrations; the release runner reruns `check:migrations` immediately before remote apply and still requires a separate coordinated rollout for destructive cleanup after the new worker code is serving.
+- Automatic worker rollback only changes traffic back to the previous Worker version; D1 schema/data rollback remains a separate D1 recovery step.
 
 ## Runtime Measurement Notes
 
