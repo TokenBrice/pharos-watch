@@ -24,6 +24,7 @@ import {
   buildGovernanceTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { useLogos } from "@/hooks/use-logos";
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -162,16 +163,19 @@ function HeroVariantChip({
   variantChipClass?: string | null;
   mobile?: boolean;
 }) {
+  const { data: logos } = useLogos();
   if (!variantParent || !variantChipClass) return null;
-
   return (
     <Link
       href={buildStablecoinUrl(variantParent.id)}
-      className={`pharos-focus-ring inline-flex items-center rounded-full border font-semibold ${variantChipClass} ${
-        mobile ? "mt-1 px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-[11px]"
+      aria-label={`Variant of ${variantParent.name} — wraps ${variantParent.symbol}`}
+      className={`pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border font-semibold ${variantChipClass} ${
+        mobile ? "mt-1 px-2 py-1 text-[11px]" : "px-3 py-1 text-xs"
       }`}
     >
-      Variant of {variantParent.symbol}
+      <StablecoinLogo src={logos?.[variantParent.id]} name={variantParent.name} size={mobile ? 14 : 16} />
+      <span>Wraps {variantParent.symbol}</span>
+      <span aria-hidden>→</span>
     </Link>
   );
 }
@@ -199,6 +203,7 @@ export function HeroMobileIdentity({
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
+          <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
         </div>
         <HeroClassificationLine coin={coin} />
         {coin.flags.pegCurrency !== "USD"
@@ -213,11 +218,6 @@ export function HeroMobileIdentity({
             Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
           </span>
         )}
-        <HeroVariantChip
-          variantParent={variantParent}
-          variantChipClass={variantChipClass}
-          mobile
-        />
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {infrastructures.map((value) => (
             <InfrastructureBadge key={value} value={value} />
@@ -244,6 +244,7 @@ export function HeroDesktopIdentity({
           <h2 className="text-3xl font-black tracking-tighter">{coin.name}</h2>
           <span className="text-base font-mono text-muted-foreground/70">{coin.symbol}</span>
           <BluechipHeaderBadge stablecoinId={coin.id} />
+          <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
         </div>
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} />
@@ -260,14 +261,6 @@ export function HeroDesktopIdentity({
             Tracks {pegCurrencySymbol(coin.flags.pegCurrency)}1.00
           </span>
         )}
-        {variantParent && variantChipClass ? (
-          <div className="mt-1.5">
-            <HeroVariantChip
-              variantParent={variantParent}
-              variantChipClass={variantChipClass}
-            />
-          </div>
-        ) : null}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {infrastructures.map((value) => (
             <InfrastructureBadge key={value} value={value} />
