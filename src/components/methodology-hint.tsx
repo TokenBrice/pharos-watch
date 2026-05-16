@@ -13,6 +13,7 @@ interface MethodologyHintProps {
   className?: string;
   buttonClassName?: string;
   contentClassName?: string;
+  children?: ReactNode;
 }
 
 function stopPropagation(event: SyntheticEvent) {
@@ -86,20 +87,58 @@ const HintButton = forwardRef<
   );
 });
 
+const InlineHintTrigger = forwardRef<
+  HTMLButtonElement,
+  ComponentPropsWithoutRef<"button"> & { topic: MethodologyContextKey }
+>(function InlineHintTrigger({ topic, className, onClick, onKeyDown, type = "button", children, ...props }, ref) {
+  const item = METHODOLOGY_CONTEXT[topic];
+
+  return (
+    <button
+      {...props}
+      ref={ref}
+      type={type}
+      aria-label={`Explain ${item.title}`}
+      onClick={(event) => {
+        stopPropagation(event);
+        onClick?.(event);
+      }}
+      onKeyDown={(event) => {
+        stopPropagation(event);
+        onKeyDown?.(event);
+      }}
+      className={cn(
+        "pharos-focus-ring inline underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground data-[state=open]:decoration-foreground",
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+});
+
 export function MethodologyHint({
   topic,
   className,
   buttonClassName,
   contentClassName,
+  children,
 }: MethodologyHintProps) {
   const item = METHODOLOGY_CONTEXT[topic];
+  const hasInlineTrigger = children !== undefined;
 
   return (
-    <span className={cn("inline-flex shrink-0 items-center", className)}>
-      <span className="md:hidden">
+    <span className={cn(hasInlineTrigger ? "inline" : "inline-flex shrink-0 items-center", className)}>
+      <span className={hasInlineTrigger ? "inline md:hidden" : "md:hidden"}>
         <Sheet>
           <SheetTrigger asChild>
-            <HintButton topic={topic} className={buttonClassName} />
+            {hasInlineTrigger ? (
+              <InlineHintTrigger topic={topic} className={buttonClassName}>
+                {children}
+              </InlineHintTrigger>
+            ) : (
+              <HintButton topic={topic} className={buttonClassName} />
+            )}
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl border-border/70 bg-background/98 pb-6" showCloseButton>
             <SheetHeader className="space-y-2 border-b border-border/60 pb-4">
@@ -113,11 +152,17 @@ export function MethodologyHint({
           </SheetContent>
         </Sheet>
       </span>
-      <span className="hidden md:inline-flex">
+      <span className={hasInlineTrigger ? "hidden md:inline" : "hidden md:inline-flex"}>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <HintButton topic={topic} className={buttonClassName} />
+              {hasInlineTrigger ? (
+                <InlineHintTrigger topic={topic} className={buttonClassName}>
+                  {children}
+                </InlineHintTrigger>
+              ) : (
+                <HintButton topic={topic} className={buttonClassName} />
+              )}
             </TooltipTrigger>
             <TooltipContent className={cn("max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl", contentClassName)}>
               <HintBody topic={topic} />
