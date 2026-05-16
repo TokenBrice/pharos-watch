@@ -3,6 +3,9 @@ import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
 const ISO_DATE = "2026-05-16";
+const NOW_MS = new Date(`${ISO_DATE}T08:00:00Z`).getTime();
+const NOW_SEC = Math.floor(NOW_MS / 1000);
+const EXPECTED_PSI_COMPUTED_AT = new Date("2026-05-15T00:00:00Z").getTime() / 1000;
 
 const STABLECOINS_CACHE_PAYLOAD = {
   peggedAssets: [
@@ -30,11 +33,11 @@ const REPORT_CARD_CACHE_PAYLOAD = {
     "usdc-circle": { score: 92.4, grade: "A-" },
     "usdt-tether": { score: 78.1, grade: "B" },
   },
-  updatedAt: 1779105600,
+  updatedAt: NOW_SEC,
 };
 
 const PSI_ROW = {
-  computed_at: 1779062400,
+  computed_at: EXPECTED_PSI_COMPUTED_AT,
   score: 87.4,
   band: "STEADY",
   components: JSON.stringify({ severity: 5, breadth: 2, stressBreadth: 1, trend: 0.5 }),
@@ -71,21 +74,19 @@ const DEX_ROWS = [
   },
 ];
 
-const NOW_MS = new Date(`${ISO_DATE}T08:00:00Z`).getTime();
-
 function buildDb(): MockD1Database {
   return mockD1([
     {
       match: "FROM cache WHERE key",
       rows: [
-        { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: Math.floor(NOW_MS / 1000) },
-        { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: Math.floor(NOW_MS / 1000) },
+        { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
       ],
     },
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signals", rows: STRESS_ROWS },
     { match: "FROM dex_liquidity", rows: DEX_ROWS },
-    { match: "INSERT OR REPLACE INTO public_snapshots", rows: [] },
+    { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
   ]);
 }
 
@@ -97,7 +98,7 @@ async function gunzipToText(bytes: Uint8Array): Promise<string> {
 function getInsertBinds(db: MockD1Database): unknown[] | undefined {
   return db
     .getHistory()
-    .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO public_snapshots"))?.binds;
+    .find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"))?.binds;
 }
 
 describe("snapshotPublicDataset", () => {
@@ -127,8 +128,28 @@ describe("snapshotPublicDataset", () => {
 
     const insert = db
       .getHistory()
-      .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO public_snapshots"));
+      .find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"));
     expect(insert).toBeUndefined();
+  });
+
+  it("skips without recomputing when today's immutable snapshot already exists", async () => {
+    const db = mockD1([
+      {
+        match: "FROM public_snapshots WHERE snapshot_date",
+        rows: [],
+        first: {
+          content_hash: "existing-hash",
+          byte_size: 1234,
+          created_at: NOW_SEC - 60,
+        },
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+    expect(result.itemCount).toBe(0);
+    expect(result.metadata).toContain("already_exists");
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cache WHERE key"))).toBe(false);
+    expect(getInsertBinds(db)).toBeUndefined();
   });
 
   it("inserts a row keyed on today's UTC date with the expected envelope", async () => {
@@ -143,7 +164,7 @@ describe("snapshotPublicDataset", () => {
     expect(binds?.[1]).toBeInstanceOf(Uint8Array);
     expect(binds?.[3]).toMatch(/^[0-9a-f]{64}$/); // sha256 hex
     expect(typeof binds?.[4]).toBe("number");
-    expect(binds?.[5]).toBe(Math.floor(NOW_MS / 1000));
+    expect(binds?.[5]).toBe(NOW_SEC);
 
     const methodologyVersionsStr = binds?.[2] as string;
     const methodologyVersions = JSON.parse(methodologyVersionsStr) as Record<string, string>;
@@ -174,7 +195,7 @@ describe("snapshotPublicDataset", () => {
     };
 
     expect(envelope.snapshotDate).toBe(ISO_DATE);
-    expect(envelope.generatedAt).toBe(Math.floor(NOW_MS / 1000));
+    expect(envelope.generatedAt).toBe(NOW_SEC);
     expect(envelope.stablecoins).toHaveLength(2);
     expect(envelope.stablecoins.map((c) => c.id).sort()).toEqual(["usdc-circle", "usdt-tether"]);
     expect(envelope.reportCards?.scores).toHaveProperty("usdc-circle");
@@ -199,18 +220,71 @@ describe("snapshotPublicDataset", () => {
     expect(binds1?.[3]).toBe(binds2?.[3]);
   });
 
-  it("still writes a snapshot when PSI / DEWS / liquidity rows are missing", async () => {
+  it("degrades instead of writing when the report-card cache is missing", async () => {
     const db = mockD1([
       {
         match: "FROM cache WHERE key",
         rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: Math.floor(NOW_MS / 1000) },
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("report_card_cache_unavailable");
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("degrades instead of writing when the PSI daily snapshot is missing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
         ],
       },
       { match: "FROM stability_index", rows: [], first: null },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("psi_snapshot_missing");
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("degrades instead of writing when the PSI daily snapshot is stale", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+      { match: "FROM stability_index", rows: [], first: { ...PSI_ROW, computed_at: EXPECTED_PSI_COMPUTED_AT - 86400 } },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("psi_snapshot_stale");
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("still writes a snapshot when DEWS / liquidity rows are missing", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key",
+        rows: [
+          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
+          { key: "report_card_cache", value: JSON.stringify(REPORT_CARD_CACHE_PAYLOAD), updated_at: NOW_SEC },
+        ],
+      },
+      { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
-      { match: "INSERT OR REPLACE INTO public_snapshots", rows: [] },
+      { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
     ]);
 
     const result = await snapshotPublicDataset(db);
@@ -219,14 +293,14 @@ describe("snapshotPublicDataset", () => {
     const binds = getInsertBinds(db);
     const decompressed = await gunzipToText(binds?.[1] as Uint8Array);
     const envelope = JSON.parse(decompressed) as {
-      psi: unknown;
+      psi: { computedAt: number } | null;
       dews: unknown[];
       liquidity: unknown[];
       reportCards: unknown;
     };
-    expect(envelope.psi).toBeNull();
+    expect(envelope.psi?.computedAt).toBe(EXPECTED_PSI_COMPUTED_AT);
     expect(envelope.dews).toEqual([]);
     expect(envelope.liquidity).toEqual([]);
-    expect(envelope.reportCards).toBeNull();
+    expect(envelope.reportCards).toEqual(REPORT_CARD_CACHE_PAYLOAD);
   });
 });

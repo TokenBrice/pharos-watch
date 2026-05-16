@@ -43,6 +43,7 @@ export function SafetyGradeBadge({
   animationDelayMs,
   className,
   style,
+  tabIndex,
   "aria-label": ariaLabel,
   versionTopic,
   versionVariant,
@@ -59,10 +60,12 @@ export function SafetyGradeBadge({
       className={cn(
         SIZE_CLASSES[size],
         animate && "pharos-grade-pop",
+        versionTopic && "pharos-focus-ring",
         getSafetyGradeBadgeClassName(grade),
         className,
       )}
       style={mergedStyle}
+      tabIndex={tabIndex ?? (versionTopic ? 0 : undefined)}
       aria-label={ariaLabel ?? `Safety grade ${grade}${scoreLabel}`}
       {...props}
     >

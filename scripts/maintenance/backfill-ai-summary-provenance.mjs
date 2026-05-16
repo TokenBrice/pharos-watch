@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 /**
- * One-shot idempotent backfill: writes the AI-disclosure provenance
- * defaults onto every entry of `data/ai-summaries.json` that does not
+ * One-shot idempotent backfill: writes operator-confirmed AI-disclosure
+ * provenance onto every entry of `data/ai-summaries.json` that does not
  * already carry `authoredBy`. Existing entries that already declare an
  * `authoredBy` are left untouched, so the script is safe to re-run after
  * the `write-ai-summaries` skill starts emitting curated values.
  *
- * Defaults applied per entry (only when missing):
+ * Values applied per entry (only when missing):
  *   authoredBy = "ai"
  *   model      = "claude-opus-4-7"
- *   reviewedBy = "@TokenBrice"
- *   reviewedAt = entry.updatedAt
+ *   reviewedBy = AI_SUMMARY_REVIEWED_BY
+ *   reviewedAt = AI_SUMMARY_REVIEWED_AT
  *   factsAsOf  = entry.updatedAt
  *
  * Run via:
- *   npm run backfill:ai-summary-provenance
+ *   AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -23,10 +23,26 @@ import { resolve } from "node:path";
 const ROOT = process.cwd();
 const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
 
+const reviewedBy = process.env.AI_SUMMARY_REVIEWED_BY?.trim();
+const reviewedAt = process.env.AI_SUMMARY_REVIEWED_AT?.trim();
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+if (!reviewedBy || !reviewedAt || !ISO_DATE_RE.test(reviewedAt)) {
+  process.stderr.write(
+    [
+      "backfill: AI_SUMMARY_REVIEWED_BY and ISO-date AI_SUMMARY_REVIEWED_AT are required.",
+      "This script records human-review provenance; do not infer reviewedAt from updatedAt.",
+      'Example: AI_SUMMARY_REVIEWED_BY="@TokenBrice" AI_SUMMARY_REVIEWED_AT="2026-05-15" npm run backfill:ai-summary-provenance',
+    ].join("\n") + "\n",
+  );
+  process.exit(1);
+}
+
 const DEFAULTS = {
   authoredBy: "ai",
   model: "claude-opus-4-7",
-  reviewedBy: "@TokenBrice",
+  reviewedBy,
+  reviewedAt,
 };
 
 const raw = readFileSync(SUMMARIES_PATH, "utf8");
@@ -61,7 +77,7 @@ for (const id of Object.keys(data)) {
     authoredBy: DEFAULTS.authoredBy,
     model: DEFAULTS.model,
     reviewedBy: DEFAULTS.reviewedBy,
-    reviewedAt: updatedAt,
+    reviewedAt: DEFAULTS.reviewedAt,
     factsAsOf: updatedAt,
   };
   data[id] = next;

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PEG_LABELS_SHORT } from "../../shared/lib/classification";
-import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES } from "../../shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
@@ -85,7 +85,7 @@ const coreDataLinks = [
   ["FreezeWatch", absolute("/freezewatch/"), "Issuer freeze events and exposure."],
   ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],
   ["Coverage", absolute("/coverage/"), "What Pharos tracks and what it does not."],
-  ["Cemetery", absolute("/cemetery/"), `${DEAD_STABLECOINS.length} defunct stablecoins and their causes of death.`],
+  ["Cemetery", absolute("/cemetery/"), `${CEMETERY_ENTRIES.length} defunct stablecoins and their causes of death.`],
   [
     "Stablecoin Cemetery dataset (JSON)",
     absolute("/datasets/stablecoin-cemetery.json"),
@@ -131,10 +131,10 @@ const apiLinks = [
 ] as const;
 
 const feedLinks = [
-  ["Digest feed (RSS 2.0)", absolute("/feed/digest/"), "Daily and weekly digests."],
-  ["Depeg feed (RSS 2.0)", absolute("/feed/depeg/"), "Confirmed depeg events."],
-  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology/"), "Unified methodology changelog across 9 datasets."],
-  ["Cemetery feed (RSS 2.0)", absolute("/feed/cemetery/"), "Newly archived defunct stablecoins."],
+  ["Digest feed (RSS 2.0)", absolute("/feed/digest.xml"), "Daily and weekly digests."],
+  ["Depeg feed (RSS 2.0)", absolute("/feed/depeg.xml"), "Confirmed depeg events."],
+  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology.xml"), "Unified methodology changelog across 9 datasets."],
+  ["Cemetery feed (RSS 2.0)", absolute("/feed/cemetery.xml"), "Newly archived defunct stablecoins."],
 ] as const;
 
 const changelogLinks = [

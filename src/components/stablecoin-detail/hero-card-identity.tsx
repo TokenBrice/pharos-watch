@@ -21,6 +21,7 @@ import type {
   ReportCard,
   StablecoinMeta,
 } from "@shared/types";
+import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getFreezableLabel } from "@/lib/blacklist-status";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
@@ -30,29 +31,7 @@ import {
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
-import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
-
-/**
- * Hero-local verdict derivation. The full view-model exposes a `verdict`
- * field with the DEWS band and peg-score inputs threaded in; the identity
- * components are below that view-model layer in the prop tree and so
- * compute a narrower verdict from inputs already in scope (coin + report
- * card). Distressed-by-grade still fires here; distressed-by-DEWS-band is
- * handled by the view-model verdict consumed by future surfaces.
- */
-function deriveHeroVerdict(coin: StablecoinMeta, reportCard?: ReportCard | null) {
-  return deriveStablecoinVerdict({
-    status: coin.status,
-    reportCardGrade: reportCard?.overallGrade ?? null,
-    pegScore: null,
-    dewsBand: null,
-    mechanismArchetype: coin.mechanismArchetype,
-    governance: coin.flags.governance,
-    yieldBearing: coin.flags.yieldBearing ?? false,
-    activeDepeg: false,
-  });
-}
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -298,6 +277,7 @@ interface HeroIdentityProps {
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
   reportCard?: ReportCard | null;
+  verdict: StablecoinVerdict;
 }
 
 // Exported for unit testing; rendered indirectly via HeroMobileIdentity / HeroDesktopIdentity.
@@ -361,18 +341,17 @@ export function FreezablePill({
  * inline next to the heading.
  */
 export function HeroVerdict({
-  coin,
-  reportCard,
+  coinId,
+  verdict,
 }: {
-  coin: StablecoinMeta;
-  reportCard?: ReportCard | null;
+  coinId: string;
+  verdict: StablecoinVerdict;
 }) {
   if (!isHeroVerdictEnabled()) return null;
-  const verdict = deriveHeroVerdict(coin, reportCard);
   if (verdict.archetype === "uncategorized") return null;
   return (
     <div className="mt-3">
-      <VerdictPill id={`hero-verdict-${coin.id}`} verdict={verdict} />
+      <VerdictPill id={`hero-verdict-${coinId}`} verdict={verdict} />
     </div>
   );
 }
@@ -384,10 +363,10 @@ export function HeroMobileIdentity({
   variantChipClass,
   infrastructures,
   reportCard,
+  verdict,
 }: HeroIdentityProps) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
-  const verdict = heroVerdictEnabled ? deriveHeroVerdict(coin, reportCard) : null;
-  const showVerdict = !!verdict && verdict.archetype !== "uncategorized";
+  const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
   return (
     <>
@@ -424,10 +403,10 @@ export function HeroDesktopIdentity({
   variantChipClass,
   infrastructures,
   reportCard,
+  verdict,
 }: HeroIdentityProps) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
-  const verdict = heroVerdictEnabled ? deriveHeroVerdict(coin, reportCard) : null;
-  const showVerdict = !!verdict && verdict.archetype !== "uncategorized";
+  const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
   return (
     <div className="flex items-start gap-3">
@@ -451,7 +430,7 @@ export function HeroDesktopIdentity({
         {coin.oneLiner ? (
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
         ) : null}
-        {showVerdict && verdict ? (
+        {showVerdict ? (
           <div className="mt-2">
             <VerdictPill id={verdictId} verdict={verdict} />
           </div>

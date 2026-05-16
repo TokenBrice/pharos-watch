@@ -46,6 +46,22 @@ describe("router contract: strict frontend paths are routable", () => {
     expect(result).toBeNull();
   });
 
+  it("routes public snapshot date and coin URLs through dynamic descriptors", async () => {
+    const dayResponse = await route(makeRouteCtx({
+      url: new URL("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
+      request: new Request("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
+    }));
+    expect(dayResponse).not.toBeNull();
+    expect(dayResponse!.status).toBe(404);
+
+    const coinResponse = await route(makeRouteCtx({
+      url: new URL("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
+      request: new Request("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
+    }));
+    expect(coinResponse).not.toBeNull();
+    expect(coinResponse!.status).toBe(404);
+  });
+
   it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.resetModules();
@@ -118,6 +134,9 @@ describe("router contract: strict frontend paths are routable", () => {
 
   it("keeps endpoint registry and router behavior aligned", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS) {
+      if (endpoint.path.includes(":") && !endpoint.probePath) {
+        continue;
+      }
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
         const request = new Request(`https://api.pharos.watch${path}`, {
@@ -129,12 +148,7 @@ describe("router contract: strict frontend paths are routable", () => {
             ? [200, 400, 501, 502, 503]
             : endpoint.path === "/api/stablecoin-reserves/iusd-infinifi"
               ? [200, 400, 502, 503]
-              : endpoint.key === "snapshot-day" || endpoint.key === "snapshot-coin"
-                // Canary date has no row in the mocked D1 used here; handler
-                // legitimately returns 404. In production the index ensures
-                // valid dates resolve before clients call these endpoints.
-                ? [200, 400, 404, 502, 503]
-                : [200, 400, 502, 503];
+              : [200, 400, 502, 503];
 
         const response = await route(makeRouteCtx({
           url: new URL(`https://api.pharos.watch${path}`),

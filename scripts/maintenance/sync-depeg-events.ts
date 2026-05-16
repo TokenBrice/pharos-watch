@@ -12,6 +12,8 @@
  */
 
 import type { DepegEvent } from "@shared/types/market";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 interface DepegEventsResponse {
   events: DepegEvent[];
@@ -82,9 +84,7 @@ async function fetchWithRetry(
       const reason = err instanceof Error ? err.message : String(err);
       if (i < attempts - 1) {
         const delay = backoff[i] ?? backoff[backoff.length - 1];
-        console.log(
-          `[sync-depeg-events] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`,
-        );
+        console.log(`[sync-depeg-events] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`);
         await sleep(delay);
         continue;
       }
@@ -109,7 +109,7 @@ async function fetchWithRetry(
  * share a day, append `-up`/`-down` from `direction`. Stable across rebuilds
  * because input order is sorted by `startedAt DESC, id DESC`.
  */
-function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
+export function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
   const byBase = new Map<string, DepegEvent[]>();
   for (const event of events) {
     const key = baseSlug(event);
@@ -130,15 +130,17 @@ function assignSlugs(events: readonly DepegEvent[]): DepegEventEntry[] {
     // multiple events on same coin/day/direction), append id for stability.
     const directionSuffix = event.direction === "above" ? "up" : "down";
     let candidate = `${key}-${directionSuffix}`;
-    const sameDirectionCount = bucket.filter(
-      (e) => e.direction === event.direction,
-    ).length;
+    const sameDirectionCount = bucket.filter((e) => e.direction === event.direction).length;
     if (sameDirectionCount > 1) {
       candidate = `${candidate}-${event.id}`;
     }
     result.push({ ...event, slug: candidate });
   }
   return result;
+}
+
+export function selectConfirmedEvents(events: readonly DepegEvent[]): DepegEvent[] {
+  return [...events];
 }
 
 async function main() {
@@ -165,14 +167,17 @@ async function main() {
     const batch = Array.isArray(body.events) ? body.events : [];
     collected.push(...batch);
     cursor = body.nextCursor ?? null;
-    console.log(`[sync-depeg-events] page=${page} fetched=${batch.length} total=${collected.length} cursor=${cursor ?? "null"}`);
+    console.log(
+      `[sync-depeg-events] page=${page} fetched=${batch.length} total=${collected.length} cursor=${cursor ?? "null"}`,
+    );
     if (!cursor || batch.length === 0) break;
   }
 
   // v1: confirmed events only (pending/expired/rejected do not get permanent URLs).
-  // The /api/depeg-events handler already excludes pending unless includePending=true,
-  // so this filter is defensive against any future shape changes.
-  const confirmed = collected.filter((event) => event.pendingReason == null);
+  // The /api/depeg-events handler already excludes pending unless includePending=true.
+  // Do not filter on pendingReason here: confirmed events can retain that field
+  // as provenance for how they entered confirmation.
+  const confirmed = selectConfirmedEvents(collected);
 
   // Deduplicate on event id (defensive in case pagination yields overlap).
   const seen = new Set<number>();
@@ -222,7 +227,11 @@ async function main() {
   console.log(`[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

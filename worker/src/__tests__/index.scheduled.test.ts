@@ -28,6 +28,7 @@ const cronMocks = vi.hoisted(() => ({
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  snapshotPublicDataset: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncUsdsStatus: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -98,6 +99,7 @@ vi.mock("../cron/snapshot-safety-grade-history", () => ({
 }));
 vi.mock("../cron/fetch-tbill-rate", () => ({ fetchTbillRate: cronMocks.fetchTbillRate }));
 vi.mock("../cron/snapshot-psi", () => ({ snapshotPsiDaily: cronMocks.snapshotPsiDaily }));
+vi.mock("../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: cronMocks.snapshotPublicDataset }));
 vi.mock("../cron/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsStatus }));
 vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
 vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
@@ -575,6 +577,13 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotPublicDataset).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.snapshotPsiDaily.mock.invocationCallOrder[0],
+    );
+    expect(cronMocks.snapshotPsiDaily.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.snapshotPublicDataset.mock.invocationCallOrder[0],
+    );
   });
 
   it("contains individual daily 08:05 failures and continues the other jobs", async () => {

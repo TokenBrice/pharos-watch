@@ -5,7 +5,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 export const dynamic = "force-static";
 export const revalidate = false;
 
-const FEED_PATH = "/feed/digest/";
+const FEED_PATH = "/feed/digest.xml";
 const MAX_ITEMS = 100;
 
 interface DigestEntry {

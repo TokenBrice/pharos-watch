@@ -237,10 +237,17 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       DIGEST_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      DEPEG_EVENTS_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
+      PUBLIC_DATASETS_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
+      PUBLIC_DATASETS_REQUIRE_API: "1"
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       # Detail-page feature flags — must mirror pages-prepare.yml so the
-      # production build inlines the same flag state. Managed via
-      # `gh variable set | list`; see docs/process/pages-env-rollout.md.
+      # production build inlines the same flag state. HERO_VERDICT is
+      # default-on and rolls back only when explicitly set to "false".
+      # Managed via `gh variable set | list`; see
+      # docs/process/pages-env-rollout.md.
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
       NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
@@ -257,11 +264,18 @@ jobs:
           tooling-cache: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
+      - name: Fetch depeg events from the target API environment
+        run: npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
+      - name: Generate public dataset mirrors from the target API environment
+        run: npm run generate:public-datasets
       - run: npm run build
       - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
+      - run: npm run check:build-size
+      - run: npm run check:build-attribution
+      - run: npm run check:methodology-pdfs
       - id: capture-pages
         name: Capture current production Pages deployment id (best effort)
         continue-on-error: true

@@ -652,6 +652,10 @@ describe("stablecoin detail hero view-model builder", () => {
           depegEventCount: 3,
         },
       } as never,
+      verdict: {
+        archetype: "distressed",
+        label: "Distressed",
+      },
     });
 
     expect(hero.header.coinName).toBe("USD Coin");
@@ -722,6 +726,10 @@ describe("stablecoin detail hero view-model builder", () => {
       yieldRanking: null,
       stressSignal: null,
       reportCard: null,
+      verdict: {
+        archetype: "uncategorized",
+        label: "Uncategorized",
+      },
     });
 
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({

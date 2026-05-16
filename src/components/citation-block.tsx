@@ -12,7 +12,7 @@ import { formatPharosUrn, type PharosUrnEntityClass } from "@shared/lib/citation
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CopyButton } from "@/components/copy-button";
-import sitemapDates from "@/generated/sitemap-dates.json";
+import { getCitationAccessedDateForUrl } from "@/lib/citation-dates";
 import { cn } from "@/lib/utils";
 
 const FORMAT_TABS = [
@@ -39,7 +39,7 @@ export interface CitationBlockProps {
   version?: string;
   /**
    * Override for the accessed date. Defaults to the build's
-   * sitemap-dates manifest entry for this URL's path (falling back to today).
+   * sitemap-dates manifest entry for this URL's path or route family.
    */
   accessedDate?: string;
   /** Optional class for the wrapper card. */
@@ -48,28 +48,11 @@ export interface CitationBlockProps {
 
 const ISO_DATE_REGEX = /^(\d{4}-\d{2}-\d{2})/;
 
-function urlToPath(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const pathname = parsed.pathname;
-    return pathname.endsWith("/") ? pathname : `${pathname}/`;
-  } catch {
-    return url;
-  }
-}
-
 function resolveAccessedDate(url: string, override?: string): string {
   if (override && ISO_DATE_REGEX.test(override)) {
     return override.slice(0, 10);
   }
-  const path = urlToPath(url);
-  const dates = sitemapDates as Record<string, string>;
-  const stamp = dates[path];
-  if (stamp) {
-    const match = stamp.match(ISO_DATE_REGEX);
-    if (match) return match[1];
-  }
-  return new Date().toISOString().slice(0, 10);
+  return getCitationAccessedDateForUrl(url);
 }
 
 export function CitationBlock(props: CitationBlockProps) {

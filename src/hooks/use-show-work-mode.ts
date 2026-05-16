@@ -20,29 +20,43 @@ function readUrlEnable(): boolean {
   }
 }
 
-function readStorage(): boolean {
-  if (typeof window === "undefined") return false;
+function readStorageOverride(): boolean | null {
+  if (typeof window === "undefined") return null;
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === "true";
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "true") return true;
+    if (stored === "false") return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 function readClient(): boolean {
-  return readUrlEnable() || readStorage();
+  const stored = readStorageOverride();
+  if (stored !== null) return stored;
+  return readUrlEnable();
 }
 
 function writeStored(value: boolean) {
   if (typeof window === "undefined") return;
   try {
-    if (value) {
-      window.localStorage.setItem(STORAGE_KEY, "true");
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
+    window.localStorage.setItem(STORAGE_KEY, value ? "true" : "false");
   } catch {
     // ignore storage failures
+  }
+}
+
+function removeUrlParam() {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(URL_PARAM)) return;
+    url.searchParams.delete(URL_PARAM);
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", next);
+  } catch {
+    // ignore URL/history failures
   }
 }
 
@@ -60,7 +74,8 @@ export interface ShowWorkMode {
 }
 
 /**
- * Reads `?show-work=1` on mount and persists `pharos.show-work` in localStorage.
+ * Reads `?show-work=1` on mount, then lets an explicit `pharos.show-work`
+ * localStorage preference override the URL flag.
  * Server-rendered fallback returns enabled=false.
  */
 export function useShowWorkMode(): ShowWorkMode {
@@ -71,11 +86,9 @@ export function useShowWorkMode(): ShowWorkMode {
   );
 
   const toggle = useCallback(() => {
-    // Persistence is the source of truth for the toggle. Reading the URL
-    // here would let `?show-work=1` shadow a "Hide inputs" click and silently
-    // no-op. Storage flip + notify means the next read short-circuits to
-    // localStorage=false even while the URL param is still present.
-    writeStored(!readStorage());
+    const next = !readClient();
+    writeStored(next);
+    if (!next) removeUrlParam();
     notify();
   }, []);
 

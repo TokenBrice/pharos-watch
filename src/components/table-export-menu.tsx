@@ -32,6 +32,8 @@ export interface TableExportMenuProps<T> {
   triggerLabel?: string;
   /** Optional class override for the trigger button. */
   triggerClassName?: string;
+  /** Disable export actions while backing rows are still resolving. */
+  disabled?: boolean;
 }
 
 function buildPreamble(endpoint: string, methodologyLabel: string): ExportPreamble {
@@ -51,6 +53,7 @@ export function TableExportMenu<T>({
   methodologyLabel,
   triggerLabel = "Export",
   triggerClassName,
+  disabled = false,
 }: TableExportMenuProps<T>): React.ReactElement {
   const [status, setStatus] = useState<Status>("idle");
 
@@ -59,14 +62,17 @@ export function TableExportMenu<T>({
   }, []);
 
   const handleCsv = useCallback(() => {
+    if (disabled) return;
     downloadCsvWithPreamble(data, columns, filename, buildPreamble(endpoint, methodologyLabel));
-  }, [columns, data, endpoint, filename, methodologyLabel]);
+  }, [columns, data, disabled, endpoint, filename, methodologyLabel]);
 
   const handleNdjson = useCallback(() => {
+    if (disabled) return;
     downloadNdjsonWithPreamble(data, columns, filename, buildPreamble(endpoint, methodologyLabel));
-  }, [columns, data, endpoint, filename, methodologyLabel]);
+  }, [columns, data, disabled, endpoint, filename, methodologyLabel]);
 
   const handleMarkdown = useCallback(async () => {
+    if (disabled) return;
     const ok = await copyMarkdownWithPreamble(
       data,
       columns,
@@ -74,7 +80,7 @@ export function TableExportMenu<T>({
     );
     setStatus(ok ? "copied" : "error");
     resetStatusAfterDelay();
-  }, [columns, data, endpoint, methodologyLabel, resetStatusAfterDelay]);
+  }, [columns, data, disabled, endpoint, methodologyLabel, resetStatusAfterDelay]);
 
   const triggerText =
     status === "copied" ? "Copied!" : status === "error" ? "Copy failed" : triggerLabel;
@@ -87,6 +93,7 @@ export function TableExportMenu<T>({
           variant="outline"
           size="sm"
           className={triggerClassName}
+          disabled={disabled}
           aria-label={`Export table as CSV, NDJSON, or Markdown`}
         >
           <TriggerIcon />

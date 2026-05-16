@@ -116,7 +116,12 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <SafetyGradeBadge grade={dim.grade} size="sm" />
+            <SafetyGradeBadge
+              grade={dim.grade}
+              size="sm"
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
+            />
             {dim.score !== null ? (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -289,7 +294,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <SafetyGradeBadge grade="F" size="defunct" />
+            <SafetyGradeBadge grade="F" size="defunct" versionTopic="safetyScore" />
             <div>
               <p className="text-lg font-medium text-muted-foreground">Defunct</p>
               <p className="text-sm text-muted-foreground">This stablecoin is no longer active.</p>
@@ -318,8 +323,18 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
     <div className="space-y-5">
       {/* Grade hero — left-aligned in split, centered when single-column */}
       <div className={cn("flex items-center gap-4 pb-1 pt-1", !hasRightColumn && "justify-center")}>
-        <SafetyGradeBadge grade={card.overallGrade} size="lg" className="sm:hidden" />
-        <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" />
+        <SafetyGradeBadge
+          grade={card.overallGrade}
+          size="lg"
+          className="sm:hidden"
+          versionTopic="safetyScore"
+        />
+        <SafetyGradeBadge
+          grade={card.overallGrade}
+          size="hero"
+          className="hidden sm:inline-flex"
+          versionTopic="safetyScore"
+        />
         <div className="flex min-w-0 flex-col">
           {card.overallScore !== null && (
             <Tooltip>

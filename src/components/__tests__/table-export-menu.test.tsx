@@ -103,6 +103,25 @@ describe("TableExportMenu", () => {
     expect(typeof preamble.sourceUrl).toBe("string");
   });
 
+  it("does not dispatch export writers while disabled", () => {
+    render(
+      <TableExportMenu
+        data={ROWS}
+        columns={COLUMNS}
+        filename="stablecoins"
+        endpoint="stablecoins"
+        methodologyLabel="safety-score v7.25"
+        disabled
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Download CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "Download NDJSON" }));
+
+    expect(downloadCsvWithPreambleMock).not.toHaveBeenCalled();
+    expect(downloadNdjsonWithPreambleMock).not.toHaveBeenCalled();
+  });
+
   it("dispatches the NDJSON writer when the NDJSON action fires", () => {
     render(
       <TableExportMenu

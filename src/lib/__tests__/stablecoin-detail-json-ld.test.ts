@@ -19,6 +19,11 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
     expect((coin.contracts ?? []).length).toBeGreaterThan(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
     expect(identifiers).toHaveLength(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
+    expect(jsonLd.identifier).toContainEqual({
+      "@type": "PropertyValue",
+      propertyID: "Pharos URN",
+      value: "urn:pharos:coin:usdt-tether",
+    });
     expect(jsonLd).toMatchObject({
       inLanguage: "en",
       mainEntityOfPage: "https://pharos.watch/stablecoin/usdt-tether/",

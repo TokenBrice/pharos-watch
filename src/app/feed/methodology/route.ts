@@ -1,6 +1,9 @@
 import { escapeXml, renderRss20, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chains/health-version";
+import {
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+} from "@shared/lib/chains/health-version";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
@@ -38,7 +41,7 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 export const dynamic = "force-static";
 export const revalidate = false;
 
-const FEED_PATH = "/feed/methodology/";
+const FEED_PATH = "/feed/methodology.xml";
 const MAX_ITEMS = 50;
 
 interface Source {
@@ -49,21 +52,64 @@ interface Source {
 }
 
 const SOURCES: readonly Source[] = [
-  { key: "safety-score", label: "Safety Score", path: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH, entries: SAFETY_SCORE_CHANGELOG },
-  { key: "depeg-dews", label: "Depeg + DEWS", path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH, entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG },
-  { key: "psi", label: "Pharos Stability Index", path: PSI_METHODOLOGY_CHANGELOG_PATH, entries: PSI_METHODOLOGY_CHANGELOG },
-  { key: "liquidity-score", label: "Liquidity Score", path: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH, entries: LIQUIDITY_METHODOLOGY_CHANGELOG },
-  { key: "chain-health", label: "Chain Health", path: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG },
-  { key: "blacklist-tracker", label: "Blacklist Tracker", path: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH, entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG },
-  { key: "mint-burn-flow", label: "Mint/Burn Flow", path: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH, entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG },
-  { key: "pricing-pipeline", label: "Pricing Pipeline", path: PRICING_PIPELINE_CHANGELOG_PATH, entries: PRICING_PIPELINE_CHANGELOG },
-  { key: "yield", label: "Yield Intelligence", path: YIELD_METHODOLOGY_CHANGELOG_PATH, entries: YIELD_METHODOLOGY_CHANGELOG },
+  {
+    key: "safety-score",
+    label: "Safety Score",
+    path: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+    entries: SAFETY_SCORE_CHANGELOG,
+  },
+  {
+    key: "depeg-dews",
+    label: "Depeg + DEWS",
+    path: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+    entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "psi",
+    label: "Pharos Stability Index",
+    path: PSI_METHODOLOGY_CHANGELOG_PATH,
+    entries: PSI_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "liquidity-score",
+    label: "Liquidity Score",
+    path: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
+    entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "chain-health",
+    label: "Chain Health",
+    path: CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
+    entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "blacklist-tracker",
+    label: "Blacklist Tracker",
+    path: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+    entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "mint-burn-flow",
+    label: "Mint/Burn Flow",
+    path: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+    entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
+  },
+  {
+    key: "pricing-pipeline",
+    label: "Pricing Pipeline",
+    path: PRICING_PIPELINE_CHANGELOG_PATH,
+    entries: PRICING_PIPELINE_CHANGELOG,
+  },
+  {
+    key: "yield",
+    label: "Yield Intelligence",
+    path: YIELD_METHODOLOGY_CHANGELOG_PATH,
+    entries: YIELD_METHODOLOGY_CHANGELOG,
+  },
 ];
 
 function methodologyItems(): RssItem[] {
-  const all = SOURCES.flatMap((source) =>
-    source.entries.map((entry) => ({ source, entry })),
-  );
+  const all = SOURCES.flatMap((source) => source.entries.map((entry) => ({ source, entry })));
   return all
     .sort((a, b) => b.entry.effectiveAt - a.entry.effectiveAt)
     .slice(0, MAX_ITEMS)

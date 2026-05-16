@@ -58,7 +58,7 @@ vi.mock("@/components/stablecoin-detail/overview-section", () => ({
 }));
 
 vi.mock("@/components/ai-summary", () => ({
-  AiSummary: () => null,
+  AiSummary: () => <div data-testid="ai-summary" />,
 }));
 
 vi.mock("@/components/dews-detail", () => ({
@@ -163,6 +163,10 @@ function makeFrozenViewModel(coin: StablecoinMeta) {
     reserveFetchError: null,
     supplyError: null,
     staleQueries: [],
+    verdict: {
+      archetype: "frozen-archive",
+      label: "Frozen Archive",
+    },
     handleRetryAll: vi.fn(),
   };
 }
@@ -192,6 +196,23 @@ describe("StablecoinDetailClient (frozen)", () => {
     // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
     // sections render unconditionally for this fixture.
     expect(notes.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("renders the frozen banner before preserved AI prose", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      ...makeFrozenViewModel(coin),
+      summary: {
+        title: "Archived note",
+        text: "Pre-freeze prose.",
+        updatedAt: "2026-04-01",
+      },
+    });
+    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+
+    const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
+    const summary = screen.getByTestId("ai-summary");
+    expect(banner.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

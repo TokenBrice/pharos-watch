@@ -105,7 +105,7 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
   return {
     rows,
     formula:
-      "overall = weighted(pegStability, liquidity, resilience, decentralization, dependencyRisk) × peg-multiplier; capped by active-depeg severity + parent variant",
+      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
     topic: "safetyScore",
   };
 }
@@ -137,7 +137,7 @@ export function formatDews(current: StressSignalEntry): ShowYourWorkTable {
   return {
     rows,
     formula:
-      "score = max(per-signal stress, 0..100) × PSI amplifier × contagion amplifier; band maps to Calm/Watch/Alert/Warning/Danger",
+      "score = weighted average of available stress signals with weights redistributed, then × PSI amplifier × contagion amplifier and clamped to 0..100; band maps to Calm/Watch/Alert/Warning/Danger",
     topic: "dews",
   };
 }

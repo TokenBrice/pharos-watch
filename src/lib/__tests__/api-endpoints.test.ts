@@ -78,8 +78,8 @@ describe("api endpoint registry", () => {
       "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history?stablecoin=usdt-tether",
-      "/api/snapshot/2026-05-16/stablecoin/usdt-tether",
-      "/api/snapshots/2026-05-16.json",
+      "/api/snapshot/:date/stablecoin/:id",
+      "/api/snapshots/:date.json",
       "/api/snapshots/index",
       "/api/stability-index",
       "/api/stablecoin-charts",
@@ -140,8 +140,6 @@ describe("api endpoint registry", () => {
       "/api/daily-digest",
       "/api/digest-archive",
       "/api/snapshots/index",
-      "/api/snapshots/2026-05-16.json",
-      "/api/snapshot/2026-05-16/stablecoin/usdt-tether",
       "/api/yield-rankings",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/safety-score-history?stablecoin=usdt-tether",
@@ -192,6 +190,8 @@ describe("api endpoint registry", () => {
 
   it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
     expect(getProbePaths("public")).not.toContain("/api/digest-snapshot");
+    expect(getProbePaths("public")).not.toContain("/api/snapshots/:date.json");
+    expect(getProbePaths("public")).not.toContain("/api/snapshot/:date/stablecoin/:id");
   });
 
   it("flags mutating admin paths for method guards", () => {

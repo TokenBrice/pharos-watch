@@ -5,6 +5,8 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CitationBlock } from "@/components/citation-block";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
+import { getCitationAccessedDateForPath } from "@/lib/citation-dates";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -207,6 +209,7 @@ export default async function DepegEventPage(
   const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
+  const citationAccessedDate = getCitationAccessedDateForPath(`/depeg/${event.slug}/`);
 
   // Find prev/next confirmed events for the same coin (sorted desc by startedAt)
   const sameCoin = DEPEG_EVENT_ENTRIES.filter((e) => e.stablecoinId === event.stablecoinId);
@@ -233,6 +236,7 @@ export default async function DepegEventPage(
       logo: `${SITE_URL}/pharos-icon.png`,
     },
     mainEntityOfPage: canonicalUrl,
+    identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
   };
 
   const eventJsonLd: Record<string, unknown> = {
@@ -245,6 +249,7 @@ export default async function DepegEventPage(
     eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
     url: canonicalUrl,
     organizer: { "@type": "Organization", name: "Pharos", url: SITE_URL },
+    identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
   };
   if (endedIso) eventJsonLd.endDate = endedIso;
 
@@ -369,6 +374,7 @@ export default async function DepegEventPage(
         title={heroTitle}
         url={canonicalUrl}
         version={versionLabel}
+        accessedDate={citationAccessedDate}
       />
 
       <p className="text-xs text-muted-foreground">

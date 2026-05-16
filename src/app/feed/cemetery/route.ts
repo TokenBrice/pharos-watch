@@ -1,11 +1,11 @@
 import { escapeXml, renderRss20, toRfc822, type RssItem } from "@/lib/rss";
-import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
-const FEED_PATH = "/feed/cemetery/";
+const FEED_PATH = "/feed/cemetery.xml";
 const MAX_ITEMS = 50;
 
 /**
@@ -23,14 +23,12 @@ function deathDateToMs(deathDate: string): number {
 }
 
 function cemeteryItems(): RssItem[] {
-  return DEAD_STABLECOINS.slice()
+  return CEMETERY_ENTRIES.slice()
     .sort((a, b) => deathDateToMs(b.deathDate) - deathDateToMs(a.deathDate))
     .slice(0, MAX_ITEMS)
     .map((coin) => {
       const obituaryHtml = `<p>${escapeXml(coin.obituary)}</p>`;
-      const description = coin.epitaph
-        ? `<p><em>${escapeXml(coin.epitaph)}</em></p>${obituaryHtml}`
-        : obituaryHtml;
+      const description = coin.epitaph ? `<p><em>${escapeXml(coin.epitaph)}</em></p>${obituaryHtml}` : obituaryHtml;
       return {
         title: `${coin.name} (${coin.symbol}) — ${coin.causeOfDeath}`,
         link: `${SITE_URL}/cemetery/#${coin.id}`,

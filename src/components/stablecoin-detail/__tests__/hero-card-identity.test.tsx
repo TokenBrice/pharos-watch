@@ -51,9 +51,25 @@ const INSTITUTIONAL_REPORT_CARD = {
   rawInputs: { canBeBlacklisted: false },
 } as unknown as ReportCard;
 
+const INSTITUTIONAL_VERDICT = {
+  archetype: "institutional-default",
+  label: "Institutional Default",
+} as const;
+
+const DISTRESSED_VERDICT = {
+  archetype: "distressed",
+  label: "Distressed",
+} as const;
+
+const UNCATEGORIZED_VERDICT = {
+  archetype: "uncategorized",
+  label: "Uncategorized",
+} as const;
+
 const COMMON_PROPS = {
   infrastructures: [],
   reportCard: null,
+  verdict: INSTITUTIONAL_VERDICT,
   variantParent: null,
   variantChipClass: null,
   logoSrc: undefined,
@@ -69,7 +85,7 @@ describe("HeroVerdict standalone (mobile section)", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroVerdict coin={BASE_COIN} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />,
     );
 
     const verdictEl = container.querySelector(`#hero-verdict-${BASE_COIN.id}`);
@@ -81,9 +97,9 @@ describe("HeroVerdict standalone (mobile section)", () => {
   it("renders nothing when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    // No report card and no mechanism context for the test coin → uncategorized.
-    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
-    const { container } = render(<HeroVerdict coin={uncategorizedCoin} />);
+    const { container } = render(
+      <HeroVerdict coinId={BASE_COIN.id} verdict={UNCATEGORIZED_VERDICT} />,
+    );
 
     expect(container.firstChild).toBeNull();
   });
@@ -92,7 +108,7 @@ describe("HeroVerdict standalone (mobile section)", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
 
     const { container } = render(
-      <HeroVerdict coin={BASE_COIN} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroVerdict coinId={BASE_COIN.id} verdict={INSTITUTIONAL_VERDICT} />,
     );
 
     expect(container.firstChild).toBeNull();
@@ -119,8 +135,13 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
   it("omits aria-describedby when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
-    const { container } = render(<HeroMobileIdentity coin={uncategorizedCoin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroMobileIdentity
+        coin={BASE_COIN}
+        {...COMMON_PROPS}
+        verdict={UNCATEGORIZED_VERDICT}
+      />,
+    );
 
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
@@ -148,14 +169,19 @@ describe("HeroDesktopIdentity verdict pill", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(
-      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+      <HeroDesktopIdentity
+        coin={BASE_COIN}
+        {...COMMON_PROPS}
+        reportCard={INSTITUTIONAL_REPORT_CARD}
+        verdict={DISTRESSED_VERDICT}
+      />,
     );
 
     const verdictId = `hero-verdict-${BASE_COIN.id}`;
     const pill = container.querySelector(`#${verdictId}`);
     expect(pill).not.toBeNull();
-    expect(pill?.getAttribute("data-archetype")).toBe("institutional-default");
-    expect(pill?.textContent).toBe("Institutional Default");
+    expect(pill?.getAttribute("data-archetype")).toBe("distressed");
+    expect(pill?.textContent).toBe("Distressed");
 
     const heading = container.querySelector("h2");
     expect(heading?.getAttribute("aria-describedby")).toBe(verdictId);
@@ -164,10 +190,15 @@ describe("HeroDesktopIdentity verdict pill", () => {
   it("hides the pill and omits aria-describedby when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
-    const { container } = render(<HeroDesktopIdentity coin={uncategorizedCoin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroDesktopIdentity
+        coin={BASE_COIN}
+        {...COMMON_PROPS}
+        verdict={UNCATEGORIZED_VERDICT}
+      />,
+    );
 
-    expect(container.querySelector(`#hero-verdict-${uncategorizedCoin.id}`)).toBeNull();
+    expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });

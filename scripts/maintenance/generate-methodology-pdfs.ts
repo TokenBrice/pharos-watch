@@ -43,6 +43,14 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..", "..");
 const PDF_OUTPUT_DIR = path.join(REPO_ROOT, "public", "methodology", "pdf");
 const SITE_BASE_URL = "https://pharos.watch";
+const DEFAULT_PDF_BUDGETS = {
+  totalPdfBytes: 25 * 1024 * 1024,
+  largestPdfBytes: 5 * 1024 * 1024,
+} as const;
+const PDF_BUDGET_ENV = {
+  totalPdfBytes: "PHAROS_SIZE_BUDGET_METHODOLOGY_PDF_TOTAL_BYTES",
+  largestPdfBytes: "PHAROS_SIZE_BUDGET_METHODOLOGY_PDF_LARGEST_BYTES",
+} as const;
 
 interface MethodologySurface {
   /** Stable key used in the PDF filename. */
@@ -168,6 +176,63 @@ interface GenerationResult {
   bytes: number;
 }
 
+interface PdfFileSize {
+  filename: string;
+  bytes: number;
+}
+
+function resolveBudget(key: keyof typeof DEFAULT_PDF_BUDGETS): number {
+  const raw = process.env[PDF_BUDGET_ENV[key]];
+  if (!raw) return DEFAULT_PDF_BUDGETS[key];
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_PDF_BUDGETS[key];
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KiB", "MiB", "GiB"];
+  let value = bytes / 1024;
+  let unit = units[0];
+  for (let i = 1; i < units.length && value >= 1024; i += 1) {
+    value /= 1024;
+    unit = units[i];
+  }
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
+}
+
+function collectCommittedPdfSizes(): PdfFileSize[] {
+  return readdirSync(PDF_OUTPUT_DIR)
+    .filter((name) => name.endsWith(".pdf"))
+    .map((filename) => ({
+      filename,
+      bytes: statSync(path.join(PDF_OUTPUT_DIR, filename)).size,
+    }))
+    .sort((a, b) => b.bytes - a.bytes || a.filename.localeCompare(b.filename));
+}
+
+function assertPdfBudgets(label: string, files: readonly PdfFileSize[]): string[] {
+  const budgets = {
+    totalPdfBytes: resolveBudget("totalPdfBytes"),
+    largestPdfBytes: resolveBudget("largestPdfBytes"),
+  };
+  const total = files.reduce((sum, file) => sum + file.bytes, 0);
+  const largest = files[0]?.bytes ?? 0;
+  const failures: string[] = [];
+
+  if (total > budgets.totalPdfBytes) {
+    failures.push(
+      `${label}: total methodology PDFs are ${formatBytes(total)}, budget is ${formatBytes(budgets.totalPdfBytes)}`,
+    );
+  }
+  if (largest > budgets.largestPdfBytes) {
+    failures.push(
+      `${label}: largest methodology PDF is ${formatBytes(largest)}, budget is ${formatBytes(budgets.largestPdfBytes)}`,
+    );
+  }
+
+  return failures;
+}
+
 async function generateAll(outputDir: string): Promise<GenerationResult[]> {
   const { createStaticExportServer } = await import("./serve-static-export.mjs");
   const { chromium } = await import("playwright");
@@ -202,7 +267,7 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
       const filename = pdfFilenameFor(surface);
       const target = path.join(outputDir, filename);
       const url = `${baseUrl}${surface.path}`;
-       
+
       console.log(`[generate-methodology-pdfs] ${url} -> ${filename}`);
 
       await page.emulateMedia({ colorScheme: "light" });
@@ -283,16 +348,17 @@ async function runCheck(): Promise<void> {
         );
       }
     }
+
+    failures.push(...assertPdfBudgets("committed", collectCommittedPdfSizes()));
+    failures.push(...assertPdfBudgets("fresh", generated));
+
     if (failures.length > 0) {
-       
       console.error("[generate-methodology-pdfs --check] drift detected:");
       for (const failure of failures) {
-         
         console.error(`  ${failure}`);
       }
       process.exitCode = 1;
     } else {
-       
       console.log(`[generate-methodology-pdfs --check] ${generated.length} PDFs stable`);
     }
   } finally {
@@ -308,8 +374,16 @@ async function runGenerate(): Promise<void> {
   const committed = readdirSync(PDF_OUTPUT_DIR).filter((name) => name.endsWith(".pdf"));
   for (const name of committed.sort()) {
     const size = statSync(path.join(PDF_OUTPUT_DIR, name)).size;
-     
+
     console.log(`  ${name}\t${size} bytes`);
+  }
+  const failures = assertPdfBudgets("generated", generated);
+  if (failures.length > 0) {
+    console.error("[generate-methodology-pdfs] PDF budget failures:");
+    for (const failure of failures) {
+      console.error(`  ${failure}`);
+    }
+    process.exitCode = 1;
   }
 }
 
@@ -324,7 +398,6 @@ async function main(): Promise<void> {
 
 if (path.resolve(process.argv[1] ?? "") === SCRIPT_PATH) {
   main().catch((error) => {
-     
     console.error(error);
     process.exit(1);
   });

@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { access, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 const OUT_DIR = new URL("../../out", import.meta.url).pathname;
 const SERVER_LOG = join(tmpdir(), `pages-smoke-server-${process.pid}.log`);
+const ENV_FILE = resolve(".env.local");
+
+if (existsSync(ENV_FILE)) {
+  process.loadEnvFile(ENV_FILE);
+}
 
 // ------------------------------------------------------------------
 // Precondition: out/ must exist
@@ -27,6 +33,10 @@ function pickEnv(prefix) {
   );
 }
 
+function firstNonEmpty(...values) {
+  return values.map((value) => value?.trim()).find(Boolean);
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -34,8 +44,15 @@ function sleep(ms) {
 // ------------------------------------------------------------------
 // Server lifecycle
 // ------------------------------------------------------------------
+const apiKey = firstNonEmpty(process.env.STATIC_EXPORT_API_KEY, process.env.SMOKE_API_KEY, process.env.PHAROS_API_KEY);
+const siteProxySecret = firstNonEmpty(
+  process.env.STATIC_EXPORT_SITE_API_SHARED_SECRET,
+  process.env.SITE_API_SHARED_SECRET,
+);
 const serverEnv = {
   ...process.env,
+  ...(apiKey ? { STATIC_EXPORT_API_KEY: apiKey } : {}),
+  ...(siteProxySecret ? { STATIC_EXPORT_SITE_API_SHARED_SECRET: siteProxySecret } : {}),
   STATIC_EXPORT_HOST: process.env.STATIC_EXPORT_HOST ?? "127.0.0.1",
   STATIC_EXPORT_PORT: process.env.STATIC_EXPORT_PORT ?? "4173",
   ...pickEnv("STATIC_EXPORT_"),

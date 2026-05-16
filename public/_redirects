@@ -18,6 +18,17 @@
 /tape/ /timeline/ 301
 /tape /timeline/ 301
 
+# RSS feeds moved to explicit .xml paths; preserve legacy extensionless
+# subscribers.
+/feed/digest/ /feed/digest.xml 301
+/feed/digest /feed/digest.xml 301
+/feed/depeg/ /feed/depeg.xml 301
+/feed/depeg /feed/depeg.xml 301
+/feed/methodology/ /feed/methodology.xml 301
+/feed/methodology /feed/methodology.xml 301
+/feed/cemetery/ /feed/cemetery.xml 301
+/feed/cemetery /feed/cemetery.xml 301
+
 /report-cards /safety-scores/ 301
 /report-cards/ /safety-scores/ 301
 /report-cards/* /safety-scores/:splat 301

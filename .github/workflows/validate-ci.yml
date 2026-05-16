@@ -73,6 +73,7 @@ jobs:
       - run: npm run check:classifier-sensitive-copy
       - run: npm run check:build-size
       - run: npm run check:build-attribution
+      - run: npm run check:methodology-pdfs
 
   test-noncritical:
     name: Noncritical Vitest (${{ matrix.shard }}/3)

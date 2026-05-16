@@ -73,10 +73,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={API_URL} />
         {gaId && <link rel="preload" href={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} as="script" />}
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Daily digest" href="/feed/digest/" />
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Depeg events" href="/feed/depeg/" />
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Methodology changelog" href="/feed/methodology/" />
-        <link rel="alternate" type="application/rss+xml" title="Pharos · Stablecoin cemetery" href="/feed/cemetery/" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Daily digest" href="/feed/digest.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Depeg events" href="/feed/depeg.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Methodology changelog" href="/feed/methodology.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Stablecoin cemetery" href="/feed/cemetery.xml" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gaId && <GoogleAnalytics measurementId={gaId} />}

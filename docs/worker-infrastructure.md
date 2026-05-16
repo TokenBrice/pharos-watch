@@ -539,10 +539,11 @@ This slot polls the `digest:force-run-request` cache key written by `POST /api/t
 | `snapshot-supply`               | `snapshotSupply()`             | `worker/src/cron/snapshot-supply.ts`               | [Supply Snapshot Pipeline](./supply-snapshot.md) |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | [Risk Lab](./report-cards.md)                    |
 | `snapshot-psi`                  | `snapshotPsiDaily()`           | `worker/src/cron/snapshot-psi.ts`                  | [Pharos Stability Index](./stability-index.md)   |
+| `snapshot-public-dataset`       | `snapshotPublicDataset()`      | `worker/src/cron/snapshot-public-dataset.ts`       | This doc (below)                                 |
 | `sync-usds-status`              | `syncUsdsStatus()`             | `worker/src/cron/sync-usds-status.ts`              | This doc (below)                                 |
 | `fetch-tbill-rate`              | `fetchTbillRate()`             | `worker/src/cron/fetch-tbill-rate.ts`              | [Yield Intelligence](./yield-intelligence.md)    |
 
-**Connection budget:** 3 snapshot jobs are D1-only (0 external connections). `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
+**Connection budget:** snapshot jobs are D1-only (0 external connections). `snapshot-public-dataset` runs after the safety-grade and PSI daily snapshots and freshness-gates its report-card and PSI inputs before writing the immutable dated public snapshot row. `fetch-tbill-rate` (ECB/FRED/Treasury/SIX benchmark fetches, still serialized inside one job) and `sync-usds-status` (Etherscan) are chained sequentially on the external-fetch branch to keep this trigger conservative on connection use. A failed `fetch-tbill-rate` run no longer suppresses `sync-usds-status`; peak external usage is 1 connection.
 
 ### Trigger 16: `5 8 * * *` (daily at 08:05 UTC — digest and Bluechip fetchers)
 
@@ -1208,6 +1209,7 @@ Returns raw and effective status, recent `cron_runs`, active `cron_run_progress`
 | `snapshot-safety-grade-history` | 86,400s (24h)    | `0 8 * * *`                                       |
 | `fetch-tbill-rate`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `snapshot-psi`                  | 86,400s (24h)    | `0 8 * * *`                                       |
+| `snapshot-public-dataset`       | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-usds-status`              | 86,400s (24h)    | `0 8 * * *`                                       |
 | `sync-live-reserves`            | 14,400s (4h)     | `11 */4 * * *`                                    |
 | `sync-redemption-backstops`     | 14,400s (4h)     | `11 */4 * * *`                                    |

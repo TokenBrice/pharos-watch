@@ -75,6 +75,18 @@ describe("CitationBlock", () => {
     expect(urnCode?.textContent).toBe("urn:pharos:methodology:dews@v4.2");
   });
 
+  it("resolves dynamic route accessed dates from the sitemap manifest", () => {
+    render(
+      <CitationBlock
+        entityClass="depeg-event"
+        id="usdc-2023-03-11"
+        title="USDC depeg"
+        url="https://pharos.watch/depeg/usdc-2023-03-11/"
+      />,
+    );
+    expect(screen.getByText(/Accessed 2026-/)).toBeTruthy();
+  });
+
   it("renders a copy button", () => {
     render(<CitationBlock {...baseProps} />);
     expect(screen.getByLabelText(/Copy to clipboard/i)).toBeTruthy();

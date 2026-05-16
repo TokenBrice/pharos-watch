@@ -13,6 +13,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [worker-infrastructure.md](./worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior, and status endpoints
 - [deployment-process.md](./deployment-process.md) - local merge gate, worktree flow, and CI deploy sequence
 - [testing.md](./testing.md) - test commands, CI gates, coverage thresholds, and helpers
+- [pharos-urn.md](./pharos-urn.md) - public citation/URN contract for methodology, depeg, stablecoin, and About trust surfaces
 - [process/agent-artifacts.md](./process/agent-artifacts.md) - routing for durable process docs, trackers, route-maintenance notes, and temporary artifacts
 
 ## System And Operations
@@ -94,6 +95,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/alt-pegs/`                                    | [alt-pegs-page.md](./alt-pegs-page.md)                                                                                                                |
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/about/editorial/`                             | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
+| `/about/principles/`                            | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex redirect wrapper for `/freezewatch/`                                                  |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |

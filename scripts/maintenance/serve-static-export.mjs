@@ -9,12 +9,14 @@ import origins from "../../shared/lib/runtime-origins.json" with { type: "json" 
 
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8",
   ".html": "text/html; charset=utf-8",
   ".ico": "image/x-icon",
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".ndjson": "application/x-ndjson; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
@@ -103,7 +105,10 @@ export function resolveStaticFilePath(rootDir, requestPathname) {
   return candidate;
 }
 
-function buildContentType(filePath) {
+function buildContentType(filePath, requestPathname = "") {
+  if (requestPathname.startsWith("/feed/") && requestPathname.endsWith(".xml")) {
+    return "application/rss+xml; charset=utf-8";
+  }
   return CONTENT_TYPES[path.extname(filePath)] ?? "application/octet-stream";
 }
 
@@ -181,7 +186,7 @@ async function readStaticExportFile(rootDir, requestPathname) {
 }
 
 function sendStaticExportFile(res, method, { file, filePath }, requestPathname) {
-  const contentType = buildContentType(filePath);
+  const contentType = buildContentType(filePath, requestPathname);
   const headers = {
     "Content-Type": contentType,
   };

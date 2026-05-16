@@ -161,6 +161,91 @@ export interface ScreenerRow {
   blacklistable: BlacklistableValue | null;
 }
 
+export type ScreenerSortKey =
+  | "name"
+  | "supply"
+  | "pegScore"
+  | "dewsScore"
+  | "liquidityScore"
+  | "safetyScore";
+
+export type ScreenerSortDirection = "asc" | "desc";
+
+function compareValues(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  direction: ScreenerSortDirection,
+): number {
+  const aMissing = a == null;
+  const bMissing = b == null;
+  if (aMissing && bMissing) return 0;
+  if (aMissing) return 1;
+  if (bMissing) return -1;
+  return direction === "asc" ? a - b : b - a;
+}
+
+function compareStrings(a: string, b: string, direction: ScreenerSortDirection): number {
+  const cmp = a.localeCompare(b);
+  return direction === "asc" ? cmp : -cmp;
+}
+
+export function sortScreenerRows(
+  rows: readonly ScreenerRow[],
+  sortKey: ScreenerSortKey,
+  sortDirection: ScreenerSortDirection,
+): ScreenerRow[] {
+  const copy = [...rows];
+  copy.sort((a, b) => {
+    switch (sortKey) {
+      case "name":
+        return compareStrings(a.symbol || a.name, b.symbol || b.name, sortDirection);
+      case "supply":
+        return compareValues(a.supplyUsd, b.supplyUsd, sortDirection);
+      case "pegScore":
+        return compareValues(a.pegScore, b.pegScore, sortDirection);
+      case "dewsScore":
+        return compareValues(a.dewsScore, b.dewsScore, sortDirection);
+      case "liquidityScore":
+        return compareValues(a.liquidityScore, b.liquidityScore, sortDirection);
+      case "safetyScore":
+        return compareValues(a.safetyScore, b.safetyScore, sortDirection);
+      default:
+        return 0;
+    }
+  });
+  return copy;
+}
+
+export interface ScreenerScoreFilterLoadingState {
+  pegLoading: boolean;
+  pegHasData: boolean;
+  dewsLoading: boolean;
+  dewsHasData: boolean;
+  liquidityLoading: boolean;
+  liquidityHasData: boolean;
+}
+
+export function hasLoadingScoreFilterData(
+  filters: ScreenerFilters,
+  state: ScreenerScoreFilterLoadingState,
+): boolean {
+  const pegScoreActive =
+    filters.pegScoreMin > SCREENER_FILTER_DEFAULTS.pegScoreMin ||
+    filters.pegScoreMax < SCREENER_FILTER_DEFAULTS.pegScoreMax;
+  const dewsActive =
+    filters.dewsMin > SCREENER_FILTER_DEFAULTS.dewsMin ||
+    filters.dewsMax < SCREENER_FILTER_DEFAULTS.dewsMax;
+  const liquidityActive =
+    filters.liquidityMin > SCREENER_FILTER_DEFAULTS.liquidityMin ||
+    filters.liquidityMax < SCREENER_FILTER_DEFAULTS.liquidityMax;
+
+  return (
+    (pegScoreActive && state.pegLoading && !state.pegHasData) ||
+    (dewsActive && state.dewsLoading && !state.dewsHasData) ||
+    (liquidityActive && state.liquidityLoading && !state.liquidityHasData)
+  );
+}
+
 /**
  * Apply scalar ranges and multi-select filters. Pure: no React, no
  * URL access. Rows missing a score do NOT pass that score's range filter

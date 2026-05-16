@@ -25,7 +25,7 @@ import { handleChains } from "../api/chains";
 import { handleNonUsdShare } from "../api/non-usd-share";
 import { handlePublicStatusHistory } from "../api/public-status-history";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
-import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../api/snapshot";
+import { handleSnapshotsIndex } from "../api/snapshot";
 import { handleTelegramPulse } from "../api/telegram-pulse";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
@@ -51,13 +51,6 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
   defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
   defineStaticRoute("snapshots-index", ({ db }) => handleSnapshotsIndex(db)),
-  // Canary entries: the live URLs are dynamic (matched by patterns in
-  // dynamic-routes.ts), but every ENDPOINT_DEFINITIONS row with a static-
-  // looking path must have a STATIC_ROUTES handler too (registry invariant).
-  // Both probe a recent canonical date + coin so the smoke check exercises
-  // a representative path.
-  defineStaticRoute("snapshot-day", ({ db }) => handleSnapshotDay(db, "2026-05-16")),
-  defineStaticRoute("snapshot-coin", ({ db }) => handleSnapshotCoin(db, "2026-05-16", "usdt-tether")),
   defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),

@@ -254,6 +254,7 @@ export default function StablecoinDetailClient({
     yieldRanking: viewModel.yieldRanking,
     stressSignal: viewModel.stressSignal,
     reportCard: viewModel.reportCard ?? null,
+    verdict: viewModel.verdict,
     variantParent: viewModel.variantParent,
     variantKind: viewModel.coin.variantKind ?? null,
   });
@@ -300,8 +301,6 @@ export default function StablecoinDetailClient({
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
 
-        {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
-
         {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
           <FrozenStateBanner
             symbol={viewModel.coin.symbol}
@@ -309,6 +308,8 @@ export default function StablecoinDetailClient({
             obituary={viewModel.coin.obituary}
           />
         ) : null}
+
+        {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
       </div>
 
       <MobileStickySummary

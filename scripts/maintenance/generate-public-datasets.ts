@@ -12,27 +12,28 @@
  *
  * Topics: top-stablecoins, depeg-history, scores-latest, peg-mechanism-distribution.
  *
- * `--check` mode: verify that `latest.*` files exist for each topic and carry a
- * recognizable preamble. Does NOT re-fetch (network-flakey in CI).
+ * `--check` mode: verify that `latest.*` files exist for each topic, carry a
+ * recognizable preamble, and satisfy per-topic row floors. Does NOT re-fetch
+ * (network-flakey in CI).
  *
  * Configure via env:
  *   PUBLIC_DATASETS_API_URL   — base API URL, e.g. `https://api.pharos.watch`
  *   SMOKE_API_BASE / API_BASE_URL — fallback bases (mirrors sync-digests)
  *   PUBLIC_DATASETS_API_KEY   — optional `X-API-Key` header
  *   PUBLIC_DATASETS_DATE      — optional ISO date to fetch (default: today UTC)
+ *   PUBLIC_DATASETS_REQUIRE_API=1 — fail if no API base is configured
  *
- * When no API base is configured (typical local prebuild), the script writes
- * empty-but-valid stub files so downstream `check:*` and `sitemap.ts` lookups
- * don't fail. The deploy pipeline supplies a real `PUBLIC_DATASETS_API_URL`.
+ * When no API base is configured, valid checked-in mirrors are preserved for
+ * local/PR validation builds. Production Pages workflows set
+ * `PUBLIC_DATASETS_REQUIRE_API=1` so they fail closed instead of shipping stale
+ * mirrors. Use `--allow-stub` or `PUBLIC_DATASETS_ALLOW_STUB=1` only for
+ * explicit local placeholder regeneration.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-  PUBLIC_DATASET_TOPICS,
-  type PublicDatasetTopic,
-} from "../../shared/lib/api-endpoints/datasets";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "../../shared/lib/api-endpoints/datasets";
 import { getMechanismArchetypeLabel } from "../../shared/lib/classification/mechanism-archetypes";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/liquidity-score-version";
@@ -47,6 +48,14 @@ const DATASETS_DIR = join(REPO_ROOT, "public/datasets");
 const SHEETS_DIR = join(REPO_ROOT, "public/sheets");
 const RETENTION_DAYS = 90;
 const CHECK_MODE = process.argv.includes("--check");
+const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
+const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
+const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
+  "top-stablecoins": 1,
+  "depeg-history": 1,
+  "scores-latest": 1,
+  "peg-mechanism-distribution": 1,
+};
 
 interface SnapshotEnvelope {
   snapshotDate: string;
@@ -69,6 +78,8 @@ interface SnapshotEnvelope {
 
 interface ReportCardScore {
   pegScore?: number;
+  safetyScore?: number;
+  score?: number;
   safetyGrade?: string;
   overall?: number;
   grade?: string;
@@ -90,6 +101,36 @@ interface DepegEvent {
   source: "live" | "backfill";
   confirmationSources: string | null;
   pendingReason: string | null;
+}
+
+interface StablecoinsResponse {
+  peggedAssets?: SnapshotEnvelope["stablecoins"];
+}
+
+interface ReportCardsResponse {
+  cards?: Array<{
+    id: string;
+    overallGrade?: string | null;
+    overallScore?: number | null;
+    rawInputs?: {
+      pegScore?: number | null;
+    };
+  }>;
+  methodology?: unknown;
+  updatedAt?: number;
+}
+
+interface StressSignalsResponse {
+  signals?: Record<string, { score?: number | null; band?: string | null }>;
+  methodology?: unknown;
+  updatedAt?: number;
+}
+
+interface DexLiquidityResponse {
+  [stablecoinId: string]: {
+    liquidityScore?: number | null;
+    coverageClass?: string | null;
+  };
 }
 
 function isoDateUtc(now: Date): string {
@@ -122,9 +163,7 @@ async function safeFetchJson<T>(url: string): Promise<T | null> {
     }
     return (await res.json()) as T;
   } catch (err) {
-    console.warn(
-      `[generate-public-datasets] ${url} fetch failed: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    console.warn(`[generate-public-datasets] ${url} fetch failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -133,9 +172,86 @@ async function fetchSnapshot(apiBase: string, date: string): Promise<SnapshotEnv
   return safeFetchJson<SnapshotEnvelope>(`${apiBase}/api/snapshots/${date}.json`);
 }
 
-async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[]> {
-  const payload = await safeFetchJson<{ events: DepegEvent[] }>(`${apiBase}/api/depeg-events?limit=1000`);
-  return payload?.events ?? [];
+async function fetchDepegEvents(apiBase: string, cutoffSec?: number): Promise<DepegEvent[] | null> {
+  const events: DepegEvent[] = [];
+  let nextCursor: string | undefined;
+
+  for (let page = 0; page < 100; page += 1) {
+    const params = new URLSearchParams({ limit: "1000" });
+    if (nextCursor) params.set("cursor", nextCursor);
+
+    const payload = await safeFetchJson<{ events: DepegEvent[]; nextCursor?: string | null }>(
+      `${apiBase}/api/depeg-events?${params.toString()}`,
+    );
+    if (!payload) return null;
+
+    const batch = payload.events ?? [];
+    events.push(...batch);
+
+    const lastStartedAt = batch.at(-1)?.startedAt;
+    if (
+      batch.length === 0 ||
+      !payload.nextCursor ||
+      (cutoffSec != null && lastStartedAt != null && lastStartedAt < cutoffSec)
+    ) {
+      return events;
+    }
+    nextCursor = payload.nextCursor;
+  }
+
+  console.warn("[generate-public-datasets] depeg-events pagination hit the 100-page safety cap.");
+  return events;
+}
+
+async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string): Promise<SnapshotEnvelope | null> {
+  const [stablecoins, reportCards, stressSignals, dexLiquidity] = await Promise.all([
+    safeFetchJson<StablecoinsResponse>(`${apiBase}/api/stablecoins`),
+    safeFetchJson<ReportCardsResponse>(`${apiBase}/api/report-cards`),
+    safeFetchJson<StressSignalsResponse>(`${apiBase}/api/stress-signals`),
+    safeFetchJson<DexLiquidityResponse>(`${apiBase}/api/dex-liquidity`),
+  ]);
+
+  if (!stablecoins?.peggedAssets || !reportCards?.cards || !stressSignals?.signals || !dexLiquidity) {
+    return null;
+  }
+
+  const scores: Record<string, ReportCardScore> = {};
+  for (const card of reportCards.cards) {
+    scores[card.id] = {
+      pegScore: card.rawInputs?.pegScore ?? undefined,
+      safetyScore: card.overallScore ?? undefined,
+      score: card.overallScore ?? undefined,
+      safetyGrade: card.overallGrade ?? undefined,
+      overall: card.overallScore ?? undefined,
+      grade: card.overallGrade ?? undefined,
+    };
+  }
+
+  const dews = Object.entries(stressSignals.signals).map(([stablecoinId, signal]) => ({
+    stablecoinId,
+    score: signal.score ?? 0,
+    band: signal.band ?? "unknown",
+  }));
+
+  const liquidity = Object.entries(dexLiquidity).map(([stablecoinId, row]) => ({
+    stablecoinId,
+    liquidityScore: row.liquidityScore ?? null,
+    coverageClass: row.coverageClass ?? null,
+  }));
+
+  return {
+    snapshotDate,
+    generatedAt: Math.max(reportCards.updatedAt ?? 0, stressSignals.updatedAt ?? 0),
+    methodologyVersions: {
+      reportCards: JSON.stringify(reportCards.methodology ?? null),
+      dews: JSON.stringify(stressSignals.methodology ?? null),
+      source: "live-endpoint-fallback",
+    },
+    stablecoins: stablecoins.peggedAssets,
+    reportCards: { scores },
+    dews,
+    liquidity,
+  };
 }
 
 // --- CSV helpers (mirror src/lib/exports/csv.ts escaping rules) -------------
@@ -143,9 +259,7 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[]> {
 function escapeCsvField(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
   const str = String(value);
-  return str.includes(",") || str.includes('"') || str.includes("\n")
-    ? `"${str.replace(/"/g, '""')}"`
-    : str;
+  return str.includes(",") || str.includes('"') || str.includes("\n") ? `"${str.replace(/"/g, '""')}"` : str;
 }
 
 interface CsvColumn<T> {
@@ -179,20 +293,22 @@ function buildJson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): s
     }
     return obj;
   });
-  return JSON.stringify(
-    {
-      _meta: {
-        endpoint: preamble.endpoint,
-        asOfISO: preamble.asOfISO,
-        sourceUrl: preamble.sourceUrl,
-        methodologyLabel: preamble.methodologyLabel,
-        rowCount: rows.length,
+  return (
+    JSON.stringify(
+      {
+        _meta: {
+          endpoint: preamble.endpoint,
+          asOfISO: preamble.asOfISO,
+          sourceUrl: preamble.sourceUrl,
+          methodologyLabel: preamble.methodologyLabel,
+          rowCount: rows.length,
+        },
+        rows: objects,
       },
-      rows: objects,
-    },
-    null,
-    2,
-  ) + "\n";
+      null,
+      2,
+    ) + "\n"
+  );
 }
 
 function buildNdjson<T>(rows: T[], columns: CsvColumn<T>[], preamble: Preamble): string {
@@ -292,7 +408,6 @@ const DEPEG_HISTORY_COLUMNS: CsvColumn<DepegHistoryRow>[] = [
 function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
   const cutoffSec = Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
   return events
-    .filter((event) => event.pendingReason === null) // confirmed only
     .filter((event) => event.startedAt >= cutoffSec)
     .map((event) => ({
       id: event.id,
@@ -316,6 +431,7 @@ interface ScoreLatestRow {
   stablecoinId: string;
   symbol: string;
   pegScore: number | null;
+  safetyScore: number | null;
   safetyGrade: string | null;
   dewsScore: number | null;
   dewsBand: string | null;
@@ -327,6 +443,7 @@ const SCORES_LATEST_COLUMNS: CsvColumn<ScoreLatestRow>[] = [
   { header: "stablecoinId", accessor: (r) => r.stablecoinId },
   { header: "symbol", accessor: (r) => r.symbol },
   { header: "pegScore", accessor: (r) => r.pegScore },
+  { header: "safetyScore", accessor: (r) => r.safetyScore },
   { header: "safetyGrade", accessor: (r) => r.safetyGrade },
   { header: "dewsScore", accessor: (r) => r.dewsScore },
   { header: "dewsBand", accessor: (r) => r.dewsBand },
@@ -348,7 +465,8 @@ function projectScoresLatest(envelope: SnapshotEnvelope | null): ScoreLatestRow[
       return {
         stablecoinId: coin.id,
         symbol: coin.symbol,
-        pegScore: reportCard?.pegScore ?? reportCard?.overall ?? null,
+        pegScore: reportCard?.pegScore ?? null,
+        safetyScore: reportCard?.safetyScore ?? reportCard?.score ?? reportCard?.overall ?? null,
         safetyGrade: reportCard?.safetyGrade ?? reportCard?.grade ?? null,
         dewsScore: dews?.score ?? null,
         dewsBand: dews?.band ?? null,
@@ -388,8 +506,7 @@ function projectPegMechanismDistribution(): PegMechanismDistributionRow[] {
     } else {
       counts.set(key, {
         mechanismArchetype: archetype,
-        mechanismLabel:
-          archetype === "unknown" ? "Unknown" : getMechanismArchetypeLabel(coin.mechanismArchetype!),
+        mechanismLabel: archetype === "unknown" ? "Unknown" : getMechanismArchetypeLabel(coin.mechanismArchetype!),
         pegReferenceId,
         jurisdiction,
         coinCount: 1,
@@ -464,7 +581,11 @@ function pruneOldSnapshots(topicDir: string, snapshotDate: string): number {
   return removed;
 }
 
-function writeTopic<T>(spec: TopicSpec<T>, snapshotDate: string, asOfISO: string): { dated: string[]; written: number } {
+function writeTopic<T>(
+  spec: TopicSpec<T>,
+  snapshotDate: string,
+  asOfISO: string,
+): { dated: string[]; written: number } {
   const topicDir = join(DATASETS_DIR, spec.topic);
   const csv = buildCsv(spec.rows, spec.columns, topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "csv"));
   const json = buildJson(spec.rows, spec.columns, topicPreamble(spec.topic, spec.methodologyLabel, asOfISO, "json"));
@@ -497,13 +618,43 @@ function writeTopic<T>(spec: TopicSpec<T>, snapshotDate: string, asOfISO: string
   return { dated: [`${snapshotDate}.csv`, `${snapshotDate}.json`, `${snapshotDate}.ndjson`], written };
 }
 
-function checkTopic(topic: PublicDatasetTopic): { ok: boolean; reason?: string } {
-  const topicDir = join(DATASETS_DIR, topic);
+interface ArtifactDirs {
+  datasetsDir: string;
+  sheetsDir: string;
+}
+
+const DEFAULT_ARTIFACT_DIRS: ArtifactDirs = {
+  datasetsDir: DATASETS_DIR,
+  sheetsDir: SHEETS_DIR,
+};
+
+function readJsonRowCount(path: string, topic: PublicDatasetTopic): number | null {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as { _meta?: { endpoint?: string; rowCount?: unknown } };
+    if (parsed._meta?.endpoint !== topic) return null;
+    return typeof parsed._meta.rowCount === "number" ? parsed._meta.rowCount : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateTopicRowFloor(topic: PublicDatasetTopic, rows: readonly unknown[]): void {
+  const floor = ROW_FLOORS[topic];
+  if (rows.length < floor) {
+    throw new Error(`Public dataset ${topic} has ${rows.length} rows; expected at least ${floor}.`);
+  }
+}
+
+function checkTopic(
+  topic: PublicDatasetTopic,
+  dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS,
+): { ok: boolean; reason?: string } {
+  const topicDir = join(dirs.datasetsDir, topic);
   const required = [
     join(topicDir, "latest.csv"),
     join(topicDir, "latest.json"),
     join(topicDir, "latest.ndjson"),
-    join(SHEETS_DIR, `${topic}.csv`),
+    join(dirs.sheetsDir, `${topic}.csv`),
   ];
   for (const path of required) {
     if (!existsSync(path)) {
@@ -517,54 +668,85 @@ function checkTopic(topic: PublicDatasetTopic): { ok: boolean; reason?: string }
       return { ok: false, reason: `${path} missing preamble` };
     }
   }
+  const rowCount = readJsonRowCount(join(topicDir, "latest.json"), topic);
+  const floor = ROW_FLOORS[topic];
+  if (rowCount == null) {
+    return { ok: false, reason: `${join(topicDir, "latest.json")} missing numeric _meta.rowCount` };
+  }
+  if (rowCount < floor) {
+    return { ok: false, reason: `${topic} rowCount ${rowCount} below required floor ${floor}` };
+  }
   return { ok: true };
 }
 
-// --- Main -------------------------------------------------------------------
+interface PublicDatasetLiveInputs {
+  envelope: SnapshotEnvelope;
+  depegEvents: DepegEvent[];
+  effectiveSnapshotDate: string;
+  asOfISO: string;
+}
 
-async function main(): Promise<void> {
-  const snapshotDate = resolveSnapshotDate();
-  // Deterministic "as-of" so re-runs on the same snapshot produce byte-identical files.
-  const asOfISO = `${snapshotDate}T00:00:00.000Z`;
+function cutoffSecForSnapshotDate(snapshotDate: string): number {
+  return Math.floor(new Date(`${snapshotDate}T00:00:00Z`).getTime() / 1000) - RETENTION_DAYS * 86_400;
+}
 
-  if (CHECK_MODE) {
-    for (const topic of PUBLIC_DATASET_TOPICS) {
-      const result = checkTopic(topic);
-      if (!result.ok) {
-        console.error(
-          `Public dataset mirrors are out of date. Run \`tsx scripts/maintenance/generate-public-datasets.ts\`. (${result.reason})`,
-        );
-        process.exit(1);
-      }
-    }
-    console.log("Public dataset mirrors are current");
-    return;
+function asOfIsoFromEnvelope(envelope: SnapshotEnvelope, snapshotDate: string): string {
+  if (envelope.methodologyVersions.source === "live-endpoint-fallback") {
+    return new Date(Math.max(Date.now(), envelope.generatedAt * 1000)).toISOString();
   }
+  return envelope.generatedAt > 0
+    ? new Date(envelope.generatedAt * 1000).toISOString()
+    : `${snapshotDate}T00:00:00.000Z`;
+}
 
-  const apiBase = resolveApiBase();
-  let envelope: SnapshotEnvelope | null = null;
-  let depegEvents: DepegEvent[] = [];
+async function fetchLatestSnapshotDate(apiBase: string): Promise<string | null> {
+  const indexPayload = await safeFetchJson<{ snapshots: Array<{ snapshotDate: string }> }>(
+    `${apiBase}/api/snapshots/index`,
+  );
+  return indexPayload?.snapshots[0]?.snapshotDate ?? null;
+}
 
-  if (apiBase) {
-    envelope = await fetchSnapshot(apiBase, snapshotDate);
-    if (!envelope) {
-      // Try the latest available index entry as a fallback.
-      const indexPayload = await safeFetchJson<{ snapshots: Array<{ snapshotDate: string }> }>(
-        `${apiBase}/api/snapshots/index`,
-      );
-      const latestDate = indexPayload?.snapshots[0]?.snapshotDate;
-      if (latestDate && latestDate !== snapshotDate) {
-        envelope = await fetchSnapshot(apiBase, latestDate);
-      }
+export async function loadPublicDatasetLiveInputs(
+  apiBase: string,
+  requestedSnapshotDate: string,
+): Promise<PublicDatasetLiveInputs> {
+  let effectiveSnapshotDate = requestedSnapshotDate;
+  let envelope = await fetchSnapshot(apiBase, requestedSnapshotDate);
+  if (!envelope) {
+    const latestDate = await fetchLatestSnapshotDate(apiBase);
+    if (latestDate && latestDate !== requestedSnapshotDate) {
+      effectiveSnapshotDate = latestDate;
+      envelope = await fetchSnapshot(apiBase, latestDate);
     }
-    depegEvents = await fetchDepegEvents(apiBase);
-  } else {
-    console.log(
-      "[generate-public-datasets] No PUBLIC_DATASETS_API_URL / SMOKE_API_BASE / API_BASE_URL set; emitting empty mirrors.",
+  }
+  if (!envelope) {
+    console.warn(
+      `[generate-public-datasets] Snapshot API unavailable for ${requestedSnapshotDate}; falling back to current live endpoints.`,
+    );
+    envelope = await fetchLiveEndpointEnvelope(apiBase, effectiveSnapshotDate);
+  }
+  if (!envelope) {
+    throw new Error(
+      `Unable to fetch public snapshot or live endpoint fallback for ${requestedSnapshotDate}.`,
     );
   }
+  effectiveSnapshotDate = envelope.snapshotDate || effectiveSnapshotDate;
+  const asOfISO = asOfIsoFromEnvelope(envelope, effectiveSnapshotDate);
 
-  const specs: TopicSpec<unknown>[] = [
+  const depegEvents = await fetchDepegEvents(apiBase, cutoffSecForSnapshotDate(effectiveSnapshotDate));
+  if (!depegEvents) {
+    throw new Error("Unable to fetch depeg events for public dataset generation.");
+  }
+
+  return { envelope, depegEvents, effectiveSnapshotDate, asOfISO };
+}
+
+function buildTopicSpecs(
+  envelope: SnapshotEnvelope | null,
+  depegEvents: DepegEvent[],
+  snapshotDate: string,
+): TopicSpec<unknown>[] {
+  return [
     {
       topic: "top-stablecoins",
       rows: projectTopStablecoins(envelope),
@@ -594,6 +776,89 @@ async function main(): Promise<void> {
       sheetColumns: PEG_MECHANISM_COLUMNS,
     } as TopicSpec<PegMechanismDistributionRow> as TopicSpec<unknown>,
   ];
+}
+
+export const testExports = {
+  buildTopicSpecs,
+  checkTopic,
+  cutoffSecForSnapshotDate,
+  projectDepegHistory,
+  validateTopicRowFloor,
+};
+
+function checkAllTopics(dirs: ArtifactDirs = DEFAULT_ARTIFACT_DIRS): { ok: boolean; reason?: string } {
+  for (const topic of PUBLIC_DATASET_TOPICS) {
+    const result = checkTopic(topic, dirs);
+    if (!result.ok) return result;
+  }
+  return { ok: true };
+}
+
+// --- Main -------------------------------------------------------------------
+
+async function main(): Promise<void> {
+  const requestedSnapshotDate = resolveSnapshotDate();
+  let snapshotDate = requestedSnapshotDate;
+
+  if (CHECK_MODE) {
+    for (const topic of PUBLIC_DATASET_TOPICS) {
+      const result = checkTopic(topic);
+      if (!result.ok) {
+        console.error(
+          `Public dataset mirrors are out of date. Run \`tsx scripts/maintenance/generate-public-datasets.ts\`. (${result.reason})`,
+        );
+        process.exit(1);
+      }
+    }
+    console.log("Public dataset mirrors are current");
+    return;
+  }
+
+  const apiBase = resolveApiBase();
+  let envelope: SnapshotEnvelope | null = null;
+  let depegEvents: DepegEvent[] = [];
+  let asOfISO = `${snapshotDate}T00:00:00.000Z`;
+
+  if (apiBase) {
+    const liveInputs = await loadPublicDatasetLiveInputs(apiBase, requestedSnapshotDate);
+    envelope = liveInputs.envelope;
+    depegEvents = liveInputs.depegEvents;
+    snapshotDate = liveInputs.effectiveSnapshotDate;
+    asOfISO = liveInputs.asOfISO;
+    if (snapshotDate !== requestedSnapshotDate) {
+      console.log(
+        `[generate-public-datasets] Requested snapshot ${requestedSnapshotDate} unavailable; using latest snapshot ${snapshotDate}.`,
+      );
+    }
+  } else {
+    if (REQUIRE_API_SOURCE) {
+      throw new Error(
+        "No public dataset API source configured. Set PUBLIC_DATASETS_API_URL, SMOKE_API_BASE, or API_BASE_URL; use --allow-stub only for explicit local placeholder regeneration.",
+      );
+    }
+    if (!ALLOW_STUB_MODE) {
+      const existing = checkAllTopics();
+      if (existing.ok) {
+        console.log(
+          "[generate-public-datasets] No PUBLIC_DATASETS_API_URL / SMOKE_API_BASE / API_BASE_URL set; preserving checked-in public dataset mirrors.",
+        );
+        return;
+      }
+      throw new Error(
+        `No public dataset API source configured and checked-in mirrors are not current. Set PUBLIC_DATASETS_API_URL, SMOKE_API_BASE, or API_BASE_URL; use --allow-stub only for explicit local placeholder regeneration. (${existing.reason})`,
+      );
+    }
+    console.log(
+      "[generate-public-datasets] No PUBLIC_DATASETS_API_URL / SMOKE_API_BASE / API_BASE_URL set; emitting explicit stub mirrors.",
+    );
+  }
+
+  const specs = buildTopicSpecs(envelope, depegEvents, snapshotDate);
+  if (apiBase) {
+    for (const spec of specs) {
+      validateTopicRowFloor(spec.topic, spec.rows);
+    }
+  }
 
   ensureDir(DATASETS_DIR);
   ensureDir(SHEETS_DIR);
@@ -612,7 +877,11 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

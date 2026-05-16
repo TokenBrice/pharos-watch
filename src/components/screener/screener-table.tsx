@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import {
   DataTableEmptyRow,
   DataTableLoadingRows,
@@ -10,20 +9,13 @@ import {
 } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { useSort } from "@/hooks/use-sort";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
-import type { ScreenerRow } from "@/app/screener/screener-filters";
+import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
+import type { DataTableSortControls } from "@/components/data-table-shell";
 import type { ReportCardGrade } from "@shared/types";
-
-type ScreenerSortKey =
-  | "name"
-  | "supply"
-  | "pegScore"
-  | "dewsScore"
-  | "liquidityScore"
-  | "safetyScore";
 
 const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   { id: "name", label: "Name", sortKey: "name", className: "min-w-[160px]" },
@@ -54,36 +46,18 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     label: "Grade",
     sortKey: "safetyScore",
     className: "text-center",
-    title: "Pharos Safety Grade",
+    title: `Pharos Safety Grade (${SAFETY_SCORE_VERSION_LABEL})`,
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
 ] as const;
-
-function compareValues(
-  a: number | null | undefined,
-  b: number | null | undefined,
-  direction: "asc" | "desc",
-): number {
-  const aMissing = a == null;
-  const bMissing = b == null;
-  // Always push null values to the bottom regardless of sort direction.
-  if (aMissing && bMissing) return 0;
-  if (aMissing) return 1;
-  if (bMissing) return -1;
-  return direction === "asc" ? a - b : b - a;
-}
-
-function compareStrings(a: string, b: string, direction: "asc" | "desc"): number {
-  const cmp = a.localeCompare(b);
-  return direction === "asc" ? cmp : -cmp;
-}
 
 interface ScreenerTableProps {
   rows: readonly ScreenerRow[];
   isLoading: boolean;
   onClearFilters?: () => void;
   hasActiveFilters: boolean;
+  sort: DataTableSortControls<ScreenerSortKey>;
 }
 
 export function ScreenerTable({
@@ -91,44 +65,17 @@ export function ScreenerTable({
   isLoading,
   onClearFilters,
   hasActiveFilters,
+  sort,
 }: ScreenerTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>(
-    "safetyScore",
-    "desc",
-  );
-
-  const sorted = useMemo(() => {
-    const copy = [...rows];
-    copy.sort((a, b) => {
-      switch (sortKey) {
-        case "name":
-          return compareStrings(a.symbol || a.name, b.symbol || b.name, sortDirection);
-        case "supply":
-          return compareValues(a.supplyUsd, b.supplyUsd, sortDirection);
-        case "pegScore":
-          return compareValues(a.pegScore, b.pegScore, sortDirection);
-        case "dewsScore":
-          return compareValues(a.dewsScore, b.dewsScore, sortDirection);
-        case "liquidityScore":
-          return compareValues(a.liquidityScore, b.liquidityScore, sortDirection);
-        case "safetyScore":
-          return compareValues(a.safetyScore, b.safetyScore, sortDirection);
-        default:
-          return 0;
-      }
-    });
-    return copy;
-  }, [rows, sortKey, sortDirection]);
-
   return (
     <DataTableShell<ScreenerSortKey>
       columns={COLUMNS}
-      sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
+      sort={sort}
       striped
     >
       {isLoading ? (
         <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
-      ) : sorted.length === 0 ? (
+      ) : rows.length === 0 ? (
         <DataTableEmptyRow colSpan={COLUMNS.length}>
           {hasActiveFilters ? (
             <div className="space-y-2">
@@ -148,7 +95,7 @@ export function ScreenerTable({
           )}
         </DataTableEmptyRow>
       ) : (
-        sorted.map((row) => <ScreenerRow key={row.id} row={row} />)
+        rows.map((row) => <ScreenerRow key={row.id} row={row} />)
       )}
     </DataTableShell>
   );
@@ -192,6 +139,7 @@ function ScreenerRow({ row }: { row: ScreenerRow }) {
             grade={row.safetyGrade as ReportCardGrade}
             score={row.safetyScore}
             size="sm"
+            versionTopic="safetyScore"
           />
         ) : (
           <span className="text-muted-foreground">—</span>

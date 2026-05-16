@@ -233,13 +233,20 @@ const stressSignal: StressSignalEntry = {
   methodologyVersion: "v1",
 };
 
+const verdict = {
+  archetype: "institutional-default",
+  label: "Institutional Default",
+} as const;
+
 function HeroCardUnderTest({
   onOpenFeedback,
+  verdict: testVerdict = verdict,
   ...props
-}: Parameters<typeof buildStablecoinDetailHeroViewModel>[0] & {
+}: Omit<Parameters<typeof buildStablecoinDetailHeroViewModel>[0], "verdict"> & {
+  verdict?: Parameters<typeof buildStablecoinDetailHeroViewModel>[0]["verdict"];
   onOpenFeedback: () => void;
 }) {
-  return <HeroCard model={buildStablecoinDetailHeroViewModel(props)} onOpenFeedback={onOpenFeedback} />;
+  return <HeroCard model={buildStablecoinDetailHeroViewModel({ ...props, verdict: testVerdict })} onOpenFeedback={onOpenFeedback} />;
 }
 
 describe("HeroCard", () => {
@@ -264,6 +271,7 @@ describe("HeroCard", () => {
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
         reportCard={null}
+        verdict={verdict}
         onOpenFeedback={() => {}}
       />,
     );

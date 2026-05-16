@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
+import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const dynamic = "force-static";
 export const revalidate = false;
 
-const FEED_PATH = "/feed/depeg/";
+const FEED_PATH = "/feed/depeg.xml";
 const MAX_ITEMS = 100;
 /** W3-D will populate this file during prebuild. Until then, treat absence as zero events. */
 const DEPEG_EVENTS_PATH = path.join(process.cwd(), "data/depeg-events.json");
@@ -19,6 +20,7 @@ interface DepegFeedEvent {
   peakDeviationBps: number;
   startedAt: number;
   endedAt: number | null;
+  slug: string;
 }
 
 function loadEvents(): DepegFeedEvent[] {
@@ -42,11 +44,15 @@ function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
       const sign = event.direction === "below" ? "-" : "+";
       const title = `${event.symbol} depeg ${sign}${event.peakDeviationBps} bps`;
       const status = event.endedAt ? "Resolved" : "Active";
+      const eventLink =
+        event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS
+          ? `${SITE_URL}/depeg/${event.slug}/`
+          : `${SITE_URL}/stablecoin/${event.stablecoinId}/#depeg-history`;
       return {
         title,
-        link: `${SITE_URL}/stablecoin/${event.stablecoinId}/#depeg-history`,
+        link: eventLink,
         description: `${status} ${event.direction} peg by ${event.peakDeviationBps} bps starting ${startedISO}.`,
-        guid: `pharos:depeg-event:${event.stablecoinId}-${startedISO}`,
+        guid: `pharos:depeg-event:${event.slug}`,
         pubDate: toRfc822(event.startedAt * 1000),
       };
     });

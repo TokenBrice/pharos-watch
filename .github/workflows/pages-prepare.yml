@@ -16,6 +16,10 @@ on:
     secrets:
       DIGEST_API_KEY:
         required: true
+      DEPEG_EVENTS_API_KEY:
+        required: false
+      PUBLIC_DATASETS_API_KEY:
+        required: false
       SITE_API_SHARED_SECRET:
         required: true
       SMOKE_API_KEY:
@@ -38,10 +42,12 @@ jobs:
       # same API surface so /datasets/* and /sheets/* carry real data.
       PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
+      PUBLIC_DATASETS_REQUIRE_API: "1"
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       # Detail-page feature flags. Each is inlined at build time when set to
-      # the literal string "true"; missing / any other value → false. Managed
-      # as GitHub repo Variables (gh variable set / list) per
+      # the literal string required by src/lib/feature-flags.ts. Most flags are
+      # on only when set to "true"; HERO_VERDICT is default-on and must be set
+      # to "false" to roll back. Managed as GitHub repo Variables per
       # docs/process/pages-env-rollout.md.
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
@@ -61,11 +67,16 @@ jobs:
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - name: Fetch depeg events from the target API environment
         run: npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
+      - name: Generate public dataset mirrors from the target API environment
+        run: npm run generate:public-datasets
       - run: npm run build
       - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
+      - run: npm run check:build-size
+      - run: npm run check:build-attribution
+      - run: npm run check:methodology-pdfs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ inputs.artifact_name }}

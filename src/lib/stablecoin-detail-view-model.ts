@@ -392,6 +392,7 @@ export interface HeroCardViewModel {
   coinData: StablecoinData;
   logoSrc?: string;
   reportCard: ReportCard | null;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantKind?: VariantKind | null;
   variantChipClass: string | null;
@@ -473,6 +474,7 @@ export interface BuildHeroCardViewModelParams {
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
   reportCard: ReportCard | null;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantKind?: VariantKind | null;
 }
@@ -520,6 +522,7 @@ export function buildStablecoinDetailHeroViewModel({
   yieldRanking,
   stressSignal,
   reportCard,
+  verdict,
   variantParent,
   variantKind,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
@@ -780,6 +783,7 @@ export function buildStablecoinDetailHeroViewModel({
     coinData,
     logoSrc,
     reportCard,
+    verdict,
     variantParent,
     variantKind,
     variantChipClass: variantKind ? getVariantDisplay(variantKind).chipClass : null,
@@ -816,11 +820,7 @@ export function buildStablecoinDetailHeroViewModel({
     },
     tertiaryMetrics,
     desktopTertiaryMetrics: tertiaryMetrics.filter(
-      (metric) =>
-        metric.key !== "dews"
-        && metric.key !== "liquidity"
-        && metric.key !== "peg-score"
-        && metric.key !== "blacklistable",
+      (metric) => !["dews", "liquidity", "peg-score", "blacklistable"].includes(metric.key),
     ),
     signalRailItems,
   };

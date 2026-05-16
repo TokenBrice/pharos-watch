@@ -129,7 +129,7 @@ The cadence field is rendered alongside the tier badge as supporting text (e.g. 
 
 ## Show Your Work
 
-Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; preference persists in `localStorage` under `pharos.show-work`. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
+Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; once a user hides or shows the panel, that explicit `localStorage` preference under `pharos.show-work` wins over the URL flag until changed again. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
 
 ## Verification Shortcuts
 

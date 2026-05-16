@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
 
 describe("feed routes smoke", () => {
+  it("advertised .xml feed routes emit RSS content", async () => {
+    const routes = [
+      await import("../digest.xml/route"),
+      await import("../depeg.xml/route"),
+      await import("../methodology.xml/route"),
+      await import("../cemetery.xml/route"),
+    ];
+
+    for (const route of routes) {
+      const res = await route.GET();
+      const xml = await res.text();
+      expect(res.headers.get("Content-Type")).toContain("application/rss+xml");
+      expect(xml).toContain('<rss version="2.0"');
+      expect(xml).toContain("<atom:link");
+      expect(xml).toContain(".xml");
+    }
+  });
+
   it("digest route emits valid RSS XML", async () => {
     const mod = await import("../digest/route");
     const res = await mod.GET();
@@ -21,7 +39,9 @@ describe("feed routes smoke", () => {
     // CI sync populates the rest. The route empty-channel branch still exists
     // for the case where the file becomes [].
     expect(xml).toContain("<item>");
-    expect(xml).toContain("pharos:depeg-event:");
+    expect(xml).toContain("pharos:depeg-event:usdc-2023-03-11");
+    expect(xml).toContain("https://pharos.watch/depeg/usdc-2023-03-11/");
+    expect(xml).not.toContain("pharos:depeg-event:usdc-circle-2023-03-11");
   });
 
   it("methodology route emits items across the unified changelogs", async () => {

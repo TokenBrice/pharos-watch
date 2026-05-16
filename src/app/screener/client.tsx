@@ -8,16 +8,20 @@ import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary, useReportCards, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useSort } from "@/hooks/use-sort";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { decodeState, encodeState } from "@/lib/url-state";
 import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
+  hasLoadingScoreFilterData,
   hasActiveFilters,
   projectBlacklistable,
+  sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
+  type ScreenerSortKey,
 } from "@/app/screener/screener-filters";
 import {
   CLIENT_TRACKED_META_BY_ID,
@@ -58,6 +62,7 @@ export function ScreenerClient() {
   } = useStablecoins();
   const {
     data: pegData,
+    isLoading: isPegLoading,
     dataUpdatedAt: pegUpdatedAt,
     error: pegError,
     refetch: refetchPeg,
@@ -72,6 +77,7 @@ export function ScreenerClient() {
   } = useReportCards();
   const {
     data: stressData,
+    isLoading: isStressLoading,
     dataUpdatedAt: stressUpdatedAt,
     error: stressError,
     refetch: refetchStress,
@@ -79,6 +85,7 @@ export function ScreenerClient() {
   } = useStressSignals();
   const {
     data: dexData,
+    isLoading: isDexLoading,
     dataUpdatedAt: dexUpdatedAt,
     error: dexError,
     refetch: refetchDex,
@@ -165,6 +172,24 @@ export function ScreenerClient() {
     () => applyFilters(allRows, filters),
     [allRows, filters],
   );
+  const scoreFilterDataLoading = hasLoadingScoreFilterData(filters, {
+    pegLoading: isPegLoading,
+    pegHasData: !!pegData?.coins?.length,
+    dewsLoading: isStressLoading,
+    dewsHasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
+    liquidityLoading: isDexLoading,
+    liquidityHasData: dexData ? Object.keys(dexData).length > 0 : false,
+  });
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>(
+    "safetyScore",
+    "desc",
+  );
+  const sortedRows = useMemo(
+    () => sortScreenerRows(filteredRows, sortKey, sortDirection),
+    [filteredRows, sortKey, sortDirection],
+  );
+  const toolbarResultCount = scoreFilterDataLoading ? allRows.length : filteredRows.length;
+  const exportRows = scoreFilterDataLoading ? [] : sortedRows;
 
   const handleRetry = useCallback(
     () => refetchQueryGroup([refetchStablecoins, refetchPeg, refetchReport, refetchStress, refetchDex]),
@@ -227,24 +252,27 @@ export function ScreenerClient() {
         filters={filters}
         onChange={setFilters}
         onReset={resetFilters}
-        resultCount={filteredRows.length}
+        resultCount={toolbarResultCount}
         totalCount={totalTracked}
         rightSlot={
           <TableExportMenu
-            data={filteredRows}
+            data={exportRows}
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
             methodologyLabel={`safety-score ${SAFETY_SCORE_VERSION_LABEL}`}
+            triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
+            disabled={scoreFilterDataLoading}
           />
         }
       />
 
       <ScreenerTable
-        rows={filteredRows}
-        isLoading={isStablecoinsLoading}
+        rows={sortedRows}
+        isLoading={isStablecoinsLoading || scoreFilterDataLoading}
         onClearFilters={active ? resetFilters : undefined}
         hasActiveFilters={active}
+        sort={{ sortKey, sortDirection, toggleSort, getAriaSortValue }}
       />
     </div>
   );

@@ -407,7 +407,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  // RSS feeds live at /feed/<topic>/ as XML (Content-Type:
+  // RSS feeds live at /feed/<topic>.xml as XML (Content-Type:
   // application/rss+xml). They're discoverable via the <link rel="alternate">
   // tags in layout.tsx and the footer "Subscribe" cluster; sitemap inclusion
   // would fail the SEO check (no HTML artifact at those paths).

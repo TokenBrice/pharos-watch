@@ -1,4 +1,4 @@
-# Pharos pharos.watch | Endpoint: peg-mechanism-distribution | As of: 2026-05-16T00:00:00.000Z | URL: https://pharos.watch/sheets/peg-mechanism-distribution.csv | Methodology: safety-score v7.25
+# Pharos pharos.watch | Endpoint: peg-mechanism-distribution | As of: 2026-05-16T21:20:16.676Z | URL: https://pharos.watch/sheets/peg-mechanism-distribution.csv | Methodology: safety-score v7.25
 mechanismArchetype,mechanismLabel,pegReferenceId,jurisdiction,coinCount
 cdp,CDP,unknown,unknown,71
 unknown,Unknown,unknown,unknown,53

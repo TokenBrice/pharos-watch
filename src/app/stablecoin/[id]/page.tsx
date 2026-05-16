@@ -21,6 +21,7 @@ import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
+import { getCitationAccessedDateForPath } from "@/lib/citation-dates";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
@@ -172,6 +173,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     hasCollateralUsage: hasCollateralUsageTarget(id),
   });
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
+  const citationAccessedDate = getCitationAccessedDateForPath(buildStablecoinUrl(id));
 
   return (
     <>
@@ -217,6 +219,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         id={coin.id}
         title={`${coin.name} (${coin.symbol}) — Pharos coin profile`}
         url={`${SITE_ORIGIN}${buildStablecoinUrl(id)}`}
+        accessedDate={citationAccessedDate}
       />
       <BreadcrumbJsonLd
         items={[

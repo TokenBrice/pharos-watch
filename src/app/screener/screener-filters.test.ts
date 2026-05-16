@@ -3,8 +3,10 @@ import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
+  hasLoadingScoreFilterData,
   hasActiveFilters,
   projectBlacklistable,
+  sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
 } from "./screener-filters";
@@ -163,6 +165,64 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 50 })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, supplyMin: 1 })).toBe(true);
+  });
+});
+
+describe("sortScreenerRows", () => {
+  const rows = [
+    makeRow({ id: "low", symbol: "LOW", safetyScore: 60, pegScore: null }),
+    makeRow({ id: "high", symbol: "HIGH", safetyScore: 95, pegScore: 95 }),
+    makeRow({ id: "mid", symbol: "MID", safetyScore: 80, pegScore: 70 }),
+  ];
+
+  it("sorts the same row order used by table rendering and exports", () => {
+    expect(sortScreenerRows(rows, "safetyScore", "desc").map((row) => row.id)).toEqual([
+      "high",
+      "mid",
+      "low",
+    ]);
+  });
+
+  it("keeps unrated score values at the bottom in either direction", () => {
+    expect(sortScreenerRows(rows, "pegScore", "asc").map((row) => row.id)).toEqual([
+      "mid",
+      "high",
+      "low",
+    ]);
+    expect(sortScreenerRows(rows, "pegScore", "desc").map((row) => row.id)).toEqual([
+      "high",
+      "mid",
+      "low",
+    ]);
+  });
+});
+
+describe("hasLoadingScoreFilterData", () => {
+  const loaded = {
+    pegLoading: false,
+    pegHasData: true,
+    dewsLoading: false,
+    dewsHasData: true,
+    liquidityLoading: false,
+    liquidityHasData: true,
+  };
+
+  it("keeps deep-linked score filters in loading state until their source data resolves", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 80 },
+        { ...loaded, pegLoading: true, pegHasData: false },
+      ),
+    ).toBe(true);
+  });
+
+  it("does not block unrelated score filter sources", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 80 },
+        { ...loaded, dewsLoading: true, dewsHasData: false },
+      ),
+    ).toBe(false);
   });
 });
 

@@ -13,12 +13,12 @@
  * Zero outbound fetches — strictly D1-only — so this job consumes 0/6 of the
  * trigger's connection budget.
  *
- * Idempotent: keyed on the UTC ISO date, `INSERT OR REPLACE` overwrites the
- * row when the cron re-runs on the same UTC day.
+ * Idempotent: keyed on the UTC ISO date, rows are write-once so dated public
+ * snapshot URLs can be cached immutably without later same-day mutation.
  */
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { getCache } from "../lib/db-cache";
+import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { CHAIN_HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health-version";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
@@ -28,6 +28,7 @@ import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import { REDEMPTION_BACKSTOP_VERSION } from "@shared/lib/redemption-backstop-version";
 import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -66,6 +67,12 @@ interface DexLiquidityRow {
   durability_score: number | null;
   coverage_class: string | null;
   updated_at: number;
+}
+
+interface ExistingSnapshotRow {
+  content_hash: string;
+  byte_size: number;
+  created_at: number;
 }
 
 function isoDateUtc(now: Date): string {
@@ -111,10 +118,37 @@ function buildMethodologyVersions(): StableMethodologyVersions {
   };
 }
 
+function utcDayStartSec(nowSec: number): number {
+  return nowSec - (nowSec % DAY_SECONDS);
+}
+
+async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promise<ExistingSnapshotRow | null> {
+  return db
+    .prepare("SELECT content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date = ?")
+    .bind(snapshotDate)
+    .first<ExistingSnapshotRow>();
+}
+
 export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDate = isoDateUtc(new Date(nowSec * 1000));
+  const expectedPsiComputedAt = utcDayStartSec(nowSec) - DAY_SECONDS;
+
+  const existingSnapshot = await loadExistingSnapshot(db, snapshotDate);
+  throwIfAborted(signal);
+  if (existingSnapshot) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        snapshotDate,
+        skipped: "already_exists",
+        contentHash: existingSnapshot.content_hash,
+        byteSize: existingSnapshot.byte_size,
+        createdAt: existingSnapshot.created_at,
+      }),
+    };
+  }
 
   // --- 1. Stablecoins (canonical market cache; required) ---
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
@@ -131,12 +165,24 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
     };
   }
 
-  // --- 2. Report-card cache (optional; degrade if missing) ---
-  const reportCardCacheRow = await getCache(db, "report_card_cache");
+  // --- 2. Report-card cache (required and freshness-gated) ---
+  const reportCardCache = await loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS });
   throwIfAborted(signal);
-  const reportCards = safeParse<unknown>(reportCardCacheRow?.value, null);
+  if (reportCardCache.kind !== "ok") {
+    console.warn(`[snapshot-public-dataset] Report-card cache unavailable: ${reportCardCache.reason}`);
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "report_card_cache_unavailable",
+        cacheReason: reportCardCache.reason,
+        updatedAt: reportCardCache.updatedAt,
+      }),
+    };
+  }
+  const reportCards = reportCardCache.payload;
 
-  // --- 3. Latest PSI row ---
+  // --- 3. Latest PSI row (required to be the completed prior UTC day) ---
   let psiRow: StabilityIndexRow | null = null;
   try {
     psiRow = await db
@@ -148,6 +194,24 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn("[snapshot-public-dataset] PSI read failed:", err);
+  }
+  if (!psiRow) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "psi_snapshot_missing", expectedComputedAt: expectedPsiComputedAt }),
+    };
+  }
+  if (psiRow.computed_at !== expectedPsiComputedAt) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "psi_snapshot_stale",
+        expectedComputedAt: expectedPsiComputedAt,
+        actualComputedAt: psiRow.computed_at,
+      }),
+    };
   }
 
   // --- 4. DEWS stress signals (latest per coin) ---
@@ -204,15 +268,13 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
     stablecoins: stablecoinsCache.payload.peggedAssets,
     fxFallbackRates: stablecoinsCache.payload.fxFallbackRates ?? null,
     reportCards,
-    psi: psiRow
-      ? {
-          computedAt: psiRow.computed_at,
-          score: psiRow.score,
-          band: psiRow.band,
-          components: safeParse<Record<string, unknown> | null>(psiRow.components, null),
-          methodologyVersion: psiRow.methodology_version ?? methodologyVersions.psi,
-        }
-      : null,
+    psi: {
+      computedAt: psiRow.computed_at,
+      score: psiRow.score,
+      band: psiRow.band,
+      components: safeParse<Record<string, unknown> | null>(psiRow.components, null),
+      methodologyVersion: psiRow.methodology_version ?? methodologyVersions.psi,
+    },
     dews: stressRows.map((row) => ({
       stablecoinId: row.stablecoin_id,
       computedAt: row.computed_at,
@@ -253,9 +315,9 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
 
   try {
     throwIfAborted(signal);
-    await db
+    const result = await db
       .prepare(
-        `INSERT OR REPLACE INTO public_snapshots
+        `INSERT OR IGNORE INTO public_snapshots
          (snapshot_date, payload_gz, methodology_versions, content_hash, byte_size, created_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
@@ -268,6 +330,18 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
         nowSec,
       )
       .run();
+    if (result.meta.changes === 0) {
+      return {
+        itemCount: 0,
+        metadata: JSON.stringify({
+          snapshotDate,
+          skipped: "already_exists",
+          contentHash,
+          byteSize,
+          compressedSize: payloadGz.byteLength,
+        }),
+      };
+    }
   } catch (err) {
     rethrowIfAborted(err, signal);
     recordCronFailure("snapshot-public-dataset", err, { metadata: { stage: "insert" } });

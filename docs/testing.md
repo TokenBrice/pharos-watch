@@ -42,6 +42,7 @@ npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
+npm run check:methodology-pdfs # Re-render methodology PDFs after `npm run build`, check drift, and enforce PDF budgets
 npm run check:phishing-signatures # Scan built `out/` HTML for inline-script patterns that match credential-harvesting phishing kits
 npm run check:classifier-sensitive-copy # Scan built `out/` HTML for wallet-drainer/phishing/browser-warning copy on classifier-sensitive routes
 npm run check:safe-browsing # Query Google Safe Browsing v4 for monitored URL flags (daily workflow + manual)
@@ -89,7 +90,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - keeps `npm run coverage:critical` unchanged and passes the compare ref into the critical coverage ratchet
    - runs `npm run typecheck:worker` and `npm run typecheck:worker-scripts` only when `worker_changed=true`
    - runs `npm run build` + `npm run seo:check` + Safe Browsing classifier guardrails (`check:phishing-signatures`, `check:classifier-sensitive-copy`) in PR validation when `pages_changed=true` and `run_pages_build_and_seo=true`
-   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow performs the Pages build, SEO, local artifact smoke, publish, and live smokes in the production `pages-release` job so it avoids a second runner setup and artifact transfer
+   - production deploy calls set `run_pages_build_and_seo=false`; the deploy workflow performs the Pages data sync, build, SEO, build-size/build-attribution/PDF guards, local artifact smoke, publish, and live smokes in the production `pages-release` job so it avoids a second runner setup and artifact transfer
 3. `detect-changes` (push/manual deploy workflow; same classifier also runs in pull-request checks):
    - Diffs `github.event.before...github.sha` on `push`
    - Emits `deploy_required`, `worker_changed`, `worker_promotion_required`, and `pages_changed`
@@ -114,8 +115,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
 6. `pages-release`:
    - production deploy job in `.github/workflows/deploy-cloudflare.yml`
    - runs only when `pages_changed=true`
-   - starts after `upload-worker-version` when Worker promotion is also required, so digest sync and local `/_site-data/*` smoke can use the uploaded preview URL
-   - fetches `/api/digest-archive` once from the selected API environment into `data/digests.json`, forwarding `DIGEST_API_KEY` from GitHub repository secrets and `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, and `npm run check:classifier-sensitive-copy`
+   - starts after `upload-worker-version` when Worker promotion is also required, so digest, depeg-event, public-dataset sync, and local `/_site-data/*` smoke can use the uploaded preview URL
+   - fetches `/api/digest-archive` into `data/digests.json`, fetches confirmed depeg events into `data/depeg-events.json`, regenerates public dataset mirrors from the selected API environment, forwards `NEXT_PUBLIC_GA_ID` from GitHub repo vars into `npm run build`, then runs `npm run seo:check`, `npm run check:phishing-signatures`, `npm run check:classifier-sensitive-copy`, `npm run check:build-size`, `npm run check:build-attribution`, and `npm run check:methodology-pdfs`
    - serves the just-built `out/` export locally, proxies direct `/api/*` and `/_site-data/*` calls to the selected API base, injects `SITE_API_SHARED_SECRET` for the site-data proxy hop, and runs `npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local`
    - local artifact `smoke-ui` keeps the full overflow route set and uses `SMOKE_UI_OVERFLOW_WORKERS=6` in production deploys to keep that coverage while reducing wall time
    - waits for the aggregate `validate / validate` job before publishing to Cloudflare Pages production
@@ -188,13 +189,14 @@ For deployment/worktree operating procedure (including the local merge gate befo
 - requires the `GOOGLE_SAFE_BROWSING_API_KEY` repository secret
 - fails the run on any flagged URL; complements the deploy-gating `check:phishing-signatures` static scan
 
-This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, SEO gate, and Safe Browsing classifier guardrails before merge and on Pages-impacting deploys, fetches digest data once inside the Pages release job so the build itself is network-independent with respect to digest data, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled digest rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, history-aware secret scanning, and Safe Browsing verdict monitoring.
+This arrangement keeps pull-request validation full-strength, makes deploy-path validation conditional on the surfaces that actually changed, skips the production workflow entirely for non-deploy pushes, proves the static export build, SEO gate, build-size/build-attribution/PDF guards, and Safe Browsing classifier guardrails before merge and on Pages-impacting deploys, fetches digest/depeg/public-dataset data once inside the Pages release job so the build itself is network-independent with respect to those static inputs, forwards the configured GA measurement ID into CI builds so the static artifact matches production analytics posture, uploads the Worker candidate early, waits for the aggregate validate result before D1 mutation or production publish, smokes the exact candidate Worker version on its preview URL before production traffic is shifted, keeps the broad overflow sweep on the local artifact smoke before Pages production deploy, verifies the real `pharos.watch` host after each Pages publish with homepage, analytics, and data-state checks, keeps the scheduled Pages rebuild off the worker deploy path, still runs the post-deploy ops-surface plus transport smoke after each production-changing workflow, runs independent live smokes in parallel after the relevant production deployment is live, and adds separate weekly/daily/manual lanes for CodeQL, GitHub Actions security scanning, dependency auditing, history-aware secret scanning, and Safe Browsing verdict monitoring.
 
 Current GitHub repository secrets required by the deploy path:
 
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for Worker/Pages deploy and rollback helpers
 - `SMOKE_API_KEY` for preview and production `smoke-api`
-- `DIGEST_API_KEY` for Pages digest sync against protected public API routes
+- `DIGEST_API_KEY` for Pages digest sync against protected public API routes; it also acts as the fallback for depeg-event and public-dataset sync when their dedicated secrets are not set
+- `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` for dedicated Pages prebuild data sync credentials when those routes diverge from the digest credential
 - `SITE_API_SHARED_SECRET` for local artifact smoke through `/_site-data/*`
 - `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET` for `smoke-ops`
 

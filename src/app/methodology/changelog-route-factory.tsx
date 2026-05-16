@@ -5,6 +5,7 @@ import { CitationBlock } from "@/components/citation-block";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,
@@ -85,6 +86,7 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
       <CitationBlock
         entityClass="methodology"
         id={config.citation.id}
+        qualifier={config.citation.versionLabel}
         title={config.title}
         url={`${SITE_URL}${config.path}`}
         version={config.citation.versionLabel}
@@ -102,6 +104,11 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
       entries={entries}
       sections={config.sections}
       footerContent={citationFooter}
+      jsonLdIdentifier={buildPharosUrnJsonLdIdentifier(
+        "methodology",
+        config.citation.id,
+        config.citation.versionLabel,
+      )}
     >
       {config.renderContent?.()}
     </MethodologyChangelogPage>

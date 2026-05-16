@@ -31,6 +31,7 @@ describe("SafetyGradeBadge", () => {
     const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel as string;
     expect(versionLabel).toBeTruthy();
     expect(screen.getByText(versionLabel)).toBeTruthy();
+    expect(screen.getAllByLabelText("Safety grade B+, score 78").every((badge) => badge.getAttribute("tabindex") === "0")).toBe(true);
   });
 
   it("hides the version suffix in tooltip-only mode", () => {

@@ -10,6 +10,7 @@ import type {
   StablecoinData,
   StablecoinMeta,
 } from "@shared/types";
+import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import {
   HeroDesktopIdentity,
   HeroMobileIdentity,
@@ -71,6 +72,7 @@ interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
@@ -98,6 +100,7 @@ export function HeroCardMobileSection({
   coin,
   coinData,
   logoSrc,
+  verdict,
   reportCard,
   variantParent,
   variantChipClass,
@@ -135,11 +138,12 @@ export function HeroCardMobileSection({
           variantChipClass={variantChipClass}
           infrastructures={infrastructures}
           reportCard={reportCard}
+          verdict={verdict}
         />
         <SafetyGradeHero reportCard={reportCard} mobile />
       </div>
 
-      <HeroVerdict coin={coin} />
+      <HeroVerdict coinId={coin.id} verdict={verdict} />
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <HeroPriceCard
@@ -190,6 +194,7 @@ export function HeroCardDesktopSection({
   coin,
   coinData,
   logoSrc,
+  verdict,
   reportCard,
   variantParent,
   variantChipClass,
@@ -231,6 +236,7 @@ export function HeroCardDesktopSection({
               variantChipClass={variantChipClass}
               infrastructures={infrastructures}
               reportCard={reportCard}
+              verdict={verdict}
             />
 
             <div className="mt-5 grid grid-cols-3 gap-4">

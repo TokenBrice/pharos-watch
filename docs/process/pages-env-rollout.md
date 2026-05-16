@@ -1,6 +1,6 @@
 # Pages env-var rollout for `NEXT_PUBLIC_PHAROS_*` flags
 
-How to flip the six May 2026 detail-page feature flags on production.
+How to flip the May 2026 detail-page feature flags on production.
 
 ## Where the build actually happens
 
@@ -8,7 +8,7 @@ The Cloudflare Pages project `stablecoin-dashboard` does **not** use Cloudflare'
 
 Consequence: **build-time env vars must live in GitHub Actions, not in the Cloudflare Pages dashboard.** The dashboard's "Environment variables" panel is only readable by Pages Functions at runtime, never inlined into the static bundle. Setting flags there has zero effect on the React app.
 
-`src/lib/feature-flags.ts` reads each flag via `process.env.NEXT_PUBLIC_PHAROS_X === "true"`. Next.js inlines that expression at build time **only when** the env var is defined in the build environment. `scripts/ci/check-feature-flag-inlining.mjs` verifies the inlining happened.
+`src/lib/feature-flags.ts` reads most flags via `process.env.NEXT_PUBLIC_PHAROS_X === "true"`. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is the exception: it is default-on and reads as enabled unless the build env sets it to the literal string `"false"`. Next.js inlines those expressions at build time. `scripts/ci/check-feature-flag-inlining.mjs` verifies the inlining happened.
 
 ## Source of truth: GitHub repo Variables
 
@@ -30,6 +30,8 @@ gh variable list   # verify
 
 Repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**. Name: `NEXT_PUBLIC_PHAROS_X`. Value: `true` (literal four characters).
 
+For the default-on Hero Verdict rollback, set `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` instead of deleting it.
+
 ## How the variables reach the build
 
 `pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job mirrors the same block so PR previews use the same flag state.
@@ -42,8 +44,9 @@ All remaining flags are code-ready (see `agents/p1-flag-flip-readiness-2026-05-1
 
 1. `QUIET_DEVIATIONS` — visual-only, lowest risk.
 2. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.
-3. `HERO_VERDICT` — verdict paragraph appears under the title row, above the AI summary.
-4. `BLACKLIST_BANNER` + `MOBILE_STICKY_SUMMARY` — after real-device QA on iOS Safari + Android Chrome.
+3. `BLACKLIST_BANNER` + `MOBILE_STICKY_SUMMARY` — after real-device QA on iOS Safari + Android Chrome.
+
+`HERO_VERDICT` is already default-on. Keep a repo Variable set to `false` only during rollback.
 
 ## Triggering a deploy
 
@@ -81,7 +84,12 @@ gh variable set NEXT_PUBLIC_PHAROS_X --body false
 gh workflow run "Rebuild Pages" --ref main
 ```
 
-Or delete the variable entirely (`gh variable delete NEXT_PUBLIC_PHAROS_X`) — same effect, the flag returns to its `false` default on the next build.
+For default-off flags, deleting the variable has the same effect as setting `false`: the flag returns to off on the next build. For `NEXT_PUBLIC_PHAROS_HERO_VERDICT`, deletion returns it to the default-on path; rollback requires:
+
+```bash
+gh variable set NEXT_PUBLIC_PHAROS_HERO_VERDICT --body false
+gh workflow run "Rebuild Pages" --ref main
+```
 
 ## Cloudflare Pages dashboard variables — leave them alone
 
@@ -92,5 +100,5 @@ If you previously set `NEXT_PUBLIC_PHAROS_*` in the Cloudflare Pages **Environme
 - **Confusing repo Variables with repo Secrets.** These are non-sensitive (`true`/`false`); Variables is the right surface. Secrets get masked and complicate debugging.
 - **Setting at the *environment* level instead of repo level.** GitHub also supports per-environment variables (e.g. `production`); `pages-prepare.yml` doesn't currently use a GH environment, so put them at the **repo** level. If you later add a GH environment, mirror the variables there.
 - **Forgetting to trigger a deploy.** Pages won't re-build on a Variable change alone.
-- **Setting value to `True`/`TRUE`/`yes`/`1`.** The code reads `=== "true"` (lowercase string). Anything else evaluates to `false`.
+- **Setting value to `True`/`TRUE`/`yes`/`1`.** Default-off flags read `=== "true"` (lowercase string). Anything else evaluates to `false`. Hero Verdict reads `!== "false"`, so only lowercase `false` disables it.
 - **Caching.** Cloudflare CDN can serve cached chunks for ~minutes after a deploy. Hard-reload or wait.

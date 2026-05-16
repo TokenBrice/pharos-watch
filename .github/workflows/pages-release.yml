@@ -16,6 +16,10 @@ on:
     secrets:
       DIGEST_API_KEY:
         required: true
+      DEPEG_EVENTS_API_KEY:
+        required: false
+      PUBLIC_DATASETS_API_KEY:
+        required: false
       SITE_API_SHARED_SECRET:
         required: true
       SMOKE_API_KEY:
@@ -40,6 +44,8 @@ jobs:
       artifact_name: ${{ inputs.artifact_name }}
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY }}
+      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY }}
       SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
       SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
 

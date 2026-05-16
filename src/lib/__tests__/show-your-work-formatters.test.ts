@@ -23,6 +23,10 @@ describe("show-your-work formatters", () => {
     expect(pegRow?.value).toBe("95");
     const liqRow = table.rows.find((r) => r.label === "Liquidity score");
     expect(liqRow?.value).toBe("72");
+    expect(table.formula).toContain("weighted(liquidity/exit, resilience, decentralization, dependency risk)");
+    expect(table.formula).toContain("(Peg Score/100)^0.40");
+    expect(table.formula).toContain("×0.9");
+    expect(table.formula).toContain("active-depeg");
   });
 
   it("formats DEWS signals", () => {
@@ -40,6 +44,9 @@ describe("show-your-work formatters", () => {
     expect(table.rows.find((r) => r.label === "supply")?.value).toBe("80");
     expect(table.rows.find((r) => r.label === "pool")?.value).toBe("n/a");
     expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("42");
+    expect(table.formula).toContain("weighted average of available stress signals");
+    expect(table.formula).toContain("weights redistributed");
+    expect(table.formula).not.toContain("max(per-signal stress");
   });
 
   it("formats liquidity components with weighted contributions", () => {

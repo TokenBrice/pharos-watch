@@ -92,6 +92,15 @@ function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): s
   return end === -1 ? yaml.slice(start) : yaml.slice(start, end);
 }
 
+function expectTextInOrder(text: string, snippets: readonly string[]): void {
+  let lastIndex = -1;
+  for (const snippet of snippets) {
+    const index = text.indexOf(snippet);
+    expect(index, snippet).toBeGreaterThan(lastIndex);
+    lastIndex = index;
+  }
+}
+
 describe("validate-ci parity", () => {
   it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
@@ -356,6 +365,12 @@ describe("validate-ci parity", () => {
     expect(deployWorkerJob).not.toContain("needs.pages-prepare.result == 'success'");
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
+    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
+    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
+    expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
+    expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
     expect(pagesReleaseJob).toContain("Start local export smoke server");
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
     expect(pagesReleaseJob).toContain("Wait for validation gate");
@@ -363,11 +378,60 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("Run post-publish smokes");
     expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
     expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
+    expectTextInOrder(pagesReleaseJob, [
+      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
+      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
+      "npm run generate:public-datasets",
+      "npm run build",
+      "npm run check:feature-flag-inlining",
+      "npm run seo:check",
+      "npm run check:phishing-signatures",
+      "npm run check:classifier-sensitive-copy",
+      "npm run check:build-size",
+      "npm run check:build-attribution",
+      "npm run check:methodology-pdfs",
+    ]);
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
     expect(deployWorkflow).not.toContain("  smoke-api:");
     expect(deployWorkflow).not.toContain("  rollback-worker:");
+  });
+
+  it("keeps reusable Pages preparation aligned with required production prebuild sync and guardrails", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-prepare.yml"), "utf8");
+    const buildPagesJob = extractJobBlock(workflow, "build-pages");
+    const runSteps = extractRunSteps(buildPagesJob).map((step) => step.cmd);
+
+    expect(workflow).toContain("DEPEG_EVENTS_API_KEY:");
+    expect(workflow).toContain("PUBLIC_DATASETS_API_KEY:");
+    expect(buildPagesJob).toContain("DEPEG_EVENTS_API_URL:");
+    expect(buildPagesJob).toContain("PUBLIC_DATASETS_API_URL:");
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expectTextInOrder(buildPagesJob, [
+      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
+      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
+      "npm run generate:public-datasets",
+      "npm run build",
+    ]);
+    expect(runSteps.slice(0, 8)).toEqual([
+      "npm run build",
+      "npm run check:feature-flag-inlining",
+      "npm run seo:check",
+      "npm run check:phishing-signatures",
+      "npm run check:classifier-sensitive-copy",
+      "npm run check:build-size",
+      "npm run check:build-attribution",
+      "npm run check:methodology-pdfs",
+    ]);
+  });
+
+  it("forwards dedicated Pages data-sync secrets through the scheduled rebuild workflow", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/rebuild-pages.yml"), "utf8");
+    const pagesReleaseJob = extractJobBlock(workflow, "pages-release");
+
+    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_KEY:");
+    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_KEY:");
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {

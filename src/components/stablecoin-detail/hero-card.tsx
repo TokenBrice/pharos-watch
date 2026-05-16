@@ -93,6 +93,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     coinData,
     logoSrc,
     reportCard,
+    verdict,
     variantParent,
     variantChipClass,
     infrastructures,
@@ -120,6 +121,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         coinData={coinData}
         logoSrc={logoSrc}
         reportCard={reportCard}
+        verdict={verdict}
         variantParent={variantParent}
         variantChipClass={variantChipClass}
         infrastructures={infrastructures}
@@ -148,6 +150,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         coinData={coinData}
         logoSrc={logoSrc}
         reportCard={reportCard}
+        verdict={verdict}
         variantParent={variantParent}
         variantChipClass={variantChipClass}
         infrastructures={infrastructures}

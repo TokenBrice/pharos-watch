@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 91 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 94 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -46,10 +46,10 @@
 
 ## Feeds
 
-- [Digest feed (RSS 2.0)](https://pharos.watch/feed/digest/): Daily and weekly digests.
-- [Depeg feed (RSS 2.0)](https://pharos.watch/feed/depeg/): Confirmed depeg events.
-- [Methodology feed (RSS 2.0)](https://pharos.watch/feed/methodology/): Unified methodology changelog across 9 datasets.
-- [Cemetery feed (RSS 2.0)](https://pharos.watch/feed/cemetery/): Newly archived defunct stablecoins.
+- [Digest feed (RSS 2.0)](https://pharos.watch/feed/digest.xml): Daily and weekly digests.
+- [Depeg feed (RSS 2.0)](https://pharos.watch/feed/depeg.xml): Confirmed depeg events.
+- [Methodology feed (RSS 2.0)](https://pharos.watch/feed/methodology.xml): Unified methodology changelog across 9 datasets.
+- [Cemetery feed (RSS 2.0)](https://pharos.watch/feed/cemetery.xml): Newly archived defunct stablecoins.
 
 ## Changelog
 

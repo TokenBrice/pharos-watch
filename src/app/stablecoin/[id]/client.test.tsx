@@ -150,6 +150,10 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     reserveFetchError: null,
     supplyError: null,
     staleQueries: [],
+    verdict: {
+      archetype: "uncategorized",
+      label: "Uncategorized",
+    },
     handleRetryAll: vi.fn(),
     ...overrides,
   };

@@ -98,6 +98,8 @@ export function ReportCardMini({
               size="md"
               animate
               animationDelayMs={animIndex * 40}
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
             />
             <span className="text-muted-foreground text-sm">&rarr;</span>
             <SafetyGradeBadge
@@ -105,6 +107,8 @@ export function ReportCardMini({
               size="md"
               animate
               animationDelayMs={animIndex * 40 + 80}
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
             />
             {originalScore != null && card.overallScore != null && (
               <span className="text-xs font-medium text-red-700 dark:text-red-400">
@@ -120,6 +124,7 @@ export function ReportCardMini({
               size="lg"
               animate
               animationDelayMs={animIndex * 40}
+              versionTopic="safetyScore"
             />
             {/* Trend indicator */}
             <TrendIndicator trend={trend} score={card.overallScore ?? undefined} />

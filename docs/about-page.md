@@ -20,9 +20,10 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 
 - `metadata` sets the canonical path `/about/` plus route-specific title/description/Open Graph fields
 - the page renders through `FeaturePageShell` with `breadcrumbName="About Pharos"`, `path="/about/"`, title `About Pharos`, and two lead paragraphs
-- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with five reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/coverage/`, `/api/`, and `/changelog/`
+- `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/learn/mechanisms/`, `/coverage/`, `/api/`, and `/changelog/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
+- public trust subroutes live under `/about/`: `/about/principles/` states the editorial/product principles and `/about/editorial/` states the AI editorial policy. Both render citation blocks with deterministic Pharos citation metadata.
 
 ## Section Contract
 
@@ -57,11 +58,12 @@ The page is organized into these sections, in order:
 ## Navigation Contract
 
 - `/about/` remains a top-level route, and primary navigation places it first in the `Reference` group (`NAV_GROUPS.info`).
-- `/about/` is now the reference hub for low-frequency explainer surfaces. `Funding`, `Methodology`, `Coverage`, API Reference, and Changelog are grouped around it in the reference module. `Status` stays in the Monitor navigation group, and `Start Here` remains the conditional bottom-nav shortcut and footer link.
+- `/about/` is now the reference hub for low-frequency explainer surfaces. `Funding`, `Methodology`, Mechanisms, `Coverage`, API Reference, and Changelog are grouped around it in the reference module. `Status` stays in the Monitor navigation group, and `Start Here` remains the conditional bottom-nav shortcut and footer link.
 - `Peg Tracker` must link to `/depeg/`, because the dedicated depeg route owns the heatmap and depeg-history surface
 - `Contagion Map` must link to `/dependency-map/`
 - `Systemic Risk Scoreboard` remains linked to `/safety-scores/` because the stress-panel scoreboard lives on that route
 - `Funding`, `Methodology`, broadcast, Telegram, GitHub, and profile links are surfaced as explicit CTAs rather than buried inline links
+- The opening `Why Pharos?` section links to `/about/principles/`; the Principles route links onward to `/about/editorial/` for the full AI disclosure policy.
 
 ## Content Notes
 

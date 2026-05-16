@@ -10,10 +10,10 @@ interface FooterLink {
 }
 
 const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/feed/digest/", label: "Digest" },
-  { href: "/feed/depeg/", label: "Depeg events" },
-  { href: "/feed/methodology/", label: "Methodology" },
-  { href: "/feed/cemetery/", label: "Cemetery" },
+  { href: "/feed/digest.xml", label: "Digest" },
+  { href: "/feed/depeg.xml", label: "Depeg events" },
+  { href: "/feed/methodology.xml", label: "Methodology" },
+  { href: "/feed/cemetery.xml", label: "Cemetery" },
 ];
 
 const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
