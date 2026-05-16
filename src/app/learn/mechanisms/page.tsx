@@ -86,7 +86,7 @@ export default function MechanismExplainersHub() {
                     </span>
                   </div>
                   <div className="flex items-center justify-center">
-                    {mechanismDiagramFor(archetype, "USDX")}
+                    {mechanismDiagramFor(archetype, "STBL")}
                   </div>
                 </Link>
               </li>

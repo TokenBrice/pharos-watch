@@ -61,8 +61,8 @@ function extractDesktopSvg(slug) {
   }
   // Substitute currentColor with white (label fill)
   inner = inner.split('fill="currentColor"').join('fill="#f5f5f7"');
-  // USDC -> USDX (the placeholder symbol used on explainer pages)
-  inner = inner.split("USDC").join("USDX");
+  // USDC -> STBL (the placeholder symbol used on explainer pages)
+  inner = inner.split("USDC").join("STBL");
   return { inner, viewBoxH: heightAttr };
 }
 

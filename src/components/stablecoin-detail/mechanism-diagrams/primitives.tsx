@@ -8,6 +8,9 @@ interface DiagramStepProps {
   width?: number;
   height?: number;
   callout?: string;
+  stepNumber?: number;
+  accentColor?: string;
+  dashedBorder?: boolean;
   children?: ReactNode;
 }
 
@@ -19,6 +22,9 @@ export function DiagramStep({
   width = 150,
   height = 60,
   callout,
+  stepNumber,
+  accentColor,
+  dashedBorder = false,
   children,
 }: DiagramStepProps) {
   return (
@@ -32,7 +38,24 @@ export function DiagramStep({
         fill="var(--card)"
         stroke="var(--border-default)"
         strokeWidth={1}
+        strokeDasharray={dashedBorder ? "3 3" : undefined}
       />
+      {stepNumber !== undefined ? (
+        <text
+          x={9}
+          y={13}
+          fontSize={8}
+          fontWeight={700}
+          letterSpacing="0.12em"
+          fill={accentColor ?? "var(--text-tertiary)"}
+          style={{
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+          }}
+        >
+          {String(stepNumber).padStart(2, "0")}
+        </text>
+      ) : null}
       {children ? (
         children
       ) : (
@@ -40,7 +63,7 @@ export function DiagramStep({
           {label ? (
             <text
               x={width / 2}
-              y={subtitle ? 26 : height / 2 + 4}
+              y={subtitle ? 28 : height / 2 + 4}
               textAnchor="middle"
               fontSize={13}
               fontWeight={600}
@@ -52,7 +75,7 @@ export function DiagramStep({
           {subtitle ? (
             <text
               x={width / 2}
-              y={44}
+              y={46}
               textAnchor="middle"
               fontSize={10}
               fill="var(--text-secondary)"
@@ -103,7 +126,7 @@ export function DiagramArrow({
 
   if (direction === "down") {
     const tipY = width;
-    const baseY = width - 10;
+    const baseY = width - 11;
     return (
       <g transform={`translate(${x}, ${y})`}>
         <line
@@ -112,16 +135,17 @@ export function DiagramArrow({
           x2={0}
           y2={baseY}
           stroke={stroke}
-          strokeWidth={1.5}
+          strokeWidth={1.75}
+          strokeLinecap="round"
           strokeDasharray={strokeDasharray}
         />
         <polygon
-          points={`-5,${baseY} 5,${baseY} 0,${tipY}`}
+          points={`-5.5,${baseY} 5.5,${baseY} 0,${tipY}`}
           fill={stroke}
         />
         {label ? (
           <text
-            x={8}
+            x={9}
             y={width / 2 + 3}
             fontSize={10}
             fill="var(--text-secondary)"
@@ -134,7 +158,7 @@ export function DiagramArrow({
   }
 
   const tipX = width;
-  const baseX = width - 10;
+  const baseX = width - 11;
   return (
     <g transform={`translate(${x}, ${y})`}>
       <line
@@ -143,17 +167,18 @@ export function DiagramArrow({
         x2={baseX}
         y2={0}
         stroke={stroke}
-        strokeWidth={1.5}
+        strokeWidth={1.75}
+        strokeLinecap="round"
         strokeDasharray={strokeDasharray}
       />
       <polygon
-        points={`${baseX},-5 ${tipX},0 ${baseX},5`}
+        points={`${baseX},-5.5 ${tipX},0 ${baseX},5.5`}
         fill={stroke}
       />
       {label ? (
         <text
           x={width / 2}
-          y={-7}
+          y={-8}
           textAnchor="middle"
           fontSize={9}
           fill="var(--text-secondary)"
@@ -188,27 +213,28 @@ export function DiagramReturnArrow({
     tone === "danger" ? "var(--severity-severe)" : "var(--text-tertiary)";
   const strokeDasharray = dashed ? "4 3" : undefined;
   const midX = (fromX + toX) / 2;
-  const arrowTipX = toX;
-  const arrowBaseX = toX + 10;
+  const arrowBaseY = topY + 11;
   return (
     <g>
       <path
-        d={`M ${fromX} ${topY} Q ${midX} ${peakY} ${arrowBaseX} ${topY}`}
+        d={`M ${fromX} ${topY} C ${fromX} ${peakY} ${toX} ${peakY} ${toX} ${arrowBaseY}`}
         fill="none"
         stroke={stroke}
-        strokeWidth={1.5}
+        strokeWidth={1.75}
+        strokeLinecap="round"
         strokeDasharray={strokeDasharray}
       />
       <polygon
-        points={`${arrowBaseX},${topY - 5} ${arrowTipX},${topY} ${arrowBaseX},${topY + 5}`}
+        points={`${toX - 5.5},${arrowBaseY} ${toX + 5.5},${arrowBaseY} ${toX},${topY}`}
         fill={stroke}
       />
       {label ? (
         <text
           x={midX}
-          y={topY + 14}
+          y={topY + 18}
           textAnchor="middle"
           fontSize={10}
+          fontWeight={600}
           fill={tone === "danger" ? "var(--severity-severe)" : "var(--text-secondary)"}
         >
           {label}
@@ -235,17 +261,18 @@ export function DiagramLoopArrow({
 }: DiagramLoopArrowProps) {
   const midX = (fromX + toX) / 2;
   const arrowTipX = toX;
-  const arrowBaseX = toX - 10;
+  const arrowBaseX = toX - 11;
   return (
     <g>
       <path
         d={`M ${fromX} ${baseY} Q ${midX} ${peakY} ${arrowBaseX} ${baseY}`}
         fill="none"
         stroke="var(--text-tertiary)"
-        strokeWidth={1.5}
+        strokeWidth={1.75}
+        strokeLinecap="round"
       />
       <polygon
-        points={`${arrowBaseX},${baseY - 5} ${arrowTipX},${baseY} ${arrowBaseX},${baseY + 5}`}
+        points={`${arrowBaseX},${baseY - 5.5} ${arrowTipX},${baseY} ${arrowBaseX},${baseY + 5.5}`}
         fill="var(--text-tertiary)"
       />
       {label ? (

@@ -68,7 +68,7 @@ function DiagramHero({ archetype }: { archetype: MechanismArchetype }) {
       className="-mx-2 flex justify-center py-2 sm:-mx-4 sm:py-4"
     >
       <div className="w-full max-w-3xl">
-        {mechanismDiagramFor(archetype, "USDX")}
+        {mechanismDiagramFor(archetype, "STBL")}
       </div>
     </section>
   );
