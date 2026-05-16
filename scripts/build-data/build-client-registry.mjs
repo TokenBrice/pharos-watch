@@ -54,6 +54,9 @@ const CLIENT_FIELDS = [
   "launchDate",
   "launchPhase",
   "canBeBlacklisted",
+  "canBeBlacklistedSource",
+  "commodityOunces",
+  "infrastructures",
 ];
 
 function projectCoin(coin) {

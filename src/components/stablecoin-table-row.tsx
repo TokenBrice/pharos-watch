@@ -15,7 +15,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
@@ -195,7 +195,7 @@ function StablecoinVirtualRowBase({
                   ) : null}
                 </span>
                 <span
-                  className={`max-w-[180px] truncate text-xs text-muted-foreground ${
+                  className={`max-w-[140px] truncate text-xs text-muted-foreground ${
                     density === "list" ? "hidden" : "hidden xl:block"
                   }`}
                 >

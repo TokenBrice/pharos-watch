@@ -484,7 +484,10 @@
     },
     "pegMechanism": "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
     "mechanismArchetype": "cdp",
-    "geckoId": "liquity-bold-2"
+    "geckoId": "liquity-bold-2",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "brd-volpon",
@@ -642,7 +645,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with liquidation mechanisms",
     "mechanismArchetype": "cdp",
-    "geckoId": "bitcoin-usd-btcfi"
+    "geckoId": "bitcoin-usd-btcfi",
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "buck-buck-assets",
@@ -872,7 +878,8 @@
       "navToken": false
     },
     "pegMechanism": "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
-    "geckoId": "comtech-gold"
+    "geckoId": "comtech-gold",
+    "commodityOunces": 0.03215072258749015
   },
   {
     "id": "cgusd-cygnus-finance",
@@ -942,7 +949,10 @@
     "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
     "mechanismArchetype": "cdp",
     "geckoId": "convertible-jpy-token",
-    "canBeBlacklisted": false
+    "canBeBlacklisted": false,
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "cngn-compliant-naira",
@@ -995,7 +1005,11 @@
     "pegMechanism": "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, frxUSD, and GHO to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     "mechanismArchetype": "cdp",
     "geckoId": "crvusd",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xf939e0a03fb07f59a73314e73794be0e57ac1b4e#code"
+    }
   },
   {
     "id": "ctusd-citrea",
@@ -1013,7 +1027,10 @@
     "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "citrea-usd",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "cusd-cap",
@@ -1083,7 +1100,11 @@
     "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     "mechanismArchetype": "cdp",
     "geckoId": "dai",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f#code"
+    }
   },
   {
     "id": "deuro-deuro",
@@ -1116,7 +1137,8 @@
       "navToken": false
     },
     "pegMechanism": "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
-    "geckoId": "gold-token-sa-dgld-tokenized-gold"
+    "geckoId": "gold-token-sa-dgld-tokenized-gold",
+    "commodityOunces": 1
   },
   {
     "id": "djed-coti",
@@ -1188,7 +1210,11 @@
     "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
     "mechanismArchetype": "cdp",
     "geckoId": "dola-usd",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x865377367054516e17014ccded1e7d814edc9ce4#code"
+    }
   },
   {
     "id": "dusd-alto",
@@ -1273,7 +1299,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and redemptions; production deployments mint natively on both Ethereum and Plasma",
     "mechanismArchetype": "cdp",
-    "geckoId": "ebusd-stablecoin"
+    "geckoId": "ebusd-stablecoin",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "emxn-telcoin",
@@ -1652,7 +1681,10 @@
     "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
     "mechanismArchetype": "cdp",
     "geckoId": "felix-feusd",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "fidd-fidelity",
@@ -1705,7 +1737,11 @@
     "pegMechanism": "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
     "mechanismArchetype": "algorithmic",
     "geckoId": "frax-price-index",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x5ca135cb8527d76e932f34b5145575f9d8cbe08e#code"
+    }
   },
   {
     "id": "frax-frax",
@@ -1895,7 +1931,8 @@
       "navToken": false
     },
     "pegMechanism": "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
-    "geckoId": "goldfish-gold"
+    "geckoId": "goldfish-gold",
+    "commodityOunces": 0.001
   },
   {
     "id": "gho-aave",
@@ -1945,7 +1982,8 @@
       "navToken": false
     },
     "pegMechanism": "Commodity-backed gold token with Chainlink proof-of-reserves on Base; eligible primary-market investors can redeem through the issuer process, while secondary markets price the gold-ounce claim plus accrued yield mechanics",
-    "geckoId": "streamex-gldy"
+    "geckoId": "streamex-gldy",
+    "commodityOunces": 1
   },
   {
     "id": "gramg-token-teknoloji",
@@ -1961,7 +1999,8 @@
       "navToken": false
     },
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram gold claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-    "geckoId": "gram-gold"
+    "geckoId": "gram-gold",
+    "commodityOunces": 0.0321507466
   },
   {
     "id": "grams-token-teknoloji",
@@ -1977,7 +2016,8 @@
       "navToken": false
     },
     "pegMechanism": "Issuer-managed mint/redeem and exchange conversion route for a one-gram silver claim; public materials support reserve backing but do not expose a reviewed direct holder redemption schedule suitable for a Pharos backstop config",
-    "geckoId": "gram-silver"
+    "geckoId": "gram-silver",
+    "commodityOunces": 0.0321507466
   },
   {
     "id": "gtusdc-gauntlet",
@@ -2125,7 +2165,10 @@
     "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
     "mechanismArchetype": "cdp",
     "geckoId": "hedera-swiss-franc",
-    "canBeBlacklisted": false
+    "canBeBlacklisted": false,
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "hkd-hsbc",
@@ -2529,7 +2572,11 @@
     },
     "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
     "geckoId": "dephaser-jpy",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify Optimism contract source",
+      "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+    }
   },
   {
     "id": "jtrsy-anemoy",
@@ -2618,7 +2665,8 @@
       "navToken": false
     },
     "pegMechanism": "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
-    "geckoId": "kinesis-silver"
+    "geckoId": "kinesis-silver",
+    "commodityOunces": 1
   },
   {
     "id": "kau-kinesis",
@@ -2634,7 +2682,8 @@
       "navToken": false
     },
     "pegMechanism": "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
-    "geckoId": "kinesis-gold"
+    "geckoId": "kinesis-gold",
+    "commodityOunces": 0.03215072258749015
   },
   {
     "id": "kesm-mento",
@@ -2741,7 +2790,11 @@
     "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "krwo",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "BscScan contract source",
+      "url": "https://bscscan.com/address/0x5868a0bc3a64cff82e19a135e17fe18e18e03bc1#code"
+    }
   },
   {
     "id": "krwq-iq",
@@ -2798,7 +2851,11 @@
     "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
     "geckoId": "lumi-finance-luausd",
     "protocolSlug": "lumi-finance",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify UtilityToken.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/42161/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c/sources/contracts/UtilityToken.sol"
+    }
   },
   {
     "id": "lusd-liquity",
@@ -2815,7 +2872,10 @@
     },
     "pegMechanism": "Overcollateralized ETH CDPs (Troves) with three peg mechanisms: (1) hard floor at $1 via direct on-chain redemption of LUSD for $1 of ETH from the riskiest Trove; (2) Stability Pool absorbs liquidations at 110% collateral ratio; (3) algorithmically adjusted borrowing and redemption fees throttle arbitrage volume",
     "mechanismArchetype": "cdp",
-    "geckoId": "liquity-usd"
+    "geckoId": "liquity-usd",
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "lvusd-leverup",
@@ -2848,7 +2908,10 @@
       "navToken": false
     },
     "pegMechanism": "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
-    "mechanismArchetype": "tbill"
+    "mechanismArchetype": "tbill",
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "mai-qidao",
@@ -2901,7 +2964,10 @@
     },
     "pegMechanism": "BTC-only overcollateralized CDP with direct $1 BTC redemption; operates on Mezo (Bitcoin L2, not Ethereum or a Stage 1 L2)",
     "mechanismArchetype": "cdp",
-    "geckoId": "mezo-usd"
+    "geckoId": "mezo-usd",
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "mf-one-midas",
@@ -3159,7 +3225,10 @@
     },
     "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
     "mechanismArchetype": "tbill",
-    "geckoId": "metamask-usd"
+    "geckoId": "metamask-usd",
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "mxnb-juno",
@@ -3248,7 +3317,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
     "mechanismArchetype": "cdp",
-    "geckoId": "nectar"
+    "geckoId": "nectar",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "nopal-nest",
@@ -3456,7 +3528,8 @@
     },
     "pegMechanism": "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
     "geckoId": "pax-gold",
-    "protocolSlug": "paxos-gold"
+    "protocolSlug": "paxos-gold",
+    "commodityOunces": 1
   },
   {
     "id": "pc0000031-tradable",
@@ -3541,7 +3614,8 @@
     },
     "pegMechanism": "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
     "geckoId": "pleasing-gold",
-    "protocolSlug": "pleasing-gold"
+    "protocolSlug": "pleasing-gold",
+    "commodityOunces": 1
   },
   {
     "id": "pgold-polaris",
@@ -3593,7 +3667,11 @@
     "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
     "mechanismArchetype": "cdp",
     "geckoId": "pht-stablecoin",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+    }
   },
   {
     "id": "pmusd-precious-metals",
@@ -3750,7 +3828,11 @@
     "pegMechanism": "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",
     "mechanismArchetype": "cdp",
     "geckoId": "resupply-usd",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x57ab1e0003f623289cd798b1824be09a793e4bec#code"
+    }
   },
   {
     "id": "rgbp-revolut",
@@ -3909,7 +3991,10 @@
     },
     "pegMechanism": "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
     "mechanismArchetype": "cdp",
-    "geckoId": "satoshi-stablecoin"
+    "geckoId": "satoshi-stablecoin",
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "savusd-avant",
@@ -3965,7 +4050,10 @@
     "geckoId": "sbold-by-k3-capital",
     "variantOf": "bold-liquity",
     "variantKind": "risk-absorption",
-    "canBeBlacklisted": "possible"
+    "canBeBlacklisted": "possible",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "scrvusd-curve",
@@ -4148,7 +4236,11 @@
     },
     "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
     "geckoId": "reservoir-srusd",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
+    }
   },
   {
     "id": "srusde-strata",
@@ -4760,7 +4852,10 @@
     },
     "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for $1 of BTC-denominated collateral from the lowest-ratio vaults with a fee of coreRate + 75 bps; a Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps",
     "mechanismArchetype": "cdp",
-    "geckoId": "usbd"
+    "geckoId": "usbd",
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "usd-nubank",
@@ -4899,7 +4994,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style redemptions and user-set interest rates; the hard redemption floor is effectively $0.995 because Liquity v2 deployments include a 0.5% fee floor",
     "mechanismArchetype": "cdp",
-    "geckoId": "asymmetry-usdaf-2"
+    "geckoId": "asymmetry-usdaf-2",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "usdai-usd-ai",
@@ -4934,7 +5032,10 @@
     "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
     "mechanismArchetype": "tbill",
     "geckoId": "saturn-dollar",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "usdb-blast",
@@ -5038,7 +5139,11 @@
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     "mechanismArchetype": "algorithmic",
     "geckoId": "usdd",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0x4f8e5de400de08b164e7421b3ee387f461becd1a#code"
+    }
   },
   {
     "id": "usde-ethena",
@@ -5056,7 +5161,11 @@
     "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-usde",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify USDe.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
+    }
   },
   {
     "id": "usdf-astherus",
@@ -5229,7 +5338,10 @@
     },
     "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
     "mechanismArchetype": "tbill",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "usdk-orki",
@@ -5246,7 +5358,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "usdkg-gold-dollar",
@@ -5314,7 +5429,10 @@
     },
     "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
     "mechanismArchetype": "tbill",
-    "geckoId": "noble-dollar-usdn"
+    "geckoId": "noble-dollar-usdn",
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "usdn-smardex",
@@ -5332,7 +5450,11 @@
     "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "smardex-usdn",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Sourcify Usdn.sol",
+      "url": "https://repo.sourcify.dev/contracts/full_match/1/0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2/sources/src/Usdn/Usdn.sol"
+    }
   },
   {
     "id": "usdnr-nerona",
@@ -5349,7 +5471,10 @@
     },
     "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona Labs by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying $M accrues to the M0 reserve and Nerona — USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault) routes that yield to stakers. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
     "mechanismArchetype": "tbill",
-    "canBeBlacklisted": "possible"
+    "canBeBlacklisted": "possible",
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "usdo-openeden",
@@ -5469,7 +5594,10 @@
     },
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "usdr-ring",
@@ -5558,7 +5686,10 @@
     "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "startale-usd",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "usdsui-sui",
@@ -5628,7 +5759,11 @@
     "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; mainnet mint/redeem against USDC is permissionless on Solana and BSC, with the DAO retaining optional KYC/KYB gating powers",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "usdu",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "BscScan contract source",
+      "url": "https://bscscan.com/address/0xea953ea6634d55dac6697c436b1e81a679db5882#code"
+    }
   },
   {
     "id": "usdu-usdu-finance",
@@ -5800,7 +5935,10 @@
     "mechanismArchetype": "cdp",
     "geckoId": "us-nerite-dollar",
     "status": "frozen",
-    "frozenAt": "2026-05-10"
+    "frozenAt": "2026-05-10",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "usp-pareto-credit",
@@ -6063,7 +6201,11 @@
     "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
     "geckoId": "vcred",
     "protocolSlug": "vcred",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Hemi contract source",
+      "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+    }
   },
   {
     "id": "veur-vnx",
@@ -6132,7 +6274,8 @@
     },
     "pegMechanism": "Each VNXAU represents one gram of gold; verified VNX platform users can sell tokens through the platform and request physical collection or delivery from one-kilogram bar denominations",
     "geckoId": "vnx-gold",
-    "protocolSlug": "vnx"
+    "protocolSlug": "vnx",
+    "commodityOunces": 0.0321507466
   },
   {
     "id": "vusd-virtue",
@@ -6291,7 +6434,10 @@
     "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wrappedm-by-m0",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "wmxn-ripio",
@@ -6395,7 +6541,8 @@
       "navToken": false
     },
     "pegMechanism": "Silver-backed commodity token redeemable through Matrixdock for KYC-approved users; issuer materials expose supply, bullion weight, and an oz-per-token metric that may drift slightly from exactly one ounce",
-    "geckoId": "matrixdock-silver"
+    "geckoId": "matrixdock-silver",
+    "commodityOunces": 1
   },
   {
     "id": "xai-silo-finance",
@@ -6412,7 +6559,11 @@
     },
     "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
     "mechanismArchetype": "cdp",
-    "canBeBlacklisted": "dilutable"
+    "canBeBlacklisted": "dilutable",
+    "canBeBlacklistedSource": {
+      "label": "Etherscan contract source",
+      "url": "https://etherscan.io/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac#code"
+    }
   },
   {
     "id": "xaum-matrixdock",
@@ -6428,7 +6579,8 @@
       "navToken": false
     },
     "pegMechanism": "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
-    "geckoId": "matrixdock-gold"
+    "geckoId": "matrixdock-gold",
+    "commodityOunces": 1
   },
   {
     "id": "xaut-tether",
@@ -6445,7 +6597,8 @@
     },
     "pegMechanism": "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
     "geckoId": "tether-gold",
-    "protocolSlug": "tether-gold"
+    "protocolSlug": "tether-gold",
+    "commodityOunces": 1
   },
   {
     "id": "xdai-gnosis",
@@ -6497,7 +6650,8 @@
     },
     "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
     "geckoId": "kinka",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "commodityOunces": 1
   },
   {
     "id": "xo-exodus",
@@ -6515,7 +6669,10 @@
     "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "xo-cash",
-    "canBeBlacklisted": true
+    "canBeBlacklisted": true,
+    "infrastructures": [
+      "m0"
+    ]
   },
   {
     "id": "xofm-mento",
@@ -6619,7 +6776,10 @@
     "mechanismArchetype": "cdp",
     "variantOf": "bold-liquity",
     "variantKind": "strategy-vault",
-    "canBeBlacklisted": "possible"
+    "canBeBlacklisted": "possible",
+    "infrastructures": [
+      "liquity-v2"
+    ]
   },
   {
     "id": "ylds-figure",

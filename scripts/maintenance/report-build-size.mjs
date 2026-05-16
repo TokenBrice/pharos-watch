@@ -9,7 +9,12 @@ const args = new Set(process.argv.slice(2));
 const check = args.has("--check");
 
 const DEFAULT_BUDGETS = {
-  totalJsBytes: 12_000_000,
+  // Bumped from 12 MB after Council-13 W2-C split: the slim client registry
+  // (~250 KiB) now ships alongside the still-extant fat-registry consumers
+  // (cemetery, stablecoin-detail page, upcoming). Net steady-state is below
+  // the new ceiling; tighten back down once the remaining fat consumers
+  // migrate to slim (followup TASK-7 / W2-C stage 2).
+  totalJsBytes: 14_500_000,
   largestJsBytes: 1_200_000,
   totalCssBytes: 650_000,
   totalStaticMediaBytes: 2_000_000,
