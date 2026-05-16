@@ -92,6 +92,7 @@
     "check:llms-txt": "tsx scripts/maintenance/generate-llms-txt.ts --check",
     "check:stablecoin-frozen-registry": "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
     "check:reserve-fixture-freshness": "node scripts/ci/check-reserve-fixture-freshness.mjs",
+    "check:feature-flag-inlining": "node scripts/ci/check-feature-flag-inlining.mjs",
     "docs:api-reference": "node scripts/maintenance/generate-api-reference.mjs",
     "check:docs-api-reference": "node scripts/maintenance/generate-api-reference.mjs --check",
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",

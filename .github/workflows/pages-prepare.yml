@@ -43,6 +43,7 @@ jobs:
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - run: npm run build
+      - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy

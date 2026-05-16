@@ -60,6 +60,7 @@ jobs:
           node-version: 24.x
           tooling-cache: "true"
       - run: npm run build
+      - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy

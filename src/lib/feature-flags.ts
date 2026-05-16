@@ -10,25 +10,30 @@
  * Each flag carries an `expiresAt` comment. Past that date, the flag should
  * either be flipped on permanently (and the off-path removed) or have its
  * retention rationale documented.
+ *
+ * IMPORTANT: each flag MUST be read via direct dot-syntax (`process.env.NAME`)
+ * so Next.js inlines the value into the client bundle at build time. Dynamic
+ * bracket access (`process.env[name]`) leaves the lookup intact at runtime,
+ * resolving against an empty polyfill object in the browser so the flag is
+ * silently always-false. Verified at build time by
+ * `scripts/ci/check-feature-flag-inlining.mjs`.
  */
-
-function readFlag(name: string): boolean {
-  return process.env[name] === "true";
-}
 
 export const FEATURE_FLAGS = {
   // expiresAt: 2026-09-01 — pending top-60 oneLiner + TL;DR curation
-  heroVerdict: readFlag("NEXT_PUBLIC_PHAROS_HERO_VERDICT"),
+  heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT === "true",
   // expiresAt: 2026-08-01 — pending iOS Safari sticky check
-  blacklistBanner: readFlag("NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER"),
+  blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
   // expiresAt: 2026-08-01 — pending WCAG AA contrast spot-check
-  quietDeviations: readFlag("NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS"),
+  quietDeviations: process.env.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS === "true",
   // expiresAt: 2026-08-01 — pending real-device scrollspy QA
-  mobileStickySummary: readFlag("NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY"),
+  mobileStickySummary:
+    process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
   // expiresAt: 2026-08-01 — pending mobile LCP measurement
-  lazyCharts: readFlag("NEXT_PUBLIC_PHAROS_LAZY_CHARTS"),
+  lazyCharts: process.env.NEXT_PUBLIC_PHAROS_LAZY_CHARTS === "true",
   // expiresAt: 2026-09-01 — pending curation owner + cadence
-  chartAnnotations: readFlag("NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS"),
+  chartAnnotations:
+    process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
 } as const;
 
 export function isHeroVerdictEnabled(): boolean {
