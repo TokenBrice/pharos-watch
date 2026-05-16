@@ -320,36 +320,39 @@ export default function StablecoinDetailClient({
         observeTarget={heroRef}
       />
 
-      {/* ── Navigation zone ── */}
-      <div className="mt-6">
-        <LongformScrollspyNav
-          sections={detailSections}
-          railLabel="Jump to Section"
-          navAriaLabel="Stablecoin detail section navigation"
-          onActiveChange={setActiveBannerId}
-          rightSlot={
-            <div className="hidden items-center gap-2 text-xs sm:flex">
-              <Link
-                href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
-                className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
-              </Link>
-              <span className="text-border">|</span>
-              <Link
-                href={
-                  getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
-                  buildLiveCompareUrl([viewModel.coin.id])
-                }
-                className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Compare
-              </Link>
-            </div>
-          }
-          showDepthHint
-        />
-      </div>
+      {/* ── Navigation zone ──
+        Intentionally NOT wrapped in a div: position: sticky only sticks
+        within its containing block. A wrapper whose only child is this nav
+        would have zero extra height and the nav would scroll off immediately.
+        Keep this as a direct child of the outer detail container. */}
+      <LongformScrollspyNav
+        sections={detailSections}
+        railLabel="Jump to Section"
+        navAriaLabel="Stablecoin detail section navigation"
+        onActiveChange={setActiveBannerId}
+        className="mt-6"
+        rightSlot={
+          <div className="hidden items-center gap-2 text-xs sm:flex">
+            <Link
+              href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
+              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
+            </Link>
+            <span className="text-border">|</span>
+            <Link
+              href={
+                getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
+                buildLiveCompareUrl([viewModel.coin.id])
+              }
+              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Compare
+            </Link>
+          </div>
+        }
+        showDepthHint
+      />
 
       {/* ── Key Info ── */}
       <div className="mt-6">
