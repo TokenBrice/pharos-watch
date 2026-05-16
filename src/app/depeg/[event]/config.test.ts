@@ -41,8 +41,8 @@ describe("depeg event indexing policy", () => {
   });
 
   it("uses absolute deviation magnitude for dedicated page eligibility", () => {
-    expect(hasDedicatedDepegEventPage({ peakDeviationBps: 250 })).toBe(true);
-    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -250 })).toBe(true);
-    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -249 })).toBe(false);
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: 500 })).toBe(true);
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -500 })).toBe(true);
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -499 })).toBe(false);
   });
 });

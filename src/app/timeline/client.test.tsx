@@ -143,7 +143,7 @@ describe("TimelineClient", () => {
   });
 
   it("collapses repeated same-coin same-class events within a day", () => {
-    const now = Date.now();
+    const now = Date.UTC(2026, 0, 15, 12, 0, 0);
     // Use peak_worsened only so the open-incidents banner stays out of the
     // way and the assertion isolates the collapse behavior.
     mockEvents([

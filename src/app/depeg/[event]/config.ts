@@ -8,12 +8,12 @@
 
 /**
  * Severity threshold (basis points) below which a confirmed event does NOT
- * get its own static page. Events whose absolute peak deviation is under
- * 2.5% remain tracked in D1, surface in feeds and dashboards, and stay
+ * qualify for its own static page. Events whose absolute peak deviation is
+ * under 5.0% remain tracked in D1, surface in feeds and dashboards, and stay
  * citable through `/api/depeg-events`, but they don't earn a dedicated route.
  * Keeps the static archive focused on materially noteworthy events.
  */
-export const MIN_DEPEG_PAGE_DEVIATION_BPS = 250;
+export const MIN_DEPEG_PAGE_DEVIATION_BPS = 500;
 
 /**
  * Only the event pages linked from the server-rendered `/depeg/` archive are
@@ -40,13 +40,15 @@ export function hasDedicatedDepegEventPage(event: DepegEventPageCandidate): bool
   return getPeakDeviationMagnitudeBps(event) >= MIN_DEPEG_PAGE_DEVIATION_BPS;
 }
 
+function sortNewestDeterministic<T extends DepegEventIndexCandidate>(events: readonly T[]): T[] {
+  return [...events].sort((a, b) => {
+    if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
+    return a.slug.localeCompare(b.slug);
+  });
+}
+
 export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(
   events: readonly T[],
 ): readonly T[] {
-  return [...events]
-    .sort((a, b) => {
-      if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
-      return a.slug.localeCompare(b.slug);
-    })
-    .slice(0, INDEXABLE_DEPEG_EVENT_LIMIT);
+  return sortNewestDeterministic(events).slice(0, INDEXABLE_DEPEG_EVENT_LIMIT);
 }

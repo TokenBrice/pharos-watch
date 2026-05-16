@@ -116,6 +116,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `check-seo-static.mjs` via `npm run seo:check`
 - `check-phishing-signatures.mjs` via `npm run check:phishing-signatures` after Pages builds
 - `check-classifier-sensitive-copy.mjs` via `npm run check:classifier-sensitive-copy` after Pages builds
+- `report-build-size.mjs --check` via `npm run check:build-size` after Pages builds; this includes the Cloudflare Pages 20,000-file direct-upload cap so oversized exports fail before the Pages publish step
 - `check-safe-browsing.mjs` via the daily/manual `Safe Browsing Monitor` workflow
 - `classify-deploy-changes.mjs` via the `detect-changes` jobs in `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pull-request-checks.yml`
 - `pharos-change-contract.mjs` via `.github/workflows/pharos-change-contract.yml` for same-repo PR comments, `.codex/config.toml` for local Codex hooks, and `.claude/settings.json` for local Claude hooks

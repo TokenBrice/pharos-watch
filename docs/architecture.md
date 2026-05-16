@@ -154,7 +154,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/stablecoins/infrastructure/` and `/stablecoins/infrastructure/[infrastructure]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
-  - `/depeg/[event]/` for the newest confirmed events whose absolute peak deviation is at least 2.5%; older dedicated event pages remain direct-linkable but noindexed
+  - `/depeg/[event]/` for the newest confirmed events whose absolute peak deviation is at least 5.0%; older dedicated event pages remain direct-linkable but noindexed
   - `/methodology/` and `/methodology/*-changelog/`
   - `/learn/mechanisms/` and `/learn/mechanisms/[archetype]/` — see [learn-mechanisms-page.md](./learn-mechanisms-page.md)
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`

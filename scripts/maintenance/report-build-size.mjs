@@ -9,6 +9,10 @@ const args = new Set(process.argv.slice(2));
 const check = args.has("--check");
 
 const DEFAULT_BUDGETS = {
+  // Cloudflare Pages direct uploads cap Wrangler deployments at 20,000 files.
+  // Next App Router static exports emit multiple RSC helper files per route,
+  // so track file count explicitly instead of discovering this at deploy time.
+  totalOutFiles: 20_000,
   // Bumped from 12 MB after Council-13 W2-C split: the slim client registry
   // (~250 KiB) now ships alongside the still-extant fat-registry consumers
   // (cemetery, stablecoin-detail page, upcoming). Net steady-state is below
@@ -25,6 +29,7 @@ const DEFAULT_BUDGETS = {
 };
 
 const BUDGET_ENV = {
+  totalOutFiles: "PHAROS_SIZE_BUDGET_TOTAL_OUT_FILES",
   totalJsBytes: "PHAROS_SIZE_BUDGET_TOTAL_JS_BYTES",
   largestJsBytes: "PHAROS_SIZE_BUDGET_LARGEST_JS_BYTES",
   totalCssBytes: "PHAROS_SIZE_BUDGET_TOTAL_CSS_BYTES",
@@ -124,6 +129,14 @@ function checkBudget(label, actual, budget, failures) {
   }
 }
 
+function checkCountBudget(label, actual, budget, failures) {
+  const ok = actual <= budget;
+  console.log(`${ok ? "ok" : "FAIL"} ${label}: ${actual} / ${budget}`);
+  if (!ok) {
+    failures.push(`${label} is ${actual}, budget is ${budget}`);
+  }
+}
+
 const outDir = path.join(root, "out");
 const nextStaticDir = path.join(outDir, "_next/static");
 const chunksDir = path.join(nextStaticDir, "chunks");
@@ -179,6 +192,7 @@ printTop("Representative stablecoin detail payloads", representativeDetails, 20)
 if (check) {
   const failures = [];
   console.log("\nBudget checks");
+  checkCountBudget("total out files", allOutFiles.length, budgets.totalOutFiles, failures);
   checkBudget("total JS chunks", sum(jsFiles), budgets.totalJsBytes, failures);
   checkBudget("largest JS chunk", jsFiles[0]?.size ?? 0, budgets.largestJsBytes, failures);
   checkBudget("total CSS chunks", sum(cssFiles), budgets.totalCssBytes, failures);
