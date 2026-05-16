@@ -181,6 +181,7 @@ describe("validate-ci parity", () => {
       "npm run check:shared-cycles",
       "npm run check:shared-types-imports",
       "npm run check:sql-safety",
+      "npm run check:stale-flags",
       "npm run check:stablecoin-data",
       "npm run check:supply-helper-usage",
       "npm run check:unused-code",

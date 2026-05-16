@@ -77,6 +77,7 @@
     "check:cron-connections": "tsx scripts/ci/check-cron-connection-budget.ts",
     "check:telegram-load": "tsx scripts/ci/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node scripts/ci/check-sql-interpolation-safety.mjs",
+    "check:stale-flags": "node scripts/ci/check-stale-flags.mjs",
     "check:stablecoin-data": "tsx scripts/ci/check-stablecoin-data.ts",
     "check:attestor-tier-coverage": "tsx scripts/ci/check-attestor-tier-coverage.ts",
     "check:glossary-coverage": "tsx scripts/ci/check-glossary-coverage.ts",
