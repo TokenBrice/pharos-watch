@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
@@ -10,9 +10,8 @@ import {
   METHODOLOGY_VERSION,
 } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { ReportCardRadar } from "@/components/radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -225,12 +224,8 @@ interface ReportCardDetailProps {
     pairDiversity: number;
   } | null;
   updatedAtMs?: number | null;
-  /** Supply history used to render the embedded "Stability footprint" chart. */
-  supplyHistory?: SupplyHistoryPoint[];
-  /** Stablecoin id, passed through to the embedded peg chart for annotations. */
-  stablecoinId?: string;
-  /** Peg currency; the embedded peg chart only renders for USD-pegged coins. */
-  pegCurrency?: string | null;
+  /** Optional slot rendered as the right column at lg+; when absent, the safety column fills the card. */
+  rightColumn?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,9 +236,7 @@ export function ReportCardDetail({
   card,
   liquidityComponents,
   updatedAtMs,
-  supplyHistory,
-  stablecoinId,
-  pegCurrency,
+  rightColumn,
 }: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
@@ -282,16 +275,12 @@ export function ReportCardDetail({
       ? Math.max(0, card.uncappedOverallScore - card.overallScore)
       : null;
 
-  const canShowPegChart =
-    pegCurrency === "USD"
-    && typeof stablecoinId === "string"
-    && Array.isArray(supplyHistory)
-    && supplyHistory.length > 0;
+  const hasRightColumn = !!rightColumn;
 
   const safetyColumn = (
     <div className="space-y-5">
       {/* Grade hero — left-aligned in split, centered when single-column */}
-      <div className={cn("flex items-center gap-4 pb-1 pt-1", !canShowPegChart && "justify-center")}>
+      <div className={cn("flex items-center gap-4 pb-1 pt-1", !hasRightColumn && "justify-center")}>
         <SafetyGradeBadge grade={card.overallGrade} size="lg" className="sm:hidden" />
         <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" />
         <div className="flex min-w-0 flex-col">
@@ -322,24 +311,36 @@ export function ReportCardDetail({
       </div>
 
       {card.overallCapped === true && card.rawInputs.variantParentId ? (
-        <div className={cn("flex", !canShowPegChart && "justify-center")}>
+        <div className={cn("flex", !hasRightColumn && "justify-center")}>
           <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
             Overall capped at parent stablecoin
           </span>
         </div>
       ) : null}
 
-      {/* Dimension breakdown */}
-      <div className="space-y-2">
-        {DIMENSION_ORDER.map((key) => (
-          <DimensionRow
-            key={key}
-            dimKey={key}
-            dim={card.dimensions[key]}
-            card={card}
-            liquidityComponents={liquidityComponents}
-          />
-        ))}
+      {/* Dimension breakdown — half-width beside the radar at xl+ when the card is in dual-column mode */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4",
+          hasRightColumn && "xl:grid-cols-2 xl:gap-6 xl:items-center",
+        )}
+      >
+        <div className="space-y-2">
+          {DIMENSION_ORDER.map((key) => (
+            <DimensionRow
+              key={key}
+              dimKey={key}
+              dim={card.dimensions[key]}
+              card={card}
+              liquidityComponents={liquidityComponents}
+            />
+          ))}
+        </div>
+        {hasRightColumn ? (
+          <div className="hidden xl:block">
+            <ReportCardRadar card={card} labels="short" size={280} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -369,15 +370,10 @@ export function ReportCardDetail({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {canShowPegChart ? (
+        {hasRightColumn ? (
           <div className="grid gap-6 lg:grid-cols-2">
             {safetyColumn}
-            <PegDeviationChart
-              data={supplyHistory!}
-              pegCurrency={pegCurrency}
-              stablecoinId={stablecoinId!}
-              embedded
-            />
+            {rightColumn}
           </div>
         ) : (
           <div className="mx-auto max-w-2xl">{safetyColumn}</div>

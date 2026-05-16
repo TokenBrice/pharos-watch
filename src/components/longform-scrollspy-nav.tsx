@@ -1,12 +1,14 @@
 "use client";
 
 import type { MutableRefObject, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface LongformSection {
   id: string;
   label: string;
+  icon?: LucideIcon;
 }
 
 interface LongformScrollspyNavProps {
@@ -17,6 +19,8 @@ interface LongformScrollspyNavProps {
   className?: string;
   /** Show a subtle gradient fade below the nav hinting at content below */
   showDepthHint?: boolean;
+  /** Called whenever the currently-in-view section changes. */
+  onActiveChange?: (id: string) => void;
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
@@ -86,6 +90,7 @@ export function LongformScrollspyNav({
   rightSlot,
   className,
   showDepthHint,
+  onActiveChange,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +98,10 @@ export function LongformScrollspyNav({
   const initialHashHandledRef = useRef(false);
   const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
   const sectionSignature = sections.map((section) => section.id).join("|");
+
+  useEffect(() => {
+    onActiveChange?.(effectiveActiveId);
+  }, [effectiveActiveId, onActiveChange]);
 
   useEffect(() => {
     const railNode = railRef.current;
@@ -171,7 +180,7 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:top-0 md:rounded-2xl md:px-4 md:py-2.5",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-[0_8px_24px_oklch(0_0_0_/0.1)] md:top-0 md:mx-0 md:rounded-2xl md:px-4 md:py-2.5",
           className,
         )}
       >
@@ -189,25 +198,29 @@ export function LongformScrollspyNav({
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
         <nav aria-label={navAriaLabel} className="overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
           <div className="flex min-w-max snap-x snap-mandatory items-center gap-1.5">
-            {sections.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                onClick={(event) => {
-                  event.preventDefault();
-                  scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
-                  setActiveId(section.id);
-                }}
-                className={cn(
-                  "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
-                  effectiveActiveId === section.id
-                    ? "border-foreground/35 bg-muted text-foreground"
-                    : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
-                )}
-              >
-                {section.label}
-              </a>
-            ))}
+            {sections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    scheduleSectionAlignment(section.id, railRef.current, pendingScrollSyncRef, true);
+                    setActiveId(section.id);
+                  }}
+                  className={cn(
+                    "pharos-focus-ring inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors md:min-h-8 md:text-sm",
+                    effectiveActiveId === section.id
+                      ? "border-foreground/35 bg-muted text-foreground"
+                      : "border-border/60 bg-background/80 text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  {Icon ? <Icon className="h-3.5 w-3.5" aria-hidden /> : null}
+                  <span>{section.label}</span>
+                </a>
+              );
+            })}
           </div>
         </nav>
         </div>

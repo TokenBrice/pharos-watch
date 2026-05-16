@@ -4,7 +4,15 @@ import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import {
+  Activity,
+  ArrowLeft,
+  Compass,
+  Droplets,
+  History as HistoryIcon,
+  Network,
+  Sparkles,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ReportCardDetail } from "@/components/report-card";
@@ -52,6 +60,13 @@ function DetailSectionSkeleton({ className }: { className: string }) {
 const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => mod.McapChart), {
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
+
+const PegDeviationChart = dynamic(
+  () => import("@/components/peg-deviation-chart").then((mod) => mod.PegDeviationChart),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+  },
+);
 
 const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
@@ -113,11 +128,12 @@ const SafetyScoreHistorySection = dynamic(
 );
 
 const DETAIL_SECTION_DEFS = {
-  overview: { id: "overview", label: "Overview" },
-  liquidity: { id: "liquidity", label: "Liquidity" },
-  activity: { id: "activity", label: "Activity" },
-  history: { id: "history", label: "History" },
-  explore: { id: "explore", label: "Explore" },
+  overview: { id: "overview", label: "Overview", icon: Compass },
+  context: { id: "context", label: "Context", icon: Network },
+  liquidity: { id: "liquidity", label: "Liquidity", icon: Droplets },
+  activity: { id: "activity", label: "Activity", icon: Activity },
+  history: { id: "history", label: "History", icon: HistoryIcon },
+  explore: { id: "explore", label: "Explore", icon: Sparkles },
 } as const;
 
 function DetailLoadingShell({
@@ -185,6 +201,7 @@ export default function StablecoinDetailClient({
   exploreNextContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [activeBannerId, setActiveBannerId] = useState<string>("overview");
   const heroRef = useRef<HTMLDivElement>(null);
   const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
@@ -258,9 +275,21 @@ export default function StablecoinDetailClient({
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
   const s = DETAIL_SECTION_DEFS;
-  const detailSections = [s.overview, s.liquidity, s.activity, s.history, s.explore];
+  const detailSections = [s.overview, s.context, s.liquidity, s.activity, s.history, s.explore];
   const heroVerdictEnabled = isHeroVerdictEnabled();
   const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
+  const hasReservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null;
+  const reservesPanel = hasReservesPanel ? (
+    <OverviewSection
+      coin={viewModel.coin}
+      reserves={viewModel.reserves}
+      reserveFetchError={viewModel.reserveFetchError}
+    />
+  ) : null;
+  const showPegChart =
+    viewModel.coin.flags.pegCurrency === "USD"
+    && !viewModel.isNavToken
+    && viewModel.supplyHistory.length > 0;
 
   return (
     <div>
@@ -308,6 +337,7 @@ export default function StablecoinDetailClient({
           sections={detailSections}
           railLabel="Jump to Section"
           navAriaLabel="Stablecoin detail section navigation"
+          onActiveChange={setActiveBannerId}
           rightSlot={
             <div className="hidden items-center gap-2 text-xs sm:flex">
               <Link
@@ -340,38 +370,68 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── Overview ── */}
-      <div className="mt-12 space-y-6">
-        <SectionBanner id="overview" label="Overview" />
+      <div className="space-y-6">
+        <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
         <section id="report-card">
           {viewModel.reportCard && (
             <ReportCardDetail
               card={viewModel.reportCard}
               liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
               updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
-              supplyHistory={viewModel.supplyHistory}
-              pegCurrency={viewModel.coin.flags.pegCurrency}
-              stablecoinId={viewModel.id}
+              rightColumn={reservesPanel}
             />
           )}
         </section>
         {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
         {heroVerdictEnabled && viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
         {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
-        <OverviewSection
-          coin={viewModel.coin}
-          reserves={viewModel.reserves}
-          reserveFetchError={viewModel.reserveFetchError}
-        />
+      </div>
+
+      {/* ── Context ── */}
+      <div className="space-y-6">
+        <SectionBanner id="context" label="Context" icon={Network} active={activeBannerId === "context"} />
         <ContagionSnapshot
           stablecoinId={viewModel.id}
           variantRelationshipCard={variantRelationshipCard}
           hasCollateralUsage={hasCollateralUsage}
         />
+        {showPegChart ? (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <section id="chart">
+              {frozenNote}
+              <LazySection minHeight={420}>
+                <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+              </LazySection>
+            </section>
+            <section id="peg-deviation" aria-label="Peg deviation chart">
+              <LazySection minHeight={420}>
+                <PegDeviationChart
+                  data={viewModel.supplyHistory}
+                  pegCurrency={viewModel.coin.flags.pegCurrency}
+                  stablecoinId={viewModel.id}
+                />
+              </LazySection>
+            </section>
+          </div>
+        ) : (
+          <section id="chart">
+            {frozenNote}
+            <LazySection minHeight={420}>
+              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+            </LazySection>
+          </section>
+        )}
+        <section id="distribution">
+          {frozenNote}
+          <SectionErrorBoundary name="distribution">
+            <DistributionSection stablecoinId={viewModel.id} />
+          </SectionErrorBoundary>
+        </section>
       </div>
 
       {/* ── Liquidity ── */}
-      <div className="mt-12 space-y-6">
-        <SectionBanner id="liquidity" label="Liquidity" />
+      <div className="space-y-6">
+        <SectionBanner id="liquidity" label="Liquidity" icon={Droplets} active={activeBannerId === "liquidity"} />
         <section id="dex-liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
@@ -401,22 +461,8 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── Activity ── */}
-      <div className="mt-12 space-y-6">
-        <SectionBanner id="activity" label="Activity" />
-        <section id="chart">
-          {frozenNote}
-          <LazySection minHeight={420}>
-            <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
-          </LazySection>
-        </section>
-
-        <section id="distribution">
-          {frozenNote}
-          <SectionErrorBoundary name="distribution">
-            <DistributionSection stablecoinId={viewModel.id} />
-          </SectionErrorBoundary>
-        </section>
-
+      <div className="space-y-6">
+        <SectionBanner id="activity" label="Activity" icon={Activity} active={activeBannerId === "activity"} />
         {viewModel.hasYieldSection ? (
           <YieldDetailSection stablecoinId={viewModel.id} />
         ) : null}
@@ -435,9 +481,12 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── History ── */}
-      <div className="mt-12 space-y-6">
-        <SectionBanner id="history" label="History" />
+      <div className="space-y-6">
+        <SectionBanner id="history" label="History" icon={HistoryIcon} active={activeBannerId === "history"} />
         {frozenNote}
+        <section id="coin-timeline" aria-label="Coin event timeline">
+          <TapeForCoinTeaser coinId={viewModel.id} />
+        </section>
         <LazySection minHeight={220}>
           <SafetyScoreHistorySection stablecoinId={viewModel.id} />
         </LazySection>
@@ -460,15 +509,12 @@ export default function StablecoinDetailClient({
             />
           </SectionErrorBoundary>
         ) : null}
-        <section id="coin-timeline" aria-label="Coin event timeline">
-          <TapeForCoinTeaser coinId={viewModel.id} />
-        </section>
       </div>
 
       {/* ── Explore ── */}
       {exploreNextContent ? (
-        <div className="mt-12 space-y-6">
-          <SectionBanner id="explore" label="Explore" />
+        <div className="space-y-6">
+          <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
           {exploreNextContent}
         </div>
       ) : null}

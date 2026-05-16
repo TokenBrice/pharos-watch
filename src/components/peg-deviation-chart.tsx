@@ -147,19 +147,13 @@ interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
   stablecoinId: string;
-  /**
-   * When true, the chart renders without its own Card chrome — for embedding
-   * inside another module (e.g. Safety Score). Height is reduced to match
-   * compact contexts; the section title is demoted to subsection weight.
-   */
-  embedded?: boolean;
 }
 
 /**
  * Continuous USD-price line for USD-pegged coins with a $1 reference line.
  * Non-USD pegs need FX adjustment so the chart is hidden for them (returns null).
  */
-export function PegDeviationChart({ data, pegCurrency, stablecoinId, embedded = false }: PegDeviationChartProps) {
+export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
@@ -213,9 +207,7 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId, embedded = 
     return null;
   }
 
-  const chartHeightClass = embedded
-    ? "min-h-[220px] w-full flex-1 sm:min-h-[260px]"
-    : "h-[250px] sm:h-[350px]";
+  const chartHeightClass = "h-[250px] sm:h-[350px]";
 
   const chartBody = filteredData.length > 0 ? (
     <div
@@ -277,21 +269,6 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId, embedded = 
       ))}
     </ul>
   ) : null;
-
-  if (embedded) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <h3 className="px-0.5 text-sm font-semibold text-foreground">Stability footprint</h3>
-          <div className="-mx-1 overflow-x-auto sm:mx-0 sm:overflow-visible">
-            <TimeRangeButtons options={options} value={range} onChange={setRange} />
-          </div>
-        </div>
-        {chartBody}
-        {annotationsList}
-      </div>
-    );
-  }
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">

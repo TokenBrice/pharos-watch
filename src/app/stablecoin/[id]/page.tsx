@@ -9,7 +9,6 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
-import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
@@ -153,7 +152,6 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           summary={summary}
           staticCoin={staticCoin}
           logoSrc={logosById[coin.id]}
-          staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
           exploreNextContent={
             <ExploreNextSection
               coin={coin}
