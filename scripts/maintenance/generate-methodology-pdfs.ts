@@ -21,7 +21,8 @@
  *                      committed PDFs; exit non-zero on drift
  */
 
-import { mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -233,9 +234,35 @@ function assertPdfBudgets(label: string, files: readonly PdfFileSize[]): string[
   return failures;
 }
 
+async function loadChromium() {
+  const { chromium } = await import("playwright");
+  const executablePath = chromium.executablePath();
+
+  if (existsSync(executablePath)) {
+    return chromium;
+  }
+
+  const cliPath = path.join(REPO_ROOT, "node_modules", "playwright", "cli.js");
+  console.log(
+    `[generate-methodology-pdfs] Playwright Chromium missing at ${executablePath}; installing chromium browser`,
+  );
+  const result = spawnSync(process.execPath, [cliPath, "install", "chromium"], {
+    cwd: REPO_ROOT,
+    env: process.env,
+    stdio: "inherit",
+  });
+
+  if (result.status !== 0) {
+    const suffix = result.signal ? ` (signal ${result.signal})` : "";
+    throw new Error(`Failed to install Playwright Chromium for methodology PDFs${suffix}.`);
+  }
+
+  return chromium;
+}
+
 async function generateAll(outputDir: string): Promise<GenerationResult[]> {
   const { createStaticExportServer } = await import("./serve-static-export.mjs");
-  const { chromium } = await import("playwright");
+  const chromium = await loadChromium();
 
   const server = createStaticExportServer({ port: 0, host: "127.0.0.1" });
   await server.listen();
