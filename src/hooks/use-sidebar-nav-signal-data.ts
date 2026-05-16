@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CRON_15MIN, CRON_30MIN, CRON_BLACKLIST, CRON_1MIN } from "@/lib/cron-intervals";
+import { CRON_15MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST, CRON_1MIN } from "@/lib/cron-intervals";
 import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";
 import type {
@@ -54,5 +54,5 @@ export function useSidebarHealthSignal() {
 }
 
 export function useSidebarDailyDigestSignal() {
-  return useLightApiQuery<DailyDigestResponse>("daily-digest", PATHS.dailyDigest, CRON_30MIN);
+  return useLightApiQuery<DailyDigestResponse>("daily-digest", PATHS.dailyDigest, CRON_24H);
 }
