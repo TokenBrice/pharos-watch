@@ -53,19 +53,24 @@ const TAPE_EVENTS_LIMIT = 200;
 
 /**
  * Map a worker tape-event `type` slug onto the public `ChartAnnotationKind`
- * enum. Returns null for slugs we don't plot (score/psi/dews/yield/lifecycle
- * etc.) so they're dropped at the hook boundary.
+ * enum. Returns null for slugs we don't plot so they're dropped at the hook
+ * boundary.
+ *
+ * Only editorially significant tape kinds reach the chart overlay:
+ *   - `depeg.opened` — rare, grade-impacting
+ *   - `methodology.*` — issued by us, low-volume
+ *
+ * `mint_burn.*` and `freeze.*` are intentionally NOT mapped. They fire often
+ * enough on large issuers (USDT mints dozens of times per month) to flood the
+ * legend and drown the curated SVB/CFTC-tier events visually. They remain
+ * visible on the tape stream UI; chart overlays restrict to high-signal kinds.
  *
  * `depeg.resolved` is intentionally NOT mapped — pairing each `depeg.opened`
  * with its matching resolution doubles the visual count without adding
- * editorial signal. A coin that flickers across the depeg threshold (e.g.
- * LUSD) emits hundreds of opened/resolved pairs per year; collapsing to
- * `opened` only halves the noise immediately.
+ * editorial signal.
  */
 function mapWorkerKind(rowType: string): ChartAnnotationKind | null {
   if (rowType === "depeg.opened") return "depeg";
-  if (rowType.startsWith("mint_burn.")) return "mint-burn-spike";
-  if (rowType.startsWith("freeze.")) return "blacklist-surge";
   if (rowType.startsWith("methodology.")) return "methodology-change";
   return null;
 }

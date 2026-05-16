@@ -113,11 +113,11 @@ describe("useChartAnnotations", () => {
             sourceUrl: "https://example.com/tape",
           }),
           tape({
-            id: "tape-mint",
-            type: "mint_burn.usdc.spike",
+            id: "tape-methodology",
+            type: "methodology.bump",
             severity: "warning",
             ts: Date.UTC(2023, 3, 1),
-            title: "Tape mint-burn",
+            title: "Tape methodology bump",
           }),
         ],
         nextCursor: null,
@@ -146,13 +146,48 @@ describe("useChartAnnotations", () => {
       kind: "depeg",
       label: "Curated depeg",
     });
-    // Tape mint-burn maps and survives
+    // High-signal tape kinds (methodology) map and survive
     expect(result.current.data[1]).toMatchObject({
       ts: Date.UTC(2023, 3, 1),
-      kind: "mint-burn-spike",
-      label: "Tape mint-burn",
+      kind: "methodology-change",
+      label: "Tape methodology bump",
       severity: "med",
     });
+  });
+
+  it("drops mint_burn and freeze tape rows from chart annotations", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({
+      data: {
+        events: [
+          tape({
+            id: "tape-mint",
+            type: "mint_burn.usdt.spike",
+            severity: "warning",
+            ts: Date.UTC(2023, 3, 1),
+            title: "Tape mint",
+          }),
+          tape({
+            id: "tape-freeze",
+            type: "freeze.usdt.surge",
+            severity: "severe",
+            ts: Date.UTC(2023, 3, 2),
+            title: "Tape freeze",
+          }),
+        ],
+        nextCursor: null,
+        total: 2,
+        totalExact: true,
+      },
+      isLoading: false,
+    });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("usdt-tether", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(result.current.data).toEqual([]);
   });
 
   it("ignores tape rows with unmapped event-type prefixes", () => {
