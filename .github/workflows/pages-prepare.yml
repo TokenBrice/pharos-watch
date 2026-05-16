@@ -44,6 +44,9 @@ jobs:
       PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
       PUBLIC_DATASETS_REQUIRE_API: "1"
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      # The local static-export smoke runs on 127.0.0.1, but the production
+      # browser data lane is same-origin /_site-data/*.
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
       # Detail-page feature flags. Each is inlined at build time when set to
       # the literal string required by src/lib/feature-flags.ts. Most flags are
       # on only when set to "true"; HERO_VERDICT is default-on and must be set

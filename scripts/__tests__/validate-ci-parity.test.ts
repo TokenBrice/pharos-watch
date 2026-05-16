@@ -341,6 +341,7 @@ describe("validate-ci parity", () => {
 
     expect(workflow).toContain("run_pages_build_and_seo:");
     expect(pagesBuildJob).toContain("if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}");
+    expect(pagesBuildJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expect(validateJob).toContain(
       "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}",
     );
@@ -368,6 +369,7 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
     expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
     expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
@@ -408,6 +410,7 @@ describe("validate-ci parity", () => {
     expect(buildPagesJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(buildPagesJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(buildPagesJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expectTextInOrder(buildPagesJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",

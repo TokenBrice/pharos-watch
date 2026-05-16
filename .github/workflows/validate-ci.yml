@@ -52,6 +52,7 @@ jobs:
       contents: read
     env:
       # Match pages-prepare.yml so the validate build inlines the same flags.
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
       NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
       NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
       NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}

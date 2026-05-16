@@ -36,11 +36,13 @@ function resolveSiteDataRequestPath(
   method: string | null | undefined,
   hostname?: string | null,
   envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
+  forceSiteDataProxy: string | undefined = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY,
 ): string | null {
   if ((envBase ?? "").trim()) {
     return null;
   }
-  if (!hostname || !isSiteDataAllowedUiHostname(hostname)) {
+  const forceProxy = (forceSiteDataProxy ?? "").trim().toLowerCase() === "true";
+  if (!forceProxy && (!hostname || !isSiteDataAllowedUiHostname(hostname))) {
     return null;
   }
   return resolveSiteDataProxyPath(path, method);
