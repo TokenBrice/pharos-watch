@@ -128,6 +128,15 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "USDe public mainnet launch",
       severity: "med",
     },
+    {
+      // 2025-10-10 — Binance perp oracle glitch during broader crypto crash;
+      // USDe printed ~$0.65 on Binance spot before recovering. Largest USDe
+      // peg stress to date.
+      ts: Date.UTC(2025, 9, 10),
+      kind: "depeg",
+      label: "Binance oracle glitch flash crash — USDe printed ~$0.65",
+      severity: "high",
+    },
   ],
   "usds-sky": [
     {
@@ -584,6 +593,14 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "high",
       href: "https://research.llamarisk.com/research/crvusd-incident-report-20240612",
     },
+    {
+      // 2025-06-26 — Resupply (Curve-affiliated lending) exploited via
+      // empty-market donation attack on cvcrvUSD vault; crvUSD depegged ~3.2%.
+      ts: Date.UTC(2025, 5, 26),
+      kind: "depeg",
+      label: "Resupply exploit — crvUSD ~3.2% depeg via Llamalend dependency",
+      severity: "med",
+    },
   ],
   "frax-frax": [
     {
@@ -812,6 +829,859 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       label: "CADD launch — Canada's first regulated CAD-backed stablecoin",
       severity: "med",
       href: "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution",
+    },
+  ],
+
+  // ───── Comprehensive curation pass (2026-05): tier-1 historical events
+  //       and materially novel launches across the tracked universe.
+  "aeur-anchored-coins": [
+    {
+      // 2023-12-05 — Binance halted AEUR after a ~200% pump to ~$3.25 just
+      // hours after listing. Only material event in AEUR's history.
+      ts: Date.UTC(2023, 11, 5),
+      kind: "depeg",
+      label: "Binance halts AEUR after ~200% pump (~$3.25) day after listing",
+      severity: "high",
+      href: "https://www.coindesk.com/markets/2023/12/05/tiny-euro-pegged-stablecoin-surges-200-on-binance-before-exchange-halts-trading-due-to-abnormal-volatility",
+    },
+  ],
+  "alusd-alchemix": [
+    {
+      // 2023-03-11 — USDC contagion via DAI-backed Transmuter. Note: the
+      // 2023-07-30 Curve reentrancy exploit hit alETH, not alUSD directly.
+      ts: Date.UTC(2023, 2, 11),
+      kind: "depeg",
+      label: "USDC/DAI contagion — alUSD depeg via Transmuter backing",
+      severity: "high",
+    },
+  ],
+  "bnusd-balanced": [
+    {
+      // 2023-01-21 — OMM Finance exploit dumped stolen bnUSD on Balanced,
+      // dragging the peg.
+      ts: Date.UTC(2023, 0, 21),
+      kind: "depeg",
+      label: "OMM exploit — stolen bnUSD dumped on Balanced, peg break",
+      severity: "high",
+    },
+  ],
+  "bold-liquity": [
+    {
+      // 2025-01-23 — Liquity V2 (BOLD) mainnet launch on Ethereum.
+      // User-set interest rates; successor to LUSD.
+      ts: Date.UTC(2025, 0, 23),
+      kind: "governance",
+      label: "BOLD launch — Liquity V2 with user-set interest rates",
+      severity: "med",
+    },
+  ],
+  "brl1-brl1": [
+    {
+      ts: Date.UTC(2024, 9, 7),
+      kind: "governance",
+      label: "BRL1 consortium announced — Bitso, Foxbit, Mercado Bitcoin, Cainvest",
+      severity: "med",
+      href: "https://brl1.io/en/projects/brl1-debuts-on-the-market-and-increases-cryptoasset-liquidity",
+    },
+    {
+      // 2025-11 — Brazilian central bank publishes Resolutions 519/520/521
+      // bringing BRL stablecoins under FX/VASP regime.
+      ts: Date.UTC(2025, 10, 1),
+      kind: "regulatory",
+      label: "BCB Res. 519/520/521 — BRL stablecoins enter FX/VASP regime",
+      severity: "med",
+    },
+  ],
+  "brla-brla-digital": [
+    {
+      ts: Date.UTC(2025, 10, 1),
+      kind: "regulatory",
+      label: "BCB Res. 519/520/521 — BRL stablecoins enter FX/VASP regime",
+      severity: "med",
+    },
+  ],
+  "btcusd-btcfi": [
+    {
+      ts: Date.UTC(2024, 3, 17),
+      kind: "governance",
+      label: "BTCFi launch — Bitcoin-collateralized BtcUSD via Bifrost",
+      severity: "med",
+    },
+  ],
+  "buck-bucket-protocol": [
+    {
+      ts: Date.UTC(2023, 5, 1),
+      kind: "governance",
+      label: "Bucket Protocol launch on Sui — first decentralized stablecoin on Sui",
+      severity: "med",
+    },
+  ],
+  "busd0-usual": [
+    {
+      // 2026-01-14 — USD0++ rebrand as bUSD0 under Usual Zero Rate (UZR)
+      // framework, repositioned as zero-coupon bond primitive.
+      ts: Date.UTC(2026, 0, 14),
+      kind: "methodology-change",
+      label: "USD0++ rebrands to bUSD0 under Usual Zero Rate (UZR)",
+      severity: "med",
+      href: "https://usual.money/blog/usual-zero-rate-a-native-credit-primitive-for-usd0",
+    },
+  ],
+  "cadc-cad-coin": [
+    {
+      ts: Date.UTC(2021, 0, 1),
+      kind: "governance",
+      label: "CADC launch — PayTrie FINTRAC-licensed CAD stablecoin",
+      severity: "low",
+    },
+  ],
+  "cdp-enosys": [
+    {
+      ts: Date.UTC(2025, 11, 11),
+      kind: "governance",
+      label: "Enosys Loans launch on Flare — first XRP-backed CDP stablecoin",
+      severity: "med",
+      href: "https://flare.network/news/enosys-loans-xrp-backed-stablecoin-flare",
+    },
+  ],
+  "cetes-etherfuse": [
+    {
+      ts: Date.UTC(2023, 9, 31),
+      kind: "governance",
+      label: "Etherfuse CETES launch — tokenized Mexican treasury bills",
+      severity: "med",
+      href: "https://www.coindesk.com/markets/2023/10/31/blockchain-startup-etherfuse-rolls-out-tokenized-bonds-in-mexico-targeting-retail-investors",
+    },
+  ],
+  "chfau-allunity": [
+    {
+      ts: Date.UTC(2026, 1, 26),
+      kind: "governance",
+      label: "CHFAU launch — first MiCAR-compliant Swiss Franc stablecoin",
+      severity: "med",
+      href: "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/",
+    },
+  ],
+  "cjpy-yamato": [
+    {
+      ts: Date.UTC(2023, 6, 1),
+      kind: "governance",
+      label: "Yamato Protocol v1 launch — ETH-collateralized JPY stablecoin",
+      severity: "low",
+    },
+  ],
+  "cngn-compliant-naira": [
+    {
+      ts: Date.UTC(2025, 1, 3),
+      kind: "regulatory",
+      label: "cNGN launch — Africa's first regulated stablecoin (SEC Nigeria RI)",
+      severity: "med",
+      href: "https://cngn.co/",
+    },
+  ],
+  "ctusd-citrea": [
+    {
+      ts: Date.UTC(2026, 0, 27),
+      kind: "governance",
+      label: "Citrea mainnet launch — ctUSD issued by MoonPay, powered by M0",
+      severity: "med",
+      href: "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/",
+    },
+  ],
+  "cusdo-openeden": [
+    {
+      ts: Date.UTC(2025, 7, 13),
+      kind: "governance",
+      label: "BNY Mellon custody for OpenEden TBILL — Moody's A-rated backing",
+      severity: "med",
+    },
+  ],
+  "deuro-deuro": [
+    {
+      ts: Date.UTC(2025, 5, 12),
+      kind: "governance",
+      label: "dEURO public launch — oracle-free decentralized Euro stablecoin",
+      severity: "low",
+    },
+  ],
+  "dgld-gold-token-sa": [
+    {
+      // 2025-11-20 — MKS PAMP acquired full ownership and relaunched DGLD;
+      // the relaunch is the material event for the active asset.
+      ts: Date.UTC(2025, 10, 20),
+      kind: "governance",
+      label: "MKS PAMP acquires full ownership — DGLD relaunch",
+      severity: "med",
+      href: "https://www.mkspamp.com/mks-pamp-acquires-full-ownership-gold-token-sa-relaunch-leading-real-world-asset-backed-tokenized",
+    },
+  ],
+  "djed-coti": [
+    {
+      ts: Date.UTC(2023, 0, 31),
+      kind: "governance",
+      label: "DJED mainnet launch — Cardano overcollateralized stablecoin",
+      severity: "med",
+    },
+  ],
+  "dllr-sovryn": [
+    {
+      ts: Date.UTC(2023, 2, 18),
+      kind: "governance",
+      label: "Sovryn Dollar launch — BTC-backed aggregator on Rootstock",
+      severity: "low",
+      href: "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar",
+    },
+  ],
+  "doc-money-on-chain": [
+    {
+      ts: Date.UTC(2019, 11, 12),
+      kind: "governance",
+      label: "DOC launch — first BTC-collateralized stablecoin on Rootstock",
+      severity: "low",
+    },
+  ],
+  "dola-inverse-finance": [
+    {
+      // 2022-04-02 — Frontier oracle exploit (~$15.6M); INV price manipulation
+      // via TWAP attack. Larger of the two 2022 issuer-damaging events.
+      ts: Date.UTC(2022, 3, 2),
+      kind: "governance",
+      label: "Frontier oracle exploit — $15.6M, INV price manipulation",
+      severity: "high",
+    },
+    {
+      // 2022-06-16 — Second flash-loan oracle exploit on Frontier (~$5.8M).
+      ts: Date.UTC(2022, 5, 16),
+      kind: "governance",
+      label: "Frontier flash-loan oracle exploit — ~$5.8M DOLA borrowed",
+      severity: "med",
+      href: "https://cointelegraph.com/news/inverse-finance-exploited-again-for-1-2m-in-flashloan-oracle-attack",
+    },
+  ],
+  "dusd-dtrinity": [
+    {
+      ts: Date.UTC(2024, 11, 18),
+      kind: "governance",
+      label: "dTRINITY dUSD launch on Fraxtal — subsidized stablecoin lending",
+      severity: "low",
+      href: "https://decrypt.co/297381/dtrinity-launches-subsidized-stablecoin-lending-protocol-on-fraxtal-l2",
+    },
+  ],
+  "eurau-allunity": [
+    {
+      ts: Date.UTC(2025, 6, 31),
+      kind: "regulatory",
+      label: "EURAU launch — first BaFin EMI-licensed MiCA euro stablecoin",
+      severity: "med",
+      href: "https://allunity.com/news/allunity-launches-eurau-germanys-first-fully-reserved-micar-compliant-euro-stablecoin/",
+    },
+  ],
+  "eurcv-societe-generale-forge": [
+    {
+      ts: Date.UTC(2023, 3, 20),
+      kind: "governance",
+      label: "EURCV launch on Ethereum — whitelisted institutional use",
+      severity: "low",
+    },
+    {
+      // 2024-07 — EURCV MiCA relaunch; whitelisting removed under SG-Forge's
+      // ACPR EMI license, becoming a free-transfer MiCA EMT.
+      ts: Date.UTC(2024, 6, 1),
+      kind: "regulatory",
+      label: "EURCV MiCA relaunch — free transferability under ACPR EMI",
+      severity: "med",
+      href: "https://www.sgforge.com/stablecoin-elevation/",
+    },
+  ],
+  "eure-monerium": [
+    {
+      ts: Date.UTC(2024, 5, 30),
+      kind: "regulatory",
+      label: "MiCA EMT regime in force — EURe among first compliant euro stables",
+      severity: "med",
+    },
+  ],
+  "euri-banking-circle": [
+    {
+      ts: Date.UTC(2024, 7, 26),
+      kind: "regulatory",
+      label: "EURI launch — first bank-backed MiCA-compliant euro stablecoin",
+      severity: "med",
+      href: "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/",
+    },
+  ],
+  "euroe-membrane": [
+    {
+      ts: Date.UTC(2023, 1, 1),
+      kind: "regulatory",
+      label: "EUROe launch — first FIN-FSA EMI-regulated euro stablecoin",
+      severity: "med",
+    },
+  ],
+  "europ-schuman": [
+    {
+      ts: Date.UTC(2024, 10, 1),
+      kind: "regulatory",
+      label: "EURØP launch — first French ACPR MiCA-compliant euro stablecoin",
+      severity: "med",
+      href: "https://www.theblock.co/post/328075/schuman-financial-debuts-europ-a-mica-compliant-euro-stablecoin",
+    },
+  ],
+  "eurq-quantoz": [
+    {
+      ts: Date.UTC(2024, 10, 18),
+      kind: "regulatory",
+      label: "EURQ launch — DNB-licensed MiCA-compliant euro stablecoin",
+      severity: "med",
+      href: "https://cointelegraph.com/news/quantoz-eurq-usdq-micar-stablecoins-launch",
+    },
+  ],
+  "eurr-stablr": [
+    {
+      ts: Date.UTC(2025, 0, 16),
+      kind: "regulatory",
+      label: "EURR public launch via Bitfinex — Malta MFSA EMI, MiCA-compliant",
+      severity: "low",
+      href: "https://www.stablr.com/insights/stablr-usdr-and-eurr-now-listed-on-bitfinex",
+    },
+  ],
+  "eurs-stasis": [
+    {
+      ts: Date.UTC(2018, 6, 4),
+      kind: "governance",
+      label: "EURS launch — first euro-pegged stablecoin (STASIS, Malta)",
+      severity: "med",
+      href: "https://www.globenewswire.com/news-release/2018/07/04/1533269/0/en/STASIS-launches-EURS-a-stablecoin-backed-by-the-Euro.html",
+    },
+  ],
+  "eusd-telcoin": [
+    {
+      ts: Date.UTC(2025, 11, 26),
+      kind: "regulatory",
+      label: "eUSD launch — first US-chartered bank stablecoin (Telcoin/Nebraska)",
+      severity: "high",
+      href: "https://www.businesswire.com/news/home/20251226357792/en/Telcoin-Begins-Digital-Asset-Banking-Operations-with-Launch-of-eUSD-Stablecoin",
+    },
+  ],
+  "eutbl-spiko": [
+    {
+      ts: Date.UTC(2024, 4, 15),
+      kind: "governance",
+      label: "Spiko EU T-Bills MMF inception — UCITS-tokenized euro T-bill fund",
+      severity: "med",
+    },
+  ],
+  "feusd-felix": [
+    {
+      ts: Date.UTC(2024, 5, 1),
+      kind: "governance",
+      label: "Felix feUSD launch — Liquity-V2 CDP on Hyperliquid",
+      severity: "low",
+    },
+  ],
+  "fidd-fidelity": [
+    {
+      ts: Date.UTC(2026, 1, 4),
+      kind: "governance",
+      label: "FIDD launch — Fidelity Digital Assets, first GENIUS-Act TradFi stable",
+      severity: "med",
+      href: "https://newsroom.fidelity.com/pressreleases/fidelity-investments--expands-digital-asset-investment-lineup-with-stablecoin-launch--fidelity-digit/s/3b55e2d1-1dba-4120-9528-1e07e632f3f4",
+    },
+  ],
+  "fiusd-fiserv": [
+    {
+      ts: Date.UTC(2025, 5, 23),
+      kind: "governance",
+      label: "FIUSD announced — Fiserv bank-friendly stablecoin via Paxos/Circle",
+      severity: "med",
+      href: "https://investors.fiserv.com/newsroom/detail/2848/fiserv-launches-new-fiusd-stablecoin-for-financial-institutions",
+    },
+  ],
+  "ftusd-flying-tulip": [
+    {
+      ts: Date.UTC(2026, 1, 23),
+      kind: "governance",
+      label: "ftUSD launch — Andre Cronje's Flying Tulip yield-bearing stablecoin",
+      severity: "med",
+    },
+  ],
+  "fusd-freedom-dollar": [
+    {
+      ts: Date.UTC(2025, 0, 5),
+      kind: "governance",
+      label: "fUSD launch on Zano — first protocol-level-private USD stablecoin",
+      severity: "low",
+    },
+  ],
+  "fxusd-f-x-protocol": [
+    {
+      ts: Date.UTC(2024, 1, 23),
+      kind: "governance",
+      label: "fxUSD launch — f(x) Protocol stablecoin backed by LSD pairs",
+      severity: "med",
+    },
+  ],
+  "gusd-gemini": [
+    {
+      ts: Date.UTC(2018, 8, 9),
+      kind: "regulatory",
+      label: "GUSD launch — first NYDFS-approved fiat-backed stablecoin",
+      severity: "med",
+    },
+    {
+      // 2023-06-27 — MakerDAO PSM cap for GUSD slashed from $500M to $110M
+      // amid Gemini Earn/Genesis fallout; major shift in DeFi backing demand.
+      ts: Date.UTC(2023, 5, 27),
+      kind: "governance",
+      label: "MakerDAO cuts GUSD PSM ceiling from $500M to $110M",
+      severity: "high",
+    },
+  ],
+  "gyen-gyen": [
+    {
+      // 2021-11-19 — Coinbase listing liquidity shock; GYEN traded thousands
+      // of dollars before trading was suspended.
+      ts: Date.UTC(2021, 10, 19),
+      kind: "depeg",
+      label: "Coinbase listing liquidity shock — GYEN upward depeg, trading halted",
+      severity: "high",
+    },
+  ],
+  "hkdap-anchorpoint": [
+    {
+      ts: Date.UTC(2026, 3, 10),
+      kind: "regulatory",
+      label: "HKMA grants Anchorpoint stablecoin licence — first batch (HK Ordinance)",
+      severity: "high",
+      href: "https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/",
+    },
+  ],
+  "hkd-hsbc": [
+    {
+      ts: Date.UTC(2026, 3, 10),
+      kind: "regulatory",
+      label: "HKMA grants HSBC stablecoin licence — first batch (HK Ordinance)",
+      severity: "high",
+      href: "https://www.about.hsbc.com.hk/news-and-media/hsbc-welcomes-hkmas-grant-of-a-hong-kong-stablecoin-issuer-licence",
+    },
+  ],
+  "hkdr-rd-technologies": [
+    {
+      ts: Date.UTC(2024, 6, 18),
+      kind: "regulatory",
+      label: "RD InnoTech admitted to HKMA stablecoin sandbox — first-batch entrant",
+      severity: "med",
+    },
+  ],
+  "hlscope-hamilton-lane": [
+    {
+      ts: Date.UTC(2023, 4, 1),
+      kind: "governance",
+      label: "SCOPE feeder fund tokenized on Polygon via Securitize",
+      severity: "med",
+      href: "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+    },
+  ],
+  "honey-berachain": [
+    {
+      // 2025-05 — HONEY redemptions halted ~50 hours after USDC.e collateral
+      // leg depleted; mechanism stress event.
+      ts: Date.UTC(2025, 4, 1),
+      kind: "depeg",
+      label: "USDC.e reserve exhaustion — HONEY redemptions halted ~50hrs",
+      severity: "med",
+      href: "https://www.ainvest.com/news/honey-redemption-halted-berachain-usdc-reserves-depleted-2505/",
+    },
+  ],
+  "ist-agoric": [
+    {
+      // 2025-06-30 — Inter Protocol sunset; IST redemption grace period ends.
+      ts: Date.UTC(2025, 5, 30),
+      kind: "governance",
+      label: "Inter Protocol sunset — IST redemption grace period ends",
+      severity: "high",
+      href: "https://agoric.com/blog/getting-started/ist/",
+    },
+  ],
+  "iusd-indigo-protocol": [
+    {
+      // 2023-11 — Oversupply-driven depeg; DAO raised MCR 120%→150% to
+      // defend the peg.
+      ts: Date.UTC(2023, 10, 1),
+      kind: "depeg",
+      label: "Oversupply depeg — DAO raised MCR 120%→150% to defend peg",
+      severity: "high",
+      href: "https://indigoprotocol1.medium.com/advancing-stablecoins-part-1-3-iusds-triple-peg-architecture-bolsters-defi-resilience-on-80d7f8318d56",
+    },
+  ],
+  "jaaa-janus-henderson-anemoy": [
+    {
+      ts: Date.UTC(2025, 5, 24),
+      kind: "governance",
+      label: "JAAA launch — first onchain AAA CLO fund, $1B Grove allocation",
+      severity: "med",
+      href: "https://centrifuge.io/blog/centrifuge-janus-henderson-grove-tokenized-aaa-clo-fund",
+    },
+  ],
+  "jpyc-jpyc": [
+    {
+      ts: Date.UTC(2025, 9, 27),
+      kind: "regulatory",
+      label: "Japan's first FSA-licensed yen stablecoin — PSA Type II issuer",
+      severity: "high",
+      href: "https://www.elliptic.co/media-center/elliptic-enables-jpyc-to-become-japans-first-fsa-approved-yen-stablecoin",
+    },
+  ],
+  "jupusd-jupiter": [
+    {
+      ts: Date.UTC(2025, 9, 8),
+      kind: "governance",
+      label: "JupUSD launch — Jupiter native stablecoin via Ethena, $750M JLP migration",
+      severity: "med",
+      href: "https://www.coindesk.com/web3/2025/10/08/solana-s-jupiter-to-develop-jupusd-stablecoin-with-backing-from-ethena-labs",
+    },
+  ],
+  "kgst-kyrgyz-som": [
+    {
+      ts: Date.UTC(2025, 9, 25),
+      kind: "regulatory",
+      label: "KGST launch — first CIS nation-backed stablecoin, listed on Binance",
+      severity: "med",
+      href: "https://www.blockhead.co/2025/10/27/kyrgyzstan-launches-som-pegged-stablecoin-establishes-national-crypto-reserve/",
+    },
+  ],
+  "klarnausd-klarna": [
+    {
+      ts: Date.UTC(2025, 10, 25),
+      kind: "governance",
+      label: "KlarnaUSD announced — first bank stablecoin on Tempo (Stripe/Bridge)",
+      severity: "med",
+      href: "https://www.klarna.com/international/press/klarna-launches-klarnausd-as-stablecoin-transactions-hit-usd27-trillion/",
+    },
+  ],
+  "krw1-bdacs": [
+    {
+      ts: Date.UTC(2025, 8, 1),
+      kind: "governance",
+      label: "KRW1 launch — first Korean won-backed stablecoin (BDACS, Woori-reserved)",
+      severity: "med",
+      href: "https://coinmarketcap.com/academy/article/krw1-stablecoin-debuts-on-avalanche-network",
+    },
+  ],
+  "lisusd-lista": [
+    {
+      ts: Date.UTC(2023, 11, 6),
+      kind: "governance",
+      label: "LISUSD launch — Lista DAO rebrand of Helio HAY (destablecoin model)",
+      severity: "med",
+    },
+  ],
+  "lusd-liquity": [
+    {
+      ts: Date.UTC(2021, 3, 5),
+      kind: "governance",
+      label: "Liquity LUSD launch — immutable 110% MCR decentralized USD CDP",
+      severity: "med",
+      href: "https://www.liquity.org/blog/announcing-liquity",
+    },
+  ],
+  "mai-qidao": [
+    {
+      // Mid-2023 — MAI's sustained depeg below $0.90; never recovered. Single
+      // pin marks the structural break vs flagging the ongoing drift.
+      ts: Date.UTC(2023, 5, 1),
+      kind: "depeg",
+      label: "MAI sustained depeg below $0.90 — recovery never achieved",
+      severity: "high",
+    },
+  ],
+  "meusd-mezo": [
+    {
+      ts: Date.UTC(2025, 2, 12),
+      kind: "governance",
+      label: "Mezo MUSD launch — BTC-collateralized CDP on Mezo mainnet",
+      severity: "low",
+    },
+  ],
+  "mim-abracadabra": [
+    {
+      // 2022-01-27 — Wonderland TIME treasury 0xSifu scandal exposed
+      // Abracadabra co-founder; major reputational hit on MIM issuer.
+      ts: Date.UTC(2022, 0, 27),
+      kind: "governance",
+      label: "Wonderland 0xSifu scandal — Abracadabra co-founder reputational hit",
+      severity: "high",
+    },
+    {
+      // 2022-05-12 — Terra/UST collapse contagion; MIM depeg low ~$0.93.
+      ts: Date.UTC(2022, 4, 12),
+      kind: "depeg",
+      label: "Terra/UST contagion — MIM depeg low ~$0.93",
+      severity: "high",
+    },
+    {
+      // 2025-03-25 — GMX cauldron exploit drained ~$13M MIM from Arbitrum
+      // markets.
+      ts: Date.UTC(2025, 2, 25),
+      kind: "governance",
+      label: "GMX cauldron exploit — ~$13M MIM drained from Arbitrum",
+      severity: "high",
+    },
+  ],
+  "musd-metamask": [
+    {
+      ts: Date.UTC(2025, 6, 30),
+      kind: "governance",
+      label: "MetaMask mUSD launch — first major wallet-native stablecoin",
+      severity: "med",
+      href: "https://consensys.io/blog/metamask-introduces-musd",
+    },
+  ],
+  "mxnb-juno": [
+    {
+      ts: Date.UTC(2024, 4, 28),
+      kind: "governance",
+      label: "MXNB launch — Bitso/Juno regulated MXN stablecoin on Arbitrum",
+      severity: "med",
+    },
+  ],
+  "nect-beraborrow": [
+    {
+      ts: Date.UTC(2025, 1, 6),
+      kind: "governance",
+      label: "NECT launch — Beraborrow Liquity-fork CDP on Berachain mainnet",
+      severity: "low",
+    },
+  ],
+  "ousd-origin-protocol": [
+    {
+      // 2020-11-17 — Reentrancy exploit drained ~$7M (~33% of supply);
+      // OUSD briefly broke peg before Origin compensation plan.
+      ts: Date.UTC(2020, 10, 17),
+      kind: "depeg",
+      label: "Reentrancy exploit — $7M drained (~33% supply), peg break",
+      severity: "high",
+      href: "https://blog.originprotocol.com/origin-dollar-ousd-hack-detailed-analysis-of-the-flash-loan-attack-on-nov-17-58939bef9c11",
+    },
+  ],
+  "ousg-ondo-finance": [
+    {
+      ts: Date.UTC(2023, 0, 31),
+      kind: "governance",
+      label: "OUSG launch — Ondo's first tokenized US Treasury product",
+      severity: "med",
+      href: "https://blog.ondo.finance/introducing-ondo-finance/",
+    },
+  ],
+  "paxg-paxos": [
+    {
+      ts: Date.UTC(2019, 8, 5),
+      kind: "regulatory",
+      label: "PAXG launch — first NYDFS-approved tokenized gold",
+      severity: "med",
+    },
+  ],
+  "pusd-polaris": [
+    {
+      // 2023-03-22 — Polaris Finance flash-loan exploit drained ~$26M across
+      // stables including pUSD; protocol-defining depeg event.
+      ts: Date.UTC(2023, 2, 22),
+      kind: "depeg",
+      label: "Polaris Finance flash-loan exploit — ~$26M drained, pUSD depeg",
+      severity: "high",
+      href: "https://rekt.news/polaris-rekt/",
+    },
+  ],
+  "reusd-resupply": [
+    {
+      // 2025-06-26 — Empty-market donation attack on cvcrvUSD vault drained
+      // ~$10M; reUSD lost ~3.2% peg briefly. Companion to crvUSD pin.
+      ts: Date.UTC(2025, 5, 26),
+      kind: "depeg",
+      label: "Resupply exploit — ~$10M drained, reUSD depeg ~3.2%",
+      severity: "high",
+      href: "https://resupply.fi/",
+    },
+  ],
+  "susd-synthetix": [
+    {
+      // 2025-04-18 — SIP-420 lowered C-ratio to 200%, causing sUSD
+      // oversupply and the first stage of the 2025 depeg saga.
+      ts: Date.UTC(2025, 3, 18),
+      kind: "methodology-change",
+      label: "SIP-420 lowers C-ratio to 200% — sUSD oversupply, depeg ~$0.68",
+      severity: "high",
+      href: "https://sips.synthetix.io/sips/sip-420/",
+    },
+    {
+      // 2025-08-01 — sUSD all-time low ~$0.21 as protocol-owned debt
+      // mechanics played out post-SIP-420.
+      ts: Date.UTC(2025, 7, 1),
+      kind: "depeg",
+      label: "sUSD ATL ~$0.21 — protocol-owned debt pool fallout",
+      severity: "high",
+    },
+  ],
+  "usdb-blast": [
+    {
+      ts: Date.UTC(2024, 1, 29),
+      kind: "governance",
+      label: "Blast mainnet launch — auto-rebasing USDB with MakerDAO T-bill yield",
+      severity: "med",
+      href: "https://www.dlnews.com/articles/defi/blast-unlocks-23bn-of-ether-and-stablecoins-with-launch/",
+    },
+  ],
+  "usdcv-societe-generale-forge": [
+    {
+      ts: Date.UTC(2025, 5, 25),
+      kind: "regulatory",
+      label: "USDCV launch — first major bank USD stablecoin under MiCA (BNY custodian)",
+      severity: "med",
+      href: "https://www.sgforge.com/usd-stablecoin-bny-custodian/",
+    },
+  ],
+  "usdh-native-markets": [
+    {
+      // 2025-09-14 — Hyperliquid validator vote awarded USDH ticker to
+      // Native Markets; contested governance moment for the chain.
+      ts: Date.UTC(2025, 8, 14),
+      kind: "governance",
+      label: "Hyperliquid validator vote awards USDH ticker to Native Markets",
+      severity: "high",
+      href: "https://www.coindesk.com/markets/2025/09/15/asia-morning-briefing-native-markets-wins-right-to-issue-usdh",
+    },
+  ],
+  "usdn-noble": [
+    {
+      ts: Date.UTC(2025, 2, 5),
+      kind: "governance",
+      label: "USDN launch — composable yield-bearing stablecoin via M0",
+      severity: "med",
+      href: "https://noble.xyz/blog/introducing-usdn",
+    },
+  ],
+  "usdp-paxos": [
+    {
+      // 2023-02-13 — NYDFS halted Paxos's BUSD minting; USDP demand and
+      // supply contracted from ~$480M toward ~$40M over the following years.
+      ts: Date.UTC(2023, 1, 13),
+      kind: "regulatory",
+      label: "NYDFS halts Paxos BUSD minting — USDP demand fades",
+      severity: "high",
+      href: "https://www.dfs.ny.gov/consumers/alerts/Paxos_and_Binance",
+    },
+  ],
+  "usdpt-western-union": [
+    {
+      ts: Date.UTC(2026, 4, 4),
+      kind: "governance",
+      label: "USDPT launch — Western Union stablecoin via Anchorage on Solana",
+      severity: "med",
+      href: "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2026/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments/default.aspx",
+    },
+  ],
+  "usdq-quantoz": [
+    {
+      ts: Date.UTC(2024, 10, 18),
+      kind: "regulatory",
+      label: "USDQ launch — DNB-licensed MiCA-compliant USD stablecoin",
+      severity: "med",
+      href: "https://www.prnewswire.com/news-releases/quantoz-payments-issues-euro-and-us-dollar-stablecoins-receives-backing-from-major-crypto-asset-firms-302307631.html",
+    },
+  ],
+  "usdr-ring": [
+    {
+      // 2023-10-11 — Tangible USDR collapse; DAI reserves drained, low ~$0.51.
+      ts: Date.UTC(2023, 9, 11),
+      kind: "depeg",
+      label: "Tangible USDR collapse — DAI reserves drained, depeg low ~$0.51",
+      severity: "high",
+      href: "https://www.dlnews.com/articles/defi/usdr-stablecoin-backed-by-real-estate-collapses/",
+    },
+  ],
+  "usdr-stablr": [
+    {
+      ts: Date.UTC(2024, 6, 1),
+      kind: "regulatory",
+      label: "StablR USDR launch — MFSA EMI license, MiCA-compliant via Hadron",
+      severity: "med",
+    },
+  ],
+  "usdsui-sui": [
+    {
+      ts: Date.UTC(2026, 2, 4),
+      kind: "governance",
+      label: "USDsui mainnet — Bridge/Stripe issuance, yield recycled to ecosystem",
+      severity: "med",
+      href: "https://blog.sui.io/sui-unveils-usdsui-native-stablecoin/",
+    },
+  ],
+  "usdx-kava": [
+    {
+      // Mid-2022 — USDX-Kava sustained depeg as DeFi credit unwind hit
+      // collateral and demand simultaneously; never durably recovered.
+      ts: Date.UTC(2022, 5, 15),
+      kind: "depeg",
+      label: "Kava USDX sustained depeg — collateral and demand collapse",
+      severity: "high",
+    },
+  ],
+  "ustb-superstate": [
+    {
+      ts: Date.UTC(2024, 1, 27),
+      kind: "governance",
+      label: "USTB launch — first SEC-registered tokenized US T-bill fund",
+      severity: "med",
+      href: "https://superstate.co/",
+    },
+  ],
+  "usx-dforce": [
+    {
+      // 2020-04-19 — Lendf.Me imBTC reentrancy exploit drained ~$25M from
+      // dForce's lending market, impairing the protocol backing USX.
+      // Funds were eventually largely returned.
+      ts: Date.UTC(2020, 3, 19),
+      kind: "governance",
+      label: "Lendf.Me imBTC reentrancy — $25M drained, dForce lending impaired",
+      severity: "high",
+      href: "https://medium.com/dforcenet/dforce-lendf-me-incident-summary-and-recovery-plan-7e2d2b3e2c66",
+    },
+  ],
+  "wemix-dollar-wemix": [
+    {
+      // 2023-12-04 — WEMIX$ lost peg alongside WEMIX token crash and
+      // reserve confidence loss.
+      ts: Date.UTC(2023, 11, 4),
+      kind: "depeg",
+      label: "WEMIX$ depeg — WEMIX token crash and reserve confidence loss",
+      severity: "high",
+    },
+  ],
+  "wusd-worldwide": [
+    {
+      // 2024-09-15 — WUSD depeg low ~$0.97; liquidity stress event.
+      ts: Date.UTC(2024, 8, 15),
+      kind: "depeg",
+      label: "WUSD depeg low ~$0.97 — liquidity stress",
+      severity: "med",
+    },
+  ],
+  "xdai-gnosis": [
+    {
+      // 2023-03-11 — USDC/SVB contagion via the xDAI bridge collateral.
+      ts: Date.UTC(2023, 2, 11),
+      kind: "depeg",
+      label: "USDC/SVB contagion via bridge — xDAI depeg",
+      severity: "high",
+    },
+  ],
+  "xusd-babelfish": [
+    {
+      // 2023-03-11 — USDC/SVB contagion; Babelfish XUSD is USDC-backed.
+      ts: Date.UTC(2023, 2, 11),
+      kind: "depeg",
+      label: "USDC/SVB contagion — XUSD collateral depeg",
+      severity: "high",
     },
   ],
 };
