@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 
 vi.mock("next/link", () => ({

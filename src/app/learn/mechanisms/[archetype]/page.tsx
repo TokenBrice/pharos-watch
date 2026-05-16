@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  MECHANISM_ARCHETYPE_VALUES,
-  type MechanismArchetype,
-} from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import type { MechanismArchetype } from "@shared/types";
 import {
   getMechanismArchetypeLabel,
   getMechanismExplainerPath,
