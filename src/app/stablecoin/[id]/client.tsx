@@ -26,6 +26,7 @@ import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-b
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
+import { AiSummary } from "@/components/ai-summary";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -298,6 +299,8 @@ export default function StablecoinDetailClient({
         <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
+
+        {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
 
         {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
           <FrozenStateBanner

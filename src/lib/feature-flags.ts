@@ -20,8 +20,9 @@
  */
 
 export const FEATURE_FLAGS = {
-  // expiresAt: 2026-09-01 — pending top-60 oneLiner + TL;DR curation
-  heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT === "true",
+  // Default-enabled after W3 launch. Set
+  // `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false` explicitly to disable.
+  heroVerdict: process.env.NEXT_PUBLIC_PHAROS_HERO_VERDICT !== "false",
   // expiresAt: 2026-08-01 — pending iOS Safari sticky check
   blacklistBanner: process.env.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER === "true",
   // expiresAt: 2026-08-01 — pending WCAG AA contrast spot-check
