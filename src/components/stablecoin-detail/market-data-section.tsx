@@ -57,33 +57,38 @@ export function MarketDataSection({
         />
       </div>
       {frozenNote}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <LazySection minHeight={420}>
-          <McapChart
-            data={supplyHistory}
-            stablecoinId={stablecoinId}
-            hideAnnotationLegend
-            controlledRange={range}
-          />
-        </LazySection>
-        <LazySection minHeight={420}>
-          <PegDeviationChart
-            data={supplyHistory}
-            pegCurrency={pegCurrency}
-            stablecoinId={stablecoinId}
-            hideAnnotationLegend
-            controlledRange={range}
-          />
-        </LazySection>
-      </div>
-      {annotations.length > 0 ? (
-        <div className="rounded-xl border border-border/40 bg-card/40 px-4 py-3">
-          <ChartAnnotationLegend
-            annotations={annotations}
-            className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
-          />
+      <div className="overflow-hidden rounded-xl border border-border/50 bg-card/40 animate-in fade-in duration-300">
+        <div className="grid grid-cols-1 divide-y divide-border/50 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+          <LazySection minHeight={420}>
+            <McapChart
+              data={supplyHistory}
+              stablecoinId={stablecoinId}
+              hideAnnotationLegend
+              controlledRange={range}
+              embedded
+            />
+          </LazySection>
+          <LazySection minHeight={420}>
+            <PegDeviationChart
+              data={supplyHistory}
+              pegCurrency={pegCurrency}
+              stablecoinId={stablecoinId}
+              hideAnnotationLegend
+              controlledRange={range}
+              embedded
+            />
+          </LazySection>
         </div>
-      ) : null}
+        {annotations.length > 0 ? (
+          <div className="border-t border-border/50 px-4 py-3 sm:px-6">
+            <ChartAnnotationLegend
+              annotations={annotations}
+              numbered
+              className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+            />
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

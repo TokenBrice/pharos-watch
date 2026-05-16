@@ -59,7 +59,7 @@ export function TimeXAxis({
 
 type MonoYAxisProps = ComponentProps<typeof YAxis>;
 
-export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, width = 56, tickMargin = 8, ...props }: MonoYAxisProps) {
+export function MonoYAxis({ tick = MONO_AXIS_TICK, tickLine = false, axisLine = false, width = 68, tickMargin = 8, ...props }: MonoYAxisProps) {
   return (
     <YAxis
       tick={tick}
@@ -142,6 +142,8 @@ const ANNOTATION_HEX_COLORS: Record<ChartAnnotationKind, string> = {
 
 interface ChartAnnotationLinesProps {
   annotations: readonly ChartAnnotation[];
+  /** When true, prefix each marker with a numbered badge (1, 2, 3...) tied to the legend order. */
+  numbered?: boolean;
 }
 
 /**
@@ -151,20 +153,37 @@ interface ChartAnnotationLinesProps {
  * `ifOverflow="hidden"` keeps out-of-range markers from extending the chart's
  * data domain (defence in depth with hook-side clamping).
  */
-export function ChartAnnotationLines({ annotations }: ChartAnnotationLinesProps) {
+export function ChartAnnotationLines({ annotations, numbered = false }: ChartAnnotationLinesProps) {
   if (annotations.length === 0) return null;
   return (
     <>
-      {annotations.map((a) => (
-        <ReferenceLine
-          key={`${a.ts}-${a.kind}`}
-          x={a.ts}
-          ifOverflow="hidden"
-          stroke={ANNOTATION_HEX_COLORS[a.kind]}
-          strokeWidth={1.5}
-          strokeDasharray="3 3"
-        />
-      ))}
+      {annotations.map((a, i) => {
+        const color = ANNOTATION_HEX_COLORS[a.kind];
+        return (
+          <ReferenceLine
+            key={`${a.ts}-${a.kind}`}
+            x={a.ts}
+            ifOverflow="hidden"
+            stroke={color}
+            strokeWidth={1.25}
+            strokeDasharray="2 4"
+            strokeOpacity={0.7}
+            label={
+              numbered
+                ? {
+                    value: String(i + 1),
+                    position: "insideTopRight",
+                    fill: color,
+                    fontSize: 10,
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 600,
+                    offset: 4,
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
     </>
   );
 }
@@ -184,6 +203,7 @@ const ANNOTATION_DATE_FMT = new Intl.DateTimeFormat("en-US", {
 export function ChartAnnotationLegend({
   annotations,
   className = "mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground",
+  numbered = false,
 }: {
   annotations: readonly ChartAnnotation[];
   /**
@@ -193,6 +213,8 @@ export function ChartAnnotationLegend({
    * (e.g. the shared legend below the Market Cap / Peg Deviation pair).
    */
   className?: string;
+  /** When true, prefix each entry with its 1-based index to match numbered chart markers. */
+  numbered?: boolean;
 }) {
   if (annotations.length === 0) return null;
   return (
@@ -200,15 +222,30 @@ export function ChartAnnotationLegend({
       aria-label="Chart events"
       className={className}
     >
-      {annotations.map((a) => {
+      {annotations.map((a, i) => {
         const date = ANNOTATION_DATE_FMT.format(new Date(a.ts));
+        const color = ANNOTATION_HEX_COLORS[a.kind];
         const content = (
           <>
-            <span
-              aria-hidden
-              className="inline-block h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: ANNOTATION_HEX_COLORS[a.kind] }}
-            />
+            {numbered ? (
+              <span
+                aria-hidden
+                className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold tabular-nums"
+                style={{
+                  color,
+                  border: `1px solid ${color}`,
+                  backgroundColor: `${color}1a`,
+                }}
+              >
+                {i + 1}
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+            )}
             <span className="font-mono tabular-nums text-foreground/80">{date}</span>
             <span aria-hidden className="text-muted-foreground/60">—</span>
             <span className="text-foreground/80">{a.label}</span>
