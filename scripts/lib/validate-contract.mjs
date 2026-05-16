@@ -48,6 +48,8 @@ export const PAGES_VALIDATE_COMMANDS = [
   "npm run seo:check",
   "npm run check:phishing-signatures",
   "npm run check:classifier-sensitive-copy",
+  "npm run check:build-size",
+  "npm run check:build-attribution",
 ];
 
 export const NONCRITICAL_TEST_SHARD_COUNT = 3;

@@ -1,0 +1,15 @@
+[
+  { "name": "stablecoin-registry-zod", "marker": "LIVE_RESERVE_SEMANTICS_VALUES" },
+  { "name": "recharts", "marker": "\"recharts\"" },
+  { "name": "recharts-component", "marker": "BarChart\"" },
+  { "name": "zod", "marker": "_zod.traits" },
+  { "name": "next-framework", "marker": "getDeploymentId" },
+  { "name": "react-tweet", "marker": "react-tweet" },
+  { "name": "react-markdown", "marker": "react-markdown" },
+  { "name": "html-to-image", "marker": "html-to-image" },
+  { "name": "d3-force", "marker": "forceSimulation" },
+  { "name": "newsreader-font", "marker": "Newsreader" },
+  { "name": "pre-launch-shell", "marker": "DRIFT_STATUS_BADGE" },
+  { "name": "methodology-version", "marker": "createMethodologyVersion" },
+  { "name": "error-boundary", "marker": "retryCount<3" }
+]

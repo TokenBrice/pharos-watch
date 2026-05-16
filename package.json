@@ -87,6 +87,8 @@
     "candidates:annotations": "tsx scripts/maintenance/build-annotation-candidates.ts",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
+    "check:build-attribution": "node scripts/ci/check-build-attribution.mjs",
+    "check:build-attribution:update-baseline": "node scripts/maintenance/update-build-attribution-baseline.mjs",
     "check:phishing-signatures": "node scripts/ci/check-phishing-signatures.mjs",
     "check:classifier-sensitive-copy": "node scripts/ci/check-classifier-sensitive-copy.mjs",
     "check:safe-browsing": "node scripts/ci/check-safe-browsing.mjs",
