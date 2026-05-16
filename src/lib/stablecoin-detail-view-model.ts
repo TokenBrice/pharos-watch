@@ -44,6 +44,7 @@ import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
 import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatBand } from "@shared/lib/classification";
+import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getVariantParent, getVariantRelationship, getVariants } from "@shared/lib/stablecoins";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -346,6 +347,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   reserveFetchError: unknown | null;
   supplyError: unknown | null;
   staleQueries: StablecoinDetailStaleQuery[];
+  verdict: StablecoinVerdict;
 }
 
 export interface HeroDisplayValue {
@@ -866,6 +868,21 @@ export function buildStablecoinDetailViewModel({
   const variantParent = getVariantParent(id);
   const childVariants = getVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
+  const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
+    ? featureAvailability.stressSignal.band
+    : null;
+  const verdict = deriveStablecoinVerdict({
+    status: coin.status,
+    reportCardGrade: reportCard?.overallGrade ?? null,
+    pegScore: pegPrice.pegScoreResult?.pegScore ?? null,
+    dewsBand: stressBand,
+    mechanismArchetype: coin.mechanismArchetype,
+    governance: coin.flags.governance,
+    backing: coin.flags.backing,
+    isNavToken,
+    yieldBearing: coin.flags.yieldBearing ?? false,
+    activeDepeg: pegPrice.pegScoreResult?.activeDepeg === true,
+  });
 
   return {
     status: "ready",
@@ -909,5 +926,6 @@ export function buildStablecoinDetailViewModel({
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,
     staleQueries: buildStaleQueryInputs(queries),
+    verdict,
   };
 }

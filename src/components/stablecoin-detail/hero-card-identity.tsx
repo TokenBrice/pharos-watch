@@ -29,6 +29,31 @@ import {
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
+import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
+import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
+
+/**
+ * Hero-local verdict derivation. The full view-model exposes a `verdict`
+ * field with the DEWS band and peg-score inputs threaded in; the identity
+ * components are below that view-model layer in the prop tree and so
+ * compute a narrower verdict from inputs already in scope (coin + report
+ * card). Distressed-by-grade still fires here; distressed-by-DEWS-band is
+ * handled by the view-model verdict consumed by future surfaces.
+ */
+function deriveHeroVerdict(coin: StablecoinMeta, reportCard?: ReportCard | null) {
+  return deriveStablecoinVerdict({
+    status: coin.status,
+    reportCardGrade: reportCard?.overallGrade ?? null,
+    pegScore: null,
+    dewsBand: null,
+    mechanismArchetype: coin.mechanismArchetype,
+    governance: coin.flags.governance,
+    backing: coin.flags.backing,
+    isNavToken: coin.flags.navToken ?? false,
+    yieldBearing: coin.flags.yieldBearing ?? false,
+    activeDepeg: false,
+  });
+}
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -329,19 +354,25 @@ export function FreezablePill({
 }
 
 /**
- * Standalone verdict paragraph. Rendered separately from the identity column
- * so it can span the full hero width on mobile (where the identity row also
- * carries the safety badge) and the full identity-column width on desktop.
+ * Standalone verdict pill. Rendered separately from the identity column so
+ * it can span the full hero width on mobile (where the identity row also
+ * carries the safety badge). The desktop identity renders its own pill
+ * inline next to the heading.
  */
-export function HeroVerdict({ coin }: { coin: StablecoinMeta }) {
-  if (!isHeroVerdictEnabled() || !coin.oneLiner) return null;
+export function HeroVerdict({
+  coin,
+  reportCard,
+}: {
+  coin: StablecoinMeta;
+  reportCard?: ReportCard | null;
+}) {
+  if (!isHeroVerdictEnabled()) return null;
+  const verdict = deriveHeroVerdict(coin, reportCard);
+  if (verdict.archetype === "uncategorized") return null;
   return (
-    <p
-      id={`hero-verdict-${coin.id}`}
-      className="mt-3 text-sm italic leading-snug text-foreground/80"
-    >
-      {coin.oneLiner}
-    </p>
+    <div className="mt-3">
+      <VerdictPill id={`hero-verdict-${coin.id}`} verdict={verdict} />
+    </div>
   );
 }
 
@@ -354,8 +385,9 @@ export function HeroMobileIdentity({
   reportCard,
 }: HeroIdentityProps) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
+  const verdict = heroVerdictEnabled ? deriveHeroVerdict(coin, reportCard) : null;
+  const showVerdict = !!verdict && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
-  const showVerdict = heroVerdictEnabled && !!coin.oneLiner;
   return (
     <>
       <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
@@ -390,8 +422,9 @@ export function HeroDesktopIdentity({
   reportCard,
 }: HeroIdentityProps) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
+  const verdict = heroVerdictEnabled ? deriveHeroVerdict(coin, reportCard) : null;
+  const showVerdict = !!verdict && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
-  const showVerdict = heroVerdictEnabled && !!coin.oneLiner;
   return (
     <div className="flex items-start gap-3">
       <StablecoinLogo src={logoSrc} name={coin.name} size={64} />
@@ -411,10 +444,10 @@ export function HeroDesktopIdentity({
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
-        {showVerdict ? (
-          <p id={verdictId} className="mt-2 text-sm italic leading-snug text-foreground/80">
-            {coin.oneLiner}
-          </p>
+        {showVerdict && verdict ? (
+          <div className="mt-2">
+            <VerdictPill id={verdictId} verdict={verdict} />
+          </div>
         ) : null}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <HeroTagList tags={coin.tags} />

@@ -33,12 +33,10 @@ import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-tran
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
-import { AiSummary } from "@/components/ai-summary";
 import { CoinNotices } from "@/components/coin-notice";
 import { DEWSDetail } from "@/components/dews-detail";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
-import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -269,7 +267,6 @@ export default function StablecoinDetailClient({
   ) : null;
   const s = DETAIL_SECTION_DEFS;
   const detailSections = [s.overview, s.context, s.liquidity, s.activity, s.history, s.explore];
-  const heroVerdictEnabled = isHeroVerdictEnabled();
   const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
   const hasReservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null;
   const reservesPanel = hasReservesPanel ? (
@@ -375,7 +372,6 @@ export default function StablecoinDetailClient({
           )}
         </section>
         {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
-        {heroVerdictEnabled && viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
         {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
       </div>
 

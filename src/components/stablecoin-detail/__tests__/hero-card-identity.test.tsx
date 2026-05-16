@@ -3,7 +3,7 @@
 import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { ReportCard, StablecoinMeta } from "@shared/types";
 
 const { isHeroVerdictEnabledMock } = vi.hoisted(() => ({
   isHeroVerdictEnabledMock: vi.fn(),
@@ -43,9 +43,13 @@ const BASE_COIN: StablecoinMeta = {
     rwa: true,
     navToken: false,
   },
+  mechanismArchetype: "fiat-cash",
 };
 
-const ONE_LINER = "Regulated USD-backed stablecoin from Circle.";
+const INSTITUTIONAL_REPORT_CARD = {
+  overallGrade: "A",
+  rawInputs: { canBeBlacklisted: false },
+} as unknown as ReportCard;
 
 const COMMON_PROPS = {
   infrastructures: [],
@@ -61,31 +65,35 @@ describe("HeroVerdict standalone (mobile section)", () => {
   });
   afterEach(cleanup);
 
-  it("renders the verdict paragraph when the flag is on and oneLiner is present", () => {
+  it("renders the verdict pill when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroVerdict coin={coin} />);
+    const { container } = render(
+      <HeroVerdict coin={BASE_COIN} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
-    const verdictEl = container.querySelector(`#hero-verdict-${coin.id}`);
+    const verdictEl = container.querySelector(`#hero-verdict-${BASE_COIN.id}`);
     expect(verdictEl).not.toBeNull();
-    expect(verdictEl?.tagName).toBe("P");
-    expect(verdictEl?.textContent).toBe(ONE_LINER);
+    expect(verdictEl?.getAttribute("data-archetype")).toBe("institutional-default");
+    expect(verdictEl?.textContent).toBe("Institutional Default");
   });
 
-  it("renders nothing when the flag is on but oneLiner is absent", () => {
+  it("renders nothing when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(<HeroVerdict coin={BASE_COIN} />);
+    // No report card and no mechanism context for the test coin → uncategorized.
+    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
+    const { container } = render(<HeroVerdict coin={uncategorizedCoin} />);
 
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders nothing when the flag is off even if oneLiner is present", () => {
+  it("renders nothing when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroVerdict coin={coin} />);
+    const { container } = render(
+      <HeroVerdict coin={BASE_COIN} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
     expect(container.firstChild).toBeNull();
   });
@@ -97,75 +105,81 @@ describe("HeroMobileIdentity heading aria-describedby", () => {
   });
   afterEach(cleanup);
 
-  it("wires aria-describedby on the heading when the flag is on and oneLiner is present", () => {
+  it("wires aria-describedby when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroMobileIdentity coin={coin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
     const heading = container.querySelector("h2");
-    expect(heading?.getAttribute("aria-describedby")).toBe(`hero-verdict-${coin.id}`);
+    expect(heading?.getAttribute("aria-describedby")).toBe(`hero-verdict-${BASE_COIN.id}`);
   });
 
-  it("omits aria-describedby when oneLiner is absent", () => {
+  it("omits aria-describedby when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(<HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
+    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
+    const { container } = render(<HeroMobileIdentity coin={uncategorizedCoin} {...COMMON_PROPS} />);
 
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });
 
-  it("omits aria-describedby when the flag is off even if oneLiner is present", () => {
+  it("omits aria-describedby when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroMobileIdentity coin={coin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });
 });
 
-describe("HeroDesktopIdentity verdict line", () => {
+describe("HeroDesktopIdentity verdict pill", () => {
   beforeEach(() => {
     isHeroVerdictEnabledMock.mockReset();
   });
   afterEach(cleanup);
 
-  it("renders the verdict and wires aria-describedby when the flag is on and oneLiner is present", () => {
+  it("renders the pill and wires aria-describedby when the flag is on and the archetype is categorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroDesktopIdentity coin={coin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
-    const verdictId = `hero-verdict-${coin.id}`;
-    const verdictEl = container.querySelector(`#${verdictId}`);
-    expect(verdictEl).not.toBeNull();
-    expect(verdictEl?.tagName).toBe("P");
-    expect(verdictEl?.textContent).toBe(ONE_LINER);
+    const verdictId = `hero-verdict-${BASE_COIN.id}`;
+    const pill = container.querySelector(`#${verdictId}`);
+    expect(pill).not.toBeNull();
+    expect(pill?.getAttribute("data-archetype")).toBe("institutional-default");
+    expect(pill?.textContent).toBe("Institutional Default");
 
     const heading = container.querySelector("h2");
     expect(heading?.getAttribute("aria-describedby")).toBe(verdictId);
   });
 
-  it("hides the verdict and omits aria-describedby when the flag is on but oneLiner is absent", () => {
+  it("hides the pill and omits aria-describedby when the archetype is uncategorized", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
-    const { container } = render(<HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
+    const uncategorizedCoin: StablecoinMeta = { ...BASE_COIN, mechanismArchetype: undefined };
+    const { container } = render(<HeroDesktopIdentity coin={uncategorizedCoin} {...COMMON_PROPS} />);
 
-    expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
+    expect(container.querySelector(`#hero-verdict-${uncategorizedCoin.id}`)).toBeNull();
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });
 
-  it("hides the verdict and omits aria-describedby when the flag is off even if oneLiner is present", () => {
+  it("hides the pill and omits aria-describedby when the flag is off", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
-    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
-    const { container } = render(<HeroDesktopIdentity coin={coin} {...COMMON_PROPS} />);
+    const { container } = render(
+      <HeroDesktopIdentity coin={BASE_COIN} {...COMMON_PROPS} reportCard={INSTITUTIONAL_REPORT_CARD} />,
+    );
 
-    expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();
+    expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });

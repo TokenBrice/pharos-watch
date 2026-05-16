@@ -1,0 +1,217 @@
+import { describe, expect, it } from "vitest";
+import {
+  deriveStablecoinVerdict,
+  type VerdictInputs,
+  type StablecoinVerdictArchetype,
+} from "@shared/lib/stablecoin-verdict";
+
+const BASE_INPUTS: VerdictInputs = {
+  status: "active",
+  reportCardGrade: "B",
+  pegScore: 85,
+  dewsBand: "CALM",
+  mechanismArchetype: "fiat-cash",
+  governance: "centralized",
+  backing: "rwa-backed",
+  isNavToken: false,
+  yieldBearing: false,
+  activeDepeg: false,
+};
+
+function inputs(overrides: Partial<VerdictInputs>): VerdictInputs {
+  return { ...BASE_INPUTS, ...overrides };
+}
+
+function archetypeOf(overrides: Partial<VerdictInputs>): StablecoinVerdictArchetype {
+  return deriveStablecoinVerdict(inputs(overrides)).archetype;
+}
+
+describe("deriveStablecoinVerdict — rule precedence", () => {
+  it("returns pre-launch when status is pre-launch", () => {
+    const verdict = deriveStablecoinVerdict(inputs({ status: "pre-launch" }));
+    expect(verdict.archetype).toBe("pre-launch");
+    expect(verdict.label).toBe("Pre-Launch");
+  });
+
+  it("returns frozen-archive when status is frozen", () => {
+    const verdict = deriveStablecoinVerdict(inputs({ status: "frozen" }));
+    expect(verdict.archetype).toBe("frozen-archive");
+    expect(verdict.label).toBe("Frozen Archive");
+  });
+
+  it("pre-launch beats every other rule", () => {
+    // Centralized fiat-cash A+ would otherwise be institutional-default; here pre-launch wins.
+    const archetype = archetypeOf({
+      status: "pre-launch",
+      reportCardGrade: "A+",
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+      activeDepeg: true,
+    });
+    expect(archetype).toBe("pre-launch");
+  });
+
+  it("frozen-archive beats distressed even when an active depeg is set", () => {
+    const archetype = archetypeOf({ status: "frozen", activeDepeg: true });
+    expect(archetype).toBe("frozen-archive");
+  });
+
+  it("returns distressed on active depeg even for an A-grade fiat-cash coin", () => {
+    const archetype = archetypeOf({
+      activeDepeg: true,
+      reportCardGrade: "A",
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+    });
+    expect(archetype).toBe("distressed");
+  });
+
+  it.each([["WARNING"] as const, ["DANGER"] as const])(
+    "returns distressed when DEWS band is %s",
+    (band) => {
+      const archetype = archetypeOf({ dewsBand: band });
+      expect(archetype).toBe("distressed");
+    },
+  );
+
+  it.each([["D"] as const, ["F"] as const])(
+    "returns distressed when overall grade is %s",
+    (grade) => {
+      const archetype = archetypeOf({ reportCardGrade: grade });
+      expect(archetype).toBe("distressed");
+    },
+  );
+
+  it("returns yield-bearing-hybrid when yieldBearing && synthetic-delta-neutral", () => {
+    const archetype = archetypeOf({
+      yieldBearing: true,
+      mechanismArchetype: "synthetic-delta-neutral",
+      governance: "decentralized",
+      backing: "crypto-backed",
+    });
+    expect(archetype).toBe("yield-bearing-hybrid");
+  });
+
+  it("returns yield-bearing-hybrid when yieldBearing && tbill", () => {
+    const archetype = archetypeOf({
+      yieldBearing: true,
+      mechanismArchetype: "tbill",
+      governance: "centralized",
+    });
+    expect(archetype).toBe("yield-bearing-hybrid");
+  });
+
+  it("yield-bearing CDPs fall through to decentralized-benchmark, not yield-bearing-hybrid", () => {
+    const archetype = archetypeOf({
+      yieldBearing: true,
+      mechanismArchetype: "cdp",
+      governance: "decentralized",
+      backing: "crypto-backed",
+    });
+    expect(archetype).toBe("decentralized-benchmark");
+  });
+
+  it("returns decentralized-benchmark for decentralized CDP", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "cdp",
+      governance: "decentralized",
+      backing: "crypto-backed",
+    });
+    expect(archetype).toBe("decentralized-benchmark");
+  });
+
+  it("does not return decentralized-benchmark when governance is centralized", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "cdp",
+      governance: "centralized",
+      backing: "crypto-backed",
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+
+  it("returns institutional-default for centralized fiat-cash with passing grade", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+      reportCardGrade: "A",
+    });
+    expect(archetype).toBe("institutional-default");
+  });
+
+  it.each([
+    ["A+"] as const,
+    ["A"] as const,
+    ["A-"] as const,
+    ["B+"] as const,
+    ["B"] as const,
+    ["B-"] as const,
+  ])("treats grade %s as institutional-default-eligible", (grade) => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+      reportCardGrade: grade,
+    });
+    expect(archetype).toBe("institutional-default");
+  });
+
+  it.each([
+    ["C+"] as const,
+    ["C"] as const,
+    ["C-"] as const,
+    ["NR"] as const,
+  ])("treats grade %s as uncategorized for fiat-cash centralized (not institutional)", (grade) => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+      reportCardGrade: grade,
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+
+  it("centralized-dependent governance does not qualify for institutional-default", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized-dependent",
+      reportCardGrade: "A",
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+
+  it("returns uncategorized when mechanismArchetype is undefined", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: undefined,
+      governance: "centralized",
+      reportCardGrade: "A",
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+
+  it("returns uncategorized when grade is null but no other rule matches", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+      reportCardGrade: null,
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+
+  it("treats null DEWS band as non-distressed", () => {
+    const archetype = archetypeOf({
+      dewsBand: null,
+      reportCardGrade: "A",
+      mechanismArchetype: "fiat-cash",
+      governance: "centralized",
+    });
+    expect(archetype).toBe("institutional-default");
+  });
+
+  it("algorithmic-only coin without other matches lands at uncategorized", () => {
+    const archetype = archetypeOf({
+      mechanismArchetype: "algorithmic",
+      governance: "decentralized",
+      backing: "algorithmic",
+      reportCardGrade: "C",
+    });
+    expect(archetype).toBe("uncategorized");
+  });
+});
