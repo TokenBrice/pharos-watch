@@ -122,6 +122,7 @@ describe("buildCommandPlan", () => {
       [
         [
           "npm run build",
+          "npm run check:feature-flag-inlining",
           "npm run seo:check",
           "npm run check:phishing-signatures",
           "npm run check:classifier-sensitive-copy",
@@ -338,6 +339,7 @@ describe("opt-in smoke wiring", () => {
       [
         [
           "npm run build",
+          "npm run check:feature-flag-inlining",
           "npm run seo:check",
           "npm run check:phishing-signatures",
           "npm run check:classifier-sensitive-copy",
