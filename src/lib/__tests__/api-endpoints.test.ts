@@ -78,6 +78,7 @@ describe("api endpoint registry", () => {
       "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history?stablecoin=usdt-tether",
+      "/api/snapshots/index",
       "/api/stability-index",
       "/api/stablecoin-charts",
       "/api/stablecoin-reserves/iusd-infinifi",
@@ -136,6 +137,7 @@ describe("api endpoint registry", () => {
       "/api/supply-history?stablecoin=usdt-tether",
       "/api/daily-digest",
       "/api/digest-archive",
+      "/api/snapshots/index",
       "/api/yield-rankings",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/safety-score-history?stablecoin=usdt-tether",
@@ -263,7 +265,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(13);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",

@@ -284,6 +284,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
+    key: "snapshots-index",
+    path: API_PATHS.snapshotsIndex(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
     methods: ["GET"],

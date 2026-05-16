@@ -789,6 +789,17 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
+    key: "snapshots-index",
+    path: API_PATHS.snapshotsIndex(),
+    summary: "Public snapshot index",
+    description: "Listing of available daily public snapshots with content hashes and methodology versions.",
+    tags: ["Digest"],
+    postman: {
+      folder: "Historical data",
+      order: 7,
+    },
+  },
+  {
     key: "public-status-history",
     path: API_PATHS.publicStatusHistory(),
     summary: "Public status history",

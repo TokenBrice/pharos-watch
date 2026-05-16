@@ -6,6 +6,7 @@ import {
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleStablecoinSummary } from "../api/stablecoin-summary";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
+import { handleSnapshotCoin, handleSnapshotDay } from "../api/snapshot";
 import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
 import { handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute } from "../api/api-keys";
@@ -96,6 +97,22 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
   defineDynamicRouteFromDescriptor(
     "og-image",
     (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
+  ),
+  defineDynamicRouteFromDescriptor(
+    "snapshot-day",
+    (routeCtx, match) => handleSnapshotDay(routeCtx.db, match[1]),
+  ),
+  defineDynamicRouteFromDescriptor(
+    "snapshot-coin",
+    (routeCtx, match) => {
+      let stablecoinId: string;
+      try {
+        stablecoinId = decodeURIComponent(match[2]);
+      } catch {
+        return Promise.resolve(errorResponse(400, "Malformed stablecoin id"));
+      }
+      return handleSnapshotCoin(routeCtx.db, match[1], stablecoinId);
+    },
   ),
 ] as const satisfies readonly DynamicRouteDefinition[];
 

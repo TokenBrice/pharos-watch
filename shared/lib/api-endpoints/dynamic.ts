@@ -11,6 +11,8 @@ export type DynamicEndpointDescriptorKey =
   | "stablecoin-reserves"
   | "stablecoin-detail"
   | "og-image"
+  | "snapshot-day"
+  | "snapshot-coin"
   | "discovery-candidate-dismiss"
   | "api-key-update"
   | "api-key-deactivate"
@@ -86,6 +88,32 @@ export const DYNAMIC_ENDPOINT_DESCRIPTORS = [
     requestAttribution: {
       routeKey: "og-image",
       routePath: "/api/og/*",
+    },
+  },
+  {
+    key: "snapshot-day",
+    pattern: /^\/api\/snapshots\/(\d{4}-\d{2}-\d{2})\.json$/,
+    methods: ["GET"],
+    publicApiAccess: "protected",
+    siteDataAccess: "allowed",
+    adminRequired: false,
+    routeDependencies: [],
+    requestAttribution: {
+      routeKey: "snapshot-day",
+      routePath: "/api/snapshots/:date.json",
+    },
+  },
+  {
+    key: "snapshot-coin",
+    pattern: /^\/api\/snapshot\/(\d{4}-\d{2}-\d{2})\/stablecoin\/([^/]+)$/,
+    methods: ["GET"],
+    publicApiAccess: "protected",
+    siteDataAccess: "allowed",
+    adminRequired: false,
+    routeDependencies: [],
+    requestAttribution: {
+      routeKey: "snapshot-coin",
+      routePath: "/api/snapshot/:date/stablecoin/:id",
     },
   },
   {

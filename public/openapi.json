@@ -1728,6 +1728,41 @@
         }
       }
     },
+    "/api/snapshots/index": {
+      "get": {
+        "tags": [
+          "Digest"
+        ],
+        "summary": "Public snapshot index",
+        "description": "Listing of available daily public snapshots with content hashes and methodology versions.",
+        "operationId": "snapshotsIndex",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/public-status-history": {
       "get": {
         "tags": [

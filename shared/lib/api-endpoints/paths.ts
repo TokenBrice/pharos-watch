@@ -55,6 +55,10 @@ export const API_PATHS = {
   digestArchive: () => "/api/digest-archive",
   digestSnapshotBase: () => "/api/digest-snapshot",
   digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
+  snapshotsIndex: () => "/api/snapshots/index",
+  snapshotDay: (date: string) => `/api/snapshots/${date}.json`,
+  snapshotCoin: (date: string, stablecoinId: string) =>
+    `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
   yieldRankings: () => "/api/yield-rankings",
   yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>

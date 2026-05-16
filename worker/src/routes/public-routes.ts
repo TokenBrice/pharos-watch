@@ -25,6 +25,7 @@ import { handleChains } from "../api/chains";
 import { handleNonUsdShare } from "../api/non-usd-share";
 import { handlePublicStatusHistory } from "../api/public-status-history";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
+import { handleSnapshotsIndex } from "../api/snapshot";
 import { handleTelegramPulse } from "../api/telegram-pulse";
 import { defineStaticRoute, type StaticRouteDefinition } from "./shared";
 
@@ -49,6 +50,7 @@ export const PUBLIC_STATIC_ROUTES = [
   defineStaticRoute("daily-digest", ({ db }) => handleDailyDigest(db)),
   defineStaticRoute("digest-archive", ({ db }) => handleDigestArchive(db)),
   defineStaticRoute("digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)),
+  defineStaticRoute("snapshots-index", ({ db }) => handleSnapshotsIndex(db)),
   defineStaticRoute("stability-index", ({ db, url }) => handleStabilityIndex(db, url)),
   defineStaticRoute("report-cards", ({ db }) => handleReportCards(db)),
   defineStaticRoute("redemption-backstops", ({ db }) => handleRedemptionBackstops(db)),

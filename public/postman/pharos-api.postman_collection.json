@@ -925,6 +925,26 @@
             "description": "Build-time digest context snapshot for a specific digest date."
           },
           "response": []
+        },
+        {
+          "name": "Public snapshot index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshots/index",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshots",
+                "index"
+              ]
+            },
+            "description": "Listing of available daily public snapshots with content hashes and methodology versions."
+          },
+          "response": []
         }
       ]
     },

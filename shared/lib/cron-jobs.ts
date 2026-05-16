@@ -400,6 +400,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     maxConnections: 0, // DB-only snapshot
   },
   {
+    job: "snapshot-public-dataset",
+    label: "Public dataset snapshot",
+    group: "daily",
+    intervalSec: DAY_SECONDS,
+    scheduleKey: "daily0800Utc",
+    triggerMode: "shared",
+    maxConnections: 0, // D1 read + D1 write; no outbound fetches
+  },
+  {
     job: "sync-usds-status",
     label: "USDS status",
     group: "daily",

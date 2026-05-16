@@ -1,6 +1,6 @@
 /**
  * Daily 08:00 UTC trigger (0 8 * * *):
- *   snapshot-supply (0) | snapshot-safety-grade-history (0) | snapshot-psi (0)  ← parallel, DB-only
+ *   snapshot-supply (0) | snapshot-safety-grade-history (0) | snapshot-psi (0) | snapshot-public-dataset (0)  ← parallel, DB-only
  *   fetch-tbill-rate (1) → sync-usds-status (1)  ← chained to avoid connection contention
  *
  * Connection budget: 1/6 peak
@@ -9,6 +9,7 @@ import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotSafetyGradeHistory } from "../../cron/snapshot-safety-grade-history";
 import { fetchTbillRate } from "../../cron/fetch-tbill-rate";
 import { snapshotPsiDaily } from "../../cron/snapshot-psi";
+import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJob } from "./run-best-effort-job";
@@ -23,6 +24,12 @@ export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promis
       (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
     ),
     runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal)),
+    runBestEffortScheduledJob(
+      runtime,
+      "daily 08:00 slot",
+      "snapshot-public-dataset",
+      (signal) => snapshotPublicDataset(runtime.db, signal),
+    ),
     (async () => {
       const tbillResult = await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal, runtime.env));
       if (tbillResult?.status === "error" || tbillResult == null) {
