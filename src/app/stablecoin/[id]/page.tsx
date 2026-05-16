@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
@@ -18,6 +18,7 @@ import { logosById } from "@/lib/logos";
 import { buildPreLaunchStablecoinJsonLd, buildStablecoinDatasetJsonLd } from "@/lib/stablecoin-detail-json-ld";
 import { buildStablecoinStaticMeta, type StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
+import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/static-seo-content";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
@@ -33,42 +34,70 @@ function hasCollateralUsageTarget(stablecoinId: string) {
 function DetailPageShellFallback({
   coin,
   logoSrc,
+  staticProfileContent,
+  staticComparisonLinks,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
+  staticProfileContent?: ReactNode;
+  staticComparisonLinks?: Array<{ href: string; shortTitle: string }>;
 }) {
   return (
-    <div className="space-y-6" aria-hidden="true">
-      <StablecoinDetailLoadingShell
-        coin={coin}
-        logoSrc={logoSrc}
-        description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
-        statusLabel="Research dossier loading"
-      />
+    <div className="space-y-6">
+      <div className="space-y-6" aria-hidden="true">
+        <StablecoinDetailLoadingShell
+          coin={coin}
+          logoSrc={logoSrc}
+          description="Loading the full research dossier: price, safety, liquidity, flows, and historical context."
+          statusLabel="Research dossier loading"
+        />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
-        <div className="space-y-6">
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)]">
+          <div className="space-y-6">
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="mt-4 h-[320px] w-full rounded-xl" />
+            </div>
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
+            </div>
           </div>
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="mt-4 h-[260px] w-full rounded-xl" />
-          </div>
-        </div>
 
-        <div className="space-y-6">
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
-          </div>
-          <div className="pharos-card-shell p-4">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
+          <div className="space-y-6">
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="mt-4 h-[220px] w-full rounded-xl" />
+            </div>
+            <div className="pharos-card-shell p-4">
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="mt-4 h-[180px] w-full rounded-xl" />
+            </div>
           </div>
         </div>
       </div>
+
+      {staticProfileContent}
+
+      {staticComparisonLinks && staticComparisonLinks.length > 0 ? (
+        <nav aria-label="Peer comparisons" className="pharos-card-shell px-4 py-3 sm:px-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Peer comparisons
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-2 text-sm">
+            {staticComparisonLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline"
+                >
+                  {link.shortTitle}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
     </div>
   );
 }
@@ -145,7 +174,15 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   return (
     <>
       <Suspense fallback={
-        <DetailPageShellFallback coin={staticCoin} logoSrc={logosById[coin.id]} />
+        <DetailPageShellFallback
+          coin={staticCoin}
+          logoSrc={logosById[coin.id]}
+          staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
+          staticComparisonLinks={staticComparisonPages.map((page) => ({
+            href: page.href,
+            shortTitle: page.shortTitle,
+          }))}
+        />
       }>
         <StablecoinDetailClient
           id={id}
