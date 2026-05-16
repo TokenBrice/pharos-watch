@@ -17,14 +17,14 @@ const SPIKE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SPIKE_MIN_APY = 2;
 const SPIKE_RATIO_THRESHOLD = 2.0;
 
-export interface SpikeAnnotation {
+interface SpikeAnnotation {
   date: number;
   apy: number;
   trailingAvg: number;
   ratio: number;
 }
 
-export function computeSpikeAnnotations(
+function computeSpikeAnnotations(
   chartData: Array<{ date: number; apy: number }>,
 ): SpikeAnnotation[] {
   const result: SpikeAnnotation[] = [];
