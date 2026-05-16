@@ -89,6 +89,8 @@
     "generate:pwa-icons": "node scripts/maintenance/generate-pwa-icons.mjs",
     "subset:fonts": "node scripts/maintenance/subset-fonts.mjs",
     "check:fonts": "node scripts/maintenance/subset-fonts.mjs --check",
+    "generate:methodology-pdfs": "tsx scripts/maintenance/generate-methodology-pdfs.ts",
+    "check:methodology-pdfs": "tsx scripts/maintenance/generate-methodology-pdfs.ts --check",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
     "check:build-attribution": "node scripts/ci/check-build-attribution.mjs",
