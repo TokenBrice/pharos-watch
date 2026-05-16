@@ -31,7 +31,7 @@ describe("page metadata helpers", () => {
     const description = buildStablecoinDetailDescription(preLaunch!);
     const metadata = buildStablecoinDetailMetadata(preLaunch!);
 
-    expect(metadata.title).toBe("Nubank USD Stablecoin (USD-NU) — Pre-Launch Stablecoin Profile");
+    expect(metadata.title).toBe("Nubank USD Stablecoin (USD-NU) — Pre-launch Stablecoin Profile");
     expect(description).toContain("Pre-launch profile");
     expect(description).toContain("before live data begins");
     expect(description).not.toContain("Peg score");

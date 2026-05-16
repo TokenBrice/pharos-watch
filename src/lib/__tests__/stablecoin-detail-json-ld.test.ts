@@ -66,7 +66,7 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
     expect(jsonLd).toHaveLength(2);
     expect(jsonLd[0]).toMatchObject({
       "@type": "WebPage",
-      name: expect.stringContaining("Pre-Launch Stablecoin Tracker"),
+      name: expect.stringContaining("Pre-launch Stablecoin Tracker"),
       url: "https://pharos.watch/stablecoin/fiusd-fiserv/",
     });
     expect(jsonLd[1]).toMatchObject({
