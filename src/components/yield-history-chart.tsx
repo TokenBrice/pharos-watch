@@ -35,44 +35,6 @@ import {
 /** Distinct colors for overlay lines (skip index 0 = blue, use contrasting hues) */
 const OVERLAY_COLORS = [CHART_PALETTE[1], CHART_PALETTE[3], CHART_PALETTE[4], CHART_PALETTE[5]];
 
-const SPIKE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const SPIKE_MIN_APY = 2; // must be above 2% to qualify
-const SPIKE_RATIO_THRESHOLD = 2.0; // current must be 2× trailing avg
-
-interface SpikeAnnotation {
-  date: number;
-  apy: number;
-  trailingAvg: number;
-  ratio: number;
-}
-
-function computeSpikeAnnotations(
-  chartData: Array<{ date: number; apy: number }>,
-): SpikeAnnotation[] {
-  const result: SpikeAnnotation[] = [];
-  for (let i = 0; i < chartData.length; i++) {
-    const point = chartData[i];
-    if (point.apy <= SPIKE_MIN_APY) continue;
-
-    // Collect points within the trailing 30d window (excluding current)
-    const windowStart = point.date - SPIKE_WINDOW_MS;
-    const windowPoints = chartData
-      .slice(0, i)
-      .filter((p) => p.date >= windowStart && p.apy > 0);
-
-    if (windowPoints.length < 3) continue; // not enough history
-
-    const avg = windowPoints.reduce((sum, p) => sum + p.apy, 0) / windowPoints.length;
-    if (avg <= 0) continue;
-
-    const ratio = point.apy / avg;
-    if (ratio >= SPIKE_RATIO_THRESHOLD) {
-      result.push({ date: point.date, apy: point.apy, trailingAvg: avg, ratio });
-    }
-  }
-  return result;
-}
-
 export function YieldHistoryChart({
   stablecoinId,
   benchmarkRate,
@@ -100,10 +62,17 @@ export function YieldHistoryChart({
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const historyWarning = model.bodyWarning ?? model.historyQuery.meta?.warning ?? null;
 
-  const spikeAnnotations = computeSpikeAnnotations(model.chartData);
+  const spikeAnnotations = model.spikeAnnotations;
   const spikesByDate = new Map(
     spikeAnnotations.map((s) => [s.date, { trailingAvg: s.trailingAvg, ratio: s.ratio }]),
   );
+  const domainMax = model.yDomain[1];
+  /* Render markers only for the most extreme spikes so the plot doesn't fill
+     with overlapping labels when a series has a sustained high-volatility period. */
+  const MAX_SPIKE_MARKERS = 3;
+  const visibleSpikes = [...spikeAnnotations]
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, MAX_SPIKE_MARKERS);
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
   const referenceLabelStyle = compact
     ? undefined
@@ -221,6 +190,7 @@ export function YieldHistoryChart({
               />
               <YAxis
                 domain={model.yDomain}
+                allowDataOverflow
                 tickLine={false}
                 axisLine={false}
                 width={compact ? 48 : 58}
@@ -310,24 +280,29 @@ export function YieldHistoryChart({
                 legendType="none"
                 isAnimationActive={false}
               />
-              {/* Spike annotations */}
-              {spikeAnnotations.map((spike) => (
-                <ReferenceDot
-                  key={spike.date}
-                  x={spike.date}
-                  y={spike.apy}
-                  r={5}
-                  fill="oklch(0.72 0.18 35)"
-                  stroke="var(--color-background)"
-                  strokeWidth={1.5}
-                  label={{
-                    value: `↑${formatChartNumber(spike.ratio, 1, 1)}×`,
-                    fill: "oklch(0.72 0.18 35)",
-                    fontSize: 10,
-                    position: "top",
-                  }}
-                />
-              ))}
+              {/* Spike annotations — clamped to the visible y-domain so an outlier
+                  doesn't sit off-canvas after the domain excludes it. */}
+              {visibleSpikes.map((spike) => {
+                const clampedY = Math.min(spike.apy, domainMax);
+                const isClamped = spike.apy > domainMax;
+                return (
+                  <ReferenceDot
+                    key={spike.date}
+                    x={spike.date}
+                    y={clampedY}
+                    r={4}
+                    fill="oklch(0.72 0.18 35)"
+                    stroke="var(--color-background)"
+                    strokeWidth={1.5}
+                    label={{
+                      value: `${isClamped ? "↑↑" : "↑"} ${formatChartNumber(spike.apy, 1, 1)}%`,
+                      fill: "oklch(0.72 0.18 35)",
+                      fontSize: 10,
+                      position: "top",
+                    }}
+                  />
+                );
+              })}
               {/* Overlay lines for multi-source comparison */}
               {model.overlaySeriesKeys.map((dataKey, i) => (
                 <Line
@@ -349,46 +324,51 @@ export function YieldHistoryChart({
           )}
         </div>
       </ChartShell>
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_ACCENT }} />
-          {model.primarySourceLabel.label}
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
-          Benchmark: {benchmarkLabel ?? "Rate"}
-          {benchmarkIsFallback ? (
-            <span className="rounded bg-amber-500/15 px-1 py-px text-[9px] font-medium uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
-              fallback
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_ACCENT }} />
+            {model.primarySourceLabel.label}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+            <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
+            Benchmark: {benchmarkLabel ?? "Rate"}
+            {benchmarkIsFallback ? (
+              <span className="rounded bg-amber-500/15 px-1 py-px text-[9px] font-medium uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
+                fallback
+              </span>
+            ) : null}
+          </span>
+          {medianApy > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+              <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>
+              Peer median
             </span>
           ) : null}
-        </span>
-        {medianApy > 0 ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-            <span className="font-mono tabular-nums">{formatChartNumber(medianApy)}%</span>
-            Peer median
+          {model.overlayLabels.map((source, i) => (
+            <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0] }} />
+              {source.label}
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
+          <span className="uppercase tracking-[0.12em] text-muted-foreground/60">Markers</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
+            warning
           </span>
-        ) : null}
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
-          Warning markers
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-          <span className="h-2 w-2 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
-          Source changed
-        </span>
-        {spikeAnnotations.length > 0 ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "oklch(0.72 0.18 35)" }} />
-            Yield spike
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: CHART_BLUE }} />
+            source change
           </span>
-        ) : null}
-        {model.overlayLabels.map((source, i) => (
-          <span key={source.sourceKey} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: OVERLAY_COLORS[i + 1] ?? OVERLAY_COLORS[0] }} />
-            {source.label}
-          </span>
-        ))}
+          {spikeAnnotations.length > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "oklch(0.72 0.18 35)" }} />
+              spike
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

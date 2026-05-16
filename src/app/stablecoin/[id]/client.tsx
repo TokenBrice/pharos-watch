@@ -253,9 +253,9 @@ export default function StablecoinDetailClient({
     s.overview,
     ...(viewModel.reserves ? [s.reserves] : []),
     ...(hasPriceTransparency ? [s.price] : []),
-    ...(viewModel.hasYieldSection ? [s.yield] : []),
     s.liquidity,
     s.market,
+    ...(viewModel.hasYieldSection ? [s.yield] : []),
     ...(viewModel.hasFlows ? [s.flows] : []),
     ...(viewModel.hasBlacklist ? [s.blacklist] : []),
     s.history,
@@ -341,6 +341,9 @@ export default function StablecoinDetailClient({
               card={viewModel.reportCard}
               liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
               updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
+              supplyHistory={viewModel.supplyHistory}
+              pegCurrency={viewModel.coin.flags.pegCurrency}
+              stablecoinId={viewModel.id}
             />
           )}
           <div className="mt-4">
@@ -380,13 +383,6 @@ export default function StablecoinDetailClient({
         />
       </div>
 
-      {/* ── Yield zone ── */}
-      {viewModel.hasYieldSection && (
-        <div className="mt-12">
-          <YieldDetailSection stablecoinId={viewModel.id} />
-        </div>
-      )}
-
       {/* ── Liquidity zone ── */}
       <div className="mt-12">
         <section id="liquidity">
@@ -408,15 +404,6 @@ export default function StablecoinDetailClient({
           </LazySection>
         </section>
 
-        {viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken ? (
-          <section id="peg-deviation">
-            {frozenNote}
-            <LazySection minHeight={420}>
-              <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} stablecoinId={viewModel.id} />
-            </LazySection>
-          </section>
-        ) : null}
-
         <section id="distribution">
           {frozenNote}
           <SectionErrorBoundary name="distribution">
@@ -424,6 +411,13 @@ export default function StablecoinDetailClient({
           </SectionErrorBoundary>
         </section>
       </div>
+
+      {/* ── Yield zone ── */}
+      {viewModel.hasYieldSection && (
+        <div className="mt-12">
+          <YieldDetailSection stablecoinId={viewModel.id} />
+        </div>
+      )}
 
       {/* ── Activity zone ── */}
       <div className="mt-12 space-y-6">

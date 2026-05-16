@@ -59,6 +59,14 @@ function sourceUrl(source: Pick<AltYieldSource, "yieldSourceUrl">): string | nul
   return source.yieldSourceUrl ?? null;
 }
 
+const DISAMBIGUATOR_MAX_LENGTH = 16;
+const DISAMBIGUATOR_SUFFIX_LENGTH = 8;
+
+function formatDisambiguator(sourceKey: string): string {
+  if (sourceKey.length <= DISAMBIGUATOR_MAX_LENGTH) return sourceKey;
+  return `…${sourceKey.slice(-DISAMBIGUATOR_SUFFIX_LENGTH)}`;
+}
+
 function buildDisplayLabels(sources: Array<{ sourceKey: string; label: string }>): Map<string, string> {
   const counts = new Map<string, number>();
   for (const source of sources) {
@@ -68,7 +76,9 @@ function buildDisplayLabels(sources: Array<{ sourceKey: string; label: string }>
   return new Map(
     sources.map((source) => [
       source.sourceKey,
-      (counts.get(source.label) ?? 0) > 1 ? `${source.label} (${source.sourceKey})` : source.label,
+      (counts.get(source.label) ?? 0) > 1
+        ? `${source.label} (${formatDisambiguator(source.sourceKey)})`
+        : source.label,
     ]),
   );
 }

@@ -13,6 +13,55 @@ export const PRESET_DAYS = [7, 30, 90, 365] as const;
 const MAX_OVERLAY_SOURCES = 4;
 const SOURCE_KEY_SUFFIX_LENGTH = 12;
 
+const SPIKE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const SPIKE_MIN_APY = 2;
+const SPIKE_RATIO_THRESHOLD = 2.0;
+
+export interface SpikeAnnotation {
+  date: number;
+  apy: number;
+  trailingAvg: number;
+  ratio: number;
+}
+
+export function computeSpikeAnnotations(
+  chartData: Array<{ date: number; apy: number }>,
+): SpikeAnnotation[] {
+  const result: SpikeAnnotation[] = [];
+  /* Compute a single reference average from the full series to catch outliers
+     near the start of the window where trailing context is thin. */
+  const seriesPositiveApys = chartData.filter((p) => p.apy > 0).map((p) => p.apy);
+  const seriesMean =
+    seriesPositiveApys.length > 0
+      ? seriesPositiveApys.reduce((sum, v) => sum + v, 0) / seriesPositiveApys.length
+      : 0;
+  for (let i = 0; i < chartData.length; i++) {
+    const point = chartData[i];
+    if (point.apy <= SPIKE_MIN_APY) continue;
+
+    const windowStart = point.date - SPIKE_WINDOW_MS;
+    const trailingPoints = chartData
+      .slice(0, i)
+      .filter((p) => p.date >= windowStart && p.apy > 0);
+
+    let avg: number;
+    if (trailingPoints.length >= 3) {
+      avg = trailingPoints.reduce((sum, p) => sum + p.apy, 0) / trailingPoints.length;
+    } else if (seriesMean > 0) {
+      avg = seriesMean;
+    } else {
+      continue;
+    }
+    if (avg <= 0) continue;
+
+    const ratio = point.apy / avg;
+    if (ratio >= SPIKE_RATIO_THRESHOLD) {
+      result.push({ date: point.date, apy: point.apy, trailingAvg: avg, ratio });
+    }
+  }
+  return result;
+}
+
 export interface YieldHistorySourceOption {
   sourceKey: string;
   yieldSource: string;
@@ -129,7 +178,7 @@ function getSourceDisplay(
   fallbackLabel = sourceKey,
 ): YieldHistorySourceDisplay {
   if (sourceKey === "best") {
-    return { sourceKey, label: "Best yield (selected)" };
+    return { sourceKey, label: "Best yield" };
   }
 
   const source = allSources.find((candidate) => candidate.sourceKey === sourceKey);
@@ -318,6 +367,9 @@ export function useYieldHistoryChartModel({
   const effectiveShowBreakdown = hasBreakdown && showBreakdown;
   const tickValues = useMemo(() => buildTicks(chartData, days), [chartData, days]);
 
+  const spikeAnnotations = useMemo(() => computeSpikeAnnotations(chartData), [chartData]);
+  const spikeDates = useMemo(() => new Set(spikeAnnotations.map((spike) => spike.date)), [spikeAnnotations]);
+
   const yDomain = useMemo(() => {
     if (chartData.length === 0) {
       const minRef = Math.min(0, benchmarkRate, medianApy > 0 ? medianApy : 0);
@@ -325,13 +377,18 @@ export function useYieldHistoryChartModel({
       return [minRef - 1, maxRef + 1] as const;
     }
 
-    const values = [...chartData.map((point) => point.apy), benchmarkRate];
+    const apyValues = chartData
+      .filter((point) => !spikeDates.has(point.date))
+      .map((point) => point.apy);
+    const values: number[] = apyValues.length > 0 ? [...apyValues] : chartData.map((point) => point.apy);
+    values.push(benchmarkRate);
     if (medianApy > 0) {
       values.push(medianApy);
     }
 
     if (effectiveShowBreakdown) {
       for (const point of chartData) {
+        if (spikeDates.has(point.date)) continue;
         if (point.apyBase !== null) values.push(point.apyBase);
         if (point.apyReward !== null) values.push(point.apyReward);
       }
@@ -348,7 +405,7 @@ export function useYieldHistoryChartModel({
     const span = Math.max(max - min, 1);
     const padding = Math.max(span * 0.08, 0.5);
     return [min - padding, max + padding] as const;
-  }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy, overlayData]);
+  }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy, overlayData, spikeDates]);
 
   return {
     days,
@@ -369,6 +426,7 @@ export function useYieldHistoryChartModel({
     effectiveShowBreakdown,
     tickValues,
     yDomain,
+    spikeAnnotations,
     resolvedBenchmarkLabel: getYieldBenchmarkDisplayLabel({
       benchmarkLabel,
       benchmarkIsFallback,

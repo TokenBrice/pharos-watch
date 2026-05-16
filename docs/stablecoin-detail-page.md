@@ -92,11 +92,11 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 9. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
 10. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail)
 11. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
-12. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
+12. `DexLiquidityCard`
 13. `McapChart`
 14. `PegDeviationChart` (wrapped in `<section id="peg-deviation">`) only when the coin is USD-pegged and not a NAV token; not surfaced in the scrollspy rail
 15. `DistributionSection`
-16. `DexLiquidityCard`
+16. `YieldDetailSection` when the coin is marked `yieldBearing` or the cached yield rankings include a live row for that coin
 17. `FlowsSection`
 18. `BlacklistSection` while blacklist summary data is still loading for a supported symbol, or after load only when that supported symbol has recorded blacklist events
 19. `DepegHistory` (suppressed for NAV tokens)
@@ -106,7 +106,7 @@ The server shell then appends `ExploreNextSection` after the client-rendered ana
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `chart` (Market), optional `yield`, `liquidity`, optional `flows`, optional `blacklist`, `history`, `explore-next`. This is the current rail order; it does not strictly mirror DOM order because `YieldDetailSection` renders before `McapChart`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`); the `history` pill is currently always present even though the target section is omitted for NAV tokens.
+- `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `liquidity`, `chart` (Market), optional `yield`, optional `flows`, optional `blacklist`, `history`, `explore-next`. `YieldDetailSection` renders between `DistributionSection` and `FlowsSection`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`); the `history` pill is currently always present even though the target section is omitted for NAV tokens.
 - Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the overview zone and are not top-level scrollspy entries.

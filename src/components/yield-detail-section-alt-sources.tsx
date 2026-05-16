@@ -14,6 +14,7 @@ export interface YieldDetailSectionAltSourcesProps {
   altSources: YieldSourceExplorerSource[];
   bestApy: number;
   bestSourceKey: string | null;
+  totalSourceCount?: number;
   onSelectSource: (sourceKey: string) => void;
   selectedSourceKeys: Set<string>;
   showAll: boolean;
@@ -24,6 +25,7 @@ export function YieldDetailSectionAltSources({
   altSources,
   bestApy,
   bestSourceKey,
+  totalSourceCount,
   onSelectSource,
   selectedSourceKeys,
   showAll,
@@ -52,9 +54,16 @@ export function YieldDetailSectionAltSources({
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        Retained alternates
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Retained alternates
+        </p>
+        {totalSourceCount && totalSourceCount > 1 ? (
+          <p className="text-[11px] text-muted-foreground/80">
+            {totalSourceCount} sources tracked · canonical chosen by confidence, not highest APY
+          </p>
+        ) : null}
+      </div>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -67,7 +76,12 @@ export function YieldDetailSectionAltSources({
               >
                 APY 30d {sortField === "apy" ? (sortDir === "desc" ? "↓" : "↑") : ""}
               </th>
-              <th className="pb-2 text-right font-medium">vs Best</th>
+              <th
+                className="pb-2 text-right font-medium"
+                title="Difference vs the canonical source's 30d APY. Positive means this alternate has a higher APY than the canonical — but canonical selection weights confidence, not raw APY."
+              >
+                Δ APY
+              </th>
               <th
                 className="cursor-pointer pb-2 text-right font-medium transition-colors hover:text-foreground"
                 onClick={() => toggleSort("tvl")}

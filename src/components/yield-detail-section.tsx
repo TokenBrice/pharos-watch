@@ -90,23 +90,24 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   }
 
   const { ranking } = view;
+  const totalSourceCount = 1 + ranking.altSources.length;
   const headerEnd = (
-    <div className="flex items-center gap-2">
-      {ranking.altSources.length > 0 ? (
-        <span className="rounded-full border border-border/60 bg-muted/20 px-2 py-0.5 text-xs font-mono text-muted-foreground">
-          Sources ({1 + ranking.altSources.length})
-        </span>
-      ) : null}
-      <span
-        className={cn(
-          "rounded-full border px-2 py-0.5 text-xs font-medium",
-          view.yieldTypeBadge,
-        )}
-      >
-        {view.yieldTypeLabel}
-      </span>
-    </div>
+    <span
+      className={cn(
+        "rounded-full border px-2 py-0.5 text-xs font-medium",
+        view.yieldTypeBadge,
+      )}
+    >
+      {view.yieldTypeLabel}
+    </span>
   );
+  const sourceAgeMinutes =
+    ranking.provenance?.sourceAgeSeconds != null
+      ? Math.round(ranking.provenance.sourceAgeSeconds / 60)
+      : null;
+  const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
+  const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
+  const excessYield = ranking.excessYield;
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
@@ -155,6 +156,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
         <YieldHistoryChart
           stablecoinId={stablecoinId}
+          defaultDays={30}
           benchmarkRate={view.benchmarkRate}
           benchmarkLabel={view.ranking.benchmarkLabel}
           benchmarkIsFallback={view.benchmarkIsFallback}
@@ -165,26 +167,30 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         />
       </div>
 
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">30d Excess Yield</span>
-        <span
-          className={cn(
-            "font-mono text-3xl tabular-nums",
-            ranking.excessYield === null
-              ? "text-muted-foreground"
-              : ranking.excessYield >= 0
-              ? "text-emerald-700 dark:text-emerald-400"
-                : "text-red-700 dark:text-red-400",
-          )}
-        >
-          {formatSignedPercent(view.ranking.excessYield)}
-        </span>
-        {view.benchmarkSubtitle ? <span className="text-sm text-muted-foreground">{view.benchmarkSubtitle}</span> : null}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <YieldDetailSectionStatCard label="Current APY" value={formatPercent(view.ranking.currentApy)} />
-        <YieldDetailSectionStatCard label="30d APY" value={formatPercent(view.ranking.apy30d)} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <YieldDetailSectionStatCard label="Yield">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-mono text-2xl tabular-nums text-foreground">
+              {formatPercent(view.ranking.apy30d)}
+            </span>
+            {excessYield !== null ? (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
+                  excessYield >= 0
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "bg-red-500/10 text-red-700 dark:text-red-400",
+                )}
+              >
+                {formatSignedPercent(excessYield)}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            30d trailing · Current {formatPercent(view.ranking.currentApy)}
+            {view.benchmarkSubtitle ? ` · ${view.benchmarkSubtitle}` : ""}
+          </p>
+        </YieldDetailSectionStatCard>
         <YieldDetailSectionStatCard label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>}>
           <PysBreakdown
             mode="inline"
@@ -213,46 +219,59 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         />
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-border/60 bg-background/40 p-4 sm:grid-cols-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Yield Source</p>
-          <div className="mt-2 text-sm font-medium text-foreground">
+      <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
+          <span className="font-semibold text-foreground">
             <YieldSourceLink href={view.sourceExplorer.sourceIdentity.url}>
               {view.sourceExplorer.sourceIdentity.displayLabel}
             </YieldSourceLink>
-          </div>
-          {view.ranking.provenance?.selectionReason ? (
-            <p className="mt-1 text-xs text-muted-foreground">{view.ranking.provenance.selectionReason}</p>
+          </span>
+          <span className="text-muted-foreground/40">·</span>
+          <span
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+              view.dataSourceMeta.badge,
+            )}
+          >
+            {view.dataSourceMeta.label}
+          </span>
+          {sourceAgeMinutes !== null ? (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground">age {sourceAgeMinutes}m</span>
+            </>
           ) : null}
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Data Source</p>
-          <div className="mt-2">
-            <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", view.dataSourceMeta.badge)}>
-              {view.dataSourceMeta.label}
-            </span>
-          </div>
-          {view.ranking.provenance?.sourceAgeSeconds != null ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Source age {Math.round(view.ranking.provenance.sourceAgeSeconds / 60)}m
-            </p>
+          {sourceTvl !== null ? (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="font-mono tabular-nums text-muted-foreground">
+                TVL {formatCurrency(sourceTvl)}
+              </span>
+              <span
+                className="text-muted-foreground/70"
+                title={sourceDepthMeta.description}
+              >
+                ({sourceDepthMeta.label.toLowerCase()} depth)
+              </span>
+            </>
           ) : null}
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">TVL and depth</p>
-          <p className="mt-2 font-mono text-sm tabular-nums text-foreground">
-            {view.sourceExplorer.selectedSource.sourceTvlUsd !== null ? formatCurrency(view.sourceExplorer.selectedSource.sourceTvlUsd) : "—"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].description}>
-            {YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens].label} depth
-          </p>
           {view.sourceExplorer.sourceSwitch.changed ? (
-            <p className="mt-1 text-xs text-sky-700 dark:text-sky-300">
-              Source changed versus the prior published snapshot
-              {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel ? ` (${view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel})` : ""}
-            </p>
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-300">
+                source changed
+                {view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel
+                  ? ` from ${view.sourceExplorer.sourceSwitch.previousSourceDisplayLabel}`
+                  : ""}
+              </span>
+            </>
           ) : null}
         </div>
+        {view.ranking.provenance?.selectionReason ? (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {view.ranking.provenance.selectionReason}
+          </p>
+        ) : null}
       </div>
 
       {view.sourceExplorer.retainedAlternates.length >= 2 ? (
@@ -260,6 +279,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           altSources={view.sourceExplorer.retainedAlternates}
           bestApy={view.ranking.apy30d}
           bestSourceKey={view.sourceExplorer.selectedSource.sourceKey}
+          totalSourceCount={totalSourceCount}
           onSelectSource={(sourceKey) => {
             view.toggleSource(sourceKey);
             document.getElementById("yield")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -289,17 +309,16 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         </div>
       ) : null}
 
-      <div className="flex items-center justify-end pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
           href={`${buildStablecoinUrl(stablecoinId)}yield/`}
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           View full yield analysis
           <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
         </Link>
+        <MethodologyCardActions topic="pys" className="border-t-0 pt-0" />
       </div>
-
-      <MethodologyCardActions topic="pys" />
     </YieldDetailSectionFrame>
   );
 }
