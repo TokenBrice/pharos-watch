@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   formatCurrency,
@@ -73,6 +74,7 @@ export function HeroTertiaryMetrics({
   trackingSpanDays,
   activeDepeg,
   mobile = false,
+  trailing,
 }: {
   metrics: HeroTertiaryMetricConfig[];
   chainCount: number;
@@ -80,6 +82,7 @@ export function HeroTertiaryMetrics({
   trackingSpanDays: number;
   activeDepeg: boolean;
   mobile?: boolean;
+  trailing?: ReactNode;
 }) {
   return (
     <>
@@ -106,6 +109,7 @@ export function HeroTertiaryMetrics({
             <span className="text-base font-bold font-mono">{chainCount}</span>
           </div>
         )}
+        {trailing}
         {!mobile && earlyPegScore && (
           <span className="text-xs text-amber-600 dark:text-amber-400">
             Early peg score · {trackingSpanDays}d tracked

@@ -180,8 +180,8 @@ export function HeroCardMobileSection({
         trackingSpanDays={trackingSpanDays}
         activeDepeg={activeDepeg}
         mobile
+        trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
       />
-      <RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />
     </div>
   );
 }
@@ -273,8 +273,8 @@ export function HeroCardDesktopSection({
           earlyPegScore={earlyPegScore}
           trackingSpanDays={trackingSpanDays}
           activeDepeg={activeDepeg}
+          trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
         />
-        <RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />
       </div>
     </div>
   );

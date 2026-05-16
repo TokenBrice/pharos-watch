@@ -63,9 +63,10 @@ describe("RecentBlacklistBanner", () => {
     useRecentBlacklist7dMock.mockReturnValue({ freezes: 1, destroys: 1, releases: 0 });
     render(<RecentBlacklistBanner symbol="USDC" />);
     const banner = screen.getByRole("status");
-    expect(banner.textContent).toContain("1 freeze");
-    expect(banner.textContent).toContain("1 destroy");
-    expect(banner.textContent).toContain("in the last 7 days.");
+    expect(banner.textContent).toContain("1");
+    expect(banner.textContent).toContain("freeze");
+    expect(banner.textContent).toContain("destroy");
+    expect(banner.getAttribute("aria-label")).toContain("in the last 7 days");
   });
 
   it("renders when freezes >= 5", () => {
@@ -73,19 +74,24 @@ describe("RecentBlacklistBanner", () => {
     useRecentBlacklist7dMock.mockReturnValue({ freezes: 7, destroys: 0, releases: 0 });
     render(<RecentBlacklistBanner symbol="USDC" />);
     const banner = screen.getByRole("status");
-    expect(banner.textContent).toContain("7 freezes");
+    expect(banner.textContent).toContain("7");
+    expect(banner.textContent).toContain("freezes");
     // No destroy clause when destroys === 0
     expect(banner.textContent).not.toContain("destroy");
   });
 
-  it("renders the Snowflake icon and correct freeze/destroy counts", () => {
+  it("renders the Snowflake icon and correct freeze/destroy counts (releases hidden)", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(true);
     useRecentBlacklist7dMock.mockReturnValue({ freezes: 12, destroys: 2, releases: 1 });
     const { container } = render(<RecentBlacklistBanner symbol="USDC" />);
     const banner = screen.getByRole("status");
-    expect(banner.textContent).toContain("12 freezes");
-    expect(banner.textContent).toContain("2 destroys");
-    expect(banner.textContent).toContain("1 release");
+    expect(banner.textContent).toContain("12");
+    expect(banner.textContent).toContain("freezes");
+    expect(banner.textContent).toContain("2");
+    expect(banner.textContent).toContain("destroys");
+    // Releases are intentionally omitted from the compact pill to keep it
+    // inline-friendly with the surrounding chips.
+    expect(banner.textContent).not.toContain("release");
     // The Snowflake lucide icon renders as an inline <svg>.
     expect(container.querySelector("svg")).not.toBeNull();
   });

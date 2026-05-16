@@ -8,18 +8,43 @@ import type { ChartAnnotation } from "@shared/types/chart-annotation";
  * Keyed by stablecoin id — must match the filename in
  * `shared/data/stablecoins/coins/<id>.json`.
  *
- * Curation rules:
- *   - One annotation per discrete event (don't collapse multi-day depegs).
- *   - Prefer the price-bottom / supply-pivot timestamp, not the press cycle.
- *   - Severity matches the tape vocabulary: `high` for grade-impacting events,
- *     `med` for non-fatal stress, `low` for context.
- *   - `href` should resolve to a primary source (issuer post-mortem, regulator
- *     filing, methodology changelog) rather than secondary press.
- *   - Keep the labels ≤80 chars; the SR-only legend lists them verbatim.
+ * Curation rules (USDC and USDT below are the reference examples):
  *
- * Coverage policy: top-50 coins by market-cap target ≥1 annotation each where
- * a meaningful historical event exists. Coins without notable events stay
- * uncurated (empty / absent key is the correct state).
+ *   1. **One pin per incident.** Bundle the cluster (regulator action → depeg
+ *      → backstop) into a single annotation placed at the price/supply-impact
+ *      moment. The chart shape already conveys the recovery; redundant pins
+ *      crowd the legend without adding information.
+ *
+ *   2. **Plot causes that moved the line, or that materially changed the
+ *      issuer.** A press cycle is not an event. A regulatory action only earns
+ *      a pin if it (a) coincides with a visible chart move, or (b) imposed an
+ *      ongoing constraint on the issuer (forced attestations, EMI license,
+ *      reserve composition rules).
+ *
+ *   3. **Drop indictments, keep settlements.** The settlement is the moment
+ *      that changed behavior. Announcement of charges is usually press-cycle
+ *      noise unless it caused a price move.
+ *
+ *   4. **Prefer distinct `kind`s within a coin's list.** Same-kind clusters
+ *      defeat the color-coded legend; mixed `depeg` / `regulatory` / `governance`
+ *      pins are immediately decodable.
+ *
+ *   5. **Aim for 0–5 pins per coin.** Coins with no notable events should
+ *      remain absent (`getCuratedAnnotations` returns `[]`).
+ *
+ *   6. **Use the price-bottom / supply-pivot timestamp.** Not the press cycle,
+ *      not the post-mortem publication date.
+ *
+ *   7. **Severity vocabulary matches the tape**: `high` for grade-impacting,
+ *      `med` for non-fatal stress, `low` for context. Most pins will be `high`
+ *      or `med` — `low` is rare.
+ *
+ *   8. **Labels ≤80 chars** (SR-only legend reads them verbatim) and should
+ *      lead with the cause, not the consequence. "SVB exposure — USDC depeg
+ *      low ~$0.87" beats "USDC depegs to $0.87".
+ *
+ *   9. **`href` should resolve to a primary source** (issuer post-mortem,
+ *      regulator filing, methodology changelog) — not secondary press.
  */
 export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
   "usdc-circle": [
