@@ -193,12 +193,18 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             <ExploreNextSection
               coin={coin}
               related={related}
-              staticComparisonPages={staticComparisonPages.map((page) => ({
-                href: page.href,
-                shortTitle: page.shortTitle,
-                leftId: page.left.id,
-                rightId: page.right.id,
-              }))}
+              staticComparisonPages={staticComparisonPages.map((page) => {
+                const counterpart = page.left.id === coin.id ? page.right : page.left;
+                return {
+                  href: page.href,
+                  shortTitle: page.shortTitle,
+                  leftId: page.left.id,
+                  rightId: page.right.id,
+                  counterpartId: counterpart.id,
+                  counterpartSymbol: counterpart.symbol,
+                  counterpartName: counterpart.name,
+                };
+              })}
               logos={logosById}
             />
           }
