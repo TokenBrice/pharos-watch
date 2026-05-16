@@ -1,0 +1,2 @@
+# Pharos pharos.watch | Endpoint: scores-latest | As of: 2026-05-16T00:00:00.000Z | URL: https://pharos.watch/sheets/scores-latest.csv | Methodology: safety-score v7.25 | dews v6.0 | liquidity v5.6
+stablecoinId,symbol,pegScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass

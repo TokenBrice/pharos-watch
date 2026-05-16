@@ -57,11 +57,26 @@
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
 
 /datasets/*.csv
   ! Cache-Control
   Cache-Control: public, max-age=3600
   Content-Type: text/csv; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/datasets/*.ndjson
+  ! Cache-Control
+  Cache-Control: public, max-age=3600
+  Content-Type: application/x-ndjson; charset=utf-8
+  Access-Control-Allow-Origin: *
+
+/sheets/*.csv
+  ! Cache-Control
+  Cache-Control: public, max-age=60
+  Content-Type: text/csv; charset=utf-8
+  Content-Disposition: inline
+  Access-Control-Allow-Origin: *
 
 /postman/*.json
   ! Cache-Control

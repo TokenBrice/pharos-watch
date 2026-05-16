@@ -1,0 +1,2 @@
+# Pharos pharos.watch | Endpoint: depeg-history | As of: 2026-05-16T00:00:00.000Z | URL: https://pharos.watch/sheets/depeg-history.csv | Methodology: depeg-dews v6.0
+id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source

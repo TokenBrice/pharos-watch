@@ -1,0 +1,2 @@
+# Pharos pharos.watch | Endpoint: top-stablecoins | As of: 2026-05-16T00:00:00.000Z | URL: https://pharos.watch/datasets/top-stablecoins/latest.csv | Methodology: safety-score v7.25
+id,symbol,name,pegType,pegMechanism,price,circulatingUsd,chainCount,chains
