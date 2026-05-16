@@ -449,9 +449,7 @@ export function HeroDesktopIdentity({
           <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
         {coin.oneLiner ? (
-          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            {coin.oneLiner}
-          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
         ) : null}
         {showVerdict && verdict ? (
           <div className="mt-2">
