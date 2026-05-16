@@ -29,7 +29,7 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <span>logo:{name}</span>,
 }));
 
-import { HeroDesktopIdentity, HeroMobileIdentity } from "../hero-card-identity";
+import { HeroDesktopIdentity, HeroMobileIdentity, HeroVerdict } from "../hero-card-identity";
 
 const BASE_COIN: StablecoinMeta = {
   id: "usdc-circle",
@@ -55,45 +55,73 @@ const COMMON_PROPS = {
   logoSrc: undefined,
 } as const;
 
-describe("HeroMobileIdentity verdict line", () => {
+describe("HeroVerdict standalone (mobile section)", () => {
   beforeEach(() => {
     isHeroVerdictEnabledMock.mockReset();
   });
   afterEach(cleanup);
 
-  it("renders the verdict and wires aria-describedby when the flag is on and oneLiner is present", () => {
+  it("renders the verdict paragraph when the flag is on and oneLiner is present", () => {
+    isHeroVerdictEnabledMock.mockReturnValue(true);
+    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
+
+    const { container } = render(<HeroVerdict coin={coin} />);
+
+    const verdictEl = container.querySelector(`#hero-verdict-${coin.id}`);
+    expect(verdictEl).not.toBeNull();
+    expect(verdictEl?.tagName).toBe("P");
+    expect(verdictEl?.textContent).toBe(ONE_LINER);
+  });
+
+  it("renders nothing when the flag is on but oneLiner is absent", () => {
+    isHeroVerdictEnabledMock.mockReturnValue(true);
+
+    const { container } = render(<HeroVerdict coin={BASE_COIN} />);
+
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing when the flag is off even if oneLiner is present", () => {
+    isHeroVerdictEnabledMock.mockReturnValue(false);
+    const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
+
+    const { container } = render(<HeroVerdict coin={coin} />);
+
+    expect(container.firstChild).toBeNull();
+  });
+});
+
+describe("HeroMobileIdentity heading aria-describedby", () => {
+  beforeEach(() => {
+    isHeroVerdictEnabledMock.mockReset();
+  });
+  afterEach(cleanup);
+
+  it("wires aria-describedby on the heading when the flag is on and oneLiner is present", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
     const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
     const { container } = render(<HeroMobileIdentity coin={coin} {...COMMON_PROPS} />);
 
-    const verdictId = `hero-verdict-${coin.id}`;
-    const verdictEl = container.querySelector(`#${verdictId}`);
-    expect(verdictEl).not.toBeNull();
-    expect(verdictEl?.tagName).toBe("P");
-    expect(verdictEl?.textContent).toBe(ONE_LINER);
-
     const heading = container.querySelector("h2");
-    expect(heading?.getAttribute("aria-describedby")).toBe(verdictId);
+    expect(heading?.getAttribute("aria-describedby")).toBe(`hero-verdict-${coin.id}`);
   });
 
-  it("hides the verdict and omits aria-describedby when the flag is on but oneLiner is absent", () => {
+  it("omits aria-describedby when oneLiner is absent", () => {
     isHeroVerdictEnabledMock.mockReturnValue(true);
 
     const { container } = render(<HeroMobileIdentity coin={BASE_COIN} {...COMMON_PROPS} />);
 
-    expect(container.querySelector(`#hero-verdict-${BASE_COIN.id}`)).toBeNull();
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });
 
-  it("hides the verdict and omits aria-describedby when the flag is off even if oneLiner is present", () => {
+  it("omits aria-describedby when the flag is off even if oneLiner is present", () => {
     isHeroVerdictEnabledMock.mockReturnValue(false);
     const coin = { ...BASE_COIN, oneLiner: ONE_LINER };
 
     const { container } = render(<HeroMobileIdentity coin={coin} {...COMMON_PROPS} />);
 
-    expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();
     const heading = container.querySelector("h2");
     expect(heading?.hasAttribute("aria-describedby")).toBe(false);
   });

@@ -168,3 +168,64 @@ export function ChartAnnotationLines({ annotations }: ChartAnnotationLinesProps)
     </>
   );
 }
+
+const ANNOTATION_DATE_FMT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/**
+ * Sighted legend rendered below `McapChart` / `PegDeviationChart`. Each entry
+ * matches a `ChartAnnotationLines` reference line by `kind` color so users can
+ * decode what the vertical lines mark. Keeps the `<ul>` semantic so screen
+ * readers read the same event list.
+ */
+export function ChartAnnotationLegend({
+  annotations,
+}: {
+  annotations: readonly ChartAnnotation[];
+}) {
+  if (annotations.length === 0) return null;
+  return (
+    <ul
+      aria-label="Chart events"
+      className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+    >
+      {annotations.map((a) => {
+        const date = ANNOTATION_DATE_FMT.format(new Date(a.ts));
+        const content = (
+          <>
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: ANNOTATION_HEX_COLORS[a.kind] }}
+            />
+            <span className="font-mono tabular-nums text-foreground/80">{date}</span>
+            <span aria-hidden className="text-muted-foreground/60">—</span>
+            <span className="text-foreground/80">{a.label}</span>
+          </>
+        );
+        return (
+          <li
+            key={`${a.ts}-${a.kind}`}
+            className="inline-flex items-baseline gap-1.5 leading-tight"
+          >
+            {a.href ? (
+              <a
+                href={a.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="pharos-focus-ring inline-flex items-baseline gap-1.5 rounded-sm underline-offset-2 hover:underline"
+              >
+                {content}
+              </a>
+            ) : (
+              <span className="inline-flex items-baseline gap-1.5">{content}</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}

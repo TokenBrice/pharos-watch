@@ -328,6 +328,23 @@ export function FreezablePill({
   );
 }
 
+/**
+ * Standalone verdict paragraph. Rendered separately from the identity column
+ * so it can span the full hero width on mobile (where the identity row also
+ * carries the safety badge) and the full identity-column width on desktop.
+ */
+export function HeroVerdict({ coin }: { coin: StablecoinMeta }) {
+  if (!isHeroVerdictEnabled() || !coin.oneLiner) return null;
+  return (
+    <p
+      id={`hero-verdict-${coin.id}`}
+      className="mt-3 text-sm italic leading-snug text-foreground/80"
+    >
+      {coin.oneLiner}
+    </p>
+  );
+}
+
 export function HeroMobileIdentity({
   coin,
   logoSrc,
@@ -356,14 +373,6 @@ export function HeroMobileIdentity({
           <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
-        {showVerdict ? (
-          <p
-            id={verdictId}
-            className="mt-2 text-sm italic leading-snug text-foreground/80 max-w-prose"
-          >
-            {coin.oneLiner}
-          </p>
-        ) : null}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <HeroTagList tags={coin.tags} />
         </div>
@@ -403,10 +412,7 @@ export function HeroDesktopIdentity({
           <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
         {showVerdict ? (
-          <p
-            id={verdictId}
-            className="mt-2 text-sm italic leading-snug text-foreground/80 max-w-prose"
-          >
+          <p id={verdictId} className="mt-2 text-sm italic leading-snug text-foreground/80">
             {coin.oneLiner}
           </p>
         ) : null}

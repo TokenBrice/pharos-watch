@@ -13,6 +13,7 @@ import type {
 import {
   HeroDesktopIdentity,
   HeroMobileIdentity,
+  HeroVerdict,
   SafetyGradeHero,
 } from "./hero-card-identity";
 import {
@@ -136,6 +137,8 @@ export function HeroCardMobileSection({
         />
         <SafetyGradeHero reportCard={reportCard} mobile />
       </div>
+
+      <HeroVerdict coin={coin} />
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <HeroPriceCard

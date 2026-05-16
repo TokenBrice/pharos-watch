@@ -11,6 +11,7 @@ import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
+  ChartAnnotationLegend,
   ChartAnnotationLines,
   DateTooltip,
   MonoYAxis,
@@ -208,13 +209,9 @@ export function McapChart({ data, stablecoinId }: McapChartProps) {
         )}
       </CardContent>
       {annotations.length > 0 ? (
-        <ul className="sr-only" aria-label="Chart events">
-          {annotations.map((a) => (
-            <li key={`${a.ts}-${a.kind}`}>
-              {new Date(a.ts).toLocaleDateString()}: {a.label}
-            </li>
-          ))}
-        </ul>
+        <CardContent className="pt-0">
+          <ChartAnnotationLegend annotations={annotations} />
+        </CardContent>
       ) : null}
     </Card>
   );

@@ -11,6 +11,7 @@ import { formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
+  ChartAnnotationLegend,
   ChartAnnotationLines,
   DateTooltip,
   MonoYAxis,
@@ -260,16 +261,6 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
     </div>
   );
 
-  const annotationsList = annotations.length > 0 ? (
-    <ul className="sr-only" aria-label="Chart events">
-      {annotations.map((a) => (
-        <li key={`${a.ts}-${a.kind}`}>
-          {new Date(a.ts).toLocaleDateString()}: {a.label}
-        </li>
-      ))}
-    </ul>
-  ) : null;
-
   return (
     <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -277,7 +268,11 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>{chartBody}</CardContent>
-      {annotationsList}
+      {annotations.length > 0 ? (
+        <CardContent className="pt-0">
+          <ChartAnnotationLegend annotations={annotations} />
+        </CardContent>
+      ) : null}
     </Card>
   );
 }
