@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
@@ -27,9 +28,11 @@ export function RedemptionBackstopCard({
       <CardContent className="space-y-4">
         {/* ── arrange: Hero score + Exit, separated from metadata ── */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <Badge variant="outline" className={cn("px-2.5 py-1 font-mono text-lg", viewModel.scoreToneClass)}>
-            {viewModel.heroScoreLabel}
-          </Badge>
+          <ScoreBadgeWrapper topic="redemptionBackstop">
+            <Badge variant="outline" className={cn("px-2.5 py-1 font-mono text-lg", viewModel.scoreToneClass)}>
+              {viewModel.heroScoreLabel}
+            </Badge>
+          </ScoreBadgeWrapper>
           {viewModel.showExitScore && (
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <MethodologyLabel topic="effectiveExit">Exit</MethodologyLabel>

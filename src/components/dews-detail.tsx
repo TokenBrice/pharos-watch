@@ -13,6 +13,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { cn } from "@/lib/utils";
 import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
@@ -214,12 +215,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         <DetailSectionTitle>
           <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
         </DetailSectionTitle>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
-          <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
-            {THREAT_BAND_LABELS[typedBand]}
+        <ScoreBadgeWrapper topic="dews">
+          <span className="flex items-center gap-2">
+            <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
+            <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
+              {THREAT_BAND_LABELS[typedBand]}
+            </span>
           </span>
-        </div>
+        </ScoreBadgeWrapper>
       </CardHeader>
       <CardContent className="space-y-4">
         {availableCount < 4 && (

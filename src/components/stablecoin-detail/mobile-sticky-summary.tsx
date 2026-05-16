@@ -85,7 +85,14 @@ export function MobileStickySummary({
       <span className="ml-auto font-mono text-sm tabular-nums">
         {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef, 4)}
       </span>
-      {reportCard ? <SafetyGradeBadge grade={reportCard.overallGrade} size="xs" /> : null}
+      {reportCard ? (
+        <SafetyGradeBadge
+          grade={reportCard.overallGrade}
+          size="xs"
+          versionTopic="safetyScore"
+          versionVariant="tooltip-only"
+        />
+      ) : null}
     </div>
   );
 }

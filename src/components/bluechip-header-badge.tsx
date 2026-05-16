@@ -3,8 +3,21 @@
 import { ExternalLink } from "lucide-react";
 import { useBluechipRatings } from "@/hooks/api-hooks";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
+import { ScoreBadgeWrapper, type ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
+import type { MethodologyContextKey } from "@/lib/methodology-context";
 
-export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) {
+interface BluechipHeaderBadgeProps {
+  stablecoinId: string;
+  /**
+   * When set, wraps the badge in `<ScoreBadgeWrapper>` for the
+   * methodology-aware tooltip. Bluechip has no methodology version, so the
+   * inline suffix is a no-op even in suffix mode.
+   */
+  versionTopic?: MethodologyContextKey;
+  versionVariant?: ScoreBadgeWrapperVariant;
+}
+
+export function BluechipHeaderBadge({ stablecoinId, versionTopic, versionVariant }: BluechipHeaderBadgeProps) {
   const { data: ratingsMap } = useBluechipRatings();
   const rating = ratingsMap?.[stablecoinId];
   if (!rating) return null;
@@ -16,7 +29,7 @@ export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) 
     order >= 4  ? "text-amber-700 dark:text-amber-400" :
                   "text-red-700 dark:text-red-400";
 
-  return (
+  const link = (
     <a
       href={`${BLUECHIP_REPORT_BASE}/${rating.slug}`}
       target="_blank"
@@ -30,4 +43,13 @@ export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) 
       <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
     </a>
   );
+
+  if (versionTopic) {
+    return (
+      <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant}>
+        {link}
+      </ScoreBadgeWrapper>
+    );
+  }
+  return link;
 }

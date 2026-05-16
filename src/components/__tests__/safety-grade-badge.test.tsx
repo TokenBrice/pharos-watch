@@ -3,6 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 afterEach(() => {
   cleanup();
@@ -23,5 +24,25 @@ describe("SafetyGradeBadge", () => {
 
     expect(screen.getByLabelText("Safety grade F")).toBeTruthy();
     expect(screen.queryByText("(21)")).toBeNull();
+  });
+
+  it("appends a version suffix when versionTopic is set", () => {
+    render(<SafetyGradeBadge grade="B+" score={78} versionTopic="safetyScore" />);
+    const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel as string;
+    expect(versionLabel).toBeTruthy();
+    expect(screen.getByText(versionLabel)).toBeTruthy();
+  });
+
+  it("hides the version suffix in tooltip-only mode", () => {
+    render(
+      <SafetyGradeBadge
+        grade="B+"
+        score={78}
+        versionTopic="safetyScore"
+        versionVariant="tooltip-only"
+      />,
+    );
+    const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel as string;
+    expect(screen.queryByText(versionLabel)).toBeNull();
   });
 });

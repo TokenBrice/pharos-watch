@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { ReportCardRadar } from "@/components/radar-chart";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { UpstreamExposure } from "@/lib/portfolio-analysis";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
@@ -260,18 +261,20 @@ export function PortfolioSummaryCard({
     <Card>
       <CardContent className="pt-6 space-y-6">
         <div className="flex items-center gap-4">
-          <Badge
-            variant="outline"
-            className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolioGrade]}`}
-            aria-label={`Safety grade ${portfolioGrade}${portfolioScore !== null ? `, score ${portfolioScore}` : ""}`}
-          >
-            {portfolioGrade}
-            {portfolioScore !== null && (
-              <span className="ml-1 opacity-70" aria-hidden="true">
-                ({portfolioScore})
-              </span>
-            )}
-          </Badge>
+          <ScoreBadgeWrapper topic="safetyScore">
+            <Badge
+              variant="outline"
+              className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolioGrade]}`}
+              aria-label={`Safety grade ${portfolioGrade}${portfolioScore !== null ? `, score ${portfolioScore}` : ""}`}
+            >
+              {portfolioGrade}
+              {portfolioScore !== null && (
+                <span className="ml-1 opacity-70" aria-hidden="true">
+                  ({portfolioScore})
+                </span>
+              )}
+            </Badge>
+          </ScoreBadgeWrapper>
           <div>
             <div className="text-sm text-muted-foreground">Portfolio Total</div>
             <div className="text-lg font-semibold">{formatUsd(totalUsd)}</div>

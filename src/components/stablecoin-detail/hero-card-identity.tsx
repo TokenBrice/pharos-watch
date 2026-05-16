@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Snowflake } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   BACKING_LABELS,
@@ -244,12 +245,14 @@ export function SafetyGradeHero({
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Safety Grade
       </span>
-      <Badge
-        variant="outline"
-        className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
-      >
-        {reportCard.overallGrade}
-      </Badge>
+      <ScoreBadgeWrapper topic="safetyScore">
+        <Badge
+          variant="outline"
+          className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+        >
+          {reportCard.overallGrade}
+        </Badge>
+      </ScoreBadgeWrapper>
       {reportCard.overallScore !== null && (
         <span
           className={`font-mono tabular-nums tracking-tight text-foreground ${

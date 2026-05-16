@@ -90,6 +90,8 @@ For the safety-score changelog specifically, update both:
 
 `src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
 
+Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, PSI) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
+
 ### Blacklist tracker {#blacklist-tracker}
 
 Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. Pharos tracks the centralized stablecoins listed in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`) — assets outside that list are excluded because they lack a confirmed admin freeze surface. The supported set today covers fiat-backed majors (USDT, USDC, PYUSD, FDUSD, USD1, USDP, TUSD, RLUSD, EURC, BUIDL, etc.) plus tokenised metals (PAXG, XAUT, XAUM).

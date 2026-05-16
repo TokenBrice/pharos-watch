@@ -23,6 +23,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import type { StablecoinData } from "@shared/types";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
@@ -58,10 +59,12 @@ function HealthBadge({ score, band }: { score: number | null; band: HealthBand |
     return <span className="text-xs text-muted-foreground">--</span>;
   }
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])} title={`${score} — ${band}`}>
-      {score}
-      <span className="hidden sm:inline capitalize">{band}</span>
-    </span>
+    <ScoreBadgeWrapper topic="chainHealth" variant="tooltip-only">
+      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])} title={`${score} — ${band}`}>
+        {score}
+        <span className="hidden sm:inline capitalize">{band}</span>
+      </span>
+    </ScoreBadgeWrapper>
   );
 }
 

@@ -14,6 +14,14 @@ interface MethodologyHintProps {
   buttonClassName?: string;
   contentClassName?: string;
   children?: ReactNode;
+  /**
+   * When true, pass `children` directly to Sheet/Tooltip triggers via `asChild`
+   * without wrapping them in the dotted-underline `InlineHintTrigger`. Use this
+   * for non-text triggers such as score badges where adding an extra `<button>`
+   * around an already-styled element would cause visual conflicts or nested
+   * interactive elements.
+   */
+  asChild?: boolean;
 }
 
 function stopPropagation(event: SyntheticEvent) {
@@ -123,23 +131,32 @@ export function MethodologyHint({
   buttonClassName,
   contentClassName,
   children,
+  asChild = false,
 }: MethodologyHintProps) {
   const item = METHODOLOGY_CONTEXT[topic];
   const hasInlineTrigger = children !== undefined;
+
+  // For `asChild`, children are passed verbatim to Sheet/Tooltip triggers via
+  // Radix Slot — caller must supply a single ReactElement.
+  const renderTrigger = (): ReactNode => {
+    if (!hasInlineTrigger) {
+      return <HintButton topic={topic} className={buttonClassName} />;
+    }
+    if (asChild) {
+      return children;
+    }
+    return (
+      <InlineHintTrigger topic={topic} className={buttonClassName}>
+        {children}
+      </InlineHintTrigger>
+    );
+  };
 
   return (
     <span className={cn(hasInlineTrigger ? "inline" : "inline-flex shrink-0 items-center", className)}>
       <span className={hasInlineTrigger ? "inline md:hidden" : "md:hidden"}>
         <Sheet>
-          <SheetTrigger asChild>
-            {hasInlineTrigger ? (
-              <InlineHintTrigger topic={topic} className={buttonClassName}>
-                {children}
-              </InlineHintTrigger>
-            ) : (
-              <HintButton topic={topic} className={buttonClassName} />
-            )}
-          </SheetTrigger>
+          <SheetTrigger asChild>{renderTrigger()}</SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl border-border/70 bg-background/98 pb-6" showCloseButton>
             <SheetHeader className="space-y-2 border-b border-border/60 pb-4">
               <p className="pharos-kicker">Methodology Context</p>
@@ -155,15 +172,7 @@ export function MethodologyHint({
       <span className={hasInlineTrigger ? "hidden md:inline" : "hidden md:inline-flex"}>
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              {hasInlineTrigger ? (
-                <InlineHintTrigger topic={topic} className={buttonClassName}>
-                  {children}
-                </InlineHintTrigger>
-              ) : (
-                <HintButton topic={topic} className={buttonClassName} />
-              )}
-            </TooltipTrigger>
+            <TooltipTrigger asChild>{renderTrigger()}</TooltipTrigger>
             <TooltipContent className={cn("max-w-[280px] border border-border/70 bg-popover px-3 py-3 text-popover-foreground shadow-xl", contentClassName)}>
               <HintBody topic={topic} />
             </TooltipContent>
