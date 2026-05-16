@@ -29,8 +29,6 @@ export const FEATURE_FLAGS = {
   // expiresAt: 2026-08-01 — pending real-device scrollspy QA
   mobileStickySummary:
     process.env.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY === "true",
-  // expiresAt: 2026-08-01 — pending mobile LCP measurement
-  lazyCharts: process.env.NEXT_PUBLIC_PHAROS_LAZY_CHARTS === "true",
   // expiresAt: 2026-09-01 — pending curation owner + cadence
   chartAnnotations:
     process.env.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS === "true",
@@ -50,10 +48,6 @@ export function isQuietDeviationsEnabled(): boolean {
 
 export function isMobileStickySummaryEnabled(): boolean {
   return FEATURE_FLAGS.mobileStickySummary;
-}
-
-export function isLazyChartsEnabled(): boolean {
-  return FEATURE_FLAGS.lazyCharts;
 }
 
 export function isChartAnnotationsEnabled(): boolean {

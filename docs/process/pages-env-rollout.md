@@ -18,7 +18,6 @@ Set each flag as a **Variable** (plaintext, not a secret — these aren't sensit
 
 ```bash
 gh variable set NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS --body true
-gh variable set NEXT_PUBLIC_PHAROS_LAZY_CHARTS --body true
 gh variable set NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS --body true
 gh variable set NEXT_PUBLIC_PHAROS_HERO_VERDICT --body true
 gh variable set NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER --body true
@@ -39,13 +38,12 @@ No code changes required to add or remove a flag — but **if you add a 7th flag
 
 ## Recommended sequence
 
-All six flags are code-ready (see `agents/p1-flag-flip-readiness-2026-05-16.md`). Flip one per deploy window so a regression is unambiguous:
+All remaining flags are code-ready (see `agents/p1-flag-flip-readiness-2026-05-16.md`). Flip one per deploy window so a regression is unambiguous:
 
 1. `QUIET_DEVIATIONS` — visual-only, lowest risk.
-2. `LAZY_CHARTS` — measure mobile LCP before/after.
-3. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.
-4. `HERO_VERDICT` — verdict paragraph appears under the title row, above the AI summary.
-5. `BLACKLIST_BANNER` + `MOBILE_STICKY_SUMMARY` — after real-device QA on iOS Safari + Android Chrome.
+2. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.
+3. `HERO_VERDICT` — verdict paragraph appears under the title row, above the AI summary.
+4. `BLACKLIST_BANNER` + `MOBILE_STICKY_SUMMARY` — after real-device QA on iOS Safari + Android Chrome.
 
 ## Triggering a deploy
 
@@ -71,7 +69,6 @@ After the workflow finishes (`gh run list --workflow="Rebuild Pages" --limit 1`)
    Expect `false` — the literal name is absent because Next.js inlined the value.
 2. **User-facing surface** — visit the relevant page and confirm:
    - `QUIET_DEVIATIONS` → peg-deviation card uses muted calm/warn/severe colors on small deviations.
-   - `LAZY_CHARTS` → heavy chart sections delay-mount on scroll (USDC).
    - `MOBILE_STICKY_SUMMARY` → compact bar with logo/symbol/price/grade sticks at the top on mobile after scrolling past the hero.
    - `BLACKLIST_BANNER` → amber "N freezes in the last 7 days" banner above Safety Score on coins with ≥5 freezes or any destroys.
    - `HERO_VERDICT` → italic `oneLiner` paragraph below the title row, above the AI summary.

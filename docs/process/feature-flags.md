@@ -13,7 +13,6 @@ Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage 
 | Flag | Gates | Default | `expiresAt` |
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Idea 19 (quiet calm deviations + magnitude-aware mcap delta) | off | 2026-08-01 |
-| `NEXT_PUBLIC_PHAROS_LAZY_CHARTS` | Idea 20c (lazy-mount heavy charts) | off | 2026-08-01 |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Idea 20b (mobile sticky compact summary) | off | 2026-08-01 |
 | `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Idea 13b (recent blacklist banner, FE-only v1) | off | 2026-08-01 |
 | `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | off | 2026-09-01 |
@@ -30,13 +29,6 @@ What must be true before turning each flag on in production:
 - [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-view-model.ts`).
 - [ ] WCAG AA contrast spot-check on the three calm/warn/severe deviation tokens (light + dark themes).
 - [ ] Visual review on USDC + USDe + a coin with an active depeg.
-
-### `NEXT_PUBLIC_PHAROS_LAZY_CHARTS`
-
-- [x] `LazySection` + `useNearViewport` wired around heavy chart sections (`#chart`, `#peg-deviation`, `#history`, etc.).
-- [x] `LazySection` reserves `minHeight` to prevent layout shift while gated.
-- [x] Section anchor (`<section id="chart">`) wraps the LazySection so deep-links resolve before the chart mounts. Note: the detail-page client is rendered inside `<Suspense>`, so neither lazy-chart anchors nor the chart canvas appear in the static HTML in either flag state — they materialize on hydration. LAZY_CHARTS therefore does not regress SEO.
-- [ ] Mobile LCP measurement on USDC detail page (Chrome DevTools / WebPageTest).
 
 ### `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`
 
