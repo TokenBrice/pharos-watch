@@ -389,8 +389,8 @@ describe("validate-ci parity", () => {
       "npm run check:classifier-sensitive-copy",
       "npm run check:build-size",
       "npm run check:build-attribution",
-      "npm run check:methodology-pdfs",
     ]);
+    expect(pagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");

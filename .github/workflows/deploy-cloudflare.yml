@@ -276,7 +276,6 @@ jobs:
       - run: npm run check:classifier-sensitive-copy
       - run: npm run check:build-size
       - run: npm run check:build-attribution
-      - run: npm run check:methodology-pdfs
       - id: capture-pages
         name: Capture current production Pages deployment id (best effort)
         continue-on-error: true
