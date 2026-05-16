@@ -617,12 +617,19 @@ export function getAnalyticsPayloadUrls(url) {
   );
 }
 
-export function isExpectedGaPageViewCollectUrl(url, expectedGaId) {
+export function isExpectedGaCollectUrl(url, expectedGaId) {
   if (!expectedGaId || !/\/g\/collect\b/.test(url)) return false;
   if (!/google-analytics\.com|analytics\.google\.com/.test(url)) return false;
 
   const collectUrl = new URL(url);
-  return collectUrl.searchParams.get("tid") === expectedGaId && collectUrl.searchParams.get("en") === "page_view";
+  return collectUrl.searchParams.get("tid") === expectedGaId;
+}
+
+export function isExpectedGaPageViewCollectUrl(url, expectedGaId) {
+  if (!isExpectedGaCollectUrl(url, expectedGaId)) return false;
+
+  const collectUrl = new URL(url);
+  return collectUrl.searchParams.get("en") === "page_view";
 }
 
 export function isToleratedGaCollectFailure(failure, successfulCollectUrls) {
@@ -637,7 +644,7 @@ export function isExpectedGaCollectAbort(failure, expectedGaId) {
   return (
     failure?.errorText === "net::ERR_ABORTED"
     && typeof failure.url === "string"
-    && isExpectedGaPageViewCollectUrl(failure.url, expectedGaId)
+    && isExpectedGaCollectUrl(failure.url, expectedGaId)
   );
 }
 

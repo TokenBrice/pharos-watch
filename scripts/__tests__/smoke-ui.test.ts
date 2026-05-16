@@ -9,6 +9,7 @@ import {
   hasGaConfigInit,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
   isExpectedGaCollectAbort,
+  isExpectedGaCollectUrl,
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
@@ -97,6 +98,26 @@ describe("isExpectedGaPageViewCollectUrl", () => {
   });
 });
 
+describe("isExpectedGaCollectUrl", () => {
+  it("accepts GA4 collect URLs for the configured measurement id even without an event name", () => {
+    expect(
+      isExpectedGaCollectUrl(
+        "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects collect URLs for other measurement ids", () => {
+    expect(
+      isExpectedGaCollectUrl(
+        "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&dp=%2F&dt=Pharos",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("isToleratedGaCollectFailure", () => {
   it("tolerates Playwright net::ERR_ABORTED reports for collect URLs that also returned success", () => {
     const url = "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
@@ -106,12 +127,12 @@ describe("isToleratedGaCollectFailure", () => {
 });
 
 describe("isExpectedGaCollectAbort", () => {
-  it("accepts aborted expected GA4 page_view collect requests", () => {
+  it("accepts aborted GA4 collect requests for the expected measurement id", () => {
     expect(
       isExpectedGaCollectAbort(
         {
           errorText: "net::ERR_ABORTED",
-          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
         },
         "G-6TS0KG8H04",
       ),
