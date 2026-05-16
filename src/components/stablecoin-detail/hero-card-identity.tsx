@@ -406,6 +406,9 @@ export function HeroMobileIdentity({
           <FreezablePill coin={coin} reportCard={reportCard} />
         </div>
         <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
+        {coin.oneLiner ? (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+        ) : null}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <HeroTagList tags={coin.tags} />
         </div>
@@ -445,6 +448,11 @@ export function HeroDesktopIdentity({
         <div className="mt-1 flex items-center gap-3">
           <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
+        {coin.oneLiner ? (
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            {coin.oneLiner}
+          </p>
+        ) : null}
         {showVerdict && verdict ? (
           <div className="mt-2">
             <VerdictPill id={verdictId} verdict={verdict} />
