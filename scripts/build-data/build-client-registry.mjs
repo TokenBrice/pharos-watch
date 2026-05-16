@@ -53,6 +53,7 @@ const CLIENT_FIELDS = [
   "frozenAt",
   "launchDate",
   "launchPhase",
+  "canBeBlacklisted",
 ];
 
 function projectCoin(coin) {

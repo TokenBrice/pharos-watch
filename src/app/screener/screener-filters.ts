@@ -19,6 +19,18 @@ import type { MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
 
+/**
+ * Blacklistability buckets. Maps to the tri-state `canBeBlacklisted` field on
+ * the stablecoin meta (boolean | "possible" | "dilutable") with friendlier
+ * URL keys.
+ *   - "yes"        → canBeBlacklisted === true  (issuer can freeze tokens)
+ *   - "no"         → canBeBlacklisted === false (no privileged freeze path)
+ *   - "possible"   → canBeBlacklisted === "possible"  (implementation-dependent)
+ *   - "dilutable"  → canBeBlacklisted === "dilutable" (issuer can dilute via mint)
+ */
+export const BLACKLISTABLE_VALUES = ["yes", "no", "possible", "dilutable"] as const;
+export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
+
 export interface ScreenerFilters {
   pegScoreMin: number;
   pegScoreMax: number;
@@ -31,6 +43,7 @@ export interface ScreenerFilters {
   mechanisms: readonly MechanismArchetype[];
   pegs: readonly PegCurrency[];
   lifecycle: readonly StablecoinStatus[];
+  blacklistable: readonly BlacklistableValue[];
 }
 
 /** Default scalar ranges. A value at the bound counts as "no filter". */
@@ -46,6 +59,7 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   mechanisms: [],
   pegs: [],
   lifecycle: [],
+  blacklistable: [],
 };
 
 /**
@@ -114,6 +128,11 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.lifecycle,
     allowedValues: STABLECOIN_STATUS_VALUES,
   },
+  blacklistable: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.blacklistable,
+    allowedValues: BLACKLISTABLE_VALUES,
+  },
 };
 
 export interface ScreenerRow {
@@ -138,6 +157,8 @@ export interface ScreenerRow {
   safetyGrade: string | null;
   /** Safety overall score (0–100). null = unrated. */
   safetyScore: number | null;
+  /** Blacklistability bucket. null = unspecified (no per-coin override). */
+  blacklistable: BlacklistableValue | null;
 }
 
 /**
@@ -162,6 +183,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const mechanismSet = filters.mechanisms.length > 0 ? new Set(filters.mechanisms) : null;
   const pegSet = filters.pegs.length > 0 ? new Set(filters.pegs) : null;
   const lifecycleSet = filters.lifecycle.length > 0 ? new Set(filters.lifecycle) : null;
+  const blacklistableSet = filters.blacklistable.length > 0 ? new Set(filters.blacklistable) : null;
 
   return rows.filter((row) => {
     if (pegScoreActive) {
@@ -186,8 +208,19 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     }
     if (pegSet && !pegSet.has(row.peg)) return false;
     if (lifecycleSet && !lifecycleSet.has(row.lifecycle)) return false;
+    if (blacklistableSet) {
+      if (!row.blacklistable || !blacklistableSet.has(row.blacklistable)) return false;
+    }
     return true;
   });
+}
+
+/** Project the meta `canBeBlacklisted` tri-state to the screener bucket. */
+export function projectBlacklistable(value: boolean | "possible" | "dilutable" | undefined): BlacklistableValue | null {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  if (value === "possible" || value === "dilutable") return value;
+  return null;
 }
 
 /** Detects whether any filter is non-default. Used for the "Reset" CTA. */
@@ -203,6 +236,7 @@ export function hasActiveFilters(filters: ScreenerFilters): boolean {
     filters.supplyMax > 0 ||
     filters.mechanisms.length > 0 ||
     filters.pegs.length > 0 ||
-    filters.lifecycle.length > 0
+    filters.lifecycle.length > 0 ||
+    filters.blacklistable.length > 0
   );
 }

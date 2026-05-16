@@ -15,6 +15,7 @@ import {
   SCREENER_URL_SCHEMA,
   applyFilters,
   hasActiveFilters,
+  projectBlacklistable,
   type ScreenerFilters,
   type ScreenerRow,
 } from "@/app/screener/screener-filters";
@@ -43,6 +44,7 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
   { header: "safety_grade", accessor: (row) => row.safetyGrade ?? "" },
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
+  { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
 ];
 
 export function ScreenerClient() {
@@ -153,6 +155,7 @@ export function ScreenerClient() {
         liquidityScore: liquidityById.get(meta.id) ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
+        blacklistable: projectBlacklistable(meta.canBeBlacklisted),
       });
     }
     return rows;

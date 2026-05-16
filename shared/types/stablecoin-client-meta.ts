@@ -34,6 +34,7 @@ export type StablecoinClientMeta = Pick<
   | "frozenAt"
   | "launchDate"
   | "launchPhase"
+  | "canBeBlacklisted"
 >;
 
 /** Canonical ordered list of fields surfaced in the client projection. */
@@ -54,4 +55,5 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "frozenAt",
   "launchDate",
   "launchPhase",
+  "canBeBlacklisted",
 ] as const satisfies ReadonlyArray<keyof StablecoinClientMeta>;

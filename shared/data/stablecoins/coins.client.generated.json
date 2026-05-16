@@ -31,7 +31,8 @@
     },
     "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",
     "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "acrdx-anemoy-apollo",
@@ -48,7 +49,8 @@
     },
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
     "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
-    "protocolSlug": "centrifuge"
+    "protocolSlug": "centrifuge",
+    "canBeBlacklisted": true
   },
   {
     "id": "acred-apollo-securitize",
@@ -64,7 +66,8 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
-    "geckoId": "apollo-diversified-credit-securitize-fund"
+    "geckoId": "apollo-diversified-credit-securitize-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "aeur-anchored-coins",
@@ -237,7 +240,8 @@
     },
     "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "macropod"
+    "geckoId": "macropod",
+    "canBeBlacklisted": true
   },
   {
     "id": "audm-mento",
@@ -271,7 +275,8 @@
     },
     "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "aussie-dollar-token"
+    "geckoId": "aussie-dollar-token",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "ausd-agora",
@@ -305,7 +310,8 @@
     },
     "pegMechanism": "KYC-verified, whitelisted users mint aUSDT by depositing Ethereum XAUT into Alloy vaults, with positions limited by a 75% maximum mint-to-value ratio. Users return aUSDT to withdraw XAUT collateral, and whitelisted liquidators can repay aUSDT against undercollateralized positions.",
     "mechanismArchetype": "cdp",
-    "geckoId": "alloy-tether"
+    "geckoId": "alloy-tether",
+    "canBeBlacklisted": true
   },
   {
     "id": "avusd-avant",
@@ -372,7 +378,8 @@
     },
     "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
     "mechanismArchetype": "tbill",
-    "geckoId": "backed-govies-0-6-months-euro"
+    "geckoId": "backed-govies-0-6-months-euro",
+    "canBeBlacklisted": true
   },
   {
     "id": "bd-basedollar",
@@ -407,7 +414,8 @@
     },
     "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
     "mechanismArchetype": "tbill",
-    "geckoId": "franklin-templeton-benji"
+    "geckoId": "franklin-templeton-benji",
+    "canBeBlacklisted": true
   },
   {
     "id": "bfusd-binance",
@@ -423,7 +431,8 @@
       "navToken": false
     },
     "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
-    "geckoId": "bfusd"
+    "geckoId": "bfusd",
+    "canBeBlacklisted": true
   },
   {
     "id": "bib01-backed",
@@ -440,7 +449,8 @@
     },
     "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
     "mechanismArchetype": "tbill",
-    "geckoId": "backed-ib01-treasury-bond-0-1yr"
+    "geckoId": "backed-ib01-treasury-bond-0-1yr",
+    "canBeBlacklisted": true
   },
   {
     "id": "bnusd-balanced",
@@ -543,7 +553,8 @@
     },
     "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 BRL1 = 1 BRL through Brazilian-real backing",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "brl1"
+    "geckoId": "brl1",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "brla-brla-digital",
@@ -560,7 +571,8 @@
     },
     "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "brla-digital-brla"
+    "geckoId": "brla-digital-brla",
+    "canBeBlacklisted": true
   },
   {
     "id": "brlm-mento",
@@ -594,7 +606,8 @@
     },
     "pegMechanism": "KYC-gated primary-market mint and redemption at 1 BRL per BRLV through Crown; reserves are pledged to BRLV holders through a Brazilian security-agent and fiduciary-assignment structure, while secondary-market price can deviate",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "crown-brlv"
+    "geckoId": "crown-brlv",
+    "canBeBlacklisted": true
   },
   {
     "id": "brz-transfero",
@@ -647,7 +660,8 @@
     "pegMechanism": "1:1 mint and redemption against USDC via the LiquidityWindow smart contract; AML-verified primary market participants only; yield distributed monthly as additional BUCK tokens (rebase)",
     "geckoId": "buck-2",
     "status": "frozen",
-    "frozenAt": "2026-04-30"
+    "frozenAt": "2026-04-30",
+    "canBeBlacklisted": true
   },
   {
     "id": "buck-bucket-protocol",
@@ -700,7 +714,8 @@
     "mechanismArchetype": "tbill",
     "geckoId": "usd0-liquid-bond",
     "variantOf": "usd0-usual",
-    "variantKind": "bond-maturity"
+    "variantKind": "bond-maturity",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "cadc-cad-coin",
@@ -736,7 +751,8 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "cad-digital",
     "status": "active",
-    "launchDate": "2026-05-04"
+    "launchDate": "2026-05-04",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "cadm-mento",
@@ -788,7 +804,8 @@
     "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
     "mechanismArchetype": "cdp",
     "geckoId": "enosys-loans-cdp",
-    "protocolSlug": "enosys-loans"
+    "protocolSlug": "enosys-loans",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "cdxusd-cod3x",
@@ -889,7 +906,8 @@
     },
     "pegMechanism": "Direct 1:1 redemption through AllUnity; holders have statutory right of redemption at par value under MiCA Article 49; mint and redeem via AllUnity platform with straight-through processing",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "allunity-chf"
+    "geckoId": "allunity-chf",
+    "canBeBlacklisted": true
   },
   {
     "id": "chfm-mento",
@@ -923,7 +941,8 @@
     },
     "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
     "mechanismArchetype": "cdp",
-    "geckoId": "convertible-jpy-token"
+    "geckoId": "convertible-jpy-token",
+    "canBeBlacklisted": false
   },
   {
     "id": "cngn-compliant-naira",
@@ -940,7 +959,8 @@
     },
     "pegMechanism": "Issuer-managed mint and redemption path designed to maintain 1 cNGN = 1 NGN through naira reserves and compliant transfer rails",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "compliant-naira"
+    "geckoId": "compliant-naira",
+    "canBeBlacklisted": true
   },
   {
     "id": "copm-mento",
@@ -974,7 +994,8 @@
     },
     "pegMechanism": "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, frxUSD, and GHO to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     "mechanismArchetype": "cdp",
-    "geckoId": "crvusd"
+    "geckoId": "crvusd",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "ctusd-citrea",
@@ -991,7 +1012,8 @@
     },
     "pegMechanism": "1:1 fiat-backed mint and redemption via MoonPay using M0 Protocol infrastructure; reserves cryptographically attested on-chain by independent M0 Validators before minting; fiat on/off ramp via Visa, Mastercard, Apple Pay, Google Pay, and PayPal through MoonPay's 30M+ verified user base",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "citrea-usd"
+    "geckoId": "citrea-usd",
+    "canBeBlacklisted": true
   },
   {
     "id": "cusd-cap",
@@ -1060,7 +1082,8 @@
     },
     "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     "mechanismArchetype": "cdp",
-    "geckoId": "dai"
+    "geckoId": "dai",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "deuro-deuro",
@@ -1110,7 +1133,8 @@
     },
     "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
     "mechanismArchetype": "cdp",
-    "geckoId": "djed"
+    "geckoId": "djed",
+    "canBeBlacklisted": false
   },
   {
     "id": "dllr-sovryn",
@@ -1127,7 +1151,8 @@
     },
     "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
     "mechanismArchetype": "cdp",
-    "geckoId": "sovryn-dollar"
+    "geckoId": "sovryn-dollar",
+    "canBeBlacklisted": false
   },
   {
     "id": "doc-money-on-chain",
@@ -1144,7 +1169,8 @@
     },
     "pegMechanism": "DOC targets 1 USD through overcollateralized rBTC backing, protocol incentives, and permissionless DOC-to-rBTC redemption through the Money On Chain dApp",
     "mechanismArchetype": "cdp",
-    "geckoId": "dollar-on-chain"
+    "geckoId": "dollar-on-chain",
+    "canBeBlacklisted": true
   },
   {
     "id": "dola-inverse-finance",
@@ -1161,7 +1187,8 @@
     },
     "pegMechanism": "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
     "mechanismArchetype": "cdp",
-    "geckoId": "dola-usd"
+    "geckoId": "dola-usd",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "dusd-alto",
@@ -1210,7 +1237,8 @@
       "navToken": false
     },
     "pegMechanism": "1:1 mint and redemption against USD wired from a user IBAN to a Fluid Finance treasury account; an oracle publishes the safeguarded-bank balance on-chain and the contract refuses to mint above that balance. Redemption burns DUSD on-chain and credits USD back to the user's IBAN.",
-    "mechanismArchetype": "fiat-cash"
+    "mechanismArchetype": "fiat-cash",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "dusd-standx",
@@ -1227,7 +1255,8 @@
     },
     "pegMechanism": "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "standx-dusd"
+    "geckoId": "standx-dusd",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "ebusd-ebisu",
@@ -1296,7 +1325,8 @@
     },
     "pegMechanism": "Users mint EUR0 by depositing eligible euro RWA collateral such as Spiko EUTBL, or indirectly by depositing EURC while a collateral provider supplies the RWA; redemption swaps EUR0 back into the underlying euro collateral through Usual's dApp",
     "mechanismArchetype": "tbill",
-    "geckoId": "usual-eur"
+    "geckoId": "usual-eur",
+    "canBeBlacklisted": true
   },
   {
     "id": "eurau-allunity",
@@ -1515,7 +1545,8 @@
     },
     "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
     "mechanismArchetype": "tbill",
-    "geckoId": "spiko-amundi-overnight-swap-fund-eur"
+    "geckoId": "spiko-amundi-overnight-swap-fund-eur",
+    "canBeBlacklisted": true
   },
   {
     "id": "eurspkcc-spiko",
@@ -1531,7 +1562,8 @@
       "navToken": true
     },
     "pegMechanism": "EUR-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
-    "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class"
+    "geckoId": "spiko-digital-assets-cash-carry-fund-euro-share-class",
+    "canBeBlacklisted": true
   },
   {
     "id": "eusd-electronic-usd",
@@ -1566,7 +1598,8 @@
     "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "eusd-2",
-    "protocolSlug": "telcoin-bank"
+    "protocolSlug": "telcoin-bank",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "eutbl-spiko",
@@ -1583,7 +1616,8 @@
     },
     "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed primarily by French and German Eurozone sovereign T-bills (and other top-rated Member-State issuers such as the Netherlands) with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a €1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
     "mechanismArchetype": "tbill",
-    "geckoId": "eutbl"
+    "geckoId": "eutbl",
+    "canBeBlacklisted": true
   },
   {
     "id": "fdusd-first-digital",
@@ -1617,7 +1651,8 @@
     },
     "pegMechanism": "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
     "mechanismArchetype": "cdp",
-    "geckoId": "felix-feusd"
+    "geckoId": "felix-feusd",
+    "canBeBlacklisted": true
   },
   {
     "id": "fidd-fidelity",
@@ -1669,7 +1704,8 @@
     },
     "pegMechanism": "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
     "mechanismArchetype": "algorithmic",
-    "geckoId": "frax-price-index"
+    "geckoId": "frax-price-index",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "frax-frax",
@@ -1703,7 +1739,8 @@
     },
     "pegMechanism": "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
     "mechanismArchetype": "tbill",
-    "geckoId": "frax-usd"
+    "geckoId": "frax-usd",
+    "canBeBlacklisted": true
   },
   {
     "id": "ftusd-flying-tulip",
@@ -1719,7 +1756,8 @@
       "navToken": false
     },
     "pegMechanism": "Mint and redeem 1:1 against USDC or USDT through on-chain MintAndRedeem contract; deposits are supplied to Aave for carry while native assets borrowed against the stablecoin collateral are staked to generate additional yield; circuit-breaker contracts enforce position caps and rebalancing bands",
-    "geckoId": "flying-tulip-usd"
+    "geckoId": "flying-tulip-usd",
+    "canBeBlacklisted": true
   },
   {
     "id": "fusd-freedom-dollar",
@@ -1840,7 +1878,8 @@
     },
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
     "mechanismArchetype": "tbill",
-    "geckoId": "spiko-amundi-overnight-swap-fund-gbp"
+    "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
+    "canBeBlacklisted": true
   },
   {
     "id": "ggbr-goldfish-gold",
@@ -1957,7 +1996,8 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "gtusdcp-gauntlet",
@@ -1976,7 +2016,8 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime",
     "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "gusd-gate",
@@ -2045,7 +2086,8 @@
     "pegMechanism": "Protocol-level conversion mechanism targets one U.S. dollar of HIVE per HBD, with witness-set interest and haircut rules under stress",
     "mechanismArchetype": "algorithmic",
     "geckoId": "hive_dollar",
-    "protocolSlug": "hive"
+    "protocolSlug": "hive",
+    "canBeBlacklisted": true
   },
   {
     "id": "hbusdt-hyperbeat",
@@ -2064,7 +2106,8 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "hyperbeat-usdt",
     "variantOf": "usdt-tether",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "hchf-hedera-swiss-franc",
@@ -2081,7 +2124,8 @@
     },
     "pegMechanism": "Liquity-style borrowing protocol on Hedera: users mint HCHF debt against HBAR collateral, undercollateralized Troves are liquidated through the Stability Pool, and HCHF can be redeemed for HBAR collateral at face value to support the CHF peg",
     "mechanismArchetype": "cdp",
-    "geckoId": "hedera-swiss-franc"
+    "geckoId": "hedera-swiss-franc",
+    "canBeBlacklisted": false
   },
   {
     "id": "hkd-hsbc",
@@ -2152,7 +2196,8 @@
     },
     "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
     "mechanismArchetype": "tbill",
-    "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund"
+    "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "hlusd-hela",
@@ -2169,7 +2214,8 @@
     },
     "pegMechanism": "Issuer- and ecosystem-managed stablecoin used as the HeLa runtime settlement asset, with external pricing and market-cap coverage supplied by CoinGecko",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "hela-usd"
+    "geckoId": "hela-usd",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "hollar-hydrated",
@@ -2202,7 +2248,8 @@
       "navToken": false
     },
     "pegMechanism": "Users fund property-backed loans with stablecoins; loans are secured by recorded liens and nonpayment can lead to foreclosure or sale proceeds",
-    "protocolSlug": "homecoin"
+    "protocolSlug": "homecoin",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "honey-berachain",
@@ -2269,7 +2316,8 @@
     },
     "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "idrx"
+    "geckoId": "idrx",
+    "canBeBlacklisted": true
   },
   {
     "id": "inalpha-nest",
@@ -2287,7 +2335,8 @@
     "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
     "mechanismArchetype": "tbill",
     "geckoId": "nest-alpha-vault-lp",
-    "protocolSlug": "nest-credit"
+    "protocolSlug": "nest-credit",
+    "canBeBlacklisted": true
   },
   {
     "id": "isc-international-stable-currency",
@@ -2303,7 +2352,8 @@
       "navToken": true
     },
     "pegMechanism": "RWA-indexed basket tracking purchasing power; price appreciates over time",
-    "geckoId": "international-stable-currency"
+    "geckoId": "international-stable-currency",
+    "canBeBlacklisted": false
   },
   {
     "id": "ist-agoric",
@@ -2320,7 +2370,8 @@
     },
     "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
     "mechanismArchetype": "cdp",
-    "geckoId": "inter-stable-token"
+    "geckoId": "inter-stable-token",
+    "canBeBlacklisted": false
   },
   {
     "id": "iusd-indigo-protocol",
@@ -2389,7 +2440,8 @@
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
     "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
-    "protocolSlug": "centrifuge"
+    "protocolSlug": "centrifuge",
+    "canBeBlacklisted": true
   },
   {
     "id": "jpyc-jpyc-v1",
@@ -2407,7 +2459,8 @@
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "jpycoin",
-    "protocolSlug": "jpyc"
+    "protocolSlug": "jpyc",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "jpyc-jpyc",
@@ -2475,7 +2528,8 @@
       "navToken": false
     },
     "pegMechanism": "Users lock USDT on Optimism or USDC on Base to mint JPYT against a real-time yen exchange-rate oracle; the redemption flow permits/burns JPYT and returns the selected USDT or USDC collateral to the user",
-    "geckoId": "dephaser-jpy"
+    "geckoId": "dephaser-jpy",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "jtrsy-anemoy",
@@ -2493,7 +2547,8 @@
     "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
     "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-treasury-fund",
-    "protocolSlug": "centrifuge"
+    "protocolSlug": "centrifuge",
+    "canBeBlacklisted": true
   },
   {
     "id": "jupusd-jupiter",
@@ -2510,7 +2565,8 @@
     },
     "pegMechanism": "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages day-to-day reserve operations (custody, bridging, rebalancing between USDtb and USDC)",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "jupusd"
+    "geckoId": "jupusd",
+    "canBeBlacklisted": true
   },
   {
     "id": "jusd-juicedollar",
@@ -2527,7 +2583,8 @@
     },
     "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
     "mechanismArchetype": "cdp",
-    "geckoId": "juice-dollar"
+    "geckoId": "juice-dollar",
+    "canBeBlacklisted": false
   },
   {
     "id": "jusd-jusd-stable-token",
@@ -2544,7 +2601,8 @@
     },
     "pegMechanism": "Dollar stable token with issuer/protocol-managed collateral and liquidity processes described by JUSD; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "geckoId": "jusd",
-    "protocolSlug": "jusd"
+    "protocolSlug": "jusd",
+    "canBeBlacklisted": true
   },
   {
     "id": "kag-kinesis",
@@ -2610,7 +2668,8 @@
     },
     "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "kyrgyz-som-stablecoin"
+    "geckoId": "kyrgyz-som-stablecoin",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "klarnausd-klarna",
@@ -2681,7 +2740,8 @@
     },
     "pegMechanism": "KRWO is issued against OV tokens at a 10,000 KRWO = 1 OV token/voucher ratio; Open Voucher documentation describes OV vouchers as redeemable for Korean won at 1:1 through the Open Voucher service",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "krwo"
+    "geckoId": "krwo",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "krwq-iq",
@@ -2702,7 +2762,8 @@
     "tags": [
       "korea",
       "rwa"
-    ]
+    ],
+    "canBeBlacklisted": true
   },
   {
     "id": "lisusd-lista",
@@ -2736,7 +2797,8 @@
     },
     "pegMechanism": "Synthetic dollar reference token tied to Lumi Finance LUA mechanics; it is not a hard 1:1 redeemable fiat stablecoin",
     "geckoId": "lumi-finance-luausd",
-    "protocolSlug": "lumi-finance"
+    "protocolSlug": "lumi-finance",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "lusd-liquity",
@@ -2769,7 +2831,8 @@
       "navToken": false
     },
     "pegMechanism": "Synthetic stablecoin used inside LeverUp's Monad liquidity layer, with mint, burn, and redemption mechanics tied to the protocol's collateral and trading engine",
-    "geckoId": "leverup-usd"
+    "geckoId": "leverup-usd",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "m-m0",
@@ -2803,7 +2866,8 @@
     "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",
     "mechanismArchetype": "cdp",
     "geckoId": "mimatic",
-    "protocolSlug": "qidao"
+    "protocolSlug": "qidao",
+    "canBeBlacklisted": true
   },
   {
     "id": "mapollo-midas",
@@ -2819,7 +2883,8 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "geckoId": "midas-mapollo"
+    "geckoId": "midas-mapollo",
+    "canBeBlacklisted": true
   },
   {
     "id": "meusd-mezo",
@@ -2852,7 +2917,8 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
-    "geckoId": "midas-mf-one"
+    "geckoId": "midas-mf-one",
+    "canBeBlacklisted": true
   },
   {
     "id": "mglobal-midas-fasanara",
@@ -2868,7 +2934,8 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
-    "geckoId": "midas-fasanara-global"
+    "geckoId": "midas-fasanara-global",
+    "canBeBlacklisted": true
   },
   {
     "id": "mhyper-midas",
@@ -2884,7 +2951,8 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "geckoId": "midas-mhyper"
+    "geckoId": "midas-mhyper",
+    "canBeBlacklisted": true
   },
   {
     "id": "mim-abracadabra",
@@ -2917,7 +2985,8 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "geckoId": "midas-mmev"
+    "geckoId": "midas-mmev",
+    "canBeBlacklisted": true
   },
   {
     "id": "mmxn-moneta-digital",
@@ -2934,7 +3003,8 @@
     },
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "moneta-digital"
+    "geckoId": "moneta-digital",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "mnee-mnee",
@@ -2985,7 +3055,8 @@
       "navToken": false
     },
     "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
-    "mechanismArchetype": "fiat-cash"
+    "mechanismArchetype": "fiat-cash",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "mre7yield-midas",
@@ -3001,7 +3072,8 @@
       "navToken": true
     },
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
-    "geckoId": "midas-mre7yield"
+    "geckoId": "midas-mre7yield",
+    "canBeBlacklisted": true
   },
   {
     "id": "msusd-main-street",
@@ -3104,7 +3176,8 @@
     },
     "pegMechanism": "1:1 MXN fiat-collateralized stablecoin; Juno/MXNB materials describe reserve parity, token burn/redemption through issuer rails, and quarterly third-party attestations confirming reserves exceed circulating supply",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "mxnb"
+    "geckoId": "mxnb",
+    "canBeBlacklisted": true
   },
   {
     "id": "mxne-real-mxn",
@@ -3138,7 +3211,8 @@
     },
     "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "blox-myrc"
+    "geckoId": "blox-myrc",
+    "canBeBlacklisted": true
   },
   {
     "id": "nbasis-nest",
@@ -3156,7 +3230,8 @@
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "nest-basis-vault",
-    "protocolSlug": "nest-credit"
+    "protocolSlug": "nest-credit",
+    "canBeBlacklisted": true
   },
   {
     "id": "nect-beraborrow",
@@ -3190,7 +3265,8 @@
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "geckoId": "nest-blackopal-liquidstone-ii-vault",
-    "protocolSlug": "nest-credit"
+    "protocolSlug": "nest-credit",
+    "canBeBlacklisted": true
   },
   {
     "id": "ntbill-nest",
@@ -3208,7 +3284,8 @@
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying Treasury fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "mechanismArchetype": "tbill",
     "geckoId": "nest-treasury-vault",
-    "protocolSlug": "nest-credit"
+    "protocolSlug": "nest-credit",
+    "canBeBlacklisted": true
   },
   {
     "id": "nusd-neutrl",
@@ -3225,7 +3302,8 @@
     },
     "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "nusd-2"
+    "geckoId": "nusd-2",
+    "canBeBlacklisted": true
   },
   {
     "id": "nusd-nexus",
@@ -3257,7 +3335,8 @@
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
     "geckoId": "nest-wisdomtree-vault",
-    "protocolSlug": "nest-credit"
+    "protocolSlug": "nest-credit",
+    "canBeBlacklisted": true
   },
   {
     "id": "nxusd-nereus",
@@ -3359,7 +3438,8 @@
     },
     "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "pathusd"
+    "geckoId": "pathusd",
+    "canBeBlacklisted": true
   },
   {
     "id": "paxg-paxos",
@@ -3392,7 +3472,8 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
-    "geckoId": "tradable-na-rent-financing-platform-sstn"
+    "geckoId": "tradable-na-rent-financing-platform-sstn",
+    "canBeBlacklisted": true
   },
   {
     "id": "pc0000033-tradable",
@@ -3408,7 +3489,8 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
-    "geckoId": "tradable-apac-diversified-finance-provider-sstn"
+    "geckoId": "tradable-apac-diversified-finance-provider-sstn",
+    "canBeBlacklisted": true
   },
   {
     "id": "pc0000089-tradable",
@@ -3424,7 +3506,8 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
-    "geckoId": "latam-residential-sstl"
+    "geckoId": "latam-residential-sstl",
+    "canBeBlacklisted": true
   },
   {
     "id": "pc0000101-tradable",
@@ -3440,7 +3523,8 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
-    "geckoId": "na-post-settlement-legal-financing-receivables"
+    "geckoId": "na-post-settlement-legal-financing-receivables",
+    "canBeBlacklisted": true
   },
   {
     "id": "pgold-pleasing",
@@ -3474,7 +3558,8 @@
     },
     "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
     "status": "pre-launch",
-    "launchPhase": "testnet"
+    "launchPhase": "testnet",
+    "canBeBlacklisted": false
   },
   {
     "id": "phpm-mento",
@@ -3507,7 +3592,8 @@
     },
     "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
     "mechanismArchetype": "cdp",
-    "geckoId": "pht-stablecoin"
+    "geckoId": "pht-stablecoin",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "pmusd-precious-metals",
@@ -3558,7 +3644,8 @@
     "pegMechanism": "Pre-launch Liquity-style CDP stablecoin: borrowers post pETH collateral to mint pUSD, undercollateralized positions are liquidated through a Stability Pool, and pUSD holders can earn borrower-interest and liquidation-flow yield once runtime sources are live",
     "mechanismArchetype": "cdp",
     "status": "pre-launch",
-    "launchPhase": "testnet"
+    "launchPhase": "testnet",
+    "canBeBlacklisted": false
   },
   {
     "id": "pusd-polymarket",
@@ -3575,7 +3662,8 @@
     },
     "pegMechanism": "Minted when users deposit supported USDC into Polymarket rails and redeemable back to USDC through the Polymarket application flow",
     "geckoId": "polymarket-usd",
-    "protocolSlug": "polymarket"
+    "protocolSlug": "polymarket",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "pyusd-paypal",
@@ -3626,7 +3714,8 @@
     },
     "pegMechanism": "Issuer-managed mint and redemption route targeting 1 REUR = 1 EUR, subject to reserve sufficiency, redemption terms, and market conditions",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "royal-euro"
+    "geckoId": "royal-euro",
+    "canBeBlacklisted": true
   },
   {
     "id": "reusd-re-protocol",
@@ -3660,7 +3749,8 @@
     },
     "pegMechanism": "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",
     "mechanismArchetype": "cdp",
-    "geckoId": "resupply-usd"
+    "geckoId": "resupply-usd",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "rgbp-revolut",
@@ -3748,7 +3838,8 @@
     "pegMechanism": "Centralized 1:1 dollar token with issuer-managed mint and redemption processes for approved users",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "royal-dollar",
-    "protocolSlug": "rcoins"
+    "protocolSlug": "rcoins",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "rwausdi-multipli",
@@ -3781,7 +3872,8 @@
     },
     "pegMechanism": "USD-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
     "mechanismArchetype": "tbill",
-    "geckoId": "safo"
+    "geckoId": "safo",
+    "canBeBlacklisted": true
   },
   {
     "id": "said-gaib",
@@ -3799,7 +3891,8 @@
     "pegMechanism": "sAID is not pegged to $1; it is minted by staking AID at deposit NAV and redeemed through a 30-day FIFO withdrawal cycle at unstaking NAV, which can reflect unrealized losses",
     "geckoId": "gaib-said",
     "variantOf": "aid-gaib",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "satusd-river",
@@ -3871,7 +3964,8 @@
     "mechanismArchetype": "cdp",
     "geckoId": "sbold-by-k3-capital",
     "variantOf": "bold-liquity",
-    "variantKind": "risk-absorption"
+    "variantKind": "risk-absorption",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "scrvusd-curve",
@@ -3944,7 +4038,8 @@
     "mechanismArchetype": "tbill",
     "geckoId": "staked-frax-usd",
     "variantOf": "frxusd-frax",
-    "variantKind": "savings-passthrough"
+    "variantKind": "savings-passthrough",
+    "canBeBlacklisted": true
   },
   {
     "id": "sgho-aave",
@@ -3980,7 +4075,8 @@
     },
     "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
     "mechanismArchetype": "cdp",
-    "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2"
+    "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
+    "canBeBlacklisted": false
   },
   {
     "id": "sofid-sofi",
@@ -3999,7 +4095,8 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "sofiusd",
     "status": "active",
-    "launchDate": "2025-12-18"
+    "launchDate": "2025-12-18",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "spkcc-spiko",
@@ -4016,7 +4113,8 @@
     },
     "pegMechanism": "USD-denominated NAV-accreting share class; primary subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails.",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "spiko-digital-assets-cash-carry-fund"
+    "geckoId": "spiko-digital-assets-cash-carry-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "spusd-soulpeg",
@@ -4049,7 +4147,8 @@
       "navToken": true
     },
     "pegMechanism": "srUSD accrues protocol yield against rUSD. Holders can exit srUSD to rUSD, while rUSD is minted and redeemed through Reservoir's PSM against supported stablecoins subject to protocol liquidity and risk controls.",
-    "geckoId": "reservoir-srusd"
+    "geckoId": "reservoir-srusd",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "srusde-strata",
@@ -4084,7 +4183,8 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
-    "geckoId": "securitize-tokenized-aaa-clo-fund"
+    "geckoId": "securitize-tokenized-aaa-clo-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "stcusd-cap",
@@ -4121,7 +4221,8 @@
     "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
     "geckoId": "steakhouse-usdc",
     "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "steakusdt-steakhouse",
@@ -4139,7 +4240,8 @@
     "pegMechanism": "ERC-4626-style Morpho vault shares appreciate against USDT as borrower interest accrues; withdrawals redeem vault shares for available USDT liquidity or wait for Morpho market liquidity to return",
     "geckoId": "steakhouse-usdt",
     "variantOf": "usdt-tether",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "stkgho-umbrella-aave",
@@ -4173,7 +4275,8 @@
       "navToken": true
     },
     "pegMechanism": "StoneYield wrapper token designed to maintain one-dollar accounting against deposited stablecoin assets while strategy yield accrues through the protocol's managed vault structure",
-    "geckoId": "stoneyield-usd"
+    "geckoId": "stoneyield-usd",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "stusds-sky",
@@ -4209,7 +4312,8 @@
     "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "esui-dollar",
-    "protocolSlug": "sui"
+    "protocolSlug": "sui",
+    "canBeBlacklisted": true
   },
   {
     "id": "susd-hedgecore",
@@ -4226,7 +4330,8 @@
     },
     "pegMechanism": "Users deposit USDC to mint soul-bound sUSD, with yield distributed through HedgeCore mechanisms and liquidity exposed through hUSDC",
     "geckoId": "staked-usd-coin",
-    "protocolSlug": "hedgecore"
+    "protocolSlug": "hedgecore",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "susd-solayer",
@@ -4314,7 +4419,8 @@
     "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
     "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
-    "variantKind": "savings-passthrough"
+    "variantKind": "savings-passthrough",
+    "canBeBlacklisted": true
   },
   {
     "id": "susdd-tron-dao-reserve",
@@ -4352,7 +4458,8 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "ethena-staked-usde",
     "variantOf": "usde-ethena",
-    "variantKind": "savings-passthrough"
+    "variantKind": "savings-passthrough",
+    "canBeBlacklisted": true
   },
   {
     "id": "susds-sky",
@@ -4371,7 +4478,8 @@
     "mechanismArchetype": "cdp",
     "geckoId": "susds",
     "variantOf": "usds-sky",
-    "variantKind": "savings-passthrough"
+    "variantKind": "savings-passthrough",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "susdt-spark",
@@ -4389,7 +4497,8 @@
     "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
     "mechanismArchetype": "fiat-cash",
     "variantOf": "usdt-tether",
-    "variantKind": "savings-passthrough"
+    "variantKind": "savings-passthrough",
+    "canBeBlacklisted": true
   },
   {
     "id": "susn-noon",
@@ -4528,7 +4637,8 @@
     },
     "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates as T-bill yield accrues; KYC-gated mint/redemption processed instantly in USDC, underlying collateral settled within T+4 business days; restricted to institutional and non-U.S. accredited investors",
     "mechanismArchetype": "tbill",
-    "geckoId": "theo-short-duration-us-treasury-fund"
+    "geckoId": "theo-short-duration-us-treasury-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "trusd-tori",
@@ -4614,7 +4724,8 @@
     },
     "pegMechanism": "GBP-denominated NAV-accreting money-market fund share; primary subscriptions and redemptions are KYC-gated through Spiko at fund NAV.",
     "mechanismArchetype": "tbill",
-    "geckoId": "spiko-uk-t-bills-money-market-fund"
+    "geckoId": "spiko-uk-t-bills-money-market-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "usat-tether",
@@ -4631,7 +4742,8 @@
     },
     "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "usa"
+    "geckoId": "usa",
+    "canBeBlacklisted": true
   },
   {
     "id": "usbd-bima",
@@ -4734,7 +4846,8 @@
     },
     "pegMechanism": "Protocol-managed dollar token using collateral reserves and incentive mechanisms to support the peg",
     "geckoId": "usda-3",
-    "protocolSlug": "alpha-partners"
+    "protocolSlug": "alpha-partners",
+    "canBeBlacklisted": true
   },
   {
     "id": "usda-anzens",
@@ -4768,7 +4881,8 @@
     },
     "pegMechanism": "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
     "mechanismArchetype": "cdp",
-    "geckoId": "usda-2"
+    "geckoId": "usda-2",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdaf-asymmetry",
@@ -4819,7 +4933,8 @@
     },
     "pegMechanism": "Permissioned 1:1 mint by depositing USDC via the M0 Swap Facility (Uniswap V3 1bps tier) which routes through wM; redemption returns USDC by unwrapping USDat back to wM and burning the USDat. Only KYC-onboarded addresses can mint, redeem, or hold USDat; geofenced away from US, EEA, and OFAC-sanctioned jurisdictions",
     "mechanismArchetype": "tbill",
-    "geckoId": "saturn-dollar"
+    "geckoId": "saturn-dollar",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdb-blast",
@@ -4922,7 +5037,8 @@
     },
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     "mechanismArchetype": "algorithmic",
-    "geckoId": "usdd"
+    "geckoId": "usdd",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "usde-ethena",
@@ -4939,7 +5055,8 @@
     },
     "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "ethena-usde"
+    "geckoId": "ethena-usde",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "usdf-astherus",
@@ -5025,7 +5142,8 @@
     },
     "pegMechanism": "Brale-issued fiat-backed stablecoin redeemable 1:1 for USD or USDC by eligible Brale customers; Brale manages reserves and liquidity for redemption obligations",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "glo-dollar"
+    "geckoId": "glo-dollar",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdgo-osl",
@@ -5076,7 +5194,8 @@
     },
     "pegMechanism": "Borrowers mint USDH against overcollateralized Solana crypto vaults and repay or are liquidated under Hubble's CDP rules; Stability Pool absorbs liquidations and distributes collateral to depositors",
     "mechanismArchetype": "cdp",
-    "geckoId": "usdh"
+    "geckoId": "usdh",
+    "canBeBlacklisted": false
   },
   {
     "id": "usdh-native-markets",
@@ -5109,7 +5228,8 @@
       "navToken": false
     },
     "pegMechanism": "1:1 wrapper around M (M0) on Solana — KAST mints USDK by depositing/wrapping M into the USDK SPL Token-2022 mint, and unwraps back to M for redemption; user-facing fiat on/off-ramp and redemption are mediated by the KAST app via licensed partners (Tazapay, BitGo, Fireblocks). The Token-2022 mint has transfer hooks and confidential-transfer extensions with authority held by KAST",
-    "mechanismArchetype": "tbill"
+    "mechanismArchetype": "tbill",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdk-orki",
@@ -5125,7 +5245,8 @@
       "navToken": false
     },
     "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
-    "mechanismArchetype": "cdp"
+    "mechanismArchetype": "cdp",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdkg-gold-dollar",
@@ -5141,7 +5262,8 @@
       "navToken": false
     },
     "pegMechanism": "1:1 mint and redemption against USD, Kyrgyzstani som, physical gold, or approved cryptocurrencies through Gold Dollar; KYC/AML verification required for all redemptions",
-    "geckoId": "usdkg"
+    "geckoId": "usdkg",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdm-mega",
@@ -5209,7 +5331,8 @@
     },
     "pegMechanism": "Users mint USDN by depositing supported underlying assets into the USDN vault and redeem by burning USDN for the corresponding underlying asset value. Mint and redemption flows can be temporarily restricted by protocol imbalance and use a two-step oracle validation flow.",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "smardex-usdn"
+    "geckoId": "smardex-usdn",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "usdnr-nerona",
@@ -5225,7 +5348,8 @@
       "navToken": false
     },
     "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona Labs by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying $M accrues to the M0 reserve and Nerona — USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault) routes that yield to stakers. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
-    "mechanismArchetype": "tbill"
+    "mechanismArchetype": "tbill",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "usdo-openeden",
@@ -5259,7 +5383,8 @@
     },
     "pegMechanism": "USDon is used as the native settlement stablecoin for Ondo Global Markets; USDC can be swapped 1:1 into USDon for purchases, and tokenized-asset redemptions can settle to USDon or to USDC when swapper liquidity is available",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "ondo-u-s-dollar-token"
+    "geckoId": "ondo-u-s-dollar-token",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdp-parallel",
@@ -5343,7 +5468,8 @@
       "navToken": false
     },
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
-    "mechanismArchetype": "cdp"
+    "mechanismArchetype": "cdp",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdr-ring",
@@ -5360,7 +5486,8 @@
     },
     "pegMechanism": "Crypto-collateralized synthetic dollar with protocol-controlled mint and liquidity-management routes; no Pharos redemption backstop is modeled until the exit route is source-reviewed",
     "geckoId": "ring-usd",
-    "protocolSlug": "ring-protocol"
+    "protocolSlug": "ring-protocol",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdr-stablr",
@@ -5394,7 +5521,8 @@
     },
     "pegMechanism": "USDRIF is minted against RIF collateral and can be redeemed for the same dollar value in RIF through the protocol, with smart-contract rules and scheduled settlement supporting the peg",
     "mechanismArchetype": "cdp",
-    "geckoId": "rif-us-dollar"
+    "geckoId": "rif-us-dollar",
+    "canBeBlacklisted": true
   },
   {
     "id": "usds-sky",
@@ -5411,7 +5539,8 @@
     },
     "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     "mechanismArchetype": "cdp",
-    "geckoId": "usds"
+    "geckoId": "usds",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "usdsc-startale",
@@ -5428,7 +5557,8 @@
     },
     "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "startale-usd"
+    "geckoId": "startale-usd",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdsui-sui",
@@ -5445,7 +5575,8 @@
     },
     "pegMechanism": "Bridge Open Issuance mint and burn rail: Bridge mints USDsui when fiat or supported crypto/stablecoin deposits are allocated to reserves, and burns USDsui on redemption before releasing equivalent fiat value or supported stablecoin output",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "usdsui"
+    "geckoId": "usdsui",
+    "canBeBlacklisted": true
   },
   {
     "id": "usdt-tether",
@@ -5496,7 +5627,8 @@
     },
     "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; mainnet mint/redeem against USDC is permissionless on Solana and BSC, with the DAO retaining optional KYC/KYB gating powers",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "usdu"
+    "geckoId": "usdu",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "usdu-usdu-finance",
@@ -5648,7 +5780,8 @@
       "navToken": false
     },
     "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
-    "geckoId": "noon-usn"
+    "geckoId": "noon-usn",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "usnd-nerite",
@@ -5683,7 +5816,8 @@
       "navToken": false
     },
     "pegMechanism": "Verified users mint and redeem USP 1:1 against stablecoin collateral through Pareto, while secondary-market holders rely on DEX liquidity",
-    "geckoId": "pareto-usp"
+    "geckoId": "pareto-usp",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "usp-pikudao",
@@ -5699,7 +5833,8 @@
       "navToken": true
     },
     "pegMechanism": "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",
-    "geckoId": "usp-yield-optimized-stablecoin"
+    "geckoId": "usp-yield-optimized-stablecoin",
+    "canBeBlacklisted": true
   },
   {
     "id": "usr-resolv",
@@ -5718,7 +5853,8 @@
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "resolv-usr",
     "status": "frozen",
-    "frozenAt": "2026-04-27"
+    "frozenAt": "2026-04-27",
+    "canBeBlacklisted": true
   },
   {
     "id": "ussd-sonic-labs",
@@ -5735,7 +5871,8 @@
     },
     "pegMechanism": "1:1 permissionless mint and redemption via non-custodial smart contracts built on Frax's frxUSD infrastructure; users mint with any approved USD asset (USDC, USDT, PYUSD, USDB, BUIDL, USTB, WTGXX) at zero fee; redeem into any supported USD asset at any time with no lockup or withdrawal delay; cross-chain via CCTP; yield from Treasury reserves flows to the Sonic ecosystem rather than to USSD holders",
     "mechanismArchetype": "tbill",
-    "geckoId": "us-sonic-dollar"
+    "geckoId": "us-sonic-dollar",
+    "canBeBlacklisted": true
   },
   {
     "id": "ustb-superstate",
@@ -5769,7 +5906,8 @@
     },
     "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
     "mechanismArchetype": "tbill",
-    "geckoId": "spiko-us-t-bills-money-market-fund"
+    "geckoId": "spiko-us-t-bills-money-market-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "usx-dforce",
@@ -5837,7 +5975,8 @@
     },
     "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "unity-2"
+    "geckoId": "unity-2",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "uusd-anything-labs",
@@ -5888,7 +6027,8 @@
     },
     "pegMechanism": "NAV-accreting institutional T-bill share token; instant mint and redemption at daily NAV through Securitize Markets against USDC, AUSD, or USD wire; Chainlink NAVLink oracle is integrated by Aave Horizon (oracle address not yet wired into Pharos)",
     "mechanismArchetype": "tbill",
-    "geckoId": "vaneck-treasury-fund"
+    "geckoId": "vaneck-treasury-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "vchf-vnx",
@@ -5922,7 +6062,8 @@
     },
     "pegMechanism": "Credit-token stable asset with protocol-managed collateral and redemption/liquidity controls on Hemi",
     "geckoId": "vcred",
-    "protocolSlug": "vcred"
+    "protocolSlug": "vcred",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "veur-vnx",
@@ -5973,7 +6114,8 @@
     },
     "pegMechanism": "1:1 fiat-collateralized issuer mint and redemption operated by Jade Labs through the ONUS and VNDC Hub platforms with VND on/off-ramps via Vietnamese banking partners; reserve backing is self-reported by Jade Labs with no third-party attestation, audit cadence, or proof-of-reserves feed currently published",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "vndc"
+    "geckoId": "vndc",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "vnxau-vnx",
@@ -6007,7 +6149,8 @@
     },
     "pegMechanism": "CDP-style mint: users borrow VUSD against IOTA or stIOTA collateral and repay debt to unlock collateral, with liquidation and redemption mechanics supporting the U.S. dollar peg",
     "mechanismArchetype": "cdp",
-    "geckoId": "virtue-usd"
+    "geckoId": "virtue-usd",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wars-argentine-peso",
@@ -6024,7 +6167,8 @@
     },
     "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "argentine-peso"
+    "geckoId": "argentine-peso",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wbrl-ripio",
@@ -6041,7 +6185,8 @@
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WBRL = 1 BRL through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "brazilian-real"
+    "geckoId": "brazilian-real",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wclp-ripio",
@@ -6058,7 +6203,8 @@
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCLP = 1 CLP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "chilean-peso"
+    "geckoId": "chilean-peso",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wcop-ripio",
@@ -6075,7 +6221,8 @@
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "colombian-peso"
+    "geckoId": "colombian-peso",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wemix-dollar-wemix",
@@ -6143,7 +6290,8 @@
     },
     "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "wrappedm-by-m0"
+    "geckoId": "wrappedm-by-m0",
+    "canBeBlacklisted": true
   },
   {
     "id": "wmxn-ripio",
@@ -6160,7 +6308,8 @@
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WMXN = 1 MXN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "mexican-peso"
+    "geckoId": "mexican-peso",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wpen-ripio",
@@ -6177,7 +6326,8 @@
     },
     "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WPEN = 1 PEN through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "peruvian-sol"
+    "geckoId": "peruvian-sol",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "wsrusd-reservoir",
@@ -6211,7 +6361,8 @@
     },
     "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
     "mechanismArchetype": "tbill",
-    "geckoId": "wisdomtree-treasury-money-market-digital-fund"
+    "geckoId": "wisdomtree-treasury-money-market-digital-fund",
+    "canBeBlacklisted": true
   },
   {
     "id": "wusd-worldwide",
@@ -6260,7 +6411,8 @@
       "navToken": false
     },
     "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
-    "mechanismArchetype": "cdp"
+    "mechanismArchetype": "cdp",
+    "canBeBlacklisted": "dilutable"
   },
   {
     "id": "xaum-matrixdock",
@@ -6327,7 +6479,8 @@
       "navToken": false
     },
     "pegMechanism": "Basket-backed stablecoin index on XPR Network, with mint and redeem flows intended to keep XMD near one U.S. dollar against the underlying stablecoin basket",
-    "geckoId": "metal-dollar"
+    "geckoId": "metal-dollar",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "xnk-kinka",
@@ -6343,7 +6496,8 @@
       "navToken": false
     },
     "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
-    "geckoId": "kinka"
+    "geckoId": "kinka",
+    "canBeBlacklisted": true
   },
   {
     "id": "xo-exodus",
@@ -6360,7 +6514,8 @@
     },
     "pegMechanism": "1:1 fiat-backed mint and redemption operated by MoonPay via M0 Protocol infrastructure on Solana; collateral cryptographically attested on-chain by independent M0 Validators before minting; consumer access is gated through the Exodus self-custodial wallet and Exodus Pay app, with on/off ramps via MoonPay's payment rails (cards, Apple/Google Pay, PayPal); the Solana SPL Token-2022 mint includes pausable, permanent-delegate, and transfer-hook controls held by MoonPay",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "xo-cash"
+    "geckoId": "xo-cash",
+    "canBeBlacklisted": true
   },
   {
     "id": "xofm-mento",
@@ -6463,7 +6618,8 @@
     "pegMechanism": "ERC-4626 Yearn vault shares represent BOLD deployed into Liquity V2 Stability Pools; yBOLD can be redeemed for underlying BOLD without a withdrawal fee or waiting period, inheriting BOLD peg and Liquity Stability Pool execution risk",
     "mechanismArchetype": "cdp",
     "variantOf": "bold-liquity",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "ylds-figure",
@@ -6529,7 +6685,8 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 vault token over USDC; the vault targets stable returns while preserving dollar value, with yield vesting and active allocator limits across supported strategies",
-    "geckoId": "yieldfi-ytoken"
+    "geckoId": "yieldfi-ytoken",
+    "canBeBlacklisted": "possible"
   },
   {
     "id": "yvusdc-yearn",
@@ -6547,7 +6704,8 @@
     "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",
     "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
-    "variantKind": "strategy-vault"
+    "variantKind": "strategy-vault",
+    "canBeBlacklisted": true
   },
   {
     "id": "yzusd-yuzu",

@@ -18,6 +18,7 @@ import {
   Send,
   Wallet,
   Network,
+  SlidersHorizontal,
   TrendingUp,
   TableProperties,
   ScrollText,
@@ -85,6 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "tools",
     label: "ANALYZE",
     items: [
+      { href: "/screener", label: "Screener", icon: SlidersHorizontal, description: "Multi-axis filter across every tracked stablecoin" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Collateral graph for hidden upstream stablecoin risk" },
       { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Look through your holdings as one combined stablecoin book" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Build a live peer set and judge substitutes side by side" },

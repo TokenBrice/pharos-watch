@@ -4,9 +4,11 @@ import { useCallback, useId } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import {
+  BLACKLISTABLE_VALUES,
   PEG_VALUES,
   SCREENER_FILTER_DEFAULTS,
   hasActiveFilters,
+  type BlacklistableValue,
   type ScreenerFilters,
 } from "@/app/screener/screener-filters";
 import {
@@ -20,6 +22,13 @@ const LIFECYCLE_LABELS: Record<StablecoinStatus, string> = {
   active: "Active",
   "pre-launch": "Pre-launch",
   frozen: "Frozen",
+};
+
+const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
+  yes: "Yes",
+  no: "No",
+  possible: "Possible",
+  dilutable: "Dilutable",
 };
 
 interface ScreenerToolbarProps {
@@ -194,6 +203,31 @@ export function ScreenerToolbar({
               className="min-h-11 sm:min-h-8"
             >
               {LIFECYCLE_LABELS[status]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+
+      <div className="space-y-2">
+        <span className="pharos-kicker" id={`${groupId}-blacklistable`}>
+          Blacklistable
+        </span>
+        <ToggleGroup
+          type="multiple"
+          variant="outline"
+          size="sm"
+          className="w-full flex-wrap justify-start"
+          value={filters.blacklistable as string[]}
+          onValueChange={(v) => update("blacklistable", v as BlacklistableValue[])}
+          aria-labelledby={`${groupId}-blacklistable`}
+        >
+          {BLACKLISTABLE_VALUES.map((bucket) => (
+            <ToggleGroupItem
+              key={bucket}
+              value={bucket}
+              className="min-h-11 sm:min-h-8"
+            >
+              {BLACKLISTABLE_LABELS[bucket]}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
