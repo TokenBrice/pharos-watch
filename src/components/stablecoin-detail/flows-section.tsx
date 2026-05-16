@@ -15,24 +15,30 @@ export function FlowsSection({ stablecoinId, hasFlows }: FlowsSectionProps) {
   if (!hasFlows) return null;
 
   return (
-    <>
-      <section id="flows">
-        <FlowSummaryCard stablecoinId={stablecoinId} />
-      </section>
+    <section id="flows">
+      <FlowSummaryCard stablecoinId={stablecoinId} />
+    </section>
+  );
+}
 
-      <section id="flow-history">
-        <Card className="p-4">
-          <div className="mb-3">
-            <DetailSectionTitle>
-              <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>
-            </DetailSectionTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Counted economic flow only. Excludes bridge transfers, review-required burns, and atomic roundtrips.
-            </p>
-          </div>
-          <FlowEventFeed stablecoinId={stablecoinId} limit={10} scope="counted" />
-        </Card>
-      </section>
-    </>
+interface FlowHistorySectionProps {
+  stablecoinId: string;
+}
+
+export function FlowHistorySection({ stablecoinId }: FlowHistorySectionProps) {
+  return (
+    <section id="flow-history">
+      <Card className="p-4">
+        <div className="mb-3">
+          <DetailSectionTitle>
+            <MethodologyLabel topic="mintBurnFlows">Mint &amp; Burn Flow History</MethodologyLabel>
+          </DetailSectionTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Counted economic flow only. Excludes bridge transfers, review-required burns, and atomic roundtrips.
+          </p>
+        </div>
+        <FlowEventFeed stablecoinId={stablecoinId} limit={10} scope="counted" />
+      </Card>
+    </section>
   );
 }

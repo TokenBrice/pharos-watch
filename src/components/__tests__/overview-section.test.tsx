@@ -11,16 +11,13 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="iusd-infinifi"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: coin!.reserves ?? [{ name: "Curated fallback", pct: 100, risk: "low" }],
           estimated: false,
           mode: "curated-fallback",
         }}
         reserveFetchError={new ApiFetchError("/api/stablecoin-reserves/iusd-infinifi", 503, null)}
-        isNavToken
       />,
     );
 
@@ -34,9 +31,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="iusd-infinifi"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
           estimated: false,
@@ -45,7 +40,6 @@ describe("OverviewSection", () => {
           source: "infinifi",
         }}
         reserveFetchError={new TypeError("Failed to fetch")}
-        isNavToken
       />,
     );
 
@@ -59,9 +53,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="iusd-infinifi"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
           estimated: false,
@@ -81,7 +73,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -99,9 +90,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="iusd-infinifi"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
           estimated: false,
@@ -119,7 +108,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -134,9 +122,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="iusd-infinifi"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Live farm", pct: 100, risk: "low" }],
           estimated: false,
@@ -155,7 +141,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -170,9 +155,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="crvusd-curve"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 67, risk: "medium" }],
           estimated: false,
@@ -188,7 +171,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -201,9 +183,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="gho-aave"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "stataUSDC GSM", pct: 100, risk: "low" }],
           estimated: false,
@@ -218,7 +198,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -234,9 +213,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="frax-frax"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Reviewed baseline", pct: 100, risk: "very-low" }],
           estimated: false,
@@ -254,7 +231,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -268,9 +244,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="pyusd-paypal"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Issuer reserves", pct: 100, risk: "very-low" }],
           estimated: false,
@@ -288,7 +262,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -302,9 +275,7 @@ describe("OverviewSection", () => {
 
     const html = renderToStaticMarkup(
       <OverviewSection
-        stablecoinId="usdd-tron-dao-reserve"
         coin={coin!}
-        summary={null}
         reserves={{
           reserves: [{ name: "Tracked vaults", pct: 100, risk: "medium" }],
           estimated: false,
@@ -322,7 +293,6 @@ describe("OverviewSection", () => {
           },
         }}
         reserveFetchError={null}
-        isNavToken
       />,
     );
 
@@ -330,58 +300,4 @@ describe("OverviewSection", () => {
     expect(html).toContain(">Live</span>");
   });
 
-  it("renders the redemption backstop card when a score is available", () => {
-    const coin = TRACKED_META_BY_ID.get("cusd-cap");
-    expect(coin).toBeDefined();
-
-    const html = renderToStaticMarkup(
-      <OverviewSection
-        stablecoinId="cusd-cap"
-        coin={coin!}
-        summary={null}
-        reserves={null}
-        reserveFetchError={null}
-        redemptionBackstop={{
-          stablecoinId: "cusd-cap",
-          score: 88,
-          effectiveExitScore: 56,
-          dexLiquidityScore: 29,
-          accessScore: 100,
-          settlementScore: 100,
-          executionCertaintyScore: 80,
-          capacityScore: 100,
-          outputAssetQualityScore: 80,
-          costScore: 40,
-          routeFamily: "basket-redeem",
-          accessModel: "permissionless-onchain",
-          settlementModel: "atomic",
-          executionModel: "deterministic-basket",
-          outputAssetType: "stable-basket",
-          provider: "supply-ratio-model",
-          sourceMode: "estimated",
-          resolutionState: "resolved",
-          routeStatus: "open",
-          routeStatusSource: "static-config",
-          holderEligibility: "any-holder",
-          capacityConfidence: "documented-bound",
-          capacitySemantics: "immediate-bounded",
-          feeConfidence: "undisclosed-reviewed",
-          feeModelKind: "documented-variable",
-          modelConfidence: "medium",
-          immediateCapacityUsd: 10_000_000,
-          immediateCapacityRatio: 0.5,
-          feeBps: null,
-          queueEnabled: false,
-          methodologyVersion: "1.0",
-          updatedAt: 1_700_000_000,
-          capsApplied: [],
-        }}
-        isNavToken
-      />,
-    );
-
-    expect(html).toContain("Redemption Backstop");
-    expect(html).toContain("Immediate Capacity");
-    expect(html).toContain("10.0M");
-  });
 });

@@ -17,7 +17,10 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 }));
 
 // BlacklistSection renders after the mocks are defined so the vi.mock hoists apply.
-import { BlacklistSection } from "@/components/stablecoin-detail/blacklist-section";
+import {
+  BlacklistHistorySection,
+  BlacklistSection,
+} from "@/components/stablecoin-detail/blacklist-section";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 
 function summaryStub(overrides: {
@@ -73,7 +76,24 @@ describe("BlacklistSection", () => {
     // Chart legend also contains "Destroy" (event-type series). The stat card
     // label "Destroyed" is specifically the past-tense form, so match exactly.
     expect(getAllByText(/Destroyed/).length).toBeGreaterThan(0);
+  });
+
+  it("renders Recent Blacklist Events from BlacklistHistorySection on the happy path", () => {
+    vi.mocked(useBlacklistSummary).mockReturnValue(summaryStub());
+    const { getByText } = render(
+      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
+    );
     expect(getByText(/Recent Blacklist Events/i)).toBeTruthy();
+  });
+
+  it("BlacklistHistorySection returns null for a supported coin with zero events", () => {
+    vi.mocked(useBlacklistSummary).mockReturnValue(
+      summaryStub({ perCoinTotalEvents: { USDC: 0 } }),
+    );
+    const { container } = render(
+      <BlacklistHistorySection stablecoinId="usdc-circle" symbol="USDC" />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 
   it("returns null when the summary errors (silent failure)", () => {

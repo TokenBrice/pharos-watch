@@ -19,13 +19,19 @@ import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note"
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
-import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
+import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
+import { AiSummary } from "@/components/ai-summary";
+import { CoinNotices } from "@/components/coin-notice";
+import { DEWSDetail } from "@/components/dews-detail";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
+import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
+import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -107,18 +113,11 @@ const SafetyScoreHistorySection = dynamic(
 );
 
 const DETAIL_SECTION_DEFS = {
-  safety: { id: "report-card", label: "Safety" },
-  overview: { id: "overview", label: "Summary" },
-  price: { id: "price", label: "Price" },
-  reserves: { id: "reserves", label: "Reserves" },
-  market: { id: "chart", label: "Mcap History" },
-  yield: { id: "yield", label: "Yield" },
+  overview: { id: "overview", label: "Overview" },
   liquidity: { id: "liquidity", label: "Liquidity" },
-  flows: { id: "flows", label: "Flows" },
-  blacklist: { id: "blacklist", label: "Blacklist" },
+  activity: { id: "activity", label: "Activity" },
   history: { id: "history", label: "History" },
-  timeline: { id: "coin-timeline", label: "Timeline" },
-  explore: { id: "explore-next", label: "Explore" },
+  explore: { id: "explore", label: "Explore" },
 } as const;
 
 function DetailLoadingShell({
@@ -174,6 +173,7 @@ interface StablecoinDetailClientProps {
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
   staticProfileContent?: ReactNode;
+  exploreNextContent?: ReactNode;
 }
 
 export default function StablecoinDetailClient({
@@ -182,6 +182,7 @@ export default function StablecoinDetailClient({
   staticCoin,
   logoSrc,
   staticProfileContent = null,
+  exploreNextContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -257,20 +258,9 @@ export default function StablecoinDetailClient({
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
   const s = DETAIL_SECTION_DEFS;
-  const detailSections = [
-    s.safety,
-    s.overview,
-    ...(viewModel.reserves ? [s.reserves] : []),
-    s.liquidity,
-    ...(hasPriceTransparency ? [s.price] : []),
-    s.market,
-    ...(viewModel.hasYieldSection ? [s.yield] : []),
-    ...(viewModel.hasFlows ? [s.flows] : []),
-    ...(viewModel.hasBlacklist ? [s.blacklist] : []),
-    s.history,
-    s.timeline,
-    s.explore,
-  ];
+  const detailSections = [s.overview, s.liquidity, s.activity, s.history, s.explore];
+  const heroVerdictEnabled = isHeroVerdictEnabled();
+  const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
 
   return (
     <div>
@@ -342,8 +332,16 @@ export default function StablecoinDetailClient({
         />
       </div>
 
-      {/* ── Safety zone ── */}
-      <div className="mt-6 space-y-4">
+      {/* ── Key Info ── */}
+      <div className="mt-6">
+        <section id="info">
+          <KeyInfoCard meta={viewModel.coin} />
+        </section>
+      </div>
+
+      {/* ── Overview ── */}
+      <div className="mt-12 space-y-6">
+        <SectionBanner id="overview" label="Overview" />
         <section id="report-card">
           {viewModel.reportCard && (
             <ReportCardDetail
@@ -356,25 +354,14 @@ export default function StablecoinDetailClient({
             />
           )}
         </section>
-
-        <section id="info">
-          <KeyInfoCard meta={viewModel.coin} />
-        </section>
-      </div>
-
-      {/* ── Context & details zone ── */}
-      <div className="mt-12 space-y-6">
-        <section id="overview">
-          <NoticesAndSummarySection
-            stablecoinId={viewModel.id}
-            coin={viewModel.coin}
-            summary={viewModel.summary}
-            reserves={viewModel.reserves}
-            reserveFetchError={viewModel.reserveFetchError}
-            isNavToken={viewModel.isNavToken}
-          />
-        </section>
-
+        {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+        {heroVerdictEnabled && viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+        {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
+        <OverviewSection
+          coin={viewModel.coin}
+          reserves={viewModel.reserves}
+          reserveFetchError={viewModel.reserveFetchError}
+        />
         <ContagionSnapshot
           stablecoinId={viewModel.id}
           variantRelationshipCard={variantRelationshipCard}
@@ -382,9 +369,10 @@ export default function StablecoinDetailClient({
         />
       </div>
 
-      {/* ── Liquidity zone ── */}
+      {/* ── Liquidity ── */}
       <div className="mt-12 space-y-6">
-        <section id="liquidity">
+        <SectionBanner id="liquidity" label="Liquidity" />
+        <section id="dex-liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
             <LazySection minHeight={360}>
@@ -412,8 +400,9 @@ export default function StablecoinDetailClient({
         )}
       </div>
 
-      {/* ── Market zone ── */}
+      {/* ── Activity ── */}
       <div className="mt-12 space-y-6">
+        <SectionBanner id="activity" label="Activity" />
         <section id="chart">
           {frozenNote}
           <LazySection minHeight={420}>
@@ -427,17 +416,11 @@ export default function StablecoinDetailClient({
             <DistributionSection stablecoinId={viewModel.id} />
           </SectionErrorBoundary>
         </section>
-      </div>
 
-      {/* ── Yield zone ── */}
-      {viewModel.hasYieldSection && (
-        <div className="mt-12">
+        {viewModel.hasYieldSection ? (
           <YieldDetailSection stablecoinId={viewModel.id} />
-        </div>
-      )}
+        ) : null}
 
-      {/* ── Activity zone ── */}
-      <div className="mt-12 space-y-6">
         {viewModel.hasFlows ? frozenNote : null}
         <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
 
@@ -451,36 +434,44 @@ export default function StablecoinDetailClient({
         )}
       </div>
 
-      {/* ── History zone ── */}
-      <div className="mt-12">
-        <section id="history" className="space-y-6">
-          {frozenNote}
-          <LazySection minHeight={220}>
-            <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+      {/* ── History ── */}
+      <div className="mt-12 space-y-6">
+        <SectionBanner id="history" label="History" />
+        {frozenNote}
+        <LazySection minHeight={220}>
+          <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+        </LazySection>
+        {!viewModel.isNavToken ? (
+          <LazySection minHeight={360}>
+            <DepegHistory
+              stablecoinId={viewModel.id}
+              earliestTrackingDate={viewModel.earliestTrackingDate}
+              hasPriceData={viewModel.coinData.price != null}
+              depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+            />
           </LazySection>
-          {!viewModel.isNavToken ? (
-            <LazySection minHeight={360}>
-              <DepegHistory
-                stablecoinId={viewModel.id}
-                earliestTrackingDate={viewModel.earliestTrackingDate}
-                hasPriceData={viewModel.coinData.price != null}
-                depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
-              />
-            </LazySection>
-          ) : null}
-          {viewModel.hasFlows ? (
-            <FlowHistorySection stablecoinId={viewModel.id} />
-          ) : null}
-          {viewModel.hasBlacklist ? (
-            <SectionErrorBoundary name="blacklist-history">
-              <BlacklistHistorySection
-                stablecoinId={viewModel.id}
-                symbol={viewModel.coin.symbol as BlacklistStablecoin}
-              />
-            </SectionErrorBoundary>
-          ) : null}
+        ) : null}
+        {viewModel.hasFlows ? <FlowHistorySection stablecoinId={viewModel.id} /> : null}
+        {viewModel.hasBlacklist ? (
+          <SectionErrorBoundary name="blacklist-history">
+            <BlacklistHistorySection
+              stablecoinId={viewModel.id}
+              symbol={viewModel.coin.symbol as BlacklistStablecoin}
+            />
+          </SectionErrorBoundary>
+        ) : null}
+        <section id="coin-timeline" aria-label="Coin event timeline">
+          <TapeForCoinTeaser coinId={viewModel.id} />
         </section>
       </div>
+
+      {/* ── Explore ── */}
+      {exploreNextContent ? (
+        <div className="mt-12 space-y-6">
+          <SectionBanner id="explore" label="Explore" />
+          {exploreNextContent}
+        </div>
+      ) : null}
 
       <FeedbackModal
         open={feedbackOpen}

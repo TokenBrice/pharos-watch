@@ -53,8 +53,24 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/notices-and-summary-section", () => ({
-  NoticesAndSummarySection: () => <div data-testid="notices-and-summary" />,
+vi.mock("@/components/stablecoin-detail/overview-section", () => ({
+  OverviewSection: () => null,
+}));
+
+vi.mock("@/components/ai-summary", () => ({
+  AiSummary: () => null,
+}));
+
+vi.mock("@/components/dews-detail", () => ({
+  DEWSDetail: () => null,
+}));
+
+vi.mock("@/components/coin-notice", () => ({
+  CoinNotices: () => null,
+}));
+
+vi.mock("@/components/tape-for-coin-teaser", () => ({
+  TapeForCoinTeaser: () => null,
 }));
 
 vi.mock("@/components/feedback-modal", () => ({

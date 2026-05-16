@@ -13,7 +13,6 @@ import { StablecoinDetailSeoContent } from "@/components/stablecoin-detail/stati
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";
 import { ExploreNextSection } from "@/components/stablecoin-detail/explore-next-section";
-import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { PreLaunchDetail } from "@/components/pre-launch-detail";
 import aiSummaries from "@data/ai-summaries.json";
 import { logosById } from "@/lib/logos";
@@ -155,22 +154,21 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           staticCoin={staticCoin}
           logoSrc={logosById[coin.id]}
           staticProfileContent={<StablecoinDetailSeoContent coin={coin} summary={summary} />}
+          exploreNextContent={
+            <ExploreNextSection
+              coin={coin}
+              related={related}
+              staticComparisonPages={staticComparisonPages.map((page) => ({
+                href: page.href,
+                shortTitle: page.shortTitle,
+                leftId: page.left.id,
+                rightId: page.right.id,
+              }))}
+              logos={logosById}
+            />
+          }
         />
       </Suspense>
-      <section id="coin-timeline" aria-label="Coin event timeline" className="mt-8">
-        <TapeForCoinTeaser coinId={id} />
-      </section>
-      <ExploreNextSection
-        coin={coin}
-        related={related}
-        staticComparisonPages={staticComparisonPages.map((page) => ({
-          href: page.href,
-          shortTitle: page.shortTitle,
-          leftId: page.left.id,
-          rightId: page.right.id,
-        }))}
-        logos={logosById}
-      />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },
