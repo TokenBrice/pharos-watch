@@ -44,6 +44,7 @@ describe("nav-config", () => {
 
     expect(analyzeGroup?.label).toBe("ANALYZE");
     expect(analyzeGroup?.items.map((item) => item.href)).toEqual([
+      "/screener",
       "/dependency-map",
       "/portfolio",
       "/compare",
