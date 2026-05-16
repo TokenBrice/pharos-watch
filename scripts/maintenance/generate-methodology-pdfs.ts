@@ -186,6 +186,16 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
   try {
     mkdirSync(outputDir, { recursive: true });
     const context = await browser.newContext({ viewport: { width: 1024, height: 1366 } });
+    // Force light theme for PDF rendering. `next-themes` reads from
+    // localStorage.theme on mount; seeding it before navigation avoids the
+    // dark-default flash and yields a coherent white-paper look. Combined
+    // with emulateMedia({ colorScheme: 'light' }) so `prefers-color-scheme`
+    // also reports light if any component branches on it.
+    await context.addInitScript(() => {
+      try {
+        window.localStorage.setItem("theme", "light");
+      } catch {}
+    });
 
     for (const surface of METHODOLOGY_SURFACES) {
       const page = await context.newPage();
@@ -195,7 +205,15 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
        
       console.log(`[generate-methodology-pdfs] ${url} -> ${filename}`);
 
+      await page.emulateMedia({ colorScheme: "light" });
       await page.goto(url, { waitUntil: "networkidle", timeout: 60_000 });
+      // Belt-and-braces: if next-themes already mounted before the init
+      // script took effect (it shouldn't), force the dark class off here.
+      await page.evaluate(() => {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        document.documentElement.style.colorScheme = "light";
+      });
       // page.pdf() emulates `print` media automatically; no manual switch needed.
       const buffer = await page.pdf({
         format: "Letter",
