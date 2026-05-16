@@ -23,6 +23,7 @@ import {
   HeroSupplyCard,
   HeroTertiaryMetrics,
 } from "./hero-card-metrics";
+import { RecentBlacklistBanner } from "./recent-blacklist-banner";
 export type {
   HeroSignalRailItem,
   HeroTertiaryMetricConfig,
@@ -180,6 +181,7 @@ export function HeroCardMobileSection({
         activeDepeg={activeDepeg}
         mobile
       />
+      <RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />
     </div>
   );
 }
@@ -272,6 +274,7 @@ export function HeroCardDesktopSection({
           trackingSpanDays={trackingSpanDays}
           activeDepeg={activeDepeg}
         />
+        <RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />
       </div>
     </div>
   );

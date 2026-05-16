@@ -36,6 +36,10 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <span>logo:{name}</span>,
 }));
 
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
+  RecentBlacklistBanner: () => null,
+}));
+
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyHint: ({ topic }: { topic: string }) => <span data-testid={`methodology-hint-${topic}`} />,
   MethodologyLabel: ({ children, topic }: { children: React.ReactNode; topic: string }) => (

@@ -30,7 +30,6 @@ import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-stick
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
-import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
 import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
@@ -308,10 +307,6 @@ export default function StablecoinDetailClient({
         <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
-        <RecentBlacklistBanner
-          symbol={viewModel.coin.symbol}
-          coinStatus={viewModel.coin.status}
-        />
 
         {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
           <FrozenStateBanner
