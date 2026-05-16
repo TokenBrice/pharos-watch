@@ -47,7 +47,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_STABLECOINS: [
     {
       id: "usdt-tether",

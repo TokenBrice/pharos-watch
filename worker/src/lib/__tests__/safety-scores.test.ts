@@ -47,7 +47,7 @@ const reportCardsSnapshotUnavailableErrorCtor = vi.hoisted(
   () => class ReportCardsSnapshotUnavailableError extends Error {},
 );
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "usdt-tether",

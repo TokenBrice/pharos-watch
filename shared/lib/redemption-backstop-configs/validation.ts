@@ -6,7 +6,7 @@ import {
   resolveFeeConfidence,
   resolveFeeModelKind,
 } from "../redemption-backstop-confidence";
-import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../stablecoins";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../stablecoins/registry";
 import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "../../types";
 import { RedemptionBackstopConfigSchema } from "./schema";
 import { getBackstopRegistryOverrideReasons, getBackstopRegistrySourceFilePaths } from "./factory";

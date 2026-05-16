@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-cron-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";

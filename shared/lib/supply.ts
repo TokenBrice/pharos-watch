@@ -1,5 +1,5 @@
 import type { GovernanceType, StablecoinData } from "../types";
-import { TRACKED_META_BY_ID } from "./stablecoins";
+import { TRACKED_META_BY_ID } from "./stablecoins/registry";
 
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
 const safeNum = (v: number | null | undefined): number =>

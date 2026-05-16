@@ -1,5 +1,5 @@
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";

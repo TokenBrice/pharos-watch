@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";

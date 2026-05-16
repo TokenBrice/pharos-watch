@@ -2,7 +2,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS, type ReportCardCacheLoadResult } from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";

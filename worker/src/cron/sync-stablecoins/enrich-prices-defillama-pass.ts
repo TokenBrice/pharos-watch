@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";

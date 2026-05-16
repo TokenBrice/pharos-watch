@@ -24,7 +24,7 @@ import {
   MECHANISM_ARCHETYPE_LABELS,
   MECHANISM_ARCHETYPE_ONE_LINERS,
 } from "../../shared/lib/classification";
-import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins/registry";
 import { ARCHETYPE_CONTENT } from "../../src/app/learn/mechanisms/content";
 import sitemap from "../../src/app/sitemap";
 import * as archetypePage from "../../src/app/learn/mechanisms/[archetype]/page";

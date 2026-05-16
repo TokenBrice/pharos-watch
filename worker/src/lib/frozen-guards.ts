@@ -1,4 +1,4 @@
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { errorResponse } from "./api-response";
 
 /**

@@ -1,5 +1,5 @@
 import { derivePegRates, type PegRateSource } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
 import { buildPegSummaryCoinMap, buildReportCardMap } from "@/lib/stablecoin-lookups";
 

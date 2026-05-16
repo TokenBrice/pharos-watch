@@ -14,7 +14,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStablecoinReserves } from "@/hooks/use-stablecoin-reserves";
 import { useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildStablecoinDetailViewModel,
   type StablecoinDetailSummary,

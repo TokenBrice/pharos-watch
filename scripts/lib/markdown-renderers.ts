@@ -18,7 +18,7 @@ import {
   preparePublicDocMarkdown,
   type PublicDoc,
 } from "../../shared/lib/public-docs";
-import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins/registry";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,

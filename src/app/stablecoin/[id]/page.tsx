@@ -1,7 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";

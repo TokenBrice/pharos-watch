@@ -27,7 +27,7 @@ import {
 } from "@/lib/severity-colors";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
 import { formatCompactUsd } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 function eventClass(type: string): string {

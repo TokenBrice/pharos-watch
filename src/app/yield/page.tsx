@@ -3,7 +3,7 @@ import { FaqSection } from "@/components/faq-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,

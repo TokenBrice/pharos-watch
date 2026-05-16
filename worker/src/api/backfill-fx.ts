@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { buildCommodityPeerMedianSeries } from "@shared/lib/commodity-median";
 import {

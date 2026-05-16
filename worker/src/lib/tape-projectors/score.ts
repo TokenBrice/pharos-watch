@@ -2,7 +2,7 @@
  * score.upgraded / score.downgraded projectors. Source: `safety_grade_history`
  * (explicit transition table — rows are written ONLY on grade change).
  */
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildTapeEventId,
   deriveIssuerId,

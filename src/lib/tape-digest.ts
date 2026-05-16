@@ -1,6 +1,6 @@
 import { collapseByCoinClass, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
 import { formatCompactUsd } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SEVERITY_RANK, type TapeEventSeverity } from "@shared/types/tape-event";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { tapeClassLabel } from "@/lib/tape-class-style";

@@ -20,7 +20,7 @@
  * which is unique per generation/coin, so re-runs are absorbed by the
  * tape_events (source_table, source_row_id, transition) unique index.
  */
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 

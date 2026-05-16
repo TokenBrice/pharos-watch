@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

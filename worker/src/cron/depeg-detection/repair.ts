@@ -1,4 +1,4 @@
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
 

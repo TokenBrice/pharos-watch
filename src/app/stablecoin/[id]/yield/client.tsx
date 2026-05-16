@@ -18,7 +18,7 @@ import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/components/yield-history-chart-model";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatChartDate, formatPercent } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { YieldHistoryPoint, YieldRanking } from "@shared/types";

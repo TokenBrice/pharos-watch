@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types/core";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";

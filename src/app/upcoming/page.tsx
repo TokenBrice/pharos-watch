@@ -7,7 +7,7 @@ import { CopyButton } from "@/components/copy-button";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
 

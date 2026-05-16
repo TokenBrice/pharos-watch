@@ -1,5 +1,5 @@
 import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveSyncStateView } from "@shared/types/live-reserves";
 import { getReserveCompositionRow, getReserveSyncState } from "./live-reserves-store-read";
 import {

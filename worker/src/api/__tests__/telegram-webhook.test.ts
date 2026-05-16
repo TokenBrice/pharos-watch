@@ -6,7 +6,7 @@ vi.stubGlobal("fetch", fetchSpy);
 
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
-const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins");
+const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
 const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
 
 function makeWebhookRequest(

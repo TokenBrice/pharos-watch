@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,

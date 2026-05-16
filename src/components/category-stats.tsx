@@ -7,7 +7,7 @@ import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@shared/lib/classification";
 import { getCirculatingRaw, computeGovernanceBreakdown } from "@shared/lib/supply";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_ACTIVE_IDS as ACTIVE_IDS, CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinData, ReportCard } from "@shared/types";
 import { GOVERNANCE_TIER_COLORS } from "@shared/lib/classification";
 

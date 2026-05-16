@@ -30,7 +30,7 @@ import {
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,

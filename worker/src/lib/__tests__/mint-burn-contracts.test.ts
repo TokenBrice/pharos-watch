@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { decodeUint256AtSlot } from "../evm-logs";
 import {
   buildMintBurnScope,

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BACKING_BADGE_STYLES, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { BackingType, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildStablecoinUrl } from "@/lib/urls";

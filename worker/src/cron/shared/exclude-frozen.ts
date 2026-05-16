@@ -1,4 +1,4 @@
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 /**
  * Strip entries whose id is in the frozen set. Generic over the iteration

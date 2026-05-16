@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   resolveTicker,
   parseTargetArgs,

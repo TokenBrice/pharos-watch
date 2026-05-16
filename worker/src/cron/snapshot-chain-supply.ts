@@ -4,7 +4,7 @@ import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 export async function snapshotChainSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (signal?.aborted) {

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,

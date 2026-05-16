@@ -1,6 +1,6 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";

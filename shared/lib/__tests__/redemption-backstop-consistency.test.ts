@@ -3,7 +3,7 @@ import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapte
 import { resolveCapacityConfidence, resolveFeeConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_CONFIG_MANIFEST } from "@shared/lib/redemption-backstop-configs";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
 import type {
   RedemptionAccessModel,

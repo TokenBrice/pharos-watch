@@ -1,4 +1,4 @@
-import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins";
+import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { sendAlert } from "../../lib/alerts";
 import {

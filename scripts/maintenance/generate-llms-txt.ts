@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { PEG_LABELS_SHORT } from "../../shared/lib/classification";
 import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
 import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
-import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
 import type { BackingType, GovernanceType, StablecoinMeta } from "../../shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";

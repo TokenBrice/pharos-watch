@@ -1,5 +1,5 @@
 import { THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   isDewsAlertable,
   isDewsDeescalation,

@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "./stablecoins";
+import { TRACKED_META_BY_ID } from "./stablecoins/registry";
 import type { RedemptionBackstopEntry, RedemptionDocSource, RedemptionDocsProvenance } from "../types/redemption";
 
 type RedemptionDocs = NonNullable<RedemptionBackstopEntry["docs"]>;

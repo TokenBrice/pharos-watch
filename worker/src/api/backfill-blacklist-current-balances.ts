@@ -16,7 +16,7 @@ import {
 import type { BlacklistRow } from "../cron/blacklist/shared";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runAdminRoute } from "../lib/route-wrappers";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 2000;

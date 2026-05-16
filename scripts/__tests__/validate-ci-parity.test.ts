@@ -200,6 +200,7 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-openapi-spec.ts",
       "tsx scripts/maintenance/generate-llms-txt.ts",
       "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
+      "node scripts/build-data/build-client-registry.mjs",
       "node scripts/maintenance/generate-api-reference.mjs",
     ];
     const expectedCheckCommands = [
@@ -210,6 +211,7 @@ describe("validate-ci parity", () => {
       "tsx scripts/maintenance/generate-openapi-spec.ts --check",
       "tsx scripts/maintenance/generate-llms-txt.ts --check",
       "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
+      "node scripts/build-data/build-client-registry.mjs --check",
       "node scripts/maintenance/generate-api-reference.mjs --check",
     ];
 
@@ -221,6 +223,7 @@ describe("validate-ci parity", () => {
       "openapi",
       "llms-txt",
       "stablecoin-frozen-registry",
+      "stablecoin-client-registry",
       "api-reference",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);

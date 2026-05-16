@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { deriveEffectiveDependencies } from "@shared/lib/dependency-derivation";
 import { buildDependencyGraphEdgesFromDependencies, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import {

@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../../../lib/response-body";

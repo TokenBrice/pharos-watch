@@ -1,7 +1,7 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {

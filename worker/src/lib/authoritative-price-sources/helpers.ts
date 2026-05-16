@@ -1,5 +1,5 @@
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { binarySearchNearest } from "../binary-search";

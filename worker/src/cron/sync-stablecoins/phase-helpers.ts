@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";

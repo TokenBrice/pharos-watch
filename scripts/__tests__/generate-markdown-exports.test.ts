@@ -19,7 +19,7 @@ import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { changelogs } from "../../src/data/changelogs";
 import digests from "../../data/digests.json";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 
 const FIXTURES = join(__dirname, "fixtures", "markdown");
 

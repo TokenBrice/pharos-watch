@@ -2,7 +2,7 @@ import { D1_BATCH_SIZE, USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { YIELD_POOL_MAP } from "./yield-config";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 const DL_CHART_BASE = "https://yields.llama.fi/chart";
 const MAX_BACKFILL_DAYS = 365;

@@ -1,5 +1,5 @@
 import { jsonFreshResponse, errorResponse, withErrorHandler } from "../lib/api-utils";
-import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReservePresentationMode, StablecoinReservesResponse } from "@shared/types/live-reserves";
 import { resolveReserveResult } from "../lib/live-reserves-store";
 import { CACHE_PROFILES } from "../lib/constants";

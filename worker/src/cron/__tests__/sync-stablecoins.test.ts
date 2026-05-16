@@ -29,7 +29,7 @@ function mockFetch(routes: MockRoute[] = []): ReturnType<typeof vi.fn> {
 // --- Module-level mocks ---
 
 // Stub the stablecoins list to avoid importing the full registry
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const fallbackTrackedTokens = Array.from({ length: 60 }, (_, i) => ({
     id: `fb-${i}`,
     name: `Fallback Coin ${i}`,

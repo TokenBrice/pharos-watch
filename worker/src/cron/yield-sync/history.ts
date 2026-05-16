@@ -1,5 +1,5 @@
 import { THIRTY_DAYS_SECONDS } from "@shared/lib/time-constants";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import {

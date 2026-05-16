@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchMarketBackfillPriceSeries } from "../../api/backfill-price-sources";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";

@@ -1,4 +1,4 @@
-import { READABLE_STABLECOINS } from "@shared/lib/stablecoins";
+import { READABLE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 

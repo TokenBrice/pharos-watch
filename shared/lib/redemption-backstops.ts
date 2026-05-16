@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "./stablecoins";
+import { TRACKED_META_BY_ID } from "./stablecoins/registry";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "./redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
 

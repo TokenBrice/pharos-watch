@@ -1,5 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
   assessAlertSafetySourceCache,

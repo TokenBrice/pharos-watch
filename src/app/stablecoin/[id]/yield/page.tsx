@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@/lib/urls";

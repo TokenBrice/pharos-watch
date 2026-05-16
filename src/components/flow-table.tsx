@@ -23,7 +23,7 @@ import {
 } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { cn } from "@/lib/utils";
 import {

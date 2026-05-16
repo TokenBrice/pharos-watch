@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const getReserveSyncStateMock = vi.fn();
 const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();

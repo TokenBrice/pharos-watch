@@ -20,7 +20,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";

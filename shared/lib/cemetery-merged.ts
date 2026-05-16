@@ -1,6 +1,10 @@
 import type { DeadStablecoin } from "../types";
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
-import { FROZEN_STABLECOINS } from "./stablecoins";
+// Cemetery rendering needs obituary prose, contracts, and peak market cap —
+// fields that intentionally live outside the slim client projection. Stay on
+// the fat registry submodule; client cemetery surfaces that import this
+// module accept the size cost in exchange for a single-import call site.
+import { FROZEN_STABLECOINS } from "./stablecoins/registry";
 
 export type CemeteryEntry = DeadStablecoin & { archivedDataAvailable?: boolean };
 

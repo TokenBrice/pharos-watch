@@ -1,4 +1,4 @@
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { chunkArray } from "./collections";
 import { buildInClause } from "./db";
 import { runWithOverloadRetry } from "./cron-lease";

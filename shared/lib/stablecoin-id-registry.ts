@@ -1,7 +1,7 @@
 import { DEAD_STABLECOINS } from "./dead-stablecoins";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "./psi-eligible";
 import { SHADOW_STABLECOINS } from "./shadow-stablecoins";
-import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins";
+import { READABLE_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins/registry";
 import type { StablecoinMeta } from "../types";
 
 /** All live coin metadata: tracked + shadow assets. Excludes dead/pre-launch. Use this as the seed for cross-provider id maps. */

@@ -5,7 +5,7 @@ import { formatCompactCount } from "@shared/lib/format";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 interface SiteHeaderProps {
   total: number;

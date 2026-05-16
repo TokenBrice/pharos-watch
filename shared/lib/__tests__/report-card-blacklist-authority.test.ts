@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_STABLECOINS } from "../stablecoins";
+import { TRACKED_STABLECOINS } from "../stablecoins/registry";
 import { createBlacklistResolutionContext, resolveBlacklistStatus, resolveBlacklistStatuses } from "../report-cards";
 
 const EXPECTED_DILUTABLE_IDS = [

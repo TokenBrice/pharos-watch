@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/dependency-graph";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   useDexLiquidity,
   usePegSummary,

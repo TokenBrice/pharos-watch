@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";

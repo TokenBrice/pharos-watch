@@ -15,7 +15,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityMap, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";

@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
 import type { YieldType } from "@shared/types/core";
 import {

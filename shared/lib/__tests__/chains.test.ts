@@ -5,7 +5,7 @@ import {
   getActiveChainIds,
   resolveChainId,
 } from "@shared/lib/chains";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 describe("CHAIN_META", () => {
   it("exposes only lowercase chain keys", () => {

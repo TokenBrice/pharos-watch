@@ -21,7 +21,7 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_STABLECOINS: STABLECOINS_MOCK,
   ACTIVE_STABLECOINS: STABLECOINS_MOCK,
   TRACKED_META_BY_ID: new Map(STABLECOINS_MOCK.map((coin: { id: string }) => [coin.id, coin])),

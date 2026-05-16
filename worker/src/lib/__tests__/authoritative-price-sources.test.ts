@@ -4,7 +4,7 @@ const fetchEvmCallHexAtBlockMock = vi.fn();
 const resolveClosestBlockAtOrBeforeTimestampMock = vi.fn();
 const fetchMarketBackfillPriceSeriesMock = vi.fn();
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_META_BY_ID: new Map([
     [
       "cusd-cap",

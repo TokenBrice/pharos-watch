@@ -13,7 +13,7 @@ import {
   filterDependencyGraphEdgesToLive,
   type DependencyGraphEdge,
 } from "@shared/lib/dependency-graph";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DependencyType, ReportCard } from "@shared/types";
 
 // ---------------------------------------------------------------------------

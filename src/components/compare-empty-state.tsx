@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, LockKeyhole, Waves } from "lucide-react";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { PresetCard } from "@/components/preset-card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";

@@ -7,7 +7,7 @@ import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
 import { DIMENSION_LABELS, DIMENSION_ORDER, METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "@/components/radar-chart";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";

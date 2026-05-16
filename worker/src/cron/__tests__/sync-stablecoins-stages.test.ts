@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@shared/lib/stablecoins", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/stablecoins")>();
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
   const TRACKED_META_BY_ID = new Map(actual.TRACKED_META_BY_ID);
   TRACKED_META_BY_ID.set("usdt-tether", {
     ...TRACKED_META_BY_ID.get("usdt-tether"),

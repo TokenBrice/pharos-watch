@@ -3,7 +3,7 @@ import {
   ACTIVE_STABLECOINS,
   TRACKED_STABLECOINS,
   TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
 import { loadStablecoinsCache } from "../stablecoins-cache";
 
 /** Matches the ResolvedCoin shape from telegram-alerts.ts — duplicated here to avoid a circular import. */

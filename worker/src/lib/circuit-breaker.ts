@@ -11,7 +11,7 @@ import {
   CIRCUIT_PROBE_INTERVAL_SEC,
 } from "./circuit-config";
 import { CIRCUIT_SOURCE } from "./constants";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
 
 export type CircuitRecord = SharedCircuitRecord;

@@ -1,5 +1,5 @@
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,

@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { DISAMBIGUATION_TTL_SEC } from "../lib/telegram-constants";
 

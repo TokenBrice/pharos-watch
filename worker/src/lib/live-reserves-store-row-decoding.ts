@@ -1,5 +1,5 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   LiveReserveEvidenceClass,
   LiveReserveFreshnessMode,

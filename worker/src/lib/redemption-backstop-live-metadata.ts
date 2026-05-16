@@ -3,7 +3,7 @@ import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   RedemptionCapacityConfidence,
   RedemptionHolderEligibility,

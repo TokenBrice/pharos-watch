@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildApiOgImageUrl,
   buildStablecoinDetailDescription,

@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 import { sanitizeRecordValues } from "./normalizers";
 

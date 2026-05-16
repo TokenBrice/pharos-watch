@@ -9,7 +9,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatPegDeviation } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_ACTIVE_IDS as ACTIVE_IDS, CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 /* ─── Constants ─────────────────────────────────────────────────── */

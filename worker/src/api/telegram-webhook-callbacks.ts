@@ -21,7 +21,7 @@
  * stays forward-compatible with future keyboard changes.
  */
 
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { formatCoveragePayload, formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { answerCallbackQuery, editMessage, escapeHtml } from "../lib/telegram";
 import { batchExecute } from "../lib/db";

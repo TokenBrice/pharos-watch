@@ -36,7 +36,7 @@ function cardWithDependencies(
 
 async function importWithStablecoins(stablecoins: SyntheticStablecoin[]) {
   vi.resetModules();
-  vi.doMock("@shared/lib/stablecoins", () => ({
+  vi.doMock("@shared/lib/stablecoins/registry", () => ({
     ACTIVE_STABLECOINS: stablecoins,
   }));
   return import("../portfolio-analysis");
@@ -50,7 +50,7 @@ function expectFiniteExposure(rows: readonly UpstreamExposure[]): void {
 }
 
 afterEach(() => {
-  vi.doUnmock("@shared/lib/stablecoins");
+  vi.doUnmock("@shared/lib/stablecoins/registry");
   vi.resetModules();
 });
 
@@ -186,7 +186,7 @@ describe("computeUpstreamExposure", () => {
 
   it("keeps representative real registry exposure values finite", async () => {
     vi.resetModules();
-    vi.doUnmock("@shared/lib/stablecoins");
+    vi.doUnmock("@shared/lib/stablecoins/registry");
     const { computeUpstreamExposure: computeRealExposure } = await import("../portfolio-analysis");
 
     const exposure = computeRealExposure(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../stablecoins";
+import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,

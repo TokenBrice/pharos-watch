@@ -1,5 +1,5 @@
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { RedemptionBackstopConfig, RedemptionCapacityModel } from "@shared/lib/redemption-backstops";
 import type { RedemptionBackstopProviderId } from "@shared/lib/redemption-backstop-providers";
 import type { RedemptionBackstopEntry, RedemptionCapacityProfile } from "@shared/types/redemption";

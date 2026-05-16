@@ -15,7 +15,7 @@ import {
 } from "../lib/constants";
 import { CoinGeckoSimplePriceSchema, DefiLlamaCoinsPriceSchema } from "../lib/upstream-schemas";
 import { batchExecute } from "../lib/db";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { cgUrl, cgHeaders } from "../lib/coingecko";

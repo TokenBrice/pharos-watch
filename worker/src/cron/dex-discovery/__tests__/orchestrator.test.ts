@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DiscoveryMeta } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {

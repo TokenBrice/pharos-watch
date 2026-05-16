@@ -4,7 +4,7 @@ import { batchExecute } from "../lib/db";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import type { ReportCardGrade } from "@shared/types/report-cards";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;

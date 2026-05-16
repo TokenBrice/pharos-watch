@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CostLineItem, Donation, FundingChain } from "@shared/lib/funding/types";
 import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/funding/helpers";
 import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";

@@ -5,7 +5,7 @@
  * `telegram-webhook-settings.ts`.
  */
 
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { escapeHtml } from "../lib/telegram";
 import { buildTelegramMiniAppUrl } from "../lib/telegram-webhook-registration";
 import { formatQuietHours } from "./telegram-webhook-messages";

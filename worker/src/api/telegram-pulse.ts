@@ -1,5 +1,5 @@
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   TelegramPulseSchema,
   type TelegramPulse,

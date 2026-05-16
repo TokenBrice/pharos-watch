@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { LAUNCH_PHASE_LABELS, PHASE_BADGE, PHASE_RING, dateScore, formatFuzzyDate } from "@/lib/pre-launch";

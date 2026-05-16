@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,

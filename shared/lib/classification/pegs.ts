@@ -1,5 +1,5 @@
 import type { PegCurrency } from "../../types";
-import { ACTIVE_STABLECOINS } from "../stablecoins";
+import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import type { PegMetadata } from "./common";
 
 // Peg currency labels

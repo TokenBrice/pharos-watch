@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 
 const MAJORITY_THRESHOLD = 0.50;

@@ -1,7 +1,7 @@
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReportCard, DimensionKey } from "@shared/types/report-cards";
 import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";

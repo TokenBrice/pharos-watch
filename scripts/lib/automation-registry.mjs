@@ -179,6 +179,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     script: "scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
   },
   {
+    id: "stablecoin-client-registry",
+    checkCommand: "node scripts/build-data/build-client-registry.mjs --check",
+    command: "node scripts/build-data/build-client-registry.mjs",
+    script: "scripts/build-data/build-client-registry.mjs",
+  },
+  {
     id: "api-reference",
     checkCommand: "node scripts/maintenance/generate-api-reference.mjs --check",
     command: "node scripts/maintenance/generate-api-reference.mjs",

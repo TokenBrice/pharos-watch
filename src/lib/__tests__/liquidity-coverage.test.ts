@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
 
 /** Chains with no standard DEX infrastructure — intentionally unsupported */

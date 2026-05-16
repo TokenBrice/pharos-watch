@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, Radar, ShieldCheck } from "lucide-react";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import { PresetCard } from "@/components/preset-card";
 

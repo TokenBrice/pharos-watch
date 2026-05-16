@@ -8,7 +8,7 @@ import {
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { ExplainerPageShell } from "./explainer-page-shell";

@@ -1,4 +1,4 @@
-import { TRACKED_IDS } from "./stablecoins";
+import { TRACKED_IDS } from "./stablecoins/registry";
 
 /**
  * Check whether a coin ID is in the tracked stablecoins set.

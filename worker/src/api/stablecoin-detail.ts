@@ -1,6 +1,6 @@
 import { getCache } from "../lib/db-cache";
 import { withErrorHandler } from "../lib/api-utils";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   CACHE_TTL_SECONDS,
   DETAIL_STALE_CACHE_MAX_AGE_SECONDS,

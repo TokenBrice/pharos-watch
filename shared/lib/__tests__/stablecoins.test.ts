@@ -17,7 +17,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
 import { getVariants, isTrackedVariant } from "@shared/lib/stablecoins";
 import {
   findStablecoinCatalogInvariantIssues,

@@ -5,7 +5,7 @@ import {
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import {
   ACTIVE_PEG_CURRENCIES,

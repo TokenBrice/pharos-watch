@@ -9,7 +9,7 @@ import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { YieldRanking } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;

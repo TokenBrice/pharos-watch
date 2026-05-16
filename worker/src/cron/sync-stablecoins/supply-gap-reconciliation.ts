@@ -1,7 +1,7 @@
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { CHAIN_META } from "@shared/lib/chains";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";

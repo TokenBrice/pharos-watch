@@ -3,7 +3,7 @@ import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { mockD1 } from "./helpers/mock-d1";
 
 // Mock stablecoins to avoid importing full metadata tree
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_META_BY_ID: new Map([
     ["usdt-tether", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],
     ["usdc-circle", { flags: { backing: "rwa-backed" }, commodityOunces: undefined }],

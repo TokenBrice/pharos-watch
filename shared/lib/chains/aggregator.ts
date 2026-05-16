@@ -1,6 +1,6 @@
 import { CHAIN_META, getChainResilienceTier } from "./index";
 import { canonicalizeChainCirculating } from "./circulating";
-import { TRACKED_META_BY_ID } from "../stablecoins";
+import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { sumPegBuckets } from "../supply";
 import {

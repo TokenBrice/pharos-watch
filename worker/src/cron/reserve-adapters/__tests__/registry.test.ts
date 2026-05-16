@@ -8,7 +8,7 @@ import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter } from "../index";
 
 const VALID_INPUT_KINDS = new Set([

@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { batchExecute } from "../lib/db";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";
 import { resolveTelegramPresetTargets, type TelegramPresetId } from "../lib/telegram-presets";

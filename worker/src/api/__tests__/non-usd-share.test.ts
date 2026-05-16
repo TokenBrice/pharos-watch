@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleNonUsdShare } from "../non-usd-share";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";

@@ -1,5 +1,5 @@
 import { isReserveDriftThresholdExceeded } from "@shared/lib/status-thresholds";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeCollateralQualityFromReserves } from "@shared/lib/report-cards";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import { loadFreshIndependentLiveReserveMap } from "./live-reserves-store";

@@ -20,7 +20,7 @@ import {
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
 import { SHADOW_STABLECOINS } from "@shared/lib/shadow-stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 

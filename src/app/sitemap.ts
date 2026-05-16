@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";

@@ -19,7 +19,7 @@ function mockD1(...args: Parameters<typeof createMockD1>): MockD1Database {
 
 // --- Module-level mocks ---
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "sdai-maker",

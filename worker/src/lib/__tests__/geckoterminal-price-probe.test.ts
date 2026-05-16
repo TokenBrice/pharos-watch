@@ -40,7 +40,7 @@ vi.mock("@shared/lib/chain-provider-registry", () => ({
   },
 }));
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_STABLECOINS: [
     {
       id: "asset-404",

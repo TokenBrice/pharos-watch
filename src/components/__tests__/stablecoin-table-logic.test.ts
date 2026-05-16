@@ -13,7 +13,7 @@ import {
   getFilterTags,
   OTHER_PEG_TAGS,
 } from "@shared/lib/filter-tags";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
 

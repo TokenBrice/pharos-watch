@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import { DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";

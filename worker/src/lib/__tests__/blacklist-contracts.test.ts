@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveBlacklistStatuses } from "@shared/lib/report-card-blacklist-matchers";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";

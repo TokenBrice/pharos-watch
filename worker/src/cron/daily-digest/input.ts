@@ -2,7 +2,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/market";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getConditionBand } from "../../lib/stability-index";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { SECONDS } from "../../lib/time-constants";

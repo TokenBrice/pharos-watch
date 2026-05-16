@@ -7,7 +7,7 @@ import { setCache } from "../lib/db-cache";
 import { writeReportCardCache } from "../lib/report-card-cache";
 import { writePublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 export async function publishReportCardCache(
   db: D1Database,

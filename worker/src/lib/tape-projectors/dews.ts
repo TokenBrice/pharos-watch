@@ -19,7 +19,7 @@
  * `tape_events` unique index on `(source_table, source_row_id, transition)`
  * absorbs duplicates. Watermark advancement keeps the scan cheap on re-runs.
  */
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DEPEG_DEWS_METHODOLOGY_VERSION } from "@shared/lib/depeg-dews-version";
 import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 

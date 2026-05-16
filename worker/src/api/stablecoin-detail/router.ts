@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { handleCommodityDetail } from "./commodity";
 import { handleCoinGeckoOnlyDetail } from "./coingecko-only";
 import { handleCacheBackedDetail } from "./cache-fallback";
