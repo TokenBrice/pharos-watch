@@ -105,52 +105,48 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
   const GRID_CLASSES = "grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <section id="collateral-usage" className="animate-in fade-in duration-300">
-      <div className="border-l-[3px] border-l-amber-500 pl-3">
-        <div className="flex items-center gap-2">
-          <DetailSectionTitle>
-            {ticker} Is Used as Collateral by:
-          </DetailSectionTitle>
-          <Badge variant="outline" className="text-[11px]">
-            {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
-          </Badge>
-        </div>
+    <section id="collateral-usage" className="animate-in fade-in space-y-3 duration-300">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <DetailSectionTitle>
+          {ticker} Is Used as Collateral by
+        </DetailSectionTitle>
+        <Badge variant="outline" className="text-[11px]">
+          {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
+        </Badge>
         {usage.length > 3 && wrapperCount > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <span className="text-xs text-muted-foreground">
             {collateralCount > 0 && `${collateralCount} collateral`}
             {collateralCount > 0 && wrapperCount > 0 && " · "}
             {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
-          </p>
+          </span>
         )}
-        <div className="mt-3">
-          {isCompact ? (
-            <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
-              {visible.map(renderItem)}
-            </div>
-          ) : showTierLabels ? (
-            <div className="space-y-3">
-              {tierSections.map((tier) => (
-                <div key={tier.key}>
-                  <p className="mb-1 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {tier.label}
-                  </p>
-                  <div className={GRID_CLASSES}>{tier.items.map(renderItem)}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className={GRID_CLASSES}>{visible.map(renderItem)}</div>
-          )}
-          {needsCollapse && (
-            <button
-              onClick={() => setShowAll((prev) => !prev)}
-              className="pharos-focus-ring mt-3 inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground lg:min-h-9"
-            >
-              {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
-            </button>
-          )}
-        </div>
       </div>
+      {isCompact ? (
+        <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
+          {visible.map(renderItem)}
+        </div>
+      ) : showTierLabels ? (
+        <div className="space-y-3">
+          {tierSections.map((tier) => (
+            <div key={tier.key}>
+              <p className="mb-1 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                {tier.label}
+              </p>
+              <div className={GRID_CLASSES}>{tier.items.map(renderItem)}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={GRID_CLASSES}>{visible.map(renderItem)}</div>
+      )}
+      {needsCollapse && (
+        <button
+          onClick={() => setShowAll((prev) => !prev)}
+          className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground lg:min-h-9"
+        >
+          {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
+        </button>
+      )}
     </section>
   );
 }

@@ -38,7 +38,8 @@ export function ContagionSnapshot({
       && liveCardIds.has(e.to)
       && (e.from === stablecoinId || e.to === stablecoinId),
   );
-  const hasRightColumn = Boolean(variantRelationshipCard) || Boolean(hasCollateralUsage);
+  const hasVariantCard = Boolean(variantRelationshipCard);
+  const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
 
   if (!hasContagion && !hasRightColumn) {
     return null;
@@ -52,9 +53,20 @@ export function ContagionSnapshot({
   const rightColumn = (
     <div className="space-y-6">
       {variantRelationshipCard}
-      {hasCollateralUsage ? <CollateralUsageSection stablecoinId={stablecoinId} /> : null}
+      {hasCollateralUsage ? (
+        <div className={hasVariantCard ? "border-t border-border/40 pt-6" : undefined}>
+          <CollateralUsageSection stablecoinId={stablecoinId} />
+        </div>
+      ) : null}
     </div>
   );
+
+  const isSplit = hasContagion && hasRightColumn;
+  const layoutClass = isSplit
+    ? "grid gap-6 lg:grid-cols-2"
+    : hasContagion
+      ? undefined
+      : "mx-auto max-w-2xl";
 
   return (
     <Card className="rounded-xl">
@@ -67,7 +79,7 @@ export function ContagionSnapshot({
         </p>
       </CardHeader>
       <CardContent>
-        <div className={hasContagion && hasRightColumn ? "grid gap-6 lg:grid-cols-2" : "grid gap-6 grid-cols-1"}>
+        <div className={layoutClass}>
           {hasContagion ? (
             <ContagionGraph
               cards={rc.cards}
