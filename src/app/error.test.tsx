@@ -23,7 +23,7 @@ describe("root app error boundary", () => {
       />,
     );
 
-    expect(screen.getByText("Something went wrong while loading this page.")).toBeTruthy();
+    expect(screen.getByText("The data didn't reach this page. Try again, or check /status/ if it keeps happening.")).toBeTruthy();
     expect(screen.queryByText("select * from secrets where leaked = 1")).toBeNull();
   });
 

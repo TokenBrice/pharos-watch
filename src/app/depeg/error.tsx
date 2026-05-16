@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load depeg data", "DepegError");
+export default createPageError("The depeg tracker didn't load.", "DepegError");

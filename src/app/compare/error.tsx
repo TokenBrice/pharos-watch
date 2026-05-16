@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load comparison data", "CompareError");
+export default createPageError("The comparison view didn't open.", "CompareError");

@@ -30,7 +30,7 @@ export function FilterCombobox({
   placeholder,
   label,
   searchable = true,
-  emptyLabel = "No results",
+  emptyLabel = "Nothing matches.",
   triggerClassName,
 }: FilterComboboxProps) {
   const [open, setOpen] = useState(false);

@@ -190,7 +190,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
       })}
       {sorted.length === 0 && (
         <DataTableEmptyRow colSpan={LIQUIDITY_COLUMNS.length}>
-          {searchQuery ? `No results for "${searchQuery}"` : "No stablecoins match the current filters."}
+          {searchQuery ? `Nothing matched "${searchQuery}". Try a symbol like USDT.` : "No coins match. Loosen the filter."}
         </DataTableEmptyRow>
       )}
     </DataTableShell>

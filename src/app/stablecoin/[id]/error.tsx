@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load stablecoin", "StablecoinError");
+export default createPageError("This coin's page didn't load.", "StablecoinError");

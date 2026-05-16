@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load API reference", "AboutApiError");
+export default createPageError("The API reference didn't load.", "AboutApiError");

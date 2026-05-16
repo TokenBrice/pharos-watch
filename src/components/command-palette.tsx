@@ -311,7 +311,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         >
           {query.trim() && flatResults.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No results found for &ldquo;{query}&rdquo;</p>
+              <p className="text-sm text-muted-foreground">Nothing found for &ldquo;{query}&rdquo;. Try a ticker or chain name.</p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Try searching by symbol (e.g., USDT) or browse by category
               </p>

@@ -88,7 +88,7 @@ describe("ChainProfileClient", () => {
 
     render(<ChainProfileClient chainId="ethereum" />);
 
-    expect(screen.getByText("No data available for this chain")).toBeTruthy();
+    expect(screen.getByText("Pharos doesn't have a chain read for this one yet.")).toBeTruthy();
     expect(screen.getByText("View all chains")).toBeTruthy();
   });
 
@@ -102,7 +102,7 @@ describe("ChainProfileClient", () => {
     render(<ChainProfileClient chainId="ethereum" />);
 
     expect(screen.getByText(/refresh delayed/i)).toBeTruthy();
-    expect(screen.queryByText("No data available for this chain")).toBeNull();
+    expect(screen.queryByText("Pharos doesn't have a chain read for this one yet.")).toBeNull();
   });
 
   it("shows a stale-data notice while still rendering the chain when cached data exists", () => {

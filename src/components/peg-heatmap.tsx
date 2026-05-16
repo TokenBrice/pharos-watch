@@ -138,7 +138,7 @@ export function PegHeatmap({
             ))}
           </div>
         ) : sorted.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No coins match filters</p>
+          <p className="text-sm text-muted-foreground text-center py-8">No coins match. Drop a filter or two.</p>
         ) : (
           <>
             <div className="grid grid-cols-2 min-[375px]:grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">

@@ -18,7 +18,7 @@ export function PageError({
       ? (error.message || "An unexpected error occurred.")
       : isHardReloadableRouteError(error)
         ? "A newer site version may be available. Reloading usually fixes this page."
-        : "Something went wrong while loading this page.";
+        : "The data didn't reach this page. Try again, or check /status/ if it keeps happening.";
   const shouldHardReload = isHardReloadableRouteError(error);
 
   const handleRetry = () => {

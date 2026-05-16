@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load flow data", "FlowsError");
+export default createPageError("Flow data didn't reach us.", "FlowsError");

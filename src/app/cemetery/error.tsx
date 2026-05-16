@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load cemetery", "CemeteryError");
+export default createPageError("The cemetery is unreachable from here.", "CemeteryError");

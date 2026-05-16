@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load liquidity data", "LiquidityError");
+export default createPageError("Liquidity feed missed this read.", "LiquidityError");

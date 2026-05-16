@@ -265,7 +265,7 @@ export function UpcomingClient() {
       {/* ── Card grid ────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="pharos-empty-note flex flex-col items-center gap-3 py-12 text-center">
-          <p>No pre-launch stablecoins match the current filters.</p>
+          <p>No pre-launch coins match. Drop a filter or two.</p>
           <button
             onClick={() => {
               setPhaseFilter(new Set());

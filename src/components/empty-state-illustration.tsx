@@ -18,11 +18,11 @@ const icons = {
 
 const defaults = {
   search: {
-    title: "No results found",
+    title: "Nothing matched.",
     description: "Try adjusting your search terms or clearing filters to see more stablecoins.",
   },
   data: {
-    title: "No data available",
+    title: "No reads yet.",
     description: "We're still gathering data for this section. Check back soon for updates.",
   },
   error: {

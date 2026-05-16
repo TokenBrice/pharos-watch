@@ -198,7 +198,7 @@ export function PriceTransparencyCard({
                 >
                   <span className="font-medium text-muted-foreground/60">{source.label}</span>
                   <Badge variant="outline" className="text-[11px] bg-muted/40 text-muted-foreground border-border/40">
-                    No data
+                    No feed
                   </Badge>
                 </div>
               ))}

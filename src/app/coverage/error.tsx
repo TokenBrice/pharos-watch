@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load coverage data", "CoverageError");
+export default createPageError("Coverage stats didn't reach this view.", "CoverageError");

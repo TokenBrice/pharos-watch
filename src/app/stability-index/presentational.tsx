@@ -90,7 +90,7 @@ function PsiHistoryStatsGrid({
   if (items.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
-        No data available
+        PSI hasn&apos;t computed yet — check back in 30 minutes.
       </div>
     );
   }

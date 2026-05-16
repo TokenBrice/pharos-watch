@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load portfolio", "PortfolioError");
+export default createPageError("Your portfolio didn't load.", "PortfolioError");

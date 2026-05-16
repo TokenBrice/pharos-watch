@@ -217,7 +217,7 @@ export function TotalMcapChart() {
           </div>
         ) : (
           <div className="pharos-empty-note flex h-[250px] sm:h-[350px] items-center justify-center text-center">
-            No market-cap history is available for the current time window.
+            No market-cap history for this window.
           </div>
         )}
       </CardContent>

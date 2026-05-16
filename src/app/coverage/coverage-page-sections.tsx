@@ -43,7 +43,7 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
       <CardContent className="pt-0">
         <div className="rounded-2xl border border-dashed border-border/70 bg-background/30 px-4 py-8 text-sm text-muted-foreground">
           {isError
-            ? "No active-coin denominator is available right now."
+            ? "Active-coin denominator isn't ready this round."
             : "Preparing feature availability, market-cap reach, and per-coin statuses."}
         </div>
       </CardContent>

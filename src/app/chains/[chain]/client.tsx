@@ -68,7 +68,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
           <Info className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="text-center">
-          <p className="font-medium">No data available for this chain</p>
+          <p className="font-medium">Pharos doesn&apos;t have a chain read for this one yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             This chain may not be tracked or may have been removed.
           </p>

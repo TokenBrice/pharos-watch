@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load the timeline", "TimelineError");
+export default createPageError("The timeline didn't load.", "TimelineError");

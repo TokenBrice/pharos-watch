@@ -445,7 +445,7 @@ export function SafetyEmptyState({
 }) {
   return (
     <div className="text-center py-12 space-y-2">
-      <p className="text-sm text-muted-foreground">No coins match this filter.</p>
+      <p className="text-sm text-muted-foreground">No coins match this filter. Loosen one and look again.</p>
       {gradeFilter !== "all" && (
         <Button
           variant="outline"
