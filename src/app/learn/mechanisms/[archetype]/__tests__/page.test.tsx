@@ -40,10 +40,10 @@ describe("ArchetypeExplainerPage", () => {
       });
       const html = renderToStaticMarkup(element);
       const label = MECHANISM_ARCHETYPE_LABELS[archetype];
-      // Header uses <h1 class="pharos-page-title">…</h1>; the label appears in
-      // breadcrumb chrome around the title, so an h1 must exist and the label
-      // must be present in the rendered markup.
-      expect(html).toMatch(/<h1[^>]*pharos-page-title[^>]*>/);
+      // Page renders an editorial display <h1> (headline) plus the archetype
+      // label inside the breadcrumb trail. Assert one semantic h1 exists and
+      // the label is present somewhere in the markup.
+      expect(html).toMatch(/<h1\b/);
       expect(html).toContain(label);
     });
   }

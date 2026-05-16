@@ -8,10 +8,10 @@ import {
   getMechanismArchetypeLabel,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ARCHETYPE_CONTENT } from "../content";
 import { ArchetypeExplainerBody } from "../explainer-shell";
+import { ExplainerPageShell } from "../explainer-page-shell";
 
 const ARCHETYPE_SLUGS = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
 
@@ -73,21 +73,18 @@ export default async function ArchetypeExplainerPage({
   const explainerPath = getMechanismExplainerPath(slug);
 
   return (
-    <FeaturePageShell
-      breadcrumbName={label}
-      breadcrumbLabel={label}
-      path={explainerPath}
-      title={content.headline}
-      variant="longform"
-      containerClassName="mx-auto w-full max-w-[68rem] space-y-8"
+    <ExplainerPageShell
       breadcrumbItems={[
         { name: "Home", url: "/" },
         { name: "Learn", url: "/learn/mechanisms/" },
         { name: label, url: explainerPath },
       ]}
-      leadParagraphs={[content.subtitle, ...content.lead]}
+      breadcrumbLabel={label}
+      title={content.headline}
+      subtitle={content.subtitle}
+      leadParagraphs={content.lead}
     >
       <ArchetypeExplainerBody content={content} />
-    </FeaturePageShell>
+    </ExplainerPageShell>
   );
 }

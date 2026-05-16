@@ -26,7 +26,6 @@ export interface ArchetypeCrossLink {
 }
 
 export interface ArchetypeVisuals {
-  readonly accentBorder: string;
   readonly kickerClass: string;
 }
 
@@ -45,24 +44,9 @@ export interface ArchetypeContent {
 }
 
 export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
-  "fiat-cash": {
-    accentBorder: "border-l-blue-500",
-    kickerClass: "text-blue-700 dark:text-blue-400",
-  },
-  tbill: {
-    accentBorder: "border-l-violet-500",
-    kickerClass: "text-violet-700 dark:text-violet-400",
-  },
-  cdp: {
-    accentBorder: "border-l-cyan-500",
-    kickerClass: "text-cyan-700 dark:text-cyan-400",
-  },
-  "synthetic-delta-neutral": {
-    accentBorder: "border-l-teal-500",
-    kickerClass: "text-teal-700 dark:text-teal-400",
-  },
-  algorithmic: {
-    accentBorder: "border-l-rose-500",
-    kickerClass: "text-rose-700 dark:text-rose-400",
-  },
+  "fiat-cash": { kickerClass: "text-blue-700 dark:text-blue-400" },
+  tbill: { kickerClass: "text-violet-700 dark:text-violet-400" },
+  cdp: { kickerClass: "text-cyan-700 dark:text-cyan-400" },
+  "synthetic-delta-neutral": { kickerClass: "text-teal-700 dark:text-teal-400" },
+  algorithmic: { kickerClass: "text-rose-700 dark:text-rose-400" },
 };

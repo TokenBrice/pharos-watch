@@ -13,7 +13,8 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The five values (`
 
 - **Hub shell:** `src/app/learn/mechanisms/page.tsx`
 - **Archetype shell:** `src/app/learn/mechanisms/[archetype]/page.tsx`
-- **Shared rendering body:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
+- **Page-level shell (editorial display + breadcrumb):** `src/app/learn/mechanisms/explainer-page-shell.tsx` (`ExplainerPageShell`)
+- **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/app/learn/mechanisms/content/index.ts` (`ARCHETYPE_CONTENT`)
 - **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic}.ts`
 - **Content schema:** `src/app/learn/mechanisms/content/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
@@ -30,15 +31,22 @@ Both routes are static-exported via `generateStaticParams()` driven by `MECHANIS
 
 ## Visual Identity
 
-Per-archetype accent borders + kicker colors, defined once in `ARCHETYPE_VISUALS`:
+These pages deliberately depart from the standard `pharos-card-shell + border-l-[3px]` dashboard chrome. Cards-with-accent-stripes were used in the v1 ship and replaced after the editorial critique — the dashboard treatment dilutes accent identity and reads as templated when repeated 6–7 times per page.
 
-| Archetype                 | Border               | Kicker pair                            |
-| ------------------------- | -------------------- | -------------------------------------- |
-| fiat-cash                 | `border-l-blue-500`  | `text-blue-700 dark:text-blue-400`     |
-| tbill                     | `border-l-violet-500`| `text-violet-700 dark:text-violet-400` |
-| cdp                       | `border-l-cyan-500`  | `text-cyan-700 dark:text-cyan-400`     |
-| synthetic-delta-neutral   | `border-l-teal-500`  | `text-teal-700 dark:text-teal-400`     |
-| algorithmic               | `border-l-rose-500`  | `text-rose-700 dark:text-rose-400`     |
+Current treatment:
+
+- **Display title:** editorial-scale `<h1>` set in Geist Sans extra-bold at `text-[clamp(2.25rem,4.5vw,4rem)]` with `tracking-[-0.035em]`. Custom to this route family; not `pharos-page-title`.
+- **Section dividers:** hairline borders (`border-border/40`, `border-border/60`) between rows in lists and definition lists — no card chrome.
+- **Diagram hero:** the mechanism diagram floats freely against the page background, no wrapping card, no kicker label. The diagram is the single editorial focal point per page.
+- **Per-archetype accent:** lives only in the **section kicker color** via `ARCHETYPE_VISUALS[archetype].kickerClass`. The visual differentiation between archetypes already lives in the diagram itself (loop arc for tbill, dashed flow + callout for algorithmic, return arc for cdp, split spot+perp legs for synthetic).
+
+| Archetype                 | Kicker pair                            |
+| ------------------------- | -------------------------------------- |
+| fiat-cash                 | `text-blue-700 dark:text-blue-400`     |
+| tbill                     | `text-violet-700 dark:text-violet-400` |
+| cdp                       | `text-cyan-700 dark:text-cyan-400`     |
+| synthetic-delta-neutral   | `text-teal-700 dark:text-teal-400`     |
+| algorithmic               | `text-rose-700 dark:text-rose-400`     |
 
 Excludes amber (Safety Score), red/green (peg severity), emerald (PoR big4) to avoid semantic collisions.
 
@@ -48,16 +56,16 @@ Excludes amber (Safety Score), red/green (peg severity), emerald (PoR big4) to a
 
 Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 
-1. **`FeaturePageShell` header** — `breadcrumbItems: [Home, Learn, <Archetype>]`, `variant="longform"`, `containerClassName="mx-auto w-full max-w-[68rem] space-y-8"`, `leadParagraphs={[subtitle, ...lead]}`.
-2. **Diagram hero** — `pharos-card-shell` with accent border, renders `mechanismDiagramFor(archetype, "USDX")`.
-3. **"How it works"** — `<ol>` of 3 numbered steps (titles aligned with diagram step labels).
-4. **"Where the design fails"** — `<dl>` of 3–4 named failure modes with concrete historical events.
-5. **"What to watch on Pharos"** — `<ul>` of 4–6 cards (`pharos-card-shell` + archetype border) pointing at specific Pharos features.
-6. **"Tracked examples"** — `pharos-interactive-card` grid linking to 4–5 representative coin detail pages.
-7. **"Variations"** — short prose paragraphs naming sub-flavors within the archetype.
-8. **"Related"** — cross-link footer (3–5 links to `/methodology/`, sibling archetypes, taxonomy hubs).
+1. **`ExplainerPageShell` header** — 3-level breadcrumb (`Dashboard / Learn / <Archetype>`), `BreadcrumbJsonLd`, editorial display `<h1>` (`content.headline`), subtitle (larger muted lead), and optional lead paragraphs. Wrapped in `mx-auto w-full max-w-[68rem] space-y-12`.
+2. **Diagram hero** — bare diagram, centered, no card wrapper, no kicker label.
+3. **"How it works"** — kicker + `<h2>` + `<ol>` of 3 steps with a left rail and small numbered chips (`-left-[1.875rem] sm:-left-[2.375rem]`). Step body capped at `max-w-[65ch]`.
+4. **"Where the design fails"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`, stacked on mobile). Hairline dividers between items. Body capped at `max-w-[65ch]`.
+5. **"What to watch on Pharos"** — kicker + `<h2>` + `<ol>` with a 2-digit mono prefix (`01`, `02`, …) and hairline dividers. No card chrome.
+6. **"Tracked examples"** — kicker + `<h2>` + `<ul>` with hairline dividers. Each row: mono ticker + name + 1-sentence note + right arrow. Hover bumps the arrow + colors the ticker `frost-blue`.
+7. **"Variations"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`).
+8. **"Continue reading"** — section above a top border. 2-column grid of underline-on-hover row links, with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell plus a 2-column card grid of all five archetypes, each card embedding the matching mechanism diagram.
+The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Five ways a stablecoin holds its peg`) and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`05`) + tracked-coin count (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
 ---
 
