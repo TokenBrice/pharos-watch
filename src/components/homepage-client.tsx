@@ -340,7 +340,7 @@ export function HomepageClient() {
       <section
         aria-label="Core monitoring"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
-        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-monitoring)' }}
+        style={{ borderTop: '2px solid var(--section-rule)', background: 'var(--surface-zone-monitoring)' }}
       >
         <HomepageSectionBand
           eyebrow="Core Monitoring"
@@ -422,7 +422,7 @@ export function HomepageClient() {
       <section
         aria-label="Research surfaces"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
-        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-research)' }}
+        style={{ borderTop: '2px solid var(--section-rule)', background: 'var(--surface-zone-research)' }}
       >
         <HomepageSectionBand
           eyebrow="Research Surfaces"
