@@ -46,6 +46,7 @@ npm run check:phishing-signatures # Scan built `out/` HTML for inline-script pat
 npm run check:classifier-sensitive-copy # Scan built `out/` HTML for wallet-drainer/phishing/browser-warning copy on classifier-sensitive routes
 npm run check:safe-browsing # Query Google Safe Browsing v4 for monitored URL flags (daily workflow + manual)
 npm run check:supply-helper-usage # Enforce `getCirculatingRaw()` usage for DefiLlama list-endpoint supply values
+npm run check:archetype-explainer-coverage # Verify every `MechanismArchetype` has a label, one-liner, content module, and `/learn/mechanisms/<slug>/` sitemap entry; see [learn-mechanisms-page.md](./learn-mechanisms-page.md)
 npm run check:redemption-backstops # Validate redemption backstop configs for completeness
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run audit:pricing-providers # Verify pricing provider configs are consistent

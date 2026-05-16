@@ -420,7 +420,11 @@ export default function AboutPage() {
             Pharos classifies stablecoins into three governance tiers:{" "}
             <span className="font-medium text-foreground">CeFi</span> (fully centralized),{" "}
             <span className="font-medium text-foreground">CeFi-Dependent</span> (decentralized infrastructure but
-            reliant on centralized collateral or peg mechanisms), and{" "}
+            reliant on centralized collateral or peg{" "}
+            <Link href="/learn/mechanisms/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              mechanisms
+            </Link>
+            ), and{" "}
             <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
             dependency). The classification reflects actual infrastructure dependency, not marketing claims.
           </p>

@@ -10,6 +10,12 @@
       "notes": ["Update methodology docs only when scoring or classification semantics change."]
     },
     {
+      "name": "mechanism-explainers",
+      "sources": ["src/app/learn/mechanisms/**", "shared/lib/classification/mechanism-archetypes.ts", "src/components/stablecoin-detail/mechanism-diagrams/**"],
+      "docs": ["docs/learn-mechanisms-page.md", "docs/classification.md"],
+      "notes": ["Slug source of truth is MECHANISM_ARCHETYPE_VALUES in shared/types/core.ts. The check:archetype-explainer-coverage CI guard enforces label, one-liner, content module, route file, and sitemap entry for every archetype."]
+    },
+    {
       "name": "pricing-pipeline",
       "sources": ["worker/src/cron/sync-stablecoins/**", "worker/src/lib/price-consensus.ts", "worker/src/lib/price-validation.ts", "worker/src/lib/authoritative-price-sources.ts", "shared/lib/pricing-*.ts", "shared/lib/pricing-provider-config.ts"],
       "docs": ["docs/pricing-pipeline.md", "docs/pricing-pipeline-timeline.md", "docs/data-pipeline.md", "docs/about-page.md", "src/app/about/page.tsx"],

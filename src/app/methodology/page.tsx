@@ -139,6 +139,17 @@ export default function MethodologyPage() {
         </div>
       </div>
 
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        New to stablecoin design?{" "}
+        <Link
+          href="/learn/mechanisms/"
+          className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Learn how each stablecoin design produces its peg
+        </Link>{" "}
+        before the scoring formulas.
+      </p>
+
       <Card className="hidden rounded-xl border border-border/70 bg-card md:block">
         <CardHeader className="space-y-3 pb-2">
           <CardTitle as="h2">How to Read This Page</CardTitle>

@@ -72,6 +72,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [api-page.md](./api-page.md) - `/api/` self-serve API access page plus `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
+- [learn-mechanisms-page.md](./learn-mechanisms-page.md) - `/learn/mechanisms/` hub and `/learn/mechanisms/[archetype]/` explainer contract, content schema, and coverage invariant
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
@@ -111,6 +112,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/docs/[slug]/`                                 | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
+| `/learn/mechanisms/`                            | [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                                                                |
+| `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
 | `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |

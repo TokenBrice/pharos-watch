@@ -9,3 +9,4 @@ export * from "./domain";
 export * from "./pegs";
 export * from "./badges";
 export * from "./risk";
+export * from "./mechanism-archetypes";

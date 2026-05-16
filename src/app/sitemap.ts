@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
@@ -326,6 +327,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  const learnMechanismPages: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/learn/mechanisms/`,
+      lastModified: lastEdited("/learn/mechanisms/"),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    ...MECHANISM_ARCHETYPE_VALUES.map((archetype) => ({
+      url: `${SITE_URL}/learn/mechanisms/${archetype}/`,
+      lastModified: lastEdited(`/learn/mechanisms/${archetype}/`),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
+
   const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
     lastModified: new Date("2026-03-07"),
@@ -359,6 +375,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...chainPages,
     ...pegPages,
     ...taxonomyPages,
+    ...learnMechanismPages,
     ...comparisonPages,
     ...digestPages,
     ...docsIndex,

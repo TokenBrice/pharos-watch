@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Copy, ExternalLink, Globe } from "lucide-react";
+import { ArrowUpRight, Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -23,6 +23,8 @@ import {
   PEG_LABELS,
   POR_BADGE_STYLES,
   POR_TIER_STYLES,
+  getMechanismArchetypeLabel,
+  getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
@@ -228,8 +230,17 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                   Peg Stability
                 </p>
                 {meta.mechanismArchetype ? (
-                  <div className="mb-3 flex justify-start">
-                    {mechanismDiagramFor(meta.mechanismArchetype, meta.symbol)}
+                  <div className="mb-3 space-y-2">
+                    <div className="flex justify-start">
+                      {mechanismDiagramFor(meta.mechanismArchetype, meta.symbol)}
+                    </div>
+                    <Link
+                      href={getMechanismExplainerPath(meta.mechanismArchetype)}
+                      className="pharos-focus-ring inline-flex items-center gap-1 text-xs font-medium text-frost-blue hover:underline"
+                    >
+                      Learn how {getMechanismArchetypeLabel(meta.mechanismArchetype)} stablecoins work
+                      <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+                    </Link>
                   </div>
                 ) : null}
                 <p className="text-base leading-relaxed">{meta.pegMechanism}</p>

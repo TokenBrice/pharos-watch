@@ -64,6 +64,7 @@ describe("nav-config", () => {
       "/about",
       "/funding",
       "/methodology",
+      "/learn/mechanisms",
       "/coverage",
       "/api",
       "/changelog",

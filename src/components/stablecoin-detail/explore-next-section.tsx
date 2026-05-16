@@ -2,7 +2,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  BACKING_LABELS,
+  GOVERNANCE_LABELS,
+  PEG_LABELS_SHORT,
+  getMechanismArchetypeLabel,
+  getMechanismExplainerPath,
+} from "@shared/lib/classification";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
 import { buildLiveCompareUrl } from "@/lib/compare-pages";
@@ -65,11 +71,17 @@ export function ExploreNextSection({
       : null,
   ].filter((link): link is { href: string; label: string } => link !== null);
 
-  const trackerLinks = [
+  const trackerLinks: Array<{ href: string; label: string }> = [
     { href: "/safety-scores/", label: "Review all stablecoin safety scores" },
     { href: "/liquidity/", label: "Review DEX liquidity rankings" },
     { href: "/depeg/", label: "Review the depeg tracker" },
   ];
+  if (coin.mechanismArchetype) {
+    trackerLinks.push({
+      href: getMechanismExplainerPath(coin.mechanismArchetype),
+      label: `Learn how ${getMechanismArchetypeLabel(coin.mechanismArchetype)} stablecoins work`,
+    });
+  }
 
   if (taxonomyLinks.length === 0 && trackerLinks.length === 0 && staticComparisonPages.length === 0 && related.length === 0) {
     return null;
