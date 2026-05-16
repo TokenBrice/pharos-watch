@@ -273,6 +273,13 @@ export default function AboutPage() {
             and make the most of it.
           </p>
           <p>
+            For the editorial position that drives what Pharos computes and refuses to compute, read the{" "}
+            <Link href="/about/principles/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Pharos Principles
+            </Link>
+            .
+          </p>
+          <p>
             For architecture, methodology, and design references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
