@@ -130,6 +130,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
+      url: `${SITE_URL}/screener/`,
+      lastModified: lastEdited("/screener/"),
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
       url: `${SITE_URL}/funding/`,
       lastModified: fundingLastModified(),
       changeFrequency: "weekly",
