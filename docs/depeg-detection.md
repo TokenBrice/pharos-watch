@@ -390,6 +390,7 @@ Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers use the
 - TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
 - Companion hook `useInfiniteDepegEvents({ stablecoinId?, autoLoadAll? })` pages through `/api/depeg-events?limit=100&offset=...`; oversized `limit` values are rejected rather than silently clamped
 - `/depeg` uses the unfiltered infinite hook for the global recent-events feed
+- `/depeg/<event>/` static pages are generated for confirmed events at or above the 2.5% static-page threshold; only the newest server-rendered archive entries are indexable and listed in `sitemap.xml`, while older event pages remain permanent, followable, direct-link citation pages
 - Stablecoin detail pages use the filtered infinite hook with `autoLoadAll` so the hero can read the full recorded-event `total` while the history table hydrates every page in the background
 
 ### Component: DepegFeed (`depeg-feed.tsx`)

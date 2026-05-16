@@ -1,13 +1,11 @@
 import Link from "next/link";
 import {
-  DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
 } from "@/app/depeg/[event]/page-data";
 import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
-
-const MAX_VISIBLE = 12;
 
 function formatDate(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toISOString().slice(0, 10);
@@ -28,12 +26,10 @@ function severityClass(bps: number): string {
 /**
  * Server-rendered list of confirmed depeg events that have earned a dedicated
  * `/depeg/<slug>/` static page (peakDeviationBps ≥ MIN_DEPEG_PAGE_DEVIATION_BPS).
- * Sorted by `startedAt` desc; capped to the most recent {@link MAX_VISIBLE}.
+ * Sorted by `startedAt` desc; capped to the indexable archive set.
  */
 export function DepegEventArchive() {
-  const events: readonly DepegEventEntry[] = [...DEPEG_EVENT_ENTRIES]
-    .sort((a, b) => b.startedAt - a.startedAt)
-    .slice(0, MAX_VISIBLE);
+  const events: readonly DepegEventEntry[] = INDEXABLE_DEPEG_EVENT_ENTRIES;
 
   if (events.length === 0) return null;
 

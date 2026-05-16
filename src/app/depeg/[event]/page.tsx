@@ -19,6 +19,7 @@ import type { ChartAnnotation } from "@shared/types/chart-annotation";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_SLUGS,
   eventBySlug,
   type DepegEventEntry,
 } from "./page-data";
@@ -124,6 +125,9 @@ export async function generateMetadata(
     description,
     canonical: `/depeg/${event.slug}/`,
     ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${event.stablecoinId}`),
+    robots: INDEXABLE_DEPEG_EVENT_SLUGS.has(event.slug)
+      ? undefined
+      : { index: false, follow: true },
   });
 }
 

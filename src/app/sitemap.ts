@@ -16,6 +16,10 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
+import {
+  MIN_DEPEG_PAGE_DEVIATION_BPS,
+  selectIndexableDepegEvents,
+} from "@/app/depeg/[event]/config";
 
 export const dynamic = "force-static";
 
@@ -27,8 +31,6 @@ const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = costsData as CostsFile;
 const fundingDonations = donationsData as DonationsFile;
 
-import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
-
 interface DepegEventSitemapEntry {
   slug: string;
   startedAt: number;
@@ -38,6 +40,7 @@ interface DepegEventSitemapEntry {
 const depegEventEntries = (depegEvents as readonly DepegEventSitemapEntry[]).filter(
   (event) => event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS,
 );
+const indexableDepegEventEntries = selectIndexableDepegEvents(depegEventEntries);
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
 function lastEdited(path: string): Date {
@@ -352,7 +355,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  const depegEventPages: MetadataRoute.Sitemap = depegEventEntries.map((e) => ({
+  const depegEventPages: MetadataRoute.Sitemap = indexableDepegEventEntries.map((e) => ({
     url: `${SITE_URL}/depeg/${e.slug}/`,
     lastModified: new Date((e.endedAt ?? e.startedAt) * 1000),
     changeFrequency: (e.endedAt ? "never" : "daily") as "never" | "daily",
