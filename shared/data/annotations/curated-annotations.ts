@@ -49,49 +49,62 @@ import type { ChartAnnotation } from "@shared/types/chart-annotation";
 export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
   "usdc-circle": [
     {
-      ts: Date.UTC(2023, 2, 10), // 2023-03-10 — SVB closed by California DFPI / FDIC receivership
-      kind: "regulatory",
-      label: "Silicon Valley Bank closed by regulators",
-      severity: "high",
+      ts: Date.UTC(2020, 2, 12), // 2020-03-12 — Black Thursday crypto-wide crash; USDC briefly to ~$0.97
+      kind: "depeg",
+      label: "Black Thursday market shock — USDC dip ~$0.97",
+      severity: "med",
     },
     {
-      ts: Date.UTC(2023, 2, 11), // 2023-03-11 — USDC price-bottom ~$0.87 after SVB exposure disclosed
+      // 2023-03-11 — Single pin for the SVB cluster (closure 03-10 → depeg low
+      // 03-11 → federal backstop 03-13). The chart already shows the recovery.
+      ts: Date.UTC(2023, 2, 11),
       kind: "depeg",
-      label: "SVB collapse — USDC depeg low ~$0.87",
+      label: "SVB reserve exposure — USDC depeg low ~$0.87",
       severity: "high",
       href: "https://www.circle.com/blog/an-update-on-usdc-and-silicon-valley-bank",
     },
     {
-      ts: Date.UTC(2023, 2, 13), // 2023-03-13 — Joint Treasury/Fed/FDIC depositor backstop; USDC repegs
+      // 2024-06-30 — MiCA stablecoin (ART/EMT) provisions take effect; Circle
+      // became the first global issuer with an EU EMI license a day later.
+      // Marks the start of regulated EU issuance for USDC.
+      ts: Date.UTC(2024, 5, 30),
       kind: "regulatory",
-      label: "Federal depositor backstop announced — USDC repegs",
+      label: "MiCA stablecoin regime in force — Circle EMI-authorized in EU",
       severity: "med",
     },
   ],
   "usdt-tether": [
     {
-      ts: Date.UTC(2018, 9, 15), // 2018-10-15 — USDT to ~$0.85 amid Bitfinex banking concerns (Noble Bank)
+      ts: Date.UTC(2018, 9, 15), // 2018-10-15 — Bitfinex/Noble Bank banking stress; USDT to ~$0.85
       kind: "depeg",
       label: "Bitfinex banking stress — USDT depeg low ~$0.85",
       severity: "high",
     },
     {
-      ts: Date.UTC(2019, 3, 25), // 2019-04-25 — NY AG announces court order against Bitfinex/Tether (iFinex)
+      // 2021-02-23 — NY AG settlement (resolution of the 2019 iFinex order).
+      // Imposed quarterly reserve attestations on Tether — first ongoing
+      // reserve-disclosure mandate on the issuer.
+      ts: Date.UTC(2021, 1, 23),
       kind: "regulatory",
-      label: "NY AG court order vs. Bitfinex/Tether (commingling)",
+      label: "NY AG settlement — forced reserve disclosures ($18.5M)",
       severity: "med",
     },
     {
-      ts: Date.UTC(2021, 1, 23), // 2021-02-23 — NY AG settlement with Bitfinex/Tether ($18.5M)
+      // 2021-10-15 — CFTC order over reserve misrepresentations 2016–2018.
+      // $41M penalty plus ongoing reporting requirements.
+      ts: Date.UTC(2021, 9, 15),
       kind: "regulatory",
-      label: "NY AG settlement with Bitfinex/Tether ($18.5M)",
+      label: "CFTC order — reserve misrepresentation ($41M penalty)",
       severity: "med",
+      href: "https://www.cftc.gov/PressRoom/PressReleases/8450-21",
     },
     {
-      ts: Date.UTC(2021, 9, 15), // 2021-10-15 — CFTC order against Tether ($41M penalty)
-      kind: "regulatory",
-      label: "CFTC settlement order vs. Tether ($41M penalty)",
-      severity: "med",
+      // 2022-05-12 — UST/LUNA collapse contagion; USDT briefly traded ~$0.95
+      // on Kraken as redemptions spiked. Largest USDT depeg since 2018.
+      ts: Date.UTC(2022, 4, 12),
+      kind: "depeg",
+      label: "Terra/UST collapse contagion — USDT depeg ~$0.95",
+      severity: "high",
     },
   ],
   "dai-makerdao": [
