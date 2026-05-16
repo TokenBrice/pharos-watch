@@ -61,13 +61,6 @@ const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => 
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const PegDeviationChart = dynamic(
-  () => import("@/components/peg-deviation-chart").then((mod) => mod.PegDeviationChart),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
-  },
-);
-
 const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
