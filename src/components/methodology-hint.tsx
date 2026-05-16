@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { METHODOLOGY_CONTEXT, type MethodologyContextKey } from "@/lib/methodology-context";
+import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 
 interface MethodologyHintProps {
   topic: MethodologyContextKey;
@@ -204,11 +205,18 @@ export function MethodologyCardActions({
   topic,
   className,
   showVersion = true,
+  showWorkToggle = false,
   trailing,
 }: {
   topic: MethodologyContextKey;
   className?: string;
   showVersion?: boolean;
+  /**
+   * When true, renders <ShowYourWorkToggle /> next to the methodology link.
+   * Use on cards that embed a <ShowYourWorkPanel> so users can discover the
+   * "show inputs" capability without knowing the `?show-work=1` URL trick.
+   */
+  showWorkToggle?: boolean;
   trailing?: ReactNode;
 }) {
   const item = METHODOLOGY_CONTEXT[topic];
@@ -230,6 +238,7 @@ export function MethodologyCardActions({
           Version history &rarr;
         </Link>
       ) : null}
+      {showWorkToggle ? <ShowYourWorkToggle /> : null}
       {trailing ? <span className="ml-auto">{trailing}</span> : null}
     </div>
   );

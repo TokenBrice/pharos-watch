@@ -11,14 +11,17 @@ describe("feed routes smoke", () => {
     expect(xml).toContain("<atom:link");
   });
 
-  it("depeg route gracefully emits empty channel when events file absent", async () => {
+  it("depeg route emits the seeded events archive", async () => {
     const mod = await import("../depeg/route");
     const res = await mod.GET();
     const xml = await res.text();
     expect(xml).toContain("<title>Pharos Depeg Events</title>");
     expect(xml).toContain("<channel>");
-    // data/depeg-events.json is produced by W3-D (Wave 3); until then, no items.
-    expect(xml).not.toContain("<item>");
+    // data/depeg-events.json carries at least the seeded USDC 2023-03-11 event;
+    // CI sync populates the rest. The route empty-channel branch still exists
+    // for the case where the file becomes [].
+    expect(xml).toContain("<item>");
+    expect(xml).toContain("pharos:depeg-event:");
   });
 
   it("methodology route emits items across the unified changelogs", async () => {

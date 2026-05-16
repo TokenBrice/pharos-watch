@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Rss } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
 import { TrustStrip } from "@/components/trust-strip";
 
@@ -8,6 +8,13 @@ interface FooterLink {
   label: string;
   external?: boolean;
 }
+
+const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/feed/digest/", label: "Digest" },
+  { href: "/feed/depeg/", label: "Depeg events" },
+  { href: "/feed/methodology/", label: "Methodology" },
+  { href: "/feed/cemetery/", label: "Cemetery" },
+];
 
 const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/", label: "Dashboard" },
@@ -75,6 +82,25 @@ export function Footer() {
             </a>
           </div>
         </div>
+
+        <nav
+          aria-label="Feeds"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+        >
+          <span className="inline-flex items-center gap-1 text-foreground/80">
+            <Rss className="h-3 w-3" aria-hidden="true" />
+            <span className="pharos-kicker">Subscribe</span>
+          </span>
+          {FEED_LINKS.map((feed) => (
+            <Link
+              key={feed.href}
+              href={feed.href}
+              className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+            >
+              {feed.label}
+            </Link>
+          ))}
+        </nav>
 
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2">
           {FOOTER_PRIMARY_LINKS.map((link) =>

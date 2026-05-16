@@ -450,7 +450,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
             stablecoinName={card.name}
           />
 
-          <MethodologyCardActions topic="safetyScore" className="font-medium" />
+          <MethodologyCardActions topic="safetyScore" showWorkToggle className="font-medium" />
         </CardContent>
       </Card>
     </TooltipProvider>

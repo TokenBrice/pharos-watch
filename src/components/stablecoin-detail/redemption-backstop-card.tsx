@@ -223,7 +223,7 @@ export function RedemptionBackstopCard({
 
         <ShowYourWorkPanel kind="redemption" entry={entry} stablecoinId={entry.stablecoinId} />
 
-        <MethodologyCardActions topic="redemptionBackstop" />
+        <MethodologyCardActions topic="redemptionBackstop" showWorkToggle />
       </CardContent>
     </Card>
   );

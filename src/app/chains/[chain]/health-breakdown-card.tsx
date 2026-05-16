@@ -171,7 +171,7 @@ export function HealthBreakdownCard({
           />
         </div>
 
-        <MethodologyCardActions topic="chainHealth" />
+        <MethodologyCardActions topic="chainHealth" showWorkToggle />
       </CardContent>
     </Card>
   );

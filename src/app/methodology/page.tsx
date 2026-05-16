@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CitationBlock } from "@/components/citation-block";
 import { MethodologySections } from "./methodology-sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { ShowYourWorkToggle } from "@/components/show-your-work-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -181,13 +183,28 @@ export default function MethodologyPage() {
         railLabel="Jump to Section"
         navAriaLabel="Methodology section controls"
         rightSlot={
-          <div className="hidden md:block">
+          <div className="hidden items-center gap-3 md:flex">
+            <ShowYourWorkToggle />
             <MethodologyModeToggle />
           </div>
         }
       />
 
       <MethodologySections />
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+        <span className="pharos-kicker text-foreground/80">White paper</span>
+        <a
+          href="/methodology/pdf/index.pdf"
+          className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground hover:underline hover:underline-offset-4"
+        >
+          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          Download the full Pharos Methodology (PDF)
+        </a>
+        <span className="text-xs text-muted-foreground/80">
+          Per-methodology PDFs are linked from each changelog page.
+        </span>
+      </div>
 
       <CitationBlock
         entityClass="methodology"

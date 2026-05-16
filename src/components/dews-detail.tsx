@@ -379,6 +379,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
         <MethodologyCardActions
           topic="dews"
+          showWorkToggle
           trailing={
             chartData.length > 1 ? (
               <button

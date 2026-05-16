@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
+import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -73,5 +74,10 @@ export default createClientFeaturePage({
       </Link>
     </CalloutBanner>
   ),
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+  afterClient: (
+    <>
+      <DepegEventArchive />
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
+    </>
+  ),
 });

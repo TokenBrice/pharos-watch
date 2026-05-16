@@ -262,7 +262,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           />
         ) : null}
 
-        <MethodologyCardActions topic="liquidityScore" />
+        <MethodologyCardActions topic="liquidityScore" showWorkToggle />
       </CardContent>
     </Card>
   );

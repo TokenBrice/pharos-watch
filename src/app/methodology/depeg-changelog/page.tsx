@@ -19,7 +19,7 @@ const route = createMethodologyChangelogRoute({
   accentClass: "border-l-amber-500",
   entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
   selectImpact: (entry) => entry.impact,
-  citation: { id: "dews", versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
+  citation: { id: "dews", versionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL, pdfKey: "depeg-dews" },
 });
 
 export const metadata = route.metadata;

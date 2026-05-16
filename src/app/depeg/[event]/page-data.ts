@@ -1,5 +1,5 @@
 import type { DepegEvent } from "@shared/types/market";
-import depegEvents from "@data/depeg-events.json";
+import depegEvents from "../../../../data/depeg-events.json";
 import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "./config";
 
 /**
