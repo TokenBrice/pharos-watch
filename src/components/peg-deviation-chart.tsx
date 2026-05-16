@@ -21,6 +21,7 @@ import {
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
 import { DAY_MS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 function PegXTick({
   x,
@@ -148,13 +149,33 @@ interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
   stablecoinId: string;
+  /**
+   * Suppress the inline annotation legend below the card. Reference-line
+   * markers are still drawn. Used when paired with `McapChart` and a single
+   * shared legend is rendered by the parent.
+   */
+  hideAnnotationLegend?: boolean;
+  /**
+   * When provided, the chart uses this range and hides its internal
+   * time-range buttons. See `McapChart` for matching prop.
+   */
+  controlledRange?: TimeRangeOption;
+  /** Optional className for the outer `<Card>`. */
+  cardClassName?: string;
 }
 
 /**
  * Continuous USD-price line for USD-pegged coins with a $1 reference line.
  * Non-USD pegs need FX adjustment so the chart is hidden for them (returns null).
  */
-export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviationChartProps) {
+export function PegDeviationChart({
+  data,
+  pegCurrency,
+  stablecoinId,
+  hideAnnotationLegend = false,
+  controlledRange,
+  cardClassName,
+}: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
@@ -167,7 +188,12 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
       }));
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(
+    chartData,
+    "ts",
+    undefined,
+    { externalRange: controlledRange },
+  );
 
   const fromMs = filteredData[0]?.ts ?? null;
   const toMs = filteredData[filteredData.length - 1]?.ts ?? null;
@@ -262,13 +288,15 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
   );
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">
+    <Card className={cn("rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300", cardClassName)}>
       <CardHeader className="flex flex-row items-center justify-between">
         <DetailSectionTitle>Peg Deviation</DetailSectionTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        {controlledRange ? null : (
+          <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        )}
       </CardHeader>
       <CardContent>{chartBody}</CardContent>
-      {annotations.length > 0 ? (
+      {!hideAnnotationLegend && annotations.length > 0 ? (
         <CardContent className="pt-0">
           <ChartAnnotationLegend annotations={annotations} />
         </CardContent>

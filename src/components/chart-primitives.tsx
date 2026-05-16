@@ -183,14 +183,22 @@ const ANNOTATION_DATE_FMT = new Intl.DateTimeFormat("en-US", {
  */
 export function ChartAnnotationLegend({
   annotations,
+  className = "mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground",
 }: {
   annotations: readonly ChartAnnotation[];
+  /**
+   * Override the `<ul>` className. Default includes the `mt-3` spacing used
+   * when the legend sits directly under a chart card. Pass a className without
+   * `mt-3` when the legend is rendered inside an already-padded container
+   * (e.g. the shared legend below the Market Cap / Peg Deviation pair).
+   */
+  className?: string;
 }) {
   if (annotations.length === 0) return null;
   return (
     <ul
       aria-label="Chart events"
-      className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground"
+      className={className}
     >
       {annotations.map((a) => {
         const date = ANNOTATION_DATE_FMT.format(new Date(a.ts));

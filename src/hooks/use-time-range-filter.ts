@@ -20,6 +20,13 @@ export function isTimeRangeOption(value: string): value is TimeRangeOption {
 
 interface UseTimeRangeFilterConfig {
   initialRange?: TimeRangeOption;
+  /**
+   * When provided, the hook is in controlled mode: filtering uses
+   * `externalRange` instead of the internal state, and `setRange` is a no-op.
+   * Used when a parent component (e.g. `MarketDataSection`) owns the range
+   * state shared across multiple charts.
+   */
+  externalRange?: TimeRangeOption;
 }
 
 export function useTimeRangeFilter<T extends Record<K, number>, K extends keyof T>(
@@ -31,7 +38,9 @@ export function useTimeRangeFilter<T extends Record<K, number>, K extends keyof 
   const fallbackRange = options[options.length - 1] ?? DEFAULT_RANGE;
   const initialRange =
     config.initialRange && options.includes(config.initialRange) ? config.initialRange : fallbackRange;
-  const [range, setRange] = useState<TimeRangeOption>(initialRange);
+  const [internalRange, setInternalRange] = useState<TimeRangeOption>(initialRange);
+  const range = config.externalRange ?? internalRange;
+  const setRange = config.externalRange ? () => {} : setInternalRange;
 
   const filteredData = useMemo(() => {
     if (range === "all" || data.length === 0) return data;

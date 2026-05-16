@@ -7,6 +7,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -96,9 +97,30 @@ function McapXTick({
 interface McapChartProps {
   data: SupplyHistoryPoint[];
   stablecoinId: string;
+  /**
+   * Suppress the inline annotation legend (`<ChartAnnotationLegend>`) below
+   * the card. Reference-line markers are still drawn. Used when the chart is
+   * paired with `PegDeviationChart` in a side-by-side grid and a single
+   * shared legend is rendered by the parent.
+   */
+  hideAnnotationLegend?: boolean;
+  /**
+   * When provided, the chart uses this range and hides its internal
+   * time-range buttons. Used by `MarketDataSection` to drive both charts
+   * from a single header-level selector.
+   */
+  controlledRange?: TimeRangeOption;
+  /** Optional className for the outer `<Card>` (e.g. remove the accent border in grouped layouts). */
+  cardClassName?: string;
 }
 
-export function McapChart({ data, stablecoinId }: McapChartProps) {
+export function McapChart({
+  data,
+  stablecoinId,
+  hideAnnotationLegend = false,
+  controlledRange,
+  cardClassName,
+}: McapChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -111,7 +133,12 @@ export function McapChart({ data, stablecoinId }: McapChartProps) {
       }));
   }, [data]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(
+    chartData,
+    "ts",
+    undefined,
+    { externalRange: controlledRange },
+  );
 
   const fromMs = filteredData[0]?.ts ?? null;
   const toMs = filteredData[filteredData.length - 1]?.ts ?? null;
@@ -154,10 +181,12 @@ export function McapChart({ data, stablecoinId }: McapChartProps) {
   );
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">
+    <Card className={cn("rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300", cardClassName)}>
       <CardHeader className="flex flex-row items-center justify-between">
         <DetailSectionTitle>Market Cap</DetailSectionTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        {controlledRange ? null : (
+          <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        )}
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
@@ -208,7 +237,7 @@ export function McapChart({ data, stablecoinId }: McapChartProps) {
           </div>
         )}
       </CardContent>
-      {annotations.length > 0 ? (
+      {!hideAnnotationLegend && annotations.length > 0 ? (
         <CardContent className="pt-0">
           <ChartAnnotationLegend annotations={annotations} />
         </CardContent>

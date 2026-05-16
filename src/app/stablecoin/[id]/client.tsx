@@ -46,6 +46,7 @@ import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { BlacklistStablecoin } from "@shared/types";
+import { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 
 const FeedbackModal = dynamic(
   () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
@@ -391,23 +392,12 @@ export default function StablecoinDetailClient({
           hasCollateralUsage={hasCollateralUsage}
         />
         {showPegChart ? (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <section id="chart">
-              {frozenNote}
-              <LazySection minHeight={420}>
-                <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
-              </LazySection>
-            </section>
-            <section id="peg-deviation" aria-label="Peg deviation chart">
-              <LazySection minHeight={420}>
-                <PegDeviationChart
-                  data={viewModel.supplyHistory}
-                  pegCurrency={viewModel.coin.flags.pegCurrency}
-                  stablecoinId={viewModel.id}
-                />
-              </LazySection>
-            </section>
-          </div>
+          <MarketDataSection
+            stablecoinId={viewModel.id}
+            supplyHistory={viewModel.supplyHistory}
+            pegCurrency={viewModel.coin.flags.pegCurrency}
+            frozenNote={frozenNote}
+          />
         ) : (
           <section id="chart">
             {frozenNote}
