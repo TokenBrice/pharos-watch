@@ -6,7 +6,7 @@
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CHF",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": true,
     "rwa": false,
     "navToken": false
@@ -73,31 +73,43 @@
     "reviewedAt": "2026-05-12"
   },
   "collateralQuality": "alt-lst-bridged-or-mixed",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Single-name equity concentration (BOSS)",
+      "message": "BOSS (Boss Info AG, a Swiss-listed IT/consulting equity) is currently the largest collateral line in the Frankencoin protocol at roughly one-third of total backing. Single-name corporate equity introduces issuer- and liquidity-specific risk distinct from the protocol's BTC, ETH, and gold collateral; positions are managed under Frankencoin's veto governance and remain subject to challenge auctions."
+    }
+  ],
   "reserves": [
     {
+      "name": "BOSS (Boss Info AG corporate equity)",
+      "pct": 33,
+      "risk": "very-high"
+    },
+    {
       "name": "Wrapped Bitcoin (WBTC, cbBTC)",
-      "pct": 45,
+      "pct": 37,
       "risk": "medium"
     },
     {
-      "name": "ETH / wstETH / LsETH",
-      "pct": 30,
+      "name": "ETH LSTs (wstETH, LsETH)",
+      "pct": 17,
       "risk": "low"
     },
     {
+      "name": "SPYon (tokenized S&P 500 ETF)",
+      "pct": 7,
+      "risk": "high"
+    },
+    {
       "name": "Gold tokens (PAXG, XAUt)",
-      "pct": 10,
+      "pct": 4,
       "risk": "medium",
       "coinId": "paxg-paxos"
     },
     {
-      "name": "Tokenized RWAs (SPYon, LENDS, REALU)",
-      "pct": 10,
-      "risk": "high"
-    },
-    {
-      "name": "Other (CRV, GNO, governance tokens)",
-      "pct": 5,
+      "name": "Other (WETH, GNO, REALU, LENDS)",
+      "pct": 2,
       "risk": "very-high"
     }
   ],
