@@ -80,7 +80,7 @@ describe("RecentBlacklistBanner", () => {
     expect(banner.textContent).not.toContain("destroy");
   });
 
-  it("renders the Snowflake icon and correct freeze/destroy counts (releases hidden)", () => {
+  it("renders the Snowflake icon plus freeze, destroy, and release counts", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(true);
     useRecentBlacklist7dMock.mockReturnValue({ freezes: 12, destroys: 2, releases: 1 });
     const { container } = render(<RecentBlacklistBanner symbol="USDC" />);
@@ -89,9 +89,8 @@ describe("RecentBlacklistBanner", () => {
     expect(banner.textContent).toContain("freezes");
     expect(banner.textContent).toContain("2");
     expect(banner.textContent).toContain("destroys");
-    // Releases are intentionally omitted from the compact pill to keep it
-    // inline-friendly with the surrounding chips.
-    expect(banner.textContent).not.toContain("release");
+    expect(banner.textContent).toContain("1");
+    expect(banner.textContent).toContain("release");
     // The Snowflake lucide icon renders as an inline <svg>.
     expect(container.querySelector("svg")).not.toBeNull();
   });

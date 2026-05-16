@@ -19,11 +19,12 @@ export function RecentBlacklistBanner({ symbol, coinStatus }: RecentBlacklistBan
   // Always call the hook — gating happens inside via `isEnabled`.
   const recent = useRecentBlacklist7d(symbol);
   if (!flagOn || isDefunct || !recent) return null;
-  const { freezes, destroys } = recent;
+  const { freezes, destroys, releases } = recent;
   if (destroys === 0 && freezes < SEVEN_DAY_THRESHOLD) return null;
   const ariaParts: string[] = [];
   ariaParts.push(`${freezes} ${freezes === 1 ? "freeze" : "freezes"}`);
   if (destroys > 0) ariaParts.push(`${destroys} ${destroys === 1 ? "destroy" : "destroys"}`);
+  if (releases > 0) ariaParts.push(`${releases} ${releases === 1 ? "release" : "releases"}`);
   ariaParts.push("in the last 7 days");
   return (
     <Link
@@ -44,6 +45,15 @@ export function RecentBlacklistBanner({ symbol, coinStatus }: RecentBlacklistBan
           <span className="font-semibold tabular-nums">{destroys}</span>
           <span className="text-amber-700/80 dark:text-amber-400/80">
             {destroys === 1 ? "destroy" : "destroys"}
+          </span>
+        </>
+      ) : null}
+      {releases > 0 ? (
+        <>
+          <span aria-hidden className="text-amber-700/40 dark:text-amber-400/40">·</span>
+          <span className="font-semibold tabular-nums">{releases}</span>
+          <span className="text-amber-700/80 dark:text-amber-400/80">
+            {releases === 1 ? "release" : "releases"}
           </span>
         </>
       ) : null}
