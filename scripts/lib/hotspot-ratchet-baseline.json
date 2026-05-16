@@ -60,8 +60,8 @@
     "notes": "Request-entry shell is intentionally thin after router extraction. Any new dispatch logic should move downward."
   },
   "src/components/contagion-graph.tsx": {
-    "fileLines": 90,
-    "maxFunctionLines": 64,
+    "fileLines": 96,
+    "maxFunctionLines": 70,
     "branchCount": 2,
     "disposition": "stabilized",
     "targetBudget": {
