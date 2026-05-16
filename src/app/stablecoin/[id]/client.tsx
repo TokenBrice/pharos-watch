@@ -334,9 +334,8 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── Safety zone ── */}
-      <div className="mt-10 space-y-4">
+      <div className="mt-6 space-y-4">
         <section id="report-card">
-          <p className="pharos-kicker mb-3">Safety Assessment</p>
           {viewModel.reportCard && (
             <ReportCardDetail
               card={viewModel.reportCard}
