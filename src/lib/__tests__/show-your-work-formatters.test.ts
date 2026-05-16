@@ -1,0 +1,127 @@
+import { describe, expect, it } from "vitest";
+import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
+import {
+  formatChainHealth,
+  formatDews,
+  formatLiquidity,
+  formatPsi,
+  formatRedemption,
+  formatReportCard,
+} from "@/lib/show-your-work-formatters";
+
+describe("show-your-work formatters", () => {
+  it("formats report card raw inputs into rows", () => {
+    const rawInputs = createReportCardRawInputs({
+      pegScore: 95,
+      liquidityScore: 72,
+      effectiveExitScore: 70,
+      collateralQuality: "rwa",
+    });
+    const table = formatReportCard(rawInputs);
+    expect(table.topic).toBe("safetyScore");
+    const pegRow = table.rows.find((r) => r.label === "Peg score");
+    expect(pegRow?.value).toBe("95");
+    const liqRow = table.rows.find((r) => r.label === "Liquidity score");
+    expect(liqRow?.value).toBe("72");
+  });
+
+  it("formats DEWS signals", () => {
+    const table = formatDews({
+      score: 42,
+      band: "ALERT",
+      signals: {
+        supply: { value: 80, available: true },
+        pool: { value: 0, available: false },
+      },
+      computedAt: 0,
+      methodologyVersion: "v6.0",
+    });
+    expect(table.topic).toBe("dews");
+    expect(table.rows.find((r) => r.label === "supply")?.value).toBe("80");
+    expect(table.rows.find((r) => r.label === "pool")?.value).toBe("n/a");
+    expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("42");
+  });
+
+  it("formats liquidity components with weighted contributions", () => {
+    const table = formatLiquidity({
+      tvlDepth: 80,
+      volumeActivity: 60,
+      poolQuality: 70,
+      durability: 50,
+      pairDiversity: 40,
+    });
+    expect(table.topic).toBe("liquidityScore");
+    const tvl = table.rows.find((r) => r.label === "TVL Depth");
+    expect(tvl?.value).toBe("80.0");
+    expect(tvl?.weight).toBe("30%");
+    expect(tvl?.contribution).toBe("24.0");
+  });
+
+  it("formats PSI components", () => {
+    const table = formatPsi({
+      score: 88,
+      band: "STEADY",
+      components: { severity: 5, breadth: 3, stressBreadth: 2, trend: 1 },
+      computedAt: 0,
+      methodologyVersion: "v3.3",
+    });
+    expect(table.topic).toBe("psi");
+    expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("88.0");
+    expect(table.rows.find((r) => r.label === "Severity penalty")?.value).toBe("5.0");
+  });
+
+  it("formats redemption sub-scores", () => {
+    const table = formatRedemption({
+      stablecoinId: "test",
+      score: 70,
+      effectiveExitScore: 65,
+      dexLiquidityScore: null,
+      accessScore: 80,
+      settlementScore: 75,
+      executionCertaintyScore: 70,
+      capacityScore: 60,
+      outputAssetQualityScore: 90,
+      costScore: 85,
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      provider: "test",
+      sourceMode: "static",
+      resolutionState: "resolved",
+      routeStatus: "open",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      capacityConfidence: "documented-bound",
+      capacitySemantics: "immediate-bounded",
+      feeConfidence: "fixed",
+      feeModelKind: "fixed-bps",
+      modelConfidence: "high",
+      immediateCapacityUsd: 1_000_000,
+      immediateCapacityRatio: 0.05,
+      feeBps: 10,
+      queueEnabled: false,
+      methodologyVersion: "v2.0",
+      updatedAt: 0,
+    });
+    expect(table.topic).toBe("redemptionBackstop");
+    expect(table.rows.find((r) => r.label === "Access")?.value).toBe("80");
+    expect(table.rows.find((r) => r.label === "Fee (bps)")?.value).toBe("10");
+  });
+
+  it("formats chain-health factors with weighted contributions", () => {
+    const table = formatChainHealth({
+      concentration: 80,
+      quality: 70,
+      pegStability: 95,
+      backingDiversity: 60,
+      chainEnvironment: 100,
+    });
+    expect(table.topic).toBe("chainHealth");
+    const quality = table.rows.find((r) => r.label === "Quality");
+    expect(quality?.value).toBe("70");
+    expect(quality?.weight).toBe("30%");
+    expect(quality?.contribution).toBe("21.0");
+  });
+});

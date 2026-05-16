@@ -125,6 +125,10 @@ The cadence field is rendered alongside the tier badge as supporting text (e.g. 
 - `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-backed`, `cdp`, `delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
 - `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
 
+## Show Your Work
+
+Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; preference persists in `localStorage` under `pharos.show-work`. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
+
 ## Verification Shortcuts
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`

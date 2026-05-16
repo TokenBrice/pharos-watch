@@ -19,6 +19,7 @@ import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { CRON_24H } from "@/lib/cron-intervals";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 // ---------------------------------------------------------------------------
 // Grade-band tooltip helper
@@ -317,8 +318,8 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
     <div className="space-y-5">
       {/* Grade hero — left-aligned in split, centered when single-column */}
       <div className={cn("flex items-center gap-4 pb-1 pt-1", !hasRightColumn && "justify-center")}>
-        <SafetyGradeBadge grade={card.overallGrade} size="lg" className="sm:hidden" />
-        <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" />
+        <SafetyGradeBadge grade={card.overallGrade} size="lg" className="sm:hidden" versionTopic="safetyScore" />
+        <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" versionTopic="safetyScore" />
         <div className="flex min-w-0 flex-col">
           {card.overallScore !== null && (
             <Tooltip>
@@ -441,6 +442,13 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
               </p>
             </div>
           )}
+
+          <ShowYourWorkPanel
+            kind="report-card"
+            rawInputs={card.rawInputs}
+            stablecoinId={card.id}
+            stablecoinName={card.name}
+          />
 
           <MethodologyCardActions topic="safetyScore" showVersion={false} className="font-medium" />
         </CardContent>

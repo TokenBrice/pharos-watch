@@ -15,6 +15,7 @@ import {
   getLiquidityEvidenceLabel,
 } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
   DurabilityBadge,
@@ -25,6 +26,7 @@ import {
   TrendArrow,
   TvlTrendChart,
 } from "@/components/dex-liquidity-card-parts";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 /**
  * A coin has "meaningful" DEX data only when at least one observed pool or
@@ -249,6 +251,14 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
           {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
         </div>
+
+        {liq.scoreComponents ? (
+          <ShowYourWorkPanel
+            kind="liquidity"
+            scoreComponents={liq.scoreComponents}
+            stablecoinId={stablecoinId}
+          />
+        ) : null}
 
         <MethodologyCardActions topic="liquidityScore" />
       </CardContent>

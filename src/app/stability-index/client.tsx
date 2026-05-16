@@ -15,6 +15,7 @@ import { trackEvent } from "@/lib/analytics";
 import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { formatRangeTickDate } from "@/lib/chart-time-range";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { formatScore } from "@shared/lib/format";
 import {
   buildPsiChartData,
@@ -228,6 +229,8 @@ export function StabilityIndexClient() {
         historyStats={historyStats}
         lanes={beamDimmerLanes}
       />
+
+      <ShowYourWorkPanel kind="psi" current={current} />
 
       <ScoreChart data={chartData} />
 

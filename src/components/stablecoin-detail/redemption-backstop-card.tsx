@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
 export function RedemptionBackstopCard({
@@ -216,6 +217,8 @@ export function RedemptionBackstopCard({
             ) : null}
           </div>
         ) : null}
+
+        <ShowYourWorkPanel kind="redemption" entry={entry} stablecoinId={entry.stablecoinId} />
 
         <MethodologyCardActions topic="redemptionBackstop" />
       </CardContent>

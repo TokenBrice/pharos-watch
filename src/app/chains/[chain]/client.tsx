@@ -16,6 +16,7 @@ import {
   HeroCard,
   StablecoinTable,
 } from "./detail-sections";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildChainRouteViewModel } from "./view-model";
 
 export function ChainProfileClient({ chainId }: { chainId: string }) {
@@ -114,6 +115,11 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
         />
         <HeroCard chain={chain} chainId={chainId} />
         <HealthBreakdownCard chain={chain} meta={chainsQuery.meta} />
+        <ShowYourWorkPanel
+          kind="chain-health"
+          factors={chain.healthFactors}
+          chainName={chain.name}
+        />
         {canRenderDetailedSections ? (
           <>
             <CompositionSection model={routeModel} />

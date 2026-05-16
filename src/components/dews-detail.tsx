@@ -15,6 +15,7 @@ import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { cn } from "@/lib/utils";
 import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
@@ -370,6 +371,8 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             )}
           </>
         )}
+
+        <ShowYourWorkPanel kind="dews" current={data.current} stablecoinId={stablecoinId} />
 
         <MethodologyCardActions
           topic="dews"
