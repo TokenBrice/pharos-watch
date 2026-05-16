@@ -40,7 +40,7 @@ const [
   bluechipSlugsModule,
   deadStablecoinsModule,
 ] = await Promise.all([
-  import("../../shared/lib/stablecoins/index.ts"),
+  import("../../shared/lib/stablecoins/registry.ts"),
   import("../../shared/lib/psi-eligible.ts"),
   import("../../shared/lib/shadow-stablecoins.ts"),
   import("../../shared/lib/live-reserve-adapters-definitions.ts"),
