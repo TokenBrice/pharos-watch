@@ -2,7 +2,9 @@ import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { CitationBlock } from "@/components/citation-block";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -210,6 +212,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           }
         />
       </Suspense>
+      <CitationBlock
+        entityClass="coin"
+        id={coin.id}
+        title={`${coin.name} (${coin.symbol}) — Pharos coin profile`}
+        url={`${SITE_ORIGIN}${buildStablecoinUrl(id)}`}
+      />
       <BreadcrumbJsonLd
         items={[
           { name: "Home", url: "/" },

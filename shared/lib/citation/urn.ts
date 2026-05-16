@@ -1,15 +1,15 @@
 /**
  * Pharos URN scheme — `urn:pharos:<entity-class>:<id>[@<qualifier>]`
  *
- * RFC 8141 conformant. Immutable from v1: the entity-class enum below is
- * frozen and may not be extended without explicit escalation. The format
- * itself ships with the first citation surface and stays parser-stable
- * across all future Pharos releases.
+ * RFC 8141 conformant. The grammar is stable: the `urn:pharos:` prefix and
+ * separator characters never change. New entity classes may be appended
+ * (additive) but existing entries are immutable once shipped. See
+ * `docs/pharos-urn.md` for the canonical class list and history.
  *
  * Runtime-neutral. Do not import from `@/` or `worker/` in this file.
  */
 
-/** Closed enum of entity classes recognised by the Pharos URN scheme. Immutable from v1. */
+/** Closed enum of entity classes recognised by the Pharos URN scheme. */
 export const PHAROS_URN_ENTITY_CLASSES = [
   "coin",
   "depeg-event",
@@ -19,6 +19,7 @@ export const PHAROS_URN_ENTITY_CLASSES = [
   "dataset",
   "snapshot",
   "depeg-report",
+  "page",
 ] as const;
 
 export type PharosUrnEntityClass = (typeof PHAROS_URN_ENTITY_CLASSES)[number];

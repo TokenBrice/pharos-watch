@@ -2,7 +2,7 @@
 
 `urn:pharos:<entity-class>:<id>[@<qualifier>]`
 
-The Pharos URN scheme is a stable, parser-friendly identifier for every cite-able artifact published by Pharos. It follows RFC 8141 with `pharos` as the namespace identifier. The grammar is **immutable from v1**: the entity-class enum, separator characters, and prefix never change.
+The Pharos URN scheme is a stable, parser-friendly identifier for every cite-able artifact published by Pharos. It follows RFC 8141 with `pharos` as the namespace identifier. The grammar is **stable**: separator characters and the `urn:pharos:` prefix never change. New entity classes may be appended (additive) but existing entries never get renamed, removed, or repurposed once shipped — see the table below for the canonical list.
 
 Implementation: `shared/lib/citation/urn.ts` (`formatPharosUrn`, `parsePharosUrn`).
 
@@ -35,8 +35,9 @@ The colon `:` is the only structural separator. Reader tooling can split `urn.sp
 | `dataset` | A static dataset export | `urn:pharos:dataset:stablecoin-cemetery` |
 | `snapshot` | A daily public-data snapshot row | `urn:pharos:snapshot:2026-05-16` |
 | `depeg-report` | A per-event depeg report (post-mortem) | `urn:pharos:depeg-report:usdc-2023-03` |
+| `page` | A first-class editorial or policy page | `urn:pharos:page:principles` |
 
-Adding a new entity class is an escalation, not in-brief work. The enum is set in stone from v1.
+Adding a new entity class is an explicit, deliberate event recorded here. The `page` class was added in 2026-05 to carry citations on the About / Principles / Editorial AI policy surfaces. Existing classes remain stable; do not rename, remove, or repurpose any entry once it has shipped.
 
 ---
 

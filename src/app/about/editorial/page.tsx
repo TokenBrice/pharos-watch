@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CitationBlock } from "@/components/citation-block";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Editorial Policy: AI-Authored Content on Pharos",
@@ -74,6 +76,13 @@ export default function AboutEditorialPage() {
           every such panel is labelled.
         </p>
       </section>
+
+      <CitationBlock
+        entityClass="page"
+        id="editorial"
+        title="Pharos Editorial Policy: AI-Authored Content"
+        url={`${SITE_ORIGIN}/about/editorial/`}
+      />
     </FeaturePageShell>
   );
 }

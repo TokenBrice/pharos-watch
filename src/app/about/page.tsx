@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ArrowRight, ExternalLink, GitBranch, Radio } from "lucide-react";
 import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
+import { CitationBlock } from "@/components/citation-block";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqSection } from "@/components/faq-section";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -536,6 +538,13 @@ export default function AboutPage() {
             </Button>
           </div>
         </AboutSection>
+
+        <CitationBlock
+          entityClass="page"
+          id="about"
+          title="About Pharos"
+          url={`${SITE_ORIGIN}/about/`}
+        />
       </div>
     </FeaturePageShell>
   );

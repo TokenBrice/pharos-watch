@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CitationBlock } from "@/components/citation-block";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   PRINCIPLES_AI_POLICY,
   PRINCIPLES_AXIOMS,
@@ -89,6 +91,13 @@ export default function AboutPrinciplesPage() {
           for the inbound side of the same accountability.
         </p>
       </section>
+
+      <CitationBlock
+        entityClass="page"
+        id="principles"
+        title="Pharos Principles"
+        url={`${SITE_ORIGIN}/about/principles/`}
+      />
     </FeaturePageShell>
   );
 }

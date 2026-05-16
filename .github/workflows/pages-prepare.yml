@@ -30,6 +30,14 @@ jobs:
     env:
       DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      # Council-13 W3-D — sync confirmed depeg events before next build so
+      # generateStaticParams() produces the full /depeg/<event>/ static set.
+      DEPEG_EVENTS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
+      # Council-13 W3-G — feed the daily dataset mirror generator from the
+      # same API surface so /datasets/* and /sheets/* carry real data.
+      PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
       # Detail-page feature flags. Each is inlined at build time when set to
       # the literal string "true"; missing / any other value → false. Managed
@@ -51,6 +59,8 @@ jobs:
           tooling-cache: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
+      - name: Fetch depeg events from the target API environment
+        run: npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
       - run: npm run build
       - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
