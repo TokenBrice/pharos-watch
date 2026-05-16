@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AiDisclosureBadge } from "@/components/ai-disclosure-badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Term } from "@/components/term";
@@ -24,7 +25,16 @@ function renderWithTerms(text: string): ReactNode[] {
   return tokens;
 }
 
-export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
+export function AiSummary({
+  title,
+  text,
+  updatedAt,
+  authoredBy,
+  model,
+  reviewedBy,
+  reviewedAt,
+  factsAsOf,
+}: StablecoinAiSummary) {
   const isoDate = updatedAt;
   const dateline = new Date(`${updatedAt}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",
@@ -42,6 +52,13 @@ export function AiSummary({ title, text, updatedAt }: StablecoinAiSummary) {
             Updated {dateline}
           </time>
         </div>
+        <AiDisclosureBadge
+          authoredBy={authoredBy}
+          model={model}
+          reviewedBy={reviewedBy}
+          reviewedAt={reviewedAt}
+          factsAsOf={factsAsOf}
+        />
       </CardHeader>
       <CardContent>
         <p className="font-serif text-[1.05rem] leading-relaxed text-foreground/90 italic">
