@@ -20,18 +20,24 @@ const FLAGS_PATH = "src/lib/feature-flags.ts";
 const WARN_WINDOW_DAYS = 30;
 const RETIREMENT_DOC = "docs/process/feature-flags.md";
 
-// Matches `// expiresAt: YYYY-MM-DD <reason>` followed (on the next code line)
-// by an identifier assignment such as `heroVerdict: process.env.…`.
-const FLAG_COMMENT_RE =
-  /^[ \t]*\/\/[ \t]*expiresAt:[ \t]*(\d{4}-\d{2}-\d{2})[ \t]*(?:[—-][ \t]*(.+?))?[ \t]*$\r?\n[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*:/gm;
+// Match an `// expiresAt: YYYY-MM-DD [— reason]` comment on a single line.
+// Linear, no backtracking — avoids `security/detect-unsafe-regex`.
+const COMMENT_LINE_RE = /^\s*\/\/\s*expiresAt:\s*(\d{4}-\d{2}-\d{2})(.*)$/;
+// Match an `identifier:` flag-key on the following code line.
+const FLAG_KEY_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/;
 
 function parseFlags(source) {
+  const lines = source.split(/\r?\n/);
   const flags = [];
-  let match;
-  FLAG_COMMENT_RE.lastIndex = 0;
-  while ((match = FLAG_COMMENT_RE.exec(source)) !== null) {
-    const [, expiresAt, reason, flag] = match;
-    flags.push({ flag, expiresAt, reason: reason?.trim() ?? "" });
+  for (let i = 0; i < lines.length - 1; i += 1) {
+    const commentMatch = COMMENT_LINE_RE.exec(lines[i]);
+    if (!commentMatch) continue;
+    const keyMatch = FLAG_KEY_LINE_RE.exec(lines[i + 1]);
+    if (!keyMatch) continue;
+    const [, expiresAt, rest] = commentMatch;
+    const [, flag] = keyMatch;
+    const reason = rest.replace(/^\s*[—-]\s*/, "").trim();
+    flags.push({ flag, expiresAt, reason });
   }
   return flags;
 }
