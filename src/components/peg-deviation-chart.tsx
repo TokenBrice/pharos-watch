@@ -8,7 +8,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatChartDate } from "@shared/lib/format";
-import { CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import {
   ChartAnnotationLines,
@@ -91,27 +91,75 @@ function PegXTick({
   );
 }
 
-function formatPriceTick(value: number): string {
-  return `$${value.toFixed(value >= 10 ? 2 : 4)}`;
-}
-
 function formatTooltip(value: number): [string, string] {
   const deviationBps = Math.round((value - 1) * 10000);
   const sign = deviationBps > 0 ? "+" : "";
   return [`$${value.toFixed(6)} (${sign}${deviationBps} bps)`, "Price"];
 }
 
+/**
+ * Snap the Y-axis domain and tick set to clean basis-point increments around
+ * the $1 peg target. Avoids the auto-Recharts behavior that produces "$1.0155"
+ * and similar ugly numbers from raw data extremes.
+ */
+const TICK_STEPS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2];
+
+function computePegYAxis(prices: number[]): {
+  domain: [number, number];
+  ticks: number[];
+  step: number;
+} {
+  if (prices.length === 0) {
+    return { domain: [0.98, 1.02], ticks: [0.98, 0.99, 1, 1.01, 1.02], step: 0.01 };
+  }
+  let min = Math.min(...prices);
+  let max = Math.max(...prices);
+  // The $1 peg target must be inside the visible window.
+  min = Math.min(min, 1);
+  max = Math.max(max, 1);
+  const range = max - min;
+
+  // Pick the smallest "nice" step that gives ~4-6 ticks across the range.
+  let step = TICK_STEPS[TICK_STEPS.length - 1];
+  for (const candidate of TICK_STEPS) {
+    if (candidate >= range / 5) {
+      step = candidate;
+      break;
+    }
+  }
+
+  const domainMin = Math.floor(min / step - 1e-9) * step;
+  const domainMax = Math.ceil(max / step + 1e-9) * step;
+
+  const ticks: number[] = [];
+  for (let t = domainMin; t <= domainMax + 1e-9; t += step) {
+    ticks.push(Number(t.toFixed(6)));
+  }
+  return { domain: [domainMin, domainMax], ticks, step };
+}
+
+function makePriceTickFormatter(step: number): (value: number) => string {
+  const decimals = step >= 0.01 ? 2 : step >= 0.001 ? 3 : 4;
+  return (value) => `$${value.toFixed(decimals)}`;
+}
+
 interface PegDeviationChartProps {
   data: SupplyHistoryPoint[];
   pegCurrency?: string | null;
   stablecoinId: string;
+  /**
+   * When true, the chart renders without its own Card chrome — for embedding
+   * inside another module (e.g. Safety Score). Height is reduced to match
+   * compact contexts; the section title is demoted to subsection weight.
+   */
+  embedded?: boolean;
 }
 
 /**
  * Continuous USD-price line for USD-pegged coins with a $1 reference line.
  * Non-USD pegs need FX adjustment so the chart is hidden for them (returns null).
  */
-export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviationChartProps) {
+export function PegDeviationChart({ data, pegCurrency, stablecoinId, embedded = false }: PegDeviationChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
@@ -155,24 +203,94 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
     return ticks;
   }, [range, filteredData]);
 
-  const yDomain = useMemo<[number, number]>(() => {
-    if (filteredData.length === 0) return [0.95, 1.05];
-    let min = Infinity;
-    let max = -Infinity;
-    for (const d of filteredData) {
-      if (d.price < min) min = d.price;
-      if (d.price > max) max = d.price;
-    }
-    // Always include the peg target in the visible window.
-    min = Math.min(min, 1);
-    max = Math.max(max, 1);
-    const span = max - min;
-    const pad = Math.max(span * 0.1, 0.001);
-    return [min - pad, max + pad];
-  }, [filteredData]);
+  const yAxis = useMemo(
+    () => computePegYAxis(filteredData.map((d) => d.price)),
+    [filteredData],
+  );
+  const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
 
   if (pegCurrency !== "USD") {
     return null;
+  }
+
+  const chartHeightClass = embedded
+    ? "min-h-[220px] w-full flex-1 sm:min-h-[260px]"
+    : "h-[250px] sm:h-[350px]";
+
+  const chartBody = filteredData.length > 0 ? (
+    <div
+      ref={chartContainerRef}
+      className={chartHeightClass}
+      role="figure"
+      aria-label={`Peg deviation chart showing ${filteredData.length} data points`}
+    >
+      {isChartReady ? (
+        <LineChart
+          width={width}
+          height={height}
+          data={filteredData}
+          margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}
+        >
+          <TimeGrid />
+          <TimeXAxis
+            dataKey="ts"
+            ticks={xTicks}
+            interval={range === "all" ? 0 : "preserveStartEnd"}
+            tick={<PegXTick range={range} />}
+            height={range === "all" ? 44 : 30}
+          />
+          <MonoYAxis tickFormatter={formatPriceTick} domain={yAxis.domain} ticks={yAxis.ticks} />
+          <ReferenceLine
+            y={1}
+            stroke="var(--color-muted-foreground)"
+            strokeOpacity={0.55}
+            strokeDasharray="4 4"
+            strokeWidth={1.25}
+          />
+          <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
+          <Line
+            type="monotone"
+            dataKey="price"
+            stroke={CHART_BLUE}
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+          />
+          <ChartAnnotationLines annotations={annotations} />
+        </LineChart>
+      ) : (
+        <ChartSkeleton className="h-full w-full" />
+      )}
+    </div>
+  ) : (
+    <div className={`flex ${chartHeightClass} items-center justify-center text-muted-foreground`}>
+      No price history available
+    </div>
+  );
+
+  const annotationsList = annotations.length > 0 ? (
+    <ul className="sr-only" aria-label="Chart events">
+      {annotations.map((a) => (
+        <li key={`${a.ts}-${a.kind}`}>
+          {new Date(a.ts).toLocaleDateString()}: {a.label}
+        </li>
+      ))}
+    </ul>
+  ) : null;
+
+  if (embedded) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <h3 className="px-0.5 text-sm font-semibold text-foreground">Stability footprint</h3>
+          <div className="-mx-1 overflow-x-auto sm:mx-0 sm:overflow-visible">
+            <TimeRangeButtons options={options} value={range} onChange={setRange} />
+          </div>
+        </div>
+        {chartBody}
+        {annotationsList}
+      </div>
+    );
   }
 
   return (
@@ -181,61 +299,8 @@ export function PegDeviationChart({ data, pegCurrency, stablecoinId }: PegDeviat
         <DetailSectionTitle>Peg Deviation</DetailSectionTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
-      <CardContent>
-        {filteredData.length > 0 ? (
-          <div
-            ref={chartContainerRef}
-            className="h-[250px] sm:h-[350px]"
-            role="figure"
-            aria-label={`Peg deviation chart showing ${filteredData.length} data points`}
-          >
-            {isChartReady ? (
-              <LineChart
-                width={width}
-                height={height}
-                data={filteredData}
-                margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}
-              >
-                <TimeGrid />
-                <TimeXAxis
-                  dataKey="ts"
-                  ticks={xTicks}
-                  interval={range === "all" ? 0 : "preserveStartEnd"}
-                  tick={<PegXTick range={range} />}
-                  height={range === "all" ? 44 : 30}
-                />
-                <MonoYAxis tickFormatter={formatPriceTick} domain={yDomain} />
-                <ReferenceLine y={1} stroke={CHART_SLATE} strokeDasharray="4 4" />
-                <DateTooltip formatter={(value) => formatTooltip(Number(value))} />
-                <Line
-                  type="monotone"
-                  dataKey="price"
-                  stroke={CHART_BLUE}
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-                <ChartAnnotationLines annotations={annotations} />
-              </LineChart>
-            ) : (
-              <ChartSkeleton className="h-full w-full" />
-            )}
-          </div>
-        ) : (
-          <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
-            No price history available
-          </div>
-        )}
-      </CardContent>
-      {annotations.length > 0 ? (
-        <ul className="sr-only" aria-label="Chart events">
-          {annotations.map((a) => (
-            <li key={`${a.ts}-${a.kind}`}>
-              {new Date(a.ts).toLocaleDateString()}: {a.label}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <CardContent>{chartBody}</CardContent>
+      {annotationsList}
     </Card>
   );
 }

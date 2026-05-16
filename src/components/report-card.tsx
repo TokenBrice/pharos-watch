@@ -10,8 +10,9 @@ import {
   METHODOLOGY_VERSION,
 } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { ReportCardRadar } from "./radar-chart";
+import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -22,26 +23,6 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { CRON_24H } from "@/lib/cron-intervals";
-
-// ---------------------------------------------------------------------------
-// Grade Glow Component
-// ---------------------------------------------------------------------------
-
-function GradeGlow({ grade }: { grade: ReportCardType["overallGrade"] }) {
-  const color = getSafetyGradeMetadata(grade).glowColor;
-  
-  return (
-    <div 
-      className="absolute inset-0 pointer-events-none -z-10"
-      style={{ 
-        background: `radial-gradient(circle at center, ${color}, transparent 70%)`,
-        transform: 'scale(1.2)',
-        filter: 'blur(20px)',
-      }}
-      aria-hidden="true"
-    />
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Dimension Row Component
@@ -78,7 +59,6 @@ interface DimensionRowProps {
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const dimBorder = getSafetyGradeMetadata(dim.grade).borderColor;
   const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
 
@@ -86,10 +66,9 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
     <div className="group">
       <div
         className={cn(
-          "relative w-full rounded-lg border border-l-[4px] px-3 py-2.5 transition-colors",
-          hasDetails ? "cursor-pointer hover:bg-muted/30" : "cursor-default"
+          "relative w-full rounded-lg border border-border/60 px-2.5 py-2 transition-colors",
+          hasDetails ? "cursor-pointer hover:border-border/80 hover:bg-muted/30" : "cursor-default"
         )}
-        style={{ borderLeftColor: dimBorder }}
       >
         {hasDetails && (
           <button
@@ -104,18 +83,23 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             </span>
           </button>
         )}
-        <div className={cn("relative z-10 flex items-center justify-between", hasDetails && "pointer-events-none")}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+        <div className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-medium">
               <DimensionLabel dimKey={dimKey} />
             </span>
-            {hasDetails && (
-              <ChevronDown aria-hidden="true" className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
-            )}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                !hasDetails && "invisible",
+                hasDetails && expanded && "rotate-180",
+              )}
+            />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <SafetyGradeBadge grade={dim.grade} size="sm" />
-            <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
+            <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
               {dim.score !== null ? (
                 <>
                   {dim.score}
@@ -241,13 +225,26 @@ interface ReportCardDetailProps {
     pairDiversity: number;
   } | null;
   updatedAtMs?: number | null;
+  /** Supply history used to render the embedded "Stability footprint" chart. */
+  supplyHistory?: SupplyHistoryPoint[];
+  /** Stablecoin id, passed through to the embedded peg chart for annotations. */
+  stablecoinId?: string;
+  /** Peg currency; the embedded peg chart only renders for USD-pegged coins. */
+  pegCurrency?: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardDetail({ card, liquidityComponents, updatedAtMs }: ReportCardDetailProps) {
+export function ReportCardDetail({
+  card,
+  liquidityComponents,
+  updatedAtMs,
+  supplyHistory,
+  stablecoinId,
+  pegCurrency,
+}: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
@@ -285,6 +282,68 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs }: Rep
       ? Math.max(0, card.uncappedOverallScore - card.overallScore)
       : null;
 
+  const canShowPegChart =
+    pegCurrency === "USD"
+    && typeof stablecoinId === "string"
+    && Array.isArray(supplyHistory)
+    && supplyHistory.length > 0;
+
+  const safetyColumn = (
+    <div className="space-y-5">
+      {/* Grade hero — left-aligned in split, centered when single-column */}
+      <div className={cn("flex items-center gap-4 pb-1 pt-1", !canShowPegChart && "justify-center")}>
+        <SafetyGradeBadge grade={card.overallGrade} size="lg" className="sm:hidden" />
+        <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" />
+        <div className="flex min-w-0 flex-col">
+          {card.overallScore !== null && (
+            <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
+              {card.overallScore}
+              <span className="text-lg text-muted-foreground">/100</span>
+            </span>
+          )}
+          {card.baseScore != null && card.overallScore != null && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
+              {pegDrag != null && pegDrag > 0 ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>Peg: <span className="font-mono">−{pegDrag.toFixed(1)}</span></span>
+                </>
+              ) : null}
+              {parentCapDelta != null ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>Parent cap: <span className="font-mono">−{parentCapDelta.toFixed(1)}</span></span>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {card.overallCapped === true && card.rawInputs.variantParentId ? (
+        <div className={cn("flex", !canShowPegChart && "justify-center")}>
+          <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+            Overall capped at parent stablecoin
+          </span>
+        </div>
+      ) : null}
+
+      {/* Dimension breakdown */}
+      <div className="space-y-2">
+        {DIMENSION_ORDER.map((key) => (
+          <DimensionRow
+            key={key}
+            dimKey={key}
+            dim={card.dimensions[key]}
+            card={card}
+            liquidityComponents={liquidityComponents}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <Card
       className="overflow-hidden"
@@ -310,73 +369,19 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs }: Rep
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Two-column layout: grade + radar | dimension breakdown */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-stretch">
-          {/* Left column: grade + radar stacked */}
-          <div className="flex flex-col items-center gap-5">
-            {/* Grade hero with glow */}
-            <div className="relative flex flex-col items-center gap-3 pt-4 pb-2 px-6">
-              <GradeGlow grade={card.overallGrade} />
-              <div className="flex items-center gap-4">
-                <SafetyGradeBadge grade={card.overallGrade} size="hero" />
-                {card.overallScore !== null && (
-                  <div className="flex flex-col">
-                    <span className="text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground">
-                      {card.overallScore}
-                      <span className="text-lg text-muted-foreground">/100</span>
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Score breakdown - surfaced from details */}
-              {card.baseScore != null && card.overallScore != null && (
-                <div className="text-xs text-muted-foreground text-center space-y-1 mt-1">
-                  <div className="flex items-center gap-2 justify-center">
-                    <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
-                    {pegDrag != null && pegDrag > 0 ? (
-                      <>
-                        <span>·</span>
-                        <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{pegDrag.toFixed(1)}</span></span>
-                      </>
-                    ) : null}
-                    {parentCapDelta != null ? (
-                      <>
-                        <span>·</span>
-                        <span>Parent cap: <span className="font-mono text-amber-600 dark:text-amber-400">−{parentCapDelta.toFixed(1)}</span></span>
-                      </>
-                    ) : null}
-                  </div>
-                  {card.overallCapped === true && card.rawInputs.variantParentId ? (
-                    <div className="flex justify-center">
-                      <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                        Overall capped at parent stablecoin
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-            
-            {/* Radar chart - larger */}
-            <div className="relative w-full max-w-[380px] min-h-[280px] flex-1">
-              <ReportCardRadar card={card} labels="short" />
-            </div>
+        {canShowPegChart ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {safetyColumn}
+            <PegDeviationChart
+              data={supplyHistory!}
+              pegCurrency={pegCurrency}
+              stablecoinId={stablecoinId!}
+              embedded
+            />
           </div>
-
-          {/* Right column: Dimension breakdown */}
-          <div className="space-y-2">
-            {DIMENSION_ORDER.map((key) => (
-              <DimensionRow
-                key={key}
-                dimKey={key}
-                dim={card.dimensions[key]}
-                card={card}
-                liquidityComponents={liquidityComponents}
-              />
-            ))}
-          </div>
-        </div>
+        ) : (
+          <div className="mx-auto max-w-2xl">{safetyColumn}</div>
+        )}
 
         {/* Dependency callout */}
         {card.rawInputs.dependencies.length > 0 && (
@@ -415,7 +420,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs }: Rep
           </div>
         )}
 
-        <MethodologyCardActions topic="safetyScore" showVersion={false} />
+        <MethodologyCardActions topic="safetyScore" showVersion={false} className="font-medium" />
       </CardContent>
     </Card>
   );

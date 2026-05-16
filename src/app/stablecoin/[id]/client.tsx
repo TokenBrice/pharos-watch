@@ -21,7 +21,9 @@ import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loa
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
+import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { RecentBlacklistBanner } from "@/components/stablecoin-detail/recent-blacklist-banner";
+import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
@@ -45,13 +47,6 @@ const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => 
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const PegDeviationChart = dynamic(
-  () => import("@/components/peg-deviation-chart").then((mod) => mod.PegDeviationChart),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
-  },
-);
-
 const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
@@ -63,8 +58,22 @@ const FlowsSection = dynamic(
   },
 );
 
+const FlowHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowHistorySection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
 const BlacklistSection = dynamic(
   () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
+const BlacklistHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
@@ -252,8 +261,8 @@ export default function StablecoinDetailClient({
     s.safety,
     s.overview,
     ...(viewModel.reserves ? [s.reserves] : []),
-    ...(hasPriceTransparency ? [s.price] : []),
     s.liquidity,
+    ...(hasPriceTransparency ? [s.price] : []),
     s.market,
     ...(viewModel.hasYieldSection ? [s.yield] : []),
     ...(viewModel.hasFlows ? [s.flows] : []),
@@ -346,11 +355,6 @@ export default function StablecoinDetailClient({
               stablecoinId={viewModel.id}
             />
           )}
-          <div className="mt-4">
-            <LazySection minHeight={220}>
-              <SafetyScoreHistorySection stablecoinId={viewModel.id} />
-            </LazySection>
-          </div>
         </section>
 
         <section id="info">
@@ -367,12 +371,7 @@ export default function StablecoinDetailClient({
             summary={viewModel.summary}
             reserves={viewModel.reserves}
             reserveFetchError={viewModel.reserveFetchError}
-            redemptionBackstop={viewModel.redemptionBackstop}
             isNavToken={viewModel.isNavToken}
-            coinData={viewModel.coinData}
-            consensusSources={viewModel.consensusSources}
-            agreeSources={viewModel.agreeSources}
-            dexPriceCheck={viewModel.dexPriceCheck}
           />
         </section>
 
@@ -384,7 +383,7 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── Liquidity zone ── */}
-      <div className="mt-12">
+      <div className="mt-12 space-y-6">
         <section id="liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
@@ -393,6 +392,24 @@ export default function StablecoinDetailClient({
             </LazySection>
           </SectionErrorBoundary>
         </section>
+
+        {(hasPriceTransparency || viewModel.redemptionBackstop) && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {hasPriceTransparency && viewModel.coinData ? (
+              <section id="price" aria-label="Price transparency">
+                <PriceTransparencyCard
+                  coinData={viewModel.coinData}
+                  consensusSources={viewModel.consensusSources ?? []}
+                  agreeSources={viewModel.agreeSources ?? []}
+                  dexPriceCheck={viewModel.dexPriceCheck}
+                />
+              </section>
+            ) : null}
+            {viewModel.redemptionBackstop ? (
+              <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* ── Market zone ── */}
@@ -435,10 +452,13 @@ export default function StablecoinDetailClient({
       </div>
 
       {/* ── History zone ── */}
-      {!viewModel.isNavToken ? (
-        <div className="mt-12">
-          <section id="history">
-            {frozenNote}
+      <div className="mt-12">
+        <section id="history" className="space-y-6">
+          {frozenNote}
+          <LazySection minHeight={220}>
+            <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+          </LazySection>
+          {!viewModel.isNavToken ? (
             <LazySection minHeight={360}>
               <DepegHistory
                 stablecoinId={viewModel.id}
@@ -447,9 +467,20 @@ export default function StablecoinDetailClient({
                 depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
               />
             </LazySection>
-          </section>
-        </div>
-      ) : null}
+          ) : null}
+          {viewModel.hasFlows ? (
+            <FlowHistorySection stablecoinId={viewModel.id} />
+          ) : null}
+          {viewModel.hasBlacklist ? (
+            <SectionErrorBoundary name="blacklist-history">
+              <BlacklistHistorySection
+                stablecoinId={viewModel.id}
+                symbol={viewModel.coin.symbol as BlacklistStablecoin}
+              />
+            </SectionErrorBoundary>
+          ) : null}
+        </section>
+      </div>
 
       <FeedbackModal
         open={feedbackOpen}
