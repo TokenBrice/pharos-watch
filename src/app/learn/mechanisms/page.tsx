@@ -74,7 +74,7 @@ export default function MechanismExplainersHub() {
                     <h2 className="text-[clamp(1.75rem,2.6vw,2.5rem)] font-extrabold leading-[1.02] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
                       {getMechanismArchetypeLabel(archetype)}
                     </h2>
-                    <p className="max-w-[42ch] text-[15px] leading-relaxed text-muted-foreground">
+                    <p className="text-[15px] leading-relaxed text-muted-foreground">
                       {getMechanismArchetypeOneLiner(archetype)}
                     </p>
                     <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">

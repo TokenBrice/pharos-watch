@@ -42,16 +42,16 @@ export function ExplainerPageShell({
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel}</span>
         </nav>
-        <h1 className="max-w-[18ch] text-[clamp(2.25rem,4.5vw,4rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-foreground">
+        <h1 className="max-w-[22ch] text-[clamp(2.25rem,4.5vw,4rem)] font-extrabold leading-[0.98] tracking-[-0.035em] text-foreground">
           {title}
         </h1>
         {subtitle ? (
-          <p className="max-w-[65ch] text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          <p className="text-lg leading-relaxed text-muted-foreground sm:text-xl">
             {subtitle}
           </p>
         ) : null}
         {leadParagraphs.length > 0 ? (
-          <div className="max-w-[68ch] space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+          <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">
             {leadParagraphs.map((paragraph, index) => (
               <p key={index}>{paragraph}</p>
             ))}
