@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { StablecoinAiSummary } from "@shared/types";
 
@@ -49,6 +50,12 @@ export function AiDisclosureBadge(props: DisclosureFields) {
       >
         {segments.join(" · ")}
       </Badge>
+      <Link
+        href="/about/editorial/#editorial-ai-policy"
+        className="pharos-focus-ring rounded-sm text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+      >
+        Policy →
+      </Link>
     </div>
   );
 }
