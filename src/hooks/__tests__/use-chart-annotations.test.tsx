@@ -106,7 +106,7 @@ describe("useChartAnnotations", () => {
         events: [
           tape({
             id: "tape-depeg",
-            type: "depeg.usdc.svb",
+            type: "depeg.opened",
             severity: "critical",
             ts: Date.UTC(2023, 2, 11, 6, 30),
             title: "Tape depeg row",
@@ -188,6 +188,93 @@ describe("useChartAnnotations", () => {
     expect(result.current.data).toEqual([]);
   });
 
+  it("drops low-severity tape rows (info, notice) but keeps curated annotations", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({
+      data: {
+        events: [
+          tape({
+            id: "tape-notice",
+            type: "depeg.opened",
+            severity: "notice",
+            ts: Date.UTC(2023, 2, 11),
+            title: "Threshold-skimming depeg",
+          }),
+          tape({
+            id: "tape-info",
+            type: "depeg.opened",
+            severity: "info",
+            ts: Date.UTC(2023, 2, 12),
+            title: "Info depeg",
+          }),
+          tape({
+            id: "tape-warn",
+            type: "depeg.opened",
+            severity: "warning",
+            ts: Date.UTC(2023, 2, 13),
+            title: "Real depeg",
+          }),
+        ],
+        nextCursor: null,
+        total: 3,
+        totalExact: true,
+      },
+      isLoading: false,
+    });
+    getCuratedAnnotationsMock.mockReturnValue([
+      {
+        ts: Date.UTC(2023, 2, 10),
+        kind: "depeg",
+        label: "Curated low-severity row survives",
+        severity: "low",
+      },
+    ]);
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(result.current.data.map((a) => a.label)).toEqual([
+      "Curated low-severity row survives",
+      "Real depeg",
+    ]);
+  });
+
+  it("drops depeg.resolved tape rows even when severity passes the filter", () => {
+    isChartAnnotationsEnabledMock.mockReturnValue(true);
+    useApiQueryWithMetaMock.mockReturnValue({
+      data: {
+        events: [
+          tape({
+            id: "tape-resolved",
+            type: "depeg.resolved",
+            severity: "warning",
+            ts: Date.UTC(2023, 2, 11),
+            title: "Depeg resolved (should be dropped)",
+          }),
+          tape({
+            id: "tape-opened",
+            type: "depeg.opened",
+            severity: "warning",
+            ts: Date.UTC(2023, 2, 12),
+            title: "Depeg opened (kept)",
+          }),
+        ],
+        nextCursor: null,
+        total: 2,
+        totalExact: true,
+      },
+      isLoading: false,
+    });
+    getCuratedAnnotationsMock.mockReturnValue([]);
+
+    const { result } = renderHook(() =>
+      useChartAnnotations("usdc-circle", Date.UTC(2023, 0, 1), Date.UTC(2023, 5, 1)),
+    );
+
+    expect(result.current.data.map((a) => a.label)).toEqual(["Depeg opened (kept)"]);
+  });
+
   it("sorts merged output by timestamp ascending", () => {
     isChartAnnotationsEnabledMock.mockReturnValue(true);
     useApiQueryWithMetaMock.mockReturnValue({
@@ -195,7 +282,8 @@ describe("useChartAnnotations", () => {
         events: [
           tape({
             id: "tape-late",
-            type: "depeg.test",
+            type: "depeg.opened",
+            severity: "severe",
             ts: Date.UTC(2023, 4, 1),
             title: "Late tape",
           }),

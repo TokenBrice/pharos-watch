@@ -55,9 +55,15 @@ const TAPE_EVENTS_LIMIT = 200;
  * Map a worker tape-event `type` slug onto the public `ChartAnnotationKind`
  * enum. Returns null for slugs we don't plot (score/psi/dews/yield/lifecycle
  * etc.) so they're dropped at the hook boundary.
+ *
+ * `depeg.resolved` is intentionally NOT mapped — pairing each `depeg.opened`
+ * with its matching resolution doubles the visual count without adding
+ * editorial signal. A coin that flickers across the depeg threshold (e.g.
+ * LUSD) emits hundreds of opened/resolved pairs per year; collapsing to
+ * `opened` only halves the noise immediately.
  */
 function mapWorkerKind(rowType: string): ChartAnnotationKind | null {
-  if (rowType.startsWith("depeg.")) return "depeg";
+  if (rowType === "depeg.opened") return "depeg";
   if (rowType.startsWith("mint_burn.")) return "mint-burn-spike";
   if (rowType.startsWith("freeze.")) return "blacklist-surge";
   if (rowType.startsWith("methodology.")) return "methodology-change";
@@ -68,6 +74,17 @@ function severityToBand(s: TapeEvent["severity"]): ChartAnnotation["severity"] {
   if (s === "critical" || s === "severe") return "high";
   if (s === "warning") return "med";
   return "low";
+}
+
+/**
+ * Tape annotations are filtered to `warning` severity or above. The `info`
+ * and `notice` tiers correspond to threshold-skimming events (e.g. LUSD
+ * crossing $0.99 by a few basis points) that visually overwhelm a chart
+ * without flagging anything a reader needs to investigate. Curated
+ * annotations bypass this filter — they're editorially selected.
+ */
+function isTapeSeverityWorthPlotting(s: TapeEvent["severity"]): boolean {
+  return s === "warning" || s === "severe" || s === "critical";
 }
 
 export function useChartAnnotations(
@@ -123,6 +140,7 @@ export function useChartAnnotations(
     if (query.data) {
       for (const ev of query.data.events) {
         if (ev.ts < lo || ev.ts > hi) continue;
+        if (!isTapeSeverityWorthPlotting(ev.severity)) continue;
         const kind = mapWorkerKind(ev.type);
         if (kind === null) continue;
         const key = `${kind}|${Math.floor(ev.ts / DAY_MS)}`;
