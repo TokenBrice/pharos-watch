@@ -258,6 +258,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
+      url: `${SITE_URL}/about/editorial/`,
+      lastModified: lastEdited("/about/editorial/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${SITE_URL}/about/principles/`,
+      lastModified: lastEdited("/about/principles/"),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
       url: `${SITE_URL}/api/`,
       lastModified: lastEdited("/api/"),
       changeFrequency: "monthly",
@@ -395,53 +407,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  const feedPages: MetadataRoute.Sitemap = [
-    {
-      url: `${SITE_URL}/feed/digest/`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/feed/depeg/`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/feed/methodology/`,
-      lastModified: lastEdited("/methodology/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/feed/cemetery/`,
-      lastModified: lastEdited("/cemetery/"),
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-  ];
+  // RSS feeds live at /feed/<topic>/ as XML (Content-Type:
+  // application/rss+xml). They're discoverable via the <link rel="alternate">
+  // tags in layout.tsx and the footer "Subscribe" cluster; sitemap inclusion
+  // would fail the SEO check (no HTML artifact at those paths).
+  const feedPages: MetadataRoute.Sitemap = [];
 
-  const datasetPages: MetadataRoute.Sitemap = PUBLIC_DATASET_TOPICS.flatMap((topic) => [
-    {
-      url: `${SITE_URL}/datasets/${topic}/latest.csv`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/datasets/${topic}/latest.json`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.4,
-    },
-    {
-      url: `${SITE_URL}/sheets/${topic}.csv`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.4,
-    },
-  ]);
+  // Public dataset + Sheets mirrors live at non-HTML URLs (.csv/.json),
+  // so sitemap inclusion isn't appropriate — the SEO check rejects URLs
+  // without HTML artifacts. They remain discoverable via /llms.txt,
+  // /about/api/, and direct linking.
+  const datasetPages: MetadataRoute.Sitemap = PUBLIC_DATASET_TOPICS.flatMap(() => []);
 
   return [
     ...staticPages,
