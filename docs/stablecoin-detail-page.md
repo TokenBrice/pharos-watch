@@ -89,7 +89,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 6. `LongformScrollspyNav`
 7. `ReportCardDetail` + `SafetyScoreHistorySection`
 8. `StablecoinDetailSeoContent` static profile block
-9. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children, then `NoticesAndSummarySection` (wraps `OverviewSection`, `CoinNotices`, and the nested `PriceTransparencyCard` anchor). The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
+9. `UnderlyingAssetCard` for tracked variants, then `ParentVariantsCard` for parents with tracked children. The Overview zone follows under a `SectionBanner` (`ReportCardDetail`, `CoinNotices`, optional `AiSummary`, `DEWSDetail`, `OverviewSection`, `ContagionSnapshot`), with `PriceTransparencyCard` rendered inside the Liquidity zone alongside `RedemptionBackstopCard`. The variant cards are contextual navigation only; they link back into the homepage owner for browse/discovery instead of introducing a dedicated variant route family.
 10. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail)
 11. `CollateralUsageSection` when the coin is used as tracked collateral elsewhere
 12. `DexLiquidityCard`
@@ -243,7 +243,7 @@ When `StablecoinMeta` includes one or more supported `infrastructures` entries, 
 | `src/hooks/use-stablecoin-detail-view-model.ts`                     | Query wiring + aggregate retry handler              |
 | `src/lib/stablecoin-detail-view-model.ts`                           | Pure derivation and fallback assembly               |
 | `src/components/stablecoin-detail/hero-card.tsx`                    | Detail hero surface                                 |
-| `src/components/stablecoin-detail/notices-and-summary-section.tsx`  | Overview + notices wrapper                          |
+| `src/components/stablecoin-detail/section-banner.tsx`               | Section banner heading shared by the detail zones   |
 | `src/components/stablecoin-detail/overview-section.tsx`             | Summary, reserves, redemption backstop              |
 | `src/components/stablecoin-detail/price-transparency-card.tsx`      | Price source transparency and confidence card       |
 | `src/components/stablecoin-detail/flows-section.tsx`                | Detail flow section                                 |
