@@ -3,6 +3,9 @@ import {
   DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
 } from "@/app/depeg/[event]/page-data";
+import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
+
+const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
 
 const MAX_VISIBLE = 12;
 
@@ -47,7 +50,7 @@ export function DepegEventArchive() {
           Event archive
         </h2>
         <p className="text-xs text-muted-foreground">
-          Permanent pages for confirmed events at 2.5% deviation or worse.
+          Permanent pages for confirmed events at {MIN_DEVIATION_PCT}% deviation or worse.
         </p>
       </header>
 

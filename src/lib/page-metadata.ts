@@ -169,7 +169,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
 
   if (coin.status === "pre-launch") {
     return buildPageMetadata({
-      title: `${coin.name} (${coin.symbol}) — Pre-Launch Stablecoin Profile`,
+      title: `${coin.name} (${coin.symbol}) — Pre-launch Stablecoin Profile`,
       description: buildStablecoinDetailDescription(coin),
       canonical: buildStablecoinUrl(coin.id),
       ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${coin.id}`),

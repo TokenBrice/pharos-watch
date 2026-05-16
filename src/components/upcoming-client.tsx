@@ -145,7 +145,7 @@ export function UpcomingClient() {
       <div className="pharos-subtle-band">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="pharos-kicker">Pre-Launch Universe</p>
+            <p className="pharos-kicker">Pre-launch Universe</p>
             <p className="pharos-meta">Track announced, testing, and launch-approaching stablecoins without mixing them into the live market table.</p>
           </div>
           <div className="flex flex-wrap gap-2">

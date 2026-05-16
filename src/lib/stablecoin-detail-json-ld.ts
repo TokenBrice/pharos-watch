@@ -117,7 +117,7 @@ export function buildPreLaunchStablecoinJsonLd(
       "@context": "https://schema.org",
       "@type": "WebPage",
       "@id": `${detailUrl}#webpage`,
-      name: `${coin.name} (${coin.symbol}) Pre-Launch Stablecoin Tracker`,
+      name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
       url: detailUrl,
       isPartOf: { "@id": `${siteUrl}#website` },

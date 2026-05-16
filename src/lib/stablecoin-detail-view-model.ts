@@ -878,8 +878,6 @@ export function buildStablecoinDetailViewModel({
     dewsBand: stressBand,
     mechanismArchetype: coin.mechanismArchetype,
     governance: coin.flags.governance,
-    backing: coin.flags.backing,
-    isNavToken,
     yieldBearing: coin.flags.yieldBearing ?? false,
     activeDepeg: pegPrice.pegScoreResult?.activeDepeg === true,
   });

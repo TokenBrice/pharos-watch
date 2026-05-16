@@ -37,7 +37,7 @@ describe("ShowYourWorkPanel", () => {
         stablecoinName="USDC"
       />,
     );
-    expect(screen.getByText(/Show Your Work · Liquidity Score/i)).toBeTruthy();
+    expect(screen.getByText(/Inputs · Liquidity Score/i)).toBeTruthy();
     expect(screen.getByText("TVL Depth")).toBeTruthy();
     expect(screen.getByText("80.0")).toBeTruthy();
     // 30% weight column visible.

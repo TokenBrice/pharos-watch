@@ -302,7 +302,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
       {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
       <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Pre-Launch</span>
+          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Pre-launch</span>
           <span className="text-sm text-muted-foreground">Pharos hasn&apos;t ingested data for this one yet.</span>
           {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} />}
         </div>
@@ -318,7 +318,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary, logos }: PreLaunchDeta
         <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
         <div className="min-w-0 space-y-1">
           <h1 className="break-words text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {coin.name} ({coin.symbol}) Pre-Launch Stablecoin Tracker
+            {coin.name} ({coin.symbol}) Pre-launch Stablecoin Tracker
           </h1>
           <p className="font-mono text-sm text-muted-foreground">{coin.symbol}</p>
         </div>

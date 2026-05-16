@@ -12,8 +12,6 @@ const BASE_INPUTS: VerdictInputs = {
   dewsBand: "CALM",
   mechanismArchetype: "fiat-cash",
   governance: "centralized",
-  backing: "rwa-backed",
-  isNavToken: false,
   yieldBearing: false,
   activeDepeg: false,
 };
@@ -30,7 +28,7 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
   it("returns pre-launch when status is pre-launch", () => {
     const verdict = deriveStablecoinVerdict(inputs({ status: "pre-launch" }));
     expect(verdict.archetype).toBe("pre-launch");
-    expect(verdict.label).toBe("Pre-Launch");
+    expect(verdict.label).toBe("Pre-launch");
   });
 
   it("returns frozen-archive when status is frozen", () => {
@@ -87,7 +85,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
       yieldBearing: true,
       mechanismArchetype: "synthetic-delta-neutral",
       governance: "decentralized",
-      backing: "crypto-backed",
     });
     expect(archetype).toBe("yield-bearing-hybrid");
   });
@@ -106,7 +103,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
       yieldBearing: true,
       mechanismArchetype: "cdp",
       governance: "decentralized",
-      backing: "crypto-backed",
     });
     expect(archetype).toBe("decentralized-benchmark");
   });
@@ -115,7 +111,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     const archetype = archetypeOf({
       mechanismArchetype: "cdp",
       governance: "decentralized",
-      backing: "crypto-backed",
     });
     expect(archetype).toBe("decentralized-benchmark");
   });
@@ -124,7 +119,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     const archetype = archetypeOf({
       mechanismArchetype: "cdp",
       governance: "centralized",
-      backing: "crypto-backed",
     });
     expect(archetype).toBe("uncategorized");
   });
@@ -209,7 +203,6 @@ describe("deriveStablecoinVerdict — rule precedence", () => {
     const archetype = archetypeOf({
       mechanismArchetype: "algorithmic",
       governance: "decentralized",
-      backing: "algorithmic",
       reportCardGrade: "C",
     });
     expect(archetype).toBe("uncategorized");

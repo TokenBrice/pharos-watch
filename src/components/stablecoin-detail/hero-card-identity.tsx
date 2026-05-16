@@ -49,8 +49,6 @@ function deriveHeroVerdict(coin: StablecoinMeta, reportCard?: ReportCard | null)
     dewsBand: null,
     mechanismArchetype: coin.mechanismArchetype,
     governance: coin.flags.governance,
-    backing: coin.flags.backing,
-    isNavToken: coin.flags.navToken ?? false,
     yieldBearing: coin.flags.yieldBearing ?? false,
     activeDepeg: false,
   });

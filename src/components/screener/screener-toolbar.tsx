@@ -73,7 +73,6 @@ export function ScreenerToolbar({
             size="sm"
             onClick={onReset}
             disabled={!active}
-            aria-label="Reset all filters"
           >
             Reset filters
           </Button>
@@ -301,7 +300,6 @@ function RangeField({
           placeholder={minPlaceholder ?? String(defaultMin)}
           onChange={(e) => onMinChange(parseValue(e.target.value, defaultMin))}
           className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums"
-          aria-labelledby={`${id}-label`}
         />
         <span className="text-xs text-muted-foreground" aria-hidden="true">
           –
@@ -320,7 +318,6 @@ function RangeField({
           placeholder={maxPlaceholder ?? String(defaultMax)}
           onChange={(e) => onMaxChange(parseValue(e.target.value, defaultMax))}
           className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums"
-          aria-labelledby={`${id}-label`}
         />
       </div>
     </div>

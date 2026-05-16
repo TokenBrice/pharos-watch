@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShowWorkMode } from "@/hooks/use-show-work-mode";
@@ -94,6 +94,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
   const { enabled } = useShowWorkMode();
   const [open, setOpen] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const panelId = useId();
 
   if (!enabled) return null;
 
@@ -110,10 +111,11 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
         onClick={() => setOpen((v) => !v)}
         className="pharos-focus-ring flex w-full items-center justify-between gap-2 rounded-sm text-left"
         aria-expanded={open}
+        aria-controls={panelId}
       >
         <span className="flex items-center gap-2">
           <span className="pharos-kicker text-sky-700 dark:text-sky-400">
-            Show Your Work · {item.title}
+            Inputs · {item.title}
           </span>
           {item.versionLabel ? (
             <span className="font-mono text-[10px] text-muted-foreground">
@@ -128,7 +130,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
       </button>
 
       {open ? (
-        <div className="mt-2 space-y-2">
+        <div id={panelId} className="mt-2 space-y-2">
           <p className="font-mono text-[11px] text-muted-foreground">{table.formula}</p>
 
           <div className="overflow-x-auto">

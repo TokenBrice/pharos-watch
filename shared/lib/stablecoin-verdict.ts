@@ -38,14 +38,12 @@ export interface VerdictInputs {
   dewsBand: ThreatBand | null;
   mechanismArchetype: MechanismArchetype | undefined;
   governance: StablecoinFlags["governance"];
-  backing: StablecoinFlags["backing"];
-  isNavToken: boolean;
   yieldBearing: boolean;
   activeDepeg: boolean;
 }
 
 const VERDICT_LABELS: Record<StablecoinVerdictArchetype, string> = {
-  "pre-launch": "Pre-Launch",
+  "pre-launch": "Pre-launch",
   "frozen-archive": "Frozen Archive",
   distressed: "Distressed",
   "yield-bearing-hybrid": "Yield-Bearing Hybrid",
