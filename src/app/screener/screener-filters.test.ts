@@ -4,6 +4,7 @@ import {
   SCREENER_URL_SCHEMA,
   applyFilters,
   hasActiveFilters,
+  projectBlacklistable,
   type ScreenerFilters,
   type ScreenerRow,
 } from "./screener-filters";
@@ -23,6 +24,7 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     liquidityScore: 85,
     safetyGrade: "A",
     safetyScore: 90,
+    blacklistable: "yes",
     ...overrides,
   };
 }
@@ -208,5 +210,80 @@ describe("SCREENER_URL_SCHEMA codec", () => {
       SCREENER_URL_SCHEMA,
     );
     expect(decoded.mechanisms).toEqual(["cdp", "fiat-cash"]);
+  });
+});
+
+describe("projectBlacklistable", () => {
+  it("maps boolean true to 'yes'", () => {
+    expect(projectBlacklistable(true)).toBe("yes");
+  });
+  it("maps boolean false to 'no'", () => {
+    expect(projectBlacklistable(false)).toBe("no");
+  });
+  it("passes 'possible' through", () => {
+    expect(projectBlacklistable("possible")).toBe("possible");
+  });
+  it("passes 'dilutable' through", () => {
+    expect(projectBlacklistable("dilutable")).toBe("dilutable");
+  });
+  it("returns null for undefined (unspecified blacklistability)", () => {
+    expect(projectBlacklistable(undefined)).toBeNull();
+  });
+});
+
+describe("applyFilters — blacklistable", () => {
+  const yesRow = makeRow({ id: "yes", blacklistable: "yes" });
+  const noRow = makeRow({ id: "no", blacklistable: "no" });
+  const possibleRow = makeRow({ id: "possible", blacklistable: "possible" });
+  const dilutableRow = makeRow({ id: "dilutable", blacklistable: "dilutable" });
+  const unknownRow = makeRow({ id: "unknown", blacklistable: null });
+  const allRows = [yesRow, noRow, possibleRow, dilutableRow, unknownRow] as const;
+
+  it("returns every row when the blacklistable filter is empty", () => {
+    const filtered = applyFilters(allRows, SCREENER_FILTER_DEFAULTS);
+    expect(filtered.map((r) => r.id)).toEqual(["yes", "no", "possible", "dilutable", "unknown"]);
+  });
+
+  it("keeps only rows whose blacklistable status matches the active filter", () => {
+    const filtered = applyFilters(allRows, {
+      ...SCREENER_FILTER_DEFAULTS,
+      blacklistable: ["yes", "dilutable"],
+    });
+    expect(filtered.map((r) => r.id).sort()).toEqual(["dilutable", "yes"]);
+  });
+
+  it("excludes rows with unknown blacklistable status when the filter is active", () => {
+    const filtered = applyFilters(allRows, {
+      ...SCREENER_FILTER_DEFAULTS,
+      blacklistable: ["yes"],
+    });
+    expect(filtered.some((r) => r.id === "unknown")).toBe(false);
+  });
+
+  it("hasActiveFilters returns true when the blacklistable filter is non-empty", () => {
+    expect(
+      hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, blacklistable: ["yes"] }),
+    ).toBe(true);
+  });
+});
+
+describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
+  it("encodes and decodes the blacklistable multi-select", () => {
+    const filters: ScreenerFilters = {
+      ...SCREENER_FILTER_DEFAULTS,
+      blacklistable: ["yes", "possible"],
+    };
+    const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
+    expect(encoded).toContain("blacklistable=yes%2Cpossible");
+    const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
+    expect(decoded.blacklistable).toEqual(["yes", "possible"]);
+  });
+
+  it("drops unknown values from a blacklistable URL param", () => {
+    const decoded = decodeState(
+      "blacklistable=yes,bogus,dilutable",
+      SCREENER_URL_SCHEMA,
+    );
+    expect(decoded.blacklistable).toEqual(["yes", "dilutable"]);
   });
 });
