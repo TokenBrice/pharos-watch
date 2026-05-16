@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { CitationBlock } from "@/components/citation-block";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,
@@ -29,6 +31,13 @@ interface MethodologyChangelogRouteConfig<T extends MethodologyChangelogSourceEn
   selectImpact?: (entry: T) => readonly string[];
   sections?: readonly { id: string; label: string }[];
   renderContent?: () => ReactNode;
+  /** URN identity for the citation block at page bottom. */
+  citation: {
+    /** Methodology slug used as the URN id (e.g. "safety-score", "dews"). */
+    id: string;
+    /** Current version label (e.g. "v7.2"). Surfaced in the citation body. */
+    versionLabel: string;
+  };
 }
 
 interface MethodologyChangelogRouteDefinition {
@@ -49,6 +58,16 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
     ? mapMethodologyChangelogEntries(config.entries, config.selectImpact)
     : [];
 
+  const citationFooter = (
+    <CitationBlock
+      entityClass="methodology"
+      id={config.citation.id}
+      title={config.title}
+      url={`${SITE_URL}${config.path}`}
+      version={config.citation.versionLabel}
+    />
+  );
+
   const Page = () => (
     <MethodologyChangelogPage
       breadcrumbName={config.breadcrumbName}
@@ -58,6 +77,7 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
       accentClass={config.accentClass}
       entries={entries}
       sections={config.sections}
+      footerContent={citationFooter}
     >
       {config.renderContent?.()}
     </MethodologyChangelogPage>

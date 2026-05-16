@@ -19,6 +19,7 @@ const route = createMethodologyChangelogRoute({
   accentClass: "border-l-blue-500",
   entries: PRICING_PIPELINE_CHANGELOG,
   selectImpact: (entry) => entry.impact,
+  citation: { id: "pricing-pipeline", versionLabel: PRICING_PIPELINE_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;

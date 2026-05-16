@@ -19,6 +19,7 @@ const route = createMethodologyChangelogRoute({
   accentClass: "border-l-teal-500",
   entries: CHAIN_HEALTH_METHODOLOGY_CHANGELOG,
   selectImpact: (entry) => entry.impact,
+  citation: { id: "chain-health", versionLabel: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;

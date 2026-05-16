@@ -16,6 +16,7 @@ interface MethodologyChangelogPageProps {
   railLabel?: string;
   navAriaLabel?: string;
   children?: React.ReactNode;
+  footerContent?: React.ReactNode;
 }
 
 function changelogEntryId(version: string) {
@@ -33,6 +34,7 @@ export function MethodologyChangelogPage({
   railLabel = "Jump to Version",
   navAriaLabel,
   children,
+  footerContent,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
     { id: "latest-updates", label: "Latest" },
@@ -163,6 +165,7 @@ export function MethodologyChangelogPage({
           </div>
         </>
       )}
+      {footerContent}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { CitationBlock } from "@/components/citation-block";
 import { MethodologySections } from "./methodology-sections";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
@@ -187,6 +188,14 @@ export default function MethodologyPage() {
       />
 
       <MethodologySections />
+
+      <CitationBlock
+        entityClass="methodology"
+        id="index"
+        title="Pharos Methodology"
+        url={`${SITE_URL}/methodology/`}
+        version={SAFETY_SCORE_VERSION_LABEL}
+      />
     </div>
   );
 }

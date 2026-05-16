@@ -19,6 +19,7 @@ const route = createMethodologyChangelogRoute({
   accentClass: "border-l-sky-500",
   entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
   selectImpact: (entry) => entry.impact,
+  citation: { id: "liquidity-score", versionLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;
