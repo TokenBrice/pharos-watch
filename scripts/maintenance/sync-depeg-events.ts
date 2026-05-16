@@ -190,9 +190,33 @@ async function main() {
 
   const entries = assignSlugs(unique);
 
-  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const { existsSync, mkdirSync, readFileSync, writeFileSync } = await import("node:fs");
   const { fileURLToPath } = await import("node:url");
   const outputFile = fileURLToPath(outputPath);
+
+  // Guard against API returning an empty list (e.g. token expiry, partial
+  // outage, or a misconfigured API base). Wiping the seed event would purge
+  // every /depeg/<slug>/ static page on the next build and invalidate the
+  // depeg RSS feed for downstream subscribers. Treat empty + non-empty
+  // existing file as a hard error rather than a silent overwrite.
+  if (entries.length === 0 && existsSync(outputFile)) {
+    let previous: unknown;
+    try {
+      previous = JSON.parse(readFileSync(outputFile, "utf8"));
+    } catch {
+      previous = null;
+    }
+    if (Array.isArray(previous) && previous.length > 0) {
+      console.error(
+        `[sync-depeg-events] API returned 0 events but ${outputFile} currently holds ${previous.length}. ` +
+          `Refusing to overwrite — pass --allow-empty to override (e.g. when the API is intentionally drained).`,
+      );
+      if (!process.argv.includes("--allow-empty")) {
+        process.exit(1);
+      }
+    }
+  }
+
   mkdirSync(new URL(".", outputPath), { recursive: true });
   writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
   console.log(`[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputFile}`);

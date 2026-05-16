@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useReportWebVitals } from "next/web-vitals";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
@@ -14,7 +15,16 @@ type WebVitalMetric = {
 
 export function WebVitalsReporter() {
   const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
 
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  // Inline arrow would capture `pathname` and re-subscribe `onCLS/onLCP/...`
+  // on every render → duplicate GA events on client navigation. Reading the
+  // ref keeps the callback identity stable across renders while still seeing
+  // the latest path at metric-fire time.
   useReportWebVitals((metric: WebVitalMetric) => {
     trackEvent("web_vital", {
       name: metric.name,
@@ -22,7 +32,7 @@ export function WebVitalsReporter() {
       id: metric.id,
       rating: metric.rating ?? "good",
       navigation_type: metric.navigationType ?? "navigate",
-      page_path: pathname ?? "",
+      page_path: pathnameRef.current ?? "",
     });
   });
 

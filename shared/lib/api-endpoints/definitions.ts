@@ -293,6 +293,28 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   },
   {
+    // Canary for the dynamic /api/snapshots/<YYYY-MM-DD>.json shape;
+    // the runtime route is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "snapshot-day",
+    path: API_PATHS.snapshotDay("2026-05-16"),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    // Canary for the dynamic /api/snapshot/<YYYY-MM-DD>/stablecoin/<id> shape;
+    // the runtime route is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    key: "snapshot-coin",
+    path: API_PATHS.snapshotCoin("2026-05-16", "usdt-tether"),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
     methods: ["GET"],

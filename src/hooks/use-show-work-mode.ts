@@ -11,20 +11,26 @@ function notify() {
   for (const listener of listeners) listener();
 }
 
-function readClient(): boolean {
+function readUrlEnable(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    if (new URLSearchParams(window.location.search).get(URL_PARAM) === "1") {
-      return true;
-    }
+    return new URLSearchParams(window.location.search).get(URL_PARAM) === "1";
   } catch {
-    // ignore URL parse failures
+    return false;
   }
+}
+
+function readStorage(): boolean {
+  if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(STORAGE_KEY) === "true";
   } catch {
     return false;
   }
+}
+
+function readClient(): boolean {
+  return readUrlEnable() || readStorage();
 }
 
 function writeStored(value: boolean) {
@@ -65,7 +71,11 @@ export function useShowWorkMode(): ShowWorkMode {
   );
 
   const toggle = useCallback(() => {
-    writeStored(!readClient());
+    // Persistence is the source of truth for the toggle. Reading the URL
+    // here would let `?show-work=1` shadow a "Hide inputs" click and silently
+    // no-op. Storage flip + notify means the next read short-circuits to
+    // localStorage=false even while the URL param is still present.
+    writeStored(!readStorage());
     notify();
   }, []);
 

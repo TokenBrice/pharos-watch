@@ -1,4 +1,4 @@
-import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
+import { escapeXml, renderRss20, toRfc822, type RssItem } from "@/lib/rss";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/chains/health-version";
 import {
@@ -69,9 +69,9 @@ function methodologyItems(): RssItem[] {
     .slice(0, MAX_ITEMS)
     .map(({ source, entry }) => {
       const impactHtml = entry.impact.length
-        ? `<ul>${entry.impact.map((line) => `<li>${line}</li>`).join("")}</ul>`
+        ? `<ul>${entry.impact.map((line) => `<li>${escapeXml(line)}</li>`).join("")}</ul>`
         : "";
-      const description = `<p>${entry.summary}</p>${impactHtml}`;
+      const description = `<p>${escapeXml(entry.summary)}</p>${impactHtml}`;
       return {
         title: `${source.label} v${entry.version} — ${entry.title}`,
         link: `${SITE_URL}${source.path}`,

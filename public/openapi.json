@@ -1763,6 +1763,108 @@
         }
       }
     },
+    "/api/snapshots/{date}.json": {
+      "get": {
+        "tags": [
+          "Digest",
+          "History"
+        ],
+        "summary": "Public snapshot for a single day",
+        "description": "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
+        "operationId": "snapshotsDateJson",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "description": "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/snapshot/{date}/stablecoin/{stablecoinId}": {
+      "get": {
+        "tags": [
+          "Digest",
+          "Stablecoins",
+          "History"
+        ],
+        "summary": "Public snapshot projection for a single coin",
+        "description": "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
+        "operationId": "snapshotDateStablecoinStablecoinId",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "description": "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stablecoinId",
+            "in": "path",
+            "required": true,
+            "description": "Stablecoin id (lowercase-kebab).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/public-status-history": {
       "get": {
         "tags": [

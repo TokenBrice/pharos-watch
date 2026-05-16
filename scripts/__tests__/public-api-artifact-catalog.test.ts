@@ -50,7 +50,19 @@ describe("public API artifact catalog", () => {
       if (!endpoint.path.includes("{")) {
         expect(endpoint.path, endpoint.key).toBe(definition?.path);
       } else {
-        expect(endpoint.path, endpoint.key).toBe(definition?.path.replace(/\/[^/]+$/, "/{stablecoinId}"));
+        // Catalog uses OpenAPI {placeholder} segments; the runtime definition
+        // ships a canary value (e.g. "usdt-tether", "2026-05-16"). Compare
+        // structural segments by collapsing both sides to the catalog's
+        // template-segment shape: any catalog segment containing `{` matches
+        // ANY single segment in the definition.
+        const catalogSegments = endpoint.path.split("/");
+        const definitionSegments = (definition?.path ?? "").split("/");
+        expect(definitionSegments.length, endpoint.key).toBe(catalogSegments.length);
+        for (let i = 0; i < catalogSegments.length; i++) {
+          const catalogSeg = catalogSegments[i];
+          if (catalogSeg.includes("{")) continue; // placeholder — any value OK
+          expect(definitionSegments[i], `${endpoint.key} segment ${i}`).toBe(catalogSeg);
+        }
       }
     }
   });

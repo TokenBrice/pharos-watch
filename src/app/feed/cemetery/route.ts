@@ -1,4 +1,4 @@
-import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
+import { escapeXml, renderRss20, toRfc822, type RssItem } from "@/lib/rss";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
@@ -27,7 +27,10 @@ function cemeteryItems(): RssItem[] {
     .sort((a, b) => deathDateToMs(b.deathDate) - deathDateToMs(a.deathDate))
     .slice(0, MAX_ITEMS)
     .map((coin) => {
-      const description = coin.epitaph ? `<p><em>${coin.epitaph}</em></p><p>${coin.obituary}</p>` : `<p>${coin.obituary}</p>`;
+      const obituaryHtml = `<p>${escapeXml(coin.obituary)}</p>`;
+      const description = coin.epitaph
+        ? `<p><em>${escapeXml(coin.epitaph)}</em></p>${obituaryHtml}`
+        : obituaryHtml;
       return {
         title: `${coin.name} (${coin.symbol}) — ${coin.causeOfDeath}`,
         link: `${SITE_URL}/cemetery/#${coin.id}`,

@@ -192,6 +192,14 @@ const stablecoinPathTemplate = (path: string) => path.replace(STABLECOIN_ID_TOKE
 const stablecoinPostmanPath = (path: string, variable = "stablecoinId") =>
   path.replace(STABLECOIN_ID_TOKEN, `{{${variable}}}`);
 
+const SNAPSHOT_DATE_TOKEN = "__snapshotDate__";
+const snapshotPathTemplate = (path: string) =>
+  path.replace(SNAPSHOT_DATE_TOKEN, "{date}").replace(STABLECOIN_ID_TOKEN, "{stablecoinId}");
+const snapshotPostmanPath = (path: string) =>
+  path
+    .replace(SNAPSHOT_DATE_TOKEN, "{{snapshotDate}}")
+    .replace(STABLECOIN_ID_TOKEN, "{{stablecoinId}}");
+
 export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   {
     key: "health",
@@ -797,6 +805,57 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     postman: {
       folder: "Historical data",
       order: 7,
+    },
+  },
+  {
+    key: "snapshot-day",
+    path: snapshotPathTemplate(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
+    summary: "Public snapshot for a single day",
+    description:
+      "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
+    tags: ["Digest", "History"],
+    parameters: [
+      {
+        name: "date",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+      },
+    ],
+    postman: {
+      folder: "Historical data",
+      order: 8,
+      path: snapshotPostmanPath(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
+    },
+  },
+  {
+    key: "snapshot-coin",
+    path: snapshotPathTemplate(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
+    summary: "Public snapshot projection for a single coin",
+    description:
+      "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
+    tags: ["Digest", "Stablecoins", "History"],
+    parameters: [
+      {
+        name: "date",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+      },
+      {
+        name: "stablecoinId",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "Stablecoin id (lowercase-kebab).",
+      },
+    ],
+    postman: {
+      folder: "Historical data",
+      order: 9,
+      path: snapshotPostmanPath(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
     },
   },
   {

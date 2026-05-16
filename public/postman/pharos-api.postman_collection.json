@@ -945,6 +945,48 @@
             "description": "Listing of available daily public snapshots with content hashes and methodology versions."
           },
           "response": []
+        },
+        {
+          "name": "Public snapshot for a single day",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshots/{{snapshotDate}}.json",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshots",
+                "{{snapshotDate}}.json"
+              ]
+            },
+            "description": "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers."
+          },
+          "response": []
+        },
+        {
+          "name": "Public snapshot projection for a single coin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshot",
+                "{{snapshotDate}}",
+                "stablecoin",
+                "{{stablecoinId}}"
+              ]
+            },
+            "description": "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers."
+          },
+          "response": []
         }
       ]
     },
