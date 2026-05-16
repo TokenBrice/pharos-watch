@@ -273,6 +273,12 @@ jobs:
       - name: Generate public dataset mirrors from the target API environment
         run: npm run generate:public-datasets
       - run: npm run build
+        env:
+          PUBLIC_DATASETS_API_URL: ""
+          PUBLIC_DATASETS_API_KEY: ""
+          PUBLIC_DATASETS_REQUIRE_API: ""
+          SMOKE_API_BASE: ""
+          API_BASE_URL: ""
       - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures

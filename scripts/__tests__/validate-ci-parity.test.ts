@@ -373,6 +373,8 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
     expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
     expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(pagesReleaseJob).toContain("Start local export smoke server");
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
     expect(pagesReleaseJob).toContain("Wait for validation gate");
@@ -411,6 +413,8 @@ describe("validate-ci parity", () => {
     expect(buildPagesJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
     expect(buildPagesJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_API_URL: ""');
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expectTextInOrder(buildPagesJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",

@@ -170,6 +170,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 
 - Runs before every Pages build path with `PUBLIC_DATASETS_API_URL` pointed at the selected API environment. On combined Worker + Pages deploys, that is the uploaded Worker preview URL.
 - Sends `X-API-Key` when `PUBLIC_DATASETS_API_KEY` is set; Pages workflows fall back to `DIGEST_API_KEY` when no dedicated public-datasets credential exists.
+- Pages workflows clear `PUBLIC_DATASETS_API_URL`, `PUBLIC_DATASETS_API_KEY`, `PUBLIC_DATASETS_REQUIRE_API`, `SMOKE_API_BASE`, and `API_BASE_URL` on the following `npm run build` step so the prebuild hook preserves the just-synced mirrors instead of making a second live API fetch.
 - Production Pages paths set `PUBLIC_DATASETS_REQUIRE_API=1`, so missing API configuration fails closed instead of shipping stale mirrors. Local and PR validation builds without a dataset API preserve already checked-in mirrors when `--check` would pass; they fail if those mirrors are missing or below the row floors.
 - `--check` verifies that latest checked-in mirrors and Sheets variants exist, carry the expected preambles, and meet per-topic row floors. It does not re-fetch the API or prove the dated mirrors were regenerated today.
 
