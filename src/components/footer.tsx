@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
+import { TrustStrip } from "@/components/trust-strip";
 
 interface FooterLink {
   href: string;
@@ -29,6 +30,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/70 py-8 sm:py-10">
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
+        <TrustStrip />
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
             <p className="pharos-kicker">Watching The Peg</p>
