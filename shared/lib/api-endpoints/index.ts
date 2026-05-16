@@ -36,16 +36,4 @@ export {
   validateEndpointMethod,
 } from "./validation";
 export { getStatusPageActions } from "./status";
-export {
-  PATH_SNAPSHOTS_INDEX,
-  SNAPSHOT_COIN_ROUTE_PATTERN,
-  SNAPSHOT_DATE_PATTERN,
-  SNAPSHOT_DAY_ROUTE_PATTERN,
-  isSnapshotPath,
-  pathSnapshotCoin,
-  pathSnapshotDay,
-  snapshotIndexPath,
-  type PublicSnapshotIndexEntry,
-  type PublicSnapshotIndexResponse,
-  type PublicSnapshotMethodologyVersions,
-} from "./snapshot";
+export { SNAPSHOT_DATE_PATTERN } from "./snapshot";

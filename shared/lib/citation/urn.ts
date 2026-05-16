@@ -10,7 +10,7 @@
  */
 
 /** Closed enum of entity classes recognised by the Pharos URN scheme. */
-export const PHAROS_URN_ENTITY_CLASSES = [
+const PHAROS_URN_ENTITY_CLASSES = [
   "coin",
   "depeg-event",
   "methodology",

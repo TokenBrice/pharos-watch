@@ -46,6 +46,10 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/dews/evidence-policy.ts::EVIDENCE_STRESS_THRESHOLD",
   "worker/src/lib/dews/evidence-policy.ts::hasStressEvidence",
   "worker/src/lib/redemption-backstop-capacity.ts::CapacityResolution",
+  // Consumed at build time by scripts/build-data/build-client-registry.mjs as
+  // the canonical field allowlist; the validator reads the array at runtime
+  // outside the TS import graph the static scan walks.
+  "shared/types/stablecoin-client-meta.ts::STABLECOIN_CLIENT_META_FIELDS",
   "shared/lib/api-endpoints/index.ts::buildQueryPath",
   "shared/lib/api-endpoints/index.ts::getStrictContractPaths",
   "shared/lib/api-endpoints/index.ts::DynamicAdminEndpointMatch",
