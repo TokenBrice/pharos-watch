@@ -54,7 +54,7 @@ interface StressSignalRow {
   computed_at: number;
   score: number;
   band: string;
-  signals: string | null;
+  signals_json: string | null;
 }
 
 interface DexLiquidityRow {
@@ -155,7 +155,7 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
   try {
     const result = await db
       .prepare(
-        `SELECT stablecoin_id, computed_at, score, band, signals
+        `SELECT stablecoin_id, computed_at, score, band, signals_json
          FROM stress_signals
          ORDER BY computed_at DESC`,
       )
@@ -208,7 +208,7 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
       computedAt: row.computed_at,
       score: row.score,
       band: row.band,
-      signals: safeParse<Record<string, unknown> | null>(row.signals, null),
+      signals: safeParse<Record<string, unknown> | null>(row.signals_json, null),
     })),
     liquidity: dexRows.map((row) => ({
       stablecoinId: row.stablecoin_id,

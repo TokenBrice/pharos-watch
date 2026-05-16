@@ -47,14 +47,14 @@ const STRESS_ROWS = [
     computed_at: 1779105000,
     score: 18,
     band: "CALM",
-    signals: JSON.stringify({ delta: 0.04 }),
+    signals_json: JSON.stringify({ delta: 0.04 }),
   },
   {
     stablecoin_id: "usdt-tether",
     computed_at: 1779105000,
     score: 24,
     band: "CALM",
-    signals: JSON.stringify({ delta: 0.07 }),
+    signals_json: JSON.stringify({ delta: 0.07 }),
   },
 ];
 
