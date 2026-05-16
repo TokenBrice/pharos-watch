@@ -4,11 +4,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
-import {
-  DIMENSION_LABELS,
-  DIMENSION_ORDER,
-  METHODOLOGY_VERSION,
-} from "@shared/lib/report-cards";
+import { DIMENSION_LABELS, DIMENSION_ORDER, METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "@/components/radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
@@ -22,6 +18,21 @@ import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { CRON_24H } from "@/lib/cron-intervals";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// ---------------------------------------------------------------------------
+// Grade-band tooltip helper
+// ---------------------------------------------------------------------------
+
+function gradeBandLabel(score: number, metric?: string): string {
+  let band: string;
+  if (score >= 90) band = "Excellent — top of the grading scale";
+  else if (score >= 75) band = "Strong — production-ready";
+  else if (score >= 60) band = "Adequate — meaningful weaknesses present";
+  else if (score >= 40) band = "Weak — significant risks";
+  else band = "Poor — major risks";
+  return metric ? `${metric}: ${score} — ${band}` : `${score} — ${band}`;
+}
 
 // ---------------------------------------------------------------------------
 // Dimension Row Component
@@ -58,7 +69,12 @@ interface DimensionRowProps {
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
+  const hasDetails =
+    (dimKey === "resilience" ||
+      dimKey === "decentralization" ||
+      dimKey === "dependencyRisk" ||
+      dimKey === "liquidity") &&
+    dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
 
   return (
@@ -66,7 +82,7 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
       <div
         className={cn(
           "relative w-full rounded-lg border border-border/60 px-2.5 py-2 transition-colors",
-          hasDetails ? "cursor-pointer hover:border-border/80 hover:bg-muted/30" : "cursor-default"
+          hasDetails ? "cursor-pointer hover:border-border/80 hover:bg-muted/30" : "cursor-default",
         )}
       >
         {hasDetails && (
@@ -82,7 +98,9 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             </span>
           </button>
         )}
-        <div className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}>
+        <div
+          className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}
+        >
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-sm font-medium">
               <DimensionLabel dimKey={dimKey} />
@@ -98,16 +116,19 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <SafetyGradeBadge grade={dim.grade} size="sm" />
-            <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
-              {dim.score !== null ? (
-                <>
-                  {dim.score}
-                  <span className="text-xs">/100</span>
-                </>
-              ) : (
-                "\u2014"
-              )}
-            </span>
+            {dim.score !== null ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="pointer-events-auto w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
+                    {dim.score}
+                    <span className="text-xs">/100</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{gradeBandLabel(dim.score, DIMENSION_LABELS[dimKey])}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">{"\u2014"}</span>
+            )}
           </div>
         </div>
       </div>
@@ -122,14 +143,13 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 const detail = parseDimensionDetail(part);
                 if (!detail) return null;
                 return (
-                  <div
-                    key={`${dimKey}-${detail.label}`}
-                    className="flex items-center justify-between text-xs"
-                  >
+                  <div key={`${dimKey}-${detail.label}`} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {detail.label}: <span className="text-foreground/80">{detail.desc}</span>
                     </span>
-                    <span className={`tabular-nums font-mono ${detail.isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
+                    <span
+                      className={`tabular-nums font-mono ${detail.isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}
+                    >
                       {detail.displayScore}
                     </span>
                   </div>
@@ -140,7 +160,9 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
           {/* Live data indicator */}
           {dimKey === "resilience" && card.rawInputs.collateralFromLive && (
-            <span className="text-xs text-muted-foreground" title="Scored from live reserve data">(live data)</span>
+            <span className="text-xs text-muted-foreground" title="Scored from live reserve data">
+              (live data)
+            </span>
           )}
 
           {/* Liquidity breakdown */}
@@ -150,9 +172,14 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 {card.rawInputs.liquidityScore != null ? (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">DEX liquidity</span>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.liquidityScore}/100
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.liquidityScore}/100
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{gradeBandLabel(card.rawInputs.liquidityScore, "DEX liquidity")}</TooltipContent>
+                    </Tooltip>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between text-xs">
@@ -162,21 +189,37 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 )}
                 {card.rawInputs.redemptionBackstopScore != null && (
                   <div className="flex items-center justify-between text-xs">
-                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">Redemption backstop</MethodologyLabel>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.redemptionBackstopScore}/100
-                      {!card.rawInputs.redemptionUsedForLiquidity
-                        ? " (not used)"
-                        : ""}
-                    </span>
+                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">
+                      Redemption backstop
+                    </MethodologyLabel>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.redemptionBackstopScore}/100
+                          {!card.rawInputs.redemptionUsedForLiquidity ? " (not used)" : ""}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {gradeBandLabel(card.rawInputs.redemptionBackstopScore, "Redemption backstop")}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
                 {card.rawInputs.effectiveExitScore != null && (
                   <div className="flex items-center justify-between text-xs">
-                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">Effective exit</MethodologyLabel>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.effectiveExitScore}/100
-                    </span>
+                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">
+                      Effective exit
+                    </MethodologyLabel>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.effectiveExitScore}/100
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {gradeBandLabel(card.rawInputs.effectiveExitScore, "Effective exit")}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
               </div>
@@ -232,12 +275,7 @@ interface ReportCardDetailProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardDetail({
-  card,
-  liquidityComponents,
-  updatedAtMs,
-  rightColumn,
-}: ReportCardDetailProps) {
+export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, rightColumn }: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
@@ -253,9 +291,7 @@ export function ReportCardDetail({
             <SafetyGradeBadge grade="F" size="defunct" />
             <div>
               <p className="text-lg font-medium text-muted-foreground">Defunct</p>
-              <p className="text-sm text-muted-foreground">
-                This stablecoin is no longer active.
-              </p>
+              <p className="text-sm text-muted-foreground">This stablecoin is no longer active.</p>
             </div>
           </div>
         </CardContent>
@@ -285,24 +321,35 @@ export function ReportCardDetail({
         <SafetyGradeBadge grade={card.overallGrade} size="hero" className="hidden sm:inline-flex" />
         <div className="flex min-w-0 flex-col">
           {card.overallScore !== null && (
-            <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
-              {card.overallScore}
-              <span className="text-lg text-muted-foreground">/100</span>
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
+                  {card.overallScore}
+                  <span className="text-lg text-muted-foreground">/100</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{gradeBandLabel(card.overallScore, "Safety Score")}</TooltipContent>
+            </Tooltip>
           )}
           {card.baseScore != null && card.overallScore != null && (
             <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
+              <span>
+                Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span>
+              </span>
               {pegDrag != null && pegDrag > 0 ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>Peg: <span className="font-mono">−{pegDrag.toFixed(1)}</span></span>
+                  <span>
+                    Peg: <span className="font-mono">−{pegDrag.toFixed(1)}</span>
+                  </span>
                 </>
               ) : null}
               {parentCapDelta != null ? (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>Parent cap: <span className="font-mono">−{parentCapDelta.toFixed(1)}</span></span>
+                  <span>
+                    Parent cap: <span className="font-mono">−{parentCapDelta.toFixed(1)}</span>
+                  </span>
                 </>
               ) : null}
             </div>
@@ -319,12 +366,7 @@ export function ReportCardDetail({
       ) : null}
 
       {/* Dimension breakdown — half-width beside the radar at xl+ when the card is in dual-column mode */}
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-4",
-          hasRightColumn && "xl:grid-cols-2 xl:gap-6 xl:items-center",
-        )}
-      >
+      <div className={cn("grid grid-cols-1 gap-4", hasRightColumn && "xl:grid-cols-2 xl:gap-6 xl:items-center")}>
         <div className="space-y-2">
           {DIMENSION_ORDER.map((key) => (
             <DimensionRow
@@ -346,78 +388,63 @@ export function ReportCardDetail({
   );
 
   return (
-    <Card
-      className="overflow-hidden"
-      style={{ borderTopWidth: '3px', borderTopColor: topBorderColor }}
-    >
-      <CardHeader>
-        <CardTitle as="h2" className="text-xl font-bold tracking-tight">
-          <span className="flex items-center justify-between gap-2">
-            <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-            <span className="flex items-center gap-2">
-              {updatedAtMs != null ? (
-                <FreshnessIndicator
-                  updatedAtMs={updatedAtMs}
-                  staleAfterMs={CRON_24H}
-                  labelPrefix="Updated"
-                />
-              ) : null}
-              <span className="text-xs font-normal text-muted-foreground">
-                v{METHODOLOGY_VERSION}
+    <TooltipProvider>
+      <Card className="overflow-hidden" style={{ borderTopWidth: "3px", borderTopColor: topBorderColor }}>
+        <CardHeader>
+          <CardTitle as="h2" className="text-xl font-bold tracking-tight">
+            <span className="flex items-center justify-between gap-2">
+              <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+              <span className="flex items-center gap-2">
+                {updatedAtMs != null ? (
+                  <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={CRON_24H} labelPrefix="Updated" />
+                ) : null}
+                <span className="text-xs font-normal text-muted-foreground">v{METHODOLOGY_VERSION}</span>
               </span>
             </span>
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {hasRightColumn ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {safetyColumn}
-            {rightColumn}
-          </div>
-        ) : (
-          <div className="mx-auto max-w-2xl">{safetyColumn}</div>
-        )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {hasRightColumn ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {safetyColumn}
+              {rightColumn}
+            </div>
+          ) : (
+            <div className="mx-auto max-w-2xl">{safetyColumn}</div>
+          )}
 
-        {/* Dependency callout */}
-        {card.rawInputs.dependencies.length > 0 && (
-          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
-            <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">
-              Dependencies
-            </p>
-            <p className="text-sm text-muted-foreground">
-              This stablecoin has exposure to{" "}
-              {card.rawInputs.dependencies.map((dep, i) => {
-                const depMeta = TRACKED_STABLECOINS.find(
-                  (s) => s.id === dep.id,
-                );
-                const name = depMeta?.symbol ?? dep.id;
-                const typeLabel = dep.type === "wrapper" ? " (wrapper)"
-                  : dep.type === "mechanism" ? " (mechanism-critical)"
-                  : "";
-                return (
-                  <span key={`${dep.id}-${dep.type}`}>
-                    {i > 0 && ", "}
-                    <Link
-                      href={buildStablecoinUrl(dep.id)}
-                      className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      {name}
-                    </Link>
-                    {typeLabel && (
-                      <span className="text-xs text-blue-700/80 dark:text-blue-400/80">{typeLabel}</span>
-                    )}
-                  </span>
-                );
-              })}
-              . Its dependency risk score reflects the health and stability of
-              these assets.
-            </p>
-          </div>
-        )}
+          {/* Dependency callout */}
+          {card.rawInputs.dependencies.length > 0 && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+              <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">Dependencies</p>
+              <p className="text-sm text-muted-foreground">
+                This stablecoin has exposure to{" "}
+                {card.rawInputs.dependencies.map((dep, i) => {
+                  const depMeta = TRACKED_STABLECOINS.find((s) => s.id === dep.id);
+                  const name = depMeta?.symbol ?? dep.id;
+                  const typeLabel =
+                    dep.type === "wrapper" ? " (wrapper)" : dep.type === "mechanism" ? " (mechanism-critical)" : "";
+                  return (
+                    <span key={`${dep.id}-${dep.type}`}>
+                      {i > 0 && ", "}
+                      <Link
+                        href={buildStablecoinUrl(dep.id)}
+                        className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        {name}
+                      </Link>
+                      {typeLabel && <span className="text-xs text-blue-700/80 dark:text-blue-400/80">{typeLabel}</span>}
+                    </span>
+                  );
+                })}
+                . Its dependency risk score reflects the health and stability of these assets.
+              </p>
+            </div>
+          )}
 
-        <MethodologyCardActions topic="safetyScore" showVersion={false} className="font-medium" />
-      </CardContent>
-    </Card>
+          <MethodologyCardActions topic="safetyScore" showVersion={false} className="font-medium" />
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
