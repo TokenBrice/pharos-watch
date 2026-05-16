@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { PUBLIC_DATASET_TOPICS } from "@shared/lib/api-endpoints/datasets";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
@@ -9,6 +10,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import digests from "../../data/digests.json";
+import depegEvents from "../../data/depeg-events.json";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
@@ -24,6 +26,13 @@ export const dynamic = "force-static";
 const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = costsData as CostsFile;
 const fundingDonations = donationsData as DonationsFile;
+
+interface DepegEventSitemapEntry {
+  slug: string;
+  startedAt: number;
+  endedAt: number | null;
+}
+const depegEventEntries = depegEvents as readonly DepegEventSitemapEntry[];
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
 function lastEdited(path: string): Date {
@@ -326,6 +335,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
+  const depegEventPages: MetadataRoute.Sitemap = depegEventEntries.map((e) => ({
+    url: `${SITE_URL}/depeg/${e.slug}/`,
+    lastModified: new Date((e.endedAt ?? e.startedAt) * 1000),
+    changeFrequency: (e.endedAt ? "never" : "daily") as "never" | "daily",
+    priority: 0.55,
+  }));
+
   const taxonomyPages: MetadataRoute.Sitemap = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
     lastModified: lastEdited(page.href),
@@ -401,6 +417,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
+  const datasetPages: MetadataRoute.Sitemap = PUBLIC_DATASET_TOPICS.flatMap((topic) => [
+    {
+      url: `${SITE_URL}/datasets/${topic}/latest.csv`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/datasets/${topic}/latest.json`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/sheets/${topic}.csv`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.4,
+    },
+  ]);
+
   return [
     ...staticPages,
     ...stablecoinPages,
@@ -411,8 +448,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...learnMechanismPages,
     ...comparisonPages,
     ...digestPages,
+    ...depegEventPages,
     ...docsIndex,
     ...docsPages,
     ...feedPages,
+    ...datasetPages,
   ];
 }

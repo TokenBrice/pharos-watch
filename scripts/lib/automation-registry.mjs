@@ -33,6 +33,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "scripts/ci/check-worker-import-boundary.mjs",
       "scripts/ci/check-worker-migrations.mjs",
       "scripts/maintenance/generate-cemetery-dataset.ts",
+      "scripts/maintenance/generate-public-datasets.ts",
       "scripts/maintenance/rollback-pages-deployment.mjs",
       "scripts/maintenance/run-critical-coverage.mjs",
       "scripts/maintenance/run-generated-artifacts.mjs",
@@ -60,6 +61,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "scripts/maintenance/run-generated-artifacts.mjs",
       "scripts/maintenance/serve-static-export.mjs",
       "scripts/maintenance/smoke-ui.mjs",
+      "scripts/maintenance/sync-depeg-events.ts",
       "scripts/maintenance/sync-digests.ts",
       "tsconfig.json",
     ],
@@ -153,6 +155,12 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
     command: "tsx scripts/maintenance/generate-cemetery-dataset.ts",
     script: "scripts/maintenance/generate-cemetery-dataset.ts",
+  },
+  {
+    id: "public-datasets",
+    checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
+    command: "tsx scripts/maintenance/generate-public-datasets.ts",
+    script: "scripts/maintenance/generate-public-datasets.ts",
   },
   {
     id: "postman",
