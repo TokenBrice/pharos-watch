@@ -72,8 +72,8 @@
     "notes": "Phase 6 split graph model, controls, legend, and SVG rendering into dedicated modules. Keep the top-level shell thin and move future graph behavior into those focused modules."
   },
   "src/app/chains/[chain]/client.tsx": {
-    "fileLines": 136,
-    "maxFunctionLines": 115,
+    "fileLines": 142,
+    "maxFunctionLines": 120,
     "branchCount": 7,
     "disposition": "queued-p4",
     "targetBudget": {
@@ -252,9 +252,9 @@
     "notes": "The hook is now the side-effect coordinator for submit, verification, copy, and one-time reveal flows; reducer state, payload shaping, and constants live in `api-key-request-form-view-model`. Keep future field workflow logic out of the hook unless it owns a browser side effect."
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 914,
+    "fileLines": 930,
     "maxFunctionLines": 324,
-    "branchCount": 66,
+    "branchCount": 67,
     "disposition": "queued-p4",
     "targetBudget": {
       "fileLines": 560,

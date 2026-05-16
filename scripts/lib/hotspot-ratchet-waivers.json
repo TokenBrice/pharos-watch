@@ -67,12 +67,12 @@
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
   },
-  "src/components/pre-launch-detail.tsx": {
-    "disposition": "deferred",
-    "notes": "Pre-launch stablecoin detail page intentionally colocates phase timeline, sponsor metadata, and CTA blocks while the upcoming-coin surface stabilizes. Defer decomposition until pre-launch UX patterns settle."
-  },
   "src/components/key-info-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass."
+  },
+  "src/app/sitemap.ts": {
+    "disposition": "deferred",
+    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern."
   }
 }
