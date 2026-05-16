@@ -84,6 +84,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "frax-frax::Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)::BUIDL",
     "FRAX's other-tokenized-assets slice aggregates BUIDL with USCC, AUSD, and JTRSY, so no single tracked coinId is representative.",
   ],
+  [
+    "hbusdt-hyperbeat::hoUSDT strategy exposure (Hyperbeat USDT strategy product)::USDT",
+    "hoUSDT is a Hyperbeat strategy wrapper that uses USDT underneath rather than a direct USDT reserve, so coinId inheritance is two layers removed and not representative.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {
