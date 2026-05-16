@@ -76,7 +76,7 @@ Filter state is read from URL search params via `useUrlFilters`, parsed in `read
 
 The route is a thin client over `GET /api/events` (handler `worker/src/api/events.ts`, route key `events` in `shared/lib/api-endpoints/definitions.ts`).
 
-- **Pagination:** opaque cursor (base64url-encoded `{v:1, ts, id}`); page size is 50, max 500.
+- **Pagination:** opaque cursor (base64url-encoded `{v:1, ts, id}`); page size is 500 (also the API max).
 - **Severity floor expansion:** server expands `severityFloor=<level>` into the inclusive set at or above that rank using `SEVERITY_RANK` from `@shared/types/tape-event`.
 - **Type filters:** `type=foo` matches exactly; `type=foo.*` matches all subtypes; `class=foo` is a shortcut for `type=foo.*`. Both can be passed multiple times.
 - **Freshness:** `_meta.maxAge = 600` (10 minutes). The `project-tape` cron lane runs every 30 minutes, so `Warning: 110` fires after roughly 80 minutes absent.

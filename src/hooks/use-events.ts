@@ -21,7 +21,7 @@ import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
 const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });
 type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
 
-const TAPE_EVENTS_PAGE_SIZE = 50;
+const TAPE_EVENTS_PAGE_SIZE = 500;
 
 export interface UseEventsFilter {
   /** Type slugs (exact or `prefix.*` wildcard). Comma-joined when passed via URL. */
