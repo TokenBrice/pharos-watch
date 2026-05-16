@@ -8,6 +8,7 @@ import {
   getOverflowWorkerCount,
   hasGaConfigInit,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
+  isExpectedGaCollectAbort,
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
@@ -101,6 +102,41 @@ describe("isToleratedGaCollectFailure", () => {
     const url = "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
     expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set([url]))).toBe(true);
     expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set())).toBe(false);
+  });
+});
+
+describe("isExpectedGaCollectAbort", () => {
+  it("accepts aborted expected GA4 page_view collect requests", () => {
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_ABORTED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects unrelated collect aborts", () => {
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_ABORTED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&en=page_view",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_FAILED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
   });
 });
 

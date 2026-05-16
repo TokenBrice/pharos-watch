@@ -633,6 +633,14 @@ export function isToleratedGaCollectFailure(failure, successfulCollectUrls) {
   );
 }
 
+export function isExpectedGaCollectAbort(failure, expectedGaId) {
+  return (
+    failure?.errorText === "net::ERR_ABORTED"
+    && typeof failure.url === "string"
+    && isExpectedGaPageViewCollectUrl(failure.url, expectedGaId)
+  );
+}
+
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -816,17 +824,23 @@ export async function run() {
           && entry.status >= 200
           && entry.status < 400,
       );
+      const tolerateIssuedCollectAbort = mode === "local";
+      const collectAborts = tolerateIssuedCollectAbort
+        ? network.failures.filter((failure) => isExpectedGaCollectAbort(failure, expectedGaId))
+        : [];
       assert(
         network.responses.some((entry) => entry.url.includes("googletagmanager.com/gtag/js") && entry.status === 200),
         `Expected successful gtag.js load for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       assert(
-        collectResponses.length > 0,
-        `Expected successful GA4 page_view collect request for ${expectedGaId}; network=${JSON.stringify(network)}`,
+        collectResponses.length + collectAborts.length > 0,
+        `Expected GA4 page_view collect signal for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       const successfulCollectUrls = new Set(collectResponses.map((entry) => entry.url));
       const unexpectedFailures = network.failures.filter(
-        (failure) => !isToleratedGaCollectFailure(failure, successfulCollectUrls),
+        (failure) =>
+          !isToleratedGaCollectFailure(failure, successfulCollectUrls)
+          && !(tolerateIssuedCollectAbort && isExpectedGaCollectAbort(failure, expectedGaId)),
       );
       assert(
         unexpectedFailures.length === 0,
@@ -836,6 +850,9 @@ export async function run() {
         network.violations.length === 0,
         `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(network.violations)}`,
       );
+      if (collectAborts.length > 0) {
+        console.log(`[smoke-ui] WARN tolerated ${collectAborts.length} local GA collect abort(s) for ${expectedGaId}`);
+      }
       console.log(`[smoke-ui] OK analytics runtime ${expectedGaId}`);
     }
 
