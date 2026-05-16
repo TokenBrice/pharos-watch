@@ -31,6 +31,16 @@ jobs:
       DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      # Detail-page feature flags. Each is inlined at build time when set to
+      # the literal string "true"; missing / any other value → false. Managed
+      # as GitHub repo Variables (gh variable set / list) per
+      # docs/process/pages-env-rollout.md.
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
+      NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
+      NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
+      NEXT_PUBLIC_PHAROS_LAZY_CHARTS: ${{ vars.NEXT_PUBLIC_PHAROS_LAZY_CHARTS }}
+      NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
