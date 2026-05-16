@@ -86,6 +86,7 @@
     "check:archetype-explainer-coverage": "tsx scripts/ci/check-archetype-explainer-coverage.ts",
     "candidates:annotations": "tsx scripts/maintenance/build-annotation-candidates.ts",
     "backfill:ai-summary-provenance": "node scripts/maintenance/backfill-ai-summary-provenance.mjs",
+    "generate:pwa-icons": "node scripts/maintenance/generate-pwa-icons.mjs",
     "digest:curation": "node scripts/maintenance/weekly-curation-digest.mjs",
     "check:build-size": "node scripts/maintenance/report-build-size.mjs --check",
     "check:build-attribution": "node scripts/ci/check-build-attribution.mjs",
