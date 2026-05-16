@@ -224,6 +224,7 @@ export function CoreSettlementStrip({
                       className="font-mono font-semibold"
                       versionTopic="safetyScore"
                       versionVariant="tooltip-only"
+                      versionInteractive={false}
                     />
                     <div className="text-[10px] text-muted-foreground">
                       {profile ? `${formatCurrency(profile.marketCapUsd)} / ${profile.chainCount} chains` : ""}

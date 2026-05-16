@@ -66,6 +66,7 @@ jobs:
         with:
           node-version: 24.x
           tooling-cache: "true"
+          install-playwright-chromium: "true"
       - run: npm run build
       - run: npm run check:feature-flag-inlining
       - run: npm run seo:check

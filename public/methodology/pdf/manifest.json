@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/maintenance/generate-methodology-pdfs.ts",
+  "entries": [
+    {
+      "filename": "blacklist-tracker-v3.993.pdf",
+      "key": "blacklist-tracker",
+      "path": "/methodology/blacklist-tracker-changelog/",
+      "title": "Blacklist Tracker Changelog",
+      "version": "3.993",
+      "urn": "urn:pharos:methodology:blacklist-tracker@v3.993",
+      "textHash": "13c6c8e897c5b615dd18fab7fd63be04e2d9a49ba92e5fb74243968e5f5b56a2",
+      "textLength": 23509
+    },
+    {
+      "filename": "chain-health-v1.2.pdf",
+      "key": "chain-health",
+      "path": "/methodology/chain-health-changelog/",
+      "title": "Chain Health Changelog",
+      "version": "1.2",
+      "urn": "urn:pharos:methodology:chain-health@v1.2",
+      "textHash": "54bcefb8fa0634dbbf99ebce1be5fc3f1bed347741126e000973abcb2651823f",
+      "textLength": 4404
+    },
+    {
+      "filename": "depeg-dews-v6.0.pdf",
+      "key": "depeg-dews",
+      "path": "/methodology/depeg-changelog/",
+      "title": "Depeg Tracker and DEWS Changelog",
+      "version": "6.0",
+      "urn": "urn:pharos:methodology:depeg-dews@v6.0",
+      "textHash": "99694b8d78450ff2a77f596b8d077bb911733bea7dc8dc3f3526804239641fc3",
+      "textLength": 27083
+    },
+    {
+      "filename": "index.pdf",
+      "key": "index",
+      "path": "/methodology/",
+      "title": "Pharos Methodology Index",
+      "version": null,
+      "urn": "urn:pharos:methodology:index",
+      "textHash": "6c5a9293a796776adfcef934382ba61898ea3d3d9d33dc72f126b0141d947c64",
+      "textLength": 29186
+    },
+    {
+      "filename": "liquidity-score-v5.6.pdf",
+      "key": "liquidity-score",
+      "path": "/methodology/liquidity-score-changelog/",
+      "title": "Liquidity Score Changelog",
+      "version": "5.6",
+      "urn": "urn:pharos:methodology:liquidity-score@v5.6",
+      "textHash": "c869cc75557e2335e5a4ffdfff724fe67458541c324a53616e3bbce4d7e4b035",
+      "textLength": 20839
+    },
+    {
+      "filename": "mint-burn-flow-v6.11.pdf",
+      "key": "mint-burn-flow",
+      "path": "/methodology/mint-burn-flow-changelog/",
+      "title": "Mint/Burn Flow Changelog",
+      "version": "6.11",
+      "urn": "urn:pharos:methodology:mint-burn-flow@v6.11",
+      "textHash": "6990a6e82f1a79e6ec70c96bb0a4ef7d2ee5540170594a3ba60b1c627d2702f9",
+      "textLength": 16478
+    },
+    {
+      "filename": "pricing-pipeline-v6.03.pdf",
+      "key": "pricing-pipeline",
+      "path": "/methodology/pricing-pipeline-changelog/",
+      "title": "Pricing Pipeline Changelog",
+      "version": "6.03",
+      "urn": "urn:pharos:methodology:pricing-pipeline@v6.03",
+      "textHash": "8d9640ddf5035591273f3516028c5dbdc882bace4ca7ab64567d94617ad3836e",
+      "textLength": 57154
+    },
+    {
+      "filename": "scoring-v7.25.pdf",
+      "key": "scoring",
+      "path": "/methodology/scoring-changelog/",
+      "title": "Safety Scores Changelog",
+      "version": "7.25",
+      "urn": "urn:pharos:methodology:scoring@v7.25",
+      "textHash": "77c4cd39e0362572126f5ab7166945d11db8e35504d63b58134777df2dd8afea",
+      "textLength": 41808
+    },
+    {
+      "filename": "stability-index-v3.3.pdf",
+      "key": "stability-index",
+      "path": "/methodology/stability-index-changelog/",
+      "title": "Stability Index (PSI) Changelog",
+      "version": "3.3",
+      "urn": "urn:pharos:methodology:stability-index@v3.3",
+      "textHash": "86f6262b314ace160c70e53c1a4c166c33470d29a1ad6bb9cf17314941c58b29",
+      "textLength": 6643
+    },
+    {
+      "filename": "yield-v8.13.pdf",
+      "key": "yield",
+      "path": "/methodology/yield-changelog/",
+      "title": "Yield Intelligence Changelog",
+      "version": "8.13",
+      "urn": "urn:pharos:methodology:yield@v8.13",
+      "textHash": "2da743508ec117ddd7c5fe86a99091455dcbfc40a6697b72a38662d237339ae4",
+      "textLength": 48029
+    }
+  ]
+}

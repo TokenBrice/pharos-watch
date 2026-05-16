@@ -17,7 +17,7 @@ import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
 import type { CostsFile, DonationsFile } from "@shared/lib/funding/types";
 import {
-  MIN_DEPEG_PAGE_DEVIATION_BPS,
+  hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
 } from "@/app/depeg/[event]/config";
 
@@ -37,9 +37,7 @@ interface DepegEventSitemapEntry {
   endedAt: number | null;
   peakDeviationBps: number;
 }
-const depegEventEntries = (depegEvents as readonly DepegEventSitemapEntry[]).filter(
-  (event) => event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS,
-);
+const depegEventEntries = (depegEvents as readonly DepegEventSitemapEntry[]).filter(hasDedicatedDepegEventPage);
 const indexableDepegEventEntries = selectIndexableDepegEvents(depegEventEntries);
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */

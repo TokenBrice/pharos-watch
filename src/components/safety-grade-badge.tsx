@@ -32,6 +32,8 @@ interface SafetyGradeBadgeProps extends Omit<ComponentProps<typeof Badge>, "chil
   versionTopic?: MethodologyContextKey;
   /** `"suffix"` (default) shows the version chip; `"tooltip-only"` hides it. */
   versionVariant?: ScoreBadgeWrapperVariant;
+  /** Disable the methodology trigger when rendering inside an existing link/control. */
+  versionInteractive?: boolean;
 }
 
 export function SafetyGradeBadge({
@@ -47,6 +49,7 @@ export function SafetyGradeBadge({
   "aria-label": ariaLabel,
   versionTopic,
   versionVariant,
+  versionInteractive,
   ...props
 }: SafetyGradeBadgeProps) {
   const scoreLabel = showScore && score !== null ? `, score ${score}` : "";
@@ -65,7 +68,7 @@ export function SafetyGradeBadge({
         className,
       )}
       style={mergedStyle}
-      tabIndex={tabIndex ?? (versionTopic ? 0 : undefined)}
+      tabIndex={tabIndex}
       aria-label={ariaLabel ?? `Safety grade ${grade}${scoreLabel}`}
       {...props}
     >
@@ -80,7 +83,7 @@ export function SafetyGradeBadge({
 
   if (versionTopic) {
     return (
-      <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant}>
+      <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant} interactive={versionInteractive}>
         {badge}
       </ScoreBadgeWrapper>
     );

@@ -42,7 +42,7 @@ npm run check:world-map # Verify generated static world map SVG is current
 npm run check:sql-safety # Static analysis of D1 SQL patterns for safety issues
 npm run check:stablecoin-data # Validate stablecoin JSON data files against schema
 npm run check:build-size # Report and enforce static-export JS/CSS/media/HTML/TXT size budgets after `npm run build`
-npm run check:methodology-pdfs # Re-render methodology PDFs after `npm run build`, check drift, and enforce PDF budgets
+npm run check:methodology-pdfs # Re-render methodology PDFs after `npm run build`, compare the rendered-text manifest, and enforce PDF budgets
 npm run check:phishing-signatures # Scan built `out/` HTML for inline-script patterns that match credential-harvesting phishing kits
 npm run check:classifier-sensitive-copy # Scan built `out/` HTML for wallet-drainer/phishing/browser-warning copy on classifier-sensitive routes
 npm run check:safe-browsing # Query Google Safe Browsing v4 for monitored URL flags (daily workflow + manual)

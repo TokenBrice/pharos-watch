@@ -8,10 +8,10 @@
 
 /**
  * Severity threshold (basis points) below which a confirmed event does NOT
- * get its own static page. Events with a peak deviation under 2.5% remain
- * tracked in D1, surface in feeds and dashboards, and stay citable through
- * `/api/depeg-events`, but they don't earn a dedicated route. Keeps the
- * static archive focused on materially noteworthy events.
+ * get its own static page. Events whose absolute peak deviation is under
+ * 2.5% remain tracked in D1, surface in feeds and dashboards, and stay
+ * citable through `/api/depeg-events`, but they don't earn a dedicated route.
+ * Keeps the static archive focused on materially noteworthy events.
  */
 export const MIN_DEPEG_PAGE_DEVIATION_BPS = 250;
 
@@ -26,6 +26,18 @@ export const INDEXABLE_DEPEG_EVENT_LIMIT = 12;
 interface DepegEventIndexCandidate {
   slug: string;
   startedAt: number;
+}
+
+interface DepegEventPageCandidate {
+  peakDeviationBps: number;
+}
+
+export function getPeakDeviationMagnitudeBps(event: DepegEventPageCandidate): number {
+  return Math.abs(event.peakDeviationBps);
+}
+
+export function hasDedicatedDepegEventPage(event: DepegEventPageCandidate): boolean {
+  return getPeakDeviationMagnitudeBps(event) >= MIN_DEPEG_PAGE_DEVIATION_BPS;
 }
 
 export function selectIndexableDepegEvents<T extends DepegEventIndexCandidate>(

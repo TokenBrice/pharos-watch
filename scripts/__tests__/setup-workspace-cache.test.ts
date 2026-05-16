@@ -21,6 +21,7 @@ describe("setup-workspace tooling cache", () => {
     expect(cacheStep).toContain("# v4.2.4");
     expect(cacheStep).toContain(".next/cache");
     expect(cacheStep).toContain(".cache/eslint");
+    expect(cacheStep).toContain("~/.cache/ms-playwright");
     expect(cacheStep).toContain("*.tsbuildinfo");
     expect(cacheStep).toContain("worker/*.tsbuildinfo");
   });
@@ -48,5 +49,12 @@ describe("setup-workspace tooling cache", () => {
     expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
     expect(cacheStep).toContain("${{ steps.tooling-cache-key.outputs.node-key }}");
     expect(cacheStep).not.toContain("inputs.node-version");
+  });
+
+  it("installs Playwright Chromium only when requested", () => {
+    const installStep = extractStepByNeedle("inputs.install-playwright-chromium == 'true'");
+
+    expect(installStep).toContain("inputs.install-playwright-chromium == 'true'");
+    expect(installStep).toContain("npx --no-install playwright install --with-deps chromium");
   });
 });

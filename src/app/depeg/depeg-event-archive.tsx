@@ -3,7 +3,10 @@ import {
   INDEXABLE_DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
 } from "@/app/depeg/[event]/page-data";
-import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
+import {
+  MIN_DEPEG_PAGE_DEVIATION_BPS,
+  getPeakDeviationMagnitudeBps,
+} from "@/app/depeg/[event]/config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
 
@@ -25,7 +28,7 @@ function severityClass(bps: number): string {
 
 /**
  * Server-rendered list of confirmed depeg events that have earned a dedicated
- * `/depeg/<slug>/` static page (peakDeviationBps ≥ MIN_DEPEG_PAGE_DEVIATION_BPS).
+ * `/depeg/<slug>/` static page (absolute peak deviation ≥ MIN_DEPEG_PAGE_DEVIATION_BPS).
  * Sorted by `startedAt` desc; capped to the indexable archive set.
  */
 export function DepegEventArchive() {
@@ -52,7 +55,7 @@ export function DepegEventArchive() {
 
       <ul className="pharos-card-shell divide-y divide-border/60">
         {events.map((event) => {
-          const peakBps = event.peakDeviationBps;
+          const peakBps = getPeakDeviationMagnitudeBps(event);
           const direction = event.direction === "above" ? "↑" : "↓";
           return (
             <li key={event.slug}>

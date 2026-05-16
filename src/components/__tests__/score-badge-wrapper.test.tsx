@@ -21,6 +21,7 @@ describe("ScoreBadgeWrapper", () => {
 
     // Badge content reaches the DOM (rendered through Sheet + Tooltip triggers).
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /explain safety score/i }).length).toBeGreaterThan(0);
 
     // Inline version suffix is rendered alongside the trigger.
     expect(screen.getByText(versionLabel as string)).toBeTruthy();
@@ -37,6 +38,7 @@ describe("ScoreBadgeWrapper", () => {
     expect(versionLabel).toBeTruthy();
 
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /explain liquidity score/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText(versionLabel as string)).toBeNull();
   });
 
@@ -52,5 +54,16 @@ describe("ScoreBadgeWrapper", () => {
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
     // No <sup> with a version label rendered.
     expect(document.querySelector("[data-score-badge-version]")).toBeNull();
+  });
+
+  it("can render a non-interactive badge for link-wrapped cards", () => {
+    render(
+      <ScoreBadgeWrapper topic="safetyScore" interactive={false}>
+        <span data-testid="badge-content">A</span>
+      </ScoreBadgeWrapper>,
+    );
+
+    expect(screen.getByTestId("badge-content")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /explain safety score/i })).toBeNull();
   });
 });

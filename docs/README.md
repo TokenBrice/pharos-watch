@@ -108,6 +108,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/compare/[slug]/`                              | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/coverage/`                                    | [coverage-page.md](./coverage-page.md)                                                                                                                |
 | `/depeg/`                                       | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md)                                                                                      |
+| `/depeg/[event]/`                               | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md)                                                                                      |
 | `/dependency-map/`                              | [dependency-map.md](./dependency-map.md)                                                                                                              |
 | `/digest/`                                      | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
 | `/digest/[date]/`                               | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |

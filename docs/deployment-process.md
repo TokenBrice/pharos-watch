@@ -70,7 +70,7 @@ Default policy:
    - `npm run check:classifier-sensitive-copy`
    - `npm run check:build-size`
    - `npm run check:build-attribution`
-   - `npm run check:methodology-pdfs`
+   - `npm run check:methodology-pdfs` (after CI has explicitly provisioned Playwright Chromium)
 4. Always run the shared validate post-build checks:
    - `npm run test:noncritical`
    - `npm run coverage:critical`

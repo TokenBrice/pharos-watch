@@ -120,7 +120,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `classify-deploy-changes.mjs` via the `detect-changes` jobs in `.github/workflows/deploy-cloudflare.yml` and `.github/workflows/pull-request-checks.yml`
 - `pharos-change-contract.mjs` via `.github/workflows/pharos-change-contract.yml` for same-repo PR comments, `.codex/config.toml` for local Codex hooks, and `.claude/settings.json` for local Claude hooks
 - `upsert-github-pr-comment.mjs` via `.github/workflows/pharos-change-contract.yml` to keep the PR comment sticky instead of creating duplicates
-- `generate-methodology-pdfs.ts --check` via `npm run check:methodology-pdfs` after `npm run build` in Pages validate/prepare/release lanes
+- `generate-methodology-pdfs.ts --check` via `npm run check:methodology-pdfs` after `npm run build` in Pages validate/prepare/release lanes. CI provisions Playwright Chromium through `setup-workspace`; the checker fails with a setup error instead of installing browsers implicitly.
 - `serve-static-export.mjs` via `npm run serve:static-export` in the pre-deploy `smoke-ui` job inside `.github/workflows/pages-prepare.yml` and the direct production Pages release job
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ops.mjs` via `npm run test:smoke-ops`

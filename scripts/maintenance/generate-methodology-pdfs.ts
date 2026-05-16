@@ -17,12 +17,13 @@
  *
  * Modes:
  *   default          - generate PDFs into public/methodology/pdf/
- *   --check          - regenerate into a temp dir, compare {size, pages} vs.
- *                      committed PDFs; exit non-zero on drift
+ *   --check          - regenerate into a temp dir, compare rendered-text
+ *                      manifest and coarse size vs. committed PDFs; exit
+ *                      non-zero on drift
  */
 
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -43,6 +44,7 @@ import { YIELD_METHODOLOGY_CHANGELOG_PATH, YIELD_METHODOLOGY_VERSION } from "../
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(SCRIPT_PATH), "..", "..");
 const PDF_OUTPUT_DIR = path.join(REPO_ROOT, "public", "methodology", "pdf");
+const MANIFEST_FILENAME = "manifest.json";
 const SITE_BASE_URL = "https://pharos.watch";
 const DEFAULT_PDF_BUDGETS = {
   totalPdfBytes: 25 * 1024 * 1024,
@@ -175,11 +177,30 @@ interface GenerationResult {
   surface: MethodologySurface;
   filename: string;
   bytes: number;
+  textHash: string;
+  textLength: number;
 }
 
 interface PdfFileSize {
   filename: string;
   bytes: number;
+}
+
+interface MethodologyPdfManifestEntry {
+  filename: string;
+  key: string;
+  path: string;
+  title: string;
+  version: string | null;
+  urn: string;
+  textHash: string;
+  textLength: number;
+}
+
+interface MethodologyPdfManifest {
+  schemaVersion: 1;
+  generatedBy: string;
+  entries: MethodologyPdfManifestEntry[];
 }
 
 function resolveBudget(key: keyof typeof DEFAULT_PDF_BUDGETS): number {
@@ -242,22 +263,86 @@ async function loadChromium() {
     return chromium;
   }
 
-  const cliPath = path.join(REPO_ROOT, "node_modules", "playwright", "cli.js");
-  console.log(
-    `[generate-methodology-pdfs] Playwright Chromium missing at ${executablePath}; installing chromium browser`,
+  throw new Error(
+    `Playwright Chromium is not installed at ${executablePath}. Run \`npx playwright install chromium\` before ` +
+      "`npm run check:methodology-pdfs`; CI should provision it through setup-workspace.",
   );
-  const result = spawnSync(process.execPath, [cliPath, "install", "chromium"], {
-    cwd: REPO_ROOT,
-    env: process.env,
-    stdio: "inherit",
-  });
+}
 
-  if (result.status !== 0) {
-    const suffix = result.signal ? ` (signal ${result.signal})` : "";
-    throw new Error(`Failed to install Playwright Chromium for methodology PDFs${suffix}.`);
+function normalizeRenderedText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function sha256Text(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function buildManifest(results: readonly GenerationResult[]): MethodologyPdfManifest {
+  return {
+    schemaVersion: 1,
+    generatedBy: "scripts/maintenance/generate-methodology-pdfs.ts",
+    entries: results
+      .map((result) => ({
+        filename: result.filename,
+        key: result.surface.key,
+        path: result.surface.path,
+        title: result.surface.title,
+        version: result.surface.version,
+        urn: urnFor(result.surface),
+        textHash: result.textHash,
+        textLength: result.textLength,
+      }))
+      .sort((a, b) => a.filename.localeCompare(b.filename)),
+  };
+}
+
+function manifestPath(outputDir: string): string {
+  return path.join(outputDir, MANIFEST_FILENAME);
+}
+
+function writeManifest(outputDir: string, results: readonly GenerationResult[]): void {
+  writeFileSync(manifestPath(outputDir), `${JSON.stringify(buildManifest(results), null, 2)}\n`);
+}
+
+function readManifest(outputDir: string): MethodologyPdfManifest | null {
+  try {
+    const parsed = JSON.parse(readFileSync(manifestPath(outputDir), "utf8")) as MethodologyPdfManifest;
+    return parsed.schemaVersion === 1 && Array.isArray(parsed.entries) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function compareManifests(committed: MethodologyPdfManifest | null, fresh: MethodologyPdfManifest): string[] {
+  if (!committed) {
+    return [`${MANIFEST_FILENAME}: missing or invalid committed methodology PDF manifest`];
   }
 
-  return chromium;
+  const failures: string[] = [];
+  const committedByFilename = new Map(committed.entries.map((entry) => [entry.filename, entry]));
+  const freshFilenames = new Set(fresh.entries.map((entry) => entry.filename));
+
+  for (const entry of fresh.entries) {
+    const expected = committedByFilename.get(entry.filename);
+    if (!expected) {
+      failures.push(`${MANIFEST_FILENAME}: missing committed manifest entry for ${entry.filename}`);
+      continue;
+    }
+
+    for (const key of ["key", "path", "title", "version", "urn", "textHash", "textLength"] as const) {
+      if (expected[key] !== entry[key]) {
+        failures.push(`${entry.filename}: manifest ${key} drift (committed=${expected[key]}, fresh=${entry[key]})`);
+      }
+    }
+  }
+
+  for (const entry of committed.entries) {
+    if (!freshFilenames.has(entry.filename)) {
+      failures.push(`${MANIFEST_FILENAME}: stale committed manifest entry for ${entry.filename}`);
+    }
+  }
+
+  return failures;
 }
 
 async function generateAll(outputDir: string): Promise<GenerationResult[]> {
@@ -306,6 +391,7 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
         document.documentElement.classList.add("light");
         document.documentElement.style.colorScheme = "light";
       });
+      const renderedText = normalizeRenderedText(await page.evaluate(() => document.body?.innerText ?? ""));
       // page.pdf() emulates `print` media automatically; no manual switch needed.
       const buffer = await page.pdf({
         format: "Letter",
@@ -317,7 +403,13 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
       });
 
       writeFileSync(target, buffer);
-      results.push({ surface, filename, bytes: buffer.byteLength });
+      results.push({
+        surface,
+        filename,
+        bytes: buffer.byteLength,
+        textHash: sha256Text(renderedText),
+        textLength: renderedText.length,
+      });
       await page.close();
     }
 
@@ -332,16 +424,8 @@ async function generateAll(outputDir: string): Promise<GenerationResult[]> {
     });
   }
 
+  writeManifest(outputDir, results);
   return results;
-}
-
-async function countPdfPages(filePath: string): Promise<number> {
-  const { readFile } = await import("node:fs/promises");
-  const buffer = await readFile(filePath);
-  const haystack = buffer.toString("binary");
-  // Count `/Type /Page` (not `/Pages`). Lightweight heuristic adequate for byte-fragile PDFs.
-  const matches = haystack.match(/\/Type\s*\/Page(?!\s*s)/g);
-  return matches ? matches.length : 0;
 }
 
 async function runCheck(): Promise<void> {
@@ -349,6 +433,8 @@ async function runCheck(): Promise<void> {
   try {
     const generated = await generateAll(tmpRoot);
     const failures: string[] = [];
+    failures.push(...compareManifests(readManifest(PDF_OUTPUT_DIR), buildManifest(generated)));
+
     for (const result of generated) {
       const committedPath = path.join(PDF_OUTPUT_DIR, result.filename);
       let committedStat;
@@ -358,16 +444,9 @@ async function runCheck(): Promise<void> {
         failures.push(`${result.filename}: missing committed PDF at ${committedPath}`);
         continue;
       }
-      const fresh = await countPdfPages(path.join(tmpRoot, result.filename));
-      const committed = await countPdfPages(committedPath);
-      if (fresh !== committed) {
-        failures.push(
-          `${result.filename}: page count drift (committed=${committed}, fresh=${fresh})`,
-        );
-        continue;
-      }
       const sizeDelta = Math.abs(committedStat.size - result.bytes);
-      // Allow 10% size drift to absorb PDF metadata wiggle (timestamps, font subset hashes).
+      // PDF pagination/byte output varies across runner font stacks. The text
+      // manifest above is the freshness contract; size remains a coarse guard.
       const tolerance = Math.max(8192, committedStat.size * 0.1);
       if (sizeDelta > tolerance) {
         failures.push(

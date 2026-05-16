@@ -73,7 +73,7 @@ function formatLongDate(seconds: number): string {
 }
 
 function formatDeviation(bps: number): string {
-  const pct = bps / 100;
+  const pct = Math.abs(bps) / 100;
   return `${pct.toFixed(2)}%`;
 }
 

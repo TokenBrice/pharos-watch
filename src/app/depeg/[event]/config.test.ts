@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   INDEXABLE_DEPEG_EVENT_LIMIT,
+  hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
 } from "./config";
 
@@ -37,5 +38,11 @@ describe("depeg event indexing policy", () => {
     ]);
 
     expect(selected.map((event) => event.slug)).toEqual(["a-first", "z-last"]);
+  });
+
+  it("uses absolute deviation magnitude for dedicated page eligibility", () => {
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: 250 })).toBe(true);
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -250 })).toBe(true);
+    expect(hasDedicatedDepegEventPage({ peakDeviationBps: -249 })).toBe(false);
   });
 });

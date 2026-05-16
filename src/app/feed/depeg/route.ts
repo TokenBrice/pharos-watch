@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderRss20, toRfc822, type RssItem } from "@/lib/rss";
-import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
+import {
+  getPeakDeviationMagnitudeBps,
+  hasDedicatedDepegEventPage,
+} from "@/app/depeg/[event]/config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 export const dynamic = "force-static";
@@ -42,16 +45,17 @@ function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
     .map((event) => {
       const startedISO = new Date(event.startedAt * 1000).toISOString().slice(0, 10);
       const sign = event.direction === "below" ? "-" : "+";
-      const title = `${event.symbol} depeg ${sign}${event.peakDeviationBps} bps`;
+      const peakBps = getPeakDeviationMagnitudeBps(event);
+      const title = `${event.symbol} depeg ${sign}${peakBps} bps`;
       const status = event.endedAt ? "Resolved" : "Active";
       const eventLink =
-        event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS
+        hasDedicatedDepegEventPage(event)
           ? `${SITE_URL}/depeg/${event.slug}/`
           : `${SITE_URL}/stablecoin/${event.stablecoinId}/#depeg-history`;
       return {
         title,
         link: eventLink,
-        description: `${status} ${event.direction} peg by ${event.peakDeviationBps} bps starting ${startedISO}.`,
+        description: `${status} ${event.direction} peg by ${peakBps} bps starting ${startedISO}.`,
         guid: `pharos:depeg-event:${event.slug}`,
         pubDate: toRfc822(event.startedAt * 1000),
       };

@@ -4,7 +4,7 @@
     "dateCreated": "2026-02-23T15:28:17+01:00"
   },
   "architecture": {
-    "dateModified": "2026-05-16T11:27:23+02:00",
+    "dateModified": "2026-05-17T00:40:00+02:00",
     "dateCreated": "2026-02-19T17:42:02+01:00"
   },
   "data-flow-map": {
@@ -28,7 +28,7 @@
     "dateCreated": "2026-03-14T09:59:04+01:00"
   },
   "depeg-detection": {
-    "dateModified": "2026-05-16T23:52:48+02:00",
+    "dateModified": "2026-05-17T00:40:00+02:00",
     "dateCreated": "2026-02-28T12:27:51+01:00"
   },
   "dews": {
