@@ -150,10 +150,12 @@ export function MethodologyCardActions({
   topic,
   className,
   showVersion = true,
+  trailing,
 }: {
   topic: MethodologyContextKey;
   className?: string;
   showVersion?: boolean;
+  trailing?: ReactNode;
 }) {
   const item = METHODOLOGY_CONTEXT[topic];
 
@@ -174,6 +176,7 @@ export function MethodologyCardActions({
           Version history &rarr;
         </Link>
       ) : null}
+      {trailing ? <span className="ml-auto">{trailing}</span> : null}
     </div>
   );
 }
