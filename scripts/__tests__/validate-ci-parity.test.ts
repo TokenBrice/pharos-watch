@@ -170,6 +170,8 @@ describe("validate-ci parity", () => {
       "npm run check:frozen-invariants",
       "npm run check:generated-artifacts",
       "npm run check:glossary-coverage",
+      "npm run check:one-liner-coverage",
+      "npm run check:mechanism-archetype-coverage",
       "npm run check:hook-polling-window",
       "npm run check:hotspot-ratchet",
       "npm run check:migrations",

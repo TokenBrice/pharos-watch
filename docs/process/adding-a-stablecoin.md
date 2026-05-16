@@ -329,6 +329,32 @@ Override when the defaults would hide real structure, especially for:
 
 ---
 
+## Phase 3.5 - Editorial Coverage Gate
+
+Before writing the per-coin JSON in Phase 4, verify that every editorial field is either filled or recorded as an intentional gap. This is the gate that turns the optional fields in Phase 3 into a required-or-waived decision so curation does not silently regress on new additions.
+
+Required fields and their conditions:
+
+| Field | Required when | Acceptable waiver |
+|------|---------------|-------------------|
+| `oneLiner` | every active or pre-launch coin | none — frozen coins follow the past-tense rewrite path instead |
+| `mechanismArchetype` | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M) | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
+| `proofOfReserves.attestorTier` | `proofOfReserves.type === "independent-audit"` | none — if the attestor is genuinely unknown, omit the whole `proofOfReserves` block instead and record the reason |
+| `data/ai-summaries.json` entry | every active coin | record skip reason in Phase 5 coverage notes |
+
+The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the four fields against the rubric above.
+
+CI backstops (run in `validate:prebuild`):
+
+- `npm run check:one-liner-coverage` — fails if any active/pre-launch coin lacks `oneLiner`.
+- `npm run check:mechanism-archetype-coverage` — fails if more than ~27% of the cohort (non-variant, non-frozen) lacks an archetype; threshold is documented in the script header and tightens over time per the curation cadence plan.
+- `npm run check:attestor-tier-coverage` — fails if more than 20% of `independent-audit` coins lack a tier.
+- `npm run check:glossary-coverage` — fails if AI summaries reference unknown `{{term:slug}}` markers.
+
+The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
+
+---
+
 ## Phase 4 - Edit The Registry
 
 Add the new object to the asset's per-coin JSON file using current field names and current enum values.
@@ -400,6 +426,8 @@ Add the new object to the asset's per-coin JSON file using current field names a
 Do not assume every branch applies. Evaluate each one explicitly.
 
 Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
+
+If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to surface them.
 
 ### 5a. Logo and summary
 

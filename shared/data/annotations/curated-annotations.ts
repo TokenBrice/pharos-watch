@@ -767,6 +767,15 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       href: "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics",
     },
   ],
+  "cadd-cad-digital": [
+    {
+      ts: Date.UTC(2026, 4, 4), // 2026-05-04 — Tetra Digital Group launches CADD as Canada's first regulated CAD-backed stablecoin
+      kind: "governance",
+      label: "CADD launch — Canada's first regulated CAD-backed stablecoin",
+      severity: "med",
+      href: "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution",
+    },
+  ],
 };
 
 const EMPTY: readonly ChartAnnotation[] = [];
