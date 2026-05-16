@@ -27,12 +27,17 @@ const LAST_EDITED: Record<string, string> = sitemapDates;
 const fundingCosts = costsData as CostsFile;
 const fundingDonations = donationsData as DonationsFile;
 
+import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/app/depeg/[event]/config";
+
 interface DepegEventSitemapEntry {
   slug: string;
   startedAt: number;
   endedAt: number | null;
+  peakDeviationBps: number;
 }
-const depegEventEntries = depegEvents as readonly DepegEventSitemapEntry[];
+const depegEventEntries = (depegEvents as readonly DepegEventSitemapEntry[]).filter(
+  (event) => event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS,
+);
 
 /** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
 function lastEdited(path: string): Date {

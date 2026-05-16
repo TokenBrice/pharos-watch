@@ -1,5 +1,6 @@
 import type { DepegEvent } from "@shared/types/market";
 import depegEvents from "@data/depeg-events.json";
+import { MIN_DEPEG_PAGE_DEVIATION_BPS } from "./config";
 
 /**
  * Event payload as written by scripts/maintenance/sync-depeg-events.ts.
@@ -9,7 +10,13 @@ export interface DepegEventEntry extends DepegEvent {
   slug: string;
 }
 
-export const DEPEG_EVENT_ENTRIES = depegEvents as readonly DepegEventEntry[];
+export { MIN_DEPEG_PAGE_DEVIATION_BPS };
+
+const ALL_ENTRIES = depegEvents as readonly DepegEventEntry[];
+
+export const DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = ALL_ENTRIES.filter(
+  (event) => event.peakDeviationBps >= MIN_DEPEG_PAGE_DEVIATION_BPS,
+);
 
 export const eventBySlug: ReadonlyMap<string, DepegEventEntry> = new Map(
   DEPEG_EVENT_ENTRIES.map((event) => [event.slug, event] as const),
