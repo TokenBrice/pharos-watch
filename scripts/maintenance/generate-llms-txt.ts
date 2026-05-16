@@ -130,6 +130,13 @@ const apiLinks = [
   ["About", absolute("/about/"), "Project context and data sources."],
 ] as const;
 
+const feedLinks = [
+  ["Digest feed (RSS 2.0)", absolute("/feed/digest/"), "Daily and weekly digests."],
+  ["Depeg feed (RSS 2.0)", absolute("/feed/depeg/"), "Confirmed depeg events."],
+  ["Methodology feed (RSS 2.0)", absolute("/feed/methodology/"), "Unified methodology changelog across 9 datasets."],
+  ["Cemetery feed (RSS 2.0)", absolute("/feed/cemetery/"), "Newly archived defunct stablecoins."],
+] as const;
+
 const changelogLinks = [
   ["Weekly Changelog", absolute("/changelog/"), "Release notes."],
   ["Daily Digest Archive", absolute("/digest/"), "Daily market recaps."],
@@ -165,6 +172,10 @@ function render(): string {
     "## API",
     "",
     ...renderLinkList(apiLinks),
+    "",
+    "## Feeds",
+    "",
+    ...renderLinkList(feedLinks),
     "",
     "## Changelog",
     "",

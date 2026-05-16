@@ -368,6 +368,33 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
+  const feedPages: MetadataRoute.Sitemap = [
+    {
+      url: `${SITE_URL}/feed/digest/`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/feed/depeg/`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/feed/methodology/`,
+      lastModified: lastEdited("/methodology/"),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: `${SITE_URL}/feed/cemetery/`,
+      lastModified: lastEdited("/cemetery/"),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+  ];
+
   return [
     ...staticPages,
     ...stablecoinPages,
@@ -380,5 +407,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...digestPages,
     ...docsIndex,
     ...docsPages,
+    ...feedPages,
   ];
 }

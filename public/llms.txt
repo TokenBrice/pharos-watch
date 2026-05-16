@@ -44,6 +44,13 @@
 - [Funding](https://pharos.watch/funding/): Public ledger of Pharos running costs, donations, and sustainability path.
 - [About](https://pharos.watch/about/): Project context and data sources.
 
+## Feeds
+
+- [Digest feed (RSS 2.0)](https://pharos.watch/feed/digest/): Daily and weekly digests.
+- [Depeg feed (RSS 2.0)](https://pharos.watch/feed/depeg/): Confirmed depeg events.
+- [Methodology feed (RSS 2.0)](https://pharos.watch/feed/methodology/): Unified methodology changelog across 9 datasets.
+- [Cemetery feed (RSS 2.0)](https://pharos.watch/feed/cemetery/): Newly archived defunct stablecoins.
+
 ## Changelog
 
 - [Weekly Changelog](https://pharos.watch/changelog/): Release notes.
