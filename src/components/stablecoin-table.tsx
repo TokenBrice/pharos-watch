@@ -48,8 +48,8 @@ interface StablecoinHeaderDef {
 }
 
 const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
-  { id: "rank", label: "#", className: "w-[50px] text-right" },
-  { id: "name", label: "Name", sortKey: "name", className: "w-[90px] xl:w-[200px] max-w-[90px] xl:max-w-none" },
+  { id: "rank", label: "#", className: "w-[40px] text-right" },
+  { id: "name", label: "Name", sortKey: "name", className: "w-[90px] xl:w-[150px] max-w-[90px] xl:max-w-[150px]" },
   { id: "price", label: "Price", sortKey: "price", className: "text-right" },
   {
     id: "peg",
@@ -277,13 +277,13 @@ export function StablecoinTable({
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-2 pr-2 sm:max-h-[70vh] sm:pr-0">
         <table
-          className={`min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
+          className={`min-w-[420px] sm:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
         >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {showPinnedControls && (
-                <TableHead scope="col" className="w-[36px] text-center">
+                <TableHead scope="col" className="w-[26px] text-center">
                   <span className="sr-only">Starred</span>
                 </TableHead>
               )}
