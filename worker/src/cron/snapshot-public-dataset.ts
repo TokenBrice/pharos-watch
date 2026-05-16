@@ -153,11 +153,21 @@ export async function snapshotPublicDataset(db: D1Database, signal?: AbortSignal
   // --- 4. DEWS stress signals (latest per coin) ---
   let stressRows: StressSignalRow[] = [];
   try {
+    // Per-coin dedup: take the latest row only. The bare ORDER BY
+    // computed_at DESC would emit every historical signal row and the
+    // snapshot blob would grow linearly with retention window.
     const result = await db
       .prepare(
-        `SELECT stablecoin_id, computed_at, score, band, signals_json
-         FROM stress_signals
-         ORDER BY computed_at DESC`,
+        `SELECT s.stablecoin_id, s.computed_at, s.score, s.band, s.signals_json
+         FROM stress_signals s
+         INNER JOIN (
+           SELECT stablecoin_id, MAX(computed_at) AS latest_computed_at
+           FROM stress_signals
+           GROUP BY stablecoin_id
+         ) latest
+           ON latest.stablecoin_id = s.stablecoin_id
+          AND latest.latest_computed_at = s.computed_at
+         ORDER BY s.stablecoin_id ASC`,
       )
       .all<StressSignalRow>();
     throwIfAborted(signal);

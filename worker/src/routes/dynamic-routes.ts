@@ -111,7 +111,14 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
       } catch {
         return Promise.resolve(errorResponse(400, "Malformed stablecoin id"));
       }
-      return handleSnapshotCoin(routeCtx.db, match[1], stablecoinId);
+      // Resolve alias ids so /api/snapshot/<date>/stablecoin/<alias> 404s
+      // consistently with sibling /api/stablecoin/<id> endpoints rather
+      // than misattributing the snapshot row to the wrong canonical id.
+      const resolved = resolveOrReject(stablecoinId);
+      if (resolved instanceof Response) {
+        return Promise.resolve(resolved);
+      }
+      return handleSnapshotCoin(routeCtx.db, match[1], resolved.canonicalId);
     },
   ),
 ] as const satisfies readonly DynamicRouteDefinition[];
