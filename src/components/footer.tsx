@@ -37,7 +37,27 @@ export function Footer() {
   return (
     <footer className="border-t border-border/70 py-8 sm:py-10">
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
-        <TrustStrip />
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <TrustStrip />
+          <nav
+            aria-label="Feeds"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto"
+          >
+            <span className="inline-flex items-center gap-1 text-foreground/80">
+              <Rss className="h-3 w-3" aria-hidden="true" />
+              <span className="pharos-kicker">Subscribe</span>
+            </span>
+            {FEED_LINKS.map((feed) => (
+              <Link
+                key={feed.href}
+                href={feed.href}
+                className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+              >
+                {feed.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
             <p className="pharos-kicker">Watching The Peg</p>
@@ -82,25 +102,6 @@ export function Footer() {
             </a>
           </div>
         </div>
-
-        <nav
-          aria-label="Feeds"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
-        >
-          <span className="inline-flex items-center gap-1 text-foreground/80">
-            <Rss className="h-3 w-3" aria-hidden="true" />
-            <span className="pharos-kicker">Subscribe</span>
-          </span>
-          {FEED_LINKS.map((feed) => (
-            <Link
-              key={feed.href}
-              href={feed.href}
-              className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
-            >
-              {feed.label}
-            </Link>
-          ))}
-        </nav>
 
         <nav aria-label="Footer navigation" className="flex flex-wrap gap-x-6 gap-y-2">
           {FOOTER_PRIMARY_LINKS.map((link) =>
