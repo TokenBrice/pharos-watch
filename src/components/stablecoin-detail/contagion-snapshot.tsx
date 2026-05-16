@@ -5,9 +5,6 @@ import { useReportCards } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { ContagionGraph } from "@/components/contagion-graph";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { DetailSectionTitle } from "./section-title";
-import { MethodologyLabel } from "@/components/methodology-hint";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { CollateralUsageSection } from "./collateral-usage-section";
 
@@ -69,31 +66,22 @@ export function ContagionSnapshot({
       : "mx-auto max-w-2xl";
 
   return (
-    <Card className="rounded-xl">
-      <CardHeader>
-        <DetailSectionTitle>
-          <MethodologyLabel topic="dependencyRisk">Dependency Context</MethodologyLabel>
-        </DetailSectionTitle>
-        <p className="text-sm text-muted-foreground">
-          Stablecoins {focus.symbol} depends on, supports, or is wrapped by.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <div className={layoutClass}>
-          {hasContagion ? (
-            <ContagionGraph
-              cards={rc.cards}
-              dependencyEdges={edges}
-              mcapMap={mcapMap}
-              logos={logos}
-              focusCoinId={stablecoinId}
-              minimalChrome
-              maxNodes={DETAIL_NODE_LIMIT}
-            />
-          ) : null}
-          {hasRightColumn ? rightColumn : null}
-        </div>
-      </CardContent>
-    </Card>
+    <section className="pharos-card-shell px-4 py-4 sm:px-5 sm:py-5">
+      <h2 className="pharos-section-title mb-4">Dependency Context</h2>
+      <div className={layoutClass}>
+        {hasContagion ? (
+          <ContagionGraph
+            cards={rc.cards}
+            dependencyEdges={edges}
+            mcapMap={mcapMap}
+            logos={logos}
+            focusCoinId={stablecoinId}
+            minimalChrome
+            maxNodes={DETAIL_NODE_LIMIT}
+          />
+        ) : null}
+        {hasRightColumn ? rightColumn : null}
+      </div>
+    </section>
   );
 }

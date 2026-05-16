@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { getVariantDisplay } from "@/lib/variant-display";
-import { buildHomepageVariantBrowseUrl, buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta } from "@shared/types";
 
 interface ParentVariantsCardProps {
@@ -19,11 +17,10 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
   if (variants.length === 0) return null;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center gap-2">
-        <DetailSectionTitle>Variants</DetailSectionTitle>
-        <Badge variant="outline" className="text-[11px]">{variants.length}</Badge>
-      </div>
+    <section className="space-y-2.5">
+      <h3 className="px-2.5 text-sm font-semibold text-foreground">
+        Variants <span className="ml-1 font-normal text-muted-foreground tabular-nums">{variants.length}</span>
+      </h3>
       <div className="grid gap-1.5">
         {variants.map((variant) => {
           const display = variant.variantKind ? getVariantDisplay(variant.variantKind) : null;
@@ -32,7 +29,7 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
             <Link
               key={variant.id}
               href={buildStablecoinUrl(variant.id)}
-              className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2 transition-colors hover:border-border/80 hover:bg-muted/30"
+              className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-2.5 py-2 transition-colors hover:border-border/80 hover:bg-muted/40"
             >
               <StablecoinLogo src={logos?.[variant.id]} name={variant.name} size={28} />
               <div className="min-w-0 flex-1">
@@ -50,12 +47,6 @@ export function ParentVariantsCard({ variants }: ParentVariantsCardProps) {
           );
         })}
       </div>
-      <Link
-        href={buildHomepageVariantBrowseUrl()}
-        className="pharos-focus-ring inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-      >
-        Browse all tracked variants
-      </Link>
     </section>
   );
 }

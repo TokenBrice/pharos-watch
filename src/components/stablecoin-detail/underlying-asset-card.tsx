@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@/lib/variant-display";
-import { buildHomepageVariantBrowseUrl, buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinMeta, VariantKind } from "@shared/types";
 
 interface UnderlyingAssetCardProps {
@@ -17,18 +16,13 @@ interface UnderlyingAssetCardProps {
 export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetCardProps) {
   const { data: logos } = useLogos();
   const display = getVariantDisplay(kind);
-  const browseHref = buildHomepageVariantBrowseUrl(kind);
-  const browseLinkText =
-    kind === "bond-maturity"
-      ? "Browse all tracked variants"
-      : `Browse all ${getVariantAccessibleLabel(kind).replace(/\s+variant$/i, "").toLowerCase()} variants`;
 
   return (
-    <section className="space-y-3">
-      <DetailSectionTitle>Underlying Asset</DetailSectionTitle>
+    <section className="space-y-2.5">
+      <h3 className="px-2.5 text-sm font-semibold text-foreground">Underlying Asset</h3>
       <Link
         href={buildStablecoinUrl(parent.id)}
-        className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2.5 transition-colors hover:border-border/80 hover:bg-muted/30"
+        className="pharos-focus-ring flex items-center gap-3 rounded-lg border border-border/50 px-2.5 py-2.5 transition-colors hover:border-border/80 hover:bg-muted/40"
         aria-label={`View ${parent.name} (${parent.symbol}) details`}
       >
         <StablecoinLogo src={logos?.[parent.id]} name={parent.name} size={32} />
@@ -46,16 +40,10 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
         </span>
       </Link>
       {siblings.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="px-2.5 text-xs text-muted-foreground">
           Related tracked variants: {siblings.map((sibling) => sibling.symbol).join(", ")}.
         </p>
       ) : null}
-      <Link
-        href={browseHref}
-        className="pharos-focus-ring inline-flex w-fit items-center text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-      >
-        {browseLinkText}
-      </Link>
     </section>
   );
 }

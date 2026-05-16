@@ -53,37 +53,43 @@ export function ContagionGraph({
   const overlayInspectedId = graph.activeHoveredId ?? graph.pinnedSelectionId;
   const inspectedNode = graph.nodeMap.get(overlayInspectedId ?? "") ?? null;
 
+  const stage = (
+    <>
+      <ContagionGraphStage
+        graph={graph}
+        logos={logos}
+        nodeTooltipEl={nodeTooltipEl}
+        edgeTooltipEl={edgeTooltipEl}
+        overlay={
+          <ContagionGraphInsights
+            inspectedNode={inspectedNode}
+            visibleLinks={graph.visibleLinks}
+            nodeMap={graph.nodeMap}
+            logos={logos}
+            onTraceNode={graph.handleTraceNodeChange}
+          />
+        }
+      />
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {tooltipAnnouncement}
+      </div>
+    </>
+  );
+
+  if (minimalChrome) {
+    return <div className="min-w-0">{stage}</div>;
+  }
+
   return (
     <Card className="overflow-hidden rounded-md border-border/70 bg-card/85 shadow-none">
-      {!minimalChrome ? (
-        <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
-          <p className="sr-only">
-            Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
-            {graph.visibleLinks.length} visible edges.
-          </p>
-          <ContagionGraphHeader graph={graph} />
-        </CardHeader>
-      ) : null}
-      <CardContent className="p-3 sm:p-4">
-        <ContagionGraphStage
-          graph={graph}
-          logos={logos}
-          nodeTooltipEl={nodeTooltipEl}
-          edgeTooltipEl={edgeTooltipEl}
-          overlay={
-            <ContagionGraphInsights
-              inspectedNode={inspectedNode}
-              visibleLinks={graph.visibleLinks}
-              nodeMap={graph.nodeMap}
-              logos={logos}
-              onTraceNode={graph.handleTraceNodeChange}
-            />
-          }
-        />
-        <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {tooltipAnnouncement}
-        </div>
-      </CardContent>
+      <CardHeader className="space-y-3 border-b border-border/70 bg-background/25 pb-3">
+        <p className="sr-only">
+          Showing {graph.visibleNodeIds.size} of {graph.nodes.length} dependency-linked stablecoins with{" "}
+          {graph.visibleLinks.length} visible edges.
+        </p>
+        <ContagionGraphHeader graph={graph} />
+      </CardHeader>
+      <CardContent className="p-3 sm:p-4">{stage}</CardContent>
     </Card>
   );
 }
