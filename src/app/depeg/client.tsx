@@ -181,15 +181,10 @@ export function DepegClient() {
 
       {/* DEWS radar + stat boxes — 2-column on desktop */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
-        <SectionErrorBoundary name="dews">
-          <DEWSSummary logos={logos} />
-        </SectionErrorBoundary>
         <div className="flex flex-col gap-6 xl:self-stretch">
-          {pegData?.summary && (
-            <SectionErrorBoundary name="depeg-stats">
-              <DepegTrackerStats stats={pegData.summary} />
-            </SectionErrorBoundary>
-          )}
+          <SectionErrorBoundary name="dews">
+            <DEWSSummary logos={logos} />
+          </SectionErrorBoundary>
           <Card className="rounded-xl">
             <CardHeader className="pb-2">
               <h2 className="pharos-kicker">Coverage</h2>
@@ -223,6 +218,13 @@ export function DepegClient() {
               </div>
             </CardContent>
           </Card>
+        </div>
+        <div className="flex flex-col gap-6 xl:self-stretch">
+          {pegData?.summary && (
+            <SectionErrorBoundary name="depeg-stats">
+              <DepegTrackerStats stats={pegData.summary} />
+            </SectionErrorBoundary>
+          )}
           <SectionErrorBoundary name="dews-alert-feed">
             <DEWSAlertFeed
               signals={dewsData?.signals}
