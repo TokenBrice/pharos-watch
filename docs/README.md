@@ -123,7 +123,9 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
+| `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [report-cards.md](./report-cards.md) |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
+| `/stablecoin/[id]/yield/`                       | [yield-intelligence.md](./yield-intelligence.md), [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                            |
 | `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |
 | `/start/`                                       | [start-page.md](./start-page.md)                                                                                                                      |
 | `/status/`                                      | [status-dashboard.md](./status-dashboard.md)                                                                                                          |
@@ -137,6 +139,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md) — canonical PharosWatchBot page; `/telegram` is a redirect alias                                           |
+| `/pharoswatchbot/app/`                          | [telegram-mini-app.md](./telegram-mini-app.md) — Telegram Mini App surface; metadata is noindex                                                       |
 | `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
 | `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 
@@ -215,6 +218,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) - mint/burn methodology version history
 - [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) - pricing pipeline methodology version history
 - [report-cards-timeline.md](./report-cards-timeline.md) - report-card scoring version history
+- Redemption Backstop history is machine-readable in `shared/lib/methodology-versions/redemption-backstop.ts` and currently deep-links to `/methodology/#safety-scores-methodology` because redemption backstops feed Safety Score liquidity rather than a standalone public changelog route.
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
 - [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history
 

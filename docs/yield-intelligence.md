@@ -821,6 +821,12 @@ Each `history` row includes:
 6. Yield Sources board for the active peg-filtered ranking scope
 7. Disclaimer
 
+### Page: `/stablecoin/[id]/yield/`
+
+**Files:** `src/app/stablecoin/[id]/yield/page.tsx` (SSG wrapper), `src/app/stablecoin/[id]/yield/client.tsx` (interactive)
+
+Generated only for tracked coins with `flags.yieldBearing`. The route renders per-source APY history, warning-signal timeline, and source-switch history for the selected coin; non-yield-bearing or unknown IDs return `notFound()` and noindex metadata.
+
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 
 Compact source-mix board rendered after the scatter on `/yield`. It consumes the pure `buildYieldSourceBoardModel(rankings, options)` output from `src/app/yield/source-board-model.ts` and stays scoped to the currently visible, peg-filtered rankings.
@@ -1015,6 +1021,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/app/yield/source-board-model.ts`                | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks |
 | `src/app/yield/source-board.tsx`                     | Compact `/yield` source-provenance board rendered before the scatter                                                                         |
+| `src/app/stablecoin/[id]/yield/page.tsx`             | SSG per-coin yield-analysis wrapper for yield-bearing stablecoins only                                                                       |
+| `src/app/stablecoin/[id]/yield/client.tsx`           | Interactive per-coin yield-analysis surface with APY history, warning timeline, and source-switch history                                    |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
 | `src/components/yield-history-chart.tsx`             | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                   |

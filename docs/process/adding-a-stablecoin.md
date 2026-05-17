@@ -312,7 +312,7 @@ Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit o
 - `attestorJurisdiction`: free-text country/region (e.g. `"United States"`).
 - `attestorLicense`: free-text license/registration (e.g. `"PCAOB-registered"`).
 
-The durable schema lives in `shared/types/core.ts` and `shared/types/stablecoin-meta-schemas.ts`; the originating implementation plan is in `/agents/stablecoin-detail-improvements-plan-2026-05-15.md` (scratch — refer to the schema files and methodology page for durable spec).
+The durable schema lives in `shared/types/core.ts` and `shared/types/stablecoin-meta-schemas.ts`; refer to those schema files and the methodology page for the durable spec.
 
 ### When to override resilience/decentralization fields
 

@@ -8,6 +8,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 
 - **Route shell:** `src/app/stablecoin/[id]/page.tsx`
 - **Client composition:** `src/app/stablecoin/[id]/client.tsx`
+- **Yield subroute:** `src/app/stablecoin/[id]/yield/page.tsx` and `src/app/stablecoin/[id]/yield/client.tsx` for tracked coins with `flags.yieldBearing`
 - **Primary hook:** `src/hooks/use-stablecoin-detail-view-model.ts`
 - **Pure view-model builder:** `src/lib/stablecoin-detail-view-model.ts`
 - **Section components:** `src/components/stablecoin-detail/*`
@@ -25,6 +26,8 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 If the ID is not tracked, the server shell returns a not-found-style fallback instead of mounting the full client.
 
 If the ID is tracked but `coin.status === "pre-launch"`, the server route returns `PreLaunchDetail` instead of mounting the normal detail client.
+
+The `/stablecoin/[id]/yield/` subroute is generated only for yield-bearing tracked coins. Unknown IDs and tracked coins without `flags.yieldBearing` return `notFound()` and noindex metadata; see [yield-intelligence.md](./yield-intelligence.md) for the per-source APY history contract.
 
 ### Pre-launch detail variant
 

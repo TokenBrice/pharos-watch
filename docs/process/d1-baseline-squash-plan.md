@@ -25,7 +25,7 @@ The thresholds are intentionally loose — neither alone forces a squash. They e
 Reference: prior squash commit `fb267826d` (`chore: squash D1 migrations 0001-0071 into baseline`).
 
 1. **Freeze new migrations** for the squash window. Announce in the operator channel; PRs that touch `worker/migrations/` are blocked until the squash lands.
-2. **Spin up a fresh scratch D1** (e.g. `stablecoin-db-squash-rehearsal`). Apply the full current migration tree from 0000 onward via `wrangler d1 migrations apply --remote`.
+2. **Spin up a fresh scratch D1** (e.g. `stablecoin-db-squash-rehearsal`). Apply the full current migration tree from 0000 onward to that named scratch database; include the D1 remote-target flag in the apply command so the rehearsal runs against Cloudflare D1, not a local emulator.
 3. **Dump the schema and required seed data** from the rehearsal DB into a single replacement `0000_baseline.sql` (idempotent `CREATE TABLE IF NOT EXISTS` style matching the existing baseline). Include any seed rows the current baseline includes (cf. existing 0000_baseline contents).
 4. **Verify byte-for-byte schema equivalence** by spinning up a second fresh scratch DB with only the new baseline, then comparing `sqlite_master` rows, index lists, and trigger definitions against the rehearsal DB. Run a sampled `SELECT COUNT(*) FROM <table>` sweep across all critical tables to confirm row count parity for any seeded data.
 5. **Replay safety drill on a preview Worker.** Point a preview Worker version at the squash-rehearsal DB and run the existing preview smoke set. Confirm no migration-name drift surfaces in `cron_runs`, `cron_slot_executions`, or any other ledger that records migration filenames.

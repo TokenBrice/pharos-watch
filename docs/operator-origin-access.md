@@ -390,7 +390,7 @@ Verification:
 After deploy:
 
 ```bash
-curl -I https://ops-api.pharos.watch/api/health
+curl -i https://ops-api.pharos.watch/api/health
 ```
 
 Expected before Access is attached:

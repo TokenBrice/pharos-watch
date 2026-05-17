@@ -8,8 +8,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `src/app/about/api/error.tsx`
 - `src/app/about/api/page.tsx` - route /about/api; default:AboutApiPage, metadata
+- `src/app/about/editorial/error.tsx`
+- `src/app/about/editorial/page.tsx` - route /about/editorial; default:AboutEditorialPage, metadata
 - `src/app/about/error.tsx`
 - `src/app/about/page.tsx` - route /about; default:AboutPage, metadata
+- `src/app/about/principles/error.tsx`
+- `src/app/about/principles/page.tsx` - route /about/principles; default:AboutPrinciplesPage, metadata
 - `src/app/admin-api/client.tsx` - default:AdminApiClient
 - `src/app/admin-api/page.tsx` - route /admin-api; default:AdminApiPage, metadata
 - `src/app/admin/client.tsx` - default:StatusClient
@@ -30,6 +34,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/compare/client.tsx` - CompareClient
 - `src/app/compare/error.tsx`
 - `src/app/compare/page.tsx` - route /compare; metadata
+- `src/app/depeg/[event]/error.tsx`
+- `src/app/depeg/[event]/page.tsx` - route /depeg/[event]; default:DepegEventPage, generateMetadata, generateStaticParams
 - `src/app/depeg/client.tsx` - DepegClient
 - `src/app/depeg/error.tsx`
 - `src/app/depeg/page.tsx` - route /depeg; metadata
@@ -78,6 +84,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/safety-scores/client.tsx` - ReportCardsClient
 - `src/app/safety-scores/error.tsx`
 - `src/app/safety-scores/page.tsx` - route /safety-scores; metadata
+- `src/app/screener/client.tsx` - ScreenerClient
+- `src/app/screener/error.tsx`
+- `src/app/screener/page.tsx` - route /screener; metadata
 - `src/app/sitemap.ts` - default:sitemap, dynamic
 - `src/app/stability-index/client.tsx` - StabilityIndexClient
 - `src/app/stability-index/error.tsx`
@@ -152,6 +161,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-public-status-history.ts` - usePublicStatusHistory
 - `src/hooks/use-recent-blacklist-7d.ts` - RecentBlacklistAggregate, useRecentBlacklist7d
 - `src/hooks/use-request-source-stats.ts` - useRequestSourceStats
+- `src/hooks/use-show-work-mode.ts` - ShowWorkMode, useShowWorkMode
 - `src/hooks/use-sidebar-nav-signal-data.ts` - useSidebarBlacklistSignal, useSidebarDailyDigestSignal, useSidebarHealthSignal, useSidebarPegSummarySignal, useSidebarStabilityIndexSignal
 - `src/hooks/use-sidebar-nav-signals.ts` - useSidebarNavSignals
 - `src/hooks/use-sort.ts` - SortDirection, getNextSortState, shouldToggleSortOnKeyDown, useSort
@@ -160,8 +170,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/hooks/use-stability-index-light.ts` - StabilityIndexLightResponse, useStabilityIndexLight
 - `src/hooks/use-stablecoin-detail-view-model.ts` - useStablecoinDetailViewModel
 - `src/hooks/use-stablecoin-reserves.ts` - StablecoinReservesQueryState, useStablecoinReserves
-- `src/hooks/use-stablecoins.ts` - supplyHistoryQueryOptions, useStablecoins, useSupplyHistory
-- ... 14 more files omitted; use `rg --files src/hooks` for the full list.
+- ... 15 more files omitted; use `rg --files src/hooks` for the full list.
 
 ## Frontend library
 
@@ -195,6 +204,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/chart-export.ts` - downloadChartPng
 - `src/lib/chart-time-range.ts` - formatRangeTickDate
 - `src/lib/chart-utils.ts` - computeChartYDomain, mergeSeriesByTimestamp
+- `src/lib/citation-dates.ts` - getCitationAccessedDateForPath, getCitationAccessedDateForUrl
 - `src/lib/client-feature-page.tsx` - createClientFeaturePage
 - `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
 - `src/lib/command-palette-search-data.ts` - COMMAND_PALETTE_STABLECOINS, CommandPaletteStablecoinSearchItem
@@ -214,12 +224,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
 - `src/lib/csv-export.ts` - downloadCsv
 - `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
-- `src/lib/data-health.ts` - DataHealthInfo, deriveDataHealth, formatDataHealthTimestamp, mergeHealthStates
-- ... 73 more files omitted; use `rg --files src/lib` for the full list.
+- ... 84 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
 - `src/components/about-reference-module.tsx` - AboutReferenceModule
+- `src/components/ai-disclosure-badge.tsx` - AiDisclosureBadge
 - `src/components/ai-summary.tsx` - AiSummary
 - `src/components/api-key-request-form.tsx` - ApiKeyRequestForm
 - `src/components/api-reference-layout.tsx` - ApiReferenceLayout
@@ -244,8 +254,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chain-type-badge.tsx` - ChainTypeBadge
 - `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
-- `src/components/chart-primitives.tsx` - CategoricalXAxis, ChartAnnotationLines, ChartGrid, DateTooltip, MonoYAxis, TimeGrid
+- `src/components/chart-primitives.tsx` - CategoricalXAxis, ChartAnnotationLegend, ChartAnnotationLines, ChartGrid, DateTooltip, MonoYAxis
 - `src/components/chart-skeleton.tsx` - ChartSkeleton
+- `src/components/citation-block.tsx` - CitationBlock, CitationBlockProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
 - `src/components/coin-notice.tsx` - CoinNotices
 - `src/components/coin-selector.tsx` - CoinSelector
@@ -257,9 +268,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/contagion-graph-graph.ts` - EdgeTypeFilter, FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
-- `src/components/contagion-graph.tsx` - ContagionGraph
-- `src/components/contagion-graph/contagion-graph-controls.tsx` - ContagionGraphControls
-- ... 261 more files omitted; use `rg --files src/components` for the full list.
+- ... 273 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -282,10 +291,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 - `shared/lib/admin-gate.ts` - MUTATING_METHODS, X_PHAROS_ADMIN_HEADER
 - `shared/lib/api-cache-profiles.ts` - API_CACHE_PROFILES, API_CACHE_PROFILE_DOCUMENTED_KEYS, ApiCacheProfileKey, PER_COIN_CACHE_TTL_SECONDS, buildPerCoinCacheControl
+- `shared/lib/api-endpoints/datasets.ts` - PUBLIC_DATASET_TOPICS, PublicDatasetTopic
 - `shared/lib/api-endpoints/definitions.ts` - DynamicAdminEndpointMatch, ENDPOINT_DEFINITIONS, EndpointDefinition, EndpointDefinitionByKey, EndpointDependenciesForKey, EndpointDependency
 - `shared/lib/api-endpoints/dynamic.ts` - DYNAMIC_ENDPOINT_DESCRIPTORS, DynamicEndpointDescriptor, DynamicEndpointDescriptorKey, findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey
-- `shared/lib/api-endpoints/index.ts` - API_PATHS, buildQueryPath, getStatusPageActions
+- `shared/lib/api-endpoints/index.ts` - API_PATHS, SNAPSHOT_DATE_PATTERN, buildQueryPath, getStatusPageActions
 - `shared/lib/api-endpoints/paths.ts` - API_PATHS, buildQueryPath
+- `shared/lib/api-endpoints/snapshot.ts` - SNAPSHOT_DATE_PATTERN
 - `shared/lib/api-endpoints/status.ts` - getStatusPageActions
 - `shared/lib/api-endpoints/validation.ts` - getProbePaths, getPublicApiAccess, getSiteDataAccess, isAdminLikePath, isAdminPath, isMutatingAdminGetAllowed
 - `shared/lib/api-freshness.ts` - API_FRESHNESS_MAX_AGE_SEC, CACHE_AVAILABILITY_MAX_AGE_SEC, CACHE_FRESHNESS_LANES, CacheFreshnessLaneConfig, CacheFreshnessLaneKey, FRESHNESS_SENTINEL_CACHE_KEYS
@@ -310,6 +321,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chains/health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT
 - `shared/lib/chains/index.ts` - CHAIN_META, CHAIN_RESILIENCE_TIER, ChainResilienceTier, getActiveChainIds, getChainResilienceTier, resolveChainId
 - `shared/lib/chains/provider-registry.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_REGISTRY, DEXPAPRIKA_CHAIN_MAP
+- `shared/lib/citation/formats.ts` - CitationInput, deriveCiteKey, formatAPA7, formatBibTeX, formatChicago, formatPlain
+- `shared/lib/citation/urn.ts` - PharosUrn, PharosUrnEntityClass, formatPharosUrn, parsePharosUrn
 - `shared/lib/classification-pegs.ts`
 - `shared/lib/classification.ts`
 - `shared/lib/classification/badges.ts` - BACKING_BADGE_STYLES, BACKING_COLORS, BLACKLIST_CHART_COLORS, EVENT_BADGE_STYLES, EVENT_LABELS, GOVERNANCE_BADGE_STYLES
@@ -336,15 +349,12 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/env-contract/render-markdown.ts` - renderOperatorOriginAccessEnvBlock, renderWorkerInfrastructureEnvBlock
 - `shared/lib/env-contract/types.ts` - EnvBindingDefinition, EnvBindingValueType, EnvExampleSection, EnvRuntimeName, EnvRuntimeStatus
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
-- `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
-- `shared/lib/filter-tags.ts` - COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, FILTER_TAG_LABELS, GRADE_FILTER_TAGS, OTHER_PEG_TAGS, getFilterTags
-- `shared/lib/format.ts` - abbreviateNumberParts, formatAddress, formatBps, formatChartDate, formatChartPercent, formatCompactCount
-- `shared/lib/funding/helpers.ts` - CostCategoryGroup, DonationSummary, MonthlyCommunityCoverage, computeCostsTotal, computeMonthlyHistory, formatCoveragePct
-- ... 188 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 194 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
 - `shared/data/stablecoins/canonical-order.json` - 391 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 391 entries
 - `shared/data/stablecoins/coins.generated.json` - 391 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 18 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 24 keys
@@ -383,8 +393,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/data/stablecoins/coins/brlv-crown.json` - 23 keys
 - `shared/data/stablecoins/coins/brz-transfero.json` - 21 keys
 - `shared/data/stablecoins/coins/btcusd-btcfi.json` - 19 keys
-- `shared/data/stablecoins/coins/buck-buck-assets.json` - 25 keys
-- ... 359 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
+- ... 360 more files omitted; use `rg --files shared/data/stablecoins` for the full list.
 
 ## Worker routing
 
@@ -494,7 +503,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/discovery.ts` - handleDiscoveryCandidates, handleDismissCandidate
 - `worker/src/api/events.ts` - handleEvents
 - `worker/src/api/feedback.ts` - handleFeedback
-- ... 85 more files omitted; use `rg --files worker/src/api` for the full list.
+- ... 86 more files omitted; use `rg --files worker/src/api` for the full list.
 
 ## Worker cron
 
@@ -578,7 +587,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/cron/dex-liquidity/fetch-meteora.ts` - fetchMeteoraPools
 - `worker/src/cron/dex-liquidity/fetch-orca.ts` - fetchOrcaPools
 - `worker/src/cron/dex-liquidity/fetch-pancakeswap.ts` - fetchPancakeSwapPools
-- ... 274 more files omitted; use `rg --files worker/src/cron` for the full list.
+- ... 275 more files omitted; use `rg --files worker/src/cron` for the full list.
 
 ## Worker library
 
@@ -660,6 +669,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/check-telegram-load.test.ts`
 - `scripts/__tests__/check-worker-migrations.test.ts`
 - `scripts/__tests__/classify-deploy-changes.test.ts`
+- `scripts/__tests__/client-registry-field-contract.test.ts`
 - `scripts/__tests__/command-runner.test.ts`
 - `scripts/__tests__/doc-sync.test.ts`
 - `scripts/__tests__/fixtures/sql-safety/scripts/safe-root-script.ts` - safeRootScriptValueInterpolation
@@ -670,6 +680,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/fixtures/sql-safety/worker/src/unsafe-worker-src.ts` - buildUnsafeWorkerSrcQuery
 - `scripts/__tests__/freeze-stablecoin.test.ts`
 - `scripts/__tests__/generate-markdown-exports.test.ts`
+- `scripts/__tests__/generate-public-datasets.test.ts`
 - `scripts/__tests__/generate-redemption-coverage-audit.test.ts`
 - `scripts/__tests__/pharos-change-contract.test.ts`
 - `scripts/__tests__/public-api-artifact-catalog.test.ts`
@@ -685,14 +696,17 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/__tests__/sql-interpolation-safety.test.ts`
 - `scripts/__tests__/stablecoin-catalog-sources.test.ts`
 - `scripts/__tests__/supply-helper-usage.test.ts`
+- `scripts/__tests__/sync-depeg-events.test.ts`
 - `scripts/__tests__/test-merge-gate.test.ts`
 - `scripts/__tests__/validate-ci-parity.test.ts`
 - `scripts/__tests__/vitest-ci-args.test.ts`
 - `scripts/__tests__/worker-boundary-waivers.test.ts`
 - `scripts/__tests__/yield-pys-v8-calibration.test.ts`
+- `scripts/build-data/build-client-registry.mjs` - buildClientRegistryOutput, projectCoin, readCanonicalClientFields, runCli, validateProjection
 - `scripts/ci/check-agent-doc-sync.mjs`
 - `scripts/ci/check-archetype-explainer-coverage.ts` - ArchetypeExplainerCheckResult, ArchetypeExplainerFinding, validateArchetypeExplainerCoverage
 - `scripts/ci/check-attestor-tier-coverage.ts`
+- `scripts/ci/check-build-attribution.mjs`
 - `scripts/ci/check-classifier-sensitive-copy.mjs`
 - `scripts/ci/check-critical-coverage.mjs` - getChangedFilesFromGit, isAllZeroSha, parseChangedFilesFromEnv, runCriticalCoverageCheck
 - `scripts/ci/check-cron-abort-contract.mjs` - main, scanCronAbortContract
@@ -701,9 +715,4 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `scripts/ci/check-depeg-operational-integrity.mjs`
 - `scripts/ci/check-doc-counts.mjs`
 - `scripts/ci/check-doc-source-paths.mjs`
-- `scripts/ci/check-doc-sync.ts`
-- `scripts/ci/check-duplicate-exports.mjs`
-- `scripts/ci/check-env-contract.mjs`
-- `scripts/ci/check-frozen-invariants.ts`
-- `scripts/ci/check-glossary-coverage.ts`
-- ... 101 more files omitted; use `rg --files scripts` for the full list.
+- ... 116 more files omitted; use `rg --files scripts` for the full list.

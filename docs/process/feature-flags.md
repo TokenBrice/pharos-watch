@@ -54,15 +54,8 @@ What must be true before turning each flag on in production:
 - [x] Phase 2 wire-up: `useChartAnnotations` fetches `/api/events`, maps tape rows, clamps to range.
 - [x] Curated annotation layer at `shared/data/annotations/curated-annotations.ts`.
 - [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
-- [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk per `agents/stablecoin-detail-improvements-follow-up-plan.md` §3.**
-
-## Idea 20a — closed, no follow-up
-
-Per `agents/idea-20a-diagnosis.md`: no bug found from code inspection. The detail page renders within the design-system layout already. No remaining action.
+- [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
 
 ## Spec source
 
-Spec, success criteria, and per-idea steps live in the plan file:
-`agents/stablecoin-detail-improvements-plan-2026-05-15.md`.
-
-(That path is local-scratch under `/agents/` per `docs/process/agent-artifacts.md`; in production the durable spec would live under `docs/process/`. The flag table above is the durable reference once the plan is consumed.)
+The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-prepare.yml`, `.github/workflows/validate-ci.yml`, and `.github/workflows/deploy-cloudflare.yml`.

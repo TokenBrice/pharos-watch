@@ -100,8 +100,8 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 
 If a migration corrupts data:
 
-1. **Get bookmark:** `cd worker && npx wrangler d1 time-travel info stablecoin-db --remote`
-2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK> --remote`
+1. **Get bookmark:** `cd worker && npx wrangler d1 time-travel info stablecoin-db`
+2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK>`
 3. **Remove bad migration** from `worker/migrations/` directory
 4. **Re-apply remaining:** `cd worker && npx wrangler d1 migrations apply stablecoin-db --remote`
 5. **Redeploy worker:** use the standard production deploy workflow, or manually run the equivalent Worker Versions sequence (`cd worker && npx wrangler versions upload`, smoke the preview URL, `npx wrangler versions deploy <VERSION_ID>@100`, then `npx wrangler triggers deploy`). `wrangler deploy` bypasses the preview-smoke/promotion flow and should be treated as an emergency shortcut only.

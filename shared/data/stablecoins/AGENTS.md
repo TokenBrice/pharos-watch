@@ -11,7 +11,7 @@ Applies to `shared/data/stablecoins/**`.
 ## Rules
 
 - Author stablecoin metadata in `shared/data/stablecoins/coins/*.json`; this directory is the editable source of truth.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts` after per-coin edits. Do not edit the generated aggregate by hand.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` after per-coin edits. Do not edit the generated aggregate by hand.
 - Treat `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` as read-only compatibility shells. They should remain empty, and `npm run check:stablecoin-data` guards that layout.
 - Keep `canonical-order.json` aligned with the per-coin catalog.
 - Do not add manual, on-chain, CMC, or DEX supply overrides. Primary supply is DefiLlama with the existing fallback path only.

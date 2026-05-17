@@ -34,13 +34,13 @@ For the default-on Hero Verdict rollback, set `NEXT_PUBLIC_PHAROS_HERO_VERDICT=f
 
 ## How the variables reach the build
 
-`pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job mirrors the same block so PR previews use the same flag state.
+`pages-prepare.yml` threads each `${{ vars.NEXT_PUBLIC_PHAROS_X }}` into the job's `env:` block, alongside `NEXT_PUBLIC_GA_ID`. `validate-ci.yml`'s `pages-build` job and the production Pages build job in `deploy-cloudflare.yml` mirror the same block so PR validation, rebuilds, and production deploys inline the same flag state.
 
-No code changes required to add or remove a flag — but **if you add a 7th flag**, you must add its line to both workflows or it will silently stay off.
+No code changes required to add or remove a flag — but if you add a new flag, you must add its line to every build workflow listed above or it will silently stay off on that path.
 
 ## Recommended sequence
 
-All remaining flags are code-ready (see `agents/p1-flag-flip-readiness-2026-05-16.md`). Flip one per deploy window so a regression is unambiguous:
+All remaining flags are code-ready according to the checked-in flag table below and `src/lib/feature-flags.ts`. Flip one per deploy window so a regression is unambiguous:
 
 1. `QUIET_DEVIATIONS` — visual-only, lowest risk.
 2. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.

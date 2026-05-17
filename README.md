@@ -134,10 +134,10 @@ Use one of these paths:
 - `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
-Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys.
+Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys, including optional provider credentials such as `BANXICO_TOKEN` and operational telemetry kill switches.
 
 **Full-stack local**
-Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals.
+Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals. `DEV_PROXY_UPSTREAM` and `DEV_PROXY_PORT` override the local site-data proxy target/port when debugging the `npm run dev` proxy path.
 
 ### Other commands
 
@@ -168,16 +168,18 @@ src/                              Frontend (Next.js static export)
 │   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
+│   ├── learn/mechanisms/         Stablecoin mechanism explainer hub + archetype pages
 │   ├── api/                      Public API access and self-serve key request flow
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
+│   ├── screener/                 Beta multi-signal stablecoin screener
 │   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── upcoming/                 Pre-launch stablecoin tracker
-│   ├── stablecoin/[id]/          Detail page per stablecoin
+│   ├── stablecoin/[id]/          Detail page per stablecoin (+ stablecoin/[id]/yield/)
 │   ├── stablecoins/              Stablecoin taxonomy hub
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/      Backing taxonomy hub
@@ -189,7 +191,8 @@ src/                              Frontend (Next.js static export)
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, indexable)
-│   ├── pharoswatchbot/           Telegram alerts + digest landing page
+│   ├── timeline/                 Cross-class event tape
+│   ├── pharoswatchbot/           Telegram alerts + digest landing page (+ pharoswatchbot/app/)
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
 │   └── about/                    About / product overview (+ about/api/ reference)
@@ -203,6 +206,7 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── admin-api/[[path]].ts         Host gate for the private API management route
+├── stablecoin/[[path]].ts        Legacy numeric stablecoin URL redirector
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper
 ├── lib/proxy-utils.ts            Shared proxy request/response helpers

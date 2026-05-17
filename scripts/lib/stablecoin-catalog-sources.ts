@@ -260,7 +260,7 @@ export function syncGeneratedPerCoinAsset({
   if (check) {
     if (current !== expected) {
       throw new Error(
-        `${GENERATED_PER_COIN_ASSET_FILE} is stale. Run: tsx scripts/generate-stablecoin-per-coin-asset.ts`,
+        `${GENERATED_PER_COIN_ASSET_FILE} is stale. Run: tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`,
       );
     }
 
