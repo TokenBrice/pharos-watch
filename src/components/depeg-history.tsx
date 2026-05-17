@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { computePegStability } from "@/lib/peg-stability";

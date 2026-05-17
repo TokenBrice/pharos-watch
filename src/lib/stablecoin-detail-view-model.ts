@@ -39,8 +39,7 @@ import {
 } from "@/lib/stablecoin-detail-derive";
 import type { ApiMeta } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
+import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD, DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatBand } from "@shared/lib/classification";

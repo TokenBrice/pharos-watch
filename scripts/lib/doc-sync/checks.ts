@@ -33,8 +33,6 @@ import {
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-} from "../../../shared/lib/depeg-detection-config";
-import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
 } from "../../../shared/lib/depeg-config";

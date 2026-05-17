@@ -23,7 +23,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
+import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 
 const PEG_TYPE_BY_CURRENCY: Record<string, string> = {
   USD: "peggedUSD",

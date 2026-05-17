@@ -336,8 +336,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
-- `shared/lib/depeg-config.ts` - DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD
-- `shared/lib/depeg-detection-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
+- `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD
 - `shared/lib/depeg-dews-version.ts`
 - `shared/lib/dependency-derivation.ts` - deriveDependencies, deriveEffectiveDependencies
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
