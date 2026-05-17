@@ -8,7 +8,7 @@ import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { YieldRanking } from "@shared/types";
 
@@ -40,11 +40,6 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
     badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
   },
 };
-
-export function formatSignedPercent(value: number | null) {
-  if (value === null) return "\u2014";
-  return sharedFormatSignedPercent(value);
-}
 
 export interface YieldDetailSectionReadyModel {
   status: "ready";

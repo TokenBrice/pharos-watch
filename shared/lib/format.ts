@@ -244,9 +244,9 @@ export function formatPercent(value: number | null | undefined, decimals = 2): s
   return value != null ? `${value.toFixed(decimals)}%` : "-";
 }
 
-/** Format a signed percentage with +/- prefix and % suffix. Returns "-" for nullish. */
-export function formatSignedPercent(value: number | null | undefined, decimals = 2): string {
-  if (value == null) return "-";
+/** Format a signed percentage with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
+export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
+  if (value == null) return nullFallback;
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(decimals)}%`;
 }
