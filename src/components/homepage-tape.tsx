@@ -12,7 +12,7 @@ import {
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
 import { tapeClassChipBg } from "@/lib/tape-class-style";
-import { formatRelativeTimeMs } from "@shared/lib/format";
+import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import {
   SEVERITY_DOT_CLASS,
   SEVERITY_LABEL,
@@ -201,4 +201,3 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     </section>
   );
 }
-

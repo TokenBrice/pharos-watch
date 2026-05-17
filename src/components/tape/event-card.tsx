@@ -26,7 +26,8 @@ import {
   deviationColorClass,
 } from "@/lib/severity-colors";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
-import { formatCompactUsd, formatRelativeTimeMs } from "@shared/lib/format";
+import { formatCompactUsd } from "@shared/lib/format";
+import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   SEVERITY_LABEL_INCLUSIVE,

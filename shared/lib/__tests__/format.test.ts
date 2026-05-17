@@ -24,8 +24,8 @@ import {
   formatDuration,
   timeAgo,
   formatAddress,
-  formatRelativeTimeMs,
 } from "../format";
+import { formatRelativeTimeMs } from "../relative-time";
 
 describe("formatScore", () => {
   it("formats to one decimal", () => expect(formatScore(72.456)).toBe("72.5"));
