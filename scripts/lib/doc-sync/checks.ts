@@ -60,32 +60,9 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "../../../shared/lib/redemption-back
 import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
+  METHODOLOGY_PROVENANCE_FILES,
   SAFETY_SCORE_VERSION_LABEL,
 } from "./methodology-manifest";
-
-const METHODOLOGY_PROVENANCE_FILES = [
-  "docs/blacklist-tracker-timeline.md",
-  "docs/chain-health-timeline.md",
-  "docs/depeg-dews-timeline.md",
-  "docs/liquidity-score-timeline.md",
-  "docs/mint-burn-flows-timeline.md",
-  "docs/pricing-pipeline-timeline.md",
-  "docs/report-cards-timeline.md",
-  "docs/stability-index-timeline.md",
-  "docs/yield-intelligence-timeline.md",
-  "shared/lib/methodology-versions/blacklist-tracker.ts",
-  "shared/lib/chains/health-version.ts",
-  "shared/lib/methodology-versions/depeg-dews.ts",
-  "shared/lib/methodology-versions/liquidity-score.ts",
-  "shared/lib/methodology-versions/base.ts",
-  "shared/lib/methodology-versions/mint-burn-flow.ts",
-  "shared/lib/methodology-versions/pricing-pipeline.ts",
-  "shared/lib/methodology-versions/redemption-backstop.ts",
-  "shared/lib/methodology-versions/safety-score-data.ts",
-  "shared/lib/methodology-versions/safety-score.ts",
-  "shared/lib/methodology-versions/stability-index.ts",
-  "shared/lib/methodology-versions/yield-methodology.ts",
-] as const;
 
 function checkMethodologyVersions(failures: Failure[]): void {
   for (const check of METHODOLOGY_DOC_VERSION_CHECKS) {
