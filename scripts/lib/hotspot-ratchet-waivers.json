@@ -3,6 +3,10 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
+  "worker/src/api/backfill-supply-history.ts": {
+    "disposition": "queued-p4",
+    "notes": "Historical supply backfill still combines DefiLlama snapshots, FX normalization, market-cap fallback, and historical on-chain exclusion repair. Keep it explicitly owned as a later admin-path cleanup; split source planning, per-day reconstruction, and persistence before adding new backfill modes."
+  },
   "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only."
@@ -19,6 +23,10 @@
     "disposition": "queued-p4",
     "notes": "Telegram usage-analytics aggregation now spans event ingestion, retention windowing, redaction, and digest-friendly projection. Surfaced as a hotspot after the worker/lib telegram cluster reorg (commit c900c7b9). Split projection vs. retention/redaction in a follow-up telegram analytics cleanup."
   },
+  "worker/src/lib/evm-rpc.ts": {
+    "disposition": "queued-p4",
+    "notes": "EVM RPC helper centralizes JSON-RPC retries, Etherscan proxy access, Multicall3 ABI encoding/decoding, and timestamp-to-block search. It surfaced after the format helper split removed another branch-count candidate; split ABI codec helpers from transport/block-search utilities before adding more RPC behavior."
+  },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
@@ -26,10 +34,6 @@
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
-  },
-  "worker/src/api/telegram-webhook-callbacks.ts": {
-    "disposition": "queued-p4",
-    "notes": "Callback routing now owns setup, settings, status, discovery, watchlist management, snooze, and per-coin alert toggles. Phase 4 Wave 3 added the CallbackActionHandler registry; the remaining height is in the 17 handler bodies (each ~30-100 LOC). Next telegram decomposition pass should consider moving setup + manage + bulk-action handlers to per-domain files."
   },
   "worker/src/api/telegram-webhook.ts": {
     "disposition": "queued-p4",
@@ -54,10 +58,6 @@
   "src/components/homepage-client.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface."
-  },
-  "worker/src/api/telegram-webhook-store.ts": {
-    "disposition": "queued-p4",
-    "notes": "Webhook state storage now covers processed-update claims, setup/disambiguation rows, callback payloads, and cooldown bookkeeping. Phase 2 added the subscriber-upsert builder + chat-migration descriptors; residual height is in the per-table state-storage helpers. Next Telegram cleanup should split processed-update idempotency vs. cooldown bookkeeping."
   },
   "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",

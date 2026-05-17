@@ -68,6 +68,9 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
   "shared/lib/redemption-backstop-scoring.ts::REDEMPTION_EXECUTION_LABELS",
+  // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
+  "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
+  "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
   "shared/lib/report-cards.ts::chainInfraLabel",
   "shared/lib/report-cards.ts::inferResilienceDefaults",

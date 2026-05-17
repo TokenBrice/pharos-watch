@@ -29,7 +29,7 @@ export async function loadChatSubscriptions(
   return result.results ?? [];
 }
 
-export async function renderManagePage(
+async function renderManagePage(
   db: D1Database,
   botToken: string,
   cb: TelegramCallbackQuery,

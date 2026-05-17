@@ -167,6 +167,18 @@
     },
     "notes": "PegScore and DEWS now share an isolated section body, but the dual-surface copy is still oversized. Split PegScore-specific and DEWS-specific detail blocks before adding more content."
   },
+  "src/app/methodology/scoring-changelog/content-v7-0.tsx": {
+    "fileLines": 748,
+    "maxFunctionLines": 45,
+    "branchCount": 0,
+    "disposition": "queued-p4",
+    "targetBudget": {
+      "fileLines": 650,
+      "maxFunctionLines": 80,
+      "branchCount": 0
+    },
+    "notes": "The v7.0-v7.25 changelog tranche is isolated from older scoring history and split into per-entry components. Split into narrower version-range modules if another large v7 tranche lands."
+  },
   "src/app/methodology/scoring-changelog/content-v6.tsx": {
     "fileLines": 273,
     "maxFunctionLines": 268,

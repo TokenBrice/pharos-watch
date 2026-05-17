@@ -8,15 +8,10 @@
  *    `dispatch-telegram-alerts.test.ts` (e.g. the `SELECT p.id, p.chat_id, ...`
  *    rows returned by the pending-queue drain phase).
  *
- * 2. `insertPendingSqliteRow()` — wrapper around `node:sqlite` INSERT used in
- *    `telegram-pending-queue.test.ts`, where a real in-memory SQLite database
- *    backs the mock D1. Mirrors the inline `insertPendingSqlite()` helper.
- *
- * Both flavors share the same overrides shape so a test can swap between
- * mockD1 rows and real-SQLite inserts without re-learning the column names.
+ * The overrides shape mirrors the pending queue schema so tests do not need
+ * to re-learn the column names.
  */
 
-import type { DatabaseSync } from "node:sqlite";
 import { TELEGRAM_PENDING_PRIORITY } from "../../lib/telegram-constants";
 
 export interface PendingAlertRowOverrides {
@@ -72,38 +67,4 @@ export function buildPendingAlertRow(
     alert_type: overrides.alertType ?? null,
     expires_at: overrides.expiresAt ?? null,
   };
-}
-
-/**
- * Insert a `telegram_pending_alerts` row directly into a `node:sqlite`
- * database used to back a sqlite-d1 mock. Mirrors `insertPendingSqlite()`
- * defined inline in `worker/src/cron/__tests__/telegram-pending-queue.test.ts`.
- */
-export function insertPendingSqliteRow(
-  sqlite: DatabaseSync,
-  overrides: PendingAlertRowOverrides & { id: number; chatId: string; html: string; createdAt: number },
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_pending_alerts (
-         id, chat_id, message_html, disable_notification, created_at, attempts,
-         not_before_at, dedupe_key, chunk_index, priority, source_type, alert_type, expires_at
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      overrides.id,
-      overrides.chatId,
-      overrides.html,
-      overrides.disableNotification ?? 0,
-      overrides.createdAt,
-      overrides.attempts ?? 0,
-      overrides.notBeforeAt ?? null,
-      overrides.dedupeKey ?? null,
-      overrides.chunkIndex ?? 0,
-      overrides.priority ?? TELEGRAM_PENDING_PRIORITY.legacy,
-      overrides.sourceType ?? "legacy",
-      overrides.alertType ?? null,
-      overrides.expiresAt ?? null,
-    );
 }

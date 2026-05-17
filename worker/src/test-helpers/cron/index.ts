@@ -23,5 +23,5 @@ export type {
   MockCircuitBreakerExports,
 } from "./mock-circuit-breaker";
 
-export { buildPendingAlertRow, insertPendingSqliteRow } from "./pending-row-builders";
+export { buildPendingAlertRow } from "./pending-row-builders";
 export type { PendingAlertRowOverrides } from "./pending-row-builders";

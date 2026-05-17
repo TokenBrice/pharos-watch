@@ -21,7 +21,7 @@ export { SNOOZE_SECONDS };
 // dispatcher so that an unknown action can never reach a D1 read/write.
 // `setup` is handled separately above. `confirm`/`cancel` are used by the
 // P0-C1 bulk-confirmation gate (action data `confirm:bulk` / `cancel:bulk`).
-export const CALLBACK_ACTIONS = [
+const CALLBACK_ACTIONS = [
   "snooze",
   "coinsnooze",
   "status",
