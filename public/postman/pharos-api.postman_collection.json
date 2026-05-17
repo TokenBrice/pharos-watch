@@ -435,7 +435,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BblacklistStablecoinSymbol%7D%7D&chain=Ethereum&eventType=blacklist&q=&sortBy=date&sortDirection=desc&limit=%7B%7Blimit%7D%7D&offset=0",
+              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BblacklistStablecoinSymbol%7D%7D&chain=Ethereum&chainId=ethereum&eventType=blacklist&q=&sortBy=date&sortDirection=desc&limit=%7B%7Blimit%7D%7D&offset=0&includeTotal=true",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -451,6 +451,10 @@
                 {
                   "key": "chain",
                   "value": "Ethereum"
+                },
+                {
+                  "key": "chainId",
+                  "value": "ethereum"
                 },
                 {
                   "key": "eventType",
@@ -475,10 +479,14 @@
                 {
                   "key": "offset",
                   "value": "0"
+                },
+                {
+                  "key": "includeTotal",
+                  "value": "true"
                 }
               ]
             },
-            "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based."
+            "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based."
           },
           "response": []
         },
@@ -536,7 +544,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&direction=&chain=ethereum&burnType=&scope=all&minAmount=0&limit=%7B%7Blimit%7D%7D&offset=0",
+              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&direction=&chain=ethereum&burnType=&scope=all&minAmount=0&limit=%7B%7Blimit%7D%7D&offset=0&includeTotal=true",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -576,6 +584,10 @@
                 {
                   "key": "offset",
                   "value": "0"
+                },
+                {
+                  "key": "includeTotal",
+                  "value": "true"
                 }
               ]
             },

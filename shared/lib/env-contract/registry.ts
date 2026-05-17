@@ -453,12 +453,21 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "BANXICO_TOKEN",
+    valueType: "string",
+    description: "Banxico SIE API token used for MXN CETES 28-day benchmark rates.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 38, status: "optional" },
+    },
+  },
+  {
     key: "CLOUDFLARE_ACCOUNT_ID",
     valueType: "string",
     description: "Cloudflare account scope used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 38, status: "optional" },
+      worker: { order: 39, status: "optional" },
     },
   },
   {
@@ -467,7 +476,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare API token with D1 status/analytics read access for admin metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 39, status: "optional" },
+      worker: { order: 40, status: "optional" },
     },
   },
   {
@@ -476,7 +485,7 @@ export const ENV_BINDINGS = [
     description: "Target D1 database ID used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 40, status: "optional" },
+      worker: { order: 41, status: "optional" },
     },
   },
   {
@@ -485,7 +494,26 @@ export const ENV_BINDINGS = [
     description: "Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 41, status: "optional" },
+      worker: { order: 42, status: "optional" },
+    },
+  },
+  {
+    key: "REQUEST_SOURCE_ATTRIBUTION_DISABLED",
+    valueType: "string",
+    description: "Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 43, status: "optional" },
+      pagesSiteData: { order: 4, status: "optional" },
+    },
+  },
+  {
+    key: "API_KEY_REQUEST_ATTRIBUTION_DISABLED",
+    valueType: "string",
+    description: "Worker-only operational telemetry kill switch for per-key public API attribution writes.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 44, status: "optional" },
     },
   },
   {

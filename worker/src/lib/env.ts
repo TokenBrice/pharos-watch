@@ -54,6 +54,8 @@ export interface Env {
   CLOUDFLARE_D1_STATUS_API_TOKEN?: string;
   CLOUDFLARE_D1_DATABASE_ID?: string;
   MAINTENANCE_MODE?: string;
+  REQUEST_SOURCE_ATTRIBUTION_DISABLED?: string;
+  API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
 }
 
 export interface WorkerEnvIssue {

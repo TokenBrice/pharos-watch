@@ -144,6 +144,13 @@ export const SUPPLY_HISTORY_DAYS_PARAM = {
   description: "Historical lookback window in days. Defaults to 365.",
 } as const satisfies PublicApiArtifactParameter;
 
+export const NON_USD_SHARE_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 30, maximum: 1825 },
+  description: "Historical lookback window in days. Defaults to 1825; `0` maps to the default.",
+} as const satisfies PublicApiArtifactParameter;
+
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
@@ -505,7 +512,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "blacklist",
     path: API_PATHS.blacklist(),
     summary: "Blacklist events",
-    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
     parameters: [
       BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM,
@@ -514,6 +521,12 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         in: "query",
         schema: { type: "string" },
         description: "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
+      },
+      {
+        name: "chainId",
+        in: "query",
+        schema: { type: "string" },
+        description: "Optional canonical chain-registry ID filter, for example `ethereum` or `tron`. When both `chain` and `chainId` are supplied, they must identify the same chain.",
       },
       {
         name: "eventType",
@@ -542,8 +555,8 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
       {
         name: "limit",
         in: "query",
-        schema: { type: "integer", minimum: 1, maximum: 1000 },
-        description: "Maximum number of events to return. Defaults to 1000.",
+        schema: { type: "integer", minimum: 0, maximum: 1000 },
+        description: "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
       },
       {
         name: "offset",
@@ -551,18 +564,26 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         schema: { type: "integer", minimum: 0 },
         description: "Pagination offset. Defaults to 0.",
       },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When false, skips the exact total count.",
+      },
     ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
       query: {
         stablecoin: "{{blacklistStablecoinSymbol}}",
         chain: "Ethereum",
+        chainId: "ethereum",
         eventType: "blacklist",
         q: "",
         sortBy: "date",
         sortDirection: "desc",
         limit: "{{limit}}",
         offset: "0",
+        includeTotal: "true",
       },
     },
   },
@@ -638,6 +659,18 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         schema: { type: "integer", minimum: 0 },
         description: "Pagination offset. Defaults to 0.",
       },
+      {
+        name: "cursor",
+        in: "query",
+        schema: { type: "string" },
+        description: "Opaque keyset cursor returned as nextCursor; cannot be combined with a non-zero offset.",
+      },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When false, skips the exact total count.",
+      },
     ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
@@ -650,6 +683,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         minAmount: "0",
         limit: "{{limit}}",
         offset: "0",
+        includeTotal: "true",
       },
     },
   },
@@ -720,7 +754,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Non-USD share",
     description: "Historical non-USD peg share series for market-structure views.",
     tags: ["Market Structure", "History"],
-    parameters: [DAYS_PARAM],
+    parameters: [NON_USD_SHARE_DAYS_PARAM],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
       query: { days: "{{days}}" },

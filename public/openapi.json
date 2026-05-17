@@ -931,7 +931,7 @@
           "Blacklist"
         ],
         "summary": "Blacklist events",
-        "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+        "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
         "operationId": "blacklist",
         "parameters": [
           {
@@ -985,6 +985,15 @@
             "in": "query",
             "required": false,
             "description": "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical chain-registry ID filter, for example `ethereum` or `tron`. When both `chain` and `chainId` are supplied, they must identify the same chain.",
             "schema": {
               "type": "string"
             }
@@ -1044,10 +1053,10 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Maximum number of events to return. Defaults to 1000.",
+            "description": "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
             "schema": {
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 1000
             }
           },
@@ -1059,6 +1068,15 @@
             "schema": {
               "type": "integer",
               "minimum": 0
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When false, skips the exact total count.",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -1276,6 +1294,24 @@
               "type": "integer",
               "minimum": 0
             }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque keyset cursor returned as nextCursor; cannot be combined with a non-zero offset.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When false, skips the exact total count.",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -1467,10 +1503,11 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "description": "Historical lookback window in days. Defaults to 1825; `0` maps to the default.",
             "schema": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 30,
+              "maximum": 1825
             }
           }
         ],

@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` / `HEAD /api/og/*` return `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
 ## Surface Split
 
@@ -35,6 +35,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 - `GET /api/health`
 - `GET /api/og/*`
+- `HEAD /api/og/*`
 - `POST /api/feedback`
 - `POST /api/api-key-requests`
 - `POST /api/api-key-requests/verify`
@@ -173,7 +174,7 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `HEAD /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
 
 ### Per-key limit
 
@@ -208,7 +209,7 @@ API-key authentication and per-key limiter storage normally rely on D1. For prot
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` returns `image/png` on success; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
+JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` and `HEAD /api/og/*` return `image/png` on success for known image routes; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
 
 | Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -296,7 +297,7 @@ Total documented public operations: **35**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
-| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?` | 200, 400, 401, 429, 503 |
+| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `chainId?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/chains` | Chains | Chains | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -308,7 +309,7 @@ Total documented public operations: **35**.
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | X-API-Key | `date` | 200, 400, 401, 429, 503 |
 | GET | `/api/events` | Tape events | Risk | X-API-Key | `type?`, `class?`, `coin?`, `pegCurrency?`, `chain?`, `severityFloor?`, `since?`, `until?`, `cursor?`, `limit?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/health` | Health check | Health | none | — | 200, 400, 503 |
-| GET | `/api/mint-burn-events` | Mint and burn events | Flows | X-API-Key | `stablecoin`, `direction?`, `chain?`, `burnType?`, `scope?`, `minAmount?`, `limit?`, `offset?` | 200, 400, 401, 429, 503 |
+| GET | `/api/mint-burn-events` | Mint and burn events | Flows | X-API-Key | `stablecoin`, `direction?`, `chain?`, `burnType?`, `scope?`, `minAmount?`, `limit?`, `offset?`, `cursor?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/mint-burn-flows` | Mint and burn flows | Flows | X-API-Key | `stablecoin?`, `hours?` | 200, 400, 401, 429, 503 |
 | GET | `/api/non-usd-share` | Non-USD share | Market Structure, History | X-API-Key | `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -741,8 +742,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `q`             | `string`  | —       | Case-insensitive address substring search                                                                                                                                      |
 | `sortBy`        | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`                                                                                                                             |
 | `sortDirection` | `string`  | `desc`  | Sort direction: `asc`, `desc`                                                                                                                                                  |
-| `limit`         | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)                                                                                                                               |
+| `limit`         | `integer` | `1000`  | Max results (0–1000; `0` maps to default `1000`)                                                                                                                               |
 | `offset`        | `integer` | `0`     | Pagination offset                                                                                                                                                              |
+| `includeTotal`  | `boolean` | `true`  | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false`                                                                       |
 
 **Response**
 
@@ -1979,7 +1981,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 
 ---
 
-### `GET /api/og/*`
+### `GET /api/og/*` / `HEAD /api/og/*`
 
 Dynamic Open Graph PNG images used by share buttons and page metadata.
 
