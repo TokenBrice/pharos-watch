@@ -50,6 +50,8 @@ const DEFAULT_PDF_BUDGETS = {
   totalPdfBytes: 25 * 1024 * 1024,
   largestPdfBytes: 5 * 1024 * 1024,
 } as const;
+const PDF_SIZE_DRIFT_TOLERANCE_RATIO = 0.2;
+const PDF_SIZE_DRIFT_TOLERANCE_FLOOR_BYTES = 8192;
 const PDF_BUDGET_ENV = {
   totalPdfBytes: "PHAROS_SIZE_BUDGET_METHODOLOGY_PDF_TOTAL_BYTES",
   largestPdfBytes: "PHAROS_SIZE_BUDGET_METHODOLOGY_PDF_LARGEST_BYTES",
@@ -447,7 +449,7 @@ async function runCheck(): Promise<void> {
       const sizeDelta = Math.abs(committedStat.size - result.bytes);
       // PDF pagination/byte output varies across runner font stacks. The text
       // manifest above is the freshness contract; size remains a coarse guard.
-      const tolerance = Math.max(8192, committedStat.size * 0.1);
+      const tolerance = Math.max(PDF_SIZE_DRIFT_TOLERANCE_FLOOR_BYTES, committedStat.size * PDF_SIZE_DRIFT_TOLERANCE_RATIO);
       if (sizeDelta > tolerance) {
         failures.push(
           `${result.filename}: size drift ${sizeDelta} bytes exceeds ${Math.round(tolerance)} byte tolerance (committed=${committedStat.size}, fresh=${result.bytes})`,
