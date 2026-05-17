@@ -13,7 +13,7 @@ import { sleepWithSignal } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES, CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE } from "../cron/dex-liquidity/constants";
 
-export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chain-provider-registry";
+export { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "@shared/lib/chains";
 
 /** Check if CoinGecko onchain API is available (API key configured) */
 export function isOnchainAvailable(apiKey: string | null): boolean {

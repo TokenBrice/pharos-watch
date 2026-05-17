@@ -1,5 +1,4 @@
-import { resolveChainId } from "@shared/lib/chains";
-import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
+import { DS_CHAIN_MAP, resolveChainId } from "@shared/lib/chains";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   CIRCUIT_SOURCE,

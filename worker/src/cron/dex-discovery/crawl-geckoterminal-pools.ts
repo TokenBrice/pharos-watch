@@ -1,6 +1,7 @@
 import type { ContractDeployment } from "@shared/types/core";
 import { sleepWithSignal } from "../../lib/abort";
-import { CHAIN_REGISTRY, GT_CHAIN_MAP } from "../../lib/chain-registry";
+import { CHAIN_META } from "@shared/lib/chains";
+import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
@@ -49,8 +50,8 @@ export async function crawlGeckoTerminalPoolsStage({
   const gtChainAddressToId = new Map<string, string>();
 
   for (const { chain, address } of coinTargets) {
-    const registry = CHAIN_REGISTRY[chain];
-    const gtNetwork = GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal;
+    const providers = CHAIN_META[chain]?.providers;
+    const gtNetwork = GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal;
     if (!gtNetwork) continue;
     if (cgPriceObservationTargets.has(makeChainAddressKey(chain, address))) continue;
     gtTokens.push({

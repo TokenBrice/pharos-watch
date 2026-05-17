@@ -31,7 +31,7 @@ vi.mock("../rate-limit", () => ({
   },
 }));
 
-vi.mock("@shared/lib/chain-provider-registry", () => ({
+vi.mock("@shared/lib/chains", () => ({
   CG_CHAIN_MAP: {
     ethereum: "eth",
   },

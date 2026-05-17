@@ -1,7 +1,8 @@
 import type { ContractDeployment } from "@shared/types/core";
 import { throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { CG_CHAIN_MAP, CHAIN_REGISTRY, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
+import { CHAIN_META } from "@shared/lib/chains";
+import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import {
   dsRateLimit,
@@ -57,9 +58,9 @@ export function selectDexScreenerTargets({
   const uncoveredChains: DexScreenerTarget[] = [];
 
   for (const { chain, address } of coinTargets) {
-    const registry = CHAIN_REGISTRY[chain];
-    const hasCg = !!(CG_CHAIN_MAP[chain] ?? registry?.coingecko);
-    const hasGt = !!(GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal);
+    const providers = CHAIN_META[chain]?.providers;
+    const hasCg = !!(CG_CHAIN_MAP[chain] ?? providers?.coingecko);
+    const hasGt = !!(GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal);
     if (!hasCg && !hasGt) {
       uncoveredChains.push([chain, address]);
     }
