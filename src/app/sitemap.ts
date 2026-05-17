@@ -272,6 +272,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${SITE_URL}/api/`,
+      // eslint-disable-next-line no-restricted-syntax -- "/api/" here is the public docs page slug, not an API endpoint; LAST_EDITED is keyed by site URLs.
       lastModified: lastEdited("/api/"),
       changeFrequency: "monthly",
       priority: 0.5,

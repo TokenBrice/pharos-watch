@@ -7,6 +7,7 @@ import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_VERSION_LABEL,
@@ -19,7 +20,7 @@ export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
   canonical: "/safety-scores/",
-  ogImage: buildApiOgImageUrl("/api/og/safety-scores"),
+  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
 });
 
 const FAQ_ITEMS = [

@@ -88,6 +88,9 @@ export const API_PATHS = {
   chains: () => "/api/chains",
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  ogDepeg: () => "/api/og/depeg",
+  ogSafetyScores: () => "/api/og/safety-scores",
+  ogStabilityIndex: () => "/api/og/stability-index",
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
       limit: params?.limit,

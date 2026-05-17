@@ -3,6 +3,7 @@ import { FaqSection } from "@/components/faq-section";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -14,7 +15,7 @@ export const metadata = buildPageMetadata({
   title: "Stability Index: Pharos Stablecoin Market Health",
   description,
   canonical: "/stability-index/",
-  ogImage: buildApiOgImageUrl("/api/og/stability-index"),
+  ogImage: buildApiOgImageUrl(API_PATHS.ogStabilityIndex()),
 });
 
 const FAQ_ITEMS = [

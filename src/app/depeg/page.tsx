@@ -8,6 +8,7 @@ import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -20,7 +21,7 @@ export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
   description: depegDescription,
   canonical: "/depeg/",
-  ogImage: buildApiOgImageUrl("/api/og/depeg"),
+  ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
 });
 
 const FAQ_ITEMS = [
