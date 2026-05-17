@@ -134,3 +134,15 @@ export function getLlamaId(canonicalId: string): string | null {
   const meta = REGISTRY_BY_ID.get(canonicalId);
   return meta?.llamaId ?? null;
 }
+
+/** Historical PSI stablecoin id aliases. Maps legacy/post-collapse ids to the canonical id used in PSI supply/shadow coverage. */
+const PSI_STABLECOIN_ID_ALIASES = new Map<string, string>([
+  // UST historical depeg rows were recorded under the post-collapse legacy id,
+  // while PSI supply/shadow coverage now keys the asset as `ust-terra`.
+  ["ust-terra-classic", "ust-terra"],
+]);
+
+/** Resolve a PSI stablecoin id to its canonical form, applying any known historical aliases. */
+export function canonicalizePsiStablecoinId(stablecoinId: string): string {
+  return PSI_STABLECOIN_ID_ALIASES.get(stablecoinId) ?? stablecoinId;
+}

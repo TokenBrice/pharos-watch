@@ -116,7 +116,7 @@ export function DateTooltip({
 
 type TimeGridProps = ComponentProps<typeof CartesianGrid>;
 
-export function ChartGrid({
+export function TimeGrid({
   strokeDasharray = "2 6",
   stroke = "var(--color-border)",
   vertical = false,
@@ -124,8 +124,6 @@ export function ChartGrid({
 }: TimeGridProps) {
   return <CartesianGrid strokeDasharray={strokeDasharray} stroke={stroke} vertical={vertical} {...props} />;
 }
-
-export const TimeGrid = ChartGrid;
 
 /**
  * Hex literals — Recharts SVG `fill` / `stroke` cannot resolve CSS variables,

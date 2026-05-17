@@ -8,7 +8,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
@@ -126,7 +126,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                   data={chartData}
                   margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
                 >
-                  <ChartGrid strokeDasharray="3 3" />
+                  <TimeGrid strokeDasharray="3 3" />
                   <CategoricalXAxis
                     dataKey="quarter"
                     tick={{

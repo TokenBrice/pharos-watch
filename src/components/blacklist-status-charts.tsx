@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
 import {
   BLACKLIST_STATUS_BUCKET_COLORS,
   BLACKLIST_STATUS_BUCKET_LABELS,
@@ -69,7 +69,7 @@ function StatusBarChart({
               data={data}
               margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
             >
-              <ChartGrid strokeDasharray="3 3" />
+              <TimeGrid strokeDasharray="3 3" />
               <CategoricalXAxis
                 dataKey="status"
                 tick={{
