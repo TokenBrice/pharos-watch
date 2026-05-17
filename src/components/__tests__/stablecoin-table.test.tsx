@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
@@ -126,7 +126,7 @@ describe("StablecoinTable", () => {
     HTMLElement.prototype.scrollTo = vi.fn();
   });
 
-  it("normalizes persisted column visibility from localStorage", () => {
+  it("normalizes persisted column visibility from localStorage", async () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "bogus"]));
 
     render(
@@ -138,8 +138,10 @@ describe("StablecoinTable", () => {
       />,
     );
 
-    expect(screen.getByText("Market Cap")).toBeTruthy();
-    expect(screen.queryByText("Price")).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText("Market Cap")).toBeTruthy();
+      expect(screen.queryByText("Price")).toBeNull();
+    });
   });
 
   it("keeps horizontal scrolling enabled on the table viewport", () => {

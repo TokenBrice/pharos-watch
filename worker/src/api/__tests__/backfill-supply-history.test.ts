@@ -191,9 +191,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(capturedStatements),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=euroe-membrane"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=euro3-3a-dao"),
       true,
-      makeApiRequest("/api/backfill-supply-history?stablecoin=euroe-membrane", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=euro3-3a-dao", { adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);
@@ -211,13 +211,13 @@ describe("handleBackfillSupplyHistory", () => {
     );
     expect(inserts).toHaveLength(2);
     expect(inserts[0].args).toEqual([
-      "euroe-membrane",
+      "euro3-3a-dao",
       Math.floor(day1 / 86400) * 86400,
       1_100_000,
       1.1,
     ]);
     expect(inserts[1].args).toEqual([
-      "euroe-membrane",
+      "euro3-3a-dao",
       Math.floor(day2 / 86400) * 86400,
       2_400_000,
       1.2,
