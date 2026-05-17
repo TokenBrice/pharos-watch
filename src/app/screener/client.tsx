@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
@@ -60,7 +60,24 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
 ];
 
+function subscribeHydrationStore() {
+  return () => {};
+}
+
+function getHydratedSnapshot() {
+  return true;
+}
+
+function getServerHydrationSnapshot() {
+  return false;
+}
+
 export function ScreenerClient() {
+  const hasHydrated = useSyncExternalStore(
+    subscribeHydrationStore,
+    getHydratedSnapshot,
+    getServerHydrationSnapshot,
+  );
   const { data: logos } = useLogos();
   const {
     data: stablecoinsData,
@@ -104,9 +121,10 @@ export function ScreenerClient() {
   const { searchParams, replaceParams } = useUrlFilters();
 
   // Decode filters from URL via W1-F codec on every searchParams change.
+  // The URL is only available in the browser, so deep-linked filters are applied after hydration.
   const filters = useMemo<ScreenerFilters>(
-    () => decodeState(searchParams, SCREENER_URL_SCHEMA),
-    [searchParams],
+    () => (hasHydrated ? decodeState(searchParams, SCREENER_URL_SCHEMA) : SCREENER_FILTER_DEFAULTS),
+    [hasHydrated, searchParams],
   );
 
   const setFilters = useCallback(

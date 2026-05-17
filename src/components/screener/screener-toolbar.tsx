@@ -63,7 +63,7 @@ export function ScreenerToolbar({
   const filterCountLabel = `${activeFilterCount.toLocaleString()} ${activeFilterCount === 1 ? "filter" : "filters"} applied`;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border/60 bg-card/60 p-4">
+    <div className="pharos-card-shell space-y-3 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base font-semibold text-foreground" aria-live="polite">
           <span>{matchSummary}</span>
@@ -84,7 +84,7 @@ export function ScreenerToolbar({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
         <div className="space-y-2">
           <span className="pharos-kicker" id={`${groupId}-safety-grades`}>
             Safety Grade
@@ -102,7 +102,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={grade}
                 value={grade}
-                className={`min-h-11 font-semibold sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)}`}
+                className={`min-h-11 font-semibold opacity-80 transition-[opacity,box-shadow,filter] data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:border-current data-[state=on]:opacity-100 data-[state=on]:ring-1 data-[state=on]:ring-current data-[state=on]:ring-inset data-[state=on]:brightness-125 sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)}`}
               >
                 {grade}
               </ToggleGroupItem>
@@ -129,7 +129,7 @@ export function ScreenerToolbar({
         />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <ThresholdField
           label="Peg Stability"
           min={0}
@@ -177,7 +177,7 @@ export function ScreenerToolbar({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
         <div className="space-y-2">
           <span className="pharos-kicker" id={`${groupId}-types`}>
             Type

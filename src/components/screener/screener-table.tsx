@@ -106,7 +106,7 @@ export function ScreenerTable({
 
 function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
   return (
-    <TableRow>
+    <TableRow className="hover:!transform-none">
       <TableCell className="min-w-[160px]">
         <Link
           href={buildStablecoinUrl(row.id)}

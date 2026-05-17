@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle. Permalinks share the exact view.`;
+const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle.`;
 
 export const metadata = buildPageMetadata({
   title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
@@ -20,17 +20,17 @@ const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener is a client-side filter over the same DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle data that powers the rest of Pharos. Set score thresholds, narrow by type, mechanism, or peg, and share the URL — the filter state is encoded directly in the query string.",
+      "The Screener filters the tracked stablecoin universe by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",
     answer:
-      "Every filter is a flat URL parameter (for example `?dewsMin=40&mechanisms=cdp,fiat-cash`). Copying the URL preserves the exact view; opening it on another device reproduces the same filter and result set.",
+      "Each filter is encoded as a URL parameter, for example `?dewsMin=40&mechanisms=cdp,fiat-cash`. Copying the URL preserves the same view on another device.",
   },
   {
     question: "Why are some scores empty?",
     answer:
-      "Pharos rates roughly 50–70% of tracked stablecoins on each score. Coins with insufficient history, no DEX coverage, or recent listings show a dash. Active score-range filters automatically exclude coins missing that score so you don't get false negatives.",
+      "Pharos rates roughly 50–70% of tracked stablecoins on each score. Coins with insufficient history, no DEX coverage, or recent listings show a dash. Active score thresholds exclude coins missing that score.",
   },
   {
     question: "Why isn't jurisdiction a filter yet?",
@@ -39,49 +39,52 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-const SCREENER_STATIC_SECTION = (
-  <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-      <p className="pharos-kicker">How To Read The Screener</p>
-      <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          Numeric thresholds narrow the candidate set on DEWS stress, the five Safety Score sub-dimensions,
-          and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism archetype, peg, and
-          lifecycle.
-        </p>
-        <p>
-          Cross-reference results against the{" "}
-          <Link
-            href="/safety-scores/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-          >
-            Safety Scores
-          </Link>
-          ,{" "}
-          <Link
-            href="/depeg/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-          >
-            Depeg Tracker
-          </Link>
-          , and{" "}
-          <Link
-            href="/liquidity/"
-            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
-          >
-            DEX Liquidity
-          </Link>{" "}
-          before relying on a coin in production.
-        </p>
+const SCREENER_SUPPORT_SECTION = (
+  <section className="space-y-4">
+    <div className="rounded-xl border border-border/60 bg-card/45 px-4 py-3">
+      <p className="text-sm font-semibold text-foreground">How to use this screener</p>
+      <div className="mt-3 grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+        <div className="space-y-2">
+          <p className="pharos-kicker">Reading the Filters</p>
+          <p>
+            Numeric thresholds narrow the candidate set on DEWS stress, the five Safety Score sub-dimensions,
+            and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism archetype, peg, and
+            lifecycle.
+          </p>
+          <p>
+            Cross-reference results against the{" "}
+            <Link
+              href="/safety-scores/"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              Safety Scores
+            </Link>
+            ,{" "}
+            <Link
+              href="/depeg/"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              Depeg Tracker
+            </Link>
+            , and{" "}
+            <Link
+              href="/liquidity/"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              DEX Liquidity
+            </Link>{" "}
+            before relying on a coin in production.
+          </p>
+        </div>
+        <div>
+          <p className="pharos-kicker">Useful Starting Points</p>
+          <ul className="mt-2 space-y-1.5">
+            <li>Which CDP stablecoins still hold an A-grade with Peg Stability &gt; 90?</li>
+            <li>What does the active-depeg cohort look like at DEWS &gt; 60?</li>
+            <li>How does EUR-pegged coverage compare to USD by Exit Liquidity?</li>
+          </ul>
+        </div>
       </div>
-    </div>
-    <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-      <p className="pharos-kicker">Good Questions To Ask</p>
-      <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-        <li>Which CDP stablecoins still hold an A-grade with PegScore above 90?</li>
-        <li>What does the active-depeg cohort look like at DEWS &gt; 60?</li>
-        <li>How does EUR-pegged coverage compare to USD by Liquidity Score?</li>
-      </ul>
     </div>
   </section>
 );
@@ -95,10 +98,13 @@ export default createClientFeaturePage({
     title: "Pharos Screener",
     statusBadge: { status: "beta" },
     leadParagraphs: [
-      "Filter the tracked stablecoin universe by score, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle.",
-      "Every filter lives in the URL — share the link to share the view. Numeric ranges respect missing scores so a partially rated coin is never wrongly excluded.",
+      "Filter the tracked stablecoin universe by Safety Grade, safety dimensions, DEWS, supply, type, mechanism, peg, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
     ],
   },
-  beforeClient: SCREENER_STATIC_SECTION,
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+  afterClient: (
+    <>
+      {SCREENER_SUPPORT_SECTION}
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
+    </>
+  ),
 });
