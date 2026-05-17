@@ -40,13 +40,14 @@ import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
 import { SAFETY_SCORE_VERSION_LABEL } from "../../shared/lib/safety-score-version";
 import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "../../shared/lib/supply";
+import { parseCheckMode } from "../lib/cli.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const DATASETS_DIR = join(REPO_ROOT, "public/datasets");
 const SHEETS_DIR = join(REPO_ROOT, "public/sheets");
 const RETENTION_DAYS = 90;
-const CHECK_MODE = process.argv.includes("--check");
+const CHECK_MODE = parseCheckMode(process.argv);
 const ALLOW_STUB_MODE = process.argv.includes("--allow-stub") || process.env.PUBLIC_DATASETS_ALLOW_STUB === "1";
 const REQUIRE_API_SOURCE = process.env.PUBLIC_DATASETS_REQUIRE_API === "1";
 const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {

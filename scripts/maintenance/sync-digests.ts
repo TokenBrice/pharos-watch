@@ -4,6 +4,9 @@
  *   DIGEST_API_URL=https://ops-api.example.com tsx scripts/sync-digests.ts
  */
 
+import { getArgValue, parseCheckMode } from "../lib/cli.mjs";
+import { resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
+
 interface ApiDigest {
   digestText: string;
   digestTitle?: string;
@@ -23,37 +26,8 @@ interface DigestEntry {
   editionNumber: number;
 }
 
-function tsToDate(ts: number): string {
-  return new Date(ts * 1000).toISOString().slice(0, 10);
-}
-
-function getArgValue(name: string): string | null {
-  const index = process.argv.indexOf(name);
-  if (index === -1) return null;
-  return process.argv[index + 1] ?? null;
-}
-
-function resolveDigestApiUrl(): string {
-  const explicitUrl =
-    getArgValue("--api-url") ??
-    process.env.DIGEST_API_URL ??
-    process.env.SMOKE_API_BASE ??
-    process.env.API_BASE_URL;
-  if (!explicitUrl) {
-    throw new Error(
-      "Provide --api-url or set DIGEST_API_URL / SMOKE_API_BASE / API_BASE_URL before running sync-digests.",
-    );
-  }
-
-  if (explicitUrl.endsWith("/api/digest-archive")) {
-    return explicitUrl;
-  }
-
-  return `${explicitUrl.replace(/\/+$/, "")}/api/digest-archive`;
-}
-
 function resolveOutputPath(): URL {
-  const explicitOutput = getArgValue("--output");
+  const explicitOutput = getArgValue(process.argv, "--output");
   if (!explicitOutput) {
     return new URL("../data/digests.json", import.meta.url);
   }
@@ -103,7 +77,18 @@ async function fetchWithRetry(
 }
 
 async function main() {
-  const apiUrl = resolveDigestApiUrl();
+  // --check mode is a smoke test for the script's own wiring (no network).
+  if (parseCheckMode(process.argv)) {
+    console.log("[sync-digests] --check mode: helpers wired OK.");
+    return;
+  }
+
+  const apiUrl = resolveApiUrl({
+    argName: "--api-url",
+    envNames: ["DIGEST_API_URL", "SMOKE_API_BASE", "API_BASE_URL"],
+    apiPath: "/api/digest-archive",
+    scriptName: "sync-digests",
+  });
   const outputPath = resolveOutputPath();
   const digestApiKey = (process.env.DIGEST_API_KEY ?? "").trim();
 
@@ -113,28 +98,27 @@ async function main() {
   if (digestApiKey) {
     headers.set("X-API-Key", digestApiKey);
   }
-  const res = await fetchWithRetry(apiUrl, { headers });
-  if (!res.ok) throw new Error(`API returned ${res.status}`);
-  const { digests } = (await res.json()) as { digests: ApiDigest[] };
-  console.log(`Fetched ${digests.length} digests`);
 
-  const entries: DigestEntry[] = digests
-    .map((d) => ({
-      date: tsToDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
-      title: d.digestTitle || "Signal & Noise",
-      text: d.digestText,
-      extended: d.digestExtended || "",
-      generatedAt: d.generatedAt,
-      digestType: d.digestType ?? ("daily" as const),
-      editionNumber: d.editionNumber ?? 0,
-    }))
-    .sort((a, b) => b.generatedAt - a.generatedAt);
-
-  const { mkdirSync, writeFileSync } = await import("fs");
-  const { fileURLToPath } = await import("url");
-  const outputFile = fileURLToPath(outputPath);
-  mkdirSync(new URL(".", outputPath), { recursive: true });
-  writeFileSync(outputFile, JSON.stringify(entries, null, 2) + "\n");
+  const { entries, outputFile } = await syncJson<DigestEntry>({
+    writeTo: outputPath,
+    parse: async () => {
+      const res = await fetchWithRetry(apiUrl, { headers });
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+      const { digests } = (await res.json()) as { digests: ApiDigest[] };
+      console.log(`Fetched ${digests.length} digests`);
+      return digests
+        .map((d) => ({
+          date: tsToDate(d.generatedAt) + (d.digestType === "weekly" ? "-weekly" : ""),
+          title: d.digestTitle || "Signal & Noise",
+          text: d.digestText,
+          extended: d.digestExtended || "",
+          generatedAt: d.generatedAt,
+          digestType: d.digestType ?? ("daily" as const),
+          editionNumber: d.editionNumber ?? 0,
+        }))
+        .sort((a, b) => b.generatedAt - a.generatedAt);
+    },
+  });
   console.log(`Wrote ${entries.length} digests to ${outputFile}`);
 }
 
