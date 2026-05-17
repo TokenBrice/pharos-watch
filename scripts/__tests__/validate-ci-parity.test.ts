@@ -21,11 +21,6 @@ import {
   CRITICAL_TEST_FILES,
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
-import {
-  buildPostPrebuildExecutionUnits,
-  getPostPrebuildCommandEnv,
-  runPostPrebuildValidation,
-} from "../maintenance/run-validate-postbuild.mjs";
 import { buildGeneratedArtifactExecutionBatches } from "../maintenance/run-generated-artifacts.mjs";
 
 function extractRunSteps(yaml) {
@@ -455,78 +450,4 @@ describe("validate-ci parity", () => {
     expect(Object.keys(baseline.files)).toEqual(CRITICAL_FILES);
   });
 
-  it("runs post-prebuild CI checks in independent execution groups", () => {
-    expect(
-      buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
-    ).toEqual([
-      PAGES_VALIDATE_COMMANDS,
-      ["npm run test:noncritical -- --shard=1/3"],
-      ["npm run test:noncritical -- --shard=2/3"],
-      ["npm run test:noncritical -- --shard=3/3"],
-      ["npm run coverage:critical"],
-      ["npm run typecheck:worker"],
-      ["npm run typecheck:worker-scripts"],
-    ]);
-
-    expect(
-      buildPostPrebuildExecutionUnits({ pagesChanged: false, workerChanged: true }).map((unit) => unit.commands),
-    ).toEqual([
-      ["npm run test:noncritical -- --shard=1/3"],
-      ["npm run test:noncritical -- --shard=2/3"],
-      ["npm run test:noncritical -- --shard=3/3"],
-      ["npm run coverage:critical"],
-      ["npm run typecheck:worker"],
-      ["npm run typecheck:worker-scripts"],
-    ]);
-  });
-
-  it("threads the coverage compare ref into the post-prebuild coverage command", () => {
-    expect(
-      getPostPrebuildCommandEnv("npm run coverage:critical", {
-        coverageCompareRef: "abc123",
-      }),
-    ).toEqual({ CRITICAL_COVERAGE_COMPARE_REF: "abc123" });
-    expect(getPostPrebuildCommandEnv("npm run test:noncritical", { coverageCompareRef: "abc123" })).toEqual({});
-  });
-
-  it("aborts sibling post-prebuild groups after the first failure", async () => {
-    const calls: string[] = [];
-    const aborted: string[] = [];
-    let exitStatus: number | undefined;
-
-    await runPostPrebuildValidation(
-      { pagesChanged: true, workerChanged: true },
-      {
-        exit: (status) => {
-          exitStatus = status;
-        },
-        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
-          calls.push(cmd);
-
-          if (cmd === "npm run build") {
-            return Promise.resolve({ status: 1, aborted: false });
-          }
-
-          return new Promise((resolve) => {
-            signal?.addEventListener("abort", () => {
-              aborted.push(cmd);
-              resolve({ status: 130, aborted: true });
-            });
-          });
-        },
-      },
-    );
-
-    expect(exitStatus).toBe(1);
-    expect(calls).toContain("npm run build");
-    expect(calls).not.toContain("npm run seo:check");
-    expect(aborted).toEqual([
-      "npm run test:noncritical -- --shard=1/3",
-      "npm run test:noncritical -- --shard=2/3",
-      "npm run test:noncritical -- --shard=3/3",
-      "npm run coverage:critical",
-      "npm run typecheck:worker",
-      "npm run typecheck:worker-scripts",
-    ]);
-  });
 });

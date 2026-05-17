@@ -38,7 +38,6 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "scripts/maintenance/run-critical-coverage.mjs",
       "scripts/maintenance/run-generated-artifacts.mjs",
       "scripts/maintenance/run-noncritical-tests.mjs",
-      "scripts/maintenance/run-validate-postbuild.mjs",
       "scripts/maintenance/run-validate-prebuild.mjs",
       "scripts/maintenance/smoke-api.mjs",
       "scripts/maintenance/smoke-ops.mjs",
