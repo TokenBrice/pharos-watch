@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath, URL } from "node:url";
+import { API_PATHS } from "../../shared/lib/api-endpoints";
 import { DAY_SECONDS } from "../../shared/lib/time-constants";
 import { derivePegRates } from "../../shared/lib/peg-rates";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "../../shared/lib/psi-eligible";
@@ -220,7 +221,7 @@ async function fetchStablecoinsPayload(): Promise<{
   peggedAssets: Array<Record<string, unknown>>;
   fxFallbackRates?: Record<string, number>;
 }> {
-  return fetchOpsJson("/api/stablecoins");
+  return fetchOpsJson(API_PATHS.stablecoins());
 }
 
 async function fetchDefiLlamaCoinDetail(meta: StablecoinMeta): Promise<CoinDetail | null> {

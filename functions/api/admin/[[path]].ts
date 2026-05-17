@@ -52,6 +52,10 @@ interface OpsAdminProxyContext {
 }
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
+  // TODO(W3.05): replace with a shared API base-prefix constant once one is exported from
+  // @shared/lib/api-endpoints. This is the proxy router that strips the leading "/api/"
+  // wildcard segment; no per-route API_PATHS helper applies here.
+  // eslint-disable-next-line no-restricted-syntax
   return resolveWildcardProxyPath(params.path, "/api/");
 }
 
