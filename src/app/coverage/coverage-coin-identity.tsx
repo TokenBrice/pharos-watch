@@ -25,10 +25,10 @@ function IdentityContent({
       <StablecoinLogo src={logoSrc} name={row.name} size={logoSize} />
       <div className="min-w-0">
         <div className={isMobile ? "flex flex-wrap items-center gap-x-2 gap-y-1" : "flex min-w-0 items-center gap-2"}>
-          <span className={`${isMobile ? "text-sm font-semibold" : "text-sm font-medium"} text-foreground`}>
+          <span className={`${isMobile ? "text-sm font-semibold" : "text-sm font-medium"} shrink-0 text-foreground`}>
             {row.symbol}
           </span>
-          <span className={`${isMobile ? "text-sm" : "text-xs xl:text-sm"} truncate text-muted-foreground`}>
+          <span className={`${isMobile ? "text-sm" : "text-xs xl:text-sm"} min-w-0 truncate text-muted-foreground`}>
             {row.name}
           </span>
         </div>

@@ -475,7 +475,7 @@ export function CoverageMatrixCard(
             ) : (
               <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
                 <div className="overflow-auto">
-                  <table className="min-w-[68rem] w-full caption-bottom text-sm">
+                  <table className="min-w-[54rem] w-full caption-bottom text-sm">
                     <TableCaption className="sr-only">
                       Per-coin feature availability across {model.rows.length} active stablecoins.
                     </TableCaption>
@@ -483,7 +483,7 @@ export function CoverageMatrixCard(
                       <TableRow className="hover:bg-transparent">
                         <TableHead
                           scope="col"
-                          className="sticky left-0 z-20 h-11 bg-muted/22 px-4 text-sm font-medium text-foreground"
+                          className="sticky left-0 z-20 h-11 w-[200px] bg-muted/22 px-4 text-sm font-medium text-foreground"
                         >
                           Stablecoin
                         </TableHead>
@@ -505,7 +505,7 @@ export function CoverageMatrixCard(
                           <TableRow key={row.id} className={cn("group", stripeClass)}>
                             <TableCell
                               className={cn(
-                                "sticky left-0 z-10 whitespace-normal px-4 py-3 group-hover:bg-muted/30",
+                                "sticky left-0 z-10 w-[200px] max-w-[200px] whitespace-normal px-4 py-3 group-hover:bg-muted/30",
                                 stripeClass,
                               )}
                             >
