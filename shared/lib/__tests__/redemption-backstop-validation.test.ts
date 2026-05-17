@@ -9,7 +9,7 @@ import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
-import { validateRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/validation";
+import { validateRedemptionBackstopRegistry } from "../../../scripts/lib/redemption-backstop-validation";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 

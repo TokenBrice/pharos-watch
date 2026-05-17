@@ -9,7 +9,7 @@ import {
 import {
   validateRedemptionBackstopRegistry,
   type RedemptionRegistryValidationResult,
-} from "../../shared/lib/redemption-backstop-configs/validation";
+} from "../lib/redemption-backstop-validation";
 
 const ROOT = process.cwd();
 

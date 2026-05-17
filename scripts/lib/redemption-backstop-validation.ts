@@ -1,22 +1,22 @@
 import ts from "typescript";
-import { getLiveReserveAdapterDefinition } from "../live-reserve-adapters";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import {
   resolveCapacityConfidence,
   resolveCapacitySemantics,
   resolveFeeConfidence,
   resolveFeeModelKind,
-} from "../redemption-backstop-confidence";
-import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "../stablecoins/registry";
-import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "../../types";
-import { RedemptionBackstopConfigSchema } from "./schema";
-import { getBackstopRegistryOverrideReasons, getBackstopRegistrySourceFilePaths } from "./factory";
-import type { RedemptionBackstopConfig } from "./shared";
+} from "@shared/lib/redemption-backstop-confidence";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { RedemptionDocSourceSupport, RedemptionRouteFamily } from "@shared/types";
+import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
+import { getBackstopRegistryOverrideReasons, getBackstopRegistrySourceFilePaths } from "@shared/lib/redemption-backstop-configs/factory";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   buildRedemptionBackstopRegistry,
   type RedemptionBackstopConfigManifestEntry,
-} from "./manifest";
-import { REDEMPTION_BACKSTOP_POLICY_ENTRIES, type RedemptionBackstopPolicyEntry } from "./policies";
+} from "@shared/lib/redemption-backstop-configs/manifest";
+import { REDEMPTION_BACKSTOP_POLICY_ENTRIES, type RedemptionBackstopPolicyEntry } from "@shared/lib/redemption-backstop-configs/policies";
 
 export type RedemptionRegistryFindingSeverity = "error" | "warning";
 
