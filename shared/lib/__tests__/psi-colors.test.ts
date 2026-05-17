@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PSI_SWEEP_DURATION, psiSweepDuration } from "./psi-colors";
+import { PSI_SWEEP_DURATION, psiSweepDuration } from "../psi-colors";
 
 describe("PSI_SWEEP_DURATION", () => {
   it("has all six bands", () => {
