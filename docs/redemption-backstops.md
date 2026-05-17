@@ -6,11 +6,11 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.03`
+- **Current methodology version:** `v4.04`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/redemption-backstop-version.ts`
 
-Latest `v4.03` update: source-reviewed RWA NAV coverage adds documented-bound issuer routes for new Spiko, Midas, Anemoy, Securitize, and Hamilton Lane assets, plus asUSDF wrapper exit coverage and XNK commodity redemption coverage.
+Latest `v4.04` update: source-reviewed documented-bound routes can retain medium model confidence when explicit route-status telemetry is unknown; active RWA, fiat, and wrapper coverage expands; and ERC-4626 wrapper adapters can expose idle underlying balances as direct current redemption capacity.
 
 There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
 
@@ -20,8 +20,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 287
-- **Route families:** 132 `offchain-issuer`, 60 `stablecoin-redeem`, 41 `collateral-redeem`, 36 `queue-redeem`, 10 `psm-swap`, 8 `basket-redeem`
+- **Configured coins:** 304
+- **Route families:** 148 `offchain-issuer`, 60 `stablecoin-redeem`, 41 `collateral-redeem`, 36 `queue-redeem`, 10 `psm-swap`, 9 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -141,6 +141,7 @@ Sky `DAI` and `USDS` now use the live `sky-makercore` PSM `USDC` balance as thei
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
 `BOLD`, `feUSD`, and `USDQ` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown as degraded route status.
 `fxUSD` now uses f(x)'s protocol pool API debt balances as live proxy capacity, while `USDaf` uses Asymmetry's timestamped protocol supply data as direct live capacity. `JupUSD` uses Jupiter's public transparency API for current USDC/USDtb holdings and oracle route-status context, with the previous 10% reviewed buffer retained only as fallback.
+ERC-4626 single-asset wrappers such as Spark savings wrappers, sUSDS, sDAI, scrvUSD, sfrxUSD, and stcUSD now use the live adapter's idle underlying ERC-20 balance as current direct redemption capacity when fresh reserve telemetry is available, rather than treating the full wrapper supply as immediately executable.
 `GHO` now uses tracked swappable GSM backing as a live lower bound even when reserve sync is degraded solely by aggregated residual issuance outside the configured GSM set, because that warning reflects reserve completeness rather than invalid tracked telemetry.
 `wsrUSD` continues to prefer live Reservoir USDC balance telemetry when available, but now falls back to Reservoir's documented 25 bps minimum USDC PSM balance instead of remaining unrated when the live feed lacks a trustworthy source timestamp.
 Reviewed bounded primary-market liquidity buffers published by protocols or issuers, such as DOLA's USDS PSM share or JupUSD's USDC buffer, can also use `documented-bound` ratio semantics when the underlying source is explicit enough to avoid pretending the ratio is merely a blind heuristic.
@@ -179,6 +180,7 @@ Each row also carries:
   - `open` for normal resolved routes without current impairment evidence
   - `degraded` when the route is currently impaired by market-implied evidence such as a severe active depeg
   - `paused`, `cohort-limited`, and `unknown` are reserved for explicit route-availability sources and backward-compatible legacy rows
+  - unknown route status remains a low-confidence signal unless the capacity evidence is direct live telemetry or a source-reviewed documented bound
 - `routeStatusSource`:
   - `static-config` for normal config-derived status
   - `market-implied` for the severe active-depeg exercisability gate
@@ -210,7 +212,7 @@ Each row also carries:
   - `fixed-bps`, `formula`, `documented-variable`, or `undisclosed-reviewed`
   - `modelConfidence`:
   - `high`, `medium`, or `low` rollups used by the API and detail page to communicate fidelity
-  - `low` for heuristic-capacity routes, unresolved rows, impaired rows, unclear holder eligibility, stale docs without current route-status evidence, or unknown route status without direct live telemetry
+  - `low` for heuristic-capacity routes, unresolved rows, impaired rows, unclear holder eligibility, stale docs without current route-status evidence, or unknown route status without direct live telemetry or source-reviewed documented-bound capacity
   - `confidenceDetails` can expose the component evidence scores and rollup reasons
 - `routeExitCorrelation`:
   - `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`

@@ -243,7 +243,7 @@ describe("deriveModelConfidence", () => {
     ).toBe("medium");
   });
 
-  it("returns low for unknown route status without direct live telemetry", () => {
+  it("returns medium for unknown route status with documented-bound capacity", () => {
     expect(
       deriveModelConfidenceWithDetails({
         resolutionState: "resolved",
@@ -253,6 +253,38 @@ describe("deriveModelConfidence", () => {
         routeStatusSource: "static-config",
         holderEligibility: "any-holder",
         sourceMode: "static",
+      }).modelConfidence,
+    ).toBe("medium");
+  });
+
+  it("returns low for unknown route status with live-proxy capacity", () => {
+    const result = deriveModelConfidenceWithDetails({
+      resolutionState: "resolved",
+      capacityConfidence: "live-proxy",
+      feeConfidence: "fixed",
+      routeStatus: "unknown",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      sourceMode: "dynamic",
+      freshnessKind: "same-run-api",
+    });
+
+    expect(result.modelConfidence).toBe("low");
+    expect(result.confidenceDetails.reasons).toContain(
+      "Route status is unknown without direct live telemetry or a documented capacity bound",
+    );
+  });
+
+  it("returns low for unknown route status with dynamic capacity", () => {
+    expect(
+      deriveModelConfidenceWithDetails({
+        resolutionState: "resolved",
+        capacityConfidence: "dynamic",
+        feeConfidence: "fixed",
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+        holderEligibility: "any-holder",
+        sourceMode: "dynamic",
       }).modelConfidence,
     ).toBe("low");
   });

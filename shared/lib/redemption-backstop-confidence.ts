@@ -136,8 +136,12 @@ export function deriveModelConfidenceWithDetails(args: {
     return { modelConfidence: "low", confidenceDetails: details };
   }
 
-  if (args.routeStatus === "unknown" && args.capacityConfidence !== "live-direct") {
-    details.reasons?.push("Route status is unknown without direct live telemetry");
+  if (
+    args.routeStatus === "unknown" &&
+    args.capacityConfidence !== "live-direct" &&
+    args.capacityConfidence !== "documented-bound"
+  ) {
+    details.reasons?.push("Route status is unknown without direct live telemetry or a documented capacity bound");
     return { modelConfidence: "low", confidenceDetails: details };
   }
 

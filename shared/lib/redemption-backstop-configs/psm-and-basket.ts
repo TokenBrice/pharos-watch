@@ -103,6 +103,29 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh reserve sync reads the BabelFish holder's accepted bAsset balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
     ],
   },
+  "eur0-usual": {
+    ...basketRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_FOLLOWUP_REMEDIATION_AT),
+    outputAssetType: "mixed-collateral",
+    costModel: documentedVariableFee(
+      "Usual docs describe EUR0 redemption into eligible euro RWA collateral through the dApp; public materials reviewed do not publish one fixed EUR0 redemption fee",
+    ),
+    docs: [
+      sourceRef("Usual EUR0 docs", "https://tech.usual.money/overview/features/eur0", [
+        "route",
+        "capacity",
+        "access",
+      ]),
+      sourceRef(
+        "Usual EUR0 contract docs",
+        "https://tech.usual.money/smart-contracts/token-contracts/eur0",
+        ["route", "access"],
+      ),
+    ],
+    notes: [
+      "Modeled as the Usual dApp basket redemption route into eligible euro-denominated RWA collateral, primarily Spiko EUTBL, rather than a direct fiat EUR issuer rail.",
+    ],
+  },
   "gho-aave": {
     ...psmSwapBase,
     capacityModel: { kind: "reserve-sync-metadata" },

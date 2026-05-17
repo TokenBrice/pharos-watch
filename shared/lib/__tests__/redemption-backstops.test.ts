@@ -358,9 +358,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("tbill-openeden")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 5 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-05-17",
     });
 
     expect(getRedemptionBackstopConfig("usdcv-societe-generale-forge")).toMatchObject({
@@ -728,9 +728,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("mtbill-midas")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 7 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-05-17",
     });
 
     expect(getRedemptionBackstopConfig("musd-metamask")).toMatchObject({

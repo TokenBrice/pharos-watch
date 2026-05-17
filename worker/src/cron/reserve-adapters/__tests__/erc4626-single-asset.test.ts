@@ -20,6 +20,10 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
+function uint256Result(value: bigint | number): string {
+  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+}
+
 const testChainRpcs = new Map<string, ChainRpcConfig>([
   ["ethereum", {
     chainId: "ethereum",
@@ -39,23 +43,32 @@ describe("fetchErc4626SingleAssetReserves", () => {
   });
 
   it("returns a 100% single-asset slice after probing ERC-4626 state", async () => {
+    const balanceOfCalls: Array<{ to?: string; data: string }> = [];
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
-      if (body.params[0].data === "0x38d52e0f") {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      if (call.data === "0x38d52e0f") {
         return jsonResponse({
           result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         });
       }
-      if (body.params[0].data === "0x01e1d114") {
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
       }
-      if (body.params[0].data === "0x18160ddd") {
+      if (call.data === "0x18160ddd") {
         // totalSupply = 100 shares
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+        return jsonResponse({ result: uint256Result(100_000_000n) });
       }
-      if (body.params[0].data.startsWith("0x07a2d13a")) {
+      if (call.data.startsWith("0x07a2d13a")) {
         // convertToAssets(100) = 100 assets → ratio 1.0
-        return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        balanceOfCalls.push(call);
+        return jsonResponse({ result: uint256Result(25_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
       }
       return null;
     });
@@ -86,20 +99,30 @@ describe("fetchErc4626SingleAssetReserves", () => {
       chain: "ethereum",
       contractAddress: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
       assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      totalAssetsRaw: "100",
-      totalSupplyRaw: "100",
-      convertToAssetsRaw: "100",
+      totalAssetsRaw: "100000000",
+      totalSupplyRaw: "100000000",
+      convertToAssetsRaw: "100000000",
       collateralizationRatio: 1,
+      idleUnderlyingBalanceRaw: "25000000",
+      underlyingDecimals: 6,
       details: {
         proofKind: "erc4626-total-assets",
         assetAddressMatchesExpected: true,
       },
       redemption: {
-        capacityKind: "documented-eventual",
+        capacityUsd: 25,
+        capacityRatioOfSupply: 0.25,
+        capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "unknown",
       },
     });
+    expect(balanceOfCalls).toEqual([
+      expect.objectContaining({
+        to: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        data: expect.stringContaining("80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"),
+      }),
+    ]);
   });
 
   it("throws when the vault asset differs from the configured expectation", async () => {
@@ -176,6 +199,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
         // convertToAssets(100) = 110 → ratio 1.10 (10% divergence)
         return jsonResponse({ result: "0x000000000000000000000000000000000000000000000000000000000000006e" });
       }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
       return null;
     });
 
@@ -219,6 +248,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       if (body.params[0].data.startsWith("0x07a2d13a")) {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
       }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(18) });
+      }
       return null;
     });
 
@@ -234,6 +269,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
     );
 
     expect(calledUrls).toEqual([
+      "https://rpc.plasma.to",
+      "https://rpc.plasma.to",
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",
@@ -275,6 +312,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       }
       if (body.params[0].data.startsWith("0x07a2d13a")) {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(18) });
       }
       return null;
     });
@@ -324,6 +367,12 @@ describe("fetchErc4626SingleAssetReserves", () => {
       }
       if (body.params[0].data.startsWith("0x07a2d13a")) {
         return jsonResponse({ result: "0x0000000000000000000000000000000000000000000000000000000000000064" });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(18) });
       }
       return null;
     });

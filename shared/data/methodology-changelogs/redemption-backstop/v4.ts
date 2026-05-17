@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
     {
+      version: "4.04",
+      title: "Documented-bound confidence and live wrapper capacity",
+      date: "2026-05-17",
+      effectiveAt: 1778976000,
+      summary:
+        "Documented-bound redemption capacity can retain medium model confidence when a route-status feed reports unknown, ERC-4626 wrappers can use live idle-underlying balances as direct capacity, and source-reviewed RWA, fiat, and wrapper coverage expands.",
+      impact: [
+        "Resolved routes with `routeStatus: unknown` and `capacityConfidence: documented-bound` now keep medium model confidence when the rest of the evidence gates pass",
+        "`routeStatus: unknown` remains a low-confidence signal for live-proxy, dynamic, heuristic, and unresolved capacity evidence",
+        "This lets source-reviewed bounded routes avoid being downgraded solely because explicit route-status telemetry is unavailable, without treating proxy liquidity as current direct redemption evidence",
+        "ERC-4626 single-asset wrappers can now score fresh idle underlying ERC-20 balances as direct redemption capacity; the Spark, Sky, Curve, Frax, and Cap wrapper configs use that live path instead of full-supply immediate capacity",
+        "Source-reviewed coverage adds active Spiko, Anemoy, Securitize, Hamilton Lane, MXNe, Ripio wFIAT, and EUR0 routes while keeping pre-launch USDPT, USDB Bridge, USDF Flipcash, and FIUSD deferred until runtime eligibility is clearer",
+        "Coverage rises to 304 configured redemption routes, with route-family totals now at 148 offchain-issuer, 60 stablecoin-redeem, 41 collateral-redeem, 36 queue-redeem, 10 psm-swap, and 9 basket-redeem",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "4.03",
       title: "RWA NAV route source review",
       date: "2026-05-14",

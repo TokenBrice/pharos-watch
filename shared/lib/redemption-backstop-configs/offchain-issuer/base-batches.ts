@@ -1,5 +1,5 @@
 import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
-import { documentedBoundSupplyFull, issuerBase } from "../shared";
+import { documentedBoundSupplyFull, issuerBase, sourceRef } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
@@ -77,6 +77,47 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       "wars-argentine-peso",
     ],
     issuerBase,
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
+  ...defineBatch(
+    ["mxne-real-mxn"],
+    {
+      ...issuerBase,
+      ...documentedBoundSupplyFull("2026-05-17"),
+      docs: [
+        sourceRef("Brale MXNe", "https://brale.xyz/stablecoins/MXNe", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+          "settlement",
+        ]),
+        sourceRef(
+          "Etherfuse MXNe launch",
+          "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar",
+          ["route", "capacity"],
+        ),
+      ],
+    },
+    { sourceFilePath: SOURCE_FILE_PATH },
+  ),
+  ...defineBatch(
+    ["wbrl-ripio", "wclp-ripio", "wcop-ripio", "wpen-ripio", "wmxn-ripio"],
+    {
+      ...issuerBase,
+      docs: [
+        sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
+          "route",
+          "capacity",
+          "fees",
+          "access",
+          "settlement",
+        ]),
+      ],
+      notes: [
+        "Modeled as a heuristic issuer route because current tracked materials do not prove per-token reserve attestation for the new Ripio wFIAT entries.",
+      ],
+    },
     { sourceFilePath: SOURCE_FILE_PATH },
   ),
   ...defineBatch(
