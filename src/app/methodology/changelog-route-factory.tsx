@@ -116,3 +116,29 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
 
   return { metadata, entries, Page };
 }
+
+type StandardMethodologyChangelogSourceEntry = MethodologyChangelogSourceEntry & {
+  impact: readonly string[];
+};
+
+interface StandardMethodologyChangelogRouteConfig<T extends StandardMethodologyChangelogSourceEntry>
+  extends Omit<MethodologyChangelogRouteConfig<T>, "lead" | "selectImpact"> {
+  leadSubject: string;
+  versionLabel: string;
+}
+
+export function createStandardMethodologyChangelogRoute<T extends StandardMethodologyChangelogSourceEntry>({
+  leadSubject,
+  versionLabel,
+  ...config
+}: StandardMethodologyChangelogRouteConfig<T>): MethodologyChangelogRouteDefinition {
+  return createMethodologyChangelogRoute({
+    ...config,
+    lead: (
+      <>
+        Full version history of {leadSubject} methodology decisions, from v1.0 to {versionLabel}.
+      </>
+    ),
+    selectImpact: (entry) => entry.impact,
+  });
+}

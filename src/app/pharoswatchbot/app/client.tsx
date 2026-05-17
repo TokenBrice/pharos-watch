@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell, ExternalLink, Info, RefreshCw, SlidersHorizontal } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { formatCoveragePayload, formatWhyPayload, miniAppPayloadIntent, parseMiniAppPayload } from "@shared/lib/telegram-mini-app-payloads";
 import type { TelegramWebAppSdk } from "./telegram-sdk";
 import type { CatalogCoin, CoinInsightTarget, FollowedPreset, SubscribedCoin, TelegramAlertType, TelegramDepegStepBps, TelegramMiniAppOperation, TelegramMiniAppState } from "./types";

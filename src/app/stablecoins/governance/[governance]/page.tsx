@@ -1,35 +1,18 @@
-import { notFound } from "next/navigation";
 import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
 import {
   GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
   GOVERNANCE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
-import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 
-export function generateStaticParams() {
-  return buildSlugStaticParams("governance", GOVERNANCE_TAXONOMY_PAGES);
-}
+const route = createStaticSlugRoute({
+  paramKey: "governance",
+  pages: GOVERNANCE_TAXONOMY_PAGES,
+  pageBySlug: GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
+  missingTitle: "Governance Type Not Found",
+  render: (page) => <StablecoinTaxonomyPage page={page} />,
+});
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ governance: string }>;
-}) {
-  return buildSlugPageMetadata(
-    params,
-    "governance",
-    GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
-    "Governance Type Not Found",
-  );
-}
-
-export default async function GovernanceTaxonomyPage({
-  params,
-}: {
-  params: Promise<{ governance: string }>;
-}) {
-  const page = await resolveSlugPage(params, "governance", GOVERNANCE_TAXONOMY_PAGE_BY_SLUG);
-  if (!page) notFound();
-
-  return <StablecoinTaxonomyPage page={page} />;
-}
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

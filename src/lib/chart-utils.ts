@@ -1,4 +1,6 @@
 /** Compute padded Y-axis domain for Recharts charts. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export function computeChartYDomain(
   values: number[],
   isAllRange: boolean,
@@ -25,4 +27,29 @@ export function mergeSeriesByTimestamp<D extends { ts: number }>(
     }
   }
   return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
+}
+
+export function buildAdaptiveMonthlyTicks(first: number, last: number): number[] {
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last < first) {
+    return [];
+  }
+
+  const spanDays = (last - first) / DAY_MS;
+  let step = 1;
+  if (spanDays > 4 * 365) step = 6;
+  else if (spanDays > 2 * 365) step = 3;
+  else if (spanDays > 365) step = 2;
+
+  const ticks: number[] = [];
+  const d = new Date(first);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  if (step > 1 && d.getMonth() !== 0) {
+    d.setFullYear(d.getFullYear() + 1, 0, 1);
+  }
+  while (d.getTime() <= last) {
+    ticks.push(d.getTime());
+    d.setMonth(d.getMonth() + step);
+  }
+  return ticks;
 }

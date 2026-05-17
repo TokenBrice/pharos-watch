@@ -1,30 +1,18 @@
-import { notFound } from "next/navigation";
 import { StablecoinTaxonomyPage } from "@/components/stablecoin-taxonomy-page";
 import {
   INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG,
   INFRASTRUCTURE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
-import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
+import { createStaticSlugRoute } from "@/lib/static-slug-page";
 
-export function generateStaticParams() {
-  return buildSlugStaticParams("infrastructure", INFRASTRUCTURE_TAXONOMY_PAGES);
-}
+const route = createStaticSlugRoute({
+  paramKey: "infrastructure",
+  pages: INFRASTRUCTURE_TAXONOMY_PAGES,
+  pageBySlug: INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG,
+  missingTitle: "Infrastructure Cohort Not Found",
+  render: (page) => <StablecoinTaxonomyPage page={page} />,
+});
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ infrastructure: string }>;
-}) {
-  return buildSlugPageMetadata(params, "infrastructure", INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG, "Infrastructure Cohort Not Found");
-}
-
-export default async function InfrastructureTaxonomyRoute({
-  params,
-}: {
-  params: Promise<{ infrastructure: string }>;
-}) {
-  const page = await resolveSlugPage(params, "infrastructure", INFRASTRUCTURE_TAXONOMY_PAGE_BY_SLUG);
-  if (!page) notFound();
-
-  return <StablecoinTaxonomyPage page={page} />;
-}
+export const generateStaticParams = route.generateStaticParams;
+export const generateMetadata = route.generateMetadata;
+export default route.Page;

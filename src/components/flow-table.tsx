@@ -10,7 +10,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLogos } from "@/hooks/use-logos";
@@ -110,15 +110,14 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 onHover={() => prefetch(coin.stablecoinId)}
               >
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <StablecoinLogo
-                      src={logos?.[coin.stablecoinId]}
-                      name={name}
-                      size={24}
-                    />
-                    <div className="flex min-w-0 flex-col items-start gap-0.5">
-                      <span className="font-medium">{coin.symbol}</span>
-                      {coverageBadge && (
+                  <StablecoinIdentity
+                    logoSrc={logos?.[coin.stablecoinId]}
+                    name={name}
+                    symbol={coin.symbol}
+                    logoSize={24}
+                    textClassName="flex min-w-0 flex-col items-start gap-0.5"
+                    details={
+                      coverageBadge ? (
                         <span
                           className={cn(
                             "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
@@ -127,9 +126,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                         >
                           {coverageBadge.label}
                         </span>
-                      )}
-                    </div>
-                  </div>
+                      ) : null
+                    }
+                  />
                 </TableCell>
                 <TableCell className="text-right">
                   <span

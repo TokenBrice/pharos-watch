@@ -11,7 +11,7 @@ import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
@@ -103,22 +103,18 @@ export function TotalMcapChart() {
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
             <div className="mb-4 flex flex-wrap gap-2">
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
+              <ChartLegendChip markerStyle={{ backgroundColor: USDT_GREEN }}>
                 USDT{latest ? `: ${formatCurrency(latest.usdt, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: USDC_BLUE }}>
                 USDC{latest ? `: ${formatCurrency(latest.usdc, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: SKY_YELLOW }}>
                 USDS + DAI{latest ? `: ${formatCurrency(latest.sky, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_SLATE }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: CHART_SLATE }}>
                 Others{latest ? `: ${formatCurrency(latest.others, 1)}` : ""}
-              </div>
+              </ChartLegendChip>
             </div>
             <div className="pharos-chart-stage">
               <div

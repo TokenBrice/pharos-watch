@@ -15,10 +15,9 @@ import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
-import { ACTIVE_STABLECOIN_COUNT, DEAD_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { ACTIVE_PEG_CURRENCY_COUNT, ACTIVE_STABLECOIN_COUNT, DEAD_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
+const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",

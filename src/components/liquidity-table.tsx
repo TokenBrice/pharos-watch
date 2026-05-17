@@ -9,7 +9,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { BalanceBar } from "@/components/balance-bar";
 import { Badge } from "@/components/ui/badge";
@@ -115,22 +115,22 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                   {pageStartIndex + index + 1}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={24} />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{row.meta.symbol}</span>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${coverageBadge.className}`}
-                          title={formatLiquiditySourceMix(liq.sourceMix)}
-                        >
-                          {coverageBadge.label}
-                        </Badge>
-                      </div>
-                      <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">{row.meta.name}</span>
-                    </div>
-                  </div>
+                  <StablecoinIdentity
+                    logoSrc={logos?.[row.meta.id]}
+                    name={row.meta.name}
+                    symbol={row.meta.symbol}
+                    logoSize={24}
+                    badge={
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${coverageBadge.className}`}
+                        title={formatLiquiditySourceMix(liq.sourceMix)}
+                      >
+                        {coverageBadge.label}
+                      </Badge>
+                    }
+                    nameClassName="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline"
+                  />
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
                   {liq.liquidityScore != null ? (

@@ -1,8 +1,9 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { cn } from "@/lib/utils";
 import type {
   ChartAnnotation,
   ChartAnnotationKind,
@@ -111,6 +112,25 @@ export function DateTooltip({
       labelFormatter={resolvedLabelFormatter}
       {...props}
     />
+  );
+}
+
+export function ChartLegendChip({
+  children,
+  markerClassName = "inline-block h-2.5 w-2.5 rounded-full",
+  markerStyle,
+  className,
+}: {
+  children: ReactNode;
+  markerClassName?: string;
+  markerStyle?: CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div className={cn("pharos-chart-legend-chip", className)}>
+      <span aria-hidden className={markerClassName} style={markerStyle} />
+      {children}
+    </div>
   );
 }
 

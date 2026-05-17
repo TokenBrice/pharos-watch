@@ -110,6 +110,18 @@ export type YieldViewModelRow = YieldRanking & {
   sourceDepthLens: YieldSourceDepthLens;
 };
 
+interface YieldRowFacet {
+  row: YieldRanking;
+  peg: PegCurrency | null;
+  benchmarkKey: YieldBenchmarkKey;
+  opportunity: Exclude<YieldOpportunityFilter, "all">;
+  sourceDepthLens: YieldSourceDepthLens;
+  confidenceTier: Exclude<YieldSourceConfidenceFilter, "all"> | null;
+  hasWarning: boolean;
+  sourceChanged: boolean;
+  isRising: boolean;
+}
+
 export interface YieldViewModelStats {
   avgApy: number;
   bestPys: { name: string; symbol: string; score: number } | null;
@@ -317,6 +329,24 @@ function isRowRising(row: YieldRanking): boolean {
   return row.currentApy > row.apy30d && observations != null && observations >= 7;
 }
 
+function buildYieldRowFacet(row: YieldRanking): YieldRowFacet {
+  return {
+    row,
+    peg: getYieldRankingPeg(row.id),
+    benchmarkKey: getBenchmarkKey(row),
+    opportunity: getOpportunity(row),
+    sourceDepthLens: getSourceDepthLens(row),
+    confidenceTier: row.provenance?.confidenceTier ?? null,
+    hasWarning: row.warningSignals.length > 0,
+    sourceChanged: row.provenance?.sourceSwitch === true,
+    isRising: isRowRising(row),
+  };
+}
+
+function buildYieldRowFacets(rows: readonly YieldRanking[]): YieldRowFacet[] {
+  return rows.map(buildYieldRowFacet);
+}
+
 function matchesSearch(row: YieldRanking, query: string): boolean {
   const normalized = query.trim().toLowerCase();
   return normalized.length === 0
@@ -333,21 +363,22 @@ function matchesPeg(peg: PegCurrency | null, filter: YieldPegFilter): boolean {
   return peg === filter;
 }
 
-function countPegs(rows: readonly YieldRanking[]): Map<PegCurrency, number> {
+function countPegs(facets: readonly YieldRowFacet[]): Map<PegCurrency, number> {
   const pegCounts = new Map<PegCurrency, number>();
-  for (const row of rows) {
-    const peg = getYieldRankingPeg(row.id);
-    if (peg) pegCounts.set(peg, (pegCounts.get(peg) ?? 0) + 1);
+  for (const facet of facets) {
+    if (facet.peg) {
+      pegCounts.set(facet.peg, (pegCounts.get(facet.peg) ?? 0) + 1);
+    }
   }
   return pegCounts;
 }
 
-function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
-  const pegCounts = countPegs(rows);
+function buildPegOptions(facets: readonly YieldRowFacet[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(facets);
   const pegs = Array.from(pegCounts.keys()).sort(compareYieldPegs);
   const nonUsdCount = pegs.reduce((sum, peg) => sum + (peg !== "USD" ? pegCounts.get(peg) ?? 0 : 0), 0);
   const options: YieldFilterOption<YieldPegFilter>[] = [
-    { value: "all", label: "All", count: rows.length },
+    { value: "all", label: "All", count: facets.length },
   ];
 
   if (nonUsdCount > 0) options.push({ value: "non-usd", label: "Non-USD", count: nonUsdCount });
@@ -363,10 +394,10 @@ function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<Yield
 
 // Tab-strip option set: a curated, conditional list of currency tabs for the
 // leaderboard. Tabs only appear when at least one row matches.
-function buildCurrencyTabOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
-  const pegCounts = countPegs(rows);
+function buildCurrencyTabOptions(facets: readonly YieldRowFacet[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(facets);
   const options: YieldFilterOption<YieldPegFilter>[] = [
-    { value: "all", label: "All", count: rows.length },
+    { value: "all", label: "All", count: facets.length },
   ];
 
   for (const peg of CURRENCY_TAB_PEGS) {
@@ -389,7 +420,7 @@ function buildCurrencyTabOptions(rows: readonly YieldRanking[]): YieldFilterOpti
   return options;
 }
 
-function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
+function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
   const yieldTypeCounts = new Map<YieldType, number>();
   const confidenceCounts = new Map<Exclude<YieldSourceConfidenceFilter, "all">, number>();
   const benchmarkCounts = new Map<YieldBenchmarkKey, number>();
@@ -401,60 +432,60 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
   let sourceUnchangedCount = 0;
   const depthCounts = new Map<YieldSourceDepthLens, number>();
 
-  for (const row of rows) {
+  for (const facet of facets) {
+    const row = facet.row;
     yieldTypeCounts.set(row.yieldType, (yieldTypeCounts.get(row.yieldType) ?? 0) + 1);
 
-    const confidence = row.provenance?.confidenceTier;
-    if (confidence) confidenceCounts.set(confidence, (confidenceCounts.get(confidence) ?? 0) + 1);
+    if (facet.confidenceTier) {
+      confidenceCounts.set(facet.confidenceTier, (confidenceCounts.get(facet.confidenceTier) ?? 0) + 1);
+    }
 
-    const benchmark = getBenchmarkKey(row);
-    benchmarkCounts.set(benchmark, (benchmarkCounts.get(benchmark) ?? 0) + 1);
+    benchmarkCounts.set(facet.benchmarkKey, (benchmarkCounts.get(facet.benchmarkKey) ?? 0) + 1);
 
-    if (row.warningSignals.length > 0) warningCount += 1;
+    if (facet.hasWarning) warningCount += 1;
     else noWarningCount += 1;
 
-    if (getOpportunity(row) === "lending-opportunity") lendingOpportunityCount += 1;
+    if (facet.opportunity === "lending-opportunity") lendingOpportunityCount += 1;
     else holderYieldCount += 1;
 
-    if (row.provenance?.sourceSwitch) sourceChangedCount += 1;
+    if (facet.sourceChanged) sourceChangedCount += 1;
     else sourceUnchangedCount += 1;
 
-    const sourceDepthLens = getSourceDepthLens(row);
-    depthCounts.set(sourceDepthLens, (depthCounts.get(sourceDepthLens) ?? 0) + 1);
+    depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
   }
 
   return {
-    peg: buildPegOptions(rows),
-    currencyTabs: buildCurrencyTabOptions(rows),
+    peg: buildPegOptions(facets),
+    currencyTabs: buildCurrencyTabOptions(facets),
     yieldType: [
-      { value: "all", label: "All types", count: rows.length },
+      { value: "all", label: "All types", count: facets.length },
       ...Array.from(yieldTypeCounts.entries())
         .map(([value, count]) => ({ value, label: YIELD_TYPE_LABELS[value] ?? value, count }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
     ],
     warnings: [
-      { value: "all", label: "All rows", count: rows.length },
+      { value: "all", label: "All rows", count: facets.length },
       { value: "hide", label: "No warnings", count: noWarningCount },
       { value: "only", label: "Warnings", count: warningCount },
     ],
     minSafety: [
-      { value: "all", label: "Any safety", count: rows.length },
+      { value: "all", label: "Any safety", count: facets.length },
       ...MIN_SAFETY_OPTIONS.map((minSafety) => ({
         value: String(minSafety),
         label: `${minSafety}+ safety`,
-        count: rows.filter((row) => row.safetyScore !== null && row.safetyScore >= minSafety).length,
+        count: facets.filter((facet) => facet.row.safetyScore !== null && facet.row.safetyScore >= minSafety).length,
       })),
     ],
     minTvl: [
-      { value: "all", label: "Any TVL", count: rows.length },
+      { value: "all", label: "Any TVL", count: facets.length },
       ...MIN_TVL_OPTIONS.map((minTvl) => ({
         value: String(minTvl),
         label: formatTvlOption(minTvl),
-        count: rows.filter((row) => row.sourceTvlUsd !== null && row.sourceTvlUsd >= minTvl).length,
+        count: facets.filter((facet) => facet.row.sourceTvlUsd !== null && facet.row.sourceTvlUsd >= minTvl).length,
       })),
     ],
     sourceConfidence: [
-      { value: "all", label: "All confidence", count: rows.length },
+      { value: "all", label: "All confidence", count: facets.length },
       ...SOURCE_CONFIDENCE_ORDER
         .filter((value) => confidenceCounts.has(value))
         .map((value) => ({
@@ -464,19 +495,23 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
         })),
     ],
     benchmark: [
-      { value: "all", label: "All benchmarks", count: rows.length },
+      { value: "all", label: "All benchmarks", count: facets.length },
       ...BENCHMARK_ORDER
         .filter((value) => benchmarkCounts.has(value))
         .map((value) => ({ value, label: value, count: benchmarkCounts.get(value) ?? 0 })),
     ],
     opportunity: [
-      { value: "all", label: "All opportunities", count: rows.length },
+      { value: "all", label: "All opportunities", count: facets.length },
       { value: "holder-yield", label: "Holder yield", count: holderYieldCount },
       { value: "lending-opportunity", label: "Lending opp.", count: lendingOpportunityCount },
     ],
     depth: [
-      { value: "all", label: "All depth", count: rows.length },
-      { value: "hide-thin", label: "Hide thin venues", count: rows.filter((row) => getSourceDepthLens(row) !== "thin").length },
+      { value: "all", label: "All depth", count: facets.length },
+      {
+        value: "hide-thin",
+        label: "Hide thin venues",
+        count: facets.filter((facet) => facet.sourceDepthLens !== "thin").length,
+      },
       ...(["deep", "moderate", "thin", "unknown"] as const).map((value) => ({
         value,
         label: YIELD_SOURCE_DEPTH_DEFINITIONS[value].label,
@@ -484,17 +519,17 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
       })),
     ],
     sourceChanged: [
-      { value: "all", label: "All changes", count: rows.length },
+      { value: "all", label: "All changes", count: facets.length },
       { value: "only", label: "Source changed", count: sourceChangedCount },
       { value: "none", label: "No source change", count: sourceUnchangedCount },
     ],
   };
 }
 
-function countRowsMatchingFilters(rows: readonly YieldRanking[], filters: YieldViewModelFilters): number {
+function countRowsMatchingFilters(facets: readonly YieldRowFacet[], filters: YieldViewModelFilters): number {
   let count = 0;
-  for (const row of rows) {
-    if (rowMatchesFilters(row, filters)) count += 1;
+  for (const facet of facets) {
+    if (rowMatchesFilters(facet, filters)) count += 1;
   }
   return count;
 }
@@ -557,24 +592,24 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   return { filters, normalizedParams, invalidParamKeys };
 }
 
-function rowMatchesFilters(row: YieldRanking, filters: YieldViewModelFilters): boolean {
-  const peg = getYieldRankingPeg(row.id);
+function rowMatchesFilters(facet: YieldRowFacet, filters: YieldViewModelFilters): boolean {
+  const row = facet.row;
 
-  if (!matchesPeg(peg, filters.peg)) return false;
+  if (!matchesPeg(facet.peg, filters.peg)) return false;
   if (filters.yieldType !== "all" && row.yieldType !== filters.yieldType) return false;
   if (!matchesSearch(row, filters.q)) return false;
-  if (filters.warnings === "hide" && row.warningSignals.length > 0) return false;
-  if (filters.warnings === "only" && row.warningSignals.length === 0) return false;
+  if (filters.warnings === "hide" && facet.hasWarning) return false;
+  if (filters.warnings === "only" && !facet.hasWarning) return false;
   if (filters.minSafety !== null && (row.safetyScore === null || row.safetyScore < filters.minSafety)) return false;
   if (filters.minTvl !== null && (row.sourceTvlUsd === null || row.sourceTvlUsd < filters.minTvl)) return false;
-  if (filters.sourceConfidence !== "all" && row.provenance?.confidenceTier !== filters.sourceConfidence) return false;
-  if (filters.benchmark !== "all" && getBenchmarkKey(row) !== filters.benchmark) return false;
-  if (filters.opportunity !== "all" && getOpportunity(row) !== filters.opportunity) return false;
-  if (filters.depth === "hide-thin" && getSourceDepthLens(row) === "thin") return false;
-  if (filters.depth !== "all" && filters.depth !== "hide-thin" && getSourceDepthLens(row) !== filters.depth) return false;
-  if (filters.sourceChanged === "only" && !row.provenance?.sourceSwitch) return false;
-  if (filters.sourceChanged === "none" && row.provenance?.sourceSwitch) return false;
-  if (filters.trending === "rising" && !isRowRising(row)) return false;
+  if (filters.sourceConfidence !== "all" && facet.confidenceTier !== filters.sourceConfidence) return false;
+  if (filters.benchmark !== "all" && facet.benchmarkKey !== filters.benchmark) return false;
+  if (filters.opportunity !== "all" && facet.opportunity !== filters.opportunity) return false;
+  if (filters.depth === "hide-thin" && facet.sourceDepthLens === "thin") return false;
+  if (filters.depth !== "all" && filters.depth !== "hide-thin" && facet.sourceDepthLens !== filters.depth) return false;
+  if (filters.sourceChanged === "only" && !facet.sourceChanged) return false;
+  if (filters.sourceChanged === "none" && facet.sourceChanged) return false;
+  if (filters.trending === "rising" && !facet.isRising) return false;
 
   return true;
 }
@@ -599,19 +634,20 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   return "Current view";
 }
 
-function rankRows(rows: readonly YieldRanking[], filters: YieldViewModelFilters): YieldViewModelRow[] {
+function rankRows(facets: readonly YieldRowFacet[], filters: YieldViewModelFilters): YieldViewModelRow[] {
   const comparisonLabel = getComparisonLabel(filters);
-  return rows.map((row, index) => {
+  return facets.map((facet, index) => {
+    const row = facet.row;
     const rank = index + 1;
     return {
       ...row,
-      peg: getYieldRankingPeg(row.id),
+      peg: facet.peg,
       viewRank: rank,
       rankWithinSet: rank,
       rankLabel: `#${rank} in ${comparisonLabel}`,
       comparableSetLabel: comparisonLabel,
-      opportunity: getOpportunity(row),
-      sourceDepthLens: getSourceDepthLens(row),
+      opportunity: facet.opportunity,
+      sourceDepthLens: facet.sourceDepthLens,
     };
   });
 }
@@ -659,7 +695,7 @@ function buildStats(
   };
 }
 
-function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparableSet[] {
+function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableSet[] {
   const sets = new Map<string, YieldComparableSet>();
   const add = (basis: YieldComparableSet["basis"], key: string, label: string) => {
     const id = `${basis}:${key}`;
@@ -671,15 +707,15 @@ function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparabl
     }
   };
 
-  for (const row of rows) {
-    const peg = getYieldRankingPeg(row.id);
+  for (const facet of facets) {
+    const row = facet.row;
     add("yield-type", row.yieldType, YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType);
-    if (peg) add("peg", peg, `${getYieldPegLabel(peg)} peg`);
-    add("benchmark", getBenchmarkKey(row), `${getBenchmarkKey(row)} benchmark`);
-    add("warning-state", row.warningSignals.length > 0 ? "warning" : "no-warning", row.warningSignals.length > 0 ? "Warning rows" : "No-warning rows");
-    if (row.provenance?.confidenceTier) add("source-confidence", row.provenance.confidenceTier, `${row.provenance.confidenceTier} confidence`);
+    if (facet.peg) add("peg", facet.peg, `${getYieldPegLabel(facet.peg)} peg`);
+    add("benchmark", facet.benchmarkKey, `${facet.benchmarkKey} benchmark`);
+    add("warning-state", facet.hasWarning ? "warning" : "no-warning", facet.hasWarning ? "Warning rows" : "No-warning rows");
+    if (facet.confidenceTier) add("source-confidence", facet.confidenceTier, `${facet.confidenceTier} confidence`);
     add("tvl", row.sourceTvlUsd === null ? "unknown" : "available", row.sourceTvlUsd === null ? "TVL unknown" : "TVL available");
-    add("source-depth", row.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label} source depth`);
+    add("source-depth", facet.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[facet.sourceDepthLens].label} source depth`);
   }
 
   return Array.from(sets.values()).sort((a, b) => {
@@ -719,7 +755,7 @@ function filtersMatchPreset(filters: YieldViewModelFilters, spec: YieldPresetSpe
 }
 
 function buildPresets(
-  rows: readonly YieldRanking[],
+  facets: readonly YieldRowFacet[],
   filters: YieldViewModelFilters,
 ): { presets: YieldPresetState[]; matchingPreset: YieldPresetKey | null } {
   let matchingPreset: YieldPresetKey | null = null;
@@ -730,7 +766,7 @@ function buildPresets(
       key: spec.key,
       label: spec.label,
       description: spec.description,
-      count: countRowsMatchingFilters(rows, presetFilters(spec)),
+      count: countRowsMatchingFilters(facets, presetFilters(spec)),
       active,
       overrides: spec.overrides,
     } satisfies YieldPresetState;
@@ -743,21 +779,23 @@ export function buildYieldViewModel(
   params: YieldViewModelUrlParams,
   buildOptionsParams: BuildYieldViewModelOptions = {},
 ): YieldViewModel {
-  const filterOptions = buildOptions(rows);
+  const rowFacets = buildYieldRowFacets(rows);
+  const filterOptions = buildOptions(rowFacets);
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
-  const visibleRows = rankRows(rows.filter((row) => rowMatchesFilters(row, filters)), filters);
+  const visibleFacets = rowFacets.filter((facet) => rowMatchesFilters(facet, filters));
+  const visibleRows = rankRows(visibleFacets, filters);
   const comparisonLabel = getComparisonLabel(filters);
-  const { presets, matchingPreset } = buildPresets(rows, filters);
+  const { presets, matchingPreset } = buildPresets(rowFacets, filters);
 
   return {
     filters,
     options: filterOptions,
     normalizedParams,
     invalidParamKeys,
-    totalRows: rows.length,
+    totalRows: rowFacets.length,
     visibleRows,
-    emptyState: buildEmptyState(rows.length, visibleRows),
-    comparableSets: buildComparableSets(visibleRows),
+    emptyState: buildEmptyState(rowFacets.length, visibleRows),
+    comparableSets: buildComparableSets(visibleFacets),
     comparisonLabel,
     stats: buildStats(visibleRows, buildOptionsParams),
     presets,

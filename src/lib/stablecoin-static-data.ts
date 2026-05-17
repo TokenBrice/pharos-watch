@@ -74,6 +74,8 @@ export const ACTIVE_PEG_CURRENCIES = [
   "OTHER",
 ] as const satisfies readonly PegCurrency[];
 
+export const ACTIVE_PEG_CURRENCY_COUNT = ACTIVE_PEG_CURRENCIES.length;
+
 export const TRACKED_STABLECOIN_IDS = [
   "usdt-tether",
   "susdt-spark",

@@ -6,7 +6,6 @@ import {
   BACKING_LABELS_SHORT,
   PEG_LABELS,
   PEG_LABELS_SHORT,
-  PEG_CURRENCY_COUNT,
   GOVERNANCE_COLORS,
   BACKING_COLORS,
 } from "@shared/lib/classification";
@@ -111,19 +110,6 @@ describe("PEG_LABELS_SHORT", () => {
     expect(Object.keys(PEG_LABELS_SHORT).sort()).toEqual(
       Object.keys(PEG_LABELS).sort()
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// PEG_CURRENCY_COUNT
-// ---------------------------------------------------------------------------
-describe("PEG_CURRENCY_COUNT", () => {
-  it("is a positive number", () => {
-    expect(PEG_CURRENCY_COUNT).toBeGreaterThan(0);
-  });
-
-  it("is an integer", () => {
-    expect(Number.isInteger(PEG_CURRENCY_COUNT)).toBe(true);
   });
 });
 

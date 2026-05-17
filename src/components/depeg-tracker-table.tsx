@@ -9,7 +9,7 @@ import {
   DataTableShell,
   type DataTableColumn,
 } from "@/components/data-table-shell";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { DEWSBadge } from "@/components/dews-badge";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -160,20 +160,28 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                   {rank}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
-                    <span className="font-medium text-sm truncate">{coin.symbol}</span>
-                    {trustBadge && (
-                      <span
-                        className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                        title={`Primary price requires confirmation (${provenanceLabel})`}
-                        aria-label={`Primary price requires confirmation (${provenanceLabel})`}
-                      >
-                        {trustBadge}
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground truncate hidden xl:inline">{coin.name}</span>
-                  </div>
+                  <StablecoinIdentity
+                    className="min-w-0"
+                    logoSrc={logos?.[coin.id]}
+                    name={coin.name}
+                    symbol={coin.symbol}
+                    logoSize={20}
+                    symbolClassName="text-sm truncate"
+                    badge={
+                      <>
+                        {trustBadge && (
+                          <span
+                            className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                            title={`Primary price requires confirmation (${provenanceLabel})`}
+                            aria-label={`Primary price requires confirmation (${provenanceLabel})`}
+                          >
+                            {trustBadge}
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground truncate hidden xl:inline">{coin.name}</span>
+                      </>
+                    }
+                  />
                 </TableCell>
                 <TableCell>
                   <StatusBadge row={row} />

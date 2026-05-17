@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { DepegEventsResponse } from "@shared/types";
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { getPollingWindow } from "./use-api-query";
+import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 const DEPEG_EVENTS_PAGE_SIZE = 100;
 
@@ -86,27 +86,14 @@ export function useInfiniteDepegEvents({
     enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
-  const retryCountRef = useRef(0);
-  const MAX_AUTO_LOAD_RETRIES = 3;
-
-  useEffect(() => {
-    if (!autoLoadAll) {
-      retryCountRef.current = 0;
-    }
-  }, [autoLoadAll]);
-
-  useEffect(() => {
-    if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage) {
-      return;
-    }
-    if (error) {
-      retryCountRef.current += 1;
-      if (retryCountRef.current > MAX_AUTO_LOAD_RETRIES) return;
-    } else {
-      retryCountRef.current = 0;
-    }
-    void fetchNextPage();
-  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  useAutoLoadInfinitePages({
+    enabled,
+    autoLoadAll,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  });
 
   const events = query.data?.pages.flatMap((page) => page.data.events) ?? [];
   const total = query.data?.pages[0]?.data.total ?? 0;

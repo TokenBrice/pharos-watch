@@ -1,4 +1,4 @@
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type {
   BluechipRatingsMap,
@@ -8,11 +8,17 @@ import type {
   DigestArchiveResponse,
   DigestSnapshotResponse,
   HealthResponse,
+  BlacklistResponse,
+  BlacklistSummaryResponse,
+  MintBurnEventsResponse,
+  MintBurnFlowsResponse,
+  MintBurnPerCoinResponse,
   PegSummaryResponse,
   ReportCardsResponse,
   RedemptionBackstopsResponse,
   SafetyScoreHistoryResponse,
   StabilityIndexResponse,
+  StablecoinListResponse,
   StablecoinChartPoint,
   StressSignalsAllResponse,
   StressSignalDetailResponse,
@@ -24,12 +30,20 @@ import type {
 import { StablecoinChartResponseSchema, UsdsStatusResponseSchema } from "@shared/types/digest";
 import {
   BluechipRatingsMapSchema,
+  BlacklistResponseSchema,
+  BlacklistSummaryResponseSchema,
   DexLiquidityMapSchema,
   PegSummaryResponseSchema,
+  StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
   SupplyHistoryResponseSchema,
 } from "@shared/types/market";
+import {
+  MintBurnEventsResponseSchema,
+  MintBurnFlowsResponseSchema,
+  MintBurnPerCoinResponseSchema,
+} from "@shared/types/mint-burn";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, SafetyScoreHistoryResponseSchema } from "@shared/types/report-cards";
 import { StabilityIndexResponseSchema } from "@shared/types/stability";
@@ -41,6 +55,8 @@ import {
   CRON_15MIN,
   CRON_24H,
   CRON_30MIN,
+  CRON_BLACKLIST,
+  CRON_MINT_BURN,
   CRON_RESERVE_SYNC,
   CRON_YIELD,
 } from "@/lib/cron-intervals";
@@ -70,6 +86,18 @@ export interface NonUsdSharePoint {
 }
 
 type YieldHistoryMode = "best" | "source";
+type BlacklistEventsDescriptorInput = Pick<
+  FrontendApiQueryDescriptor<BlacklistResponse>,
+  "queryKey" | "path"
+>;
+
+export interface MintBurnEventsDescriptorOptions {
+  direction?: string;
+  burnType?: "effective_burn" | "bridge_burn" | "review_required";
+  scope?: "all" | "counted";
+  limit?: number;
+  offset?: number;
+}
 
 const YIELD_META_MAX_AGE_SEC = CRON_YIELD / 1000;
 
@@ -82,6 +110,13 @@ function staticDescriptor<T>(descriptor: FrontendStaticApiQueryDescriptor<T>): F
 }
 
 export const FRONTEND_API_QUERY_REGISTRY = {
+  stablecoins: pollingDescriptor<StablecoinListResponse>({
+    queryKey: ["stablecoins"],
+    path: API_PATHS.stablecoins(),
+    producerIntervalMs: CRON_15MIN,
+    schema: StablecoinListResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+  }),
   bluechipRatings: pollingDescriptor<BluechipRatingsMap | null>({
     queryKey: ["bluechip-ratings"],
     path: API_PATHS.bluechipRatings(),
@@ -124,6 +159,61 @@ export const FRONTEND_API_QUERY_REGISTRY = {
     producerIntervalMs: CRON_1MIN,
     schema: HealthResponseSchema,
   }),
+  blacklistSummary: pollingDescriptor<BlacklistSummaryResponse>({
+    queryKey: ["blacklist-summary"],
+    path: API_PATHS.blacklistSummary(),
+    producerIntervalMs: CRON_BLACKLIST,
+    schema: BlacklistSummaryResponseSchema,
+    metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
+  }),
+  blacklistEvents: ({ queryKey, path }: BlacklistEventsDescriptorInput) =>
+    pollingDescriptor<BlacklistResponse>({
+      queryKey,
+      path,
+      producerIntervalMs: CRON_BLACKLIST,
+      schema: BlacklistResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
+    }),
+  mintBurnFlows: (hours = 24) =>
+    pollingDescriptor<MintBurnFlowsResponse>({
+      queryKey: ["mint-burn-flows", "all", hours],
+      path: API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
+      producerIntervalMs: CRON_MINT_BURN,
+      schema: MintBurnFlowsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
+    }),
+  mintBurnFlowsCoin: (stablecoinId: string, hours = 24) =>
+    pollingDescriptor<MintBurnPerCoinResponse>({
+      queryKey: ["mint-burn-flows", stablecoinId, hours],
+      path: API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
+      producerIntervalMs: CRON_MINT_BURN,
+      schema: MintBurnPerCoinResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows,
+    }),
+  mintBurnEvents: (stablecoinId: string, opts?: MintBurnEventsDescriptorOptions) => {
+    const params = new URLSearchParams({ stablecoin: stablecoinId });
+    if (opts?.direction) params.set("direction", opts.direction);
+    if (opts?.burnType) params.set("burnType", opts.burnType);
+    if (opts?.scope && opts.scope !== "all") params.set("scope", opts.scope);
+    if (opts?.limit) params.set("limit", opts.limit.toString());
+    if (opts?.offset) params.set("offset", opts.offset.toString());
+
+    return pollingDescriptor<MintBurnEventsResponse>({
+      queryKey: [
+        "mint-burn-events",
+        stablecoinId,
+        opts?.scope ?? "all",
+        opts?.direction ?? "all",
+        opts?.burnType ?? "all",
+        opts?.limit ?? 50,
+        opts?.offset ?? 0,
+      ],
+      path: API_PATHS.mintBurnEvents(Object.fromEntries(params.entries())),
+      producerIntervalMs: CRON_MINT_BURN,
+      schema: MintBurnEventsResponseSchema,
+      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
+    });
+  },
   pegSummary: pollingDescriptor<PegSummaryResponse>({
     queryKey: ["peg-summary"],
     path: API_PATHS.pegSummary(),

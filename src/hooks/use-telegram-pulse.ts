@@ -1,6 +1,6 @@
 "use client";
 
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { TelegramPulse } from "@shared/types/status";
 import { CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { useApiQuery } from "./use-api-query";

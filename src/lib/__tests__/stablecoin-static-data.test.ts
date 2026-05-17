@@ -9,6 +9,7 @@ import {
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import {
   ACTIVE_PEG_CURRENCIES,
+  ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_PEG_CURRENCY_COUNTS,
   ACTIVE_STABLECOIN_COUNT,
   ACTIVE_STABLECOIN_GOVERNANCE_COUNTS,
@@ -76,6 +77,7 @@ describe("static stablecoin projections", () => {
 
     expect(ACTIVE_STABLECOIN_GOVERNANCE_COUNTS).toEqual(governanceCounts);
     expect(ACTIVE_PEG_CURRENCIES).toEqual(PEG_ORDER.filter((peg) => pegCounts[peg] != null));
+    expect(ACTIVE_PEG_CURRENCY_COUNT).toBe(ACTIVE_PEG_CURRENCIES.length);
     expect(ACTIVE_PEG_CURRENCY_COUNTS).toEqual(pegCounts);
   });
 

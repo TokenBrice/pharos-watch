@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
 
 const STORAGE_KEY = "pharos.show-work";
 const URL_PARAM = "show-work";
@@ -21,15 +22,10 @@ function readUrlEnable(): boolean {
 }
 
 function readStorageOverride(): boolean | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") return true;
-    if (stored === "false") return false;
-    return null;
-  } catch {
-    return null;
-  }
+  const stored = safeStorageGetItem(getWindowStorage("local"), STORAGE_KEY);
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return null;
 }
 
 function readClient(): boolean {
@@ -39,12 +35,7 @@ function readClient(): boolean {
 }
 
 function writeStored(value: boolean) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, value ? "true" : "false");
-  } catch {
-    // ignore storage failures
-  }
+  safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, value ? "true" : "false");
 }
 
 function removeUrlParam() {

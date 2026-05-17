@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   TAPE_EVENT_SEVERITY_VALUES,
   TapeEventsResponseSchema,
@@ -13,6 +12,7 @@ import {
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
+import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 // The wire `TapeEventsResponseSchema` includes the `_meta` envelope. Our
 // `apiFetchWithMeta` lifts `_meta` off the body before schema parsing, so we
@@ -130,27 +130,14 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
-  const retryCountRef = useRef(0);
-  const MAX_AUTO_LOAD_RETRIES = 3;
-
-  useEffect(() => {
-    if (!autoLoadAll) {
-      retryCountRef.current = 0;
-    }
-  }, [autoLoadAll]);
-
-  useEffect(() => {
-    if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage) {
-      return;
-    }
-    if (error) {
-      retryCountRef.current += 1;
-      if (retryCountRef.current > MAX_AUTO_LOAD_RETRIES) return;
-    } else {
-      retryCountRef.current = 0;
-    }
-    void fetchNextPage();
-  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  useAutoLoadInfinitePages({
+    enabled,
+    autoLoadAll,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  });
 
   const events: TapeEvent[] = query.data?.pages.flatMap((page) => page.data.events) ?? [];
   const pages = query.data?.pages ?? [];

@@ -1,4 +1,4 @@
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
 } from "@shared/lib/ops-limits";

@@ -10,6 +10,19 @@ vi.mock("@/lib/browser-storage", () => ({
   getWindowStorage: () => mockStorage,
   safeStorageGetItem: (_s: unknown, key: string) => mockStorage.getItem(key),
   safeStorageSetItem: (_s: unknown, key: string, val: string) => mockStorage.setItem(key, val),
+  readJsonStorageValue: (_s: unknown, key: string, decode: (value: unknown) => unknown, fallback: unknown) => {
+    const raw = mockStorage.getItem(key);
+    if (!raw) return fallback;
+    try {
+      return decode(JSON.parse(raw)) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  writeJsonStorageValue: (_s: unknown, key: string, value: unknown) => {
+    mockStorage.setItem(key, JSON.stringify(value));
+    return true;
+  },
 }));
 
 let mockStorage: Storage;

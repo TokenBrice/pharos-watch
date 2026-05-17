@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { TapeEventsResponseSchema, type TapeEvent } from "@shared/types/tape-event";
 import type {
   ChartAnnotation,

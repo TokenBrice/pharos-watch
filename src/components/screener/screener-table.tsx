@@ -9,7 +9,7 @@ import {
 } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
@@ -112,11 +112,15 @@ function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
           href={buildStablecoinUrl(row.id)}
           className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
         >
-          <StablecoinLogo src={logo} name={row.name} size={24} />
-          <span className="min-w-0">
-            <span className="block font-semibold text-foreground">{row.symbol}</span>
-            <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
-          </span>
+          <StablecoinIdentity
+            layout="contents"
+            logoSrc={logo}
+            name={row.name}
+            symbol={row.symbol}
+            logoSize={24}
+            symbolClassName="block font-semibold text-foreground"
+            nameClassName="block truncate text-xs text-muted-foreground"
+          />
         </Link>
       </TableCell>
       <TableCell className="text-right tabular-nums">

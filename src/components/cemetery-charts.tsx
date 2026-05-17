@@ -16,6 +16,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartLegendChip } from "@/components/chart-primitives";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
@@ -78,13 +79,9 @@ function CauseOfDeathDonutChart({
       <div className="flex h-full flex-col">
         <div className="mb-2 flex flex-wrap gap-2">
           {data.map((datum) => (
-            <div key={datum.cause} className="pharos-chart-legend-chip">
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: CAUSE_HEX[datum.cause] }}
-              />
+            <ChartLegendChip key={datum.cause} markerStyle={{ backgroundColor: CAUSE_HEX[datum.cause] }}>
               {datum.name}
-            </div>
+            </ChartLegendChip>
           ))}
         </div>
         <div className="min-h-0 flex-1">
@@ -224,14 +221,12 @@ function DeathsByYearChart() {
     <CemeteryChartCard title="Deaths per Year" ariaLabel="Stablecoin deaths per year">
       <div className="flex h-full flex-col">
         <div className="mb-2 flex flex-wrap gap-2">
-          <div className="pharos-chart-legend-chip">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
+          <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_RED }}>
             Deaths
-          </div>
-          <div className="pharos-chart-legend-chip">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
+          </ChartLegendChip>
+          <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_BLUE }}>
             Peak Mcap
-          </div>
+          </ChartLegendChip>
         </div>
         <div className="min-h-0 flex-1">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>

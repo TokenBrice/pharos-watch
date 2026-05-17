@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { HomepageStartHereCallout } from "@/components/homepage-sections";
@@ -10,6 +9,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { logosById } from "@/lib/logos";
 import {
+  ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_STABLECOIN_COUNT,
   HOMEPAGE_TOP_ACTIVE_STABLECOINS,
   TRACKED_STABLECOIN_COUNT,
@@ -85,7 +85,7 @@ export default function HomePage() {
         }}
       />
       <div className="space-y-5">
-        <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
+        <SiteHeader total={total} pegCount={ACTIVE_PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
         <div className="flex flex-col gap-5">
           <div className="empty:hidden">
             <HomepageStartHereCallout />

@@ -16,13 +16,13 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { SectionSkeleton } from "@/components/homepage-skeletons";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { HomepageSectionBand } from "@/components/homepage-sections";
 import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
 import { Button } from "@/components/ui/button";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import {
   buildHomepageCriticalViewModel,
@@ -31,7 +31,11 @@ import {
 import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
 import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { ACTIVE_STABLECOIN_COUNT, ACTIVE_STABLECOIN_GOVERNANCE_COUNTS } from "@/lib/stablecoin-static-data";
+import {
+  ACTIVE_PEG_CURRENCY_COUNT,
+  ACTIVE_STABLECOIN_COUNT,
+  ACTIVE_STABLECOIN_GOVERNANCE_COUNTS,
+} from "@/lib/stablecoin-static-data";
 
 const CEFI_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS.centralized;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS["centralized-dependent"];
@@ -448,7 +452,7 @@ export function HomepageClient() {
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-relaxed text-muted-foreground">
-          Pharos tracks {ACTIVE_STABLECOIN_COUNT} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
+          Pharos tracks {ACTIVE_STABLECOIN_COUNT} stablecoins across {ACTIVE_PEG_CURRENCY_COUNT} peg currencies with honest
           governance classification:{" "}
           {CEFI_COUNT} CeFi, {CEFI_DEP_COUNT} CeFi-Dependent, and {DEFI_COUNT} DeFi. Use the dashboard
           for live market ranking, then drill into peg stress, safety, liquidity, blacklist risk, flows, and dead-coin

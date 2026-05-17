@@ -20,7 +20,7 @@ import {
 } from "@/components/chart-primitives";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 import { useChartAnnotations } from "@/hooks/use-chart-annotations";
-import { DAY_MS } from "@/lib/constants";
+import { buildAdaptiveMonthlyTicks } from "@/lib/chart-utils";
 import { cn } from "@/lib/utils";
 
 function PegXTick({
@@ -263,25 +263,7 @@ export function PegDeviationChart({
     if (range !== "all" || filteredData.length === 0) return undefined;
     const first = filteredData[0].ts;
     const last = filteredData[filteredData.length - 1].ts;
-    const spanDays = (last - first) / DAY_MS;
-
-    let step = 1;
-    if (spanDays > 4 * 365) step = 6;
-    else if (spanDays > 2 * 365) step = 3;
-    else if (spanDays > 365) step = 2;
-
-    const ticks: number[] = [];
-    const d = new Date(first);
-    d.setDate(1);
-    d.setHours(0, 0, 0, 0);
-    if (step > 1 && d.getMonth() !== 0) {
-      d.setFullYear(d.getFullYear() + 1, 0, 1);
-    }
-    while (d.getTime() <= last) {
-      ticks.push(d.getTime());
-      d.setMonth(d.getMonth() + step);
-    }
-    return ticks;
+    return buildAdaptiveMonthlyTicks(first, last);
   }, [range, filteredData]);
 
   const yAxis = useMemo(

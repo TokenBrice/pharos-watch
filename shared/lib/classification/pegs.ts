@@ -1,5 +1,4 @@
 import type { PegCurrency } from "../../types";
-import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import type { PegMetadata } from "./common";
 
 // Peg currency labels
@@ -406,9 +405,6 @@ export function mapPegMetadata<T>(select: (metadata: PegMetadata) => T): Record<
 
 /** Full labels with article, for prose descriptions. */
 export const PEG_LABELS = mapPegMetadata((metadata) => metadata.label);
-
-/** Number of distinct peg currencies actually tracked (with at least one stablecoin). */
-export const PEG_CURRENCY_COUNT = new Set(ACTIVE_STABLECOINS.map((s) => s.flags.pegCurrency)).size;
 
 /** Labels without article, for metadata and keywords. */
 export const PEG_LABELS_SHORT = mapPegMetadata((metadata) => metadata.shortLabel);

@@ -1,3 +1,5 @@
+import { readJsonStorageValue, writeJsonStorageValue } from "@/lib/browser-storage";
+
 export interface StartHereCalloutState {
   homepageSessions: number;
   hasOpenedStartHere: boolean;
@@ -34,18 +36,11 @@ export function normalizeStartHereCalloutState(value: unknown): StartHereCallout
 }
 
 export function readStartHereCalloutState(storage: Storage): StartHereCalloutState {
-  const stored = storage.getItem(START_HERE_CALLOUT_STORAGE_KEY);
-  if (!stored) return DEFAULT_STATE;
-
-  try {
-    return normalizeStartHereCalloutState(JSON.parse(stored));
-  } catch {
-    return DEFAULT_STATE;
-  }
+  return readJsonStorageValue(storage, START_HERE_CALLOUT_STORAGE_KEY, normalizeStartHereCalloutState, DEFAULT_STATE);
 }
 
 export function writeStartHereCalloutState(storage: Storage, state: StartHereCalloutState): void {
-  storage.setItem(START_HERE_CALLOUT_STORAGE_KEY, JSON.stringify(state));
+  writeJsonStorageValue(storage, START_HERE_CALLOUT_STORAGE_KEY, state);
 }
 
 export function evaluateHomepageStartHereCallout(

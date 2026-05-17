@@ -1,7 +1,7 @@
 import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 import perCoinClientAsset from "../../data/stablecoins/coins.client.generated.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
-import { isActiveStablecoinMeta } from "./status";
+import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 
 /**
  * Client-side slim stablecoin registry.
@@ -47,6 +47,11 @@ export const CLIENT_TRACKED_META_BY_ID = new Map(
   CLIENT_TRACKED_STABLECOINS.map((entry) => [entry.id, entry] as const),
 );
 
+/** Set of all tracked stablecoin IDs, including pre-launch and frozen assets. */
+export const CLIENT_TRACKED_IDS = new Set(
+  CLIENT_TRACKED_STABLECOINS.map((entry) => entry.id),
+);
+
 /** Active stablecoins (excludes pre-launch and frozen). */
 export const CLIENT_ACTIVE_STABLECOINS: StablecoinClientMeta[] =
   CLIENT_TRACKED_STABLECOINS.filter(isActiveStablecoinMeta);
@@ -60,5 +65,9 @@ export const CLIENT_ACTIVE_IDS = new Set(
 export const CLIENT_ACTIVE_META_BY_ID = new Map(
   CLIENT_ACTIVE_STABLECOINS.map((entry) => [entry.id, entry] as const),
 );
+
+/** Public readback stablecoins (active + frozen; excludes pre-launch). */
+export const CLIENT_READABLE_STABLECOINS: StablecoinClientMeta[] =
+  CLIENT_TRACKED_STABLECOINS.filter(isReadableStablecoinMeta);
 
 export type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";

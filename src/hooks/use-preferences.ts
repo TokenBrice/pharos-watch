@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem } from "@/lib/browser-storage";
+import {
+  getWindowStorage,
+  readJsonStorageValue,
+  safeStorageRemoveItem,
+  writeJsonStorageValue,
+} from "@/lib/browser-storage";
 export {
   ALL_COLUMNS,
   DEFAULT_VISIBLE_COLUMNS,
@@ -31,33 +36,30 @@ export function usePreference<T>(
   const defaultValueRef = useRef(defaultValue);
   const decodeRef = useRef(decode);
 
-  defaultValueRef.current = defaultValue;
-  decodeRef.current = decode;
+  useEffect(() => {
+    defaultValueRef.current = defaultValue;
+    decodeRef.current = decode;
+  }, [defaultValue, decode]);
 
   useEffect(() => {
-    const storage = getWindowStorage("local");
-    const fallback = defaultValueRef.current;
-    const decodeStored = decodeRef.current;
-    if (!storage) {
-      setStorageLoadedKey(key);
-      return;
-    }
-    try {
-      const stored = safeStorageGetItem(storage, key);
-      if (stored === null) {
-        setValue(fallback);
+    const timeout = window.setTimeout(() => {
+      const storage = getWindowStorage("local");
+      const fallback = defaultValueRef.current;
+      const decodeStored = decodeRef.current;
+      if (!storage) {
         setStorageLoadedKey(key);
         return;
       }
-      const parsed = JSON.parse(stored) as unknown;
-      // When no decode function is provided, the parsed value is trusted as T.
-      // Callers handling complex types should supply a decoder for runtime validation.
-      setValue(decodeStored ? decodeStored(parsed) : (parsed as T));
-    } catch {
-      setValue(fallback);
-    } finally {
+      const storedValue = readJsonStorageValue(
+        storage,
+        key,
+        (parsed) => (decodeStored ? decodeStored(parsed) : (parsed as T)),
+        fallback,
+      );
+      setValue(storedValue);
       setStorageLoadedKey(key);
-    }
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [key]);
 
   // Persist to localStorage on change
@@ -65,7 +67,7 @@ export function usePreference<T>(
     if (storageLoadedKey !== key) return;
     const storage = getWindowStorage("local");
     if (!storage) return;
-    safeStorageSetItem(storage, key, JSON.stringify(value));
+    writeJsonStorageValue(storage, key, value);
   }, [key, storageLoadedKey, value]);
 
   const reset = useCallback(() => {

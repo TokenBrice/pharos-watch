@@ -2,23 +2,19 @@ import {
   PSI_METHODOLOGY_CHANGELOG,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/stability-index-version";
-import { createMethodologyChangelogRoute } from "../changelog-route-factory";
+import { createStandardMethodologyChangelogRoute } from "../changelog-route-factory";
 
-const route = createMethodologyChangelogRoute({
+const route = createStandardMethodologyChangelogRoute({
   path: "/methodology/stability-index-changelog/",
   metadataTitle: "Stability Index Changelog — Version History",
   metadataDescription:
     `Full version history of the Pharos Stability Index methodology, from v1.0 through ${PSI_METHODOLOGY_VERSION_LABEL}. Every formula, cap, and component revision documented.`,
   breadcrumbName: "Stability Index Changelog",
   title: "Stability Index Changelog",
-  lead: (
-    <>
-      Full version history of PSI methodology decisions, from v1.0 to {PSI_METHODOLOGY_VERSION_LABEL}.
-    </>
-  ),
+  leadSubject: "PSI",
+  versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
   accentClass: "border-l-cyan-500",
   entries: PSI_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.impact,
   citation: { id: "psi", versionLabel: PSI_METHODOLOGY_VERSION_LABEL, pdfKey: "stability-index" },
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { StabilityIndexResponse } from "@shared/types";
 import { fetchLightApiJson } from "@/lib/light-api-client";
 import { getPollingWindow } from "@/hooks/use-api-query";

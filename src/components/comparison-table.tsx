@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useMemo } from "react";
+import { Fragment, memo, useMemo, type ReactNode } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice, formatScore, formatSignedCurrency, getNetColor } from "@shared/lib/format";
@@ -116,6 +116,15 @@ function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   );
 }
 
+interface ComparisonMetric {
+  key: string;
+  mobileLabel: ReactNode;
+  desktopLabel: ReactNode;
+  renderValue: (coin: ComparisonCoin, index: number) => ReactNode;
+  mobileValueClassName: (coin: ComparisonCoin, index: number) => string;
+  desktopValueClassName: (coin: ComparisonCoin, index: number) => string;
+}
+
 export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
   // Pre-compute row data
   const rowData = useMemo(() => {
@@ -179,6 +188,115 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
     };
   }, [coins, pegRates]);
 
+  const comparisonMetrics = useMemo<ComparisonMetric[]>(
+    () => [
+      {
+        key: "price",
+        mobileLabel: "Price",
+        desktopLabel: "Price",
+        renderValue: (_coin, i) => rowData.prices[i],
+        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
+        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`,
+      },
+      {
+        key: "peg-score",
+        mobileLabel: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
+        desktopLabel: <MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel>,
+        renderValue: (coin, i) =>
+          rowData.pegScores[i] != null
+            ? formatScore(rowData.pegScores[i])
+            : <NullCell frozen={coin.meta.status === "frozen"} />,
+        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
+        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`,
+      },
+      {
+        key: "market-cap",
+        mobileLabel: "Market Cap",
+        desktopLabel: "Market Cap",
+        renderValue: (_coin, i) => formatCurrency(rowData.marketCaps[i]),
+        mobileValueClassName: () => "text-right font-mono tabular-nums",
+        desktopValueClassName: () => "text-center font-mono tabular-nums",
+      },
+      {
+        key: "weekly-change",
+        mobileLabel: "7d Change",
+        desktopLabel: "7d Change",
+        renderValue: (coin, i) => {
+          const change = rowData.weeklyChanges[i];
+          const sign = change != null && change >= 0 ? "+" : "";
+          return change != null ? `${sign}${change.toFixed(2)}%` : <NullCell frozen={coin.meta.status === "frozen"} />;
+        },
+        mobileValueClassName: () => "text-right font-mono tabular-nums",
+        desktopValueClassName: () => "text-center font-mono tabular-nums",
+      },
+      {
+        key: "liquidity-score",
+        mobileLabel: <MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel>,
+        desktopLabel: <MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel>,
+        renderValue: (coin, i) =>
+          rowData.liquidityScores[i] != null
+            ? formatScore(rowData.liquidityScores[i])
+            : <NullCell frozen={coin.meta.status === "frozen"} />,
+        mobileValueClassName: (_coin, i) => `text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
+        desktopValueClassName: (_coin, i) => `text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`,
+      },
+      {
+        key: "governance",
+        mobileLabel: "Governance",
+        desktopLabel: "Governance",
+        renderValue: (_coin, i) => rowData.governanceLabels[i],
+        mobileValueClassName: () => "text-right",
+        desktopValueClassName: () => "text-center",
+      },
+      {
+        key: "backing",
+        mobileLabel: "Backing",
+        desktopLabel: "Backing",
+        renderValue: (_coin, i) => rowData.backingLabels[i],
+        mobileValueClassName: () => "text-right",
+        desktopValueClassName: () => "text-center",
+      },
+      {
+        key: "peg-currency",
+        mobileLabel: "Peg",
+        desktopLabel: "Peg Currency",
+        renderValue: (_coin, i) => rowData.pegCurrencies[i],
+        mobileValueClassName: () => "text-right",
+        desktopValueClassName: () => "text-center",
+      },
+      {
+        key: "safety-rating",
+        mobileLabel: <MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel>,
+        desktopLabel: <MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel>,
+        renderValue: (coin, i) => rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />,
+        mobileValueClassName: (_coin, i) => `text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`,
+        desktopValueClassName: (_coin, i) => `text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`,
+      },
+      {
+        key: "net-flow-30d",
+        mobileLabel: "Net Flow 30D",
+        desktopLabel: "Net Flow 30D",
+        renderValue: (coin, i) =>
+          rowData.netFlow30dValues[i] != null
+            ? formatSignedCurrency(rowData.netFlow30dValues[i]!)
+            : <NullCell frozen={coin.meta.status === "frozen"} />,
+        mobileValueClassName: (_coin, i) => {
+          const value = rowData.netFlow30dValues[i];
+          return `text-right font-mono tabular-nums ${
+            i === rowData.bestNetFlow30d ? BEST_CLASS : value != null ? getNetColor(value) : ""
+          }`;
+        },
+        desktopValueClassName: (_coin, i) => {
+          const value = rowData.netFlow30dValues[i];
+          return `text-center font-mono tabular-nums ${
+            i === rowData.bestNetFlow30d ? BEST_CLASS : value != null ? getNetColor(value) : ""
+          }`;
+        },
+      },
+    ],
+    [rowData],
+  );
+
   if (coins.length === 0) {
     return (
       <div className="pharos-empty-note py-8 text-center">
@@ -214,40 +332,12 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               )}
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted-foreground">Price</dt>
-              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
-              <dt className="text-muted-foreground"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></dt>
-              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
-                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : <NullCell frozen={coin.meta.status === "frozen"} />}
-              </dd>
-              <dt className="text-muted-foreground">Market Cap</dt>
-              <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
-              <dt className="text-muted-foreground">7d Change</dt>
-              <dd className="text-right font-mono tabular-nums">
-                {rowData.weeklyChanges[i] != null
-                  ? `${rowData.weeklyChanges[i]! >= 0 ? "+" : ""}${rowData.weeklyChanges[i]!.toFixed(2)}%`
-                  : <NullCell frozen={coin.meta.status === "frozen"} />}
-              </dd>
-              <dt className="text-muted-foreground"><MethodologyLabel topic="liquidityScore">Liquidity</MethodologyLabel></dt>
-              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
-                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : <NullCell frozen={coin.meta.status === "frozen"} />}
-              </dd>
-              <dt className="text-muted-foreground">Governance</dt>
-              <dd className="text-right">{rowData.governanceLabels[i]}</dd>
-              <dt className="text-muted-foreground">Backing</dt>
-              <dd className="text-right">{rowData.backingLabels[i]}</dd>
-              <dt className="text-muted-foreground">Peg</dt>
-              <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
-              <dt className="text-muted-foreground"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></dt>
-              <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
-                {rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />}
-              </dd>
-              <dt className="text-muted-foreground">Net Flow 30D</dt>
-              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : rowData.netFlow30dValues[i] != null ? getNetColor(rowData.netFlow30dValues[i]!) : ""}`}>
-                {rowData.netFlow30dValues[i] != null
-                  ? formatSignedCurrency(rowData.netFlow30dValues[i]!)
-                  : <NullCell frozen={coin.meta.status === "frozen"} />}
-              </dd>
+              {comparisonMetrics.map((metric) => (
+                <Fragment key={metric.key}>
+                  <dt className="text-muted-foreground">{metric.mobileLabel}</dt>
+                  <dd className={metric.mobileValueClassName(coin, i)}>{metric.renderValue(coin, i)}</dd>
+                </Fragment>
+              ))}
             </dl>
           </div>
         ))}
@@ -282,137 +372,16 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* Price */}
-              <TableRow>
-                <TableCell className="pharos-table-sticky-metric font-medium">Price</TableCell>
-                {coins.map((coin, i) => (
-                  <TableCell
-                    key={coin.id}
-                    className={`text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}
-                  >
-                    {rowData.prices[i]}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-              {/* Peg Score */}
-              <TableRow>
-                <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="pegScore">Peg Score</MethodologyLabel></TableCell>
-                {coins.map((coin, i) => (
-                  <TableCell
-                    key={coin.id}
-                    className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
-                  >
-                    {rowData.pegScores[i] != null
-                      ? formatScore(rowData.pegScores[i])
-                      : <NullCell frozen={coin.meta.status === "frozen"} />}
-                  </TableCell>
-                ))}
-              </TableRow>
-
-            {/* Market Cap */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">Market Cap</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell
-                  key={coin.id}
-                  className="text-center font-mono tabular-nums"
-                >
-                  {formatCurrency(rowData.marketCaps[i])}
-                </TableCell>
+              {comparisonMetrics.map((metric) => (
+                <TableRow key={metric.key}>
+                  <TableCell className="pharos-table-sticky-metric font-medium">{metric.desktopLabel}</TableCell>
+                  {coins.map((coin, i) => (
+                    <TableCell key={coin.id} className={metric.desktopValueClassName(coin, i)}>
+                      {metric.renderValue(coin, i)}
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-
-            {/* 7d Change */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">7d Change</TableCell>
-              {coins.map((coin, i) => {
-                const change = rowData.weeklyChanges[i];
-                const sign = change != null && change >= 0 ? "+" : "";
-                return (
-                  <TableCell
-                    key={coin.id}
-                    className="text-center font-mono tabular-nums"
-                  >
-                    {change != null ? `${sign}${change.toFixed(2)}%` : <NullCell frozen={coin.meta.status === "frozen"} />}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-
-            {/* Liquidity Score */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="liquidityScore">Liquidity Score</MethodologyLabel></TableCell>
-              {coins.map((coin, i) => (
-                <TableCell
-                  key={coin.id}
-                  className={`text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}
-                >
-                  {rowData.liquidityScores[i] != null
-                    ? formatScore(rowData.liquidityScores[i])
-                    : <NullCell frozen={coin.meta.status === "frozen"} />}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* Governance */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">Governance</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell key={coin.id} className="text-center">
-                  {rowData.governanceLabels[i]}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* Backing */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">Backing</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell key={coin.id} className="text-center">
-                  {rowData.backingLabels[i]}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* Peg Currency */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">Peg Currency</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell key={coin.id} className="text-center">
-                  {rowData.pegCurrencies[i]}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* Safety Rating */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium"><MethodologyLabel topic="safetyScore">Safety Rating</MethodologyLabel></TableCell>
-              {coins.map((coin, i) => (
-                <TableCell
-                  key={coin.id}
-                  className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
-                >
-                  {rowData.safetyGrades[i] ?? <NullCell frozen={coin.meta.status === "frozen"} />}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* Net Flow 30D */}
-            <TableRow>
-              <TableCell className="pharos-table-sticky-metric font-medium">Net Flow 30D</TableCell>
-              {coins.map((coin, i) => {
-                const val = rowData.netFlow30dValues[i];
-                return (
-                  <TableCell
-                    key={coin.id}
-                    className={`text-center font-mono tabular-nums ${i === rowData.bestNetFlow30d ? BEST_CLASS : val != null ? getNetColor(val) : ""}`}
-                  >
-                    {val != null ? formatSignedCurrency(val) : <NullCell frozen={coin.meta.status === "frozen"} />}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
           </TableBody>
         </Table>
         </div>

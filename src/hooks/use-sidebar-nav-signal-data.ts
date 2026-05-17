@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { CRON_15MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST, CRON_1MIN } from "@/lib/cron-intervals";
 import { getPollingWindow } from "@/hooks/use-api-query";
 import { fetchLightApiJson } from "@/lib/light-api-client";

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { NAV_GROUPS, DEFAULT_EXPANDED } from "@/lib/nav-config";
-import { getWindowStorage, safeStorageGetItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { getWindowStorage, readJsonStorageValue, writeJsonStorageValue } from "@/lib/browser-storage";
 import { isRouteActive } from "@/lib/navigation";
 
 export const STORAGE_KEY = "pharos-nav-groups";
@@ -25,20 +25,12 @@ function normalizeExpandedState(value: unknown): Record<string, boolean> {
 
 export function getExpandedState(): Record<string, boolean> {
   const storage = getWindowStorage("local");
-  const raw = safeStorageGetItem(storage, STORAGE_KEY);
-  let persisted: Record<string, boolean> = {};
-  if (raw) {
-    try {
-      persisted = normalizeExpandedState(JSON.parse(raw) as unknown);
-    } catch {
-      // corrupted — ignore
-    }
-  }
+  const persisted = readJsonStorageValue(storage, STORAGE_KEY, normalizeExpandedState, {});
   return { ...DEFAULT_EXPANDED, ...persisted };
 }
 
 export function setExpandedState(state: Record<string, boolean>): void {
-  safeStorageSetItem(getWindowStorage("local"), STORAGE_KEY, JSON.stringify(state));
+  writeJsonStorageValue(getWindowStorage("local"), STORAGE_KEY, state);
 }
 
 function getDefaultExpandedState(): Record<string, boolean> {
