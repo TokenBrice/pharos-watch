@@ -163,6 +163,9 @@ function collectSourceEnvKeys(filePaths) {
     for (const match of source.matchAll(/\breadEnvFirst\(\s*\[([^\]]*)\]/g)) {
       addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
     }
+    for (const match of source.matchAll(/\benvNames\s*:\s*\[([^\]]*)\]/g)) {
+      addRegexMatches(keys, match[1], /"([A-Z][A-Z0-9_]+)"/g);
+    }
 
     if (extname(filePath) === ".sh") {
       for (const key of collectShellEnvKeys(source)) {

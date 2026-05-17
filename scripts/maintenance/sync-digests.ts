@@ -1,7 +1,7 @@
 /**
  * Fetches all digests from an explicit API base/URL and writes them to data/digests.json.
  * Run before builds to ensure static digest pages have fresh data:
- *   DIGEST_API_URL=https://ops-api.example.com tsx scripts/sync-digests.ts
+ *   DIGEST_API_URL=https://ops-api.example.com tsx scripts/maintenance/sync-digests.ts
  */
 
 import { getArgValue, parseCheckMode } from "../lib/cli.mjs";
@@ -29,7 +29,7 @@ interface DigestEntry {
 function resolveOutputPath(): URL {
   const explicitOutput = getArgValue(process.argv, "--output");
   if (!explicitOutput) {
-    return new URL("../data/digests.json", import.meta.url);
+    return new URL("../../data/digests.json", import.meta.url);
   }
 
   return new URL(explicitOutput, `file://${process.cwd()}/`);
