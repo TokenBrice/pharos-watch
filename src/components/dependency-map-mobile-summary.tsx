@@ -11,10 +11,6 @@ interface DependencyMapMobileSummaryProps {
   logos?: Record<string, string>;
 }
 
-function formatWeight(value: number): string {
-  return value.toFixed(2);
-}
-
 export function DependencyMapMobileSummary({ model, logos }: DependencyMapMobileSummaryProps) {
   const hubs = model.hubs.slice(0, 6);
   if (hubs.length === 0) return null;
@@ -59,7 +55,7 @@ export function DependencyMapMobileSummary({ model, logos }: DependencyMapMobile
 
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
-                  Summed direct dependency weight {formatWeight(hub.summedDirectDependencyWeight)}
+                  Summed direct dependency weight {hub.summedDirectDependencyWeight.toFixed(2)}
                 </span>
                 <span className="rounded-full border border-border/50 bg-background/50 px-2.5 py-1">
                   Modeled dependent market-cap context {formatCurrency(hub.uniqueDependentMcapUsd, 1)}

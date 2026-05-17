@@ -14,10 +14,6 @@ const EDGE_TYPE_LABELS: Record<DependencyType, string> = {
   wrapper: "Wrapper",
 };
 
-function formatWeight(value: number): string {
-  return value.toFixed(2);
-}
-
 function DependencyMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-md border border-border/70 bg-background/55 p-3">
@@ -81,7 +77,7 @@ function DependencyHubRow({
               </svg>
               <span>{EDGE_TYPE_LABELS[entry.type]}</span>
               <span className="font-mono tabular-nums text-foreground">
-                {entry.edgeCount} / {formatWeight(entry.summedDirectDependencyWeight)}
+                {entry.edgeCount} / {entry.summedDirectDependencyWeight.toFixed(2)}
               </span>
             </span>
           ))}
@@ -92,7 +88,7 @@ function DependencyHubRow({
       </td>
       <td className="px-3 py-3 align-top">
         <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
-          {formatWeight(hub.summedDirectDependencyWeight)}
+          {hub.summedDirectDependencyWeight.toFixed(2)}
         </p>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/45" aria-hidden="true">
           <div className="h-full rounded-full bg-frost-blue" style={{ width: `${weightPct}%` }} />
@@ -168,7 +164,7 @@ export function DependencyHubsBoard({ model, logos }: { model: DependencyHubsMod
           />
           <DependencyMetric
             label="Summed direct dependency weight"
-            value={formatWeight(model.summedDirectDependencyWeight)}
+            value={model.summedDirectDependencyWeight.toFixed(2)}
             detail={`${model.directEdgeCount} live direct edges`}
           />
           <DependencyMetric

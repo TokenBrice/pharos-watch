@@ -19,10 +19,6 @@ interface NodeLinkSummary {
   examples: string[];
 }
 
-function formatWeight(value: number): string {
-  return value.toFixed(2);
-}
-
 function summarizeNodeLinks({
   nodeId,
   visibleLinks,
@@ -120,8 +116,8 @@ export function ContagionGraphInsights({
         <div className="grid grid-cols-2 gap-1.5">
           <MiniMetric label="Dependents" value={String(dependentSummary.count)} />
           <MiniMetric label="Upstream" value={String(upstreamSummary.count)} />
-          <MiniMetric label="Dep weight" value={formatWeight(dependentSummary.weight)} />
-          <MiniMetric label="Up weight" value={formatWeight(upstreamSummary.weight)} />
+          <MiniMetric label="Dep weight" value={dependentSummary.weight.toFixed(2)} />
+          <MiniMetric label="Up weight" value={upstreamSummary.weight.toFixed(2)} />
         </div>
 
         <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
