@@ -21,77 +21,12 @@ import {
   type ReserveSyncStatus,
   type SnapshotIntegrityIssue,
 } from "./live-reserves-store-shared";
+import {
+  hasConsistentSnapshotState,
+  hasScoringEligibleLiveReserveFreshness,
+} from "./live-reserves-store-snapshot-state";
 
-export function hasConsistentSnapshotState(
-  syncState: Pick<ReserveSyncStateRecord, "lastSuccessAt" | "lastSuccessAttemptId"> | null | undefined,
-  snapshot: {
-    fetchedAt: number | null | undefined;
-    attemptId?: string | null;
-  } | null | undefined,
-): boolean {
-  const fetchedAt = snapshot?.fetchedAt;
-  const snapshotAttemptId = snapshot?.attemptId ?? null;
-  const successAttemptId = syncState?.lastSuccessAttemptId ?? null;
-  const hasAttemptMatch = typeof successAttemptId === "string"
-    || typeof snapshotAttemptId === "string";
-  if (hasAttemptMatch) {
-    return typeof successAttemptId === "string"
-      && successAttemptId.length > 0
-      && typeof snapshotAttemptId === "string"
-      && snapshotAttemptId.length > 0
-      && successAttemptId === snapshotAttemptId
-      && typeof syncState?.lastSuccessAt === "number"
-      && syncState.lastSuccessAt > 0
-      && typeof fetchedAt === "number"
-      && fetchedAt > 0
-      && syncState.lastSuccessAt === fetchedAt;
-  }
-
-  return typeof syncState?.lastSuccessAt === "number"
-    && syncState.lastSuccessAt > 0
-    && typeof fetchedAt === "number"
-    && fetchedAt > 0
-    && syncState.lastSuccessAt === fetchedAt;
-}
-
-export function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
-  if (metadata.freshnessMode === "unverified") {
-    if (metadata.scoringAllowsUnverifiedFreshness === true) {
-      return true;
-    }
-    return false;
-  }
-
-  if (typeof metadata.sourceTimestamp === "number" && Number.isFinite(metadata.sourceTimestamp) && metadata.sourceTimestamp > 0) {
-    return true;
-  }
-
-  return metadata.freshnessMode === "verified" || metadata.freshnessMode === "not-applicable";
-}
-
-export function hasUncertainWriteState(syncState: ReserveSyncStateRecord | null | undefined): boolean {
-  return syncState?.metadata.uncertainWrite === true;
-}
-
-export function shouldUseLegacySnapshotFallback(
-  syncState: ReserveSyncStateRecord | null,
-  snapshot: {
-    fetchedAt: number | null | undefined;
-    attemptId?: string | null;
-  } | null | undefined,
-): boolean {
-  if (syncState?.lastSuccessAttemptId || snapshot?.attemptId) {
-    return false;
-  }
-
-  return hasConsistentSnapshotState(syncState, snapshot)
-    && typeof syncState?.lastAttemptedAt === "number"
-    && syncState.lastAttemptedAt === syncState.lastSuccessAt
-    && syncState.lastStatus !== "error"
-    && syncState.lastStatus !== "skipped";
-}
-
-export function buildReserveProvenanceView(
+function buildReserveProvenanceView(
   record: Pick<ReserveCompositionRecord, "adapterEvidenceClass" | "adapterSourceModel" | "metadata">,
   syncState: ReserveSyncStateRecord | null,
   stale: boolean,
@@ -108,7 +43,7 @@ export function buildReserveProvenanceView(
   };
 }
 
-export function buildReserveDisplayBadgeView(
+function buildReserveDisplayBadgeView(
   record: Pick<ReserveCompositionRecord, "source" | "adapterEvidenceClass">,
 ): ReserveDisplayBadgeView {
   const kind = hasReserveDisplayBadgeForAdapter(record.source)
