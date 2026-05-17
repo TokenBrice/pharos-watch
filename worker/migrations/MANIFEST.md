@@ -74,6 +74,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0128     | `0128_depeg_backfill_runs.sql`                           | Add durable depeg backfill run manifests with status, counts, and replay fingerprints                                                           |
 | 0129     | `0129_tape_events.sql`                                   | Add materialized `tape_events` stream projected from existing producer tables, idempotent on `(source_table, source_row_id, transition)`         |
 | 0130     | `0130_public_snapshots.sql`                              | Add `public_snapshots` table holding daily gzipped JSON payloads for `/api/snapshots/<date>.json` and `/api/snapshot/<date>/stablecoin/<id>`     |
+| 0131     | `0131_usg_tangent_inception_supply_repair.sql`           | Repair Tangent USG early `supply_history` rows so the on-chain-circulating exclusion applies from first tracked chart day                        |
 
 ## Retired Individual Migrations
 
