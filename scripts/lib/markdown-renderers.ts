@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- repo-local build script reads checked-in docs under the repository root only. */
-
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

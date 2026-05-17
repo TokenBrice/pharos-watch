@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests read temporary files and checked-in fixtures only. */
-
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

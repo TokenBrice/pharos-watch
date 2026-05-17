@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests use isolated temp fixtures. */
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";

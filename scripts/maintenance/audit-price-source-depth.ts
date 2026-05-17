@@ -884,7 +884,7 @@ export function parseArgs(argv: string[]): CliOptions {
 }
 
 function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown; // eslint-disable-line security/detect-non-literal-fs-filename
+  return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
 async function fetchJson(url: string, fetchImpl: typeof fetch): Promise<unknown> {
@@ -934,7 +934,7 @@ async function loadInputs(options: CliOptions, cwd: string, fetchImpl: typeof fe
   const inputActivePath = inputDir ? resolve(inputDir, "active-stablecoins.json") : null;
   const activeStablecoinsPath = options.activeStablecoinsPath
     ? resolve(cwd, options.activeStablecoinsPath)
-    : inputActivePath && existsSync(inputActivePath) // eslint-disable-line security/detect-non-literal-fs-filename
+    : inputActivePath && existsSync(inputActivePath)
       ? inputActivePath
       : null;
 
@@ -970,8 +970,8 @@ export async function runCli(
 
   if (reportPath) {
     const target = resolve(cwd, reportPath);
-    mkdirSync(dirname(target), { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
-    writeFileSync(target, output, "utf8"); // eslint-disable-line security/detect-non-literal-fs-filename
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, output, "utf8");
     process.stdout.write(`Wrote price source depth audit to ${target}\n`);
   } else {
     process.stdout.write(output);

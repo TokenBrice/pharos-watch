@@ -41,7 +41,6 @@ function parseArgs(argv: readonly string[]): CliOptions {
 }
 
 function readRepoFile(path: string): string {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- CLI reads fixed repo paths and explicit report paths.
   return readFileSync(resolve(ROOT, path), "utf8");
 }
 
@@ -56,9 +55,7 @@ function buildReport(result: RedemptionRegistryValidationResult): object {
 
 function writeJson(path: string, value: unknown): void {
   const resolved = resolve(ROOT, path);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- user-supplied CLI report path.
   mkdirSync(dirname(resolved), { recursive: true });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- user-supplied CLI report path.
   writeFileSync(resolved, `${JSON.stringify(value, null, 2)}\n`);
 }
 

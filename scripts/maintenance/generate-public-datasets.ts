@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- build script operates on explicit repo-local generated artifact paths. */
-
 /**
  * Generate public dataset mirrors + Sheets-friendly CSVs (ideas 11.7 + 11.8 fused).
  *

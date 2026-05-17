@@ -30,7 +30,6 @@ export interface MechanismArchetypeCoverageResult {
 export function loadCurationBaselineCaps(rootDir: string = process.cwd()): CurationBaselineCaps {
   const absolutePath = resolve(rootDir, BASELINE_FILE);
   // Repo-owned baseline; BASELINE_FILE is a hardcoded module constant.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const raw = readFileSync(absolutePath, "utf8");
   const parsed = JSON.parse(raw) as CurationBaselineCaps;
   if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.topByRank)) {

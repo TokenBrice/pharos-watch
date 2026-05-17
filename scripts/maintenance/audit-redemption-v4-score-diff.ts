@@ -149,7 +149,6 @@ function printUsage(): void {
 function loadV4ProfileOverride(base: ScoreProfile, path: string | undefined): ScoreProfile {
   if (!path) return base;
   const resolved = resolve(ROOT, path);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local audit input.
   const parsed = JSON.parse(readFileSync(resolved, "utf8")) as Partial<ScoreProfile>;
   return {
     label: parsed.label ?? `${base.label}+override`,
@@ -532,9 +531,7 @@ function formatScore(value: number | null): string {
 
 function writeOutput(path: string, content: string): void {
   const resolved = resolve(ROOT, path);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local audit output.
   mkdirSync(dirname(resolved), { recursive: true });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit local audit output.
   writeFileSync(resolved, content);
 }
 

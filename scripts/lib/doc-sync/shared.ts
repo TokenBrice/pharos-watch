@@ -1,4 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- repo-local validator reads checked-in files under the repository root only. */
 /* eslint-disable security/detect-unsafe-regex -- the regexes run only on bounded checked-in docs, not untrusted input. */
 
 import { readFileSync } from "node:fs";

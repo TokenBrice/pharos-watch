@@ -79,7 +79,6 @@ function formatJson(value: unknown): string {
 function readJson(relativePath: string, rootDir: string): unknown {
   const absolutePath = resolve(rootDir, relativePath);
   // Repo-owned catalog helpers only read checked-in stablecoin metadata paths.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return JSON.parse(readFileSync(absolutePath, "utf8")) as unknown;
 }
 
@@ -117,13 +116,11 @@ export function loadLegacyStablecoinEntries(rootDir = process.cwd()): Stablecoin
 export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): StablecoinSourceEntry[] {
   const absoluteDir = resolve(rootDir, PER_COIN_SOURCE_DIR);
   // Repo-owned catalog helpers only probe the checked-in per-coin source directory.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   if (!existsSync(absoluteDir)) {
     return [];
   }
 
   // Repo-owned catalog helpers only enumerate the checked-in per-coin source directory.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   return readdirSync(absoluteDir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -252,7 +249,6 @@ export function syncGeneratedPerCoinAsset({
   const expected = formatJson(buildGeneratedPerCoinAsset(perCoinEntries));
   const absoluteGeneratedPath = resolve(rootDir, GENERATED_PER_COIN_ASSET_FILE);
   // Repo-owned catalog helpers only check the checked-in generated aggregate path.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const current = existsSync(absoluteGeneratedPath)
     ? formatJson(loadGeneratedPerCoinCoins(rootDir))
     : "";
@@ -274,10 +270,8 @@ export function syncGeneratedPerCoinAsset({
   const changed = current !== expected;
   if (changed) {
     // Repo-owned catalog helpers only write the checked-in generated aggregate path.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     mkdirSync(dirname(absoluteGeneratedPath), { recursive: true });
     // Repo-owned catalog helpers only write the checked-in generated aggregate path.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(absoluteGeneratedPath, expected, "utf8");
   }
 

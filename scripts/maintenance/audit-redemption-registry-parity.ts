@@ -180,15 +180,12 @@ function compareSnapshots(beforePath: string, afterPath: string): string[] {
 }
 
 function readJson(path: string): unknown {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit CLI input.
   return JSON.parse(readFileSync(resolve(ROOT, path), "utf8"));
 }
 
 function writeJson(path: string, value: unknown): void {
   const resolved = resolve(ROOT, path);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit CLI output.
   mkdirSync(dirname(resolved), { recursive: true });
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- explicit CLI output.
   writeFileSync(resolved, `${JSON.stringify(value, null, 2)}\n`);
 }
 

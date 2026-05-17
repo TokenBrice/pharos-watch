@@ -411,8 +411,8 @@ export function runCli(argv = process.argv.slice(2), cwd = process.cwd()): numbe
 
   if (options.reportPath) {
     const target = resolve(cwd, options.reportPath);
-    mkdirSync(dirname(target), { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
-    writeFileSync(target, output, "utf8"); // eslint-disable-line security/detect-non-literal-fs-filename
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, output, "utf8");
     console.log(`Wrote redemption coverage audit to ${target}`);
   } else {
     process.stdout.write(output);

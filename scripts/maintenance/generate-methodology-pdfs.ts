@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- build script writes generated PDFs to a fixed public/methodology/pdf/ subtree only. */
-
 /**
  * Generate one PDF per methodology version under
  * `public/methodology/pdf/<key>-v<version>.pdf`, plus a current

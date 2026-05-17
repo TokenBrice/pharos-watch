@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- repo-local build script writes generated markdown under the static export directory only. */
-
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";

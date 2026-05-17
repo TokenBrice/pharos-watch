@@ -113,7 +113,7 @@ function stringValue(value: unknown): string | null {
 }
 
 function readJsonFile(path: string): unknown {
-  return JSON.parse(readFileSync(path, "utf8")) as unknown; // eslint-disable-line security/detect-non-literal-fs-filename
+  return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
 
 function toPositiveInt(value: string, option: string): number {
@@ -168,7 +168,7 @@ function parseArgs(argv: string[]): CliOptions {
 function defaultInputPath(cwd: string): string | null {
   const today = new Date().toISOString().slice(0, 10);
   const candidate = resolve(cwd, "agents", `source-depth-baseline-${today}.json`);
-  return existsSync(candidate) ? candidate : null; // eslint-disable-line security/detect-non-literal-fs-filename
+  return existsSync(candidate) ? candidate : null;
 }
 
 function isBelowTarget(row: PriceSourceDepthRow): boolean {
@@ -452,8 +452,8 @@ export async function runCli(
 
   if (options.reportPath) {
     const target = resolve(cwd, options.reportPath);
-    mkdirSync(dirname(target), { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
-    writeFileSync(target, output, "utf8"); // eslint-disable-line security/detect-non-literal-fs-filename
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, output, "utf8");
     process.stdout.write(`Wrote DIA provider POC audit to ${target}\n`);
   } else {
     process.stdout.write(output);

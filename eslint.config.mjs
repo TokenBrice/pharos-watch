@@ -34,7 +34,7 @@ const eslintConfig = defineConfig([
     // Repo-local maintenance scripts intentionally walk dynamic paths inside the
     // checked-out workspace. The security rule is useful for runtime code, but
     // it produces false positives for these controlled CLI scripts.
-    files: ["scripts/**/*.mjs"],
+    files: ["scripts/**/*.{mjs,ts}"],
     rules: {
       "security/detect-non-literal-fs-filename": "off",
     },

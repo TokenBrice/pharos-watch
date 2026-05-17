@@ -41,7 +41,6 @@ function readCanonicalOrder(): string[] {
   try {
     const result = CanonicalOrderAssetSchema.safeParse(
       // Repo-owned validation only reads the checked-in canonical-order asset.
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
       JSON.parse(readFileSync(path, "utf8")) as unknown,
     );
     if (result.success) {
