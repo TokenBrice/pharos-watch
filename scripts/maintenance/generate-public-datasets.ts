@@ -34,6 +34,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "../../shared/lib/api-endpoints/datasets";
+import type { DepegEvent } from "../../shared/types/market";
 import { getMechanismArchetypeLabel } from "../../shared/lib/classification/mechanism-archetypes";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "../../shared/lib/liquidity-score-version";
@@ -83,24 +84,6 @@ interface ReportCardScore {
   safetyGrade?: string;
   overall?: number;
   grade?: string;
-}
-
-interface DepegEvent {
-  id: number | string;
-  stablecoinId: string;
-  symbol: string;
-  pegType: string;
-  direction: "above" | "below";
-  peakDeviationBps: number;
-  startedAt: number;
-  endedAt: number | null;
-  startPrice: number;
-  peakPrice: number | null;
-  recoveryPrice: number | null;
-  pegReference: number;
-  source: "live" | "backfill";
-  confirmationSources: string | null;
-  pendingReason: string | null;
 }
 
 interface StablecoinsResponse {
@@ -374,7 +357,7 @@ function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoin
 }
 
 interface DepegHistoryRow {
-  id: number | string;
+  id: number;
   stablecoinId: string;
   symbol: string;
   direction: "above" | "below";
