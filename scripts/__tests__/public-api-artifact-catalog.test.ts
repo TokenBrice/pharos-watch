@@ -141,12 +141,14 @@ describe("public API artifact catalog", () => {
     expect(endpoint?.parameters?.map((parameter) => parameter.name)).toEqual([
       "stablecoin",
       "chain",
+      "chainId",
       "eventType",
       "q",
       "sortBy",
       "sortDirection",
       "limit",
       "offset",
+      "includeTotal",
     ]);
 
     const stablecoin = endpoint?.parameters?.find((parameter) => parameter.name === "stablecoin");
@@ -161,8 +163,11 @@ describe("public API artifact catalog", () => {
     const sortDirection = endpoint?.parameters?.find((parameter) => parameter.name === "sortDirection");
     expect(sortDirection?.schema.enum).toEqual(["asc", "desc"]);
     const limit = endpoint?.parameters?.find((parameter) => parameter.name === "limit");
+    expect(limit?.schema.minimum).toBe(0);
     expect(limit?.schema.maximum).toBe(1000);
     expect(postmanRequests(endpoint?.postman)[0]?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
+    expect(postmanRequests(endpoint?.postman)[0]?.query?.chainId).toBe("ethereum");
+    expect(postmanRequests(endpoint?.postman)[0]?.query?.includeTotal).toBe("true");
   });
 
   it("documents the yield-history query contract used by OpenAPI and Postman", () => {
