@@ -16,6 +16,7 @@ import type {
   StablecoinChartPoint,
   StressSignalsAllResponse,
   StressSignalDetailResponse,
+  SupplyHistoryPoint,
   UsdsStatusResponse,
   YieldHistoryResponse,
   YieldRankingsResponse,
@@ -27,6 +28,7 @@ import {
   PegSummaryResponseSchema,
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
+  SupplyHistoryResponseSchema,
 } from "@shared/types/market";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsResponseSchema, SafetyScoreHistoryResponseSchema } from "@shared/types/report-cards";
@@ -211,5 +213,12 @@ export const FRONTEND_API_QUERY_REGISTRY = {
       producerIntervalMs: CRON_30MIN,
       schema: StressSignalDetailResponseSchema,
       metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals,
+    }),
+  supplyHistory: (stablecoinId: string, days = 1825) =>
+    pollingDescriptor<SupplyHistoryPoint[]>({
+      queryKey: ["supply-history", stablecoinId, days],
+      path: API_PATHS.supplyHistory(stablecoinId, days),
+      producerIntervalMs: CRON_1H,
+      schema: SupplyHistoryResponseSchema,
     }),
 } as const;

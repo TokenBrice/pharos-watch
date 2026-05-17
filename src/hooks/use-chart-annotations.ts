@@ -105,7 +105,7 @@ export function useChartAnnotations(
     stablecoinId.length > 0;
 
   const path = enabled
-    ? `${API_PATHS.events()}?coin=${encodeURIComponent(stablecoinId)}&since=${fromMs}&until=${toMs}&limit=${TAPE_EVENTS_LIMIT}`
+    ? API_PATHS.events({ coin: stablecoinId, since: fromMs, until: toMs, limit: TAPE_EVENTS_LIMIT })
     : API_PATHS.events();
 
   const query = useApiQueryWithMeta<TapeEventsResponseBody>(
