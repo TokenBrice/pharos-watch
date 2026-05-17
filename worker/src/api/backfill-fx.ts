@@ -1,6 +1,6 @@
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
-import { buildCommodityPeerMedianSeries } from "@shared/lib/commodity-median";
+import { buildCommodityPeerMedianSeries, type CommodityPeg } from "@shared/lib/commodity-median";
 import {
   enumerateDates,
   interpolateRateAtTimestamp,
@@ -63,7 +63,7 @@ export const OTHER_COIN_FX: Record<string, string> = {
 export const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
 export type FxTimeSeries = TimestampedRatePoint;
-export type CommodityPeg = "GOLD" | "SILVER";
+export type { CommodityPeg } from "@shared/lib/commodity-median";
 
 interface SecondaryFxResponse {
   date?: string;
