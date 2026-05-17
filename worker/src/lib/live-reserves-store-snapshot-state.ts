@@ -35,17 +35,22 @@ export function hasConsistentSnapshotState(
 
 export function hasScoringEligibleLiveReserveFreshness(metadata: LiveReserveSnapshotMetadata): boolean {
   if (metadata.freshnessMode === "unverified") {
-    if (metadata.scoringAllowsUnverifiedFreshness === true) {
-      return true;
-    }
     return false;
   }
 
-  if (typeof metadata.sourceTimestamp === "number" && Number.isFinite(metadata.sourceTimestamp) && metadata.sourceTimestamp > 0) {
+  if (metadata.freshnessMode === "not-applicable") {
     return true;
   }
 
-  return metadata.freshnessMode === "verified" || metadata.freshnessMode === "not-applicable";
+  const hasVerifiedTimestamp =
+    typeof metadata.sourceTimestamp === "number" &&
+    Number.isFinite(metadata.sourceTimestamp) &&
+    metadata.sourceTimestamp > 0;
+  if (metadata.freshnessMode === "verified") {
+    return hasVerifiedTimestamp;
+  }
+
+  return hasVerifiedTimestamp;
 }
 
 export function hasUncertainWriteState(syncState: ReserveSyncStateRecord | null | undefined): boolean {

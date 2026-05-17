@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   beginReserveSyncAttempt,
@@ -9,6 +10,7 @@ import {
   recordReserveSyncDeferred,
   resolveReserveResult,
 } from "../live-reserves-store";
+import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
@@ -134,7 +136,7 @@ describe("live-reserves-store", () => {
     });
   });
 
-  it("marks unverified snapshots with explicit freshness exceptions as scoring eligible", async () => {
+  it("keeps unverified snapshots non-score-grade even with legacy freshness exception flags", async () => {
     const db = mockD1([
       {
         match: "reserve_composition",
@@ -176,7 +178,7 @@ describe("live-reserves-store", () => {
     expect(result?.provenance).toMatchObject({
       evidenceClass: "independent",
       freshnessMode: "unverified",
-      scoringEligible: true,
+      scoringEligible: false,
     });
   });
 
@@ -1456,6 +1458,127 @@ describe("live-reserves-store", () => {
     expect(scoringMap.has("iusd-infinifi")).toBe(false);
     expect(scoringMap.get("gho-aave")).toEqual([{ name: "Tracked GSM", pct: 100, risk: "low" }]);
     expect(scoringMap.get("usds-sky")).toEqual([{ name: "PSM USDC", pct: 100, risk: "low" }]);
+  });
+
+  it("keeps static-validated, weak-probe, and unverified active configs out of score-grade reserve maps", async () => {
+    const now = 10_000;
+    const configuredCoins = getConfiguredLiveReserveCoins();
+    const coinsWithDefinitions = configuredCoins.map((coin) => {
+      const definition = getLiveReserveAdapterDefinition(coin.liveReservesConfig?.adapter ?? "");
+      expect(definition, `${coin.id} has a registered live reserve adapter`).not.toBeNull();
+      return { coin, definition: definition! };
+    });
+    const nonScoringEvidenceCoins = coinsWithDefinitions.filter(
+      ({ definition }) => definition.evidenceClass === "static-validated"
+        || definition.evidenceClass === "weak-live-probe",
+    );
+    const independentCoins = coinsWithDefinitions.filter(
+      ({ definition }) => definition.evidenceClass === "independent",
+    );
+    const independentVerified = independentCoins[0];
+    const independentLatestState = independentCoins.find(
+      ({ coin }) => coin.id !== independentVerified?.coin.id,
+    );
+    const independentUnverified = independentCoins.find(
+      ({ coin }) =>
+        coin.id !== independentVerified?.coin.id &&
+        coin.id !== independentLatestState?.coin.id,
+    );
+
+    expect(
+      nonScoringEvidenceCoins.some(({ definition }) => definition.evidenceClass === "static-validated"),
+      "expected at least one active static-validated config",
+    ).toBe(true);
+    expect(
+      nonScoringEvidenceCoins.some(({ definition }) => definition.evidenceClass === "weak-live-probe"),
+      "expected at least one active weak-live-probe config",
+    ).toBe(true);
+    expect(independentVerified, "expected an active independent config for the verified control").toBeDefined();
+    expect(independentLatestState, "expected a second active independent config for the latest-state control").toBeDefined();
+    expect(independentUnverified, "expected a third active independent config for the unverified control").toBeDefined();
+
+    const scoringRows = [
+      {
+        stablecoin_id: independentVerified!.coin.id,
+        slices: JSON.stringify([{ name: "Verified independent reserves", pct: 100, risk: "low" }]),
+        fetched_at: now,
+        source: independentVerified!.coin.liveReservesConfig!.adapter,
+        metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now }),
+        adapter_source_model: independentVerified!.definition.sourceModel,
+        adapter_evidence_class: independentVerified!.definition.evidenceClass,
+      },
+      {
+        stablecoin_id: independentLatestState!.coin.id,
+        slices: JSON.stringify([{ name: "Latest-state reserves", pct: 100, risk: "medium" }]),
+        fetched_at: now,
+        source: independentLatestState!.coin.liveReservesConfig!.adapter,
+        metadata: JSON.stringify({ freshnessMode: "not-applicable" }),
+        adapter_source_model: independentLatestState!.definition.sourceModel,
+        adapter_evidence_class: independentLatestState!.definition.evidenceClass,
+      },
+    ];
+    const nonScoringRows = [
+      ...nonScoringEvidenceCoins.map(({ coin, definition }) => ({
+        stablecoin_id: coin.id,
+        slices: JSON.stringify([{ name: `${definition.evidenceClass} reserves`, pct: 100, risk: "low" }]),
+        fetched_at: now,
+        source: coin.liveReservesConfig!.adapter,
+        metadata: JSON.stringify({ freshnessMode: "verified", sourceTimestamp: now }),
+        adapter_source_model: definition.sourceModel,
+        adapter_evidence_class: definition.evidenceClass,
+      })),
+      {
+        stablecoin_id: independentUnverified!.coin.id,
+        slices: JSON.stringify([{ name: "Legacy exception reserves", pct: 100, risk: "medium" }]),
+        fetched_at: now,
+        source: independentUnverified!.coin.liveReservesConfig!.adapter,
+        metadata: JSON.stringify({
+          freshnessMode: "unverified",
+          sourceTimestamp: now,
+          scoringAllowsUnverifiedFreshness: true,
+        }),
+        adapter_source_model: independentUnverified!.definition.sourceModel,
+        adapter_evidence_class: independentUnverified!.definition.evidenceClass,
+      },
+    ];
+    const allRows = [...scoringRows, ...nonScoringRows];
+    const db = mockD1([
+      {
+        match: "reserve_sync_state",
+        rows: allRows.map((row) => ({
+          stablecoin_id: row.stablecoin_id,
+          adapter_key: row.source,
+          breaker_key: `live-reserves:${row.source}`,
+          last_attempted_at: now,
+          last_success_at: now,
+          last_status: "ok",
+          warning_count: 0,
+          warnings: null,
+          last_error: null,
+          metadata: "{}",
+        })),
+      },
+      {
+        match: "reserve_composition",
+        rows: allRows,
+      },
+    ]);
+
+    const scoringMap = await loadFreshIndependentLiveReserveMap(db, now + 100);
+
+    expect(scoringMap.get(independentVerified!.coin.id)).toEqual([
+      { name: "Verified independent reserves", pct: 100, risk: "low" },
+    ]);
+    expect(scoringMap.get(independentLatestState!.coin.id)).toEqual([
+      { name: "Latest-state reserves", pct: 100, risk: "medium" },
+    ]);
+    expect(scoringMap.has(independentUnverified!.coin.id)).toBe(false);
+    for (const { coin, definition } of nonScoringEvidenceCoins) {
+      expect(
+        scoringMap.has(coin.id),
+        `${coin.id} (${coin.liveReservesConfig!.adapter}/${definition.evidenceClass}) must not be score-grade`,
+      ).toBe(false);
+    }
   });
 
   it("rolls up fresh evidence quality and uncertain write states separately", async () => {

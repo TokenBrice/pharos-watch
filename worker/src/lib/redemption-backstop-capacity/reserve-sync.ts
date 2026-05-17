@@ -195,6 +195,10 @@ export async function resolveReserveSyncCapacity(
       capacityConfidence: fallbackCapacityConfidence,
       capacityBasis: resolveCapacityBasis(null, model, fallbackCapacityConfidence),
       capacitySemantics,
+      ...(liveMetadata.routeStatus ? { routeStatus: liveMetadata.routeStatus } : {}),
+      ...(liveMetadata.routeStatusSource ? { routeStatusSource: liveMetadata.routeStatusSource } : {}),
+      ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
+      ...(liveMetadata.routeStatusReviewedAt ? { routeStatusReviewedAt: liveMetadata.routeStatusReviewedAt } : {}),
       notes: [
         liveMetadata.capacityReason
           ? `${liveMetadata.capacityReason}; using configured fallback USD capacity`

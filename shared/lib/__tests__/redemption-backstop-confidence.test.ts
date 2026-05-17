@@ -257,6 +257,24 @@ describe("deriveModelConfidence", () => {
     ).toBe("medium");
   });
 
+  it("keeps unknown route status high-confidence when capacity evidence is live-direct", () => {
+    const result = deriveModelConfidenceWithDetails({
+      resolutionState: "resolved",
+      capacityConfidence: "live-direct",
+      feeConfidence: "fixed",
+      routeStatus: "unknown",
+      routeStatusSource: "static-config",
+      holderEligibility: "any-holder",
+      sourceMode: "dynamic",
+      freshnessKind: "same-run-onchain",
+    });
+
+    expect(result.modelConfidence).toBe("high");
+    expect(result.confidenceDetails.reasons).not.toContain(
+      "Route status is unknown without direct live telemetry or a documented capacity bound",
+    );
+  });
+
   it("returns low for unknown route status with live-proxy capacity", () => {
     const result = deriveModelConfidenceWithDetails({
       resolutionState: "resolved",

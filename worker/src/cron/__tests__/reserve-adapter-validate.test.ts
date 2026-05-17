@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters-schemas";
 import { validateAdapterOutput } from "../reserve-adapters/validate";
 
 describe("validateAdapterOutput", () => {
@@ -135,6 +136,23 @@ describe("validateAdapterOutput", () => {
 
     expect(result.valid).toBe(true);
     expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(true);
+  });
+
+  it("accepts source timestamps inside the late-monthly disclosure source-age policy", () => {
+    const now = 1_000 + LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC;
+    const result = validateAdapterOutput(
+      {
+        slices: [{ name: "A", pct: 100, risk: "low" }],
+        metadata: { sourceTimestamp: 1_000, freshnessMode: "verified" },
+      },
+      {
+        maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+        now,
+      },
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
   });
 
   it("rejects source timestamps beyond the future skew window", () => {

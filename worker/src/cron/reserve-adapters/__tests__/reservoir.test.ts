@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
@@ -18,6 +19,12 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 };
 
 describe("adaptReservoirReserves", () => {
+  it("declares the timestamp-less balance-sheet API as unverified-only freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toEqual([
+      "unverified",
+    ]);
+  });
+
   it("groups live balance-sheet assets into reserve slices", () => {
     const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
@@ -156,6 +163,9 @@ describe("adaptReservoirReserves", () => {
       shareholderEquityUsd: 5,
       collateralizationRatio: 100 / 95,
       redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
+    });
+    expect(result.metadata?.redemption).toMatchObject({
+      freshnessKind: "unverified",
     });
   });
 

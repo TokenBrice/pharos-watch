@@ -162,7 +162,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
-    validation: { allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "buck-io-transparency": {
     sourceModel: "dynamic-mix",
@@ -226,7 +226,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
-      allowedFreshnessModes: UNVERIFIED_ONLY_FRESHNESS,
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
   },
   crvusd: {
@@ -448,7 +448,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   "quantoz-transparency": {
@@ -497,7 +497,7 @@ export const LIVE_RESERVE_ADAPTER_DEFINITIONS = {
   reservoir: {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
-    sharedSourceMode: "none",
+    sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {

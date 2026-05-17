@@ -19292,7 +19292,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
+    "collateral": "Berachain-native Collateral Vault branches: WBERA, pumpBTC, solvBTC, solvBTC.bbn, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
     "pegMechanism": "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
     "mechanismArchetype": "cdp",
     "geckoId": "nectar",
@@ -19370,10 +19370,14 @@
       }
     ],
     "liveReservesConfig": {
-      "version": 1,
+      "version": 2,
       "semantics": "collateral-mix",
       "breakerScope": "nect-beraborrow",
-      "adapter": "curated-validated",
+      "display": {
+        "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses",
+        "label": "Beraborrow contracts"
+      },
+      "adapter": "liquity-v2-branches",
       "inputs": {
         "primary": {
           "kind": "onchain-evm",
@@ -19382,7 +19386,141 @@
         }
       },
       "params": {
-        "rpcUrl": "https://rpc.berachain.com"
+        "rpcUrl": "https://rpc.berachain.com",
+        "branches": [
+          {
+            "name": "WBERA",
+            "holder": "0xf1356Cb726C2988C65c5313350C9115D9Af0f954",
+            "token": {
+              "chain": "berachain",
+              "address": "0x9158d1b0c9Cc4EC7640EAeF0522f710dADeE9a1B",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "pumpBTC",
+            "holder": "0xFec9F8cd6F7B7a6674CD846938Fe44b001f7a568",
+            "token": {
+              "chain": "berachain",
+              "address": "0xCE1e426E35eBc9f512944F59527304E3B771EA12",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "solvBTC",
+            "holder": "0xb6Ab580B36ed2DEF692dc608aFAc0A27C725CD0E",
+            "token": {
+              "chain": "berachain",
+              "address": "0x4c0c5ae255A1dcBeC206a1CD40a03c60C387dCdD",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "solvBTC.bbn",
+            "holder": "0xcEDEFfec2860409E3ccB0D798C71dD1239259d8A",
+            "token": {
+              "chain": "berachain",
+              "address": "0xE357B38F9871da3F8320E132e272D93721aA6582",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "uniBTC",
+            "holder": "0xE66E9873E5851b25a3b539879265F554c50f2f8c",
+            "token": {
+              "chain": "berachain",
+              "address": "0xdc8408870f77B0B99d70779f68Fb560b6FE39259",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "beraETH",
+            "holder": "0xA0f32354419c2e02cd5D535edd5Fd7F5e81Fbe96",
+            "token": {
+              "chain": "berachain",
+              "address": "0x65af6D1822f162b2b70395428CC24FF5587c0B02",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "Stakestone ETH",
+            "holder": "0x2016885fC46E879Aa3D170C7472Ce623090D4c1a",
+            "token": {
+              "chain": "berachain",
+              "address": "0x3D7F3b0aB008a04582A2A37bEe150dE7c8a37953",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "WETH",
+            "holder": "0x9A3549ef882584a687C1FF1843e3B3C07a2A0cB2",
+            "token": {
+              "chain": "berachain",
+              "address": "0x42ebe55B64Bb6fA169518ab1Bf1c7fCa874e3004",
+              "decimals": 18
+            },
+            "risk": "very-low"
+          },
+          {
+            "name": "ylstETH",
+            "holder": "0xc3Ad34f9fe5C4634C9e723682a0FEdB5103cd667",
+            "token": {
+              "chain": "berachain",
+              "address": "0x45b3B6b28c77DD23A91AcC3bd41dA436FA6A61AE",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "rsETH",
+            "holder": "0xC94CD2ADB51E5CbE2d9fa0d09481a24929d7B7fF",
+            "token": {
+              "chain": "berachain",
+              "address": "0xabBF8064047a6EA85169230bf42013dA4431659A",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "WBTC-HONEY Kodiak Island",
+            "holder": "0xEe49c5FF02b70c4099EA63B1792d963ABD9947f0",
+            "token": {
+              "chain": "berachain",
+              "address": "0x08FEDDCBF7fF3462A61Dd56016f5297B87c0789F",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "WETH-HONEY Kodiak Island",
+            "holder": "0x1d2A3141BE9a5D4c785A56A01C53Fd02fA4eAa04",
+            "token": {
+              "chain": "berachain",
+              "address": "0xd8a8231F78B25DE11119b77ae56D3DaA84605a64",
+              "decimals": 18
+            },
+            "risk": "high"
+          },
+          {
+            "name": "WETH-WBTC Kodiak Island",
+            "holder": "0x8Ed442f8A10d046b2Bd9A5866B2ecd7eE0e2aBEe",
+            "token": {
+              "chain": "berachain",
+              "address": "0x924d6485583bfe571A03FCB05107E1e6dC44e408",
+              "decimals": 18
+            },
+            "risk": "high"
+          }
+        ],
+        "debtSelector": "0x795d26c3",
+        "shutdownSelector": "0x9484fb8e"
       }
     }
   },

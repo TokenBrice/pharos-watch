@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptCollateralPositions } from "../collateral-positions-api";
 
 describe("adaptCollateralPositions", () => {
+  it("declares latest-state collateral APIs as not-applicable freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["collateral-positions-api"].validation.allowedFreshnessModes).toEqual([
+      "not-applicable",
+    ]);
+  });
+
   it("aggregates open collateral positions into reserve slices and folds small tails into Other", () => {
     const result = adaptCollateralPositions(
       {
@@ -50,7 +57,7 @@ describe("adaptCollateralPositions", () => {
       collateralAssetCount: 3,
       activePositionCount: 3,
       missingPriceCount: 0,
-      freshnessMode: "unverified",
+      freshnessMode: "not-applicable",
       details: {
         freshnessSource: "position-and-price-apis",
       },

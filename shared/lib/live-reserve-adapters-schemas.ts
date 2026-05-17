@@ -502,7 +502,7 @@ const jupusdParamsSchema = z
 
 const mentoParamsSchema = z
   .object({
-    cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm"]).optional(),
+    cdpStablecoin: z.enum(["GBPm", "JPYm", "CHFm", "XOFm"]).optional(),
   })
   .strict();
 
@@ -653,6 +653,9 @@ export const DISCLOSURE_SOURCE_MAX_AGE_SEC = 7 * DAY_SECONDS;
 // Some issuer attestations publish on a monthly cadence (e.g. Native Markets USDH);
 // give those feeds a 33-day window (~month + 3d grace) before staleness degrades them.
 export const MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 33 * DAY_SECONDS;
+// Late monthly disclosure feeds get a wider reviewed window for issuers whose
+// attestations routinely arrive after the next calendar month has started.
+export const LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC = 4_000_000;
 
 export type LiveReserveSingleAssetProbe = z.infer<typeof singleAssetProbeSchema>;
 export type LiveReserveRedemptionRateProbe = z.infer<typeof redemptionRateProbeSchema>;

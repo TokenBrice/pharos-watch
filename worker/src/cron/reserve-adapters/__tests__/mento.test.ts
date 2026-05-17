@@ -68,6 +68,14 @@ const SAMPLE_PAYLOAD = {
         status: "active",
       },
       {
+        stablecoin: "XOFm",
+        collateral_token: "USDm",
+        collateral_usd: 25_000,
+        debt_usd: 12_500,
+        ratio: 2,
+        status: "active",
+      },
+      {
         stablecoin: "GBPm",
         collateral_token: "USDm",
         collateral_usd: 1_000,
@@ -256,6 +264,28 @@ describe("mento adapter", () => {
     });
   });
 
+  it("maps XOFm CDP troves through the same USDm collateral shape", () => {
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
+    expect(result.slices).toEqual([
+      {
+        name: "USDm (Mento Dollar) CDP collateral",
+        pct: 100,
+        risk: "low",
+        coinId: "cusd-celo",
+        depType: "collateral",
+      },
+    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      cdpStablecoin: "XOFm",
+      cdpActiveTroves: 1,
+      totalCollateralUsd: 25_000,
+      totalDebtUsd: 12_500,
+      collateralizationRatio: 2,
+      freshnessMode: "unverified",
+    });
+  });
+
   it("stamps reserve composition with verified dashboard freshness when available", async () => {
     const result = await fetchMentoReserves(
       { id: "cusd-celo" } as never,
@@ -356,7 +386,7 @@ describe("mento adapter", () => {
   });
 
   it("produces CDP reserve output that passes adapter validation", () => {
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "JPYm");
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
   });
 });

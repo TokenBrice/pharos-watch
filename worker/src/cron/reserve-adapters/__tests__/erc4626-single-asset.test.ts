@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 
 const getChainRpcMock = vi.fn();
@@ -22,6 +23,14 @@ function jsonResponse(body: unknown): Response {
 
 function uint256Result(value: bigint | number): string {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+}
+
+function cloneConfigWithoutExpectedAsset(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { slice?: { expectedAssetAddress?: string } };
+  };
+  delete cloned.params.slice?.expectedAssetAddress;
+  return cloned;
 }
 
 const testChainRpcs = new Map<string, ChainRpcConfig>([
@@ -177,6 +186,202 @@ describe("fetchErc4626SingleAssetReserves", () => {
         { chainRpcs: testChainRpcs },
       ),
     ).rejects.toThrow(/asset\(\) could not be read/);
+  });
+
+  it("uses documented-eventual redemption telemetry when asset() is absent with no expected asset", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({ result: "0x" });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithoutExpectedAsset(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalAssetsRaw: "100000000",
+      totalSupplyRaw: "100000000",
+      convertToAssetsRaw: "100000000",
+      collateralizationRatio: 1,
+      redemption: {
+        capacityKind: "documented-eventual",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("assetAddress");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+  });
+
+  it("suppresses redemption capacity when underlying decimals are invalid", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(25_000_000n) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(37) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      assetAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      redemption: {
+        capacityKind: "documented-eventual",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("idleUnderlyingBalanceRaw");
+    expect(result.metadata).not.toHaveProperty("underlyingDecimals");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+  });
+
+  it("emits zero redemption capacity when idle underlying balance is zero", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "0",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 0,
+        capacityRatioOfSupply: 0,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+      },
+    });
+  });
+
+  it("skips NAV ratio when totalSupply is zero but still emits readable idle capacity USD", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(0) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        throw new Error("convertToAssets should not be called when totalSupply is zero");
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(25_000_000n) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalAssetsRaw: "100000000",
+      totalSupplyRaw: "0",
+      idleUnderlyingBalanceRaw: "25000000",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 25,
+        capacityRatioOfSupply: 0.25,
+        capacityKind: "live-direct",
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("convertToAssetsRaw");
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
   it("emits degraded warning when convertToAssets diverges from totalAssets by >1%", async () => {

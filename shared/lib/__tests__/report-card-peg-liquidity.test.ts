@@ -1,6 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { scoreLiquidity } from "../report-cards";
 
+type DexLiquidityInput = NonNullable<Parameters<typeof scoreLiquidity>[0]>;
+type RedemptionLiquidityInput = NonNullable<Parameters<typeof scoreLiquidity>[1]>;
+
+function dexLiquidity(liquidityScore: number): DexLiquidityInput {
+  return { liquidityScore, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 };
+}
+
+function documentedOffchainEventualRoute(
+  overrides: Partial<RedemptionLiquidityInput> = {},
+): RedemptionLiquidityInput {
+  return {
+    score: 65,
+    routeFamily: "offchain-issuer",
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    resolutionState: "resolved",
+    modelConfidence: "medium",
+    capacitySemantics: "eventual-only",
+    capacityConfidence: "documented-bound",
+    routeStatus: "open",
+    ...overrides,
+  };
+}
+
 describe("scoreLiquidity", () => {
   it("treats configured but unrated redemption routes as NR with explicit detail", () => {
     const result = scoreLiquidity(undefined, {
@@ -325,20 +349,7 @@ describe("scoreLiquidity", () => {
   });
 
   it("lets documented offchain issuer eventual redemption add only a DEX-gated primary-market bonus", () => {
-    const result = scoreLiquidity(
-      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
-      {
-        score: 65,
-        routeFamily: "offchain-issuer",
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        resolutionState: "resolved",
-        modelConfidence: "medium",
-        capacitySemantics: "eventual-only",
-        capacityConfidence: "documented-bound",
-        routeStatus: "open",
-      },
-    );
+    const result = scoreLiquidity(dexLiquidity(63), documentedOffchainEventualRoute());
 
     expect(result.score).toBe(63);
     expect(result.detail).toContain("primary-market exit bonus only");
@@ -346,38 +357,67 @@ describe("scoreLiquidity", () => {
     expect(result.detail).not.toContain("not used for Safety Score uplift");
   });
 
+  it("caps documented offchain eventual contribution at the DEX floor when DEX is below redemption", () => {
+    const result = scoreLiquidity(
+      dexLiquidity(40),
+      documentedOffchainEventualRoute({ routeExitCorrelation: "independent-issuer-rail" }),
+    );
+
+    expect(result.score).toBe(43);
+    expect(result.detail).toContain("DEX liquidity 40/100");
+    expect(result.detail).toContain("Redemption backstop 65/100");
+    expect(result.detail).toContain("primary-market exit bonus only");
+  });
+
+  it("keeps documented offchain eventual contribution as a bonus when DEX is above redemption", () => {
+    const result = scoreLiquidity(
+      dexLiquidity(80),
+      documentedOffchainEventualRoute({ routeExitCorrelation: "independent-issuer-rail" }),
+    );
+
+    expect(result.score).toBe(85);
+    expect(result.detail).toContain("DEX liquidity 80/100");
+    expect(result.detail).toContain("Redemption backstop 65/100");
+    expect(result.detail).toContain("primary-market exit bonus only");
+  });
+
   it("does not let documented offchain issuer eventual redemption replace missing DEX liquidity", () => {
-    const result = scoreLiquidity(undefined, {
-      score: 65,
-      routeFamily: "offchain-issuer",
-      immediateCapacityUsd: null,
-      immediateCapacityRatio: null,
-      resolutionState: "resolved",
-      modelConfidence: "medium",
-      capacitySemantics: "eventual-only",
-      capacityConfidence: "documented-bound",
-      routeStatus: "open",
-    });
+    const result = scoreLiquidity(undefined, documentedOffchainEventualRoute());
 
     expect(result.grade).toBe("NR");
     expect(result.score).toBeNull();
     expect(result.detail).toContain("primary-market route requires DEX liquidity floor");
   });
 
+  it("does not treat eventual offchain routes with missing capacityConfidence as documented-bound", () => {
+    const result = scoreLiquidity(
+      dexLiquidity(40),
+      documentedOffchainEventualRoute({ capacityConfidence: undefined }),
+    );
+
+    expect(result.score).toBe(40);
+    expect(result.detail).toContain("not used for Safety Score uplift (eventual-only route)");
+    expect(result.detail).not.toContain("primary-market exit bonus only");
+  });
+
+  it("keeps documented offchain eventual routes eligible when route status is unknown", () => {
+    const result = scoreLiquidity(
+      dexLiquidity(40),
+      documentedOffchainEventualRoute({
+        routeExitCorrelation: "independent-issuer-rail",
+        routeStatus: "unknown",
+      }),
+    );
+
+    expect(result.score).toBe(43);
+    expect(result.detail).toContain("primary-market exit bonus only");
+    expect(result.detail).not.toContain("route currently unknown");
+  });
+
   it("does not let low-confidence offchain issuer eventual redemption add a primary-market bonus", () => {
     const result = scoreLiquidity(
-      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
-      {
-        score: 65,
-        routeFamily: "offchain-issuer",
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        resolutionState: "resolved",
-        modelConfidence: "low",
-        capacitySemantics: "eventual-only",
-        capacityConfidence: "documented-bound",
-        routeStatus: "open",
-      },
+      dexLiquidity(63),
+      documentedOffchainEventualRoute({ modelConfidence: "low" }),
     );
 
     expect(result.score).toBe(63);
@@ -386,26 +426,19 @@ describe("scoreLiquidity", () => {
 
   it("excludes documented offchain issuer eventual redemption during severe active depegs", () => {
     const result = scoreLiquidity(
-      { liquidityScore: 63, concentrationHhi: 0.04, poolCount: 100, chainCount: 10 },
-      {
-        score: 65,
-        routeFamily: "offchain-issuer",
-        immediateCapacityUsd: null,
-        immediateCapacityRatio: null,
-        resolutionState: "resolved",
-        modelConfidence: "medium",
-        capacitySemantics: "eventual-only",
-        capacityConfidence: "documented-bound",
+      dexLiquidity(63),
+      documentedOffchainEventualRoute({
         sourceMode: "estimated",
         accessModel: "issuer-api",
         settlementModel: "same-day",
-        routeStatus: "open",
-      },
+        routeExitCorrelation: "independent-issuer-rail",
+      }),
       { activeDepegBps: 2500 },
     );
 
     expect(result.score).toBe(63);
     expect(result.detail).toContain("active severe depeg requires live-open redemption evidence");
+    expect(result.detail).not.toContain("primary-market exit bonus only");
   });
 
   it("caps queue redemption uplift before blending with DEX liquidity", () => {

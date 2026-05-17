@@ -16,7 +16,7 @@ import {
 } from "./helpers";
 import { requireJsonInput } from "./input-guards";
 
-type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm";
+type MentoCdpStablecoin = "GBPm" | "JPYm" | "CHFm" | "XOFm";
 
 interface MentoReserveEntry {
   symbol: string;

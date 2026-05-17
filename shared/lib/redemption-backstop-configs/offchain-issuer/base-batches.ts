@@ -105,6 +105,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ["wbrl-ripio", "wclp-ripio", "wcop-ripio", "wpen-ripio", "wmxn-ripio"],
     {
       ...issuerBase,
+      reviewedAt: "2026-05-17",
       docs: [
         sourceRef("Ripio local stablecoins", "https://www.ripio.com/en/cryptos/local-stablecoins", [
           "route",
@@ -115,7 +116,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
         ]),
       ],
       notes: [
-        "Modeled as a heuristic issuer route because current tracked materials do not prove per-token reserve attestation for the new Ripio wFIAT entries.",
+        "Reviewed as a heuristic issuer route because current tracked materials describe 1:1 local-currency backing and selected attestations, but do not publish a hard immediate redemption-capacity source for all five Ripio wFIAT entries.",
       ],
     },
     { sourceFilePath: SOURCE_FILE_PATH },

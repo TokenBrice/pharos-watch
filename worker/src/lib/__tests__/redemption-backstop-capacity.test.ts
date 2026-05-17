@@ -313,6 +313,46 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes).toContain("Live redemption capacity has unverified freshness; route-specific approval required");
   });
 
+  it.each([
+    ["paused", "onchain", "Vault redemptions are paused"],
+    ["degraded", "protocol-api", "Redemptions are degraded"],
+  ] as const)(
+    "preserves live %s route status when using configured fallback USD capacity",
+    async (routeStatus, routeStatusSource, routeStatusReason) => {
+      const db = {} as D1Database;
+      const result = await resolveRedemptionCapacity(
+        db,
+        "lusd-liquity",
+        { kind: "reserve-sync-metadata", fallbackUsd: 250_000 },
+        1_000_000,
+        now,
+        {
+          reserveSnapshotMetadata: baseSnapshot({
+            freshnessMode: "not-applicable",
+            redemption: {
+              routeStatus,
+              routeStatusSource,
+              routeStatusReason,
+              routeStatusReviewedAt: "2026-05-17",
+            },
+          }),
+        },
+      );
+
+      expect(result.resolutionState).toBe("resolved");
+      expect(result.provider).toBe("reserve-sync-fallback");
+      expect(result.immediateCapacityUsd).toBe(250_000);
+      expect(result.scoringCapacityUsd).toBe(250_000);
+      expect(result.routeStatus).toBe(routeStatus);
+      expect(result.routeStatusSource).toBe(routeStatusSource);
+      expect(result.routeStatusReason).toBe(routeStatusReason);
+      expect(result.routeStatusReviewedAt).toBe("2026-05-17");
+      expect(result.notes).toContain(
+        "Live reserve metadata lacks redeemable-capacity amount; using configured fallback USD capacity",
+      );
+    },
+  );
+
   it("clamps live capacity to zero when supplyUsd is zero", async () => {
     const db = {} as D1Database;
     const result = await resolveRedemptionCapacity(

@@ -35,6 +35,17 @@ describe("computeEffectiveExitScore", () => {
     expect(computeEffectiveExitScore(51, 90)).toBe(95);
   });
 
+  it("preserves legacy diversification without options but requires independent correlation with v4 options", () => {
+    expect(computeEffectiveExitScore(40, 90)).toBe(94);
+    expect(
+      computeEffectiveExitScore(40, 90, {
+        modeledExitSizeUsd: 25_000_000,
+        currentExecutableCapacityUsd: 25_000_000,
+        modelConfidence: "high",
+      }),
+    ).toBe(90);
+  });
+
   it("caps effective score at 100", () => {
     // dex=95, redemption=98 → best=98, bonus=95*0.10=9.5 → 107.5 → capped at 100
     expect(computeEffectiveExitScore(95, 98)).toBe(100);

@@ -39,9 +39,24 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     fixture: "circle-usdc.html",
   },
   {
+    name: "Circle transparency absolute amount fixture (USDC)",
+    url: "https://www.circle.com/transparency",
+    fixture: "circle-usdc-absolute.html",
+  },
+  {
     name: "Circle transparency (EURC alias)",
     url: "https://www.circle.com/transparency",
     fixture: "circle-eurc.html",
+  },
+  {
+    name: "Circle transparency absolute amount fixture (EURC)",
+    url: "https://www.circle.com/transparency",
+    fixture: "circle-eurc-absolute.html",
+  },
+  {
+    name: "Buck transparency",
+    url: "https://buck.io/transparency",
+    fixture: "buck-io.html",
   },
   {
     name: "First Digital FDUSD transparency",
@@ -57,6 +72,11 @@ const FIXTURES: readonly HtmlFixtureSpec[] = [
     name: "Reserve (RE) metrics dashboard",
     url: "https://app.re.xyz/metrics",
     fixture: "re-metrics-initial-tvl.html",
+  },
+  {
+    name: "Reserve (RE) metrics dashboard series payload",
+    url: "https://app.re.xyz/metrics",
+    fixture: "re-metrics-series.html",
   },
   {
     name: "SG Forge EUR CoinVertible",
