@@ -6,6 +6,23 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-05-11 to 2026-05-17
+
+Screener launches, detail pages rebuild around verdict, and Yield v8.13 ships multi-currency benchmarks.
+
+- **Pharos Screener launch**: New /screener/ tool ships with composable filters, blacklistable + safety-tier predicates, URL state codec, and universal CSV/NDJSON/Markdown export for power users.
+- **Detail page rebuild**: Detail pages restructure around section banners, with a verdict-first hero, mechanism schematics, AI summaries with Term popovers, attestor + freezability identity pills, and a mobile compact summary bar.
+- **Trust & SEO surface area**: Ten methodology white-paper PDFs go live, RSS feeds ship for digest/depeg/methodology/cemetery, citation blocks + Pharos URN substrate land, plus AI-disclosure badges and a page-footer trust strip.
+- **Yield methodology v8.13**: Yield gets a v8.13 bump with a multi-currency benchmark registry (GBP/JPY/MXN/BRL/AUD/CAD), currency tab strip, per-coin /stablecoin/[id]/yield page, source-risk scoring, and yield-spike annotations.
+- **Tape → Timeline migration**: The Tape moves to /timeline/ with per-class digest grouping and new PSI/DEWS/mint-burn/yield/peak-worsen/methodology/cemetery/lifecycle projectors. Copy-permalink, server-side search, and wire-service redesign land.
+- **Telegram Mini App maturation**: Mini App Phase 2-4 ships with HMAC hardening, /forget command, batched coin-setting writes, global depeg-step setting, and watchlists. Group UX, retention, and webhook delivery hardened across the board.
+- **DEWS v6 + depeg lifecycle**: DEWS v6 lands with evidence + freshness scoring, depeg lifecycle provenance schema, /depeg/<event>/ pages gated at 250 bps threshold, incident triage surface, and historical provenance persistence.
+- **Reserve coverage expansion**: Reserve adapter count climbs to 55 with sGHO, Zephyr, centrifuge-vault, Resupply, hbUSDT, and score-grade adapters. Live-reserves coverage reaches 252; methodology v7.23 documents the scoring policy.
+- **Redemption backstop v4**: Redemption backstop v4 ships with audited route coverage, capacity-model split, run-row handling, source-reviewed backstop scoring, refreshed coverage modeling, and a redemption backstop card on detail pages.
+- **Performance + bundle work**: Client registry splits into a slim 281 KiB path (down from 1.37 MiB), fonts move to woff2 + subset Newsreader, detail charts lazy-mount on intersection, Web Vitals stream to GA, and chunk-size budgets gate merges.
+- **Worker + scripts modularization**: Scripts split into ci/maintenance/oneshots, telegram webhook + store split into focused submodules, shared/lib groups by domain (chains, classification, telegram, blacklist), and cron mock factories standardize tests.
+- **CI + supply chain hardening**: Zizmor + CodeQL findings remediated, persist-credentials + explicit secrets enforced on workflows, deploy validation runtime trimmed, validate leaf jobs start immediately, and pages release smoke gates clarified.
+
 ## 2026-05-04 to 2026-05-10
 
 Non-USD stablecoin batch ships, DEX pricing gains confidence telemetry, and Telegram adds depeg-step commands.
