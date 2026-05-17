@@ -138,9 +138,62 @@ describe("parseOndoPriceData", () => {
   });
 });
 
-describe("fetchChainlinkNavReserves getAssetPrice wrapper-oracle parse", () => {
+describe("fetchChainlinkNavReserves Ondo methods", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("reads getPriceData directly and marks freshness verified", async () => {
+    const helpers = await import("../helpers");
+    const { fetchChainlinkNavReserves } = await import("../chainlink-nav");
+    const updatedAt = 1_775_684_339;
+    const rawPriceData = "0x"
+      + "00000000000000000000000000000000000000000000000639e961576659e000"
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+
+    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
+      if (opts.data === "0x313ce567") return 18n; // decimals()
+      if (opts.data === "0x18160ddd") return 500_000_000_000_000_000_000n; // totalSupply()
+      return null;
+    });
+    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
+      if (opts.data === "0xa4a28168" && opts.contract === ORACLE_ADDRESS) {
+        return rawPriceData;
+      }
+      return null;
+    });
+
+    const config = {
+      adapter: "chainlink-nav" as const,
+      version: 1,
+      semantics: "single-asset" as const,
+      inputs: {
+        primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+      },
+      params: {
+        oracleAddress: ORACLE_ADDRESS,
+        tokenAddress: TOKEN_ADDRESS,
+        assetLabel: "Ondo T-Bills",
+        assetRisk: "very-low" as const,
+        oracleMethod: "getPriceData" as const,
+      },
+    };
+
+    const result = await fetchChainlinkNavReserves(
+      {} as never,
+      config as never,
+      new AbortController().signal,
+      { nowSec: updatedAt + 60 },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      oracleTimestampSource: "ondo-price-data",
+      oracleUpdatedAt: updatedAt,
+      sourceTimestamp: updatedAt,
+    });
+    expect(result.metadata?.navPerToken).toBe("114.853438");
   });
 
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {

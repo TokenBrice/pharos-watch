@@ -55,13 +55,55 @@ interface MentoReserveApiResponse {
 }
 
 // The Mento dashboard ships its reserve payload as a React Query cache entry
-// embedded in the Next.js Flight payload. The reserve-scoped timestamp always
-// appears between the `troves` array and the `dataUpdateCount` cache marker
-// (i.e. it is the React Query entry's payload-update timestamp, not some
-// unrelated build-manifest or news timestamp). Anchoring on those neighbours
-// rules out the many unrelated `"timestamp":"..."` occurrences in the bundle.
-const MENTO_DASHBOARD_TIMESTAMP_PATTERN =
-  /troves\\?"\s*:\s*\[[\s\S]*?\]\s*,\s*\\?"timestamp\\?"\s*:\s*\\?"([^"\\]+)\\?"[\s\S]{0,128}?\\?"dataUpdateCount\\?"/;
+// embedded in the Next.js Flight payload. The reserve-scoped timestamp appears
+// near the historical `troves` array or the current `cdp_backings` array and the
+// `dataUpdateCount` cache marker. Anchoring on those neighbours rules out the
+// many unrelated `"timestamp":"..."` occurrences in the bundle.
+const MENTO_DASHBOARD_PAYLOAD_KEYS = ["cdp_backings", "troves"] as const;
+const MENTO_DASHBOARD_MAX_ESCAPE_DEPTH = 5;
+const MENTO_DASHBOARD_PAYLOAD_WINDOW_CHARS = 64_000;
+const MENTO_DASHBOARD_TIMESTAMP_IN_WINDOW_PATTERN =
+  /\\{1,5}"timestamp\\{1,5}"\s*:\s*\\{1,5}"([^"\\]+)\\{1,5}"/;
+const MENTO_DASHBOARD_DATA_UPDATE_COUNT_IN_WINDOW_PATTERN = /\\{1,5}"dataUpdateCount\\{1,5}"/;
+const MENTO_DASHBOARD_DATA_UPDATED_AT_IN_WINDOW_PATTERN = /\\{1,5}"dataUpdatedAt\\{1,5}"\s*:\s*(\d{13,})/;
+
+function hasEscapedQuoteAt(value: string, index: number): boolean {
+  let slashCount = 0;
+  while (
+    slashCount < MENTO_DASHBOARD_MAX_ESCAPE_DEPTH &&
+    value[index + slashCount] === "\\"
+  ) {
+    slashCount += 1;
+  }
+
+  return slashCount > 0 && value[index + slashCount] === "\"";
+}
+
+function findDashboardPayloadKeyIndex(html: string, key: string): number | null {
+  let keyIndex = html.indexOf(key);
+  while (keyIndex >= 0) {
+    if (hasEscapedQuoteAt(html, keyIndex + key.length)) {
+      return keyIndex;
+    }
+    keyIndex = html.indexOf(key, keyIndex + key.length);
+  }
+
+  return null;
+}
+
+function extractMentoDashboardPayloadWindow(html: string): string | null {
+  for (const key of MENTO_DASHBOARD_PAYLOAD_KEYS) {
+    const keyIndex = findDashboardPayloadKeyIndex(html, key);
+    if (keyIndex != null) {
+      return html.slice(
+        keyIndex,
+        Math.min(html.length, keyIndex + MENTO_DASHBOARD_PAYLOAD_WINDOW_CHARS),
+      );
+    }
+  }
+
+  return null;
+}
 
 interface TokenConfig {
   key: string;
@@ -248,8 +290,17 @@ export function parseMentoCdpComposition(payload: unknown, cdpStablecoin: MentoC
 }
 
 export function extractMentoDashboardTimestamp(html: string): number | null {
-  const timestamp = html.match(MENTO_DASHBOARD_TIMESTAMP_PATTERN)?.[1];
-  return parseTimestampLikeToUnixSeconds(timestamp);
+  const payloadWindow = extractMentoDashboardPayloadWindow(html);
+  if (!payloadWindow) return null;
+
+  const timestamp = payloadWindow.match(MENTO_DASHBOARD_TIMESTAMP_IN_WINDOW_PATTERN)?.[1];
+  const parsedTimestamp = parseTimestampLikeToUnixSeconds(timestamp);
+  if (parsedTimestamp != null && MENTO_DASHBOARD_DATA_UPDATE_COUNT_IN_WINDOW_PATTERN.test(payloadWindow)) {
+    return parsedTimestamp;
+  }
+
+  const dataUpdatedAt = payloadWindow.match(MENTO_DASHBOARD_DATA_UPDATED_AT_IN_WINDOW_PATTERN)?.[1];
+  return parseTimestampLikeToUnixSeconds(dataUpdatedAt);
 }
 
 export function adaptMentoReserveComposition(payload: unknown, sourceTimestamp: number | null = null): AdapterResult {

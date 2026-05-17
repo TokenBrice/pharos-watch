@@ -155,7 +155,7 @@
       "tokenAddress": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
       "assetLabel": "Short-term U.S. Treasuries and bank deposits",
       "assetRisk": "very-low",
-      "oracleMethod": "getPrice"
+      "oracleMethod": "getPriceData"
     }
   },
   "yieldConfig": {

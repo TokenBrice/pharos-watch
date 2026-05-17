@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   adaptMentoCdpComposition,
@@ -9,6 +12,9 @@ import {
 } from "../mento";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
 
 const SAMPLE_PAYLOAD = {
   collateral: {
@@ -128,17 +134,31 @@ describe("mento adapter", () => {
     });
   });
 
-  it("extracts the dashboard reserve payload timestamp", () => {
+  it("extracts the historical dashboard reserve payload timestamp", () => {
     expect(extractMentoDashboardTimestamp(
-      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
     )).toBe(Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000));
+  });
+
+  it("extracts the current cdp_backings dashboard timestamp with deeper escaped quotes", () => {
+    expect(extractMentoDashboardTimestamp(CURRENT_DASHBOARD_HTML)).toBe(
+      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
+    );
+  });
+
+  it("falls back to numeric dashboard dataUpdatedAt milliseconds", () => {
+    const html = String.raw`...\\"cdp_backings\\":[{\\"stablecoin\\":\\"GBPm\\"}],\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
+
+    expect(extractMentoDashboardTimestamp(html)).toBe(
+      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
+    );
   });
 
   it("ignores unrelated timestamps that appear outside the troves/dataUpdateCount anchor window", () => {
     const buildManifest =
-      'buildManifest\\":{\\"timestamp\\":\\"2099-01-01T00:00:00.000Z\\"},\\"polyfillFiles\\":[]';
+      String.raw`buildManifest\":{\"timestamp\":\"2099-01-01T00:00:00.000Z\"},\"polyfillFiles\":[]`;
     const anchoredPayload =
-      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1';
+      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
     const html = `${buildManifest}${"x".repeat(1024)}${anchoredPayload}`;
 
     expect(extractMentoDashboardTimestamp(html)).toBe(
@@ -264,7 +284,7 @@ describe("mento adapter", () => {
           [
             "text-get:https://reserve.mento.org/:12000",
             Promise.resolve(
-              'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+              String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
             ),
           ],
         ]),

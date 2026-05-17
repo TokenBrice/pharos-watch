@@ -202,7 +202,7 @@ const chainlinkNavParamsSchema = z
     tokenAddress: z.string(),
     assetLabel: z.string(),
     assetRisk: LiveReserveRiskSchema,
-    oracleMethod: z.enum(["latestRoundData", "getPrice", "getAssetPrice"]).optional(),
+    oracleMethod: z.enum(["latestRoundData", "getPrice", "getPriceData", "getAssetPrice"]).optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     maxOracleAgeSec: z.number().positive().optional(),

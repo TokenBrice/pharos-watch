@@ -5,7 +5,7 @@ import { requireHtmlInput } from "./input-guards";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 
-const ADAPTER_USER_AGENT = "Mozilla/5.0";
+export const ADAPTER_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 /**
  * Some issuer dashboards gate their JSON/HTML endpoints with CORS-style
