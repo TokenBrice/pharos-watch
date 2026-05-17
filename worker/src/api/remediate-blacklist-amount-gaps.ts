@@ -1,7 +1,7 @@
 import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types/market";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { requireAdmin } from "../lib/auth";
-import { withAdminMutation } from "../lib/route-wrappers";
+import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { errorResponse, jsonResponse, parseOptionalRequestJsonObject, parseQueryParams } from "../lib/api-utils";
 import {
   getBlacklistConfigByContract,
@@ -94,7 +94,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted(
   request: Request | undefined,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<Response> {
-  return withAdminMutation(request, true, async () => {
+  return runTrustedAdminMutation(async () => {
     const body = await parseOptionalRequestJsonObject(request);
     if (body instanceof Response) return body;
     const dryRun = parseBooleanInput(body.dryRun ?? url.searchParams.get("dryRun"), true);

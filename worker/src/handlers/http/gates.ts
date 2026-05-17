@@ -1,4 +1,4 @@
-import { getPublicApiAccess, isAdminLikePath, isCacheBypassPath } from "@shared/lib/api-endpoints";
+import { getPublicApiAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import {
@@ -22,6 +22,10 @@ import {
 } from "../../lib/auth";
 import { validateWorkerEnvContract } from "../../lib/env";
 import type { Env } from "../../lib/env";
+import {
+  isCacheableGetRequest,
+  isProtectedPublicApiCacheableGetRequest,
+} from "./cache-eligibility";
 
 const LOGGED_ENV_ISSUES = new Set<string>();
 
@@ -147,7 +151,7 @@ export async function evaluateAccessGate(
     };
   }
 
-  const canUseIsolateFallbackRateLimit = request.method === "GET" && !isCacheBypassPath(url.pathname);
+  const canUseIsolateFallbackRateLimit = isCacheableGetRequest(request, url);
   let rateLimitResponse: Response | null;
   try {
     rateLimitResponse = await checkApiKeyRateLimit(
@@ -187,16 +191,7 @@ export async function evaluateCachedPublicApiReadFastGate(
   url: URL,
   env: Env,
 ): Promise<AccessGateResult | null> {
-  if (
-    request.method !== "GET"
-    || isCacheBypassPath(url.pathname)
-    || !url.pathname.startsWith("/api/")
-    || url.pathname === "/api/telegram-webhook"
-    || url.hostname === OPS_API_HOSTNAME
-    || url.hostname === SITE_API_HOSTNAME
-    || getPublicApiAccess(url.pathname) === "exempt"
-    || isAdminLikePath(url.pathname)
-  ) {
+  if (!isProtectedPublicApiCacheableGetRequest(request, url)) {
     return null;
   }
 

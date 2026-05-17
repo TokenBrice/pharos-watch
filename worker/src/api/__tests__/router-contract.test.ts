@@ -70,6 +70,7 @@ describe("router contract: strict frontend paths are routable", () => {
       getRouteDependencies: () => [],
       getRouteMatch: () => ({
         dependencies: [],
+        methods: ["GET"],
         handle: async () => {
           throw new Error("boom");
         },

@@ -5,6 +5,7 @@ import {
   type EndpointDefinition,
   type EndpointDependency,
   type EndpointKey,
+  type EndpointMethod,
 } from "@shared/lib/api-endpoints";
 import type { CloudflareD1StatusBindings } from "../lib/env";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
@@ -118,12 +119,14 @@ export interface StaticRouteDefinition {
 export interface DynamicRouteDefinition {
   pattern: RegExp;
   dependencies: readonly RouteDependency[];
+  methods: readonly EndpointMethod[];
   handle: (routeCtx: FullRouteContext, match: RegExpMatchArray) => Promise<Response>;
 }
 
 export interface RouteMatch {
   endpoint?: EndpointDefinition;
   dependencies: readonly RouteDependency[];
+  methods: readonly EndpointMethod[];
   handle: (routeCtx: FullRouteContext) => Promise<Response>;
 }
 
@@ -150,11 +153,13 @@ export function defineStaticRoute<K extends EndpointKey>(key: K, handler: Static
 export function defineDynamicRoute<const Deps extends readonly RouteDependency[]>(
   pattern: RegExp,
   dependencies: Deps,
+  methods: readonly EndpointMethod[],
   handle: DynamicRouteHandler<Deps>,
 ): DynamicRouteDefinition {
   return {
     pattern,
     dependencies,
+    methods,
     handle: handle as DynamicRouteDefinition["handle"],
   };
 }

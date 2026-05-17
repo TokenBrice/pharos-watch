@@ -1,6 +1,6 @@
 import { requireAdmin } from "../lib/auth";
 import { jsonResponse, parseOptionalNonNegativeIntegerParam } from "../lib/api-utils";
-import { withAdminMutation } from "../lib/route-wrappers";
+import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { batchExecute } from "../lib/db";
 import { collectAffectedHours, recalcAffectedHours } from "../lib/mint-burn-pipeline/persistence";
 import { ROUNDTRIP_TOLERANCE_HAVING_SQL } from "../lib/mint-burn-pipeline/roundtrip-detection";
@@ -69,7 +69,7 @@ export async function handleReclassifyAtomicRoundtripsTrusted(
   db: D1Database,
   url: URL,
 ): Promise<Response> {
-  return withAdminMutation(undefined, true, async () => {
+  return runTrustedAdminMutation(async () => {
     const since = resolveSince(url);
     if (since instanceof Response) return since;
     const stablecoinId = resolveStablecoinId(url);

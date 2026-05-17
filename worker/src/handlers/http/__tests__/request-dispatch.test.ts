@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   flushPendingApiKeyPrunes: vi.fn(() => Promise.resolve()),
   flushPendingPrunes: vi.fn(() => Promise.resolve()),
-  getRouteDependencies: vi.fn(),
+  resolveRoute: vi.fn(),
   route: vi.fn(),
   createRequestSourceRecorder: vi.fn(),
   recordRequestSource: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock("../../../lib/rate-limit", () => ({
 }));
 
 vi.mock("../../../router", () => ({
-  getRouteDependencies: mocks.getRouteDependencies,
+  resolveRoute: mocks.resolveRoute,
   route: mocks.route,
 }));
 
@@ -106,7 +106,11 @@ describe("handleHttpRequestImpl", () => {
     mocks.isRequestSourceAttributionDisabled.mockReturnValue(false);
     mocks.createEdgeCacheContext.mockReturnValue({ cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false });
     mocks.readEdgeCache.mockResolvedValue(null);
-    mocks.getRouteDependencies.mockReturnValue(["coingeckoApiKey"]);
+    mocks.resolveRoute.mockReturnValue({
+      routeDependencies: ["coingeckoApiKey"],
+      methodValidation: null,
+      routeMatch: { dependencies: ["coingeckoApiKey"], methods: ["GET"], handle: vi.fn() },
+    });
     mocks.buildRouteContext.mockReturnValue({ routeContext: true });
     mocks.route.mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), {
@@ -201,14 +205,14 @@ describe("handleHttpRequestImpl", () => {
 
     expect(response).toBe(cachedResponse);
     expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
-    expect(mocks.getRouteDependencies).not.toHaveBeenCalled();
+    expect(mocks.resolveRoute).not.toHaveBeenCalled();
     expect(mocks.route).not.toHaveBeenCalled();
     expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
     expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
   });
 
   it("returns 404 when no route dependencies are registered for the path", async () => {
-    mocks.getRouteDependencies.mockReturnValue(null);
+    mocks.resolveRoute.mockReturnValue(null);
 
     const response = await handleHttpRequestImpl(
       new Request("https://api.pharos.watch/api/not-real"),
@@ -256,6 +260,11 @@ describe("handleHttpRequestImpl", () => {
     });
     const edgeCacheContext = { cacheKey: new Request("https://api.pharos.watch/api/stablecoins"), skipCache: false };
     const routeContext = { hydrated: true };
+    const resolvedRoute = {
+      routeDependencies: ["coingeckoApiKey"],
+      methodValidation: null,
+      routeMatch: { dependencies: ["coingeckoApiKey"], methods: ["GET"], handle: vi.fn() },
+    };
     const ctx = makeCtx();
     const request = new Request("https://api.pharos.watch/api/stablecoins");
     const env = makeEnv();
@@ -264,12 +273,13 @@ describe("handleHttpRequestImpl", () => {
     mocks.flushPendingApiKeyPrunes.mockReturnValue(Promise.resolve());
     mocks.createEdgeCacheContext.mockReturnValue(edgeCacheContext);
     mocks.buildRouteContext.mockReturnValue(routeContext);
+    mocks.resolveRoute.mockReturnValue(resolvedRoute);
     mocks.route.mockResolvedValue(routedResponse);
 
     const response = await handleHttpRequestImpl(request, env, ctx);
 
     expect(response).toBe(routedResponse);
-    expect(mocks.route).toHaveBeenCalledWith(routeContext);
+    expect(mocks.route).toHaveBeenCalledWith(routeContext, resolvedRoute);
     expect(mocks.flushPendingPrunes).toHaveBeenCalledOnce();
     expect(mocks.flushPendingApiKeyPrunes).toHaveBeenCalledOnce();
     expect(ctx.waitUntil).toHaveBeenCalledOnce();

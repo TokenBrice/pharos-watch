@@ -1,6 +1,6 @@
 import { API_PATHS } from "./paths";
 
-type EndpointMethod = "GET" | "HEAD" | "POST";
+export type EndpointMethod = "GET" | "HEAD" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
 export type EndpointPublicApiAccess = "protected" | "exempt";
 export type EndpointSiteDataAccess = "allowed" | "denied";

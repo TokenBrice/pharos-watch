@@ -2,6 +2,7 @@ import {
   getDynamicEndpointDescriptorByKey,
   matchDynamicAdminEndpoint,
   type DynamicAdminEndpointMatch,
+  type EndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleStablecoinSummary } from "../api/stablecoin-summary";
@@ -50,6 +51,7 @@ type DynamicAdminEndpointFor<Key extends DynamicAdminEndpointKey> =
   Extract<ExpandedDynamicAdminEndpointMatch, { key: Key }>;
 type DynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey> = {
   dependencies: readonly RouteDependency[];
+  methods: readonly EndpointMethod[];
   handle: (routeCtx: FullRouteContext, dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>) => Promise<Response>;
 };
 type DynamicAdminRouteBindingMap = {
@@ -69,7 +71,7 @@ function defineDynamicRouteFromDescriptor(
   handle: DynamicRouteDefinition["handle"],
 ): DynamicRouteDefinition {
   const descriptor = requireDynamicEndpointDescriptor(key);
-  return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, handle);
+  return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, descriptor.methods, handle);
 }
 
 const DYNAMIC_ROUTE_DEFINITIONS = [
@@ -127,8 +129,10 @@ function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
   key: Key,
   handle: DynamicAdminRouteBinding<Key>["handle"],
 ): DynamicAdminRouteBinding<Key> {
+  const descriptor = requireDynamicEndpointDescriptor(key);
   return {
-    dependencies: requireDynamicEndpointDescriptor(key).routeDependencies,
+    dependencies: descriptor.routeDependencies,
+    methods: descriptor.methods,
     handle,
   };
 }
@@ -186,6 +190,7 @@ function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
   const binding = DYNAMIC_ADMIN_ROUTE_BINDINGS[dynamicAdminEndpoint.key] as unknown as DynamicAdminRouteBinding<Key>;
   return {
     dependencies: binding.dependencies,
+    methods: binding.methods,
     handle: (routeCtx) => binding.handle(routeCtx, dynamicAdminEndpoint),
   };
 }
@@ -201,6 +206,7 @@ export function getDynamicRouteMatch(path: string): RouteMatch | null {
     if (match) {
       return {
         dependencies: definition.dependencies,
+        methods: definition.methods,
         handle: (routeCtx) => definition.handle(routeCtx, match),
       };
     }

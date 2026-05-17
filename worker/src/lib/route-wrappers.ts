@@ -128,27 +128,16 @@ export function makeConditionalIdempotentAdminRoute<TContext extends AdminRouteC
 }
 
 /**
- * Wrap an admin mutation handler so all uncaught throws are captured and
- * shaped into a uniform JSON response. Use for admin endpoints that perform
- * D1 writes or external mutations; do NOT use for read-only endpoints.
+ * Wrap a trusted admin mutation body so all uncaught throws are captured and
+ * shaped into a uniform JSON response. Route-level wrappers should own auth,
+ * idempotency, and no-store policy before calling this helper.
  *
  * Returns the handler's Response on success (including its own controlled
  * error responses like 400/404/500). If the handler throws, logs the error
  * and returns 503 with `{ error: <error.name>, message: "Admin mutation failed" }`
  * — never leaks raw `error.message` (which may contain SQL or other internals).
- *
- * Composes admin auth gating so callers don't need to layer `withAdmin`
- * separately: requireAdmin runs first and short-circuits on a missing
- * credential, mirroring the upstream `runAdminRoute` contract.
  */
-export async function withAdminMutation(
-  request: Request | undefined,
-  trustedAdmin: boolean | undefined,
-  handler: () => Promise<Response>,
-): Promise<Response> {
-  const authError = await requireAdmin(request, trustedAdmin);
-  if (authError) return authError;
-
+export async function runTrustedAdminMutation(handler: () => Promise<Response>): Promise<Response> {
   try {
     return await handler();
   } catch (error) {
@@ -159,4 +148,19 @@ export async function withAdminMutation(
       { status: 503, noStore: true },
     );
   }
+}
+
+/**
+ * Compatibility wrapper for direct admin mutation entrypoints that are invoked
+ * outside the route registry and therefore still need local auth gating.
+ */
+export async function withAdminMutation(
+  request: Request | undefined,
+  trustedAdmin: boolean | undefined,
+  handler: () => Promise<Response>,
+): Promise<Response> {
+  const authError = await requireAdmin(request, trustedAdmin);
+  if (authError) return authError;
+
+  return runTrustedAdminMutation(handler);
 }

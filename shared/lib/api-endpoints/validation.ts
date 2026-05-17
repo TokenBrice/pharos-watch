@@ -1,6 +1,7 @@
 import type {
   DynamicAdminEndpointMatch,
   EndpointDefinition,
+  EndpointMethod,
   EndpointMethodValidationError,
   EndpointProbeGroup,
   EndpointPublicApiAccess,
@@ -8,8 +9,6 @@ import type {
 } from "./definitions";
 import { findDynamicEndpointDescriptor, getDynamicEndpointDescriptorByKey } from "./dynamic";
 import { ENDPOINT_DEFINITIONS, getEndpointDefinition } from "./definitions";
-
-type EndpointMethod = "GET" | "HEAD" | "POST";
 
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
@@ -155,13 +154,20 @@ export function isMutatingAdminGetAllowed(url: URL): boolean {
   return false;
 }
 
+export function getEndpointAllowedMethods(
+  url: URL,
+  endpoint: Pick<EndpointDefinition, "methods" | "mutatingAdmin">,
+): readonly EndpointMethod[] {
+  if (endpoint.mutatingAdmin && endpoint.methods.includes("GET") && !isMutatingAdminGetAllowed(url)) {
+    return POST_ONLY_METHODS;
+  }
+  return endpoint.methods;
+}
+
 function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
   const definition = getEndpointDefinition(url.pathname);
   if (definition) {
-    if (definition.mutatingAdmin && definition.methods.includes("GET") && !isMutatingAdminGetAllowed(url)) {
-      return POST_ONLY_METHODS;
-    }
-    return definition.methods;
+    return getEndpointAllowedMethods(url, definition);
   }
 
   const dynamicDescriptor = getResolvedDynamicEndpointDescriptor(url.pathname);
@@ -186,6 +192,26 @@ function getResolvedDynamicEndpointDescriptor(path: string) {
     : null;
 }
 
+export function validateAllowedEndpointMethods(
+  method: string,
+  allowedMethods: readonly EndpointMethod[],
+): EndpointMethodValidationError | null {
+  if (method !== "GET" && method !== "HEAD" && method !== "POST") {
+    return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
+  }
+
+  if (allowedMethods.includes(method as EndpointMethod)) {
+    return null;
+  }
+
+  const postOnly =
+    (method === "GET" || method === "HEAD") && allowedMethods.length === 1 && allowedMethods[0] === "POST";
+  return {
+    message: postOnly ? "Method not allowed. Use POST for this endpoint." : "Method not allowed",
+    allowedMethods,
+  };
+}
+
 export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
   if (method !== "GET" && method !== "HEAD" && method !== "POST") {
     return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
@@ -202,16 +228,7 @@ export function validateEndpointMethod(url: URL, method: string): EndpointMethod
     return null;
   }
 
-  if (allowedMethods.includes(method as EndpointMethod)) {
-    return null;
-  }
-
-  const postOnly =
-    (method === "GET" || method === "HEAD") && allowedMethods.length === 1 && allowedMethods[0] === "POST";
-  return {
-    message: postOnly ? "Method not allowed. Use POST for this endpoint." : "Method not allowed",
-    allowedMethods,
-  };
+  return validateAllowedEndpointMethods(method, allowedMethods);
 }
 
 export function getProbePaths(group: EndpointProbeGroup): string[] {

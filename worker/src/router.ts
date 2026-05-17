@@ -1,6 +1,8 @@
 import {
   getEndpointDefinition,
-  validateEndpointMethod,
+  getEndpointAllowedMethods,
+  validateAllowedEndpointMethods,
+  type EndpointMethodValidationError,
 } from "@shared/lib/api-endpoints";
 
 import { errorResponse } from "./lib/api-utils";
@@ -10,6 +12,12 @@ import {
   getRouteDependencies as getRegisteredRouteDependencies,
 } from "./routes/registry";
 import type { FullRouteContext, RouteDependency, RouteMatch } from "./routes/shared";
+
+export interface ResolvedRoute {
+  routeMatch: RouteMatch;
+  routeDependencies: readonly RouteDependency[];
+  methodValidation: EndpointMethodValidationError | null;
+}
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
   if (request?.method !== "GET") return response;
@@ -33,6 +41,28 @@ export function getRouteDependencies(url: URL): readonly RouteDependency[] | nul
   return getRegisteredRouteDependencies(url.pathname);
 }
 
+function validateRouteMatchMethod(
+  url: URL,
+  method: string,
+  routeMatch: RouteMatch,
+): EndpointMethodValidationError | null {
+  const allowedMethods = routeMatch.endpoint
+    ? getEndpointAllowedMethods(url, routeMatch.endpoint)
+    : routeMatch.methods;
+  return validateAllowedEndpointMethods(method, allowedMethods);
+}
+
+export function resolveRoute(url: URL, method: string): ResolvedRoute | null {
+  const routeMatch = getRouteMatch(url.pathname);
+  if (!routeMatch) return null;
+
+  return {
+    routeMatch,
+    routeDependencies: routeMatch.dependencies,
+    methodValidation: validateRouteMatchMethod(url, method, routeMatch),
+  };
+}
+
 function getRouteErrorLabel(routeMatch: RouteMatch, path: string): string {
   return routeMatch.endpoint?.key ?? routeMatch.endpoint?.path ?? path;
 }
@@ -54,20 +84,19 @@ async function handleRouteWithErrorBoundary(
   return stripHeadBody(routeCtx.request, responseWithHeaders);
 }
 
-export function route(routeCtx: FullRouteContext): Promise<Response> | null {
+export function route(
+  routeCtx: FullRouteContext,
+  resolvedRoute = resolveRoute(routeCtx.url, routeCtx.request.method),
+): Promise<Response> | null {
   const path = routeCtx.url.pathname;
-  const methodValidation = validateEndpointMethod(routeCtx.url, routeCtx.request.method);
-  if (methodValidation) {
-    const resp = errorResponse(405, methodValidation.message);
-    resp.headers.set("Allow", methodValidation.allowedMethods.join(", "));
+  if (!resolvedRoute) return null;
+
+  if (resolvedRoute.methodValidation) {
+    const resp = errorResponse(405, resolvedRoute.methodValidation.message);
+    resp.headers.set("Allow", resolvedRoute.methodValidation.allowedMethods.join(", "));
     return Promise.resolve(resp);
   }
 
-  const routeMatch = getRouteMatch(path);
-  if (routeMatch) {
-    return handleRouteWithErrorBoundary(routeCtx, routeMatch, path);
-  }
-
-  return null;
+  return handleRouteWithErrorBoundary(routeCtx, resolvedRoute.routeMatch, path);
 }
 export { ROUTER_STATIC_PATHS };
