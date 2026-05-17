@@ -1,4 +1,5 @@
-export type TelegramAlertType = "dews" | "depeg" | "safety" | "launch";
+import type { TelegramAlertType } from "@shared/types/status";
+export type { TelegramAlertType };
 export type TelegramDewsBand = "ALERT" | "WARNING" | "DANGER";
 export type TelegramSafetyMode = "all" | "downgrade-only" | "upgrade-only";
 export type TelegramDepegStepBps = 100 | 250 | 500;
