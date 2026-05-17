@@ -1,12 +1,12 @@
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
-import { escapeHtml } from "../telegram";
+import { escapeHtml } from "./telegram";
 import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
   TELEGRAM_SPLIT_VERSION,
-} from "./constants";
-import { buildTelegramMiniAppUrl } from "./webhook-registration";
-import type { ResolvedCoin } from "./alerts-parser";
+} from "./telegram-constants";
+import { buildTelegramMiniAppUrl } from "./telegram-webhook-registration";
+import type { ResolvedCoin } from "./telegram-alerts-parser";
 
 // Re-export the chunking constants so existing callers that import them from
 // the compatibility barrel (and any downstream tests) keep working.

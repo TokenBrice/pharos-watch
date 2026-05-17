@@ -224,7 +224,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
 - `src/lib/csv-export.ts` - downloadCsv
 - `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
-- ... 84 more files omitted; use `rg --files src/lib` for the full list.
+- ... 83 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -239,7 +239,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/blacklist-chart.tsx` - BlacklistChart, getBlacklistChartCoins, getBlacklistTooltipSummary
 - `src/components/blacklist-filters.tsx` - BlacklistFilters
 - `src/components/blacklist-stats.tsx` - BlacklistStats
-- `src/components/blacklist-status-charts.tsx` - BlacklistStatusCharts
 - `src/components/blacklist-status-drilldown.tsx` - BlacklistStatusDrilldown
 - `src/components/blacklist-table.tsx` - BlacklistTable
 - `src/components/bluechip-header-badge.tsx` - BluechipHeaderBadge
@@ -254,7 +253,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/chain-type-badge.tsx` - ChainTypeBadge
 - `src/components/changelog-entry-card.tsx` - ChangelogEntryCard, formatDateRange
 - `src/components/changelog-week-nav.tsx` - ChangelogWeekNav
-- `src/components/chart-primitives.tsx` - CategoricalXAxis, ChartAnnotationLegend, ChartAnnotationLines, ChartGrid, DateTooltip, MonoYAxis
+- `src/components/chart-primitives.tsx` - CategoricalXAxis, ChartAnnotationLegend, ChartAnnotationLines, DateTooltip, MonoYAxis, TimeGrid
 - `src/components/chart-skeleton.tsx` - ChartSkeleton
 - `src/components/citation-block.tsx` - CitationBlock, CitationBlockProps
 - `src/components/coin-flow-card.tsx` - CoinFlowCard, CoinFlowCardProps
@@ -268,7 +267,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/contagion-graph-graph.ts` - EdgeTypeFilter, FocusMode, ResolvedLink, RippleState, computeRippleState, computeVisibleGraph
 - `src/components/contagion-graph-model.ts` - TYPE_COLORS, TYPE_DASH, gradeColor
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
-- ... 273 more files omitted; use `rg --files src/components` for the full list.
+- `src/components/contagion-graph.tsx` - ContagionGraph
+- ... 272 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -314,13 +314,11 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/chain-circulating.ts`
 - `shared/lib/chain-health-version.ts`
 - `shared/lib/chain-health.ts`
-- `shared/lib/chain-provider-registry.ts`
 - `shared/lib/chains/aggregator.ts` - ChainAggregatorAsset, ChainAggregatorInput, aggregateChains
 - `shared/lib/chains/circulating.ts` - ChainCirculatingPoint, RawChainCirculating, canonicalizeChainCirculating, findCanonicalChainData
 - `shared/lib/chains/health-version.ts` - CHAIN_HEALTH_METHODOLOGY_CHANGELOG, CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH, CHAIN_HEALTH_METHODOLOGY_VERSION, CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL, getChainHealthMethodologyVersionAt
 - `shared/lib/chains/health.ts` - BACKING_DIVERSITY_WEIGHT, CHAIN_ENVIRONMENT_SCORES, CHAIN_ENVIRONMENT_WEIGHT, CHAIN_HEALTH_METHODOLOGY_VERSION, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT
-- `shared/lib/chains/index.ts` - CHAIN_META, CHAIN_RESILIENCE_TIER, ChainResilienceTier, getActiveChainIds, getChainResilienceTier, resolveChainId
-- `shared/lib/chains/provider-registry.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_REGISTRY, DEXPAPRIKA_CHAIN_MAP
+- `shared/lib/chains/index.ts` - ALCHEMY_CHAIN_MAP, BIRDEYE_CHAIN_MAP, CG_CHAIN_MAP, CG_CHAIN_REVERSE, CHAIN_META, CHAIN_RESILIENCE_TIER
 - `shared/lib/citation/formats.ts` - CitationInput, deriveCiteKey, formatAPA7, formatBibTeX, formatChicago, formatPlain
 - `shared/lib/citation/urn.ts` - PharosUrn, PharosUrnEntityClass, formatPharosUrn, parsePharosUrn
 - `shared/lib/classification-pegs.ts`
@@ -336,7 +334,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
 - `shared/lib/dead-stablecoins.ts` - CAUSE_HEX, CAUSE_META, DEAD_STABLECOINS
-- `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD
+- `shared/lib/depeg-config.ts` - DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC
 - `shared/lib/depeg-dews-version.ts`
 - `shared/lib/dependency-derivation.ts` - deriveDependencies, deriveEffectiveDependencies
 - `shared/lib/dependency-graph.ts` - DependencyGraphEdge, buildDependencyGraphEdges, buildDependencyGraphEdgesFromDependencies, collectDependencyGraphIds, filterDependencyGraphEdgesToLive
@@ -348,7 +346,10 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/env-contract/render-markdown.ts` - renderOperatorOriginAccessEnvBlock, renderWorkerInfrastructureEnvBlock
 - `shared/lib/env-contract/types.ts` - EnvBindingDefinition, EnvBindingValueType, EnvExampleSection, EnvRuntimeName, EnvRuntimeStatus
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
-- ... 194 more files omitted; use `rg --files shared/lib` for the full list.
+- `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
+- `shared/lib/filter-tags.ts` - COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, FILTER_TAG_LABELS, GRADE_FILTER_TAGS, OTHER_PEG_TAGS, getFilterTags
+- `shared/lib/format.ts` - abbreviateNumberParts, formatAddress, formatBps, formatChartDate, formatChartPercent, formatCompactCount
+- ... 189 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
@@ -478,7 +479,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/api/backfill-depegs/persistence.ts` - BackfillConfidenceTier, BackfillEventProvenanceInput, BackfillRunInput, buildBackfillEventsFingerprint, buildInsertProvenanceStmt, buildReplayRunId
 - `worker/src/api/backfill-depegs/planning.ts` - BackfillPlan, PreparedBackfillCoin, buildBackfillPlan
 - `worker/src/api/backfill-dews.ts` - handleBackfillDEWS
-- `worker/src/api/backfill-fx.ts` - COMMODITY_PEGS, CommodityPeg, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX
+- `worker/src/api/backfill-fx.ts` - COMMODITY_PEGS, FxTimeSeries, OTHER_COIN_FX, PEG_TO_FX, SECONDARY_PEG_TO_FX, buildCommodityMedianSeriesFromCg
 - `worker/src/api/backfill-mint-burn-prices.ts` - handleBackfillMintBurnPrices
 - `worker/src/api/backfill-mint-burn.ts` - handleBackfillMintBurn
 - `worker/src/api/backfill-price-sources.ts` - HistoricalMarketBackfillGranularity, HistoricalMarketBackfillRange, HistoricalMarketMergeReason, HistoricalMarketPolicyAdjustment, HistoricalMarketPriceSeriesResult, HistoricalMarketSeriesStats
@@ -635,22 +636,22 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `worker/src/lib/backtest-anchors.ts` - BACKTEST_ANCHORS, BACKTEST_ANCHORS_VERIFIED, BACKTEST_NEGATIVE_CONTROLS, BacktestAnchor, BacktestNegativeControl
 - `worker/src/lib/bigint.ts` - bigIntToDecimal, decimalNumberFromBigInt, decimalStringFromBigInt, finiteDecimalNumberFromBigInt
 - `worker/src/lib/binary-search.ts` - binarySearchNearest
-- `worker/src/lib/blacklist-api.ts`
-- `worker/src/lib/blacklist-contracts.ts`
-- `worker/src/lib/blacklist-coverage-manifest.ts`
-- `worker/src/lib/blacklist-current-balances.ts`
-- `worker/src/lib/blacklist-gaps.ts`
-- `worker/src/lib/blacklist/api.ts` - BlacklistEventRow, mapBlacklistEventRow
-- `worker/src/lib/blacklist/contracts.ts` - BlacklistEventDef, BlacklistEventFamily, CONTRACT_CONFIGS, ContractEventConfig, PYUSD_EVENT_FAMILY, chainConfig
-- `worker/src/lib/blacklist/coverage-manifest.ts` - BlacklistCoverageManifestEntry, BlacklistCoverageManifestStatus, BlacklistDeferredCoverageEntry, buildBlacklistCoverageManifest, getDeferredBlacklistCoverage, getSupportedBlacklistChainIds
-- `worker/src/lib/blacklist/current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
-- `worker/src/lib/blacklist/gaps.ts` - BlacklistGapMetrics, queryBlacklistGapMetrics
+- `worker/src/lib/blacklist-api.ts` - BlacklistEventRow, mapBlacklistEventRow
+- `worker/src/lib/blacklist-contracts.ts` - BlacklistEventDef, BlacklistEventFamily, CONTRACT_CONFIGS, ContractEventConfig, PYUSD_EVENT_FAMILY, chainConfig
+- `worker/src/lib/blacklist-coverage-manifest.ts` - BlacklistCoverageManifestEntry, BlacklistCoverageManifestStatus, BlacklistDeferredCoverageEntry, buildBlacklistCoverageManifest, getDeferredBlacklistCoverage, getSupportedBlacklistChainIds
+- `worker/src/lib/blacklist-current-balances.ts` - BlacklistCurrentBalanceRow, deleteBlacklistCurrentBalance, loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance
+- `worker/src/lib/blacklist-gaps.ts` - BlacklistGapMetrics, queryBlacklistGapMetrics
 - `worker/src/lib/bluechip-cache.ts` - parseBluechipRatingsCache
 - `worker/src/lib/cache-json.ts` - CachedJsonRow, JsonDecodeMode, JsonDecodeResult, decodeCachedJson, decodeJsonString
 - `worker/src/lib/cex-orderbooks.ts` - CexOrderbookDepth, DirectCexOrderbookDepthSummary, computeOrderbookDepth, fetchBinanceOrderbookDepths, fetchCoinbaseOrderbookDepths, fetchKrakenOrderbookDepths
 - `worker/src/lib/cex-tickers.ts` - BINANCE_KNOWN_SYMBOLS, BITSTAMP_KNOWN_SYMBOLS, COINBASE_KNOWN_SYMBOLS, CexTickerBatch, KRAKEN_KNOWN_SYMBOLS, fetchBinancePricesDetailed
 - `worker/src/lib/cg-ticker.ts` - CG_TICKER_COINS, CgTickerConfig, CgTickerFetchResult, fetchCgTickerPrices, fetchCgTickerPricesDetailed, pickBestTicker
-- ... 219 more files omitted; use `rg --files worker/src/lib` for the full list.
+- `worker/src/lib/chain-config.ts` - ChainConfig, chainConfig
+- `worker/src/lib/chain-registry.ts` - ALCHEMY_CHAINS, ChainRpcConfig, buildChainRpcs, getChainRpc
+- `worker/src/lib/chainlink-feeds.ts` - CHAINLINK_REFERENCE_FEEDS, ChainlinkFeedOutcome, ChainlinkReferenceFeed, ChainlinkReferenceQuote, ChainlinkReferenceQuoteSnapshot, ChainlinkReferenceQuoteSummary
+- `worker/src/lib/chainlink-round-data.ts` - ChainlinkLatestRoundData, parseChainlinkLatestRoundData, parseSignedInt256Word
+- `worker/src/lib/circuit-breaker.ts` - CircuitOutcomeDecision, CircuitRecord, CircuitState, filterInactiveCircuitStates, filterStaleLiveReserveCircuitStates, getCircuitRecord
+- ... 202 more files omitted; use `rg --files worker/src/lib` for the full list.
 
 ## Validation and tooling
 

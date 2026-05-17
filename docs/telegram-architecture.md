@@ -266,8 +266,8 @@ Files any seam may import:
 
 - `worker/src/lib/telegram-constants.ts` — central magic numbers and tokens (`SNOOZE_SECONDS`, `DEPEG_STEP_VALUES`, `TOP_VIEW_NAMES`, `TELEGRAM_MESSAGE_CHUNK_LIMIT`, all queue tuning, disambiguation TTL).
 - `worker/src/lib/telegram-alerts.ts` — compatibility barrel for alert parsing and formatting exports.
-- `worker/src/lib/telegram/alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
-- `worker/src/lib/telegram/alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
+- `worker/src/lib/telegram-alerts-parser.ts` — ticker resolution, subscribe/set argument parsing, disambiguation parsing, and close-match suggestions.
+- `worker/src/lib/telegram-alerts-formatting.ts` — alert message formatting, `splitMessage`, and `SNOOZE_REPLY_MARKUP`.
 - `worker/src/lib/telegram-presets.ts` — preset definitions and resolution.
 - `worker/src/lib/telegram-digest-appendices.ts` — channel digest appendices (cemetery, newly tracked).
 - `worker/src/lib/telegram-log.ts` — structured logging.

@@ -2,11 +2,11 @@ import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registr
 import {
   resolveTelegramPresetAlias,
   type TelegramPresetId,
-} from "./presets";
+} from "./telegram-presets";
 import {
   isDepegStepValue,
   type DepegStepValue,
-} from "./constants";
+} from "./telegram-constants";
 
 // Frozen coins are no longer subscribable for new alerts (no fresh data is being collected),
 // but pre-launch coins remain subscribable so users can opt into launch alerts.
