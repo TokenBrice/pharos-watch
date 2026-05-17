@@ -8,27 +8,11 @@
  */
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { ScheduledRuntimeContext } from "./context";
-import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
-
-function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
-  return [
-    {
-      mode: "serial",
-      label: "stablecoin-charts",
-      tasks: [
-        {
-          job: "sync-stablecoin-charts",
-          run: (signal) => syncStablecoinCharts(runtime.db, signal),
-        },
-      ],
-    },
-  ];
-}
+import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runScheduledSlotGroups(
-    runtime,
-    "half-hour charts slot",
-    buildHalfHourlyChartsSlotGroups(runtime),
-  );
+  await runSingleScheduledJob(runtime, "half-hour charts slot", {
+    job: "sync-stablecoin-charts",
+    run: (signal) => syncStablecoinCharts(runtime.db, signal),
+  });
 }

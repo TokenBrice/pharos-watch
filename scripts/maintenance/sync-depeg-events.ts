@@ -17,7 +17,7 @@ import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { getArgValue } from "../lib/cli.mjs";
-import { resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
+import { fetchWithRetry, resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
 
 interface DepegEventsResponse {
   events: DepegEvent[];
@@ -43,44 +43,6 @@ function resolveOutputPath(): URL {
   const explicit = getArgValue(process.argv, "--output");
   if (!explicit) return new URL("../../data/depeg-events.json", import.meta.url);
   return new URL(explicit, `file://${process.cwd()}/`);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  attempts = 3,
-  backoff = [1000, 2000],
-): Promise<Response> {
-  for (let i = 0; i < attempts; i++) {
-    let res: Response;
-    try {
-      res = await fetch(url, options);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      if (i < attempts - 1) {
-        const delay = backoff[i] ?? backoff[backoff.length - 1];
-        console.log(`[sync-depeg-events] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`);
-        await sleep(delay);
-        continue;
-      }
-      throw err;
-    }
-    if (res.ok || res.status < 500) return res;
-    if (i < attempts - 1) {
-      const delay = backoff[i] ?? backoff[backoff.length - 1];
-      console.log(
-        `[sync-depeg-events] Attempt ${i + 1}/${attempts} failed (HTTP ${res.status}); retrying in ${delay}ms...`,
-      );
-      await sleep(delay);
-    } else {
-      return res;
-    }
-  }
-  throw new Error("fetchWithRetry: exhausted attempts");
 }
 
 /**
@@ -149,7 +111,7 @@ async function main() {
         params.set("limit", String(limit));
         if (cursor) params.set("cursor", cursor);
         const pagedUrl = `${apiUrl}?${params.toString()}`;
-        const res = await fetchWithRetry(pagedUrl, { headers });
+        const res = await fetchWithRetry(pagedUrl, { headers }, { logLabel: "sync-depeg-events" });
         if (!res.ok) throw new Error(`API returned ${res.status} for ${pagedUrl}`);
         const body = (await res.json()) as DepegEventsResponse;
         const batch = Array.isArray(body.events) ? body.events : [];

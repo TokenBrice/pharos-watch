@@ -54,6 +54,54 @@ export function tsToDate(seconds: number): string {
   return new Date(seconds * 1000).toISOString().slice(0, 10);
 }
 
+interface FetchWithRetryOptions {
+  /** Label used in retry logs, without surrounding brackets. */
+  logLabel: string;
+  attempts?: number;
+  backoffMs?: readonly number[];
+}
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retryOptions: FetchWithRetryOptions,
+): Promise<Response> {
+  const attempts = retryOptions.attempts ?? 3;
+  const backoff = retryOptions.backoffMs ?? [1000, 2000];
+  for (let i = 0; i < attempts; i++) {
+    let res: Response;
+    try {
+      res = await fetch(url, options);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      if (i < attempts - 1) {
+        const delay = backoff[i] ?? backoff[backoff.length - 1];
+        console.log(
+          `[${retryOptions.logLabel}] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`,
+        );
+        await sleep(delay);
+        continue;
+      }
+      throw err;
+    }
+    if (res.ok || res.status < 500) return res;
+    if (i < attempts - 1) {
+      const delay = backoff[i] ?? backoff[backoff.length - 1];
+      console.log(
+        `[${retryOptions.logLabel}] Attempt ${i + 1}/${attempts} failed (HTTP ${res.status}); retrying in ${delay}ms...`,
+      );
+      await sleep(delay);
+    } else {
+      return res;
+    }
+  }
+  throw new Error("fetchWithRetry: exhausted attempts");
+}
+
 interface SyncJsonOptions<T> {
   /** Destination file URL. Parent directory is created if missing. */
   writeTo: URL;

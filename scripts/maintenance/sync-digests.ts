@@ -5,7 +5,7 @@
  */
 
 import { getArgValue, parseCheckMode } from "../lib/cli.mjs";
-import { resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
+import { fetchWithRetry, resolveApiUrl, syncJson, tsToDate } from "../lib/sync-from-api";
 
 interface ApiDigest {
   digestText: string;
@@ -35,47 +35,6 @@ function resolveOutputPath(): URL {
   return new URL(explicitOutput, `file://${process.cwd()}/`);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  attempts = 3,
-  backoff = [1000, 2000],
-): Promise<Response> {
-  for (let i = 0; i < attempts; i++) {
-    let res: Response;
-    try {
-      res = await fetch(url, options);
-    } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
-      if (i < attempts - 1) {
-        const delay = backoff[i] ?? backoff[backoff.length - 1];
-        console.log(
-          `[sync-digests] Attempt ${i + 1}/${attempts} failed (${reason}); retrying in ${delay}ms...`,
-        );
-        await sleep(delay);
-        continue;
-      }
-      throw err;
-    }
-    if (res.ok || res.status < 500) return res;
-    if (i < attempts - 1) {
-      const delay = backoff[i] ?? backoff[backoff.length - 1];
-      console.log(
-        `[sync-digests] Attempt ${i + 1}/${attempts} failed (HTTP ${res.status}); retrying in ${delay}ms...`,
-      );
-      await sleep(delay);
-    } else {
-      return res;
-    }
-  }
-  // unreachable, but satisfies TypeScript
-  throw new Error("fetchWithRetry: exhausted attempts");
-}
-
 async function main() {
   // --check mode is a smoke test for the script's own wiring (no network).
   if (parseCheckMode(process.argv)) {
@@ -102,7 +61,7 @@ async function main() {
   const { entries, outputFile } = await syncJson<DigestEntry>({
     writeTo: outputPath,
     parse: async () => {
-      const res = await fetchWithRetry(apiUrl, { headers });
+      const res = await fetchWithRetry(apiUrl, { headers }, { logLabel: "sync-digests" });
       if (!res.ok) throw new Error(`API returned ${res.status}`);
       const { digests } = (await res.json()) as { digests: ApiDigest[] };
       console.log(`Fetched ${digests.length} digests`);

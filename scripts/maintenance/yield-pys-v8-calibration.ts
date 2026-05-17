@@ -464,7 +464,7 @@ function escapeCell(value: string): string {
 }
 
 function printUsage(): void {
-  console.log("Usage: tsx scripts/yield-pys-v8-calibration.ts --input rankings.json [--out agents/report.md]");
+  console.log("Usage: tsx scripts/maintenance/yield-pys-v8-calibration.ts --input rankings.json [--out agents/report.md]");
 }
 
 function main(): void {

@@ -269,6 +269,29 @@ function buildResolvedBenchmark(params: {
   };
 }
 
+type BenchmarkFetchResult = { rate: number; recordDate: string };
+type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
+type BenchmarkProviderEnvKey = keyof Pick<Env, "BANXICO_TOKEN">;
+
+interface BenchmarkProvider {
+  key: BenchmarkProviderKey;
+  fetch: (params: {
+    env?: Pick<Env, "BANXICO_TOKEN">;
+    signal?: AbortSignal;
+  }) => Promise<BenchmarkFetchResult | null>;
+  source: string;
+  fallbackMode: string;
+  requiredEnv?: BenchmarkProviderEnvKey;
+  missingEnvFallbackMode?: string;
+}
+
+interface ResolvedBenchmarkProvider {
+  key: BenchmarkProviderKey;
+  parsed: BenchmarkFetchResult | null;
+  meta: ParsedYieldBenchmarkMeta | null;
+  failureMode: string | null;
+}
+
 async function tryFredCsv(
   url: string,
   signal?: AbortSignal,
@@ -519,6 +542,101 @@ async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; record
   }
 }
 
+const BENCHMARK_PROVIDERS: readonly BenchmarkProvider[] = [
+  {
+    key: "EUR",
+    fetch: ({ signal }) => tryEcbCompoundedEstrCsv(signal),
+    source: "ecb-estr-3m",
+    fallbackMode: "ecb-failed",
+  },
+  {
+    key: "CHF",
+    fetch: ({ signal }) => trySixSar3mcCsv(signal),
+    source: "six-sar3mc",
+    fallbackMode: "six-saron-failed",
+  },
+  {
+    key: "GBP",
+    fetch: ({ signal }) => tryFredCsv(FRED_SONIA_CSV_URL, signal),
+    source: "fred-iudsoia",
+    fallbackMode: "fred-sonia-failed",
+  },
+  {
+    key: "JPY",
+    fetch: ({ signal }) => tryFredCsv(FRED_TONA_CSV_URL, signal),
+    source: "fred-jpy-overnight",
+    fallbackMode: "fred-jpy-failed",
+  },
+  {
+    key: "AUD",
+    fetch: ({ signal }) => tryFredCsv(FRED_AUD_CSV_URL, signal),
+    source: "fred-aud-3m",
+    fallbackMode: "fred-aud-failed",
+  },
+  {
+    key: "MXN",
+    fetch: ({ env, signal }) => tryBanxicoCetes(env?.BANXICO_TOKEN?.trim() || null, signal),
+    source: "banxico-cetes-28d",
+    fallbackMode: "banxico-cetes-failed",
+    requiredEnv: "BANXICO_TOKEN",
+    missingEnvFallbackMode: "banxico-token-missing",
+  },
+  {
+    key: "BRL",
+    fetch: ({ signal }) => tryBcbSelic(signal),
+    source: "bcb-selic",
+    fallbackMode: "bcb-selic-failed",
+  },
+  {
+    key: "CAD",
+    fetch: ({ signal }) => tryBocCorra(signal),
+    source: "boc-valet-v122530",
+    fallbackMode: "boc-corra-failed",
+  },
+] as const;
+
+const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "MXN",
+  "BRL",
+  "AUD",
+  "CAD",
+] as const;
+
+async function resolveBenchmarkProvider(params: {
+  provider: BenchmarkProvider;
+  previous: ParsedYieldBenchmarkRegistry;
+  fetchedAt: number;
+  env?: Pick<Env, "BANXICO_TOKEN">;
+  signal?: AbortSignal;
+}): Promise<ResolvedBenchmarkProvider> {
+  const { provider, previous, fetchedAt, env, signal } = params;
+  const missingRequiredEnv = provider.requiredEnv ? !env?.[provider.requiredEnv]?.trim() : false;
+  const fallbackMode = missingRequiredEnv
+    ? (provider.missingEnvFallbackMode ?? provider.fallbackMode)
+    : provider.fallbackMode;
+  const parsed = missingRequiredEnv ? null : await provider.fetch({ env, signal });
+  const meta = parsed
+    ? buildResolvedBenchmark({
+      key: provider.key,
+      rate: parsed.rate,
+      recordDate: parsed.recordDate,
+      fetchedAt,
+      source: provider.source,
+    })
+    : buildRetainedBenchmark(previous[provider.key], fallbackMode);
+
+  return {
+    key: provider.key,
+    parsed,
+    meta,
+    failureMode: parsed ? null : (meta?.fallbackMode ?? fallbackMode),
+  };
+}
+
 export async function fetchTbillRate(
   db: D1Database,
   signal?: AbortSignal,
@@ -581,102 +699,28 @@ export async function fetchTbillRate(
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
   }
 
-  const eurParsed = await tryEcbCompoundedEstrCsv(signal);
-  const eurSource = eurParsed ? "ecb-estr-3m" : null;
-  const eurMeta = eurParsed && eurSource
-    ? buildResolvedBenchmark({
-      key: "EUR",
-      rate: eurParsed.rate,
-      recordDate: eurParsed.recordDate,
+  const resolvedProviders: ResolvedBenchmarkProvider[] = [];
+  for (const provider of BENCHMARK_PROVIDERS) {
+    resolvedProviders.push(await resolveBenchmarkProvider({
+      provider,
+      previous,
       fetchedAt,
-      source: eurSource,
-    })
-    : buildRetainedBenchmark(previous.EUR, "ecb-failed");
+      env,
+      signal,
+    }));
+  }
+  const resolvedByKey = Object.fromEntries(
+    resolvedProviders.map((entry) => [entry.key, entry]),
+  ) as Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>;
 
-  const chfParsed = await trySixSar3mcCsv(signal);
-  const chfMeta = chfParsed
-    ? buildResolvedBenchmark({
-      key: "CHF",
-      rate: chfParsed.rate,
-      recordDate: chfParsed.recordDate,
-      fetchedAt,
-      source: "six-sar3mc",
-    })
-    : buildRetainedBenchmark(previous.CHF, "six-saron-failed");
-
-  // GBP (SONIA via FRED IUDSOIA mirror)
-  const gbpParsed = await tryFredCsv(FRED_SONIA_CSV_URL, signal);
-  const gbpMeta = gbpParsed
-    ? buildResolvedBenchmark({
-      key: "GBP",
-      rate: gbpParsed.rate,
-      recordDate: gbpParsed.recordDate,
-      fetchedAt,
-      source: "fred-iudsoia",
-    })
-    : buildRetainedBenchmark(previous.GBP, "fred-sonia-failed");
-
-  // JPY (FRED IRSTCB01JPM156N — uncollateralized overnight call rate, TONA proxy)
-  const jpyParsed = await tryFredCsv(FRED_TONA_CSV_URL, signal);
-  const jpyMeta = jpyParsed
-    ? buildResolvedBenchmark({
-      key: "JPY",
-      rate: jpyParsed.rate,
-      recordDate: jpyParsed.recordDate,
-      fetchedAt,
-      source: "fred-jpy-overnight",
-    })
-    : buildRetainedBenchmark(previous.JPY, "fred-jpy-failed");
-
-  // AUD (FRED IR3TIB01AUM156N — 3-month interbank, RBA cash rate proxy)
-  const audParsed = await tryFredCsv(FRED_AUD_CSV_URL, signal);
-  const audMeta = audParsed
-    ? buildResolvedBenchmark({
-      key: "AUD",
-      rate: audParsed.rate,
-      recordDate: audParsed.recordDate,
-      fetchedAt,
-      source: "fred-aud-3m",
-    })
-    : buildRetainedBenchmark(previous.AUD, "fred-aud-failed");
-
-  // MXN (Banxico SF43936 — CETES 28d; requires BANXICO_TOKEN env)
-  const banxicoToken = env?.BANXICO_TOKEN?.trim() || null;
-  const mxnParsed = await tryBanxicoCetes(banxicoToken, signal);
-  const mxnFailureMode = banxicoToken ? "banxico-cetes-failed" : "banxico-token-missing";
-  const mxnMeta = mxnParsed
-    ? buildResolvedBenchmark({
-      key: "MXN",
-      rate: mxnParsed.rate,
-      recordDate: mxnParsed.recordDate,
-      fetchedAt,
-      source: "banxico-cetes-28d",
-    })
-    : buildRetainedBenchmark(previous.MXN, mxnFailureMode);
-
-  // BRL (BCB SGS series 11 — SELIC over)
-  const brlParsed = await tryBcbSelic(signal);
-  const brlMeta = brlParsed
-    ? buildResolvedBenchmark({
-      key: "BRL",
-      rate: brlParsed.rate,
-      recordDate: brlParsed.recordDate,
-      fetchedAt,
-      source: "bcb-selic",
-    })
-    : buildRetainedBenchmark(previous.BRL, "bcb-selic-failed");
-
-  // CAD (BoC Valet V122530 — overnight repo, CORRA proxy)
-  const cadParsed = await tryBocCorra(signal);
-  const cadMeta = cadParsed
-    ? buildResolvedBenchmark({
-      key: "CAD",
-      rate: cadParsed.rate,
-      recordDate: cadParsed.recordDate,
-      fetchedAt,
-      source: "boc-valet-v122530",
-    })
-    : buildRetainedBenchmark(previous.CAD, "boc-corra-failed");
+  const eurMeta = resolvedByKey.EUR.meta;
+  const chfMeta = resolvedByKey.CHF.meta;
+  const gbpMeta = resolvedByKey.GBP.meta;
+  const jpyMeta = resolvedByKey.JPY.meta;
+  const mxnMeta = resolvedByKey.MXN.meta;
+  const brlMeta = resolvedByKey.BRL.meta;
+  const audMeta = resolvedByKey.AUD.meta;
+  const cadMeta = resolvedByKey.CAD.meta;
 
   // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
   const sgdMeta: ParsedYieldBenchmarkMeta | null = null;
@@ -694,24 +738,12 @@ export async function fetchTbillRate(
     SGD: sgdMeta,
   });
 
-  const eurFailureMode = eurParsed ? null : (eurMeta?.fallbackMode ?? "ecb-failed");
-  const chfFailureMode = chfParsed ? null : (chfMeta?.fallbackMode ?? "six-saron-failed");
-  const gbpFailureMode = gbpParsed ? null : (gbpMeta?.fallbackMode ?? "fred-sonia-failed");
-  const jpyFailureMode = jpyParsed ? null : (jpyMeta?.fallbackMode ?? "fred-jpy-failed");
-  const mxnFailureModeFinal = mxnParsed ? null : (mxnMeta?.fallbackMode ?? mxnFailureMode);
-  const brlFailureMode = brlParsed ? null : (brlMeta?.fallbackMode ?? "bcb-selic-failed");
-  const audFailureMode = audParsed ? null : (audMeta?.fallbackMode ?? "fred-aud-failed");
-  const cadFailureMode = cadParsed ? null : (cadMeta?.fallbackMode ?? "boc-corra-failed");
   const degradationReasons: string[] = [];
   if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
-  if (eurFailureMode) degradationReasons.push(`eur:${eurFailureMode}`);
-  if (chfFailureMode) degradationReasons.push(`chf:${chfFailureMode}`);
-  if (gbpFailureMode) degradationReasons.push(`gbp:${gbpFailureMode}`);
-  if (jpyFailureMode) degradationReasons.push(`jpy:${jpyFailureMode}`);
-  if (mxnFailureModeFinal) degradationReasons.push(`mxn:${mxnFailureModeFinal}`);
-  if (brlFailureMode) degradationReasons.push(`brl:${brlFailureMode}`);
-  if (audFailureMode) degradationReasons.push(`aud:${audFailureMode}`);
-  if (cadFailureMode) degradationReasons.push(`cad:${cadFailureMode}`);
+  for (const key of BENCHMARK_DEGRADATION_ORDER) {
+    const failureMode = resolvedByKey[key].failureMode;
+    if (failureMode) degradationReasons.push(`${key.toLowerCase()}:${failureMode}`);
+  }
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",

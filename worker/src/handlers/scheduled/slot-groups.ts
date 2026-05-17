@@ -18,7 +18,7 @@ export interface ScheduledSlotGroup {
   tasks: readonly ScheduledSlotTask[];
 }
 
-async function runScheduledSlotTask(
+export async function runSingleScheduledJob(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
   task: ScheduledSlotTask,
@@ -28,6 +28,16 @@ async function runScheduledSlotTask(
   });
 }
 
+async function runSerialScheduledJobs(
+  runtime: ScheduledRuntimeContext,
+  slotLabel: string,
+  tasks: readonly ScheduledSlotTask[],
+): Promise<void> {
+  for (const task of tasks) {
+    await runSingleScheduledJob(runtime, slotLabel, task);
+  }
+}
+
 export async function runScheduledSlotGroups(
   runtime: ScheduledRuntimeContext,
   slotLabel: string,
@@ -35,12 +45,10 @@ export async function runScheduledSlotGroups(
 ): Promise<void> {
   for (const group of groups) {
     if (group.mode === "parallel") {
-      await Promise.all(group.tasks.map((task) => runScheduledSlotTask(runtime, slotLabel, task)));
+      await Promise.all(group.tasks.map((task) => runSingleScheduledJob(runtime, slotLabel, task)));
       continue;
     }
 
-    for (const task of group.tasks) {
-      await runScheduledSlotTask(runtime, slotLabel, task);
-    }
+    await runSerialScheduledJobs(runtime, slotLabel, group.tasks);
   }
 }
