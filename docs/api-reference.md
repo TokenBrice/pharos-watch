@@ -3137,7 +3137,7 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
 
-Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
 
 ---
 

@@ -122,7 +122,7 @@ export const TELEGRAM_COMMAND_GROUPS = [
       {
         command: "/presets",
         description:
-          "Browse preset watchlists (usd-top25, eur-top10, mcap-ge-1b, …). Subscribing to a preset expands to its current member coins.",
+          "Browse preset watchlists (usd-top25, non-usd-top25, mcap-ge-1b, ...). Subscribing to a preset expands to its current member coins.",
         example: "/presets",
       },
     ],
@@ -302,7 +302,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What are preset watchlists?",
     answer:
-      "Presets are curated coin lists like usd-top25 or mcap-ge-1b (compact and dashed spellings both work). Subscribing to a preset expands to its current member coins. Send /presets in Telegram to browse them.",
+      "Presets are curated coin lists like usd-top25, non-usd-top25, or mcap-ge-1b (compact and dashed spellings both work). Subscribing to a preset expands to its current member coins. Send /presets in Telegram to browse them.",
   },
   {
     question: "Can I use the bot in a Telegram group?",

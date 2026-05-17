@@ -302,10 +302,10 @@ Telegram only delivers `?start=` deep links in private chats, but the dispatcher
 
 Preset watchlists are persistent dynamic follows on top of the existing per-coin subscription model.
 
-- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
-- Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
+- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `non-usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
 - Resolution happens at command and dispatch/list time inside `worker/src/lib/telegram-presets.ts`
-- The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs
+- The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs; `non-usd-top*` includes active tracked coins whose `flags.pegCurrency` is not `USD`
 - `/subscribe ... <preset>` stores a persistent row in `telegram_preset_subscriptions` and also updates the currently resolved coin rows for backwards-compatible list/explicit-row behavior
 - `/unsubscribe <preset>` deletes the persistent preset row and removes the currently resolved coin rows for that chat
 - `/list` shows both dynamic preset rows and explicit coin rows

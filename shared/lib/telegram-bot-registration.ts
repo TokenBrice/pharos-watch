@@ -22,7 +22,7 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: "list", description: "Show your current subscriptions and settings" },
   { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
   { command: "unsubscribe", description: "Remove coin subscriptions" },
-  { command: "presets", description: "Browse preset watchlists like usd-top25 / usd-top-25" },
+  { command: "presets", description: "Browse preset watchlists like usd-top25 / non-usd-top25" },
   { command: "set", description: "Tune per-coin or global thresholds (e.g. /set all depeg-step 250)" },
   { command: "settings", description: "Open the inline settings keyboard (e.g. /settings or /settings USDC)" },
   { command: "mute", description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)" },

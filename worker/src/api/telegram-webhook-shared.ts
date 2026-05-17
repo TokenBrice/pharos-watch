@@ -133,7 +133,7 @@ Show current subscriptions and settings
 Cancel a pending selection
 
 Preset watchlists expand into normal coin follows at subscribe time. Launch alerts require explicit tickers or coin ids.
-Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</code> or <code>usd-top-25</code>.
+Preset aliases accept compact or dashed top-N spelling, e.g. <code>usd-top25</code> or <code>non-usd-top-25</code>.
 
 In groups, use addressed commands like <code>/subscribe@PharosWatchBot dews usd-top25</code>. Settings apply to the current chat, and pending ticker selections can only be completed by the user who started them.`;
 

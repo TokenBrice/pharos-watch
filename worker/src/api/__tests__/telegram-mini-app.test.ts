@@ -100,6 +100,7 @@ function stablecoinsCacheTable(): MockTableConfig {
         peggedAssets: [
           { id: "usdt-tether", symbol: "USDT", name: "Tether", circulating: { peggedUSD: 1_000_000_000 } },
           { id: "usdc-circle", symbol: "USDC", name: "USD Coin", circulating: { peggedUSD: 900_000_000 } },
+          { id: "eurc-circle", symbol: "EURC", name: "Euro Coin", circulating: { peggedUSD: 800_000_000 } },
         ],
       }),
       updated_at: NOW_SEC,
@@ -642,6 +643,20 @@ describe("handleTelegramMiniAppMutation", () => {
     expect(unfollowResponse.status).toBe(200);
     expect(historyHas(unfollowDb, "DELETE FROM telegram_subscriptions", ["42", "usdt-tether"])).toBe(true);
     expect(historyHas(unfollowDb, "DELETE FROM telegram_preset_subscriptions", ["42", "usd-top10"])).toBe(true);
+  });
+
+  it("accepts non-USD preset ids through Mini App follow mutations", async () => {
+    const initData = await privateInitData();
+    const db = mockD1([stablecoinsCacheTable(), ...stateReadTables()]);
+
+    const response = await handleTelegramMiniAppMutation(db, request("/api/telegram-mini-app/mutate", {
+      initData,
+      operation: { kind: "follow-preset", presetId: "non-usd-top10", alertTypes: { dews: true } },
+    }), BOT_TOKEN);
+
+    expect(response.status).toBe(200);
+    expect(historyHas(db, "INSERT INTO telegram_subscriptions", ["42", "eurc-circle", 1, 0, 0, 0])).toBe(true);
+    expect(historyHas(db, "INSERT INTO telegram_preset_subscriptions", ["42", "non-usd-top10", 1, 0, 0])).toBe(true);
   });
 
   it("does not persist subscription, preset, or analytics rows when D1 fails mid-batch", async () => {
