@@ -14,8 +14,8 @@ import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, 
 import { applyListAggregatorDowngrade } from "../sync-stablecoins/enrich-prices-primary";
 import type { PeggedAsset, PrimaryPriceResult, PriceValidationStats } from "../sync-stablecoins/enrich-prices";
 import { runCmcPass, runDexScreenerPass, runDlContractPasses, runJupiterPass } from "../sync-stablecoins/enrich-prices-passes";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 const freshObservedAtSec = () => Math.floor(Date.now() / 1000) - 60;

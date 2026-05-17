@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { handleRequestSourceStats } from "../request-source-stats";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 describe("handleRequestSourceStats", () => {
   it("returns aggregated total site-vs-external demand for the requested window", async () => {

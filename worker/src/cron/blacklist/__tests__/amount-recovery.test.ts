@@ -5,7 +5,7 @@ import {
   extractDestroyAmountFromReceiptLogs,
 } from "../amount-recovery";
 import { shouldSuppressAsMirrorZero } from "../shared";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistRow } from "../shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../run-budget";

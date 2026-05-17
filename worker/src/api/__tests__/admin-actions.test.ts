@@ -3,7 +3,7 @@ import {
   handleDebugSyncState,
   handleResetBlacklistSync,
 } from "../admin-actions";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 describe("admin mutation auth — custom header required for mutating methods", () => {
   it("rejects POST without X-Pharos-Admin header", async () => {

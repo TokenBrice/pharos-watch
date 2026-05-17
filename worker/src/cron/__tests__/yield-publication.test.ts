@@ -6,7 +6,7 @@ import {
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
-import { mockD1, type MockTableConfig } from "../api/__tests__/helpers/mock-d1";
-import { hmacSha256Hex, makeExecutionContext } from "../api/__tests__/helpers/auth";
+import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { getApiKeyAuthCacheTtlMs, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";

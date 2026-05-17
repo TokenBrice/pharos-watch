@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeAsset } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { handlePegSummary } from "../peg-summary";
 
 const nowSec = Math.floor(Date.now() / 1000);

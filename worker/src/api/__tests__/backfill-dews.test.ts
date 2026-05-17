@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1 } })),

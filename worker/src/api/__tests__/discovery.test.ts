@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { handleDiscoveryCandidates, handleDismissCandidate } from "../discovery";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 describe("handleDiscoveryCandidates", () => {
   it("returns active candidates sorted by market_cap desc", async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 stubCryptoForAuth();
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";

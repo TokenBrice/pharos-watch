@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeDigestRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeDigestRow } from "../../test-helpers/__shared/fixtures";
 import { handleDigestArchive } from "../digest-archive";
 
 describe("handleDigestArchive", () => {

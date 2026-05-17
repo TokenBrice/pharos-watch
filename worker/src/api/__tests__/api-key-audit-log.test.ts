@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleApiKeyAuditLog } from "../api-key-audit-log";
 
 describe("api-key-audit-log handler", () => {

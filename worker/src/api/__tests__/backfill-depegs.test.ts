@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { mockD1, type MockD1Database } from "./helpers/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegs } from "../backfill-depegs";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadReportCardCache, writeReportCardCache } from "../report-card-cache";
 
 function makeReportCardDb(value: string | null, updatedAt = 1_700_000_000): D1Database {

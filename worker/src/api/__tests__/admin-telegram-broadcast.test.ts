@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 function adminRequest(body: unknown, opts: { admin?: boolean } = {}): Request {

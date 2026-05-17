@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1, type MockD1Database } from "./helpers/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { handleEvents } from "../events";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
 

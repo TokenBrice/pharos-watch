@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
-import { mockFetch } from "./helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 

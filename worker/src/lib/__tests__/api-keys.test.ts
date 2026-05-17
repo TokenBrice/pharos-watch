@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { hmacSha256Hex } from "../../api/__tests__/helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { hmacSha256Hex } from "../../test-helpers/__shared/auth";
 import {
   authenticateApiKey,
   checkApiKeyRateLimit,

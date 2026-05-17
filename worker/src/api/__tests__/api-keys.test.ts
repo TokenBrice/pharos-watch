@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../../index";
-import { mockD1 } from "./helpers/mock-d1";
-import { hmacSha256Hex, makeApiRequest, makeExecutionContext, stubCryptoForAuth } from "./helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { hmacSha256Hex, makeApiRequest, makeExecutionContext, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import {
   handleApiKeyRotate,
   handleApiKeyUpdate,

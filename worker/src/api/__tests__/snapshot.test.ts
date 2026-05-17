@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../snapshot";
 
 const ISO_DATE = "2026-05-16";

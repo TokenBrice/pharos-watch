@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1, type MockD1Database } from "./helpers/mock-d1";
-import { makeMintBurnRow } from "./helpers/fixtures";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { handleMintBurnEvents } from "../mint-burn-events";
 
 describe("handleMintBurnEvents", () => {

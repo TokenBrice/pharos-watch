@@ -6,8 +6,8 @@ import {
   parseSupplyData,
 } from "../backfill-depegs-extraction";
 import { summarizeBackfillReplayDiff } from "../backfill-depegs-preview";
-import { mockD1 } from "./helpers/mock-d1";
-import { mockFetch } from "./helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
   vi.restoreAllMocks();

@@ -7,7 +7,7 @@ import {
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
 

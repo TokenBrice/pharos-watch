@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1, type MockD1Database } from "./helpers/mock-d1";
-import { makeAsset, makeReportCardsDb } from "./helpers/fixtures";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../report-cards";
 import { METHODOLOGY_VERSION } from "@shared/lib/report-cards";
 

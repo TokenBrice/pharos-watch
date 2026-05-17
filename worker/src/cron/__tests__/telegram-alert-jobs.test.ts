@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   finalizeTelegramAlertJobManifests,
   persistTelegramAlertJobManifests,

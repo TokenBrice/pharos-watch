@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeBlacklistRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
 
 describe("handleBlacklist", () => {

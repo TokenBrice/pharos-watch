@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { BACKTEST_ANCHORS } from "../../lib/backtest-anchors";
 

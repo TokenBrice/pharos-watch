@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../lib/stability-index";
 

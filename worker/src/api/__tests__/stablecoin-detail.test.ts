@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Stub external fetches before importing the handler

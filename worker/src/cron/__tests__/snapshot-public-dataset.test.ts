@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
 const ISO_DATE = "2026-05-16";

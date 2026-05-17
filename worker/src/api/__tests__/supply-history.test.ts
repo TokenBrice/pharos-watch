@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeSupplyRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
 import { handleSupplyHistory } from "../supply-history";
 
 describe("handleSupplyHistory", () => {

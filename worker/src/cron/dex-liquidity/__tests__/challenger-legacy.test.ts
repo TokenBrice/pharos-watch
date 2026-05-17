@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 describe("challenger legacy fallback", () => {
   it("falls back safely when the challenger tables are absent", async () => {

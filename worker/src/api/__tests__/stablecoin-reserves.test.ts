@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";

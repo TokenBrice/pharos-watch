@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // --- Module-level mocks ---
 
@@ -262,7 +262,7 @@ import { batchExecute } from "../../lib/db";
 import { getCache, setCache, setCacheIfNewer, writeFreshnessSentinel } from "../../lib/db-cache";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import * as safetyScoresModule from "../../lib/safety-scores";

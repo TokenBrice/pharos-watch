@@ -1,7 +1,7 @@
 import { DepegEventsResponseSchema } from "@shared/types/market";
 import { describe, it, expect, vi } from "vitest";
-import { mockD1, type MockD1Database } from "./helpers/mock-d1";
-import { makeDepegRow } from "./helpers/fixtures";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { handleDepegEvents } from "../depeg-events";
 
 describe("handleDepegEvents", () => {

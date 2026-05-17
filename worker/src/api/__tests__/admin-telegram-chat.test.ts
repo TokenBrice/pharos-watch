@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handleAdminTelegramChat } from "../admin-telegram-chat";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 interface SubscriberBody {
   chatId: string;

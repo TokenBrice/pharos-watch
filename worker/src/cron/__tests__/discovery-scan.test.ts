@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("@shared/lib/stablecoins/registry", () => ({
   ACTIVE_STABLECOINS: [

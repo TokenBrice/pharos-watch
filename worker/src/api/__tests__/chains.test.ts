@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Mock stablecoins to avoid importing full metadata tree
 vi.mock("@shared/lib/stablecoins/registry", () => ({

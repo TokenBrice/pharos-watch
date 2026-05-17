@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
-import { makeBlacklistRow } from "../../../api/__tests__/helpers/fixtures";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../run-budget";
 import type { BlacklistRow } from "../shared";

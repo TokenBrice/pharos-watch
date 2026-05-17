@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeYieldHistoryRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";

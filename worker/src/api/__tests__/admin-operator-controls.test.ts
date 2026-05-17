@@ -4,7 +4,7 @@ import { handleResetCircuitBreaker } from "../admin-reset-circuit-breaker";
 import { handleKillCronInFlight } from "../admin-kill-cron-in-flight";
 import { handleBulkDismissDiscoveryCandidates } from "../admin-bulk-dismiss-discovery-candidates";
 import { handleStatusProbeHistory } from "../status-probe-history";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Tests intentionally omit Idempotency-Key so the handler bypasses the
 // idempotency layer (which requires admin_idempotency_keys rows in the mock).

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getEndpointDefinition, getSiteDataAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { handleYieldSourceDecisions } from "../yield-source-decisions";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 function buildRequest(query = ""): { request: Request; url: URL } {
   const url = new URL(`https://ops-api.pharos.watch/api/yield-source-decisions${query}`);
