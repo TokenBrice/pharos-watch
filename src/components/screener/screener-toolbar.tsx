@@ -34,6 +34,9 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
   dilutable: "Dilutable",
 };
 
+const FILTER_PILL_CLASS_NAME =
+  "min-h-11 font-semibold text-muted-foreground transition-[background-color,border-color,color,box-shadow,filter] hover:text-foreground data-[state=on]:relative data-[state=on]:z-10 data-[state=on]:!border-[oklch(0.72_0.14_248)] data-[state=on]:!bg-[oklch(0.72_0.14_248)] data-[state=on]:!text-slate-950 data-[state=on]:shadow-[0_0_0_1px_oklch(0.72_0.14_248),0_0_18px_oklch(0.72_0.14_248_/_0.2)] sm:min-h-8";
+
 interface ScreenerToolbarProps {
   filters: ScreenerFilters;
   matchSummary: string;
@@ -195,7 +198,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={type}
                 value={type}
-                className="min-h-11 sm:min-h-8"
+                className={FILTER_PILL_CLASS_NAME}
               >
                 {GOVERNANCE_LABELS_SHORT[type]}
               </ToggleGroupItem>
@@ -220,7 +223,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={archetype}
                 value={archetype}
-                className="min-h-11 sm:min-h-8"
+                className={FILTER_PILL_CLASS_NAME}
               >
                 {MECHANISM_ARCHETYPE_LABELS[archetype]}
               </ToggleGroupItem>
@@ -245,7 +248,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={bucket}
                 value={bucket}
-                className="min-h-11 sm:min-h-8"
+                className={FILTER_PILL_CLASS_NAME}
               >
                 {BLACKLISTABLE_LABELS[bucket]}
               </ToggleGroupItem>
@@ -270,7 +273,7 @@ export function ScreenerToolbar({
               <ToggleGroupItem
                 key={status}
                 value={status}
-                className="min-h-11 sm:min-h-8"
+                className={FILTER_PILL_CLASS_NAME}
               >
                 {LIFECYCLE_LABELS[status]}
               </ToggleGroupItem>
@@ -296,7 +299,7 @@ export function ScreenerToolbar({
             <ToggleGroupItem
               key={peg}
               value={peg}
-              className="min-h-11 sm:min-h-8"
+              className={FILTER_PILL_CLASS_NAME}
               title={PEG_METADATA[peg].label}
             >
               {PEG_METADATA[peg].filterLabel}
