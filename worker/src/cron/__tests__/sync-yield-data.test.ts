@@ -1,142 +1,77 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  mockCircuitBreaker,
+  mockDbCache,
+  mockRegistry,
+} from "../../test-helpers/cron";
 
 // --- Module-level mocks ---
 
 // Stub the stablecoins list — one yield-bearing, two non-yield-bearing
-vi.mock("@shared/lib/stablecoins/registry", () => {
-  const stablecoins = [
-    {
-      id: "100",
-      name: "sDAI",
-      symbol: "sDAI",
-      geckoId: "savings-dai",
-      flags: {
-        pegCurrency: "USD",
-        backing: "crypto-backed",
-        yieldBearing: true,
-        navToken: true,
-        governance: "decentralized",
+vi.mock("@shared/lib/stablecoins/registry", () =>
+  mockRegistry({
+    stablecoins: [
+      {
+        id: "100",
+        name: "sDAI",
+        symbol: "sDAI",
+        geckoId: "savings-dai",
+        flags: {
+          pegCurrency: "USD",
+          backing: "crypto-backed",
+          yieldBearing: true,
+          navToken: true,
+          governance: "decentralized",
+        },
+        yieldConfig: {
+          yieldSource: "DSR",
+          yieldType: "nav-appreciation",
+        },
       },
-      yieldConfig: {
-        yieldSource: "DSR",
-        yieldType: "nav-appreciation",
+      {
+        id: "usdc-circle",
+        name: "USD Coin",
+        symbol: "USDC",
+        geckoId: "usd-coin",
+        flags: {
+          pegCurrency: "USD",
+          backing: "fiat-backed",
+          yieldBearing: false,
+          navToken: false,
+          governance: "centralized",
+        },
       },
-    },
-    {
-      id: "usdc-circle",
-      name: "USD Coin",
-      symbol: "USDC",
-      geckoId: "usd-coin",
-      flags: {
-        pegCurrency: "USD",
-        backing: "fiat-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "centralized",
+      {
+        id: "u-united-stables",
+        name: "United Stables",
+        symbol: "U",
+        geckoId: "united-stables",
+        flags: {
+          pegCurrency: "USD",
+          backing: "rwa-backed",
+          yieldBearing: false,
+          navToken: false,
+          governance: "centralized",
+        },
       },
-    },
-    {
-      id: "u-united-stables",
-      name: "United Stables",
-      symbol: "U",
-      geckoId: "united-stables",
-      flags: {
-        pegCurrency: "USD",
-        backing: "rwa-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "centralized",
+      {
+        id: "lusd-liquity",
+        name: "Liquity USD",
+        symbol: "LUSD",
+        geckoId: "liquity-usd",
+        flags: {
+          pegCurrency: "USD",
+          backing: "crypto-backed",
+          yieldBearing: false,
+          navToken: false,
+          governance: "decentralized",
+        },
+        contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
       },
-    },
-    {
-      id: "lusd-liquity",
-      name: "Liquity USD",
-      symbol: "LUSD",
-      geckoId: "liquity-usd",
-      flags: {
-        pegCurrency: "USD",
-        backing: "crypto-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "decentralized",
-      },
-      contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
-    },
-  ];
-  const metaById = new Map(stablecoins.map((stablecoin) => [stablecoin.id, stablecoin]));
-  return {
-  TRACKED_STABLECOINS: stablecoins,
-  ACTIVE_IDS: new Set(stablecoins.map((s) => s.id)),
-  ACTIVE_STABLECOINS: stablecoins,
-  TRACKED_META_BY_ID: new Map([
-    ["100", {
-      id: "100",
-      name: "sDAI",
-      symbol: "sDAI",
-      geckoId: "savings-dai",
-      flags: {
-        pegCurrency: "USD",
-        backing: "crypto-backed",
-        yieldBearing: true,
-        navToken: true,
-        governance: "decentralized",
-      },
-      yieldConfig: {
-        yieldSource: "DSR",
-        yieldType: "nav-appreciation",
-      },
-    }],
-    ["usdc-circle", {
-      id: "usdc-circle",
-      name: "USD Coin",
-      symbol: "USDC",
-      geckoId: "usd-coin",
-      flags: {
-        pegCurrency: "USD",
-        backing: "fiat-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "centralized",
-      },
-    }],
-    ["u-united-stables", {
-      id: "u-united-stables",
-      name: "United Stables",
-      symbol: "U",
-      geckoId: "united-stables",
-      flags: {
-        pegCurrency: "USD",
-        backing: "rwa-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "centralized",
-      },
-    }],
-    ["lusd-liquity", {
-      id: "lusd-liquity",
-      name: "Liquity USD",
-      symbol: "LUSD",
-      geckoId: "liquity-usd",
-      flags: {
-        pegCurrency: "USD",
-        backing: "crypto-backed",
-        yieldBearing: false,
-        navToken: false,
-        governance: "decentralized",
-      },
-      contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
-    }],
-  ]),
-  FROZEN_IDS: new Set<string>(),
-  FROZEN_META_BY_ID: new Map<string, never>(),
-  FROZEN_STABLECOINS: [],
-  READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
-  READABLE_STABLECOINS: stablecoins,
-  ACTIVE_META_BY_ID: metaById,
-  READABLE_META_BY_ID: metaById,
-  };
-});
+    ],
+  }),
+);
 
 // Stub fetch-retry to delegate to global fetch
 vi.mock("../../lib/fetch-retry", () => ({
@@ -144,10 +79,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 }));
 
 // Stub circuit-breaker
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 // Stub db helpers
 vi.mock("../../lib/db", async (importOriginal) => {
@@ -159,12 +91,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-vi.mock("../../lib/db-cache", () => ({
-  getCache: vi.fn(async () => null),
-  setCache: vi.fn(async () => {}),
-  setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
-  writeFreshnessSentinel: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/db-cache", () => mockDbCache());
 
 // Stub chain-registry
 vi.mock("../../lib/chain-registry", () => ({
