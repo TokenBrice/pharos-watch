@@ -342,7 +342,7 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 
 ## Test Infrastructure
 
-### Mock D1 (`worker/src/api/__tests__/helpers/mock-d1.ts`)
+### Mock D1 (`worker/src/test-helpers/__shared/mock-d1.ts`)
 
 Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
 
@@ -364,7 +364,7 @@ const db = mockD1([
 - `mockD1(tables, { strict: true })` — shorthand for `requireMatch` + exact normalized SQL matching
 - `db.assertAllMatchesUsed()` — optional assertion that every configured match was exercised during the test
 
-### Mock Fetch (`worker/src/api/__tests__/helpers/mock-fetch.ts`)
+### Mock Fetch (`worker/src/test-helpers/__shared/mock-fetch.ts`)
 
 Stubs global `fetch` for testing cron jobs that make HTTP requests.
 
@@ -387,7 +387,7 @@ const spy = mockFetch([
 - `spy.assertAllRoutesUsed()` — optional assertion that every configured route was exercised during the test
 - Call `vi.restoreAllMocks()` in `afterEach` to clean up
 
-### Shared Fixtures (`worker/src/api/__tests__/helpers/fixtures.ts`)
+### Shared Fixtures (`worker/src/test-helpers/__shared/fixtures.ts`)
 
 Factory functions that return complete DB rows with sensible defaults. Pass `overrides` for specific values.
 
@@ -424,7 +424,7 @@ npm run refresh:html-fixtures
 
 The script fetches each source live, prepends a `<!-- captured-at: ISO -->` provenance header, and writes the file back under `worker/src/cron/reserve-adapters/__tests__/fixtures/`. Sources that respond with <200 bytes or an HTTP error are left untouched and a warning is printed; the script exits non-zero only when zero fixtures refreshed. Run locally before updating adapter parsers — do not run in CI.
 
-### Shared Auth Helpers (`worker/src/api/__tests__/helpers/auth.ts`)
+### Shared Auth Helpers (`worker/src/test-helpers/__shared/auth.ts`)
 
 Use these helpers in worker API contract tests that exercise admin auth and URL/request plumbing.
 

@@ -67,8 +67,8 @@ BotFather-owned release checklist:
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`
 - `worker/migrations/MANIFEST.md`
-- `scripts/maintenance/register-telegram-webhook.sh`
-- `scripts/maintenance/register-telegram-commands.sh`
+- `scripts/maintenance/register-telegram.ts --action webhook`
+- `scripts/maintenance/register-telegram.ts --action commands`
 
 ## Frontend Main Page
 
@@ -138,7 +138,7 @@ When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
-Webhook registration is handled by `scripts/maintenance/register-telegram-webhook.sh`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
+Webhook registration is handled by `scripts/maintenance/register-telegram.ts --action webhook`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
 
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
@@ -209,7 +209,7 @@ Settings callbacks edit the message in place via `editMessageText`. If the edit 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
 
-Registration script `scripts/maintenance/register-telegram-webhook.sh` declares
+Registration script `scripts/maintenance/register-telegram.ts --action webhook` declares
 `allowed_updates = ["message", "callback_query", "my_chat_member"]` so Telegram forwards only
 update types the bot handles.
 
@@ -715,7 +715,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a slim list (`subscribe`, `unsubscribe`, `list`, `status`, `mute`, `help`) under `scope: { type: "all_group_chats" }`. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `worker/src/lib/telegram-webhook-registration.ts` so changes flow through code review. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Profile-photo updates are not exposed via the Bot API — set the avatar manually through @BotFather using `public/pharos-icon.png`.
 - The cron connection-budget check includes the command/profile/webhook reconciliation as a budget-only entry on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job, but its serial Bot API calls are still visible to `npm run check:cron-connections`.
-- `scripts/maintenance/register-telegram-webhook.sh`, `scripts/maintenance/register-telegram-commands.sh`, and `scripts/maintenance/register-telegram-profile.sh` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop.
+- `scripts/maintenance/register-telegram.ts --action webhook`, `scripts/maintenance/register-telegram.ts --action commands`, and `scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger runs registration reconciliation first, then subscriber alert fan-out through `dispatch-telegram-alerts`.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.

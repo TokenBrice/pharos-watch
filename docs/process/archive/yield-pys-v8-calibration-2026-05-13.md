@@ -114,4 +114,4 @@ Rows analyzed: 10
 - This report uses controlled fixture rows generated under `/agents/` so every v8 source-risk driver remains reviewable independent of live-market coverage.
 - Shared tests reuse the same driver cases for scoring and evaluation coverage.
 - Keep scratch calibration inputs under `/agents/`; committed rollout evidence belongs under `docs/process/`.
-- Pair this fixture report with `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for live null-rate coverage, rank churn, capped rows, and non-USD cohorts.
+- Pair this fixture report with `docs/process/archive/yield-pys-v8-production-sample-calibration-2026-05-13.md` for live null-rate coverage, rank churn, capped rows, and non-USD cohorts.

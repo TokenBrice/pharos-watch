@@ -2,7 +2,7 @@
 
 Generated: 2026-05-15T18:55:00.000Z
 
-Scope: rollout evidence for methodology v8.13. v8.13 is additive — benchmark registry expansion to GBP/JPY/MXN/BRL/AUD/CAD, `sourceRiskScore` derivation from the resolved penalty, and the first reviewed venue tier batch. This artifact documents the per-currency wiring, the score derivation rule, the venue tier batch, and the coverage delta versus the prior USD-only fallback. Production snapshot null-rate measurements remain in `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md`; this artifact does not regenerate that snapshot.
+Scope: rollout evidence for methodology v8.13. v8.13 is additive — benchmark registry expansion to GBP/JPY/MXN/BRL/AUD/CAD, `sourceRiskScore` derivation from the resolved penalty, and the first reviewed venue tier batch. This artifact documents the per-currency wiring, the score derivation rule, the venue tier batch, and the coverage delta versus the prior USD-only fallback. Production snapshot null-rate measurements remain in `docs/process/archive/yield-pys-v8-production-sample-calibration-2026-05-13.md`; this artifact does not regenerate that snapshot.
 
 ## Methodology Delta
 
@@ -104,5 +104,5 @@ When the next batch lands, generate a fresh production-sample calibration to mea
 
 - Commits in scope: `10e469cf4` (benchmark registry expansion) and `e70720a3c` (sourceRiskScore derivation + venue tier batch).
 - The leaderboard caveat dot for currency-mismatched benchmarks (`isCurrencyMismatchedBenchmark`) is presentation-only and was part of the v8.13 sprint but does not require a methodology version. It surfaces when `benchmarkSelectionMode === "fallback-usd"` on a non-USD peg — useful while AED/IDR/TRY/ZAR/SGD remain unwired.
-- Pair this artifact with `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the prior production snapshot. Both retain v8 production reference value because the v8.13 changes are additive.
+- Pair this artifact with `docs/process/archive/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/archive/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the prior production snapshot. Both retain v8 production reference value because the v8.13 changes are additive.
 - Scratch calibration inputs stay under `/agents/`; committed rollout evidence belongs under `docs/process/`.

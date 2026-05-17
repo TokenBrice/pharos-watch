@@ -2,7 +2,7 @@
 
 Generated: 2026-05-13T19:35:57.000Z
 
-Scope: production-snapshot calibration for the methodology v8 PYS source-risk layer. The input is the public site-data `/yield-rankings` payload captured on 2026-05-13 after publication generation `yield-1778700012` (`updatedAt = 1778700012`, 2026-05-13T19:20:12.000Z) emitted populated nested `sourceRisk.*` rows. Golden-fixture source-risk driver evidence is recorded in `docs/process/yield-pys-v8-calibration-2026-05-13.md`. This artifact is evidence only and does not change runtime behavior.
+Scope: production-snapshot calibration for the methodology v8 PYS source-risk layer. The input is the public site-data `/yield-rankings` payload captured on 2026-05-13 after publication generation `yield-1778700012` (`updatedAt = 1778700012`, 2026-05-13T19:20:12.000Z) emitted populated nested `sourceRisk.*` rows. Golden-fixture source-risk driver evidence is recorded in `docs/process/archive/yield-pys-v8-calibration-2026-05-13.md`. This artifact is evidence only and does not change runtime behavior.
 
 ## Candidate Formula For Analysis
 
