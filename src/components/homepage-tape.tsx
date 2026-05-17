@@ -12,19 +12,12 @@ import {
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
 import { tapeClassChipBg } from "@/lib/tape-class-style";
+import { formatRelativeTimeMs } from "@shared/lib/format";
 import {
   SEVERITY_DOT_CLASS,
   SEVERITY_LABEL,
   type TapeEvent,
 } from "@shared/types/tape-event";
-
-function formatRelativeTime(tsMs: number): string {
-  const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
-  if (ageSec < 60) return `${ageSec}s ago`;
-  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m ago`;
-  if (ageSec < 86_400) return `${Math.round(ageSec / 3600)}h ago`;
-  return `${Math.round(ageSec / 86_400)}d ago`;
-}
 
 function durationFromCount(count: number): string {
   // ~4.5 seconds per item — slow news ticker pace
@@ -131,7 +124,7 @@ function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
           ×{badgeValue}
         </span>
       ) : null}
-      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
     </Link>
   );
 }

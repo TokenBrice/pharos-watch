@@ -24,6 +24,7 @@ import {
   formatDuration,
   timeAgo,
   formatAddress,
+  formatRelativeTimeMs,
 } from "../format";
 
 describe("formatScore", () => {
@@ -403,6 +404,28 @@ describe("formatNativePrice", () => {
     expect(formatNativePrice(25, "SILVER", 25)).toBe("$25.0000");
     expect(formatNativePrice(1.0, "VAR", 1)).toBe("$1.0000");
     expect(formatNativePrice(1.0, "OTHER", 1)).toBe("$1.0000");
+  });
+});
+
+describe("formatRelativeTimeMs", () => {
+  const now = 1_700_000_000_000; // fixed reference point
+  it("returns seconds ago for sub-minute age", () => {
+    expect(formatRelativeTimeMs(now - 30_000, { now })).toBe("30s ago");
+  });
+  it("clamps minimum age to 1s", () => {
+    expect(formatRelativeTimeMs(now, { now })).toBe("1s ago");
+    expect(formatRelativeTimeMs(now + 5_000, { now })).toBe("1s ago");
+  });
+  it("returns minutes ago for sub-hour age", () => {
+    expect(formatRelativeTimeMs(now - 5 * 60_000, { now })).toBe("5m ago");
+    expect(formatRelativeTimeMs(now - 59 * 60_000, { now })).toBe("59m ago");
+  });
+  it("returns hours ago for sub-day age", () => {
+    expect(formatRelativeTimeMs(now - 2 * 3_600_000, { now })).toBe("2h ago");
+    expect(formatRelativeTimeMs(now - 23 * 3_600_000, { now })).toBe("23h ago");
+  });
+  it("returns days ago for multi-day age", () => {
+    expect(formatRelativeTimeMs(now - 3 * 86_400_000, { now })).toBe("3d ago");
   });
 });
 

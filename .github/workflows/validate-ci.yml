@@ -116,10 +116,15 @@ jobs:
       - run: npm run coverage:critical
 
   typecheck-worker:
+    name: typecheck-worker (${{ matrix.script }})
     if: ${{ inputs.worker_changed }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        script: [typecheck:worker, typecheck:worker-scripts]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -129,23 +134,7 @@ jobs:
         with:
           node-version: 24.x
           tooling-cache: "true"
-      - run: npm run typecheck:worker
-
-  typecheck-worker-scripts:
-    if: ${{ inputs.worker_changed }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24.x
-          tooling-cache: "true"
-      - run: npm run typecheck:worker-scripts
+      - run: npm run ${{ matrix.script }}
 
   validate:
     needs:
@@ -154,7 +143,6 @@ jobs:
       - test-noncritical
       - coverage-critical
       - typecheck-worker
-      - typecheck-worker-scripts
     if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
@@ -172,5 +160,5 @@ jobs:
           VALIDATE_PREBUILD_RESULT: ${{ needs.validate-prebuild.result }}
           WORKER_CHANGED: ${{ inputs.worker_changed }}
           TYPECHECK_WORKER_RESULT: ${{ needs.typecheck-worker.result }}
-          TYPECHECK_WORKER_SCRIPTS_RESULT: ${{ needs.typecheck-worker-scripts.result }}
+          TYPECHECK_WORKER_SCRIPTS_RESULT: ${{ needs.typecheck-worker.result }}
         run: node .github/scripts/verify-validate-results.mjs

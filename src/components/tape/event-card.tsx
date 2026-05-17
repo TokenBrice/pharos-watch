@@ -26,7 +26,7 @@ import {
   deviationColorClass,
 } from "@/lib/severity-colors";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
-import { formatCompactUsd } from "@shared/lib/format";
+import { formatCompactUsd, formatRelativeTimeMs } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   SEVERITY_LABEL_INCLUSIVE,
@@ -66,14 +66,6 @@ function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
     case "lifecycle":   return <Rocket className={className} aria-hidden="true" />;
     default:            return <Calendar className={className} aria-hidden="true" />;
   }
-}
-
-function formatRelativeTime(tsMs: number): string {
-  const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
-  if (ageSec < 60) return `${ageSec}s ago`;
-  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m ago`;
-  if (ageSec < 86_400) return `${Math.round(ageSec / 3600)}h ago`;
-  return `${Math.round(ageSec / 86_400)}d ago`;
 }
 
 function formatHhMm(tsMs: number): string {
@@ -501,7 +493,7 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>
-        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
+        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
       </div>
       {summaryLine ? (
         <p className="mt-0.5 pl-[calc(5ch+2.75rem)] text-muted-foreground/80 line-clamp-2">
