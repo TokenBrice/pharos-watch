@@ -28,7 +28,15 @@ import {
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
 import { formatCompactUsd } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import {
+  SEVERITY_LABEL_INCLUSIVE,
+  SEVERITY_TEXT_CLASS,
+  type TapeEvent,
+} from "@shared/types/tape-event";
+
+// Re-exported for legacy consumers (`class-digest-row`, `timeline/client`).
+// The tape-event source-of-truth lives in `shared/types/tape-event.ts`.
+export const SEVERITY_LABEL = SEVERITY_LABEL_INCLUSIVE;
 
 function eventClass(type: string): string {
   const dot = type.indexOf(".");
@@ -59,25 +67,6 @@ function ClassIcon({ type, className = "h-4 w-4" }: ClassIconProps) {
     default:            return <Calendar className={className} aria-hidden="true" />;
   }
 }
-
-export const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
-  info: "Info+",
-  notice: "Notice+",
-  warning: "Warning+",
-  severe: "Severe+",
-  critical: "Critical",
-};
-
-// Severity is communicated via text color on the inline tag — the wire-service
-// stream deliberately omits border-l rails and badge chrome (see
-// docs/tape-page.md Visual Identity for the locked-in rules).
-const SEVERITY_TEXT: Record<TapeEventSeverity, string> = {
-  info: "text-zinc-600 dark:text-zinc-400",
-  notice: "text-sky-700 dark:text-sky-400",
-  warning: "text-amber-700 dark:text-amber-400",
-  severe: "text-orange-700 dark:text-orange-400",
-  critical: "text-red-700 dark:text-red-400",
-};
 
 function formatRelativeTime(tsMs: number): string {
   const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
@@ -438,7 +427,7 @@ interface EventCardProps {
 
 export function EventCard({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
   const severityLabel = SEVERITY_LABEL[event.severity];
-  const severityText = SEVERITY_TEXT[event.severity];
+  const severityText = SEVERITY_TEXT_CLASS[event.severity];
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
   const titleId = `tape-event-${event.id}`;
   const ticker = deriveTicker(event);

@@ -8,7 +8,11 @@ import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { isUrlFilterClearValue } from "@/hooks/use-url-filters";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import {
+  SEVERITY_LABEL_INCLUSIVE,
+  type TapeEvent,
+  type TapeEventSeverity,
+} from "@shared/types/tape-event";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 
 export type TapeWindowKey = "24h" | "7d" | "30d" | "90d" | "all";
@@ -30,14 +34,6 @@ const WINDOW_URL_VALUE: Record<TapeWindowKey, string> = {
   "30d": "30d",
   "90d": "90d",
   all: "alltime",
-};
-
-const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
-  info: "Info+",
-  notice: "Notice+",
-  warning: "Warning+",
-  severe: "Severe+",
-  critical: "Critical",
 };
 
 // `notice` is the page-level default. Routine info-tier bookkeeping (e.g.
@@ -264,7 +260,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
                       onClick={() => setParam("severity", sev === DEFAULT_SEVERITY ? "" : sev)}
                       className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
                     >
-                      {SEVERITY_LABELS[sev]}
+                      {SEVERITY_LABEL_INCLUSIVE[sev]}
                     </button>
                   );
                 })}

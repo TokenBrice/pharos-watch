@@ -12,23 +12,11 @@ import {
   type CollapsedTapeEntry,
 } from "@/lib/tape-collapse";
 import { tapeClassChipBg } from "@/lib/tape-class-style";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
-
-const SEVERITY_DOT_CLASS: Record<TapeEventSeverity, string> = {
-  info: "bg-emerald-500",
-  notice: "bg-sky-500",
-  warning: "bg-amber-500",
-  severe: "bg-orange-500",
-  critical: "bg-red-500",
-};
-
-const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
-  info: "Info",
-  notice: "Notice",
-  warning: "Warning",
-  severe: "Severe",
-  critical: "Critical",
-};
+import {
+  SEVERITY_DOT_CLASS,
+  SEVERITY_LABEL,
+  type TapeEvent,
+} from "@shared/types/tape-event";
 
 function formatRelativeTime(tsMs: number): string {
   const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
