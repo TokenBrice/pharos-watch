@@ -791,27 +791,246 @@ function extractPatchPaths(patchText) {
     .map((match) => match[1]);
 }
 
-function trimShellToken(token) {
-  let trimmed = String(token ?? "").trim();
-  const stripStart = new Set(["\"", "'", "(", "{"]);
-  const stripEnd = new Set(["\"", "'", ")", "}", ";"]);
+const SHELL_CONTROL_TOKENS = new Set([";", "&&", "||", "|", "\n"]);
+const ENV_VALUE_OPTIONS = new Set(["-C", "--chdir", "-S", "--split-string", "-u", "--unset"]);
+const NPX_VALUE_OPTIONS = new Set(["-c", "--call", "-p", "--package", "--cache", "--shell", "--userconfig"]);
+const SHELL_EVAL_COMMANDS = new Set(["bash", "dash", "fish", "sh", "zsh"]);
+const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 
-  while (trimmed && stripStart.has(trimmed[0])) {
-    trimmed = trimmed.slice(1);
+function commandLooksLikePatchPayload(command) {
+  const text = String(command ?? "").trimStart();
+  return text.startsWith("*** Begin Patch") || /^apply_patch(?:\s|$)/.test(text);
+}
+
+function stripHereDocBodies(command) {
+  const lines = String(command ?? "").split(/\r?\n/g);
+  const kept = [];
+  let marker = "";
+
+  for (const line of lines) {
+    if (marker) {
+      if (line.trim() === marker) {
+        marker = "";
+      }
+      continue;
+    }
+
+    kept.push(line);
+    const match = line.match(/<<-?\s*['"]?([A-Za-z0-9_.-]+)['"]?/);
+    if (match) {
+      marker = match[1];
+    }
   }
 
-  while (trimmed && stripEnd.has(trimmed.at(-1))) {
-    trimmed = trimmed.slice(0, -1);
+  return kept.join("\n");
+}
+
+function getExecutableShellText(command) {
+  if (commandLooksLikePatchPayload(command)) return "";
+  return stripHereDocBodies(command);
+}
+
+function tokenizeShell(command) {
+  const tokens = [];
+  let token = "";
+  let quote = "";
+  let escaping = false;
+  const text = String(command ?? "");
+
+  const pushToken = () => {
+    if (token) {
+      tokens.push(token);
+      token = "";
+    }
+  };
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+
+    if (escaping) {
+      token += char;
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\" && quote !== "'") {
+      escaping = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = "";
+      } else {
+        token += char;
+      }
+      continue;
+    }
+
+    if (char === "'" || char === "\"") {
+      quote = char;
+      continue;
+    }
+
+    if (char === "\n") {
+      pushToken();
+      tokens.push("\n");
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      pushToken();
+      continue;
+    }
+
+    if ((char === "&" && text[i + 1] === "&") || (char === "|" && text[i + 1] === "|")) {
+      pushToken();
+      tokens.push(`${char}${char}`);
+      i += 1;
+      continue;
+    }
+
+    if (char === "|" || char === ";") {
+      pushToken();
+      tokens.push(char);
+      continue;
+    }
+
+    if (char === ">") {
+      pushToken();
+      if (text[i + 1] === ">") {
+        tokens.push(">>");
+        i += 1;
+      } else {
+        tokens.push(">");
+      }
+      continue;
+    }
+
+    token += char;
   }
 
-  return trimmed;
+  pushToken();
+  return tokens;
 }
 
 function splitShellTokens(command) {
-  return String(command)
-    .split(/\s+/)
-    .map(trimShellToken)
-    .filter(Boolean);
+  return tokenizeShell(getExecutableShellText(command))
+    .filter((token) => !SHELL_CONTROL_TOKENS.has(token));
+}
+
+function shellCommandName(token) {
+  return String(token ?? "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    ?.replace(/\.(?:cmd|exe)$/i, "") ?? "";
+}
+
+function isShellControlToken(token) {
+  return SHELL_CONTROL_TOKENS.has(token);
+}
+
+function isEnvAssignment(token) {
+  return /^[A-Za-z_][A-Za-z0-9_]*=/.test(String(token ?? ""));
+}
+
+function skipLeadingOptions(tokens, startIndex, valueOptions = new Set()) {
+  let index = startIndex;
+  while (index < tokens.length && !isShellControlToken(tokens[index]) && tokens[index]?.startsWith("-")) {
+    const option = tokens[index].split("=")[0];
+    index += 1;
+    if (!tokens[index - 1].includes("=") && valueOptions.has(option)) {
+      index += 1;
+    }
+  }
+  return index;
+}
+
+function resolveExecutableIndex(tokens, startIndex, depth = 0) {
+  if (depth > 4 || startIndex >= tokens.length || isShellControlToken(tokens[startIndex])) {
+    return null;
+  }
+
+  const name = shellCommandName(tokens[startIndex]);
+  if (name === "env") {
+    let index = skipLeadingOptions(tokens, startIndex + 1, ENV_VALUE_OPTIONS);
+    while (index < tokens.length && isEnvAssignment(tokens[index])) {
+      index += 1;
+    }
+    return resolveExecutableIndex(tokens, index, depth + 1);
+  }
+
+  if (name === "npx") {
+    const index = skipLeadingOptions(tokens, startIndex + 1, NPX_VALUE_OPTIONS);
+    return index < tokens.length && !isShellControlToken(tokens[index]) ? index : startIndex;
+  }
+
+  if (name === "sudo" || name === "command" || name === "exec") {
+    const index = skipLeadingOptions(tokens, startIndex + 1);
+    return resolveExecutableIndex(tokens, index, depth + 1);
+  }
+
+  return startIndex;
+}
+
+function getShellEvalArgument(tokens) {
+  if (!SHELL_EVAL_COMMANDS.has(shellCommandName(tokens[0]))) return "";
+
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === "-c" || token === "--command" || (/^-[A-Za-z]+$/.test(token) && token.includes("c"))) {
+      return tokens[index + 1] ?? "";
+    }
+  }
+
+  return "";
+}
+
+function getShellCommandInvocations(command, depth = 0) {
+  const tokens = tokenizeShell(getExecutableShellText(command));
+  const invocations = [];
+  let atCommandStart = true;
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (isShellControlToken(token)) {
+      atCommandStart = true;
+      continue;
+    }
+
+    if (!atCommandStart) continue;
+    if (isEnvAssignment(token)) continue;
+
+    const resolvedIndex = resolveExecutableIndex(tokens, index);
+    if (resolvedIndex !== null) {
+      const endIndex = tokens.findIndex((candidate, candidateIndex) => (
+        candidateIndex > resolvedIndex && isShellControlToken(candidate)
+      ));
+      const invocationTokens = tokens.slice(resolvedIndex, endIndex === -1 ? tokens.length : endIndex);
+      invocations.push({
+        name: shellCommandName(tokens[resolvedIndex]),
+        tokens: invocationTokens,
+      });
+
+      const nestedCommand = depth < 3 ? getShellEvalArgument(invocationTokens) : "";
+      if (nestedCommand) {
+        invocations.push(...getShellCommandInvocations(nestedCommand, depth + 1));
+      }
+    }
+
+    atCommandStart = false;
+  }
+
+  return invocations;
+}
+
+function stripWranglerGlobalOptions(tokens) {
+  return tokens.slice(skipLeadingOptions(tokens, 0, WRANGLER_GLOBAL_VALUE_OPTIONS));
+}
+
+function invocationHasHelpFlag(tokens) {
+  return tokens.includes("--help") || tokens.includes("-h");
 }
 
 function extractBashWritePaths(command) {
@@ -848,6 +1067,7 @@ function collectToolPaths(hookInput = {}) {
     ...collectArrayPaths(toolInput.edits),
     ...extractPatchPaths(toolInput.patch),
     ...extractPatchPaths(String(toolInput.input ?? "")),
+    ...extractPatchPaths(command),
     ...extractBashWritePaths(command),
   ].filter(Boolean).map(normalizeLocalPath));
 }
@@ -870,7 +1090,8 @@ function collectToolText(hookInput = {}) {
 
 function extractAddedPatchText(hookInput = {}) {
   const toolInput = getToolInput(hookInput);
-  const patchText = String(toolInput.patch ?? toolInput.input ?? "");
+  const command = getCommandFromHookInput(hookInput);
+  const patchText = String(toolInput.patch ?? toolInput.input ?? (commandLooksLikePatchPayload(command) ? command : ""));
   if (!patchText) return "";
   return patchText
     .split(/\r?\n/g)
@@ -894,10 +1115,10 @@ function findProtectedWrite(paths) {
 }
 
 function commandInvokesGitCleanForceDelete(command) {
-  const tokens = splitShellTokens(command);
-  for (let i = 0; i < tokens.length; i += 1) {
-    if (tokens[i] !== "git") continue;
-    let cursor = i + 1;
+  for (const invocation of getShellCommandInvocations(command)) {
+    if (invocation.name !== "git") continue;
+    const { tokens } = invocation;
+    let cursor = 1;
     if (tokens[cursor] === "-C") {
       cursor += 2;
     }
@@ -913,10 +1134,10 @@ function commandInvokesGitCleanForceDelete(command) {
 }
 
 function commandInvokesGitResetHard(command) {
-  const tokens = splitShellTokens(command);
-  for (let i = 0; i < tokens.length; i += 1) {
-    if (tokens[i] !== "git") continue;
-    let cursor = i + 1;
+  for (const invocation of getShellCommandInvocations(command)) {
+    if (invocation.name !== "git") continue;
+    const { tokens } = invocation;
+    let cursor = 1;
     if (tokens[cursor] === "-C") {
       cursor += 2;
     }
@@ -929,29 +1150,47 @@ function commandInvokesGitResetHard(command) {
 }
 
 function commandInvokesRemoteD1Mutation(command) {
-  const text = String(command);
-  if (!/\bwrangler\s+d1\b/.test(text)) return false;
-  if (!/\s--remote\b/.test(text)) return false;
+  return getShellCommandInvocations(command).some((invocation) => {
+    if (invocation.name !== "wrangler" || invocationHasHelpFlag(invocation.tokens)) return false;
 
-  if (/\bd1\s+migrations\s+apply\b/.test(text)) {
-    return true;
-  }
+    const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
+    if (args[0] !== "d1" || !invocation.tokens.some((token) => token === "--remote" || token.startsWith("--remote="))) {
+      return false;
+    }
 
-  if (!/\bd1\s+execute\b/.test(text)) {
-    return false;
-  }
+    if (args[1] === "migrations" && args[2] === "apply") {
+      return true;
+    }
 
-  if (/\s--file(?:=|\s+)/.test(text)) {
-    return true;
-  }
+    if (args[1] !== "execute") {
+      return false;
+    }
 
-  return MUTATING_SQL_RE.test(text);
+    if (invocation.tokens.some((token) => token === "--file" || token.startsWith("--file="))) {
+      return true;
+    }
+
+    return MUTATING_SQL_RE.test(args.join(" "));
+  });
 }
 
 function commandInvokesRawProductionDeploy(command) {
-  const text = String(command);
-  return /\bwrangler\s+(?:deploy|versions\s+deploy|pages\s+deploy)\b/.test(text)
-    || /\bnpm\s+run\s+deploy\b/.test(text);
+  return getShellCommandInvocations(command).some((invocation) => {
+    if (invocationHasHelpFlag(invocation.tokens)) return false;
+
+    if (invocation.name === "npm") {
+      return invocation.tokens[1] === "run" && invocation.tokens[2] === "deploy";
+    }
+
+    if (invocation.name !== "wrangler") {
+      return false;
+    }
+
+    const args = stripWranglerGlobalOptions(invocation.tokens.slice(1));
+    return args[0] === "deploy"
+      || (args[0] === "versions" && args[1] === "deploy")
+      || (args[0] === "pages" && args[1] === "deploy");
+  });
 }
 
 function findUnsafeMigrationSql(paths, hookInput = {}) {

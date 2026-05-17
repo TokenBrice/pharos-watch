@@ -244,6 +244,126 @@ describe("hard-block hook outputs", () => {
     expect(output.reason).toContain("git reset --hard");
   });
 
+  it("blocks raw production deploy commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "cd worker && npx --no-install wrangler versions deploy 00000000-0000-0000-0000-000000000000@100",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("Raw production deploy commands");
+  });
+
+  it("blocks raw production deploy commands inside shell eval wrappers", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "bash -lc \"cd worker && npx --no-install wrangler pages deploy out\"",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("Raw production deploy commands");
+  });
+
+  it("blocks remote D1 mutation commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote",
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("Remote D1 mutation commands");
+  });
+
+  it("allows searches that mention deploy and remote D1 commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "rg -n \"wrangler deploy|wrangler pages deploy|wrangler d1 migrations apply stablecoin-db --remote\" docs scripts",
+      },
+    });
+
+    expect(output).toEqual({ continue: true });
+  });
+
+  it("allows patch payloads that mention deploy commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "*** Begin Patch",
+          "*** Update File: docs/example.md",
+          "@@",
+          "+Do not run `wrangler deploy`; use the release workflow.",
+          "*** End Patch",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toEqual({ continue: true });
+  });
+
+  it("still blocks protected paths when patch payloads arrive as commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "*** Begin Patch",
+          "*** Add File: .env.local",
+          "+TOKEN=value",
+          "*** End Patch",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toMatchObject({
+      decision: "block",
+      hookSpecificOutput: {
+        permissionDecision: "deny",
+      },
+    });
+    expect(output.reason).toContain("environment files");
+  });
+
+  it("allows heredoc scripts that only quote blocked commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: [
+          "node - <<'NODE'",
+          "console.log('wrangler pages deploy');",
+          "console.log('wrangler d1 execute stablecoin-db --remote --command \"delete from cache\"');",
+          "NODE",
+        ].join("\n"),
+      },
+    });
+
+    expect(output).toEqual({ continue: true });
+  });
+
+  it("allows help output for deploy-shaped commands", () => {
+    const output = buildPreToolUseHookOutput({
+      tool_input: {
+        command: "npx --no-install wrangler pages deploy --help",
+      },
+    });
+
+    expect(output).toEqual({ continue: true });
+  });
+
   it("blocks direct env file writes", () => {
     const output = buildPreToolUseHookOutput({
       tool_input: {
