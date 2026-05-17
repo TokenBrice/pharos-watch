@@ -379,9 +379,14 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
-    expect(pagesReleaseJob).toContain("Run post-publish smokes");
+    expect(pagesReleaseJob).toContain("Capture Pages release metrics");
+    expect(pagesReleaseJob).toContain("Smoke live public UI");
+    expect(pagesReleaseJob).toContain("Smoke ops canary");
+    expect(pagesReleaseJob).toContain("Smoke transport redirects");
+    expect(pagesReleaseJob).toContain("Summarize post-publish smokes");
     expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
     expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
+    expect(pagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
     expectTextInOrder(pagesReleaseJob, [
       "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
       "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
@@ -392,6 +397,7 @@ describe("validate-ci parity", () => {
       "npm run check:phishing-signatures",
       "npm run check:classifier-sensitive-copy",
       "npm run check:build-size",
+      "Capture Pages release metrics",
       "npm run check:build-attribution",
     ]);
     expect(pagesReleaseJob).not.toContain("npm run check:methodology-pdfs");

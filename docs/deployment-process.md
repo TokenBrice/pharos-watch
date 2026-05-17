@@ -159,7 +159,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
      - the local static-export server treats exact `/api` and `/api/` as the public API access page, serves checked-in/static route payload artifacts below `/api/` when present, and proxies endpoint-like `/api/*` requests including JSON `POST` bodies to the selected public API base
    - uses `SMOKE_UI_BROWSER_CHANNEL=chrome` and `SMOKE_UI_OVERFLOW_WORKERS=6` for the local smoke so the full local overflow route set remains covered without downloading a Playwright-managed browser in the release job
    - waits for the aggregate `validate / validate` job before Cloudflare Pages production publish, and on combined Worker + Pages deploys also waits for `deploy-worker` to finish successfully before publishing Pages
-   - captures the current Cloudflare Pages production deployment id as a best-effort rollback target, publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, ops, and transport smokes in parallel in the same job; the live public UI check skips overflow because the full overflow sweep already ran against the exact local artifact before publish, but still verifies homepage data-state and the Live Tape `/_site-data/recent-events` contract
+   - writes a Pages release summary after `check:build-size` with the total output file count, static export size, and depeg-event static page count, then captures the current Cloudflare Pages production deployment id as a best-effort rollback target, publishes the already verified local artifact through Wrangler with the existing retry loop, and runs live public UI, ops, and transport smokes as separate status-producing steps in the same job; the live public UI check skips overflow because the full overflow sweep already ran against the exact local artifact before publish, but still verifies homepage data-state and the Live Tape `/_site-data/recent-events` contract
    - calls `scripts/maintenance/rollback-pages-deployment.mjs` when `deploy-pages` succeeded but the live public UI smoke failed and a previous deployment id is available; the overall workflow still surfaces as failed so the incident is visible
 6. `smoke-ui-live`
    - worker-only deploy path runs inside `deploy-worker` after production API smoke
@@ -168,7 +168,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 7. `smoke-ops`
    - private post-deploy ops smoke against `ops.pharos.watch/admin/` and `ops-api.pharos.watch`
    - runs inside `pages-release` after `deploy-pages` on Pages-including deploys, or inside `deploy-worker` on worker-only deploys
-   - runs in parallel with the public live UI smoke because it only depends on the production deployment being live
+   - runs as its own post-publish step on Pages-including deploys so GitHub surfaces ops failures separately from public UI and transport failures
    - requires repository secrets `OPS_SMOKE_CF_ACCESS_CLIENT_ID` and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
    - UI check accepts either an Access redirect or a token-backed HTML response, so CI does not depend on the UI app also granting `Service Auth`
    - same-origin `ops.pharos.watch/api/admin/status` starts as soon as the UI Access cookie is available and retries transient `502`/`504` gateway responses up to twice to absorb operator-status warmup immediately after promotion, but persistent proxy failures still fail the deploy
@@ -256,7 +256,7 @@ GitHub-owned JS actions in this workflow are pinned by full commit SHA. When bum
 
 - The production Pages path fetches digests, depeg events, and public dataset mirrors once inside `pages-release` and requires the local `smoke-ui` gate before `deploy-pages`, so a bad static export is blocked before Cloudflare Pages production publish. The build step clears the public-dataset source env before `npm run build`, so the prebuild hook uses the already synced mirrors and the build itself no longer depends on mutable static input endpoints. The local artifact is built with `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` so browser reads go through `/_site-data/*` instead of the protected direct `/api/*` lane while the smoke server runs on `127.0.0.1`. `check:build-size` also enforces Cloudflare Pages' 20,000-file direct-upload cap before Wrangler deploys the artifact.
 - On combined Worker-promotion + Pages deploys, the prepublish Pages path runs against the uploaded Worker preview URL in parallel with validation and Worker release preparation.
-- After publish, `pages-release` runs a homepage/GA/data-state live public-host smoke against `https://pharos.watch`, while the broader overflow sweep remains on the local artifact smoke.
+- After publish, `pages-release` runs separate live public UI, ops canary, and transport smoke steps, followed by a Markdown summary of the three outcomes. The homepage/GA/data-state live public-host smoke targets `https://pharos.watch`, while the broader overflow sweep remains on the local artifact smoke.
 - The production ops smoke runs in canary scope on the deploy critical path, keeping shell/access and status coverage while leaving the slower deep admin probes for explicit full smoke runs.
 
 ### Skip Rules

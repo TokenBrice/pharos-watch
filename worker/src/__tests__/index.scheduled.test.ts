@@ -80,6 +80,10 @@ const cronMocks = vi.hoisted(() => ({
   sendAlert: vi.fn(async () => true),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
+  reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
+  reconcileTelegramMenuButton: vi.fn(async () => ({ attempted: false, miniAppUrl: null })),
+  reconcileTelegramProfileRegistration: vi.fn(async () => ({ attempted: false })),
+  reconcileTelegramWebhookRegistration: vi.fn(async () => ({ attempted: false, expectedUrl: null })),
 }));
 
 vi.mock("../cron/sync-stablecoins", () => ({ syncStablecoins: cronMocks.syncStablecoins }));
@@ -155,6 +159,17 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
     ...original,
     shouldAttemptFetch: cronMocks.shouldAttemptFetch,
     recordOutcome: cronMocks.recordOutcome,
+  };
+});
+
+vi.mock("../lib/telegram-webhook-registration", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/telegram-webhook-registration")>();
+  return {
+    ...original,
+    reconcileTelegramCommandRegistration: cronMocks.reconcileTelegramCommandRegistration,
+    reconcileTelegramMenuButton: cronMocks.reconcileTelegramMenuButton,
+    reconcileTelegramProfileRegistration: cronMocks.reconcileTelegramProfileRegistration,
+    reconcileTelegramWebhookRegistration: cronMocks.reconcileTelegramWebhookRegistration,
   };
 });
 

@@ -284,6 +284,30 @@ jobs:
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
       - run: npm run check:build-size
+      - name: Capture Pages release metrics
+        id: pages-release-metrics
+        run: |
+          total_files="$(find out -type f | wc -l | tr -d ' ')"
+          output_size="$(du -sh out | awk '{print $1}')"
+          depeg_pages="0"
+          if [ -d out/depeg ]; then
+            depeg_pages="$(find out/depeg -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')"
+          fi
+
+          echo "total_files=${total_files}" >> "$GITHUB_OUTPUT"
+          echo "output_size=${output_size}" >> "$GITHUB_OUTPUT"
+          echo "depeg_pages=${depeg_pages}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Pages Release Artifact"
+            echo ""
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| Output files | ${total_files} / 20000 |"
+            echo "| Output size | ${output_size} |"
+            echo "| Depeg event pages | ${depeg_pages} |"
+            echo "| Commit | ${GITHUB_SHA} |"
+          } >> "$GITHUB_STEP_SUMMARY"
       - run: npm run check:build-attribution
       - id: capture-pages
         name: Capture current production Pages deployment id (best effort)
@@ -397,6 +421,7 @@ jobs:
           echo "Timed out waiting for deploy-worker to finish."
           exit 1
       - name: Deploy Pages with retry
+        id: deploy-pages
         run: |
           for attempt in 1 2 3; do
             echo "[deploy-pages] Attempt ${attempt}/3"
@@ -409,47 +434,60 @@ jobs:
             fi
             sleep $((attempt * 15))
           done
-      - name: Run post-publish smokes
-        id: post-publish-smokes
+      - name: Smoke live public UI
+        id: smoke-ui-live
         continue-on-error: true
-        run: |
-          set +e
-
-          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
-          ui_pid=$!
-          npm run test:smoke-ops &
-          ops_pid=$!
-          npm run test:smoke-transport &
-          transport_pid=$!
-
-          wait "$ui_pid"
-          ui_status=$?
-          wait "$ops_pid"
-          ops_status=$?
-          wait "$transport_pid"
-          transport_status=$?
-
-          echo "ui_status=${ui_status}" >> "$GITHUB_OUTPUT"
-          echo "ops_status=${ops_status}" >> "$GITHUB_OUTPUT"
-          echo "transport_status=${transport_status}" >> "$GITHUB_OUTPUT"
-
-          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
-            echo "post-publish smoke statuses: ui=${ui_status}, ops=${ops_status}, transport=${transport_status}"
-            exit 1
-          fi
+        run: npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
+      - name: Smoke ops canary
+        id: smoke-ops
+        continue-on-error: true
+        run: npm run test:smoke-ops
+        env:
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
+      - name: Smoke transport redirects
+        id: smoke-transport
+        continue-on-error: true
+        run: npm run test:smoke-transport
+      - name: Summarize post-publish smokes
+        id: post-publish-smokes
+        if: ${{ always() && steps.deploy-pages.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          UI_STATUS: ${{ steps.smoke-ui-live.outcome }}
+          OPS_STATUS: ${{ steps.smoke-ops.outcome }}
+          TRANSPORT_STATUS: ${{ steps.smoke-transport.outcome }}
+        run: |
+          echo "ui_status=${UI_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "ops_status=${OPS_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "transport_status=${TRANSPORT_STATUS}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Post-Publish Smokes"
+            echo ""
+            echo "| Check | Status | Rollback trigger |"
+            echo "| --- | --- | --- |"
+            echo "| Live public UI | ${UI_STATUS} | yes |"
+            echo "| Ops canary | ${OPS_STATUS} | no |"
+            echo "| Transport redirects | ${TRANSPORT_STATUS} | no |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${UI_STATUS}" != "success" ] || [ "${OPS_STATUS}" != "success" ] || [ "${TRANSPORT_STATUS}" != "success" ]; then
+            echo "post-publish smoke statuses: ui=${UI_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
+            exit 1
+          fi
       - name: Roll back Pages production to previous successful deployment
         if: >-
           ${{
             steps.post-publish-smokes.outcome == 'failure'
-            && steps.post-publish-smokes.outputs.ui_status != '0'
+            && steps.deploy-pages.outcome == 'success'
+            && steps.post-publish-smokes.outputs.ui_status != 'success'
             && steps.capture-pages.outputs.deployment_id != ''
           }}
         env:
