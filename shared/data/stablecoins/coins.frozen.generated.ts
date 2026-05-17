@@ -12,7 +12,7 @@ import type { StablecoinMeta } from "../../types";
 import coinsGenerated from "./coins.generated.json";
 
 /** FNV-1a 32-bit fingerprint of `coins.generated.json` at generation time. */
-export const STABLECOIN_META_ASSETS_FROZEN_HASH = "8de3cb50";
+export const STABLECOIN_META_ASSETS_FROZEN_HASH = "3d836b83";
 
 /**
  * Pre-validated stablecoin metas, exposed in source order. The generator

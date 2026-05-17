@@ -16131,7 +16131,7 @@
     "announcedDate": "2025-09",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. The Bank of Korea nominee (April 2026) signalled CBDC and bank-issued deposit tokens should lead Korea's digital money system, with private stablecoins in a secondary role — a headwind for commercial launch timing. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework.",
+    "launchPhaseDetail": "Pilot phase following successful September 2025 proof of concept; not yet in public circulation. BDACS is South Korea's regulated digital-asset custodian; Woori Bank holds the won reserves and participated directly in the PoC. Initial deployment on Avalanche (cited by KISA for reliability in public-sector use); KRW1 expanded to Polygon in December 2025 for broader payments, remittances, and enterprise reach. October 2025 MoU with Circle positions KRW1 for deployment on Arc (Circle's new Layer 1), where it joins national stablecoin issuers from Japan, Brazil, Mexico, and the Philippines. February 2026 Plume partnership positions KRW1 as Korean institutional settlement rail for tokenized RWA. May 2026 Aptos Foundation partnership brings KRW1 to its first non-EVM chain, leveraging Aptos's payment infrastructure for cross-border remittances and RWA tokenisation. The Bank of Korea nominee (April 2026) signalled CBDC and bank-issued deposit tokens should lead Korea's digital money system, with private stablecoins in a secondary role — a headwind for commercial launch timing. Commercial launch contingent on Korea's forthcoming Digital Asset Basic Act framework.",
     "featuredContent": [
       {
         "type": "article",
@@ -16167,6 +16167,13 @@
         "title": "BDACS brings KRW stablecoin KRW1 to Polygon",
         "description": "Multi-chain expansion to Polygon in December 2025; selected for speed, low fees, and enterprise integrations with Stripe, Circle, and Mastercard.",
         "source": "crypto.news"
+      },
+      {
+        "type": "article",
+        "url": "https://themerkle.com/koreas-onchain-crypto-expansion-continues-as-first-krw-stablecoin-launches-on-aptos/",
+        "title": "Korea's first KRW stablecoin launches on Aptos",
+        "description": "KRW1 expands beyond EVM chains via Aptos Foundation partnership; Aptos cited for low-cost payments, remittances, and real-world asset tokenisation infrastructure.",
+        "source": "The Merkle"
       }
     ],
     "milestones": [
@@ -16204,6 +16211,13 @@
         "title": "BDACS partners with Plume to position KRW1 as Korean institutional RWA settlement rail",
         "description": "Plume integration lets Korean institutional investors allocate into tokenized RWA instruments denominated in KRW1 without USD conversion; ~$645M of tokenized assets currently on Plume.",
         "sourceUrl": "https://www.seoulz.com/korea-won-stablecoin-2026/"
+      },
+      {
+        "date": "2026-05-13",
+        "type": "partnership",
+        "title": "BDACS and Aptos Foundation partner to bring KRW1 to Aptos",
+        "description": "First deployment of KRW1 outside EVM-compatible chains; aims to accelerate practical stablecoin use cases across domestic and global markets via Aptos's low-fee payment infrastructure for remittances and real-world asset tokenisation.",
+        "sourceUrl": "https://www.cryptotimes.io/2026/05/13/bdacs-and-aptos-team-up-to-expand-krw1-stablecoin-ecosystem/"
       }
     ]
   },
@@ -29313,7 +29327,7 @@
     "announcedDate": "2026-02",
     "expectedLaunchDate": "2026",
     "launchPhase": "beta",
-    "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; distinct from Blast's USDB (usdb-blast)",
+    "launchPhaseDetail": "USDB powers Stripe's Stablecoin Financial Accounts in 101 countries; 1:1 backed by USD held in cash and BlackRock money market funds; Bridge received conditional OCC national trust bank charter Feb 2026; Payoneer integration announced Feb 17 will roll USDB into the Payoneer platform across select Q2 2026 markets; Visa + Bridge stablecoin-linked cards expanding from 18 to 100+ countries by end of 2026; distinct from Blast's USDB (usdb-blast)",
     "featuredContent": [
       {
         "type": "article",
@@ -29332,10 +29346,24 @@
         "sourceUrl": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter/"
       },
       {
+        "date": "2026-02-17",
+        "type": "partnership",
+        "title": "Payoneer launches stablecoin capabilities powered by Bridge / USDB",
+        "description": "Payoneer announces plans to launch stablecoin services embedded in its platform, powered by Bridge; rollout in select markets in Q2 2026 with broader availability throughout the year.",
+        "sourceUrl": "https://investor.payoneer.com/news-releases/news-release-details/payoneer-launch-stablecoin-capabilities-powered-bridge-bringing"
+      },
+      {
         "date": "2026-02-20",
         "type": "milestone",
         "title": "USDB launches powering Stripe's Stablecoin Financial Accounts in 101 countries",
         "sourceUrl": "https://www.ledgerinsights.com/stripe-rolls-out-stablecoin-accounts-in-101-countries-as-bridge-launches-usdb/"
+      },
+      {
+        "date": "2026-02-25",
+        "type": "partnership",
+        "title": "Visa and Bridge expand stablecoin-linked cards from 18 to 100+ countries",
+        "description": "Visa + Bridge program lets fintechs and wallets issue cards that spend stablecoin balances at Visa's 175M merchant locations; expansion targeted across Europe, Asia Pacific, Africa, and the Middle East by end of 2026.",
+        "sourceUrl": "https://thedefiant.io/news/tradfi-and-fintech/visa-and-stripe-owned-bridge-roll-out-stablecoin-linked-cards-to-100-countries"
       }
     ]
   },
