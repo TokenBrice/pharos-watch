@@ -867,9 +867,7 @@ export async function auditEvents(
     : undefined;
 
   const affectedDays = new Set<number>();
-  const deleteStatements: D1PreparedStatement[] = [];
   const provenanceStatements: D1PreparedStatement[] = [];
-  const deletedIds: number[] = [];
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -1031,11 +1029,11 @@ export async function auditEvents(
     }
   }
 
-  if (!dryRun && (deleteStatements.length > 0 || provenanceStatements.length > 0)) {
-    const remainingDepegEvents = await loadRemainingDepegEvents(db, deletedIds);
+  if (!dryRun && provenanceStatements.length > 0) {
+    const remainingDepegEvents = await loadRemainingDepegEvents(db);
     result.daysRecomputed = await commitAuditMutation(
       db,
-      [...provenanceStatements, ...deleteStatements],
+      provenanceStatements,
       "False-positive audit persistence failed before the stability-index repair could finish",
       { affectedDays, remainingDepegEvents },
     );

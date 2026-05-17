@@ -25,7 +25,7 @@ const CANONICAL_ORDER = parseCanonicalOrderAsset(
 
 /**
  * Synchronous FNV-1a 32-bit fingerprint, mirroring the generator in
- * scripts/generate-stablecoin-frozen-registry.mjs. Runs in Node, Workers,
+ * scripts/maintenance/generate-stablecoin-frozen-registry.mjs. Runs in Node, Workers,
  * and browsers without crypto APIs. Used only to detect drift between the
  * frozen TS snapshot and the source JSON — never security-sensitive.
  */
@@ -55,7 +55,7 @@ if (frozenSnapshotIsFresh) {
   console.warn(
     `[stablecoin-registry] coins.generated.json fingerprint ${sourceFingerprint} ` +
       `does not match frozen snapshot ${STABLECOIN_META_ASSETS_FROZEN_HASH}; ` +
-      "running live Zod validation. Run `node scripts/generate-stablecoin-frozen-registry.mjs` to refresh.",
+      "running live Zod validation. Run `node scripts/maintenance/generate-stablecoin-frozen-registry.mjs` to refresh.",
   );
   PER_COIN_SOURCE_COINS = parseStablecoinMetaAssets(
     perCoinGeneratedAsset,

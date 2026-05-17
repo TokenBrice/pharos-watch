@@ -1,7 +1,4 @@
-interface SortState<K extends string> {
-  key: K;
-  direction: "asc" | "desc";
-}
+import type { SortState } from "@/hooks/use-sort";
 
 interface ComparatorOptions {
   /** Where to place null/undefined values. Default: "last". */

@@ -100,8 +100,8 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
 // --- Cache ratio thresholds (availability status) ---
 /** Age/interval ratio bands for cached endpoint availability. Distinct from FRESHNESS_RATIOS: applied at the endpoint-availability layer, not the per-record freshness layer. */
 export const STATUS_CACHE_RATIO_THRESHOLDS = {
-  degraded: 8,
-  stale: 12,
+  degraded: FRESHNESS_RATIOS.FRESH,
+  stale: FRESHNESS_RATIOS.DEGRADED,
 } as const;
 
 // --- Probe classification thresholds (browser & self-check probe runs) ---
