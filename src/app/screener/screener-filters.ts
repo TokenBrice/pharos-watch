@@ -1,7 +1,7 @@
 /**
  * Pure filter primitives for the Pharos Screener.
  *
- * URL params are flat and human-friendly (e.g. `?pegscore-min=80&mechanism=cdp,fiat-cash`).
+ * URL params are flat and human-friendly (e.g. `?dewsMin=40&mechanisms=cdp,fiat-cash`).
  * Encoding/decoding goes through W1-F's URL codec in `src/lib/url-state.ts`.
  *
  * This module owns:
@@ -13,11 +13,12 @@
  * server-side `StablecoinMeta`). Deferred to v2 per brief escalation rule.
  */
 import type { UrlStateSchema } from "@/lib/url-state";
-import { MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
+import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
 import { PEG_METADATA } from "@shared/lib/classification";
-import type { MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
+import type { GovernanceType, MechanismArchetype, PegCurrency, ReportCardGrade, StablecoinStatus } from "@shared/types";
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
+export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const satisfies readonly ReportCardGrade[];
 
 /**
  * Blacklistability buckets. Maps to the tri-state `canBeBlacklisted` field on
@@ -32,14 +33,17 @@ export const BLACKLISTABLE_VALUES = ["yes", "no", "possible", "dilutable"] as co
 export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
 
 export interface ScreenerFilters {
-  pegScoreMin: number;
-  pegScoreMax: number;
   dewsMin: number;
   dewsMax: number;
-  liquidityMin: number;
-  liquidityMax: number;
   supplyMin: number;
   supplyMax: number;
+  safetyGrades: readonly ReportCardGrade[];
+  safetyPegStabilityMin: number;
+  safetyLiquidityMin: number;
+  safetyResilienceMin: number;
+  safetyDecentralizationMin: number;
+  safetyDependencyRiskMin: number;
+  types: readonly GovernanceType[];
   mechanisms: readonly MechanismArchetype[];
   pegs: readonly PegCurrency[];
   lifecycle: readonly StablecoinStatus[];
@@ -48,14 +52,17 @@ export interface ScreenerFilters {
 
 /** Default scalar ranges. A value at the bound counts as "no filter". */
 export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
-  pegScoreMin: 0,
-  pegScoreMax: 100,
   dewsMin: 0,
   dewsMax: 100,
-  liquidityMin: 0,
-  liquidityMax: 100,
   supplyMin: 0,
   supplyMax: 0,
+  safetyGrades: [],
+  safetyPegStabilityMin: 0,
+  safetyLiquidityMin: 0,
+  safetyResilienceMin: 0,
+  safetyDecentralizationMin: 0,
+  safetyDependencyRiskMin: 0,
+  types: [],
   mechanisms: [],
   pegs: [],
   lifecycle: [],
@@ -67,18 +74,6 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
  * Flat per-param keys — no nested groups, no fancy query builder.
  */
 export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
-  pegScoreMin: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.pegScoreMin,
-    min: 0,
-    max: 100,
-  },
-  pegScoreMax: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.pegScoreMax,
-    min: 0,
-    max: 100,
-  },
   dewsMin: {
     kind: "boundedNumber",
     defaultValue: SCREENER_FILTER_DEFAULTS.dewsMin,
@@ -91,18 +86,6 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     min: 0,
     max: 100,
   },
-  liquidityMin: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.liquidityMin,
-    min: 0,
-    max: 100,
-  },
-  liquidityMax: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.liquidityMax,
-    min: 0,
-    max: 100,
-  },
   supplyMin: {
     kind: "boundedNumber",
     defaultValue: SCREENER_FILTER_DEFAULTS.supplyMin,
@@ -112,6 +95,46 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     kind: "boundedNumber",
     defaultValue: SCREENER_FILTER_DEFAULTS.supplyMax,
     min: 0,
+  },
+  safetyGrades: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyGrades,
+    allowedValues: SAFETY_GRADE_VALUES,
+  },
+  safetyPegStabilityMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyPegStabilityMin,
+    min: 0,
+    max: 100,
+  },
+  safetyLiquidityMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyLiquidityMin,
+    min: 0,
+    max: 100,
+  },
+  safetyResilienceMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyResilienceMin,
+    min: 0,
+    max: 100,
+  },
+  safetyDecentralizationMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyDecentralizationMin,
+    min: 0,
+    max: 100,
+  },
+  safetyDependencyRiskMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyDependencyRiskMin,
+    min: 0,
+    max: 100,
+  },
+  types: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.types,
+    allowedValues: GOVERNANCE_TYPE_VALUES,
   },
   mechanisms: {
     kind: "enumList",
@@ -143,6 +166,8 @@ export interface ScreenerRow {
   lifecycle: StablecoinStatus;
   /** Mechanism archetype from the slim client registry (may be undefined). */
   mechanism: MechanismArchetype | null;
+  /** Governance type from `StablecoinClientMeta.flags`. */
+  type: GovernanceType;
   /** Peg currency from `StablecoinClientMeta.flags`. */
   peg: PegCurrency;
   /** USD circulating supply summed from peg buckets (0 if unavailable). */
@@ -154,9 +179,14 @@ export interface ScreenerRow {
   /** DEX Liquidity Score (0–100). null = unrated. */
   liquidityScore: number | null;
   /** Safety grade from report-cards. null = unrated. */
-  safetyGrade: string | null;
+  safetyGrade: ReportCardGrade | null;
   /** Safety overall score (0–100). null = unrated. */
   safetyScore: number | null;
+  safetyPegStabilityScore: number | null;
+  safetyLiquidityScore: number | null;
+  safetyResilienceScore: number | null;
+  safetyDecentralizationScore: number | null;
+  safetyDependencyRiskScore: number | null;
   /** Blacklistability bucket. null = unspecified (no per-coin override). */
   blacklistable: BlacklistableValue | null;
 }
@@ -217,32 +247,52 @@ export function sortScreenerRows(
 }
 
 export interface ScreenerScoreFilterLoadingState {
-  pegLoading: boolean;
-  pegHasData: boolean;
   dewsLoading: boolean;
   dewsHasData: boolean;
-  liquidityLoading: boolean;
-  liquidityHasData: boolean;
+  reportLoading: boolean;
+  reportHasData: boolean;
+}
+
+function isScoreRangeActive(minValue: number, maxValue: number): boolean {
+  return minValue > 0 || maxValue < 100;
+}
+
+function isSupplyRangeActive(minValue: number, maxValue: number): boolean {
+  return minValue > 0 || maxValue > 0;
+}
+
+function passesRange(
+  value: number | null | undefined,
+  minValue: number,
+  maxValue: number,
+  active: boolean,
+): boolean {
+  if (!active) return true;
+  if (value == null) return false;
+  return value > minValue && value < maxValue;
+}
+
+function passesMinimum(value: number | null | undefined, minValue: number): boolean {
+  if (minValue <= 0) return true;
+  return value != null && value > minValue;
 }
 
 export function hasLoadingScoreFilterData(
   filters: ScreenerFilters,
   state: ScreenerScoreFilterLoadingState,
 ): boolean {
-  const pegScoreActive =
-    filters.pegScoreMin > SCREENER_FILTER_DEFAULTS.pegScoreMin ||
-    filters.pegScoreMax < SCREENER_FILTER_DEFAULTS.pegScoreMax;
-  const dewsActive =
-    filters.dewsMin > SCREENER_FILTER_DEFAULTS.dewsMin ||
-    filters.dewsMax < SCREENER_FILTER_DEFAULTS.dewsMax;
-  const liquidityActive =
-    filters.liquidityMin > SCREENER_FILTER_DEFAULTS.liquidityMin ||
-    filters.liquidityMax < SCREENER_FILTER_DEFAULTS.liquidityMax;
+  const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
+  const reportActive =
+    filters.safetyGrades.length > 0 ||
+    filters.safetyPegStabilityMin > 0 ||
+    filters.safetyLiquidityMin > 0 ||
+    filters.safetyResilienceMin > 0 ||
+    filters.safetyDecentralizationMin > 0 ||
+    filters.safetyDependencyRiskMin > 0;
 
   return (
-    (pegScoreActive && state.pegLoading && !state.pegHasData) ||
     (dewsActive && state.dewsLoading && !state.dewsHasData) ||
-    (liquidityActive && state.liquidityLoading && !state.liquidityHasData)
+    (reportActive && state.reportLoading && !state.reportHasData)
   );
 }
 
@@ -253,44 +303,31 @@ export function hasLoadingScoreFilterData(
  * the range, so we don't want to hide unrated coins).
  */
 export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilters): ScreenerRow[] {
-  const pegScoreActive =
-    filters.pegScoreMin > SCREENER_FILTER_DEFAULTS.pegScoreMin ||
-    filters.pegScoreMax < SCREENER_FILTER_DEFAULTS.pegScoreMax;
-  const dewsActive =
-    filters.dewsMin > SCREENER_FILTER_DEFAULTS.dewsMin ||
-    filters.dewsMax < SCREENER_FILTER_DEFAULTS.dewsMax;
-  const liquidityActive =
-    filters.liquidityMin > SCREENER_FILTER_DEFAULTS.liquidityMin ||
-    filters.liquidityMax < SCREENER_FILTER_DEFAULTS.liquidityMax;
-  const supplyMinActive = filters.supplyMin > 0;
-  const supplyMaxActive = filters.supplyMax > 0;
+  const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
+  const supplyActive = isSupplyRangeActive(filters.supplyMin, filters.supplyMax);
 
+  const safetyGradeSet = filters.safetyGrades.length > 0 ? new Set(filters.safetyGrades) : null;
   const mechanismSet = filters.mechanisms.length > 0 ? new Set(filters.mechanisms) : null;
+  const typeSet = filters.types.length > 0 ? new Set(filters.types) : null;
   const pegSet = filters.pegs.length > 0 ? new Set(filters.pegs) : null;
   const lifecycleSet = filters.lifecycle.length > 0 ? new Set(filters.lifecycle) : null;
   const blacklistableSet = filters.blacklistable.length > 0 ? new Set(filters.blacklistable) : null;
 
   return rows.filter((row) => {
-    if (pegScoreActive) {
-      if (row.pegScore == null) return false;
-      if (row.pegScore < filters.pegScoreMin) return false;
-      if (row.pegScore > filters.pegScoreMax) return false;
+    if (!passesRange(row.dewsScore, filters.dewsMin, filters.dewsMax, dewsActive)) return false;
+    if (!passesRange(row.supplyUsd, filters.supplyMin, filters.supplyMax || Infinity, supplyActive)) return false;
+    if (safetyGradeSet) {
+      if (!row.safetyGrade || !safetyGradeSet.has(row.safetyGrade)) return false;
     }
-    if (dewsActive) {
-      if (row.dewsScore == null) return false;
-      if (row.dewsScore < filters.dewsMin) return false;
-      if (row.dewsScore > filters.dewsMax) return false;
-    }
-    if (liquidityActive) {
-      if (row.liquidityScore == null) return false;
-      if (row.liquidityScore < filters.liquidityMin) return false;
-      if (row.liquidityScore > filters.liquidityMax) return false;
-    }
-    if (supplyMinActive && row.supplyUsd < filters.supplyMin) return false;
-    if (supplyMaxActive && row.supplyUsd > filters.supplyMax) return false;
+    if (!passesMinimum(row.safetyPegStabilityScore, filters.safetyPegStabilityMin)) return false;
+    if (!passesMinimum(row.safetyLiquidityScore, filters.safetyLiquidityMin)) return false;
+    if (!passesMinimum(row.safetyResilienceScore, filters.safetyResilienceMin)) return false;
+    if (!passesMinimum(row.safetyDecentralizationScore, filters.safetyDecentralizationMin)) return false;
+    if (!passesMinimum(row.safetyDependencyRiskScore, filters.safetyDependencyRiskMin)) return false;
     if (mechanismSet) {
       if (!row.mechanism || !mechanismSet.has(row.mechanism)) return false;
     }
+    if (typeSet && !typeSet.has(row.type)) return false;
     if (pegSet && !pegSet.has(row.peg)) return false;
     if (lifecycleSet && !lifecycleSet.has(row.lifecycle)) return false;
     if (blacklistableSet) {
@@ -311,17 +348,39 @@ export function projectBlacklistable(value: boolean | "possible" | "dilutable" |
 /** Detects whether any filter is non-default. Used for the "Reset" CTA. */
 export function hasActiveFilters(filters: ScreenerFilters): boolean {
   return (
-    filters.pegScoreMin !== SCREENER_FILTER_DEFAULTS.pegScoreMin ||
-    filters.pegScoreMax !== SCREENER_FILTER_DEFAULTS.pegScoreMax ||
-    filters.dewsMin !== SCREENER_FILTER_DEFAULTS.dewsMin ||
-    filters.dewsMax !== SCREENER_FILTER_DEFAULTS.dewsMax ||
-    filters.liquidityMin !== SCREENER_FILTER_DEFAULTS.liquidityMin ||
-    filters.liquidityMax !== SCREENER_FILTER_DEFAULTS.liquidityMax ||
-    filters.supplyMin > 0 ||
-    filters.supplyMax > 0 ||
-    filters.mechanisms.length > 0 ||
-    filters.pegs.length > 0 ||
-    filters.lifecycle.length > 0 ||
-    filters.blacklistable.length > 0
+    countActiveScreenerFilters(filters) > 0
   );
+}
+
+/** Counts visible active constraints for summary UI. Ranges count once; selected pills count individually. */
+export function countActiveScreenerFilters(filters: ScreenerFilters): number {
+  let count = 0;
+  if (isScoreRangeActive(filters.dewsMin, filters.dewsMax)) {
+    count += 1;
+  }
+  if (isSupplyRangeActive(filters.supplyMin, filters.supplyMax)) {
+    count += 1;
+  }
+  count += filters.safetyGrades.length;
+  if (filters.safetyPegStabilityMin > 0) {
+    count += 1;
+  }
+  if (filters.safetyLiquidityMin > 0) {
+    count += 1;
+  }
+  if (filters.safetyResilienceMin > 0) {
+    count += 1;
+  }
+  if (filters.safetyDecentralizationMin > 0) {
+    count += 1;
+  }
+  if (filters.safetyDependencyRiskMin > 0) {
+    count += 1;
+  }
+  count += filters.types.length;
+  count += filters.mechanisms.length;
+  count += filters.pegs.length;
+  count += filters.lifecycle.length;
+  count += filters.blacklistable.length;
+  return count;
 }

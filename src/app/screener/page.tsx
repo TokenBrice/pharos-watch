@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by Peg Score, DEWS, Liquidity Score, supply, mechanism, peg, and lifecycle. Permalinks share the exact view.`;
+const screenerDescription = `Filter ${TRACKED_STABLECOIN_COUNT} stablecoins by DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle. Permalinks share the exact view.`;
 
 export const metadata = buildPageMetadata({
   title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
@@ -20,12 +20,12 @@ const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener is a client-side filter over the same Peg Score, DEWS, Liquidity Score, supply, mechanism, peg, and lifecycle data that powers the rest of Pharos. Pick a band on any score, narrow by mechanism or peg, and share the URL — the filter state is encoded directly in the query string.",
+      "The Screener is a client-side filter over the same DEWS, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle data that powers the rest of Pharos. Set score thresholds, narrow by type, mechanism, or peg, and share the URL — the filter state is encoded directly in the query string.",
   },
   {
     question: "How is filter state shared?",
     answer:
-      "Every filter is a flat URL parameter (for example `?pegscore-min=80&mechanism=cdp,fiat-cash`). Copying the URL preserves the exact view; opening it on another device reproduces the same filter and result set.",
+      "Every filter is a flat URL parameter (for example `?dewsMin=40&mechanisms=cdp,fiat-cash`). Copying the URL preserves the exact view; opening it on another device reproduces the same filter and result set.",
   },
   {
     question: "Why are some scores empty?",
@@ -45,8 +45,9 @@ const SCREENER_STATIC_SECTION = (
       <p className="pharos-kicker">How To Read The Screener</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <p>
-          Numeric ranges narrow the candidate set on Peg Score, DEWS stress, and Liquidity Score (each 0–100), plus
-          USD-denominated supply. Multi-select pills filter by mechanism archetype, peg, and lifecycle.
+          Numeric thresholds narrow the candidate set on DEWS stress, the five Safety Score sub-dimensions,
+          and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism archetype, peg, and
+          lifecycle.
         </p>
         <p>
           Cross-reference results against the{" "}
@@ -94,7 +95,7 @@ export default createClientFeaturePage({
     title: "Pharos Screener",
     statusBadge: { status: "beta" },
     leadParagraphs: [
-      "Filter the tracked stablecoin universe by score, supply, mechanism, peg, and lifecycle.",
+      "Filter the tracked stablecoin universe by score, Safety Grade, Safety Score dimensions, supply, type, mechanism, peg, and lifecycle.",
       "Every filter lives in the URL — share the link to share the view. Numeric ranges respect missing scores so a partially rated coin is never wrongly excluded.",
     ],
   },

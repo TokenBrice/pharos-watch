@@ -3,20 +3,23 @@
 import { useCallback, useId } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
+import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import {
   BLACKLISTABLE_VALUES,
   PEG_VALUES,
+  SAFETY_GRADE_VALUES,
   SCREENER_FILTER_DEFAULTS,
   hasActiveFilters,
   type BlacklistableValue,
   type ScreenerFilters,
 } from "@/app/screener/screener-filters";
 import {
+  GOVERNANCE_LABELS_SHORT,
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
 } from "@shared/lib/classification";
-import { MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
-import type { MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
+import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES, STABLECOIN_STATUS_VALUES } from "@shared/types/core";
+import type { GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
 
 const LIFECYCLE_LABELS: Record<StablecoinStatus, string> = {
   active: "Active",
@@ -33,19 +36,19 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
 
 interface ScreenerToolbarProps {
   filters: ScreenerFilters;
+  matchSummary: string;
+  activeFilterCount: number;
   onChange: (next: ScreenerFilters) => void;
   onReset: () => void;
-  resultCount: number;
-  totalCount: number;
   rightSlot?: React.ReactNode;
 }
 
 export function ScreenerToolbar({
   filters,
+  matchSummary,
+  activeFilterCount,
   onChange,
   onReset,
-  resultCount,
-  totalCount,
   rightSlot,
 }: ScreenerToolbarProps) {
   const groupId = useId();
@@ -57,14 +60,16 @@ export function ScreenerToolbar({
   );
 
   const active = hasActiveFilters(filters);
+  const filterCountLabel = `${activeFilterCount.toLocaleString()} ${activeFilterCount === 1 ? "filter" : "filters"} applied`;
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/60 bg-card/60 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          Showing <span className="font-mono text-foreground">{resultCount}</span>
-          {" "}of{" "}
-          <span className="font-mono text-foreground">{totalCount}</span> stablecoins.
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base font-semibold text-foreground" aria-live="polite">
+          <span>{matchSummary}</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            {filterCountLabel}
+          </span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
           {rightSlot}
@@ -79,81 +84,199 @@ export function ScreenerToolbar({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <RangeField
-          label="Peg Score"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.pegScoreMin}
-          maxValue={filters.pegScoreMax}
-          onMinChange={(v) => update("pegScoreMin", v)}
-          onMaxChange={(v) => update("pegScoreMax", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.pegScoreMin}
-          defaultMax={SCREENER_FILTER_DEFAULTS.pegScoreMax}
-        />
-        <RangeField
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-safety-grades`}>
+            Safety Grade
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.safetyGrades as string[]}
+            onValueChange={(v) => update("safetyGrades", v as typeof filters.safetyGrades)}
+            aria-labelledby={`${groupId}-safety-grades`}
+          >
+            {SAFETY_GRADE_VALUES.map((grade) => (
+              <ToggleGroupItem
+                key={grade}
+                value={grade}
+                className={`min-h-11 font-semibold sm:min-h-8 ${getSafetyGradeBadgeClassName(grade)}`}
+              >
+                {grade}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+        <ThresholdField
           label="DEWS Stress"
           min={0}
           max={100}
           step={1}
           minValue={filters.dewsMin}
-          maxValue={filters.dewsMax}
           onMinChange={(v) => update("dewsMin", v)}
-          onMaxChange={(v) => update("dewsMax", v)}
           defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
-          defaultMax={SCREENER_FILTER_DEFAULTS.dewsMax}
         />
-        <RangeField
-          label="Liquidity Score"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.liquidityMin}
-          maxValue={filters.liquidityMax}
-          onMinChange={(v) => update("liquidityMin", v)}
-          onMaxChange={(v) => update("liquidityMax", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.liquidityMin}
-          defaultMax={SCREENER_FILTER_DEFAULTS.liquidityMax}
-        />
-        <RangeField
+        <ThresholdField
           label="Supply (USD)"
           min={0}
           step={1_000_000}
           minValue={filters.supplyMin}
-          maxValue={filters.supplyMax}
           onMinChange={(v) => update("supplyMin", v)}
-          onMaxChange={(v) => update("supplyMax", v)}
           defaultMin={0}
-          defaultMax={0}
-          minPlaceholder="0"
-          maxPlaceholder="No max"
+          placeholder="No threshold"
         />
       </div>
 
-      <div className="space-y-2">
-        <span className="pharos-kicker" id={`${groupId}-mechanisms`}>
-          Mechanism
-        </span>
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={filters.mechanisms as string[]}
-          onValueChange={(v) => update("mechanisms", v as MechanismArchetype[])}
-          aria-labelledby={`${groupId}-mechanisms`}
-        >
-          {MECHANISM_ARCHETYPE_VALUES.map((archetype) => (
-            <ToggleGroupItem
-              key={archetype}
-              value={archetype}
-              className="min-h-11 sm:min-h-8"
-            >
-              {MECHANISM_ARCHETYPE_LABELS[archetype]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <ThresholdField
+          label="Peg Stability"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyPegStabilityMin}
+          onMinChange={(v) => update("safetyPegStabilityMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyPegStabilityMin}
+        />
+        <ThresholdField
+          label="Exit Liquidity"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyLiquidityMin}
+          onMinChange={(v) => update("safetyLiquidityMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyLiquidityMin}
+        />
+        <ThresholdField
+          label="Resilience"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyResilienceMin}
+          onMinChange={(v) => update("safetyResilienceMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyResilienceMin}
+        />
+        <ThresholdField
+          label="Decentralization"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyDecentralizationMin}
+          onMinChange={(v) => update("safetyDecentralizationMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyDecentralizationMin}
+        />
+        <ThresholdField
+          label="Dependency Risk"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.safetyDependencyRiskMin}
+          onMinChange={(v) => update("safetyDependencyRiskMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyDependencyRiskMin}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.45fr)_minmax(0,0.95fr)_minmax(0,0.75fr)]">
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-types`}>
+            Type
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.types as string[]}
+            onValueChange={(v) => update("types", v as GovernanceType[])}
+            aria-labelledby={`${groupId}-types`}
+          >
+            {GOVERNANCE_TYPE_VALUES.map((type) => (
+              <ToggleGroupItem
+                key={type}
+                value={type}
+                className="min-h-11 sm:min-h-8"
+              >
+                {GOVERNANCE_LABELS_SHORT[type]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-mechanisms`}>
+            Mechanism
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.mechanisms as string[]}
+            onValueChange={(v) => update("mechanisms", v as MechanismArchetype[])}
+            aria-labelledby={`${groupId}-mechanisms`}
+          >
+            {MECHANISM_ARCHETYPE_VALUES.map((archetype) => (
+              <ToggleGroupItem
+                key={archetype}
+                value={archetype}
+                className="min-h-11 sm:min-h-8"
+              >
+                {MECHANISM_ARCHETYPE_LABELS[archetype]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-blacklistable`}>
+            Blacklistable
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.blacklistable as string[]}
+            onValueChange={(v) => update("blacklistable", v as BlacklistableValue[])}
+            aria-labelledby={`${groupId}-blacklistable`}
+          >
+            {BLACKLISTABLE_VALUES.map((bucket) => (
+              <ToggleGroupItem
+                key={bucket}
+                value={bucket}
+                className="min-h-11 sm:min-h-8"
+              >
+                {BLACKLISTABLE_LABELS[bucket]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
+
+        <div className="space-y-2">
+          <span className="pharos-kicker" id={`${groupId}-lifecycle`}>
+            Lifecycle
+          </span>
+          <ToggleGroup
+            type="multiple"
+            variant="outline"
+            size="sm"
+            className="w-full flex-wrap justify-start"
+            value={filters.lifecycle as string[]}
+            onValueChange={(v) => update("lifecycle", v as StablecoinStatus[])}
+            aria-labelledby={`${groupId}-lifecycle`}
+          >
+            {STABLECOIN_STATUS_VALUES.map((status) => (
+              <ToggleGroupItem
+                key={status}
+                value={status}
+                className="min-h-11 sm:min-h-8"
+              >
+                {LIFECYCLE_LABELS[status]}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -181,92 +304,33 @@ export function ScreenerToolbar({
           ))}
         </ToggleGroup>
       </div>
-
-      <div className="space-y-2">
-        <span className="pharos-kicker" id={`${groupId}-lifecycle`}>
-          Lifecycle
-        </span>
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={filters.lifecycle as string[]}
-          onValueChange={(v) => update("lifecycle", v as StablecoinStatus[])}
-          aria-labelledby={`${groupId}-lifecycle`}
-        >
-          {STABLECOIN_STATUS_VALUES.map((status) => (
-            <ToggleGroupItem
-              key={status}
-              value={status}
-              className="min-h-11 sm:min-h-8"
-            >
-              {LIFECYCLE_LABELS[status]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
-
-      <div className="space-y-2">
-        <span className="pharos-kicker" id={`${groupId}-blacklistable`}>
-          Blacklistable
-        </span>
-        <ToggleGroup
-          type="multiple"
-          variant="outline"
-          size="sm"
-          className="w-full flex-wrap justify-start"
-          value={filters.blacklistable as string[]}
-          onValueChange={(v) => update("blacklistable", v as BlacklistableValue[])}
-          aria-labelledby={`${groupId}-blacklistable`}
-        >
-          {BLACKLISTABLE_VALUES.map((bucket) => (
-            <ToggleGroupItem
-              key={bucket}
-              value={bucket}
-              className="min-h-11 sm:min-h-8"
-            >
-              {BLACKLISTABLE_LABELS[bucket]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
     </div>
   );
 }
 
-interface RangeFieldProps {
+interface ThresholdFieldProps {
   label: string;
   min: number;
   max?: number;
   step?: number;
   minValue: number;
-  maxValue: number;
   onMinChange: (value: number) => void;
-  onMaxChange: (value: number) => void;
   defaultMin: number;
-  defaultMax: number;
-  minPlaceholder?: string;
-  maxPlaceholder?: string;
+  placeholder?: string;
 }
 
-function RangeField({
+function ThresholdField({
   label,
   min,
   max,
   step = 1,
   minValue,
-  maxValue,
   onMinChange,
-  onMaxChange,
   defaultMin,
-  defaultMax,
-  minPlaceholder,
-  maxPlaceholder,
-}: RangeFieldProps) {
+  placeholder,
+}: ThresholdFieldProps) {
   const id = useId();
-  const minId = `${id}-min`;
-  const maxId = `${id}-max`;
+  const inputId = `${id}-threshold`;
 
   const parseValue = useCallback(
     (raw: string, fallback: number): number => {
@@ -285,38 +349,23 @@ function RangeField({
       <span className="pharos-kicker" id={`${id}-label`}>
         {label}
       </span>
-      <div className="flex items-center gap-2">
-        <label htmlFor={minId} className="sr-only">
-          {label} minimum
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
+        <span className="rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm font-semibold text-muted-foreground" aria-hidden="true">
+          &gt;
+        </span>
+        <label htmlFor={inputId} className="sr-only">
+          {label} greater than
         </label>
         <input
-          id={minId}
+          id={inputId}
           type="number"
           inputMode="numeric"
           min={min}
           max={max}
           step={step}
           value={minValue || ""}
-          placeholder={minPlaceholder ?? String(defaultMin)}
+          placeholder={placeholder ?? String(defaultMin)}
           onChange={(e) => onMinChange(parseValue(e.target.value, defaultMin))}
-          className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums"
-        />
-        <span className="text-xs text-muted-foreground" aria-hidden="true">
-          –
-        </span>
-        <label htmlFor={maxId} className="sr-only">
-          {label} maximum
-        </label>
-        <input
-          id={maxId}
-          type="number"
-          inputMode="numeric"
-          min={min}
-          max={max}
-          step={step}
-          value={maxValue || ""}
-          placeholder={maxPlaceholder ?? String(defaultMax)}
-          onChange={(e) => onMaxChange(parseValue(e.target.value, defaultMax))}
           className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums"
         />
       </div>

@@ -3,6 +3,7 @@ import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
+  countActiveScreenerFilters,
   hasLoadingScoreFilterData,
   hasActiveFilters,
   projectBlacklistable,
@@ -18,6 +19,7 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     name: "USD Coin",
     symbol: "USDC",
     lifecycle: "active",
+    type: "centralized",
     mechanism: "fiat-cash",
     peg: "USD",
     supplyUsd: 50_000_000_000,
@@ -26,6 +28,11 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     liquidityScore: 85,
     safetyGrade: "A",
     safetyScore: 90,
+    safetyPegStabilityScore: 92,
+    safetyLiquidityScore: 88,
+    safetyResilienceScore: 84,
+    safetyDecentralizationScore: 76,
+    safetyDependencyRiskScore: 82,
     blacklistable: "yes",
     ...overrides,
   };
@@ -78,26 +85,26 @@ describe("applyFilters", () => {
     expect(applyFilters(rows, SCREENER_FILTER_DEFAULTS)).toHaveLength(rows.length);
   });
 
-  it("filters by PegScore min, excluding unrated rows", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 90 };
-    const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["usdc-circle"]);
-  });
-
   it("filters by DEWS max, excluding unrated rows", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMax: 40 };
     const result = applyFilters(rows, filters);
     expect(result.map((r) => r.id).sort()).toEqual(["dai-makerdao", "usdc-circle"]);
   });
 
-  it("filters by liquidity score range", () => {
-    const filters: ScreenerFilters = {
-      ...SCREENER_FILTER_DEFAULTS,
-      liquidityMin: 50,
-      liquidityMax: 80,
-    };
+  it("filters by safety grade", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyGrades: ["A"] };
     const result = applyFilters(rows, filters);
-    expect(result.map((r) => r.id)).toEqual(["dai-makerdao"]);
+    expect(result.map((r) => r.id)).toEqual(["usdc-circle"]);
+  });
+
+  it("filters by safety sub-dimension minimum", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyDependencyRiskMin: 90 };
+    const result = applyFilters([
+      makeRow({ id: "low-dependency", safetyDependencyRiskScore: 70 }),
+      makeRow({ id: "high-dependency", safetyDependencyRiskScore: 95 }),
+      makeRow({ id: "unrated-dependency", safetyDependencyRiskScore: null }),
+    ], filters);
+    expect(result.map((r) => r.id)).toEqual(["high-dependency"]);
   });
 
   it("filters by supply min only when min > 0", () => {
@@ -116,6 +123,16 @@ describe("applyFilters", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] };
     const result = applyFilters(rows, filters);
     expect(result.map((r) => r.id)).toEqual(["dai-makerdao"]);
+  });
+
+  it("filters by type (multi-select)", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] };
+    const result = applyFilters([
+      makeRow({ id: "cefi", type: "centralized" }),
+      makeRow({ id: "cefi-dep", type: "centralized-dependent" }),
+      makeRow({ id: "defi", type: "decentralized" }),
+    ], filters);
+    expect(result.map((r) => r.id)).toEqual(["defi"]);
   });
 
   it("excludes rows with null mechanism when mechanism filter is active", () => {
@@ -159,12 +176,27 @@ describe("applyFilters", () => {
 describe("hasActiveFilters", () => {
   it("reports false for defaults", () => {
     expect(hasActiveFilters(SCREENER_FILTER_DEFAULTS)).toBe(false);
+    expect(countActiveScreenerFilters(SCREENER_FILTER_DEFAULTS)).toBe(0);
   });
 
   it("reports true when any range or multi-select is narrowed", () => {
-    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 50 })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, dewsMin: 50 })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, safetyGrades: ["A", "B+"] })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, types: ["decentralized"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mechanisms: ["cdp"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, supplyMin: 1 })).toBe(true);
+  });
+
+  it("counts active range groups once and selected pills individually", () => {
+    expect(countActiveScreenerFilters({
+      ...SCREENER_FILTER_DEFAULTS,
+      dewsMin: 80,
+      dewsMax: 95,
+      supplyMax: 1_000_000_000,
+      safetyGrades: ["A", "B+"],
+      types: ["centralized", "decentralized"],
+      pegs: ["USD"],
+    })).toBe(7);
   });
 });
 
@@ -199,19 +231,17 @@ describe("sortScreenerRows", () => {
 
 describe("hasLoadingScoreFilterData", () => {
   const loaded = {
-    pegLoading: false,
-    pegHasData: true,
     dewsLoading: false,
     dewsHasData: true,
-    liquidityLoading: false,
-    liquidityHasData: true,
+    reportLoading: false,
+    reportHasData: true,
   };
 
   it("keeps deep-linked score filters in loading state until their source data resolves", () => {
     expect(
       hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 80 },
-        { ...loaded, pegLoading: true, pegHasData: false },
+        { ...SCREENER_FILTER_DEFAULTS, dewsMin: 80 },
+        { ...loaded, dewsLoading: true, dewsHasData: false },
       ),
     ).toBe(true);
   });
@@ -219,10 +249,19 @@ describe("hasLoadingScoreFilterData", () => {
   it("does not block unrelated score filter sources", () => {
     expect(
       hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, pegScoreMin: 80 },
+        { ...SCREENER_FILTER_DEFAULTS, safetyResilienceMin: 75 },
         { ...loaded, dewsLoading: true, dewsHasData: false },
       ),
     ).toBe(false);
+  });
+
+  it("keeps safety score filters in loading state until report cards resolve", () => {
+    expect(
+      hasLoadingScoreFilterData(
+        { ...SCREENER_FILTER_DEFAULTS, safetyResilienceMin: 75 },
+        { ...loaded, reportLoading: true, reportHasData: false },
+      ),
+    ).toBe(true);
   });
 });
 
@@ -230,18 +269,24 @@ describe("SCREENER_URL_SCHEMA codec", () => {
   it("round-trips a non-default filter set", () => {
     const filters: ScreenerFilters = {
       ...SCREENER_FILTER_DEFAULTS,
-      pegScoreMin: 80,
+      dewsMin: 20,
       dewsMax: 40,
+      safetyGrades: ["A", "B+"],
+      types: ["centralized", "decentralized"],
       mechanisms: ["cdp", "fiat-cash"],
       pegs: ["USD", "EUR"],
     };
     const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
-    expect(encoded).toContain("pegScoreMin=80");
+    expect(encoded).toContain("dewsMin=20");
     expect(encoded).toContain("dewsMax=40");
+    expect(encoded).toContain("safetyGrades=A%2CB%2B");
+    expect(encoded).toContain("types=centralized%2Cdecentralized");
     expect(encoded).toContain("mechanisms=cdp%2Cfiat-cash");
     const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
-    expect(decoded.pegScoreMin).toBe(80);
+    expect(decoded.dewsMin).toBe(20);
     expect(decoded.dewsMax).toBe(40);
+    expect(decoded.safetyGrades).toEqual(["A", "B+"]);
+    expect(decoded.types).toEqual(["centralized", "decentralized"]);
     expect(decoded.mechanisms).toEqual(["cdp", "fiat-cash"]);
     expect(decoded.pegs).toEqual(["USD", "EUR"]);
   });
@@ -256,10 +301,10 @@ describe("SCREENER_URL_SCHEMA codec", () => {
 
   it("clamps out-of-range numbers to defaults", () => {
     const decoded = decodeState(
-      "pegScoreMin=999&dewsMin=-5&supplyMin=-1",
+      "dewsMax=999&dewsMin=-5&supplyMin=-1",
       SCREENER_URL_SCHEMA,
     );
-    expect(decoded.pegScoreMin).toBe(SCREENER_FILTER_DEFAULTS.pegScoreMin);
+    expect(decoded.dewsMax).toBe(SCREENER_FILTER_DEFAULTS.dewsMax);
     expect(decoded.dewsMin).toBe(SCREENER_FILTER_DEFAULTS.dewsMin);
     expect(decoded.supplyMin).toBe(SCREENER_FILTER_DEFAULTS.supplyMin);
   });

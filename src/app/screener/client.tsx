@@ -16,6 +16,7 @@ import {
   SCREENER_FILTER_DEFAULTS,
   SCREENER_URL_SCHEMA,
   applyFilters,
+  countActiveScreenerFilters,
   hasLoadingScoreFilterData,
   hasActiveFilters,
   projectBlacklistable,
@@ -31,13 +32,15 @@ import {
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { CsvColumn } from "@/lib/exports/csv";
-import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
+import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
+import type { ReportCardGrade } from "@shared/types";
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
   { header: "symbol", accessor: (row) => row.symbol },
   { header: "name", accessor: (row) => row.name },
   { header: "lifecycle", accessor: (row) => row.lifecycle },
+  { header: "type", accessor: (row) => GOVERNANCE_LABELS[row.type] ?? row.type },
   {
     header: "mechanism",
     accessor: (row) => (row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : ""),
@@ -49,6 +52,11 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
   { header: "safety_grade", accessor: (row) => row.safetyGrade ?? "" },
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
+  { header: "safety_peg_stability", accessor: (row) => row.safetyPegStabilityScore ?? "" },
+  { header: "safety_liquidity", accessor: (row) => row.safetyLiquidityScore ?? "" },
+  { header: "safety_resilience", accessor: (row) => row.safetyResilienceScore ?? "" },
+  { header: "safety_decentralization", accessor: (row) => row.safetyDecentralizationScore ?? "" },
+  { header: "safety_dependency_risk", accessor: (row) => row.safetyDependencyRiskScore ?? "" },
   { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
 ];
 
@@ -64,7 +72,6 @@ export function ScreenerClient() {
   } = useStablecoins();
   const {
     data: pegData,
-    isLoading: isPegLoading,
     dataUpdatedAt: pegUpdatedAt,
     error: pegError,
     refetch: refetchPeg,
@@ -72,6 +79,7 @@ export function ScreenerClient() {
   } = usePegSummary();
   const {
     data: reportData,
+    isLoading: isReportLoading,
     dataUpdatedAt: reportUpdatedAt,
     error: reportError,
     refetch: refetchReport,
@@ -87,7 +95,6 @@ export function ScreenerClient() {
   } = useStressSignals();
   const {
     data: dexData,
-    isLoading: isDexLoading,
     dataUpdatedAt: dexUpdatedAt,
     error: dexError,
     refetch: refetchDex,
@@ -134,9 +141,25 @@ export function ScreenerClient() {
     for (const coin of pegData?.coins ?? []) {
       pegById.set(coin.id, coin.pegScore);
     }
-    const reportById = new Map<string, { grade: string; score: number | null }>();
+    const reportById = new Map<string, {
+      grade: ReportCardGrade;
+      score: number | null;
+      pegStability: number | null;
+      liquidity: number | null;
+      resilience: number | null;
+      decentralization: number | null;
+      dependencyRisk: number | null;
+    }>();
     for (const card of reportData?.cards ?? []) {
-      reportById.set(card.id, { grade: card.overallGrade, score: card.overallScore });
+      reportById.set(card.id, {
+        grade: card.overallGrade,
+        score: card.overallScore,
+        pegStability: card.dimensions.pegStability.score,
+        liquidity: card.dimensions.liquidity.score,
+        resilience: card.dimensions.resilience.score,
+        decentralization: card.dimensions.decentralization.score,
+        dependencyRisk: card.dimensions.dependencyRisk.score,
+      });
     }
     const dewsById = new Map<string, number>();
     for (const [id, entry] of Object.entries(stressData?.signals ?? {})) {
@@ -156,6 +179,7 @@ export function ScreenerClient() {
         name: meta.name,
         symbol: meta.symbol,
         lifecycle,
+        type: meta.flags.governance,
         mechanism: meta.mechanismArchetype ?? null,
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? 0,
@@ -164,6 +188,11 @@ export function ScreenerClient() {
         liquidityScore: liquidityById.get(meta.id) ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
+        safetyPegStabilityScore: safety?.pegStability ?? null,
+        safetyLiquidityScore: safety?.liquidity ?? null,
+        safetyResilienceScore: safety?.resilience ?? null,
+        safetyDecentralizationScore: safety?.decentralization ?? null,
+        safetyDependencyRiskScore: safety?.dependencyRisk ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
       });
     }
@@ -175,12 +204,10 @@ export function ScreenerClient() {
     [allRows, filters],
   );
   const scoreFilterDataLoading = hasLoadingScoreFilterData(filters, {
-    pegLoading: isPegLoading,
-    pegHasData: !!pegData?.coins?.length,
     dewsLoading: isStressLoading,
     dewsHasData: stressData ? Object.keys(stressData.signals).length > 0 : false,
-    liquidityLoading: isDexLoading,
-    liquidityHasData: dexData ? Object.keys(dexData).length > 0 : false,
+    reportLoading: isReportLoading,
+    reportHasData: !!reportData?.cards?.length,
   });
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<ScreenerSortKey>(
     "safetyScore",
@@ -190,7 +217,6 @@ export function ScreenerClient() {
     () => sortScreenerRows(filteredRows, sortKey, sortDirection),
     [filteredRows, sortKey, sortDirection],
   );
-  const toolbarResultCount = scoreFilterDataLoading ? allRows.length : filteredRows.length;
   const exportRows = scoreFilterDataLoading ? [] : sortedRows;
 
   const handleRetry = useCallback(
@@ -199,7 +225,13 @@ export function ScreenerClient() {
   );
 
   const totalTracked = CLIENT_TRACKED_META_BY_ID.size;
+  const totalRows = allRows.length || totalTracked;
+  const matchingRows = scoreFilterDataLoading ? totalRows : filteredRows.length;
   const active = hasActiveFilters(filters);
+  const activeFilterCount = countActiveScreenerFilters(filters);
+  const matchSummary = active
+    ? `${matchingRows.toLocaleString()}/${totalRows.toLocaleString()} stablecoins matching`
+    : `${totalRows.toLocaleString()} matching stablecoins`;
 
   // Surfaces a banner if the underlying queries error out; mirrors other
   // multi-source surfaces.
@@ -252,10 +284,10 @@ export function ScreenerClient() {
 
       <ScreenerToolbar
         filters={filters}
+        matchSummary={matchSummary}
+        activeFilterCount={activeFilterCount}
         onChange={setFilters}
         onReset={resetFilters}
-        resultCount={toolbarResultCount}
-        totalCount={totalTracked}
         rightSlot={
           <TableExportMenu
             data={exportRows}
