@@ -14,7 +14,7 @@ import type {
 import { RedemptionHolderEligibilitySchema } from "@shared/types/redemption";
 import type { ReserveSlice } from "@shared/types/core";
 import { decodeJsonString } from "./cache-json";
-import { shouldUseLegacySnapshotFallback } from "./live-reserves-store-snapshot-state";
+import { shouldUseLegacySnapshotFallback } from "./live-reserves-store-views";
 import type {
   ReserveCompositionRecord,
   ReserveCompositionRow,

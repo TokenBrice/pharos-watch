@@ -6,11 +6,15 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 const getReserveSyncStateMock = vi.fn();
 const getLatestSuccessfulReserveSnapshotMetadataMock = vi.fn();
 
-vi.mock("../live-reserves-store", () => ({
-  getReserveSyncState: getReserveSyncStateMock,
-  getLatestSuccessfulReserveSnapshotMetadata: getLatestSuccessfulReserveSnapshotMetadataMock,
-  LIVE_RESERVE_FRESHNESS_SEC: 3600,
-}));
+vi.mock("../live-reserves-store", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../live-reserves-store")>();
+  return {
+    ...actual,
+    getReserveSyncState: getReserveSyncStateMock,
+    getLatestSuccessfulReserveSnapshotMetadata: getLatestSuccessfulReserveSnapshotMetadataMock,
+    LIVE_RESERVE_FRESHNESS_SEC: 3600,
+  };
+});
 
 describe("buildRedemptionBackstopEntry", () => {
   let buildRedemptionBackstopEntry: typeof import("../redemption-backstop-sources").buildRedemptionBackstopEntry;

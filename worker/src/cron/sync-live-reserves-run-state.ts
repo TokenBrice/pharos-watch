@@ -5,7 +5,7 @@ import { rotateFromCursor } from "./shared/cursor-rotation";
 import {
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncRecordDeferredStatement,
-} from "../lib/live-reserves-store-statements";
+} from "../lib/live-reserves-store";
 
 const RESERVE_SYNC_CURSOR_CACHE_KEY = "live-reserves:run-cursor";
 

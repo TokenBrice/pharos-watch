@@ -9,7 +9,7 @@ import type {
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
-import { emptyReserveCompositionOverview } from "../live-reserves-store-shared";
+import { emptyReserveCompositionOverview } from "../live-reserves-store";
 export { getTelegramBotStats } from "./telegram-bot-stats";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
