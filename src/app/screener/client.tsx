@@ -6,6 +6,7 @@ import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary, useReportCards, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
@@ -52,6 +53,7 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
 ];
 
 export function ScreenerClient() {
+  const { data: logos } = useLogos();
   const {
     data: stablecoinsData,
     isLoading: isStablecoinsLoading,
@@ -269,6 +271,7 @@ export function ScreenerClient() {
 
       <ScreenerTable
         rows={sortedRows}
+        logos={logos}
         isLoading={isStablecoinsLoading || scoreFilterDataLoading}
         onClearFilters={active ? resetFilters : undefined}
         hasActiveFilters={active}

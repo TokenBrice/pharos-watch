@@ -9,6 +9,7 @@ import {
 } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
@@ -54,6 +55,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
 
 interface ScreenerTableProps {
   rows: readonly ScreenerRow[];
+  logos?: Record<string, string>;
   isLoading: boolean;
   onClearFilters?: () => void;
   hasActiveFilters: boolean;
@@ -62,6 +64,7 @@ interface ScreenerTableProps {
 
 export function ScreenerTable({
   rows,
+  logos,
   isLoading,
   onClearFilters,
   hasActiveFilters,
@@ -95,22 +98,25 @@ export function ScreenerTable({
           )}
         </DataTableEmptyRow>
       ) : (
-        rows.map((row) => <ScreenerRow key={row.id} row={row} />)
+        rows.map((row) => <ScreenerRow key={row.id} row={row} logo={logos?.[row.id]} />)
       )}
     </DataTableShell>
   );
 }
 
-function ScreenerRow({ row }: { row: ScreenerRow }) {
+function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
   return (
     <TableRow>
       <TableCell className="min-w-[160px]">
         <Link
           href={buildStablecoinUrl(row.id)}
-          className="pharos-focus-ring inline-flex flex-col rounded-sm"
+          className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
         >
-          <span className="font-semibold text-foreground">{row.symbol}</span>
-          <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+          <StablecoinLogo src={logo} name={row.name} size={24} />
+          <span className="min-w-0">
+            <span className="block font-semibold text-foreground">{row.symbol}</span>
+            <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
+          </span>
         </Link>
       </TableCell>
       <TableCell className="text-right tabular-nums">
@@ -139,7 +145,6 @@ function ScreenerRow({ row }: { row: ScreenerRow }) {
             grade={row.safetyGrade as ReportCardGrade}
             score={row.safetyScore}
             size="sm"
-            versionTopic="safetyScore"
           />
         ) : (
           <span className="text-muted-foreground">—</span>
