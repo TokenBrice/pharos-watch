@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 363 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 362 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 94 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 95 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -344,7 +344,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Goldfish Gold (GGBR)](https://pharos.watch/stablecoin/ggbr-goldfish-gold/): centralized stablecoin backed by real-world assets pegged to Gold.
 - [Kinesis Silver (KAG)](https://pharos.watch/stablecoin/kag-kinesis/): centralized stablecoin backed by real-world assets pegged to Silver.
 - [Mento Euro (EURm)](https://pharos.watch/stablecoin/ceur-celo/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Euro.
-- [EUROe (EUROe)](https://pharos.watch/stablecoin/euroe-membrane/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Spiko EU T-Bills Money Market Fund (EUTBL)](https://pharos.watch/stablecoin/eutbl-spiko/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Backed GOVIES 0-6 months EURO investment grade (bC3M)](https://pharos.watch/stablecoin/bc3m-backed/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Mento British Pound (GBPm)](https://pharos.watch/stablecoin/gbpm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to British Pound.
