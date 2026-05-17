@@ -10,7 +10,7 @@ import {
 } from "@/components/liquidity-breakdown";
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { formatCurrency, formatChartDate } from "@shared/lib/format";
+import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import {
   PROTOCOL_COLORS,
@@ -37,7 +37,7 @@ export function TrendArrow({ value }: { value: number | null }) {
   const isPositive = value >= 0;
   return (
     <span
-      className={`text-xs font-mono ${isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+      className={`text-xs font-mono ${getNetColor(value, { positiveInclusiveZero: true })}`}
     >
       {isPositive ? "\u2191" : "\u2193"}
       {Math.abs(value).toFixed(1)}%

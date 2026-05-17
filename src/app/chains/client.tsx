@@ -15,7 +15,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
-import { formatSignedPercent } from "@shared/lib/format";
+import { formatSignedPercent, getNetColor } from "@shared/lib/format";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -253,7 +253,7 @@ export function ChainsLeaderboardClient() {
             {show7dTrend && (
               <span>
                 <span className="pharos-kicker mr-1.5">7d</span>
-                <span className={cn("font-mono font-semibold tabular-nums", change7dPct > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                <span className={cn("font-mono font-semibold tabular-nums", getNetColor(change7dPct))}>
                   {change7dPct >= 0 ? "+" : ""}{change7dPct.toFixed(1)}%
                 </span>
               </span>

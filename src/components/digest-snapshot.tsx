@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { useDigestSnapshot } from "@/hooks/api-hooks";
-import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
+import { formatCurrency, formatAddress, formatPercentChange, formatScore, getNetColor } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import type { DigestInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
@@ -34,12 +34,6 @@ function SnapshotCard({
   );
 }
 
-/** Green for positive, red for negative, muted for zero. */
-function deltaColor(value: number): string {
-  if (value > 0) return "text-emerald-700 dark:text-emerald-400";
-  if (value < 0) return "text-red-700 dark:text-red-400";
-  return "text-muted-foreground";
-}
 
 function SnapshotUnavailable() {
   return (
@@ -178,7 +172,7 @@ export function DigestSnapshot({ date }: { date: string }) {
               {formatCurrency(inputData.totalMcapUsd)}
             </span>
             {prev && (
-              <span className={deltaColor(mcapDelta)}>
+              <span className={getNetColor(mcapDelta)}>
                 {" "}({mcapDelta >= 0 ? "+" : ""}
                 {formatCurrency(mcapDelta)} from yesterday)
               </span>
@@ -186,11 +180,11 @@ export function DigestSnapshot({ date }: { date: string }) {
           </p>
           <p className="text-sm text-muted-foreground">
             7d change:{" "}
-            <span className={`font-medium ${deltaColor(inputData.mcap7dDelta)}`}>
+            <span className={`font-medium ${getNetColor(inputData.mcap7dDelta)}`}>
               {formatCurrency(inputData.mcap7dDelta)}
             </span>
             {inputData.totalMcapUsd - inputData.mcap7dDelta !== 0 && (
-              <span className={deltaColor(inputData.mcap7dDelta)}>
+              <span className={getNetColor(inputData.mcap7dDelta)}>
                 {" "}
                 ({formatPercentChange(
                   inputData.totalMcapUsd,
@@ -257,7 +251,7 @@ export function DigestSnapshot({ date }: { date: string }) {
             </p>
             <p className="text-sm text-foreground/90">
               7d change:{" "}
-              <span className={`font-medium ${deltaColor(inputData.biggestSupplyChange.changeUsd)}`}>
+              <span className={`font-medium ${getNetColor(inputData.biggestSupplyChange.changeUsd)}`}>
                 {inputData.biggestSupplyChange.changeUsd >= 0 ? "+" : ""}
                 {formatCurrency(inputData.biggestSupplyChange.changeUsd)}
               </span>
@@ -365,7 +359,7 @@ export function DigestSnapshot({ date }: { date: string }) {
             {inputData.liquidityShifts.map((l) => (
               <div key={l.symbol} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{l.symbol}</span>
-                <span className={l.scoreDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
+                <span className={getNetColor(l.scoreDelta)}>
                   {l.previousScore} → {l.currentScore} ({l.scoreDelta > 0 ? "+" : ""}{l.scoreDelta})
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -387,7 +381,7 @@ export function DigestSnapshot({ date }: { date: string }) {
               {inputData.supplyVelocity.map((v) => (
                 <li key={v.coin} className="text-xs text-foreground/90">
                   <span className="font-medium">{v.coin}</span>:{" "}
-                  <span className={deltaColor(v.change1d)}>
+                  <span className={getNetColor(v.change1d)}>
                     {v.change1d >= 0 ? "+" : ""}{formatCurrency(v.change1d)}/1d
                   </span>{" "}
                   <span className="text-muted-foreground">

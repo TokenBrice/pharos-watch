@@ -15,7 +15,7 @@ import { BalanceBar } from "@/components/balance-bar";
 import { Badge } from "@/components/ui/badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
-import { formatCurrency, formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent, getNetColor } from "@shared/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-display-constants";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
@@ -144,7 +144,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</TableCell>
                 <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
                   {liq.tvlChange7d != null ? (
-                    <span className={liq.tvlChange7d >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
+                    <span className={getNetColor(liq.tvlChange7d, { positiveInclusiveZero: true })}>
                       {liq.tvlChange7d >= 0 ? "\u2191" : "\u2193"}{Math.abs(liq.tvlChange7d).toFixed(1)}%
                     </span>
                   ) : (

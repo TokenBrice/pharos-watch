@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { formatPegDeviation } from "@shared/lib/format";
+import { formatPegDeviation, getNetColor } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { CLIENT_ACTIVE_IDS as ACTIVE_IDS, CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
@@ -200,7 +200,7 @@ function MoverEntry({
         {entry.symbol}
       </span>
       <span
-        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${isGrower ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${getNetColor(entry.pctChange, { positiveInclusiveZero: true })}`}
       >
         {change}
       </span>
@@ -276,7 +276,7 @@ function MoversGroup({
   if (entries.length === 0) return null;
 
   const Icon = tone === "up" ? TrendingUp : TrendingDown;
-  const toneClass = tone === "up" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400";
+  const toneClass = getNetColor(tone === "up" ? 1 : -1);
 
   return (
     <div className="space-y-1.5">

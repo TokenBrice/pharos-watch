@@ -10,7 +10,7 @@ import {
 } from "@/components/liquidity-breakdown";
 import { buildProtocolBreakdown } from "@/components/liquidity-stats-model";
 import { MetricStatCard } from "@/components/metric-stat-card";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, getNetColor } from "@shared/lib/format";
 import { PROTOCOL_LOGOS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-display-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
@@ -130,7 +130,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               Across all tracked stablecoins
               {stats.agg7dChange != null && (
                 <span
-                  className={`ml-2 font-mono ${stats.agg7dChange >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+                  className={`ml-2 font-mono ${getNetColor(stats.agg7dChange, { positiveInclusiveZero: true })}`}
                 >
                   {stats.agg7dChange >= 0 ? "\u2191" : "\u2193"}
                   {Math.abs(stats.agg7dChange).toFixed(1)}% 7d
