@@ -102,8 +102,6 @@ export const LIVE_RESERVE_RISK_VALUES = RESERVE_RISK_VALUES;
 
 export type LiveReserveAdapterKey = (typeof LIVE_RESERVE_ADAPTER_KEYS)[number];
 export type LiveReserveSourceModel = (typeof LIVE_RESERVE_SOURCE_MODEL_VALUES)[number];
-/** @deprecated Use LiveReserveSourceModel. */
-export type LiveReserveFeedClass = LiveReserveSourceModel;
 export type LiveReserveEvidenceClass = (typeof LIVE_RESERVE_EVIDENCE_CLASS_VALUES)[number];
 export type LiveReserveSourceSharingMode = (typeof LIVE_RESERVE_SHARED_SOURCE_MODE_VALUES)[number];
 export type LiveReserveWarningEffect = (typeof LIVE_RESERVE_WARNING_EFFECT_VALUES)[number];
