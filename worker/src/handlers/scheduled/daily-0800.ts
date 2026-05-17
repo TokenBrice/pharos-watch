@@ -13,37 +13,72 @@ import { snapshotPsiDaily } from "../../cron/snapshot-psi";
 import { snapshotPublicDataset } from "../../cron/snapshot-public-dataset";
 import { syncUsdsStatus } from "../../cron/sync-usds-status";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+
+const SLOT_LABEL = "daily 08:00 slot";
+
+function buildSnapshotSupplyGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "snapshot-supply",
+      tasks: [
+        {
+          job: "snapshot-supply",
+          run: (signal) => snapshotSupply(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
+
+function buildSafetyPsiPublicGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "safety-psi-public",
+      tasks: [
+        {
+          job: "snapshot-safety-grade-history",
+          run: (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
+        },
+        {
+          job: "snapshot-psi",
+          run: (signal) => snapshotPsiDaily(runtime.db, signal),
+        },
+        {
+          job: "snapshot-public-dataset",
+          run: (signal) => snapshotPublicDataset(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
+
+function buildTbillUsdsGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "tbill-usds",
+      tasks: [
+        {
+          job: "fetch-tbill-rate",
+          run: (signal) => fetchTbillRate(runtime.db, signal, runtime.env),
+        },
+        {
+          job: "sync-usds-status",
+          run: (signal) =>
+            syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
+        },
+      ],
+    },
+  ];
+}
 
 export async function runDaily0800Slot(runtime: ScheduledRuntimeContext): Promise<void> {
   await Promise.all([
-    runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-supply", (signal) => snapshotSupply(runtime.db, signal)),
-    (async () => {
-      await runBestEffortScheduledJob(
-        runtime,
-        "daily 08:00 slot",
-        "snapshot-safety-grade-history",
-        (signal) => snapshotSafetyGradeHistory(runtime.db, signal),
-      );
-      await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "snapshot-psi", (signal) => snapshotPsiDaily(runtime.db, signal));
-      await runBestEffortScheduledJob(
-        runtime,
-        "daily 08:00 slot",
-        "snapshot-public-dataset",
-        (signal) => snapshotPublicDataset(runtime.db, signal),
-      );
-    })(),
-    (async () => {
-      const tbillResult = await runBestEffortScheduledJob(runtime, "daily 08:00 slot", "fetch-tbill-rate", (signal) => fetchTbillRate(runtime.db, signal, runtime.env));
-      if (tbillResult?.status === "error" || tbillResult == null) {
-        console.warn("[cron] fetch-tbill-rate did not complete cleanly — continuing to sync-usds-status");
-      }
-      await runBestEffortScheduledJob(
-        runtime,
-        "daily 08:00 slot",
-        "sync-usds-status",
-        (signal) => syncUsdsStatus(runtime.db, runtime.env.ETHERSCAN_API_KEY ?? null, signal),
-      );
-    })(),
+    runScheduledSlotGroups(runtime, SLOT_LABEL, buildSnapshotSupplyGroups(runtime)),
+    runScheduledSlotGroups(runtime, SLOT_LABEL, buildSafetyPsiPublicGroups(runtime)),
+    runScheduledSlotGroups(runtime, SLOT_LABEL, buildTbillUsdsGroups(runtime)),
   ]);
 }

@@ -12,16 +12,31 @@ import { computeAndStoreDEWS } from "../../cron/compute-dews";
 import { computeAndStoreStabilityIndex } from "../../cron/stability-index";
 import { projectTape } from "../../cron/project-tape";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+
+function buildDewsPsiSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "dews-psi-tape",
+      tasks: [
+        {
+          job: "compute-dews",
+          run: (signal) => computeAndStoreDEWS(runtime.db, signal),
+        },
+        {
+          job: "stability-index",
+          run: (signal) => computeAndStoreStabilityIndex(runtime.db, signal),
+        },
+        {
+          job: "project-tape",
+          run: (signal) => projectTape(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
 
 export async function runDewsPsiSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runBestEffortScheduledJob(runtime, "dews-psi slot", "compute-dews", (signal) =>
-    computeAndStoreDEWS(runtime.db, signal),
-  );
-  await runBestEffortScheduledJob(runtime, "dews-psi slot", "stability-index", (signal) =>
-    computeAndStoreStabilityIndex(runtime.db, signal),
-  );
-  await runBestEffortScheduledJob(runtime, "dews-psi slot", "project-tape", (signal) =>
-    projectTape(runtime.db, signal),
-  );
+  await runScheduledSlotGroups(runtime, "dews-psi slot", buildDewsPsiSlotGroups(runtime));
 }

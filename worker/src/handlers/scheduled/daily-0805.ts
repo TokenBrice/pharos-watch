@@ -12,30 +12,61 @@ import { generateDailyDigest } from "../../cron/daily-digest";
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
+
+const SLOT_LABEL = "daily 08:05 slot";
+
+function buildBluechipGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "sync-bluechip",
+      tasks: [
+        {
+          job: "sync-bluechip",
+          run: (signal) => syncBluechip(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
+
+function buildDigestChainGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "digest-chain",
+      tasks: [
+        {
+          job: "daily-digest",
+          run: (signal) =>
+            generateDailyDigest(
+              runtime.db,
+              runtime.env.ANTHROPIC_API_KEY ?? null,
+              buildTwitterCreds(runtime.env),
+              false,
+              buildTelegramCreds(runtime.env),
+              signal,
+            ),
+        },
+        {
+          job: "weekly-recap",
+          run: (signal) =>
+            generateWeeklyRecap(
+              runtime.db,
+              runtime.env.ANTHROPIC_API_KEY ?? null,
+              buildTelegramCreds(runtime.env),
+              signal,
+            ),
+        },
+      ],
+    },
+  ];
+}
 
 export async function runDaily0805Slot(runtime: ScheduledRuntimeContext): Promise<void> {
   await Promise.all([
-    runBestEffortScheduledJob(runtime, "daily 08:05 slot", "sync-bluechip", (signal) => syncBluechip(runtime.db, signal)),
-    (async () => {
-      await runBestEffortScheduledJob(runtime, "daily 08:05 slot", "daily-digest", (signal) => {
-        return generateDailyDigest(
-          runtime.db,
-          runtime.env.ANTHROPIC_API_KEY ?? null,
-          buildTwitterCreds(runtime.env),
-          false,
-          buildTelegramCreds(runtime.env),
-          signal,
-        );
-      });
-      await runBestEffortScheduledJob(runtime, "daily 08:05 slot", "weekly-recap", (signal) => {
-        return generateWeeklyRecap(
-          runtime.db,
-          runtime.env.ANTHROPIC_API_KEY ?? null,
-          buildTelegramCreds(runtime.env),
-          signal,
-        );
-      });
-    })(),
+    runScheduledSlotGroups(runtime, SLOT_LABEL, buildBluechipGroups(runtime)),
+    runScheduledSlotGroups(runtime, SLOT_LABEL, buildDigestChainGroups(runtime)),
   ]);
 }

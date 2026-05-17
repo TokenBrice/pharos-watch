@@ -13,39 +13,52 @@ import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { sendAlert } from "../../lib/alerts";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 
 const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
 const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
 
+function buildReserveSyncSlotGroups(runtime: ScheduledRuntimeContext): ScheduledSlotGroup[] {
+  return [
+    {
+      mode: "serial",
+      label: "reserve-adapters",
+      tasks: [
+        {
+          job: "sync-live-reserves",
+          errorMessage: "[hourly-live-reserves] Live reserves sync failed:",
+          run: (signal, reportProgress) =>
+            syncLiveReserves(
+              runtime.db,
+              signal,
+              {
+                etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
+                alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
+                chainRpcs: runtime.chainRpcs,
+              },
+              reportProgress,
+            ),
+        },
+        {
+          job: "sync-redemption-backstops",
+          errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:",
+          run: (signal) => syncRedemptionBackstops(runtime.db, signal),
+        },
+        {
+          job: "sync-kinesis-supply",
+          errorMessage: "[hourly-live-reserves] Kinesis supply sync failed:",
+          run: (signal) => syncKinesisSupply(runtime.db, signal),
+        },
+      ],
+    },
+  ];
+}
+
 export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  await runBestEffortScheduledJob(
+  await runScheduledSlotGroups(
     runtime,
     "four-hourly reserve sync slot",
-    "sync-live-reserves",
-    (signal, reportProgress) =>
-      syncLiveReserves(runtime.db, signal, {
-        etherscanApiKey: runtime.env.ETHERSCAN_API_KEY,
-        alchemyApiKey: runtime.env.ALCHEMY_API_KEY,
-        chainRpcs: runtime.chainRpcs,
-      }, reportProgress),
-    { errorMessage: "[hourly-live-reserves] Live reserves sync failed:" },
-  );
-
-  await runBestEffortScheduledJob(
-    runtime,
-    "four-hourly reserve sync slot",
-    "sync-redemption-backstops",
-    (signal) => syncRedemptionBackstops(runtime.db, signal),
-    { errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:" },
-  );
-
-  await runBestEffortScheduledJob(
-    runtime,
-    "four-hourly reserve sync slot",
-    "sync-kinesis-supply",
-    (signal) => syncKinesisSupply(runtime.db, signal),
-    { errorMessage: "[hourly-live-reserves] Kinesis supply sync failed:" },
+    buildReserveSyncSlotGroups(runtime),
   );
 
   try {
