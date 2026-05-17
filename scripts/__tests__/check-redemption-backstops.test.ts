@@ -15,8 +15,8 @@ describe("check-redemption-backstops CLI", () => {
     });
 
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(287);
-    expect(report.auditRows).toHaveLength(287);
+    expect(report.summary.configuredCount).toBe(304);
+    expect(report.auditRows).toHaveLength(304);
     expect(report.auditRows[0]).toMatchObject({
       stablecoinId: expect.any(String),
       routeFamily: expect.any(String),
