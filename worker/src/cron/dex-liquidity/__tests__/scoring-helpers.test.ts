@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { accumulateGlobalAggregate, classifyCoverage, collapseDuplicateObservations } from "../scoring-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
-import type { DexPriceObs, LiquiditySourceMix, PoolEntry } from "../types";
+import type { DexPriceObs, LiquiditySourceMixByFamily, PoolEntry } from "../types";
 
 function makePool(overrides: Partial<PoolEntry>): PoolEntry {
   return {
@@ -33,7 +33,7 @@ describe("isPlausibleDexObservationPrice guards peg", () => {
 });
 
 // Minimal input builder for classifyCoverage – only sourceMix and totalTvlUsd vary per case.
-function makeCoverageInput(sourceMix: LiquiditySourceMix, totalTvlUsd: number) {
+function makeCoverageInput(sourceMix: LiquiditySourceMixByFamily, totalTvlUsd: number) {
   return {
     sourceMix,
     totalTvlUsd,
