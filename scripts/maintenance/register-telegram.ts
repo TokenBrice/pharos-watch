@@ -5,10 +5,10 @@
  * Worker's 15-minute reconciliation loop. Replaces three shell scripts that
  * duplicated command/profile/webhook payloads by hand.
  *
- * Canonical source for every payload is
- * worker/src/lib/telegram-webhook-registration.ts. Normal deploys reconcile
- * automatically; this script exists for the cases where reconciliation is
- * unavailable or needs to be forced immediately.
+ * Canonical command/profile/update payloads live in
+ * shared/lib/telegram-bot-registration.ts. Normal deploys reconcile
+ * automatically through the Worker; this script exists for the cases where
+ * reconciliation is unavailable or needs to be forced immediately.
  *
  * Usage:
  *   tsx scripts/maintenance/register-telegram.ts --action commands --bot-token ...
@@ -35,7 +35,7 @@ import {
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
-} from "../../worker/src/lib/telegram-webhook-registration";
+} from "../../shared/lib/telegram-bot-registration";
 import { parseCliOptions } from "../lib/smoke-runtime.mjs";
 
 interface CliHandlerContext {
