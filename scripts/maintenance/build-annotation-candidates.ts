@@ -24,6 +24,7 @@ const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");
 const WORKER_BASE_URL =
   process.env.PHAROS_WORKER_BASE_URL ?? "http://127.0.0.1:8787";
+const PHAROS_API_KEY = process.env.PHAROS_API_KEY?.trim() || null;
 const DEFAULT_LOOKBACK_DAYS = 7;
 const LAUNCH_LOOKBACK_DAYS = 30;
 const FETCH_TIMEOUT_MS = 6000;
@@ -59,8 +60,10 @@ function readExistingQueue(): { body: string; lastSweptAt: string | null } {
 async function fetchWithTimeout(url: string): Promise<Response | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const headers: Record<string, string> = {};
+  if (PHAROS_API_KEY) headers["X-API-Key"] = PHAROS_API_KEY;
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch(url, { signal: controller.signal, headers });
     return response;
   } catch {
     return null;
