@@ -135,7 +135,6 @@ describe("buildCommandPlan", () => {
         ["npm run test:noncritical -- --shard=3/3"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
-        ["npm run typecheck:worker-scripts"],
       ],
     ]);
   });
@@ -185,7 +184,6 @@ describe("buildCommandPlan", () => {
       "npm run test:noncritical -- --shard=3/3",
       "npm run coverage:critical",
       "npm run typecheck:worker",
-      "npm run typecheck:worker-scripts",
     ]);
   });
 
@@ -355,7 +353,6 @@ describe("opt-in smoke wiring", () => {
         ["npm run test:noncritical -- --shard=3/3"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
-        ["npm run typecheck:worker-scripts"],
       ],
       [["npm run validate:pages-smoke"], ["npm run validate:worker-smoke"]],
     ]);

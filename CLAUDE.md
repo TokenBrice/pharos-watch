@@ -5,7 +5,7 @@ Analytics dashboard tracking 391 stablecoins (+2 shadow assets for PSI). Static 
 Live: https://pharos.watch
 Local dev-server (maintained): http://localhost:3000/
 
-**Note**: This file is deliberately kept in sync with `AGENTS.md`. Durable guidance lives in `/docs/process/` and `/docs/`. Changes to rules, gotchas, or repo map must be mirrored in both files (or moved to `docs/process/agent-artifacts.md` + referenced here).
+**Note**: This file is mirrored to both `CLAUDE.md` and `AGENTS.md`. Durable guidance lives in `/docs/process/` and `/docs/`. Changes to rules, gotchas, or repo map must be mirrored in both files (or moved to `docs/process/agent-artifacts.md` + referenced here).
 
 ## Methodology
 
@@ -54,7 +54,6 @@ npm run typecheck
 npm test
 npm run test:watch
 cd worker && npx tsc --noEmit
-cd worker && npx tsc --noEmit -p tsconfig.scripts.json
 cd worker && npx wrangler dev
 ```
 

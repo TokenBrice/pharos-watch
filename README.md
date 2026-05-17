@@ -145,8 +145,7 @@ Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separa
 npm run build    # Production static build
 npm run lint     # ESLint
 npm run typecheck # Type-check frontend, shared, Pages Functions, and root scripts
-npm run typecheck:worker # Type-check worker
-npm run typecheck:worker-scripts # Type-check worker-bound operational scripts
+npm run typecheck:worker # Type-check worker (includes worker-bound operational scripts)
 ```
 
 ## Project Structure
@@ -235,6 +234,8 @@ worker/                           Cloudflare Worker (API + cron jobs)
 Current source-of-truth product docs live in `/docs/` and this README. Durable process guidance now belongs under `/docs/`; see [docs/process/agent-artifacts.md](./docs/process/agent-artifacts.md) for artifact routing.
 
 - [docs/README.md](./docs/README.md) - verified documentation index and topic map
+- [docs/agent-task-router.md](./docs/agent-task-router.md) - agent-first task routing from user intent to docs, files, checks, and gotchas
+- [docs/agent-code-map.md](./docs/agent-code-map.md) - generated compact code entrypoint/export map for fast discovery
 - [docs/alt-pegs-page.md](./docs/alt-pegs-page.md) - `/alt-pegs/` route contract, crawlability pattern, and homepage integration
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
@@ -379,7 +380,7 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
-1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` + `npm run typecheck:worker-scripts` when worker-impacting files changed
+1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
 2. **Worker candidate upload:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` to expose the candidate preview URL before validation finishes
 3. **Worker migration + preview smoke:** after the aggregate validate gate passes, rerun the migration checker, apply D1 migrations with `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, then run `npm run test:smoke-api` against the uploaded preview URL
 4. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`

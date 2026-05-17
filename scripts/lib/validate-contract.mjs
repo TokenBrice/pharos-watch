@@ -69,7 +69,7 @@ export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
 
 export const PAGES_SMOKE_VALIDATE_COMMANDS = ["npm run validate:pages-smoke"];
 
-export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker", "npm run typecheck:worker-scripts"];
+export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker"];
 
 export const WORKER_SMOKE_VALIDATE_COMMANDS = ["npm run validate:worker-smoke"];
 

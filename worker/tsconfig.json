@@ -18,6 +18,6 @@
       "@shared/data/*": ["../shared/data/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "../shared/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "../shared/**/*.ts"],
   "exclude": ["node_modules", "src/scripts"]
 }

@@ -35,6 +35,14 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
 - [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
 
+## Process Policies
+
+- [process/boundary-waivers.md](./process/boundary-waivers.md) - worker import-boundary waiver inventory with retirement rationale
+- [process/cron-trigger-policy.md](./process/cron-trigger-policy.md) - governance for adding new cron trigger expressions to the Worker
+- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - planning doc for the second D1 baseline squash cadence and procedure
+- [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` feature flag inventory and default-state rules
+- [process/pages-env-rollout.md](./process/pages-env-rollout.md) - rollout procedure for flipping `NEXT_PUBLIC_PHAROS_*` flags on production Pages
+
 ## Runbooks
 
 - [runbooks/blacklist-sync.md](./runbooks/blacklist-sync.md) - blacklist sync incidents, stale windows, and remediation entrypoints
@@ -51,6 +59,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/telegram-operator-queries.md](./runbooks/telegram-operator-queries.md) - read-only SQL queries for PharosWatchBot incident triage
 - [runbooks/telegram-preset-resolution-failure.md](./runbooks/telegram-preset-resolution-failure.md) - investigate rising preset resolver failures and stale `TRACKED_STABLECOINS` drift
 - [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+- [runbooks/telegram-secret-rotation.md](./runbooks/telegram-secret-rotation.md) - rotate Telegram webhook secret and bot token with overlap windows
 - [runbooks/telegram-setup-wizard-stuck.md](./runbooks/telegram-setup-wizard-stuck.md) - clear stale `setup-step` rows in `telegram_pending_disambiguation`
 - [runbooks/telegram-webhook-retry-dedupe.md](./runbooks/telegram-webhook-retry-dedupe.md) - Telegram webhook retry/dedupe incidents, stuck processing rows, and recovery
 - [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage

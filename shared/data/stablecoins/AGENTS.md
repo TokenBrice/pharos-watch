@@ -10,12 +10,12 @@ Applies to `shared/data/stablecoins/**`.
 
 ## Rules
 
+See root CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents stablecoin-data-specific items.
+
 - Author stablecoin metadata in `shared/data/stablecoins/coins/*.json`; this directory is the editable source of truth.
 - Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` after per-coin edits. Do not edit the generated aggregate by hand.
 - Treat `usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, and `pre-launch.json` as read-only compatibility shells. They should remain empty, and `npm run check:stablecoin-data` guards that layout.
 - Keep `canonical-order.json` aligned with the per-coin catalog.
-- Do not add manual, on-chain, CMC, or DEX supply overrides. Primary supply is DefiLlama with the existing fallback path only.
-- DefiLlama list endpoint `circulating` values are already USD-denominated; do not multiply them by price.
 - Add or update contracts only when the address is verified against the relevant source.
 - If adding a data source, update the about page and source docs.
 - If classification or methodology semantics change, update the relevant methodology doc and timeline.

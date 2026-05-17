@@ -107,8 +107,7 @@ describe("validate-ci parity", () => {
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const coverageCriticalJob = extractJobBlock(workflow, "coverage-critical", "typecheck-worker");
-    const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "typecheck-worker-scripts");
-    const typecheckWorkerScriptsJob = extractJobBlock(workflow, "typecheck-worker-scripts", "validate");
+    const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "validate");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction).filter((step) => step.cmd === "npm ci");
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validatePrebuildJob)]).toEqual([
@@ -121,9 +120,6 @@ describe("validate-ci parity", () => {
     ]);
     expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
     expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
-    expect(extractRunSteps(typecheckWorkerScriptsJob)).toEqual([
-      { cmd: "npm run typecheck:worker-scripts", condition: null },
-    ]);
   });
 
   it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
@@ -317,8 +313,7 @@ describe("validate-ci parity", () => {
       ["pages-build", "test-noncritical"],
       ["test-noncritical", "coverage-critical"],
       ["coverage-critical", "typecheck-worker"],
-      ["typecheck-worker", "typecheck-worker-scripts"],
-      ["typecheck-worker-scripts", "validate"],
+      ["typecheck-worker", "validate"],
     ] as const) {
       expect(extractJobBlock(workflow, jobName, nextJobName)).not.toContain("needs: validate-prebuild");
     }

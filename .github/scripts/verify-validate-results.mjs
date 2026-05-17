@@ -14,10 +14,8 @@ if (process.env.PAGES_BUILD_EXPECTED === "true") {
 
 if (process.env.WORKER_CHANGED === "true") {
   required.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
-  required.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
 } else {
   optional.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
-  optional.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
 }
 
 let failed = false;
