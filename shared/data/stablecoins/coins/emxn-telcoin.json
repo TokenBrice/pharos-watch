@@ -30,6 +30,9 @@
       "url": "https://bank.telco.in/"
     }
   ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
   "contracts": [
     {
       "chain": "polygon",

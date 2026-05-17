@@ -26,7 +26,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-fund-onyc"
+      "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
     },
     {
       "label": "Transparency",
@@ -37,6 +37,11 @@
       "url": "https://github.com/onre-finance"
     }
   ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "Bermuda Monetary Authority",
+    "license": "IIGB and DABA licenses (Segregated Accounts Company)"
+  },
   "contracts": [
     {
       "chain": "solana",

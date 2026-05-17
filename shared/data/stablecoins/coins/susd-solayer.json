@@ -21,7 +21,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://solayer.org/platform/susd"
+      "url": "https://app.solayer.org/?asset=susd"
     },
     {
       "label": "Twitter",
@@ -29,9 +29,12 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd"
+      "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "solana",
@@ -47,7 +50,10 @@
     "reviewedAt": "2026-05-12"
   },
   "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "U.S. Treasury bill basket / RWA partner product",
@@ -61,7 +67,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "susd-solayer",
     "display": {
-      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd",
+      "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd",
       "label": "Solayer sUSD docs"
     },
     "inputs": {

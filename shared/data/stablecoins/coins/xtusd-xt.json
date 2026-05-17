@@ -27,6 +27,9 @@
       "url": "https://x.com/XTexchange"
     }
   ],
+  "jurisdiction": {
+    "country": "Seychelles"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

@@ -30,6 +30,9 @@
       "url": "https://docs.apyx.fi"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

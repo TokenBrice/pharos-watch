@@ -44,6 +44,11 @@
       "url": "https://docs.openeden.com/usdo/developers/integration-guide"
     }
   ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "Bermuda Monetary Authority",
+    "license": "Digital Asset Business Act (DABA) License"
+  },
   "contracts": [
     {
       "chain": "ethereum",

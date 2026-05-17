@@ -9,7 +9,7 @@
   "sourceDataPath": "shared/data/dead-stablecoins.json",
   "sourceChecksum": "sha256:e8897111f1a41d676bce36447bb1b56e77343480ef9a26062aea45e8ad8d7407",
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 94,
+  "rowCount": 95,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -55,6 +55,57 @@
       "archivedDataAvailable": false,
       "contracts": [],
       "pharosUrl": "https://pharos.watch/cemetery/#usdh-hubble-2026-05"
+    },
+    {
+      "id": "euroe-membrane",
+      "name": "EUROe",
+      "symbol": "EUROe",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/euroe.png",
+      "pegCurrency": "EUR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-05",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 3377858,
+      "epitaph": "Acquired, integrated, retired",
+      "obituary": "Paxos completed its acquisition of Membrane Finance in February 2025 to absorb its Finnish EMI license and EU stablecoin issuance rails. As Paxos consolidated its product lineup, the EUROe business line was decommissioned and the platform transitioned to redemption-only mode in May 2026, with no new minting or trading. Existing holders were instructed to complete KYC and redeem outstanding EUROe 1:1 for euros via SEPA through Paxos Issuance Europe.",
+      "sourceUrl": "https://www.paxos.com/euroe-redemptions",
+      "sourceLabel": "Paxos EUROe Redemption Notice",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "decimals": 6
+        },
+        {
+          "chain": "polygon",
+          "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "decimals": 6
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "decimals": 6
+        },
+        {
+          "chain": "optimism",
+          "address": "0x820802fa8a99901f52e39acd21177b0be6ee2974",
+          "decimals": 6
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xcf985aba4647a432e60efceeb8054bbd64244305",
+          "decimals": 6
+        },
+        {
+          "chain": "solana",
+          "address": "2VhjJ9WxaGC3EZFwJG9BDUs9KxKCAjQY4vgd1qxgYWVg",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/euroe-membrane/"
     },
     {
       "id": "fusd-fedz-2026-05",

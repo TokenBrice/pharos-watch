@@ -32,6 +32,9 @@
       "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
     }
   ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
   "contracts": [
     {
       "chain": "ethereum",

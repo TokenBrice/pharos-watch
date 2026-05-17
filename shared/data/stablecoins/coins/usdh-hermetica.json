@@ -31,6 +31,9 @@
       "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
     }
   ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
   "contracts": [
     {
       "chain": "stacks",

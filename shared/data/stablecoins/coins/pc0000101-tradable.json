@@ -26,6 +26,9 @@
       "url": "https://www.coingecko.com/en/coins/na-post-settlement-legal-financing-receivables"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "zksync",

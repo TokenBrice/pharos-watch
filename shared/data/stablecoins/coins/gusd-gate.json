@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
@@ -17,7 +17,7 @@
   "llamaId": "306",
   "detailProvider": "defillama",
   "geckoId": "gusd",
-  "cmcSlug": "gatechain-token",
+  "cmcSlug": "gusd",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.gate.com/gusd",

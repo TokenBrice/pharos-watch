@@ -32,6 +32,9 @@
       "url": "https://docs.plume.org/plume/tokens/plume-usd"
     }
   ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

@@ -30,6 +30,9 @@
       "url": "https://www.coingecko.com/en/coins/tradable-na-rent-financing-platform-sstn"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "zksync",

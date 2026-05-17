@@ -24,10 +24,6 @@
     {
       "label": "Twitter",
       "url": "https://x.com/rcoins_official"
-    },
-    {
-      "label": "Docs",
-      "url": "https://ribg.digital/faqs/"
     }
   ],
   "jurisdiction": {
@@ -54,10 +50,6 @@
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
-      {
-        "label": "Docs",
-        "url": "https://ribg.digital/faqs/"
-      },
       {
         "label": "Website",
         "url": "https://www.rcoins.digital/"

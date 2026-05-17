@@ -37,7 +37,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics"
+      "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
     },
     {
       "label": "GitHub",
@@ -75,7 +75,7 @@
     "semantics": "single-asset",
     "breakerScope": "stcusd-cap",
     "display": {
-      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics",
+      "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
       "label": "Cap stcUSD"
     },
     "inputs": {

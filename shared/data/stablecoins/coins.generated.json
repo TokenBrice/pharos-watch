@@ -735,6 +735,9 @@
         "url": "https://docs.apyx.fi"
       }
     ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -828,6 +831,9 @@
         "url": "https://github.com/apyx-labs"
       }
     ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -914,7 +920,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.anq.money"
+        "url": "https://anq.finance"
       },
       {
         "label": "Twitter",
@@ -1176,7 +1182,7 @@
     "geckoId": "forte-aud",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://www.forteaud.com/new-page",
+      "url": "https://www.forteaud.com/reserves",
       "attestorTier": "niche",
       "cadence": "monthly",
       "attestorJurisdiction": "Australia"
@@ -1192,7 +1198,7 @@
       },
       {
         "label": "Proof of Reserve",
-        "url": "https://www.forteaud.com/new-page"
+        "url": "https://www.forteaud.com/reserves"
       },
       {
         "label": "Legal",
@@ -1408,7 +1414,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       }
     ],
     "contracts": [
@@ -2113,7 +2119,8 @@
     ],
     "jurisdiction": {
       "country": "Singapore",
-      "license": "Portfolio managed by Golden Hill Asset Management (GHAM), a Singapore-regulated fund manager; assets held in a regulated fund vehicle"
+      "regulator": "Monetary Authority of Singapore (MAS)",
+      "license": "Portfolio managed by Golden Hill Asset Management (GHAM) under MAS Capital Markets Services Licence CMS-101035; assets held in a regulated fund vehicle"
     },
     "contracts": [
       {
@@ -2512,6 +2519,7 @@
     },
     "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
     "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
+    "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "bfusd",
     "cmcSlug": "bfusd",
     "proofOfReserves": {
@@ -4806,6 +4814,7 @@
     },
     "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
     "pegMechanism": "Cod3x Facilitators can mint and burn cdxUSD under protocol-defined limits; supply is expected to remain sufficiently collateralized by strategy assets",
+    "mechanismArchetype": "cdp",
     "geckoId": "cod3x-usd",
     "protocolSlug": "cod3x",
     "links": [
@@ -5195,6 +5204,9 @@
         "url": "https://wiki.cygnus.finance/whitepaper/"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "base",
@@ -6367,6 +6379,11 @@
         "url": "https://docs.openeden.com/usdo/developers/integration-guide"
       }
     ],
+    "jurisdiction": {
+      "country": "Bermuda",
+      "regulator": "Bermuda Monetary Authority",
+      "license": "Digital Asset Business Act (DABA) License"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -6845,7 +6862,7 @@
       },
       {
         "label": "Dapp",
-        "url": "https://app.djed.xyz/"
+        "url": "https://djed.xyz/"
       }
     ],
     "contracts": [
@@ -7795,6 +7812,9 @@
         "url": "https://bank.telco.in/"
       }
     ],
+    "jurisdiction": {
+      "country": "Singapore"
+    },
     "contracts": [
       {
         "chain": "polygon",
@@ -8648,7 +8668,7 @@
     "detailProvider": "defillama",
     "name": "EUROe",
     "symbol": "EUROe",
-    "oneLiner": "EUROe is Membrane Finance's regulated euro stablecoin issued from Finland under an EMI license, redeemable 1:1 against euro fiat reserves.",
+    "oneLiner": "EUROe was Membrane's Finnish EMI-licensed euro stablecoin, decommissioned in 2026 after Paxos acquired Membrane and switched the platform to redemption-only.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "EUR",
@@ -8738,20 +8758,16 @@
         "risk": "very-low"
       }
     ],
-    "liveReservesConfig": {
-      "version": 1,
-      "semantics": "single-asset",
-      "breakerScope": "euroe-membrane",
-      "display": {
-        "url": "https://www.euroe.com/transparency-and-regulation",
-        "label": "EUROe Transparency"
-      },
-      "adapter": "curated-validated",
-      "inputs": {
-        "primary": {
-          "kind": "onchain-solana"
-        }
-      }
+    "status": "frozen",
+    "frozenAt": "2026-05-15",
+    "obituary": {
+      "causeOfDeath": "abandoned",
+      "deathDate": "2026-05",
+      "epitaph": "Acquired, integrated, retired",
+      "obituary": "Paxos completed its acquisition of Membrane Finance in February 2025 to absorb its Finnish EMI license and EU stablecoin issuance rails. As Paxos consolidated its product lineup, the EUROe business line was decommissioned and the platform transitioned to redemption-only mode in May 2026, with no new minting or trading. Existing holders were instructed to complete KYC and redeem outstanding EUROe 1:1 for euros via SEPA through Paxos Issuance Europe.",
+      "peakMcap": 3377858,
+      "sourceUrl": "https://www.paxos.com/euroe-redemptions",
+      "sourceLabel": "Paxos EUROe Redemption Notice"
     }
   },
   {
@@ -9664,7 +9680,7 @@
         "url": "https://x.com/telcoin"
       },
       {
-        "label": "Docs",
+        "label": "Terms",
         "url": "https://bank.telco.in/terms-of-use"
       }
     ],
@@ -11031,7 +11047,7 @@
       },
       {
         "label": "Dapp",
-        "url": "https://app.fathom.fi/"
+        "url": "https://dapp.fathom.fi/"
       }
     ],
     "contracts": [
@@ -11585,6 +11601,9 @@
         "url": "https://x.com/goldfishggbr"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -12406,7 +12425,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": false
     },
@@ -12414,7 +12433,7 @@
     "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "gusd",
-    "cmcSlug": "gatechain-token",
+    "cmcSlug": "gusd",
     "proofOfReserves": {
       "type": "self-reported",
       "url": "https://www.gate.com/gusd",
@@ -15191,7 +15210,7 @@
     "protocolSlug": "centrifuge",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://centrifuge.io/pools/jtrsy",
+      "url": "https://anemoy.io/funds/jtrsy",
       "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating",
       "attestorTier": "niche",
       "cadence": "daily-nav"
@@ -15199,7 +15218,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://centrifuge.io/pools/jtrsy"
+        "url": "https://anemoy.io/funds/jtrsy"
       },
       {
         "label": "Twitter",
@@ -15228,7 +15247,7 @@
       "sources": [
         {
           "label": "Centrifuge JTRSY pool",
-          "url": "https://centrifuge.io/pools/jtrsy"
+          "url": "https://anemoy.io/funds/jtrsy"
         }
       ],
       "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
@@ -16106,7 +16125,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.bdacs.com"
+        "url": "https://bdacs.co.kr"
       },
       {
         "label": "Twitter",
@@ -16257,6 +16276,9 @@
         "url": "https://t.me/gimswap"
       }
     ],
+    "jurisdiction": {
+      "country": "South Korea"
+    },
     "contracts": [
       {
         "chain": "klaytn",
@@ -18246,6 +18268,11 @@
         "url": "https://www.solflare.com/prices/moveusd/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/"
       }
     ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "FinCEN",
+      "license": "Money Services Business"
+    },
     "contracts": [
       {
         "chain": "solana",
@@ -19011,10 +19038,6 @@
       {
         "label": "Brale announcement",
         "url": "https://brale.xyz/blog/introducing-mxne"
-      },
-      {
-        "label": "Etherfuse announcement",
-        "url": "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar"
       }
     ],
     "jurisdiction": {
@@ -20237,7 +20260,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-fund-onyc"
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
       },
       {
         "label": "Transparency",
@@ -20248,6 +20271,11 @@
         "url": "https://github.com/onre-finance"
       }
     ],
+    "jurisdiction": {
+      "country": "Bermuda",
+      "regulator": "Bermuda Monetary Authority",
+      "license": "IIGB and DABA licenses (Segregated Accounts Company)"
+    },
     "contracts": [
       {
         "chain": "solana",
@@ -20574,6 +20602,11 @@
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
       }
     ],
+    "jurisdiction": {
+      "country": "United States",
+      "regulator": "FinCEN",
+      "license": "Money Services Business"
+    },
     "contracts": [
       {
         "chain": "tempo",
@@ -20744,6 +20777,9 @@
         "url": "https://www.coingecko.com/en/coins/tradable-na-rent-financing-platform-sstn"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "zksync",
@@ -20815,6 +20851,9 @@
         "url": "https://www.coingecko.com/en/coins/tradable-apac-diversified-finance-provider-sstn"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "zksync",
@@ -20882,6 +20921,9 @@
         "url": "https://www.coingecko.com/en/coins/latam-residential-sstl"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "zksync",
@@ -20949,6 +20991,9 @@
         "url": "https://www.coingecko.com/en/coins/na-post-settlement-legal-financing-receivables"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "zksync",
@@ -21022,6 +21067,9 @@
         "url": "https://x.com/PleasingGolden"
       }
     ],
+    "jurisdiction": {
+      "country": "Hong Kong"
+    },
     "contracts": [
       {
         "chain": "arbitrum",
@@ -21212,7 +21260,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
       },
       {
         "label": "PUSO Launch Note",
@@ -21516,6 +21564,9 @@
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
       }
     ],
+    "jurisdiction": {
+      "country": "Cayman Islands"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -22016,10 +22067,6 @@
       {
         "label": "Twitter",
         "url": "https://x.com/rcoins_official"
-      },
-      {
-        "label": "Docs",
-        "url": "https://ribg.digital/faqs/"
       }
     ],
     "jurisdiction": {
@@ -22046,10 +22093,6 @@
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sources": [
-        {
-          "label": "Docs",
-          "url": "https://ribg.digital/faqs/"
-        },
         {
           "label": "Website",
           "url": "https://www.rcoins.digital/"
@@ -22680,6 +22723,8 @@
       "rwa": false,
       "navToken": false
     },
+    "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
+    "pegMechanism": "Planned MiCA-compliant electronic-money token issued by Revolut's Lithuanian EMI with 1:1 USD mint and redemption; distribution and chain selection unannounced.",
     "mechanismArchetype": "fiat-cash",
     "links": [
       {
@@ -22796,6 +22841,9 @@
         "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
       }
     ],
+    "jurisdiction": {
+      "country": "Hong Kong"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23120,6 +23168,9 @@
         "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said"
       }
     ],
+    "jurisdiction": {
+      "country": "Panama"
+    },
     "contracts": [
       {
         "chain": "ethereum",
@@ -23365,6 +23416,9 @@
         "url": "https://github.com/Avant-Protocol"
       }
     ],
+    "jurisdiction": {
+      "country": "British Virgin Islands"
+    },
     "contracts": [
       {
         "chain": "avalanche",
@@ -24937,7 +24991,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics"
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
       },
       {
         "label": "GitHub",
@@ -24978,7 +25032,7 @@
       "semantics": "single-asset",
       "breakerScope": "stcusd-cap",
       "display": {
-        "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics",
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
         "label": "Cap stcUSD"
       },
       "adapter": "erc4626-single-asset",
@@ -25655,7 +25709,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://solayer.org/platform/susd"
+        "url": "https://app.solayer.org/?asset=susd"
       },
       {
         "label": "Twitter",
@@ -25663,9 +25717,12 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd"
+        "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
       }
     ],
+    "jurisdiction": {
+      "country": "United States"
+    },
     "contracts": [
       {
         "chain": "solana",
@@ -25681,7 +25738,10 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "mature-alt-l1",
+    "deploymentModel": "single-chain",
+    "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
+    "governanceQuality": "single-entity",
     "reserves": [
       {
         "name": "U.S. Treasury bill basket / RWA partner product",
@@ -25694,7 +25754,7 @@
       "semantics": "collateral-mix",
       "breakerScope": "susd-solayer",
       "display": {
-        "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd",
+        "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd",
         "label": "Solayer sUSD docs"
       },
       "adapter": "curated-validated",
@@ -25830,7 +25890,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://app.lorenzo-protocol.xyz/otf/vault"
+        "url": "https://www.lorenzo-protocol.xyz/"
       },
       {
         "label": "Twitter",
@@ -26350,11 +26410,11 @@
       },
       {
         "label": "Docs",
-        "url": "https://developers.sky.money/core-protocol/susds/"
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
         "label": "Deployments",
-        "url": "https://developers.sky.money/quick-start/deployments-tracker/"
+        "url": "https://chainlog.skyeco.com/"
       }
     ],
     "contracts": [
@@ -26375,7 +26435,7 @@
       "sources": [
         {
           "label": "Docs",
-          "url": "https://developers.sky.money/core-protocol/susds/"
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         },
         {
           "label": "Website",
@@ -26406,7 +26466,7 @@
       "semantics": "single-asset",
       "breakerScope": "susds-sky",
       "display": {
-        "url": "https://developers.sky.money/core-protocol/susds/",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/",
         "label": "Sky sUSDS"
       },
       "adapter": "erc4626-single-asset",
@@ -31029,6 +31089,9 @@
         "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
       }
     ],
+    "jurisdiction": {
+      "country": "Panama"
+    },
     "contracts": [
       {
         "chain": "stacks",
@@ -31160,7 +31223,7 @@
     "pythFeedId": "0xf364e785775b4cb2f159ea823f8b5b9b669a4c221a3f845e518ba0e09611c553",
     "proofOfReserves": {
       "type": "independent-audit",
-      "url": "https://www.usdh.com/transparency",
+      "url": "https://usdh.com/reserves",
       "provider": "BPM LLP",
       "attestorTier": "regional",
       "cadence": "monthly",
@@ -36442,10 +36505,6 @@
       {
         "label": "Twitter",
         "url": "https://x.com/vaneck_us"
-      },
-      {
-        "label": "Securitize Markets",
-        "url": "https://markets.securitize.io/"
       }
     ],
     "jurisdiction": {
@@ -37694,6 +37753,9 @@
         "url": "https://docs.wemix.com/"
       }
     ],
+    "jurisdiction": {
+      "country": "Singapore"
+    },
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -39611,6 +39673,9 @@
         "url": "https://x.com/XTexchange"
       }
     ],
+    "jurisdiction": {
+      "country": "Seychelles"
+    },
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -41267,16 +41332,8 @@
     "pegMechanism": "Issued and redeemed through the Goal3 Portal at 1 zkUSD = 1 USDC; the protocol claims to maintain over-collateralization of zkUSD circulating supply against assets held by Goal3 on ZKsync Era.",
     "links": [
       {
-        "label": "Website",
-        "url": "https://goal3.xyz"
-      },
-      {
         "label": "X",
         "url": "https://x.com/Goal3_xyz"
-      },
-      {
-        "label": "Docs",
-        "url": "https://docs.goal3.xyz/sportsbook/technical-overview/usdzkusd"
       }
     ],
     "contracts": [

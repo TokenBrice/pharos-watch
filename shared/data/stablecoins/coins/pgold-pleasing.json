@@ -31,6 +31,9 @@
       "url": "https://x.com/PleasingGolden"
     }
   ],
+  "jurisdiction": {
+    "country": "Hong Kong"
+  },
   "contracts": [
     {
       "chain": "arbitrum",

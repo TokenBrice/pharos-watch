@@ -26,6 +26,9 @@
       "url": "https://x.com/goldfishggbr"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "ethereum",

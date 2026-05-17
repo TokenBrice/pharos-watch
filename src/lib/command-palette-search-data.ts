@@ -248,7 +248,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["ggbr-goldfish-gold", "Goldfish Gold", "GGBR"],
   ["kag-kinesis", "Kinesis Silver", "KAG"],
   ["ceur-celo", "Mento Euro", "EURm"],
-  ["euroe-membrane", "EUROe", "EUROe"],
+  ["euroe-membrane", "EUROe", "EUROe", "frozen", "2026-05-15"],
   ["eutbl-spiko", "Spiko EU T-Bills Money Market Fund", "EUTBL"],
   ["bc3m-backed", "Backed GOVIES 0-6 months EURO investment grade", "bC3M"],
   ["gbpm-mento", "Mento British Pound", "GBPm"],

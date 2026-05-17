@@ -44,6 +44,9 @@
       "url": "https://github.com/Avant-Protocol"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "avalanche",

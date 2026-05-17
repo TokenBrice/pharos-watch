@@ -31,6 +31,9 @@
       "url": "https://docs.wemix.com/"
     }
   ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",

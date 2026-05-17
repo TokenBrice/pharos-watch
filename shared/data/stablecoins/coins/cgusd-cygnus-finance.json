@@ -31,6 +31,9 @@
       "url": "https://wiki.cygnus.finance/whitepaper/"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "base",

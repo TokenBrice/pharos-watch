@@ -30,6 +30,9 @@
       "url": "https://www.coingecko.com/en/coins/tradable-apac-diversified-finance-provider-sstn"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "zksync",

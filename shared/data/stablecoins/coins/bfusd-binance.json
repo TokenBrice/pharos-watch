@@ -13,6 +13,7 @@
   },
   "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
   "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "bfusd",
   "cmcSlug": "bfusd",

@@ -2,7 +2,18 @@
   "id": "euroe-membrane",
   "name": "EUROe",
   "symbol": "EUROe",
-  "oneLiner": "EUROe is Membrane Finance's regulated euro stablecoin issued from Finland under an EMI license, redeemable 1:1 against euro fiat reserves.",
+  "oneLiner": "EUROe was Membrane's Finnish EMI-licensed euro stablecoin, decommissioned in 2026 after Paxos acquired Membrane and switched the platform to redemption-only.",
+  "status": "frozen",
+  "frozenAt": "2026-05-15",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-05",
+    "epitaph": "Acquired, integrated, retired",
+    "obituary": "Paxos completed its acquisition of Membrane Finance in February 2025 to absorb its Finnish EMI license and EU stablecoin issuance rails. As Paxos consolidated its product lineup, the EUROe business line was decommissioned and the platform transitioned to redemption-only mode in May 2026, with no new minting or trading. Existing holders were instructed to complete KYC and redeem outstanding EUROe 1:1 for euros via SEPA through Paxos Issuance Europe.",
+    "peakMcap": 3377858,
+    "sourceUrl": "https://www.paxos.com/euroe-redemptions",
+    "sourceLabel": "Paxos EUROe Redemption Notice"
+  },
   "mechanismArchetype": "fiat-cash",
   "flags": {
     "backing": "rwa-backed",
@@ -93,20 +104,5 @@
       "pct": 100,
       "risk": "very-low"
     }
-  ],
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "euroe-membrane",
-    "display": {
-      "url": "https://www.euroe.com/transparency-and-regulation",
-      "label": "EUROe Transparency"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-solana"
-      }
-    }
-  }
+  ]
 }

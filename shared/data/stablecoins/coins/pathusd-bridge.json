@@ -46,6 +46,11 @@
       "url": "https://apidocs.bridge.xyz/platform/issuance/reserves"
     }
   ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Services Business"
+  },
   "contracts": [
     {
       "chain": "tempo",

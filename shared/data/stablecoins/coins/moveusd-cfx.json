@@ -30,6 +30,11 @@
       "url": "https://www.solflare.com/prices/moveusd/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/"
     }
   ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "FinCEN",
+    "license": "Money Services Business"
+  },
   "contracts": [
     {
       "chain": "solana",

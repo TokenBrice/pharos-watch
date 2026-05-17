@@ -19,7 +19,7 @@
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://centrifuge.io/pools/jtrsy",
+    "url": "https://anemoy.io/funds/jtrsy",
     "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating",
     "attestorTier": "niche",
     "cadence": "daily-nav"
@@ -27,7 +27,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://centrifuge.io/pools/jtrsy"
+      "url": "https://anemoy.io/funds/jtrsy"
     },
     {
       "label": "Twitter",
@@ -56,7 +56,7 @@
     "sources": [
       {
         "label": "Centrifuge JTRSY pool",
-        "url": "https://centrifuge.io/pools/jtrsy"
+        "url": "https://anemoy.io/funds/jtrsy"
       }
     ],
     "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",

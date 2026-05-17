@@ -43,7 +43,8 @@
   ],
   "jurisdiction": {
     "country": "Singapore",
-    "license": "Portfolio managed by Golden Hill Asset Management (GHAM), a Singapore-regulated fund manager; assets held in a regulated fund vehicle"
+    "regulator": "Monetary Authority of Singapore (MAS)",
+    "license": "Portfolio managed by Golden Hill Asset Management (GHAM) under MAS Capital Markets Services Licence CMS-101035; assets held in a regulated fund vehicle"
   },
   "contracts": [
     {

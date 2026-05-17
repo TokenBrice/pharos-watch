@@ -92,7 +92,7 @@ describe("tracked stablecoin metadata", () => {
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
     expect(TRACKED_STABLECOINS).toHaveLength(391);
-    expect(ACTIVE_STABLECOINS).toHaveLength(363);
+    expect(ACTIVE_STABLECOINS).toHaveLength(362);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",

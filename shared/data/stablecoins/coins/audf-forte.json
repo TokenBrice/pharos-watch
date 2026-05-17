@@ -26,7 +26,7 @@
   "deploymentModel": "native-multichain",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.forteaud.com/new-page",
+    "url": "https://www.forteaud.com/reserves",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Australia"
@@ -42,7 +42,7 @@
     },
     {
       "label": "Proof of Reserve",
-      "url": "https://www.forteaud.com/new-page"
+      "url": "https://www.forteaud.com/reserves"
     },
     {
       "label": "Legal",

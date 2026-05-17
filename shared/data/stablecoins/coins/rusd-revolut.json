@@ -11,6 +11,8 @@
     "rwa": false,
     "navToken": false
   },
+  "collateral": "Planned 1:1 USD-equivalent reserves held by Revolut's Lithuanian EMI under MiCA Title IV (EMT) safeguarding rules; exact composition (cash, MMF, segregated bank accounts) unannounced.",
+  "pegMechanism": "Planned MiCA-compliant electronic-money token issued by Revolut's Lithuanian EMI with 1:1 USD mint and redemption; distribution and chain selection unannounced.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [

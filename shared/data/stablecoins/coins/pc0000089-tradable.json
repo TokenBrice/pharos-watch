@@ -26,6 +26,9 @@
       "url": "https://www.coingecko.com/en/coins/latam-residential-sstl"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "zksync",

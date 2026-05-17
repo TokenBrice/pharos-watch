@@ -43,6 +43,9 @@
       "url": "https://github.com/apyx-labs"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

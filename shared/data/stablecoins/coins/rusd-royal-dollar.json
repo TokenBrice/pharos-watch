@@ -38,6 +38,9 @@
       "url": "https://book.royalcc.world/books/RUSD_Whitepaper/"
     }
   ],
+  "jurisdiction": {
+    "country": "Hong Kong"
+  },
   "contracts": [
     {
       "chain": "ethereum",

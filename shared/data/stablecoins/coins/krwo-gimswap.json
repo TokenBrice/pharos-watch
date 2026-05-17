@@ -34,6 +34,9 @@
       "url": "https://t.me/gimswap"
     }
   ],
+  "jurisdiction": {
+    "country": "South Korea"
+  },
   "contracts": [
     {
       "chain": "klaytn",
