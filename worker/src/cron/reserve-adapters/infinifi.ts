@@ -65,6 +65,8 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "gauntlet-alpha-farm":     { risk: "medium" },
   "reservoir-wsrUSD":        { risk: "medium" },
   "sGHO":                    { risk: "medium", ...wrapperAssetMeta("gho") },
+  "liquid-cap":              { risk: "medium" },
+  "cowswap-fxSave":          { risk: "medium" },
 };
 
 const SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT = 0.5;

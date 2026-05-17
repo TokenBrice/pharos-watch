@@ -105,6 +105,27 @@ describe("adaptInfiniFi", () => {
     ]);
   });
 
+  it("recognizes current Liquid Cap and CoW Swap fxSave positions", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        farms: [
+          { name: "liquid-cap", label: "Liquid Cap", assetsNormalized: 60, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+          { name: "cowswap-fxSave", label: "CoW Swap fxSave", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxUSD" },
+        ],
+        stats: { asset: { totalTVLAssetNormalized: 100 } },
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).toEqual([]);
+    expect(result.slices).toEqual([
+      { name: "Liquid Cap", pct: 60, risk: "medium" },
+      { name: "CoW Swap fxSave", pct: 40, risk: "medium" },
+    ]);
+  });
+
   it("flags dust unknown farms and preserves them in final slices when they remain material at one-decimal precision", () => {
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,

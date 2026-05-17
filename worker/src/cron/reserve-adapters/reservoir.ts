@@ -198,7 +198,7 @@ export async function fetchReservoirReserves(
   const payload = await fetchJsonWithRetry<ReservoirReservesResponse>(
     primaryInput.url,
     signal,
-    12_000,
+    20_000,
     ctx,
     { headers: RESERVOIR_BROWSER_HEADERS },
   );

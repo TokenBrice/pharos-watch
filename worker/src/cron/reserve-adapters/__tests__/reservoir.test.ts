@@ -141,7 +141,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
         ]),
       } as never,
     );
@@ -171,7 +171,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             assets: [
               ...SAMPLE_RESPONSE.assets,
@@ -207,7 +207,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             totalAssets: "125",
           })],
@@ -235,7 +235,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             totalAssets: "100",
             totalLiabilities: "120",

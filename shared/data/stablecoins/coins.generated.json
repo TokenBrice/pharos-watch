@@ -24557,7 +24557,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
-      "breakerScope": "srusd-reservoir",
+      "breakerScope": "reservoir",
       "display": {
         "url": "https://app.reservoir.xyz/reserves",
         "label": "Proof of Reserves"
@@ -34505,7 +34505,7 @@
         "tokenAddress": "0x96F6eF951840721AdBF46Ac996b59E0235CB985C",
         "assetLabel": "Short-term U.S. Treasuries and bank deposits",
         "assetRisk": "very-low",
-        "oracleMethod": "getPrice"
+        "oracleMethod": "getPriceData"
       }
     },
     "yieldConfig": {
@@ -38250,7 +38250,7 @@
     "liveReservesConfig": {
       "version": 1,
       "semantics": "protocol-reserve",
-      "breakerScope": "wsrusd-reservoir",
+      "breakerScope": "reservoir",
       "display": {
         "url": "https://app.reservoir.xyz/reserves",
         "label": "Proof of Reserves"
@@ -40563,8 +40563,10 @@
           "[Fluid]_fUSDT0": "low",
           "Liquidity_Buffer": "low",
           "[Aave]_USDT": "medium",
+          "[Aave]_GHO": "medium",
           "[Aave]_Gho_Savings": "low",
           "[Cap]_stcUSD": "medium",
+          "[Fluid]_Gho": "medium",
           "[Fluent]_fUSDnr": "medium",
           "[GlobalDollar]_USDG": "low",
           "[Ripple]_Sentora_RLUSD": "medium",
@@ -40585,14 +40587,17 @@
           "[Paypal]_PYUSD_Loop": "high",
           "[MegaEth]_USDm": "low",
           "[Paxos]_USDG": "low",
-          "[Ethena]_sUSDe_Loop": "high"
+          "[Ethena]_sUSDe_Loop": "high",
+          "[Yuzu]_yzPRIME": "medium"
         },
         "renameMap": {
           "[Fluid]_fUSDT0": "Fluid fUSDT0",
           "Liquidity_Buffer": "Liquidity buffer",
           "[Aave]_USDT": "Aave USDT",
+          "[Aave]_GHO": "Aave GHO",
           "[Aave]_Gho_Savings": "Aave GHO Savings",
           "[Cap]_stcUSD": "Cap stcUSD",
+          "[Fluid]_Gho": "Fluid GHO",
           "[Fluent]_fUSDnr": "Fluent fUSDnr",
           "[GlobalDollar]_USDG": "Global Dollar USDG",
           "[Ripple]_Sentora_RLUSD": "Ripple RLUSD Sentora",
@@ -40613,7 +40618,8 @@
           "[Paypal]_PYUSD_Loop": "PayPal PYUSD loop",
           "[MegaEth]_USDm": "MegaETH USDm",
           "[Paxos]_USDG": "Paxos USDG",
-          "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop"
+          "[Ethena]_sUSDe_Loop": "Ethena sUSDe loop",
+          "[Yuzu]_yzPRIME": "Yuzu yzPRIME"
         }
       }
     },

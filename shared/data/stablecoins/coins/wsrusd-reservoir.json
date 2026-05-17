@@ -181,7 +181,7 @@
         "source-total-gap"
       ]
     },
-    "breakerScope": "wsrusd-reservoir",
+    "breakerScope": "reservoir",
     "display": {
       "url": "https://app.reservoir.xyz/reserves",
       "label": "Proof of Reserves"
