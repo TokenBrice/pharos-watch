@@ -72,6 +72,10 @@
       "risk": "high"
     }
   ],
+  "yieldConfig": {
+    "yieldSource": "Gate USD redemption yield",
+    "yieldType": "governance-set"
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

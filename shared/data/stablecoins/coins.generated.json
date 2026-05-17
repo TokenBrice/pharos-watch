@@ -12504,6 +12504,10 @@
           "rpcMode": "public-rpc"
         }
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "Gate USD redemption yield",
+      "yieldType": "governance-set"
     }
   },
   {

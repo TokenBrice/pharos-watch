@@ -176,6 +176,7 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "bd-basedollar": "asset with no reliable runtime yield source yet",
   "brd-volpon": "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   "gldy-streamex": "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
+  "gusd-gate": "Gate account-product yield has no reliable runtime APY source wired yet",
   "pc0000031-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
   "pc0000033-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
   "pc0000089-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
