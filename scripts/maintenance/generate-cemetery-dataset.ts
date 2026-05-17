@@ -10,12 +10,30 @@ import type { DeadStablecoin } from "../../shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOURCE_DATA_PATH = join(__dirname, "../../shared/data/dead-stablecoins.json");
-const SOURCE_REPO_PATH = "shared/data/dead-stablecoins.json";
+const SOURCE_REPO_PATH = "shared/lib/cemetery-merged.ts";
+const SOURCE_FILE_PATH = join(__dirname, "../../shared/lib/cemetery-merged.ts");
+const SOURCE_DATA_FILES = [
+  {
+    repoPath: "shared/data/dead-stablecoins.json",
+    filePath: join(__dirname, "../../shared/data/dead-stablecoins.json"),
+    role: "Curated dead-stablecoin metadata.",
+  },
+  {
+    repoPath: "shared/data/stablecoins/coins.generated.json",
+    filePath: join(__dirname, "../../shared/data/stablecoins/coins.generated.json"),
+    role: "Generated tracked-stablecoin aggregate used for frozen cemetery rows.",
+  },
+] as const;
 const OUTPUT_DIR = join(__dirname, "../../public/datasets");
 const JSON_OUTPUT = join(OUTPUT_DIR, "stablecoin-cemetery.json");
 const CSV_OUTPUT = join(OUTPUT_DIR, "stablecoin-cemetery.csv");
 const CHECK_MODE = process.argv.includes("--check");
+
+interface CemeteryDatasetSource {
+  path: string;
+  checksum: string;
+  role: string;
+}
 
 interface CemeteryDatasetRow {
   id: string;
@@ -132,8 +150,31 @@ function renderCsv(rows: CemeteryDatasetRow[]): string {
   return `${lines.join("\n")}\n`;
 }
 
+function sha256Text(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+function getSourceDataProvenance(): CemeteryDatasetSource[] {
+  return SOURCE_DATA_FILES.map(({ repoPath, filePath, role }) => ({
+    path: repoPath,
+    checksum: `sha256:${sha256Text(readFileSync(filePath, "utf8"))}`,
+    role,
+  }));
+}
+
+function getCombinedSourceChecksum(sources: CemeteryDatasetSource[]): string {
+  const checksumInput = [
+    {
+      path: SOURCE_REPO_PATH,
+      checksum: `sha256:${sha256Text(readFileSync(SOURCE_FILE_PATH, "utf8"))}`,
+    },
+    ...sources.map(({ path, checksum }) => ({ path, checksum })),
+  ];
+  return `sha256:${sha256Text(JSON.stringify(checksumInput))}`;
+}
+
 function renderJson(rows: CemeteryDatasetRow[]): string {
-  const sourceData = readFileSync(SOURCE_DATA_PATH, "utf8");
+  const sourceData = getSourceDataProvenance();
 
   return `${JSON.stringify({
     schemaVersion: "1.0",
@@ -145,7 +186,8 @@ function renderJson(rows: CemeteryDatasetRow[]): string {
     jsonUrl: `${SITE_ORIGIN}/datasets/stablecoin-cemetery.json`,
     csvUrl: `${SITE_ORIGIN}/datasets/stablecoin-cemetery.csv`,
     sourceDataPath: SOURCE_REPO_PATH,
-    sourceChecksum: `sha256:${createHash("sha256").update(sourceData).digest("hex")}`,
+    sourceChecksum: getCombinedSourceChecksum(sourceData),
+    sourceData,
     recordsOrderedBy: "deathDate descending, then peakMcapUsd descending, then symbol ascending",
     rowCount: rows.length,
     limitations: [

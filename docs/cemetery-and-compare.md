@@ -62,6 +62,7 @@ Frozen tracked stablecoins (registry entries with `status: "frozen"`) merge into
 The static cemetery dataset export reflects the same merge:
 
 - `scripts/maintenance/generate-cemetery-dataset.ts` consumes `CEMETERY_ENTRIES` and writes one combined row set to `public/datasets/stablecoin-cemetery.json` and `public/datasets/stablecoin-cemetery.csv`.
+- The JSON export records `shared/lib/cemetery-merged.ts` as the merge source plus per-source paths and checksums for `shared/data/dead-stablecoins.json` and `shared/data/stablecoins/coins.generated.json`.
 - `archivedDataAvailable` is exposed as a row field, with a schema description, and `pharosUrl` resolves to `/stablecoin/<id>/` when archived data is available and to the cemetery anchor otherwise.
 - `npm run check:cemetery-dataset` continues to guard drift across both sources.
 

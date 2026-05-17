@@ -9,7 +9,7 @@
       "title": "Blacklist Tracker Changelog",
       "version": "3.993",
       "urn": "urn:pharos:methodology:blacklist-tracker@v3.993",
-      "textHash": "13c6c8e897c5b615dd18fab7fd63be04e2d9a49ba92e5fb74243968e5f5b56a2",
+      "textHash": "70ab44fd38eb117b6c4e2d82276797baa9b08175cc2f107d7c079f8e43b1d552",
       "textLength": 23509
     },
     {
@@ -19,7 +19,7 @@
       "title": "Chain Health Changelog",
       "version": "1.2",
       "urn": "urn:pharos:methodology:chain-health@v1.2",
-      "textHash": "54bcefb8fa0634dbbf99ebce1be5fc3f1bed347741126e000973abcb2651823f",
+      "textHash": "ba3aaaf1990349790952a9c93f40a94beba5af179a56cbe6b904e10cc2b63acb",
       "textLength": 4404
     },
     {
@@ -29,7 +29,7 @@
       "title": "Depeg Tracker and DEWS Changelog",
       "version": "6.0",
       "urn": "urn:pharos:methodology:depeg-dews@v6.0",
-      "textHash": "99694b8d78450ff2a77f596b8d077bb911733bea7dc8dc3f3526804239641fc3",
+      "textHash": "c0e4d5022db4cdefb3798f921cf6538fcaeb4c5650cea49cbbb62a75ecbabccd",
       "textLength": 27083
     },
     {
@@ -49,7 +49,7 @@
       "title": "Liquidity Score Changelog",
       "version": "5.6",
       "urn": "urn:pharos:methodology:liquidity-score@v5.6",
-      "textHash": "c869cc75557e2335e5a4ffdfff724fe67458541c324a53616e3bbce4d7e4b035",
+      "textHash": "3f10db34c5354c3dd5413d267dd6fa17cc10a48f7bed80889c58a8469ca522e1",
       "textLength": 20839
     },
     {
@@ -59,7 +59,7 @@
       "title": "Mint/Burn Flow Changelog",
       "version": "6.11",
       "urn": "urn:pharos:methodology:mint-burn-flow@v6.11",
-      "textHash": "6990a6e82f1a79e6ec70c96bb0a4ef7d2ee5540170594a3ba60b1c627d2702f9",
+      "textHash": "d970f1224e18ae6c895eee734b6c03e87b1dad8437576beb10669583db2fc6bd",
       "textLength": 16478
     },
     {
@@ -69,7 +69,7 @@
       "title": "Pricing Pipeline Changelog",
       "version": "6.03",
       "urn": "urn:pharos:methodology:pricing-pipeline@v6.03",
-      "textHash": "8d9640ddf5035591273f3516028c5dbdc882bace4ca7ab64567d94617ad3836e",
+      "textHash": "18ecddaa1f9697d237f5283ac67a9aeb558931403574e4b014e26861b697d589",
       "textLength": 57154
     },
     {
@@ -89,7 +89,7 @@
       "title": "Stability Index (PSI) Changelog",
       "version": "3.3",
       "urn": "urn:pharos:methodology:stability-index@v3.3",
-      "textHash": "86f6262b314ace160c70e53c1a4c166c33470d29a1ad6bb9cf17314941c58b29",
+      "textHash": "b73ff7e4735bcfe474df6d8ec558adcb13b280206d57ddfc0f7ceee615af29d7",
       "textLength": 6643
     },
     {
@@ -99,7 +99,7 @@
       "title": "Yield Intelligence Changelog",
       "version": "8.13",
       "urn": "urn:pharos:methodology:yield@v8.13",
-      "textHash": "2da743508ec117ddd7c5fe86a99091455dcbfc40a6697b72a38662d237339ae4",
+      "textHash": "39f441ab38ea279f77f295032bd7dd9120d56c47f921aaf6aeb71b1a77854f53",
       "textLength": 48029
     }
   ]
