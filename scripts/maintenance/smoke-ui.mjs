@@ -648,6 +648,19 @@ export function isExpectedGaCollectAbort(failure, expectedGaId) {
   );
 }
 
+export function getUnexpectedGaAnalyticsFailures(
+  failures,
+  successfulCollectUrls,
+  expectedGaId,
+  { tolerateExpectedCollectAbort = false } = {},
+) {
+  return failures.filter(
+    (failure) =>
+      !isToleratedGaCollectFailure(failure, successfulCollectUrls)
+      && !(tolerateExpectedCollectAbort && isExpectedGaCollectAbort(failure, expectedGaId)),
+  );
+}
+
 export async function verifyAnalyticsSnippet(url, expectedGaId, fetchImpl = fetch) {
   if (!expectedGaId) {
     return;
@@ -831,8 +844,8 @@ export async function run() {
           && entry.status >= 200
           && entry.status < 400,
       );
-      const tolerateIssuedCollectAbort = mode === "local";
-      const collectAborts = tolerateIssuedCollectAbort
+      const tolerateCollectAbortAsSignal = mode === "local";
+      const collectAborts = tolerateCollectAbortAsSignal
         ? network.failures.filter((failure) => isExpectedGaCollectAbort(failure, expectedGaId))
         : [];
       assert(
@@ -844,10 +857,12 @@ export async function run() {
         `Expected GA4 page_view collect signal for ${expectedGaId}; network=${JSON.stringify(network)}`,
       );
       const successfulCollectUrls = new Set(collectResponses.map((entry) => entry.url));
-      const unexpectedFailures = network.failures.filter(
-        (failure) =>
-          !isToleratedGaCollectFailure(failure, successfulCollectUrls)
-          && !(tolerateIssuedCollectAbort && isExpectedGaCollectAbort(failure, expectedGaId)),
+      const tolerateExpectedCollectAbort = tolerateCollectAbortAsSignal || collectResponses.length > 0;
+      const unexpectedFailures = getUnexpectedGaAnalyticsFailures(
+        network.failures,
+        successfulCollectUrls,
+        expectedGaId,
+        { tolerateExpectedCollectAbort },
       );
       assert(
         unexpectedFailures.length === 0,
@@ -857,8 +872,13 @@ export async function run() {
         network.violations.length === 0,
         `Found analytics CSP violation(s) for ${expectedGaId}; violations=${JSON.stringify(network.violations)}`,
       );
-      if (collectAborts.length > 0) {
-        console.log(`[smoke-ui] WARN tolerated ${collectAborts.length} local GA collect abort(s) for ${expectedGaId}`);
+      const expectedCollectAbortCount = network.failures.filter((failure) =>
+        isExpectedGaCollectAbort(failure, expectedGaId)
+      ).length;
+      if (tolerateExpectedCollectAbort && expectedCollectAbortCount > 0) {
+        console.log(
+          `[smoke-ui] WARN tolerated ${expectedCollectAbortCount} ${mode} GA collect abort(s) for ${expectedGaId}`,
+        );
       }
       console.log(`[smoke-ui] OK analytics runtime ${expectedGaId}`);
     }
