@@ -70,7 +70,7 @@
     {
       "name": "ETH Silo credit-line collateral",
       "pct": 10.55,
-      "risk": "medium"
+      "risk": "very-low"
     }
   ],
   "liveReservesConfig": {
