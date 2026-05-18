@@ -10,6 +10,7 @@ import {
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
+  fetchOnchainMulticall3,
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
@@ -22,6 +23,7 @@ vi.mock("../helpers", async (importOriginal) => {
     ...actual,
     fetchDefiLlamaPrices: vi.fn(),
     fetchErc20Balance: vi.fn(),
+    fetchOnchainMulticall3: vi.fn(),
     fetchOnchainRateBps: vi.fn(),
     fetchOnchainRawCall: vi.fn(),
     fetchOnchainUint256: vi.fn(),
@@ -52,8 +54,8 @@ function encodeAddress(address: string): string {
   return `0x${address.toLowerCase().slice(2).padStart(64, "0")}`;
 }
 
-function encodeUint(value: bigint | number): string {
-  return `0x${BigInt(value).toString(16).padStart(64, "0")}`;
+function encodeUint(value: bigint | number): `0x${string}` {
+  return `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
 }
 
 afterEach(() => {
@@ -296,6 +298,64 @@ describe("fetchLiquityV2BranchReserves Beraborrow branches", () => {
     expect(fetchOnchainRawCall).toHaveBeenCalledWith(expect.objectContaining({
       contract: pumpBtcBranch.holder,
       data: BERABORROW_SHUTDOWN_SELECTOR,
+    }));
+  });
+});
+
+describe("fetchLiquityV2BranchReserves multicall fast-path", () => {
+  it("uses multicall for branch balances and debt/shutdown reads when fully decodable", async () => {
+    const testConfig: LiveReservesConfig = {
+      adapter: "liquity-v2-branches",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        branches: [
+          {
+            name: "WETH",
+            holder: "0x1111111111111111111111111111111111111111",
+            token: {
+              chain: "ethereum",
+              address: "0x2222222222222222222222222222222222222222",
+              decimals: 18,
+            },
+            risk: "very-low",
+          },
+        ],
+      },
+    };
+
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["WETH", 1_750]]));
+    vi.mocked(fetchOnchainMulticall3)
+      .mockResolvedValueOnce([
+        { label: "balance:0", success: true, returnData: encodeUint(2_000_000_000_000_000_000n) },
+      ])
+      .mockResolvedValueOnce([
+        { label: "debt:0", success: true, returnData: encodeUint(1_250_000_000_000_000_000_000n) },
+        { label: "shutdown:0", success: true, returnData: encodeUint(0) },
+      ]);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValue(null);
+
+    const result = await fetchLiquityV2BranchReserves(
+      { id: "test-liquity-v2" } as StablecoinMeta,
+      testConfig,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(result.metadata).toMatchObject({
+      totalDebtUsd: 1250,
+      immediateRedeemableUsd: 1250,
+      redemption: {
+        routeStatus: "open",
+      },
+    });
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(2);
+    expect(fetchErc20Balance).not.toHaveBeenCalled();
+    expect(fetchOnchainUint256).not.toHaveBeenCalledWith(expect.objectContaining({
+      data: "0x45507998",
     }));
   });
 });

@@ -1,10 +1,12 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchErc20Balance,
+  fetchOnchainMulticall3,
   fetchOnchainRateBps,
   fetchOnchainRawCall,
   fetchOnchainUint256,
@@ -71,6 +73,15 @@ function parseUint8Result(raw: string | null): number | null {
   if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
   const value = Number(BigInt(raw));
   return Number.isInteger(value) && value >= 0 && value <= 255 ? value : null;
+}
+
+function parseUint256Result(raw: string | null): bigint | null {
+  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) return null;
+  try {
+    return BigInt(raw);
+  } catch {
+    return null;
+  }
 }
 
 function sumBranchDebtUsd(
@@ -179,6 +190,38 @@ async function fetchLiquityV2BranchBalances(
   ctx: AdapterContext | undefined,
   timeoutMs: number,
 ): Promise<BranchBalanceEntry[]> {
+  const balanceCalls = params.branches.map((branch, index) => ({
+    label: `balance:${index}`,
+    contract: branch.token.address,
+    data: encodeBalanceOfCallData(branch.holder),
+    allowFailure: true,
+  }));
+
+  const multicallResults = await fetchOnchainMulticall3({
+    calls: balanceCalls,
+    signal,
+    ctx,
+    chain: input.chain,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
+
+  if (multicallResults && multicallResults.length === balanceCalls.length) {
+    const balances = multicallResults.map((result, index) => {
+      const branch = params.branches[index]!;
+      const balanceRaw = result.success ? parseUint256Result(result.returnData) : null;
+      return { branch, balanceRaw };
+    });
+    const unreadable = balances.some((entry) => entry.balanceRaw == null);
+    if (!unreadable) {
+      const adapted = await Promise.all(
+        balances.map((entry) => tryAdaptErc4626ShareEntry(input, entry, signal, ctx, params, timeoutMs)),
+      );
+      return adapted;
+    }
+  }
+
   const shareEntries = await Promise.all(
     params.branches.map(async (branch) => {
       const raw = await fetchErc20Balance(
@@ -372,43 +415,88 @@ export async function fetchLiquityV2BranchReserves(
       params.fallbackRpcUrl,
     ),
   ]);
-  const debts = await Promise.all(
-    balances.map(async (entry) => {
-      const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
-        fetchOnchainUint256({
-          contract: entry.branch.holder,
-          data: debtSelector,
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          timeoutMs,
-        }),
-        fetchOnchainRawCall({
-          contract: entry.branch.holder,
-          data: shutdownSelector,
-          signal,
-          ctx,
-          rpcUrl: params.rpcUrl,
-          fallbackRpcUrl: params.fallbackRpcUrl,
-          rpcMode: input.rpcMode,
-          chain: input.chain,
-          timeoutMs,
-        }),
-        params.redemptionRateProbe
-          ? Promise.resolve(null)
-          : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
-      ]);
-      return {
-        entry,
-        debtRaw,
-        shutDown: parseBoolResult(shutDownRaw),
-        redemptionFeeBps: branchRedemptionFeeBps,
-      };
-    }),
-  );
+  const debtCalls = balances.flatMap((entry, index) => [
+    {
+      label: `debt:${index}`,
+      contract: entry.branch.holder,
+      data: debtSelector,
+      allowFailure: true,
+    },
+    {
+      label: `shutdown:${index}`,
+      contract: entry.branch.holder,
+      data: shutdownSelector,
+      allowFailure: true,
+    },
+  ]);
+
+  const multicallDebts = await fetchOnchainMulticall3({
+    calls: debtCalls,
+    signal,
+    ctx,
+    chain: input.chain,
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    timeoutMs,
+  });
+
+  const multicallDebtReads = multicallDebts && multicallDebts.length === debtCalls.length
+    ? await Promise.all(
+      balances.map(async (entry, index) => {
+        const debtResult = multicallDebts[index * 2];
+        const shutdownResult = multicallDebts[index * 2 + 1];
+        const branchRedemptionFeeBps = params.redemptionRateProbe
+          ? null
+          : await probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params);
+        return {
+          entry,
+          debtRaw: debtResult?.success ? parseUint256Result(debtResult.returnData) : null,
+          shutDown: shutdownResult?.success ? parseBoolResult(shutdownResult.returnData) : null,
+          redemptionFeeBps: branchRedemptionFeeBps,
+        };
+      }),
+    )
+    : null;
+
+  const debts = multicallDebtReads && multicallDebtReads.every((entry) => entry.debtRaw != null)
+    ? multicallDebtReads
+    : await Promise.all(
+      balances.map(async (entry) => {
+        const [debtRaw, shutDownRaw, branchRedemptionFeeBps] = await Promise.all([
+          fetchOnchainUint256({
+            contract: entry.branch.holder,
+            data: debtSelector,
+            signal,
+            ctx,
+            rpcUrl: params.rpcUrl,
+            fallbackRpcUrl: params.fallbackRpcUrl,
+            rpcMode: input.rpcMode,
+            chain: input.chain,
+            timeoutMs,
+          }),
+          fetchOnchainRawCall({
+            contract: entry.branch.holder,
+            data: shutdownSelector,
+            signal,
+            ctx,
+            rpcUrl: params.rpcUrl,
+            fallbackRpcUrl: params.fallbackRpcUrl,
+            rpcMode: input.rpcMode,
+            chain: input.chain,
+            timeoutMs,
+          }),
+          params.redemptionRateProbe
+            ? Promise.resolve(null)
+            : probeBranchRedemptionFeeBps(input, entry.branch, signal, ctx, params),
+        ]);
+        return {
+          entry,
+          debtRaw,
+          shutDown: parseBoolResult(shutDownRaw),
+          redemptionFeeBps: branchRedemptionFeeBps,
+        };
+      }),
+    );
 
   const unreadableDebtBranches = debts
     .filter((entry) => entry.debtRaw == null)
