@@ -39,30 +39,44 @@ function MetricChip({
   subValue,
   colorClass = "text-foreground",
   accentClass,
+  mobile = false,
+  mobileFull = false,
+  mobileHideSub = false,
 }: {
   label: React.ReactNode;
   value: React.ReactNode;
   subValue?: string;
   colorClass?: string;
   accentClass?: string;
+  mobile?: boolean;
+  mobileFull?: boolean;
+  mobileHideSub?: boolean;
 }) {
   const isEmpty = value === "—";
 
   return (
     <div
-      className={`pharos-control-pill flex items-center gap-2 ${accentClass ?? ""}`}
+      className={`pharos-control-pill ${
+        mobile ? `w-full min-w-0 !justify-start gap-1.5 !px-2.5 !py-1.5 ${mobileFull ? "col-span-2" : ""}` : "flex items-center gap-2"
+      } ${accentClass ?? ""}`}
     >
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        {label}
-      </span>
+      {label ? (
+        <span className={`${mobile ? "text-[10px]" : "text-[11px]"} font-medium uppercase tracking-wider text-muted-foreground`}>
+          {label}
+        </span>
+      ) : null}
       <span
-        className={`text-base font-bold font-mono ${colorClass}`}
+        className={`${mobile ? "text-lg" : "text-base"} font-bold font-mono ${colorClass}`}
         aria-hidden={isEmpty ? "true" : undefined}
       >
         {value}
       </span>
       {isEmpty && <span className="sr-only">data unavailable</span>}
-      {subValue && <span className="text-xs text-muted-foreground">{subValue}</span>}
+      {subValue && !(mobile && mobileHideSub) && (
+        <span className={`${mobile ? "min-w-0 truncate text-[11px]" : "text-xs"} text-muted-foreground`}>
+          {subValue}
+        </span>
+      )}
     </div>
   );
 }
@@ -84,33 +98,96 @@ export function HeroTertiaryMetrics({
   mobile?: boolean;
   trailing?: ReactNode;
 }) {
+  if (mobile) {
+    const regularMetrics = metrics.filter(
+      (metric) => metric.key !== "excess-yield" && metric.key !== "performance-vs-usd",
+    );
+    const excessMetric = metrics.find((metric) => metric.key === "excess-yield");
+    const performanceMetric = metrics.find((metric) => metric.key === "performance-vs-usd");
+
+    return (
+      <>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {regularMetrics.map((metric) => (
+            <MetricChip
+              key={metric.key}
+              label={metric.mobileLabel ?? metric.label}
+              value={metric.value}
+              subValue={metric.subValue}
+              colorClass={metric.colorClass}
+              accentClass={metric.accentClass}
+              mobile
+            />
+          ))}
+        </div>
+        {excessMetric ? (
+          <div className="mt-2 flex items-stretch gap-2">
+            <div className="min-w-0 flex-1">
+              <MetricChip
+                label={excessMetric.mobileLabel ?? excessMetric.label}
+                value={excessMetric.value}
+                subValue={excessMetric.subValue}
+                colorClass={excessMetric.colorClass}
+                accentClass={excessMetric.accentClass}
+                mobile
+                mobileHideSub
+              />
+            </div>
+            <div className="pharos-control-pill shrink-0 !justify-start gap-1.5 !px-2.5 !py-1.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Chains</span>
+              <span className="text-lg font-bold font-mono text-foreground">{chainCount}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <MetricChip label="Chains" value={String(chainCount)} mobile />
+          </div>
+        )}
+        {performanceMetric ? (
+          <div className="mt-2">
+            <MetricChip
+              label={performanceMetric.mobileLabel ?? performanceMetric.label}
+              value={performanceMetric.value}
+              subValue={performanceMetric.subValue}
+              colorClass={performanceMetric.colorClass}
+              accentClass={performanceMetric.accentClass}
+              mobile
+              mobileHideSub
+            />
+          </div>
+        ) : null}
+        {trailing ? <div className="mt-2 flex flex-wrap items-center gap-2">{trailing}</div> : null}
+
+        {activeDepeg && (
+          <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+            Active depeg detected
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
-      <div className={mobile ? "mt-3 flex flex-wrap gap-2" : "flex flex-wrap items-center gap-3"}>
+      <div className="flex flex-wrap items-center gap-3">
         {metrics.map((metric) => (
           <MetricChip
             key={metric.key}
-            label={mobile ? (metric.mobileLabel ?? metric.label) : metric.label}
+            label={metric.label}
             value={metric.value}
             subValue={metric.subValue}
             colorClass={metric.colorClass}
             accentClass={metric.accentClass}
           />
         ))}
-        {mobile ? (
-          <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-background/30 px-2.5 py-1.5">
-            <span className="text-[11px] text-muted-foreground">{chainCount} chains</span>
-          </div>
-        ) : (
-          <div className="pharos-control-pill flex items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Chains
-            </span>
-            <span className="text-base font-bold font-mono">{chainCount}</span>
-          </div>
-        )}
+        <div className="pharos-control-pill flex items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Chains
+          </span>
+          <span className="text-base font-bold font-mono">{chainCount}</span>
+        </div>
         {trailing}
-        {!mobile && earlyPegScore && (
+        {earlyPegScore && (
           <span className="text-xs text-amber-600 dark:text-amber-400">
             Early peg score · {trackingSpanDays}d tracked
           </span>
@@ -118,14 +195,8 @@ export function HeroTertiaryMetrics({
       </div>
 
       {activeDepeg && (
-        <div
-          className={
-            mobile
-              ? "mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400"
-              : "rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400"
-          }
-        >
-          {mobile ? "Active depeg detected" : "Active depeg detected — view details in Depeg History"}
+        <div className="rounded-lg border border-red-500/20 bg-red-500/8 px-4 py-2.5 text-sm text-red-700 dark:text-red-400">
+          Active depeg detected — view details in Depeg History
         </div>
       )}
     </>

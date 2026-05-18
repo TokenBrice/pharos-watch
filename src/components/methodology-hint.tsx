@@ -188,15 +188,24 @@ export function MethodologyLabel({
   topic,
   children,
   className,
+  compact = false,
 }: {
   topic: MethodologyContextKey;
   children: ReactNode;
   className?: string;
+  compact?: boolean;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       <span>{children}</span>
-      <MethodologyHint topic={topic} />
+      <MethodologyHint
+        topic={topic}
+        buttonClassName={
+          compact
+            ? "!h-6 !w-6 !min-h-0 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
+            : undefined
+        }
+      />
     </span>
   );
 }

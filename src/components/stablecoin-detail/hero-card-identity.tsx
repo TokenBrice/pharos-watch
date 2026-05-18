@@ -200,7 +200,7 @@ export function SafetyGradeHero({
     return (
       <div
         className={`flex flex-col items-center justify-center rounded-xl border border-border/60 bg-background/50 ${
-          mobile ? "px-3 py-2" : "px-4 py-3"
+          mobile ? "min-w-[8.75rem] px-2.5 py-2" : "px-4 py-3"
         }`}
       >
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -211,18 +211,18 @@ export function SafetyGradeHero({
     );
   }
 
-  const sizeClasses = mobile ? "text-3xl px-3 py-1.5" : "text-5xl px-6 py-3";
+  const sizeClasses = mobile ? "px-2.5 py-1 text-2xl" : "text-5xl px-6 py-3";
 
   return (
     <div
       className={`flex flex-col items-center justify-center rounded-xl border-2 border-border/60 bg-background/50 ${
-        mobile ? "gap-1 px-3 py-2" : "gap-2.5 px-5 py-4"
+        mobile ? "min-w-[8.75rem] gap-1 px-2.5 py-2" : "gap-2.5 px-5 py-4"
       }`}
     >
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Safety Grade
       </span>
-      <ScoreBadgeWrapper topic="safetyScore">
+      <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
         <Badge
           variant="outline"
           className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
@@ -278,6 +278,12 @@ interface HeroIdentityProps {
   infrastructures: Infrastructure[];
   reportCard?: ReportCard | null;
   verdict: StablecoinVerdict;
+}
+
+interface HeroMobileIdentityDetailsProps {
+  coin: StablecoinMeta;
+  infrastructures: Infrastructure[];
+  includeClassification?: boolean;
 }
 
 // Exported for unit testing; rendered indirectly via HeroMobileIdentity / HeroDesktopIdentity.
@@ -362,35 +368,58 @@ export function HeroMobileIdentity({
   variantParent,
   variantChipClass,
   infrastructures,
-  reportCard,
   verdict,
-}: HeroIdentityProps) {
+  condensed = false,
+}: HeroIdentityProps & { condensed?: boolean }) {
   const heroVerdictEnabled = isHeroVerdictEnabled();
   const showVerdict = heroVerdictEnabled && verdict.archetype !== "uncategorized";
   const verdictId = `hero-verdict-${coin.id}`;
   return (
+    <div className="min-w-0 flex-1">
+      <div className="flex items-start gap-3">
+        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+        <div className="min-w-0 flex-1">
+          <h2
+            className="text-2xl font-black tracking-tighter"
+            {...(showVerdict ? { "aria-describedby": verdictId } : {})}
+          >
+            {coin.name}
+          </h2>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
+            <BluechipHeaderBadge stablecoinId={coin.id} />
+            <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
+          </div>
+          {condensed ? (
+            <div className="mt-1">
+              <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {!condensed ? <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} /> : null}
+    </div>
+  );
+}
+
+export function HeroMobileIdentityDetails({
+  coin,
+  infrastructures,
+  includeClassification = true,
+}: HeroMobileIdentityDetailsProps) {
+  return (
     <>
-      <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
-      <div className="min-w-0 flex-1">
-        <h2
-          className="text-2xl font-black tracking-tighter"
-          {...(showVerdict ? { "aria-describedby": verdictId } : {})}
-        >
-          {coin.name}
-        </h2>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-sm font-mono text-muted-foreground">{coin.symbol}</span>
-          <BluechipHeaderBadge stablecoinId={coin.id} />
-          <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} mobile />
-          <FreezablePill coin={coin} reportCard={reportCard} />
+      {includeClassification ? (
+        <div className="mt-1">
+          <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
         </div>
-        <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
-        {coin.oneLiner ? (
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
-        ) : null}
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <HeroTagList tags={coin.tags} />
-        </div>
+      ) : null}
+      {coin.oneLiner ? (
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+      ) : null}
+      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        <HeroTagList tags={coin.tags} />
       </div>
     </>
   );

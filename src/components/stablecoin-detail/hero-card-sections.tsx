@@ -13,6 +13,7 @@ import type {
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import {
   HeroDesktopIdentity,
+  HeroMobileIdentityDetails,
   HeroMobileIdentity,
   HeroVerdict,
   SafetyGradeHero,
@@ -139,9 +140,15 @@ export function HeroCardMobileSection({
           infrastructures={infrastructures}
           reportCard={reportCard}
           verdict={verdict}
+          condensed
         />
         <SafetyGradeHero reportCard={reportCard} mobile />
       </div>
+      <HeroMobileIdentityDetails
+        coin={coin}
+        infrastructures={infrastructures}
+        includeClassification={false}
+      />
 
       <HeroVerdict coinId={coin.id} verdict={verdict} />
 
