@@ -7663,12 +7663,11 @@
         "primary": {
           "kind": "onchain-evm",
           "chain": "ethereum",
-          "rpcMode": "public-rpc"
+          "rpcMode": "alchemy"
         }
       },
       "params": {
         "rpcUrl": "https://ethereum-rpc.publicnode.com",
-        "fallbackRpcUrl": "https://eth.llamarpc.com",
         "branches": [
           {
             "name": "weETH",

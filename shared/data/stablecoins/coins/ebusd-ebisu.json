@@ -93,12 +93,11 @@
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "public-rpc"
+        "rpcMode": "alchemy"
       }
     },
     "params": {
       "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "fallbackRpcUrl": "https://eth.llamarpc.com",
       "redemptionRateProbe": {
         "contract": "0x5e159fac2d137f7b83a12b9f30ac6ab2ba6d45e7",
         "selector": "0xc52861f2"
