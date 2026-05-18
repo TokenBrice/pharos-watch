@@ -66,7 +66,7 @@
     "reviewer": "Pharos lane D Wave 3 non-USD review",
     "reviewedAt": "2026-05-12"
   },
-  "chainTier": "stage1-l2",
+  "chainTier": "mature-alt-l1",
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",

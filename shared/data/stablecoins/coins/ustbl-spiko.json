@@ -144,7 +144,7 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "USTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
+      "message": "USTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet, with cross-chain transfers relayed via Chainlink CCIP."
     }
   ]
 }

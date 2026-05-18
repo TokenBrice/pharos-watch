@@ -18,9 +18,9 @@
   "geckoId": "janus-henderson-anemoy-treasury-fund",
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://anemoy.io/funds/jtrsy",
-    "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating",
+    "type": "real-time",
+    "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2",
+    "provider": "Chainlink JTRSY NAV",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },

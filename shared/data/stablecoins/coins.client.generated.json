@@ -423,7 +423,7 @@
     "symbol": "BFUSD",
     "oneLiner": "BFUSD is a Binance account product redeemable inside Binance against USD stablecoins, backed by an opaque collateral pool and hedging portfolio.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
@@ -892,12 +892,12 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
+      "yieldBearing": true,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "cygnus-finance-global-usd"
   },
   {
@@ -951,10 +951,7 @@
     "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
     "mechanismArchetype": "cdp",
     "geckoId": "convertible-jpy-token",
-    "canBeBlacklisted": false,
-    "infrastructures": [
-      "liquity-v1"
-    ]
+    "canBeBlacklisted": false
   },
   {
     "id": "cngn-compliant-naira",
@@ -1090,7 +1087,7 @@
     "id": "dai-makerdao",
     "name": "Dai",
     "symbol": "DAI",
-    "oneLiner": "DAI is MakerDAO's decentralized dollar stablecoin, minted from overcollateralized vaults of crypto, RWA, and USDC via the PSM, governed by MKR holders.",
+    "oneLiner": "DAI is MakerDAO/Sky's dollar stablecoin, minted from crypto and RWA vaults and supported by stablecoin PSM liquidity.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -1751,7 +1748,7 @@
     "id": "frax-frax",
     "name": "Frax",
     "symbol": "FRAX",
-    "oneLiner": "FRAX is Frax's dollar stablecoin, fully collateralized since 2023 by short-dated U.S. Treasuries, repos, and USDC custodied off-chain by FinresPBC.",
+    "oneLiner": "FRAX is Frax's dollar stablecoin, backed by protocol-owned stable liquidity, tokenized cash/T-bill/MMF assets, and strategy exposure.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -1917,7 +1914,6 @@
       "navToken": true
     },
     "pegMechanism": "GBP-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
-    "mechanismArchetype": "tbill",
     "geckoId": "spiko-amundi-overnight-swap-fund-gbp",
     "canBeBlacklisted": true
   },
@@ -2037,7 +2033,6 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 MetaMorpho vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime-morpho-vault",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
@@ -2057,7 +2052,6 @@
       "navToken": true
     },
     "pegMechanism": "ERC-4626 MetaMorpho V2 vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "gauntlet-usdc-prime",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
@@ -2147,7 +2141,6 @@
       "navToken": true
     },
     "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure; holders exit through Hyperbeat vault liquidity into USDT, while ultimate fiat par exit remains Tether's issuer route",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "hyperbeat-usdt",
     "variantOf": "usdt-tether",
     "variantKind": "strategy-vault",
@@ -2242,7 +2235,6 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
-    "mechanismArchetype": "tbill",
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
     "canBeBlacklisted": true
   },
@@ -2372,15 +2364,14 @@
     "symbol": "inALPHA",
     "oneLiner": "inALPHA is Nest Credit's NAV-priced dollar vault token, holding private and structured credit positions with nTBILL and liquid stablecoin buffers.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
-    "mechanismArchetype": "tbill",
     "geckoId": "nest-alpha-vault-lp",
     "protocolSlug": "nest-credit",
     "canBeBlacklisted": true
@@ -2485,7 +2476,6 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
-    "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
     "protocolSlug": "centrifuge",
     "canBeBlacklisted": true
@@ -3086,7 +3076,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
@@ -3224,7 +3214,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "1:1 mint and redemption via Bridge using M0 protocol infrastructure; reserves continuously validated on-chain by independent validators; arbitrage corrects price drift; monthly public attestations",
@@ -3699,7 +3689,7 @@
     "symbol": "pUSD",
     "oneLiner": "pUSD is Plume's dollar stablecoin minted 1:1 against USDC in a Nucleus BoringVault; zero-fee redemption on Ethereum or Plume Chain with OFAC compliance checks.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
@@ -3707,7 +3697,6 @@
       "navToken": false
     },
     "pegMechanism": "Zero-fee mint/redeem at 1:1 for USDC on Ethereum or Plume Chain; reserves managed by Nucleus BoringVault contracts with OFAC compliance checks",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "plume-usd"
   },
   {
@@ -4007,7 +3996,7 @@
     "symbol": "savUSD",
     "oneLiner": "savUSD is Avant's yield-bearing wrapper of avUSD; share price compounds with delta-neutral strategy yield, exits inherit avUSD's USDC redemption.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": true,
@@ -4297,7 +4286,6 @@
       "navToken": true
     },
     "pegMechanism": "Users stake cUSD for stcUSD; the stcUSD exchange rate appreciates versus cUSD as yield accrues, and final USD exit inherits cUSD proportional basket redemption and Cap's slashing protections",
-    "mechanismArchetype": "fiat-cash",
     "geckoId": "staked-cap-usd",
     "variantOf": "cusd-cap",
     "variantKind": "strategy-vault"
@@ -4514,7 +4502,6 @@
       "navToken": true
     },
     "pegMechanism": "Deposit USDC to mint spUSDC; the share price appreciates against USDC as the Sky Savings Rate accrues. Withdrawals burn spUSDC for USDC subject to Spark vault liquidity",
-    "mechanismArchetype": "fiat-cash",
     "variantOf": "usdc-circle",
     "variantKind": "savings-passthrough",
     "canBeBlacklisted": true
@@ -4592,7 +4579,6 @@
       "navToken": true
     },
     "pegMechanism": "Deposit USDT to mint spUSDT; the share price appreciates against USDT as the Sky Savings Rate accrues. Withdrawals burn spUSDT for USDT subject to Spark vault liquidity",
-    "mechanismArchetype": "fiat-cash",
     "variantOf": "usdt-tether",
     "variantKind": "savings-passthrough",
     "canBeBlacklisted": true
@@ -4603,11 +4589,11 @@
     "symbol": "sUSN",
     "oneLiner": "sUSN is Noon's staking wrapper of USN; share price accrues yield from private credit, CLOs, DeFi lending, and T-bills, with delta-neutral CEX strategies on top.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
@@ -4795,7 +4781,7 @@
     "symbol": "U",
     "oneLiner": "U is a BVI-issued multi-stablecoin wrapper dollar minted 1:1 against USD, USDC, USDT, and USD1, with Bermuda trustee custody via Wallets Trust Limited.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
@@ -5142,7 +5128,7 @@
       "navToken": false
     },
     "pegMechanism": "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
-    "mechanismArchetype": "algorithmic",
+    "mechanismArchetype": "cdp",
     "geckoId": "usdd",
     "canBeBlacklisted": "dilutable",
     "canBeBlacklistedSource": {
@@ -5412,7 +5398,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
@@ -5428,8 +5414,8 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
+      "yieldBearing": true,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
@@ -5490,8 +5476,8 @@
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
+      "yieldBearing": true,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
@@ -5689,7 +5675,7 @@
       "navToken": false
     },
     "pegMechanism": "1:1 wrapper around M (M0) token — USDSC is minted by wrapping M via the Soneium-native UsdscToken contract; underlying M is backed by T-bill collateral attested by M0 Validators; redemption unwinds the wrapper back to M",
-    "mechanismArchetype": "fiat-cash",
+    "mechanismArchetype": "tbill",
     "geckoId": "startale-usd",
     "canBeBlacklisted": true,
     "infrastructures": [
@@ -5806,7 +5792,7 @@
     "id": "usdx-hex-trust",
     "name": "Hex Trust USDX",
     "symbol": "USDX",
-    "oneLiner": "USDX is Hex Trust's Hong Kong dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under a TCSP license.",
+    "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under a TCSP license.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -5885,7 +5871,6 @@
       "navToken": false
     },
     "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
-    "mechanismArchetype": "tbill",
     "geckoId": "anzen-usdz"
   },
   {
@@ -6494,7 +6479,7 @@
       "navToken": true
     },
     "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "wrapped-savings-rusd"
   },
   {
@@ -6744,7 +6729,7 @@
       "navToken": false
     },
     "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "xusd-babelfish"
   },
   {
@@ -6757,7 +6742,7 @@
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Fiat-backed 1:1 mint and redeem: users deposit USD to a StraitsX-designated bank account to mint XUSD; redemption returns USD to a whitelisted beneficiary bank account within 5 business days; reserve assets held at 100%+ of circulating supply at all times per MAS SCS framework",

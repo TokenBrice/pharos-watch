@@ -13,7 +13,6 @@
   },
   "collateral": "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
   "pegMechanism": "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
-  "mechanismArchetype": "tbill",
   "llamaId": "202",
   "detailProvider": "defillama",
   "geckoId": "anzen-usdz",

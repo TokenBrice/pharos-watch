@@ -24,7 +24,6 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC deposited into a Gauntlet-curated MetaMorpho V2 vault on Morpho Blue; the curator allocates across permissioned USDC lending markets backed by blue-chip crypto and real-world asset collateral",
   "pegMechanism": "ERC-4626 MetaMorpho V2 vault shares appreciate against USDC as borrower interest accrues; withdrawals redeem vault shares for available USDC liquidity or wait for Morpho market liquidity to return",
-  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "gauntlet-usdc-prime",
   "links": [
@@ -96,6 +95,5 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       }
     }
-  },
-  "canBeBlacklisted": true
+  }
 }

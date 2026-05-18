@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
+  "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance.",
   "pegMechanism": "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "7",

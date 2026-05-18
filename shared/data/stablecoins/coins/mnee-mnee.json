@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",

@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",

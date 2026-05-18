@@ -17,7 +17,7 @@
   "detailProvider": "coingecko",
   "geckoId": "ousg",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing",
     "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)",
     "attestorTier": "niche",

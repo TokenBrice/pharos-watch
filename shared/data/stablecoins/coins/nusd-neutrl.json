@@ -115,6 +115,6 @@
   },
   "yieldConfig": {
     "yieldSource": "Neutrl savings (sNUSD)",
-    "yieldType": "lending-vault"
+    "yieldType": "nav-appreciation"
   }
 }

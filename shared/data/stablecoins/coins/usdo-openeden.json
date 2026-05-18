@@ -7,8 +7,8 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
+    "yieldBearing": true,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",

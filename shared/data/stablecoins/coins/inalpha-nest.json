@@ -4,16 +4,15 @@
   "symbol": "inALPHA",
   "oneLiner": "inALPHA is Nest Credit's NAV-priced dollar vault token, holding private and structured credit positions with nTBILL and liquid stablecoin buffers.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "collateral": "Nest Alpha Vault strategy assets and LP positions backing the NAV-style dollar reference token",
   "pegMechanism": "Vault LP token whose value targets a dollar base but can appreciate or drift with strategy NAV rather than functioning as a hard 1:1 redeemable stablecoin",
-  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "nest-alpha-vault-lp",
   "protocolSlug": "nest-credit",

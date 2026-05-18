@@ -28,7 +28,7 @@
   "llamaId": "98",
   "detailProvider": "defillama",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://www.euroe.com/transparency-and-regulation",
     "provider": "Membrane Finance attestations",
     "attestorTier": "self",

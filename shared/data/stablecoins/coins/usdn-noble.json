@@ -7,8 +7,8 @@
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
+    "yieldBearing": true,
+    "rwa": true,
     "navToken": false
   },
   "blacklistabilityReview": {

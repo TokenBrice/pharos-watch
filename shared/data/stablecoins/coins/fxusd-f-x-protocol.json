@@ -17,13 +17,6 @@
   "llamaId": "168",
   "detailProvider": "defillama",
   "geckoId": "f-x-protocol-fxusd",
-  "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://www.openzeppelin.com/news/fx-v2-audit",
-    "provider": "OpenZeppelin",
-    "attestorTier": "niche",
-    "cadence": "ad-hoc"
-  },
   "links": [
     {
       "label": "Website",

@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",

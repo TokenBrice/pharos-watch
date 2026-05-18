@@ -81,6 +81,5 @@
       "title": "Exit liquidity depends on Falcon USDf",
       "message": "AA_FalconXUSDC is the senior tranche of a CDO over Falcon Finance USDf-collateralised Morpho markets. USDC redemption rates and exit timing are tied to USDf's mint/burn liquidity; sustained USDf stress can degrade vault liquidity even when the senior tranche absorbs no principal loss."
     }
-  ],
-  "canBeBlacklisted": true
+  ]
 }

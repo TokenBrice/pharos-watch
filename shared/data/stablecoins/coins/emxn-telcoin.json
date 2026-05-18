@@ -47,7 +47,7 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "stage1-l2",
+  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

@@ -62,9 +62,6 @@
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "infrastructures": [
-    "liquity-v1"
-  ],
   "reserves": [
     {
       "name": "ETH",

@@ -4,7 +4,7 @@
   "symbol": "BFUSD",
   "oneLiner": "BFUSD is a Binance account product redeemable inside Binance against USD stablecoins, backed by an opaque collateral pool and hedging portfolio.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,

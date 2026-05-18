@@ -100,7 +100,7 @@
     {
       "type": "info",
       "title": "Multi-chain Backed product",
-      "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      "message": "bC3M is also listed across Arbitrum, Avalanche, Base, BNB Chain, Polygon, and Gnosis. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
     },
     {
       "type": "info",
