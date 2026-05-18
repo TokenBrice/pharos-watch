@@ -37,6 +37,10 @@ function firstNonEmpty(...values) {
   return values.map((value) => value?.trim()).find(Boolean);
 }
 
+function shouldRunMobileSmoke() {
+  return process.env.PAGES_SMOKE_INCLUDE_MOBILE !== "0";
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -136,8 +140,10 @@ function runNpmScript(args) {
 
 try {
   smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", "http://127.0.0.1:4173", "--mode", "local"]);
-  if (smokeExit === 0) {
+  if (smokeExit === 0 && shouldRunMobileSmoke()) {
     smokeExit = await runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", "http://127.0.0.1:4173"]);
+  } else if (smokeExit === 0) {
+    console.log("[pages-smoke] Skipping mobile smoke (PAGES_SMOKE_INCLUDE_MOBILE=0).");
   }
 } finally {
   if (smokeExit !== 0) {

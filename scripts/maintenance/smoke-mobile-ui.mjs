@@ -7,11 +7,13 @@ import { parsePositiveInt } from "../lib/smoke-runtime.mjs";
 import { getBrowserLaunchOptions } from "./smoke-ui.mjs";
 
 const DEFAULT_URL = process.env.SMOKE_MOBILE_UI_URL ?? process.env.SMOKE_UI_URL ?? "http://localhost:3000";
-const DEFAULT_WAIT_MS = 2000;
+const DEFAULT_WAIT_MS = 1500;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_TOUCH_TARGET_PX = 44;
 const DEFAULT_TOUCH_HARD_FLOOR_PX = 24;
 const DEFAULT_DESKTOP_VIEWPORT = { label: "desktop-1280x900", width: 1280, height: 900 };
+const DEFAULT_MOBILE_UI_WORKERS = 2;
+const MAX_MOBILE_UI_WORKERS = 6;
 
 export const DEFAULT_MOBILE_UI_ROUTES = [
   "/",
@@ -38,18 +40,20 @@ export const DEFAULT_MOBILE_UI_VIEWPORTS = [
   { label: "mobile-414x896", width: 414, height: 896 },
 ];
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
+  const skipDesktopDefault = (process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP ?? "1") !== "0";
   const args = {
     desktopViewport: process.env.SMOKE_MOBILE_UI_DESKTOP_VIEWPORT ?? "",
     failureScreenshotDir: process.env.SMOKE_MOBILE_UI_FAILURE_SCREENSHOT_DIR ?? "",
     routes: process.env.SMOKE_MOBILE_UI_ROUTES ?? "",
-    skipDesktop: process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP === "1",
+    skipDesktop: skipDesktopDefault,
     skipTouch: process.env.SMOKE_MOBILE_UI_SKIP_TOUCH === "1",
     strictTouchTargets: process.env.SMOKE_MOBILE_UI_STRICT_TOUCH_TARGETS === "1",
     timeoutMs: process.env.SMOKE_MOBILE_UI_TIMEOUT_MS ?? "",
     url: DEFAULT_URL,
     viewports: process.env.SMOKE_MOBILE_UI_VIEWPORTS ?? "",
     waitMs: process.env.SMOKE_MOBILE_UI_WAIT_MS ?? "",
+    workers: process.env.SMOKE_MOBILE_UI_WORKERS ?? "",
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -74,10 +78,15 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--skip-desktop") {
       args.skipDesktop = true;
+    } else if (arg === "--include-desktop") {
+      args.skipDesktop = false;
     } else if (arg === "--skip-touch") {
       args.skipTouch = true;
     } else if (arg === "--strict-touch-targets") {
       args.strictTouchTargets = true;
+    } else if (arg === "--workers") {
+      args.workers = argv[i + 1] ?? "";
+      i += 1;
     } else if (arg === "--failure-screenshot-dir") {
       args.failureScreenshotDir = argv[i + 1] ?? "";
       i += 1;
@@ -609,11 +618,31 @@ function printConsoleWarnings(prefix, consoleMessages) {
   console.log(`[mobile-ui-smoke] WARN ${prefix} console warnings=${warnings.length}: ${preview}`);
 }
 
+function toCheckPlans(routes, viewports) {
+  const plans = [];
+  for (const viewport of viewports) {
+    for (const route of routes) {
+      plans.push({ route, viewport });
+    }
+  }
+  return plans;
+}
+
+export function getMobileWorkerCount(taskCount, workersInput) {
+  if (taskCount <= 0) {
+    return 1;
+  }
+  const requested = parsePositiveInt(workersInput, DEFAULT_MOBILE_UI_WORKERS);
+  return Math.max(1, Math.min(MAX_MOBILE_UI_WORKERS, requested, taskCount));
+}
+
 export async function run(argv = process.argv.slice(2)) {
   const rawArgs = parseArgs(argv);
   const url = ensureUrl(rawArgs.url);
   const routes = parseRouteList(rawArgs.routes);
   const viewports = parseViewportList(rawArgs.viewports);
+  const mobilePlans = toCheckPlans(routes, viewports);
+  const mobileWorkerCount = getMobileWorkerCount(mobilePlans.length, rawArgs.workers);
   const desktopViewport = parseDesktopViewport(rawArgs.desktopViewport);
   const timeoutMs = parsePositiveInt(rawArgs.timeoutMs, DEFAULT_TIMEOUT_MS);
   const waitMs = parsePositiveInt(rawArgs.waitMs, DEFAULT_WAIT_MS);
@@ -629,74 +658,87 @@ export async function run(argv = process.argv.slice(2)) {
       rawArgs.skipTouch ? "disabled" : rawArgs.strictTouchTargets ? "strict" : "hard-floor fail, 44px warn"
     }`,
   );
+  console.log(`[mobile-ui-smoke] Mobile workers ${mobileWorkerCount}`);
 
   const chromium = await loadChromium();
   const browser = await launchChromiumBrowser(chromium);
   const context = await browser.newContext();
-  const page = await context.newPage();
   const failures = [];
 
   try {
-    for (const viewport of viewports) {
-      for (const route of routes) {
-        const result = await runRouteCheck(page, {
-          failureScreenshotDir: rawArgs.failureScreenshotDir,
-          route,
-          scanTableGeometry: true,
-          scanTouchTargets: !rawArgs.skipTouch,
-          strictTouchTargets: rawArgs.strictTouchTargets,
-          timeoutMs,
-          url,
-          viewport,
-          waitMs,
-        });
-        const { summary } = result;
-        const prefix = `${route} @ ${formatViewport(viewport)}`;
-        if (result.failures.length > 0) {
-          failures.push({ ...result, prefix });
-          console.log(`[mobile-ui-smoke] FAIL mobile ${prefix}: ${result.failures.join("; ")}`);
-          if (result.screenshotPath) {
-            console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
-          }
-        } else {
-          console.log(
-            `[mobile-ui-smoke] OK mobile ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked} touchChecked=${summary.touchScan.checked}`,
-          );
-          printConsoleWarnings(prefix, result.consoleMessages);
-          if (!rawArgs.skipTouch && !rawArgs.strictTouchTargets) {
-            printTouchWarnings(prefix, summary.touchScan);
+    const runMobileWorker = async (workerIndex) => {
+      const page = await context.newPage();
+      try {
+        for (let planIndex = workerIndex; planIndex < mobilePlans.length; planIndex += mobileWorkerCount) {
+          const { route, viewport } = mobilePlans[planIndex];
+          const result = await runRouteCheck(page, {
+            failureScreenshotDir: rawArgs.failureScreenshotDir,
+            route,
+            scanTableGeometry: true,
+            scanTouchTargets: !rawArgs.skipTouch,
+            strictTouchTargets: rawArgs.strictTouchTargets,
+            timeoutMs,
+            url,
+            viewport,
+            waitMs,
+          });
+          const { summary } = result;
+          const prefix = `${route} @ ${formatViewport(viewport)}`;
+          if (result.failures.length > 0) {
+            failures.push({ ...result, prefix });
+            console.log(`[mobile-ui-smoke] FAIL mobile ${prefix}: ${result.failures.join("; ")}`);
+            if (result.screenshotPath) {
+              console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
+            }
+          } else {
+            console.log(
+              `[mobile-ui-smoke] OK mobile ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked} touchChecked=${summary.touchScan.checked}`,
+            );
+            printConsoleWarnings(prefix, result.consoleMessages);
+            if (!rawArgs.skipTouch && !rawArgs.strictTouchTargets) {
+              printTouchWarnings(prefix, summary.touchScan);
+            }
           }
         }
+      } finally {
+        await page.close();
       }
-    }
+    };
+
+    await Promise.all(Array.from({ length: mobileWorkerCount }, (_unused, index) => runMobileWorker(index)));
 
     if (!rawArgs.skipDesktop) {
-      for (const route of routes) {
-        const result = await runRouteCheck(page, {
-          failureScreenshotDir: rawArgs.failureScreenshotDir,
-          route,
-          scanTableGeometry: false,
-          scanTouchTargets: false,
-          strictTouchTargets: false,
-          timeoutMs,
-          url,
-          viewport: desktopViewport,
-          waitMs,
-        });
-        const { summary } = result;
-        const prefix = `${route} @ ${formatViewport(desktopViewport)}`;
-        if (result.failures.length > 0) {
-          failures.push({ ...result, prefix });
-          console.log(`[mobile-ui-smoke] FAIL desktop ${prefix}: ${result.failures.join("; ")}`);
-          if (result.screenshotPath) {
-            console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
+      const desktopPage = await context.newPage();
+      try {
+        for (const route of routes) {
+          const result = await runRouteCheck(desktopPage, {
+            failureScreenshotDir: rawArgs.failureScreenshotDir,
+            route,
+            scanTableGeometry: false,
+            scanTouchTargets: false,
+            strictTouchTargets: false,
+            timeoutMs,
+            url,
+            viewport: desktopViewport,
+            waitMs,
+          });
+          const { summary } = result;
+          const prefix = `${route} @ ${formatViewport(desktopViewport)}`;
+          if (result.failures.length > 0) {
+            failures.push({ ...result, prefix });
+            console.log(`[mobile-ui-smoke] FAIL desktop ${prefix}: ${result.failures.join("; ")}`);
+            if (result.screenshotPath) {
+              console.log(`[mobile-ui-smoke] FAIL screenshot ${result.screenshotPath}`);
+            }
+          } else {
+            console.log(
+              `[mobile-ui-smoke] OK desktop ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked}`,
+            );
+            printConsoleWarnings(prefix, result.consoleMessages);
           }
-        } else {
-          console.log(
-            `[mobile-ui-smoke] OK desktop ${prefix} overflow=${summary.overflowDelta}px tablesChecked=${summary.tableScan.checked}`,
-          );
-          printConsoleWarnings(prefix, result.consoleMessages);
         }
+      } finally {
+        await desktopPage.close();
       }
     }
 

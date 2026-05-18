@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasPagesUiImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
   hasWorkerPromotionImpact,
@@ -16,6 +17,7 @@ const ZERO_SHA = /^0+$/;
 export {
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasPagesUiImpact,
   hasWorkerDeployImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerPromotionImpact,
@@ -59,6 +61,7 @@ export function classifyDeployChanges({
       changedFiles: [],
       deployRequired: true,
       pagesChanged: true,
+      pagesUiChanged: true,
       reason: `Non-push event (${eventName ?? "unknown"}) runs the full deploy workflow`,
       workerChanged: true,
       workerPromotionRequired: true,
@@ -70,6 +73,7 @@ export function classifyDeployChanges({
       changedFiles: [],
       deployRequired: true,
       pagesChanged: true,
+      pagesUiChanged: true,
       reason: "Missing push diff base/head; falling back to full deploy path",
       workerChanged: true,
       workerPromotionRequired: true,
@@ -85,6 +89,7 @@ export function classifyDeployChanges({
       changedFiles: [],
       deployRequired: true,
       pagesChanged: true,
+      pagesUiChanged: true,
       reason: `Failed to diff ${baseSha}...${headSha}; falling back to full deploy path`,
       workerChanged: true,
       workerPromotionRequired: true,
@@ -92,6 +97,7 @@ export function classifyDeployChanges({
   }
 
   const pagesChanged = hasPagesDeployImpact(changedFiles);
+  const pagesUiChanged = pagesChanged && hasPagesUiImpact(changedFiles);
   const workerChanged = hasWorkerDeployImpact(changedFiles);
   const workerPromotionRequired = hasWorkerPromotionImpact(changedFiles)
     || hasWorkerPackagePromotionDiff({ baseSha, changedFiles, execFile, headSha });
@@ -99,6 +105,7 @@ export function classifyDeployChanges({
     changedFiles,
     deployRequired: hasDeployImpact(changedFiles),
     pagesChanged,
+    pagesUiChanged,
     reason: changedFiles.length > 0
       ? `Detected ${changedFiles.length} changed file(s) in push range`
       : "No changed files detected in push range",
@@ -114,6 +121,7 @@ function writeGithubOutputLine(key, value) {
 export function emitGithubOutputs(classification) {
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("pages_changed", classification.pagesChanged ? "true" : "false");
+  writeGithubOutputLine("pages_ui_changed", classification.pagesUiChanged ? "true" : "false");
   writeGithubOutputLine("worker_changed", classification.workerChanged ? "true" : "false");
   writeGithubOutputLine("worker_promotion_required", classification.workerPromotionRequired ? "true" : "false");
 }
@@ -132,6 +140,7 @@ function runCli(env = process.env) {
     }
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
+  console.error(`[deploy-changes] pages_ui_changed=${classification.pagesUiChanged}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);
   console.error(`[deploy-changes] worker_promotion_required=${classification.workerPromotionRequired}`);
   console.error(`[deploy-changes] deploy_required=${classification.deployRequired}`);

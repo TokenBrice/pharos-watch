@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import {
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasPagesUiImpact,
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
@@ -18,6 +19,8 @@ import {
 } from "../lib/validate-contract.mjs";
 
 const ZERO_SHA = /^0+$/;
+const LOCAL_MOBILE_CANARY_ROUTES = "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
+const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 
 export function normalizePath(path) {
   return normalizeRepoPath(path);
@@ -152,6 +155,26 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
   const baseEnv = env.MERGE_GATE_NATIVE_ENV === "1"
     ? {}
     : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
+
+  if (cmd === "npm run validate:pages-smoke") {
+    const pagesUiChanged = hasPagesUiImpact(changedFiles);
+    if (!pagesUiChanged) {
+      return {
+        ...baseEnv,
+        PAGES_SMOKE_INCLUDE_MOBILE: "0",
+      };
+    }
+
+    return {
+      ...baseEnv,
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+      ...(env.SMOKE_MOBILE_UI_ROUTES ? {} : { SMOKE_MOBILE_UI_ROUTES: LOCAL_MOBILE_CANARY_ROUTES }),
+      ...(env.SMOKE_MOBILE_UI_VIEWPORTS ? {} : { SMOKE_MOBILE_UI_VIEWPORTS: LOCAL_MOBILE_CANARY_VIEWPORTS }),
+      ...(env.SMOKE_MOBILE_UI_SKIP_DESKTOP ? {} : { SMOKE_MOBILE_UI_SKIP_DESKTOP: "1" }),
+      ...(env.SMOKE_MOBILE_UI_WORKERS ? {} : { SMOKE_MOBILE_UI_WORKERS: "3" }),
+      ...(env.SMOKE_MOBILE_UI_WAIT_MS ? {} : { SMOKE_MOBILE_UI_WAIT_MS: "1500" }),
+    };
+  }
 
   if (cmd !== "npm run coverage:critical") {
     return baseEnv;

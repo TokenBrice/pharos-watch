@@ -367,13 +367,12 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(pagesReleaseJob).toContain("Start local export smoke server");
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
+    expect(pagesReleaseJob).toContain("Smoke local mobile canary (UI-impacting diffs only)");
+    expect(pagesReleaseJob).toContain("needs.detect-changes.outputs.pages_ui_changed == 'true'");
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
     expect(pagesReleaseJob).toContain("Capture Pages release metrics");
-    expect(pagesReleaseJob).toContain("Smoke live public UI");
-    expect(pagesReleaseJob).toContain("Smoke ops canary");
-    expect(pagesReleaseJob).toContain("Smoke transport redirects");
-    expect(pagesReleaseJob).toContain("Summarize post-publish smokes");
+    expect(pagesReleaseJob).toContain("Run post-publish smokes in parallel");
     expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
     expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
     expect(pagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");

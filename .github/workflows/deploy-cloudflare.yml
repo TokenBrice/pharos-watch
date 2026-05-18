@@ -18,6 +18,7 @@ jobs:
     outputs:
       deploy_required: ${{ steps.classify.outputs.deploy_required }}
       pages_changed: ${{ steps.classify.outputs.pages_changed }}
+      pages_ui_changed: ${{ steps.classify.outputs.pages_ui_changed }}
       worker_changed: ${{ steps.classify.outputs.worker_changed }}
       worker_promotion_required: ${{ steps.classify.outputs.worker_promotion_required }}
     steps:
@@ -350,9 +351,16 @@ jobs:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_UI_OVERFLOW_WORKERS: "6"
-      - run: npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
+      - name: Smoke local mobile canary (UI-impacting diffs only)
+        if: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}
+        run: npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
         env:
           SMOKE_UI_BROWSER_CHANNEL: chrome
+          SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
+          SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
+          SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
+          SMOKE_MOBILE_UI_WORKERS: "3"
+          SMOKE_MOBILE_UI_WAIT_MS: "1500"
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log
@@ -437,36 +445,47 @@ jobs:
             fi
             sleep $((attempt * 15))
           done
-      - name: Smoke live public UI
-        id: smoke-ui-live
+      - name: Run post-publish smokes in parallel
+        id: post-publish-smokes
+        if: ${{ steps.deploy-pages.outcome == 'success' }}
         continue-on-error: true
-        run: npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
-      - name: Smoke ops canary
-        id: smoke-ops
-        continue-on-error: true
-        run: npm run test:smoke-ops
-        env:
           SMOKE_OPS_UI_URL: ${{ vars.SMOKE_OPS_UI_URL || 'https://ops.pharos.watch/admin/' }}
           SMOKE_OPS_API_BASE: ${{ vars.SMOKE_OPS_API_BASE || 'https://ops-api.pharos.watch' }}
           SMOKE_OPS_SCOPE: "canary"
           OPS_SMOKE_CF_ACCESS_CLIENT_ID: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_ID }}
           OPS_SMOKE_CF_ACCESS_CLIENT_SECRET: ${{ secrets.OPS_SMOKE_CF_ACCESS_CLIENT_SECRET }}
-      - name: Smoke transport redirects
-        id: smoke-transport
-        continue-on-error: true
-        run: npm run test:smoke-transport
-      - name: Summarize post-publish smokes
-        id: post-publish-smokes
-        if: ${{ always() && steps.deploy-pages.outcome == 'success' }}
-        continue-on-error: true
-        env:
-          UI_STATUS: ${{ steps.smoke-ui-live.outcome }}
-          OPS_STATUS: ${{ steps.smoke-ops.outcome }}
-          TRANSPORT_STATUS: ${{ steps.smoke-transport.outcome }}
         run: |
+          set +e
+
+          npm run test:smoke-ui -- --url https://pharos.watch --mode live --skip-overflow &
+          ui_pid=$!
+          npm run test:smoke-ops &
+          ops_pid=$!
+          npm run test:smoke-transport &
+          transport_pid=$!
+
+          wait "$ui_pid"
+          ui_status=$?
+          wait "$ops_pid"
+          ops_status=$?
+          wait "$transport_pid"
+          transport_status=$?
+
+          to_result() {
+            if [ "$1" -eq 0 ]; then
+              echo "success"
+            else
+              echo "failure"
+            fi
+          }
+
+          UI_STATUS="$(to_result "$ui_status")"
+          OPS_STATUS="$(to_result "$ops_status")"
+          TRANSPORT_STATUS="$(to_result "$transport_status")"
+
           echo "ui_status=${UI_STATUS}" >> "$GITHUB_OUTPUT"
           echo "ops_status=${OPS_STATUS}" >> "$GITHUB_OUTPUT"
           echo "transport_status=${TRANSPORT_STATUS}" >> "$GITHUB_OUTPUT"
@@ -481,7 +500,7 @@ jobs:
             echo "| Transport redirects | ${TRANSPORT_STATUS} | no |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${UI_STATUS}" != "success" ] || [ "${OPS_STATUS}" != "success" ] || [ "${TRANSPORT_STATUS}" != "success" ]; then
+          if [ "$ui_status" -ne 0 ] || [ "$ops_status" -ne 0 ] || [ "$transport_status" -ne 0 ]; then
             echo "post-publish smoke statuses: ui=${UI_STATUS}, ops=${OPS_STATUS}, transport=${TRANSPORT_STATUS}"
             exit 1
           fi

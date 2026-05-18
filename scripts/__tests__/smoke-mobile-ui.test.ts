@@ -1,13 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   assertRouteSummary,
   DEFAULT_MOBILE_UI_ROUTES,
   DEFAULT_MOBILE_UI_VIEWPORTS,
+  getMobileWorkerCount,
   getConsoleScanOutcome,
   getTableScanOutcome,
   getTouchScanOutcome,
   isAllowedSmallTouchTarget,
+  parseArgs,
   parseRouteList,
   parseViewportList,
 } from "../maintenance/smoke-mobile-ui.mjs";
@@ -45,6 +47,60 @@ describe("parseViewportList", () => {
 
   it("falls back when viewport input is invalid", () => {
     expect(parseViewportList("wide,390-by-844")).toEqual(DEFAULT_MOBILE_UI_VIEWPORTS);
+  });
+});
+
+describe("parseArgs", () => {
+  const ORIGINAL_SKIP = process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
+  const ORIGINAL_WORKERS = process.env.SMOKE_MOBILE_UI_WORKERS;
+
+  afterEach(() => {
+    if (ORIGINAL_SKIP === undefined) {
+      delete process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
+    } else {
+      process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP = ORIGINAL_SKIP;
+    }
+
+    if (ORIGINAL_WORKERS === undefined) {
+      delete process.env.SMOKE_MOBILE_UI_WORKERS;
+    } else {
+      process.env.SMOKE_MOBILE_UI_WORKERS = ORIGINAL_WORKERS;
+    }
+  });
+
+  it("skips desktop by default unless explicitly enabled", () => {
+    delete process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP;
+    expect(parseArgs([]).skipDesktop).toBe(true);
+    expect(parseArgs(["--include-desktop"]).skipDesktop).toBe(false);
+    expect(parseArgs(["--include-desktop", "--skip-desktop"]).skipDesktop).toBe(true);
+  });
+
+  it("respects SMOKE_MOBILE_UI_SKIP_DESKTOP=0", () => {
+    process.env.SMOKE_MOBILE_UI_SKIP_DESKTOP = "0";
+    expect(parseArgs([]).skipDesktop).toBe(false);
+  });
+
+  it("accepts worker overrides from env and argv", () => {
+    process.env.SMOKE_MOBILE_UI_WORKERS = "4";
+    expect(parseArgs([]).workers).toBe("4");
+    expect(parseArgs(["--workers", "3"]).workers).toBe("3");
+  });
+});
+
+describe("getMobileWorkerCount", () => {
+  it("defaults to one worker when there are no mobile tasks", () => {
+    expect(getMobileWorkerCount(0, "6")).toBe(1);
+  });
+
+  it("clamps worker count by task count and max cap", () => {
+    expect(getMobileWorkerCount(1, "3")).toBe(1);
+    expect(getMobileWorkerCount(12, "99")).toBe(6);
+  });
+
+  it("falls back to the default worker count on invalid input", () => {
+    expect(getMobileWorkerCount(12, "")).toBe(2);
+    expect(getMobileWorkerCount(12, "abc")).toBe(2);
+    expect(getMobileWorkerCount(12, "0")).toBe(2);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   classifyDeployChanges,
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasPagesUiImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
   hasWorkerPromotionImpact,
@@ -57,6 +58,26 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-methodology-pdfs.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
+  });
+});
+
+describe("hasPagesUiImpact", () => {
+  it("returns false for workflow-only and script-only Pages changes", () => {
+    expect(
+      hasPagesUiImpact([
+        ".github/workflows/pages-release.yml",
+        "scripts/maintenance/generate-markdown-exports.ts",
+        "scripts/lib/validate-contract.mjs",
+      ]),
+    ).toBe(false);
+  });
+
+  it("returns true for frontend/runtime surface changes", () => {
+    expect(hasPagesUiImpact(["src/app/page.tsx"])).toBe(true);
+    expect(hasPagesUiImpact(["public/logo.svg"])).toBe(true);
+    expect(hasPagesUiImpact(["shared/lib/classification.ts"])).toBe(true);
+    expect(hasPagesUiImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
+    expect(hasPagesUiImpact(["data/depeg-events.json"])).toBe(true);
   });
 });
 
@@ -186,6 +207,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {
@@ -198,6 +220,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("runs only the Pages path for frontend-only push diffs", () => {
@@ -214,6 +237,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
   });
 
@@ -231,6 +255,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(false);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
   });
 
@@ -248,6 +273,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
   });
 
@@ -283,6 +309,7 @@ diff --git a/package-lock.json b/package-lock.json
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("promotes the Worker for root package changes that can affect its bundle", () => {
@@ -308,6 +335,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
@@ -324,6 +352,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual([".github/workflows/pages-prepare.yml"]);
   });
 
@@ -341,6 +370,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
   });
 

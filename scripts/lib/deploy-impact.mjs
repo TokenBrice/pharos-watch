@@ -12,6 +12,18 @@ const WORKER_CHANGE_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.worker.exactPat
 const WORKER_PROMOTION_EXACT_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.exactPaths);
 const WORKER_PROMOTION_SHARED_EXCLUDED_PATHS = new Set(DEPLOY_IMPACT_REGISTRY.workerPromotion.sharedExcludedPaths);
 const WORKER_ROOT_RUNTIME_PACKAGES = new Set(DEPLOY_IMPACT_REGISTRY.workerRootRuntimePackages);
+const PAGES_UI_EXACT_PATHS = new Set([
+  "next.config.ts",
+  "package.json",
+  "package-lock.json",
+]);
+const PAGES_UI_PREFIXES = [
+  "src/",
+  "public/",
+  "shared/",
+  "functions/",
+  "data/",
+];
 
 const FULL_DEPLOY_INFRA_PREFIXES = DEPLOY_IMPACT_REGISTRY.fullDeployInfra.prefixes;
 const PAGES_CHANGE_PREFIXES = DEPLOY_IMPACT_REGISTRY.pages.prefixes;
@@ -112,6 +124,13 @@ export function hasPagesDeployImpact(files) {
     || PAGES_CHANGE_EXACT_PATHS.has(file)
     || FULL_DEPLOY_INFRA_PREFIXES.some((prefix) => file.startsWith(prefix))
     || PAGES_CHANGE_PREFIXES.some((prefix) => file.startsWith(prefix)),
+  );
+}
+
+export function hasPagesUiImpact(files) {
+  return files.some((file) =>
+    PAGES_UI_EXACT_PATHS.has(file)
+    || PAGES_UI_PREFIXES.some((prefix) => file.startsWith(prefix)),
   );
 }
 

@@ -113,6 +113,54 @@ describe("buildCommandPlan", () => {
     ).toEqual({});
   });
 
+  it("skips local mobile smoke when pages smoke runs for non-UI diffs", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], {}),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "0",
+    });
+  });
+
+  it("applies the local mobile canary profile for UI-impacting pages smoke", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {}),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
+      SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
+      SMOKE_MOBILE_UI_WORKERS: "3",
+      SMOKE_MOBILE_UI_WAIT_MS: "1500",
+    });
+  });
+
+  it("does not override explicit local mobile smoke env overrides", () => {
+    expect(
+      getCommandEnv(
+        "npm run validate:pages-smoke",
+        ["src/app/page.tsx"],
+        {
+          SMOKE_MOBILE_UI_ROUTES: "/custom/",
+          SMOKE_MOBILE_UI_VIEWPORTS: "412x915",
+          SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
+          SMOKE_MOBILE_UI_WORKERS: "5",
+          SMOKE_MOBILE_UI_WAIT_MS: "2100",
+        },
+      ),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+    });
+  });
+
   it("groups independent post-validate checks for parallel local execution", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"]);
     expect(
