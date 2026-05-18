@@ -15,9 +15,10 @@ interface ContagionGraphBodyProps {
   cards: ReportCard[];
   graph: ReturnType<typeof useContagionGraphModel>;
   logos?: Record<string, string>;
+  detailNodePresentation?: boolean;
 }
 
-export function ContagionGraphBody({ cards, graph, logos }: ContagionGraphBodyProps) {
+export function ContagionGraphBody({ cards, graph, logos, detailNodePresentation }: ContagionGraphBodyProps) {
   const tooltipContext = {
     activeHoveredId: graph.activeHoveredId,
     activeHoveredEdge: graph.activeHoveredEdge,
@@ -41,6 +42,7 @@ export function ContagionGraphBody({ cards, graph, logos }: ContagionGraphBodyPr
       <ContagionGraphStage
         graph={graph}
         logos={logos}
+        detailNodePresentation={detailNodePresentation}
         nodeTooltipEl={nodeTooltipEl}
         edgeTooltipEl={edgeTooltipEl}
         overlay={

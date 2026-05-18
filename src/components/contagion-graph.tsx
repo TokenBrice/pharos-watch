@@ -32,7 +32,14 @@ export function ContagionGraph({
 
   if (graph.nodes.length === 0) return null;
 
-  const stage = <ContagionGraphBody cards={cards} graph={graph} logos={logos} />;
+  const stage = (
+    <ContagionGraphBody
+      cards={cards}
+      graph={graph}
+      logos={logos}
+      detailNodePresentation={Boolean(minimalChrome)}
+    />
+  );
 
   if (minimalChrome) {
     return <div className="min-w-0">{stage}</div>;

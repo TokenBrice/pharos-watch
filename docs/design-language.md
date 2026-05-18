@@ -25,7 +25,7 @@ Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/dige
 
 ### Masthead tagline
 
-The `SiteHeader` tagline reads `Chart your route through the stablecoin market — live peg, safety, liquidity, and dependency signals on every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
+The `SiteHeader` tagline reads `Chart your route through the stablecoin market — depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals for every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
 
 ### Hero signals rail (stablecoin detail)
 

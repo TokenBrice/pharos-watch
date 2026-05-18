@@ -232,6 +232,11 @@ export default function StablecoinDetailClient({
   }
 
   const hasPriceTransparency = !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const hasRedemptionBackstop = Boolean(viewModel.redemptionBackstop);
+  const liquidityDetailGridClass =
+    hasPriceTransparency && hasRedemptionBackstop
+      ? "grid grid-cols-1 gap-6 lg:grid-cols-2"
+      : "grid grid-cols-1 gap-6";
   const frozenNote =
     viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
       <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
@@ -425,8 +430,8 @@ export default function StablecoinDetailClient({
           </SectionErrorBoundary>
         </section>
 
-        {(hasPriceTransparency || viewModel.redemptionBackstop) && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {(hasPriceTransparency || hasRedemptionBackstop) && (
+          <div className={liquidityDetailGridClass}>
             {hasPriceTransparency && viewModel.coinData ? (
               <section id="price" aria-label="Price transparency">
                 <PriceTransparencyCard
@@ -437,7 +442,7 @@ export default function StablecoinDetailClient({
                 />
               </section>
             ) : null}
-            {viewModel.redemptionBackstop ? (
+            {hasRedemptionBackstop && viewModel.redemptionBackstop ? (
               <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
             ) : null}
           </div>

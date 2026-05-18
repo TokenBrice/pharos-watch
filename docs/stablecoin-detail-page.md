@@ -110,6 +110,7 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 - Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the overview zone and are not top-level scrollspy entries.
+- `ContagionSnapshot` uses the shared dependency graph in `minimalChrome` mode. On detail pages, crowded maps keep the compact node treatment with a 1.33x internal logo zoom; maps with 10 or fewer visible stablecoins render ticker labels and 2x node/logo/text scale, and maps with 5 or fewer visible stablecoins use 3x scale.
 - `DistributionSection` renders after the chart, outside the top-level rail.
 - `DepegHistory` is omitted for NAV tokens, but the top-level history section remains mounted for timeline and score-history content.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.

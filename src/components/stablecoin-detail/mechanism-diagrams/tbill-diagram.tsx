@@ -50,6 +50,7 @@ export function TbillDiagram({ symbol }: { symbol: string }) {
         baseY={30}
         peakY={6}
         label="NAV accrues"
+        labelY={9}
       />
     </MechanismDiagramShell>
   );

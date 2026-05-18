@@ -91,7 +91,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
             Pharos
           </h1>
           <p className="hidden max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88 md:line-clamp-2 md:block lg:line-clamp-none">
-            Chart your route through the stablecoin market — live peg, safety, liquidity, and dependency signals on every tracked coin.
+            Chart your route through the stablecoin market — depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals for every tracked coin.
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5 text-[11px] md:hidden">

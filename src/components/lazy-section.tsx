@@ -5,7 +5,9 @@ import { useNearViewport } from "@/hooks/use-near-viewport";
 
 interface LazySectionProps {
   /** Minimum height in px to reserve while gated, prevents CLS. */
-  minHeight: number;
+  minHeight?: number;
+  /** Optional responsive min-height utility classes for adaptive chart shells. */
+  className?: string;
   /** Optional IntersectionObserver rootMargin override. */
   rootMargin?: string;
   children: ReactNode;
@@ -18,10 +20,14 @@ interface LazySectionProps {
  * element approaches the viewport (or immediately when `IntersectionObserver`
  * is unavailable).
  */
-export function LazySection({ minHeight, rootMargin, children }: LazySectionProps) {
+export function LazySection({ minHeight, className, rootMargin, children }: LazySectionProps) {
   const { ref, near } = useNearViewport<HTMLDivElement>(rootMargin);
   return (
-    <div ref={ref} style={{ minHeight }}>
+    <div
+      ref={ref}
+      className={near ? undefined : className}
+      style={!near && minHeight != null ? { minHeight } : undefined}
+    >
       {near ? children : null}
     </div>
   );

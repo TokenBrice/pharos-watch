@@ -250,6 +250,7 @@ interface DiagramLoopArrowProps {
   baseY: number;
   peakY: number;
   label?: string;
+  labelY?: number;
 }
 
 export function DiagramLoopArrow({
@@ -258,6 +259,7 @@ export function DiagramLoopArrow({
   baseY,
   peakY,
   label,
+  labelY,
 }: DiagramLoopArrowProps) {
   const midX = (fromX + toX) / 2;
   const arrowTipX = toX;
@@ -278,7 +280,7 @@ export function DiagramLoopArrow({
       {label ? (
         <text
           x={midX}
-          y={peakY + (baseY - peakY) / 2}
+          y={labelY ?? peakY + (baseY - peakY) / 2}
           textAnchor="middle"
           fontSize={9}
           fontStyle="italic"
