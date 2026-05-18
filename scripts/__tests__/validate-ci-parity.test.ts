@@ -373,9 +373,11 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(pagesReleaseJob).toContain("Start local export smoke server");
+    expect(pagesReleaseJob).toContain("Run local pre-publish checks in parallel");
+    expect(pagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ needs.detect-changes.outputs.pages_ui_changed }}");
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
-    expect(pagesReleaseJob).toContain("Smoke local mobile canary (UI-impacting diffs only)");
-    expect(pagesReleaseJob).toContain("needs.detect-changes.outputs.pages_ui_changed == 'true'");
+    expect(pagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
+    expect(pagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
     expect(pagesReleaseJob).toContain("Capture Pages release metrics");
@@ -389,12 +391,14 @@ describe("validate-ci parity", () => {
       "npm run generate:public-datasets",
       "npm run build",
       "npm run check:feature-flag-inlining",
-      "npm run seo:check",
       "npm run check:phishing-signatures",
       "npm run check:classifier-sensitive-copy",
       "npm run check:build-size",
       "Capture Pages release metrics",
       "npm run check:build-attribution",
+      "Start local export smoke server",
+      "Run local pre-publish checks in parallel",
+      "npm run seo:check",
     ]);
     expect(pagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
 

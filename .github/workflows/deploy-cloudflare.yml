@@ -266,7 +266,6 @@ jobs:
         with:
           node-version: 24
           tooling-cache: "true"
-          install-playwright-chromium: "true"
       - name: Fetch digests from the target API environment
         run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
       - name: Fetch depeg events from the target API environment
@@ -281,7 +280,6 @@ jobs:
           SMOKE_API_BASE: ""
           API_BASE_URL: ""
       - run: npm run check:feature-flag-inlining
-      - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
       - run: npm run check:build-size
@@ -346,21 +344,50 @@ jobs:
           done
           cat /tmp/pages-smoke-server.log
           exit 1
-      - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
+      - name: Run local pre-publish checks in parallel
         env:
+          PAGES_UI_CHANGED: ${{ needs.detect-changes.outputs.pages_ui_changed }}
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
           SMOKE_UI_BROWSER_CHANNEL: chrome
+          # Keep deploy-lane overflow checks fast with representative canary routes.
+          # Full route-breadth overflow coverage remains in broader validation lanes.
+          SMOKE_UI_OVERFLOW_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
           SMOKE_UI_OVERFLOW_WORKERS: "6"
-      - name: Smoke local mobile canary (UI-impacting diffs only)
-        if: ${{ needs.detect-changes.outputs.pages_ui_changed == 'true' }}
-        run: npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
-        env:
-          SMOKE_UI_BROWSER_CHANNEL: chrome
           SMOKE_MOBILE_UI_ROUTES: /,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/
           SMOKE_MOBILE_UI_VIEWPORTS: 360x740,390x844
           SMOKE_MOBILE_UI_SKIP_DESKTOP: "1"
           SMOKE_MOBILE_UI_WORKERS: "3"
           SMOKE_MOBILE_UI_WAIT_MS: "1500"
+        run: |
+          set +e
+
+          npm run seo:check &
+          seo_pid=$!
+
+          npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local &
+          ui_pid=$!
+
+          mobile_pid=""
+          if [ "${PAGES_UI_CHANGED}" = "true" ]; then
+            npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173 &
+            mobile_pid=$!
+          fi
+
+          wait "$seo_pid"
+          seo_status=$?
+          wait "$ui_pid"
+          ui_status=$?
+
+          mobile_status=0
+          if [ -n "$mobile_pid" ]; then
+            wait "$mobile_pid"
+            mobile_status=$?
+          fi
+
+          if [ "$seo_status" -ne 0 ] || [ "$ui_status" -ne 0 ] || [ "$mobile_status" -ne 0 ]; then
+            echo "local pre-publish statuses: seo=${seo_status}, ui=${ui_status}, mobile=${mobile_status}"
+            exit 1
+          fi
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log
