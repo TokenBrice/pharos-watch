@@ -8,6 +8,7 @@ import {
   createFreshCacheHitResponse,
   createStaleCacheHitResponse,
 } from "./stablecoin-detail/shared";
+import { applyCuratedDetailAddress } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
 
 const detailRefreshesInFlight = new Map<string, Promise<Response>>();
@@ -76,11 +77,14 @@ export const handleStablecoinDetail = withErrorHandler(
     const cached = await getCache(db, cacheKey);
     const meta = TRACKED_META_BY_ID.get(id);
     const pegType = `pegged${meta?.flags.pegCurrency ?? "USD"}`;
+    const normalizedCached = cached
+      ? { ...cached, value: applyCuratedDetailAddress(cached.value, meta) }
+      : null;
 
-    if (cached) {
-      const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
+    if (normalizedCached) {
+      const age = Math.floor(Date.now() / 1000) - normalizedCached.updatedAt;
       if (age < CACHE_TTL_SECONDS) {
-        return createFreshCacheHitResponse(cached.value, age);
+        return createFreshCacheHitResponse(normalizedCached.value, age);
       }
       if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
         console.warn(
@@ -96,8 +100,8 @@ export const handleStablecoinDetail = withErrorHandler(
         });
         return response.clone();
       }
-      scheduleStablecoinDetailRefresh({ db, id, pegType, cached, ctx, coingeckoApiKey });
-      return createStaleCacheHitResponse(cached.value, age);
+      scheduleStablecoinDetailRefresh({ db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey });
+      return createStaleCacheHitResponse(normalizedCached.value, age);
     }
 
     const response = await startStablecoinDetailRefresh({
