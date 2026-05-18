@@ -74,8 +74,16 @@ vi.mock("@/hooks/use-stress-test", () => ({
 }));
 
 vi.mock("@/components/report-card-mini", () => ({
-  ReportCardMini: ({ card, coreSettlement }: { card: ReportCard; coreSettlement?: boolean }) => (
-    <article data-testid={`report-card-${card.id}`}>
+  ReportCardMini: ({
+    card,
+    coreSettlement,
+    gradeVersionVariant,
+  }: {
+    card: ReportCard;
+    coreSettlement?: boolean;
+    gradeVersionVariant?: string;
+  }) => (
+    <article data-testid={`report-card-${card.id}`} data-grade-version-variant={gradeVersionVariant ?? "unset"}>
       {card.symbol}
       {coreSettlement ? " Core rail" : ""}
     </article>
@@ -166,6 +174,8 @@ describe("ReportCardsClient", () => {
     expect(screen.getByTestId("report-card-usdc-circle")).toBeTruthy();
     expect(screen.getByTestId("report-card-usdt-tether")).toBeTruthy();
     expect(screen.getAllByText("Core rail").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByTestId("report-card-usdc-circle").getAttribute("data-grade-version-variant")).toBe("tooltip-only");
+    expect(screen.getByTestId("report-card-usdt-tether").getAttribute("data-grade-version-variant")).toBe("tooltip-only");
 
     fireEvent.click(screen.getAllByRole("button", { name: /B \(1\)/ })[0]!);
 

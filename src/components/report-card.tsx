@@ -398,7 +398,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         </div>
         {hasRightColumn ? (
           <div className="hidden xl:block">
-            <ReportCardRadar card={card} labels="short" size={280} />
+            <ReportCardRadar card={card} labels="short" size={340} />
           </div>
         ) : null}
       </div>

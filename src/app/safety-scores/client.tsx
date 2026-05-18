@@ -179,6 +179,7 @@ export function ReportCardsClient() {
         originalScore={originalCardMap.get(card.id)?.overallScore}
         coreSettlement={coreSettlementProfiles.has(card.id)}
         animIndex={index % 5}
+        gradeVersionVariant="tooltip-only"
       />
     </LazyCard>
   ), [affectedIds, coreSettlementProfiles, isSimulating, logos, originalCardMap]);

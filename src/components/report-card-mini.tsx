@@ -5,6 +5,7 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import type { ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 import { getNetColor } from "@shared/lib/format";
 import { ReportCardRadar } from "./radar-chart";
@@ -28,6 +29,8 @@ interface ReportCardMiniProps {
   animIndex?: number;
   /** Trend direction based on score change from previous period */
   trend?: "up" | "down" | "stable" | null;
+  /** Controls whether the inline methodology version suffix is shown on grade badges. */
+  gradeVersionVariant?: ScoreBadgeWrapperVariant;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +65,7 @@ export function ReportCardMini({
   coreSettlement,
   animIndex = 0,
   trend,
+  gradeVersionVariant = "suffix",
 }: ReportCardMiniProps) {
   const dimUnaffected = isSimulating && !isSimulated;
   const cardBody = (
@@ -128,6 +132,7 @@ export function ReportCardMini({
               animate
               animationDelayMs={animIndex * 40}
               versionTopic="safetyScore"
+              versionVariant={gradeVersionVariant}
               versionInteractive={false}
             />
             {/* Trend indicator */}

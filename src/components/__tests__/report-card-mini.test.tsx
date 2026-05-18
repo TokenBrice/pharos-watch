@@ -3,6 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import type { ReportCard } from "@shared/types";
 
 vi.mock("next/link", () => ({
@@ -82,5 +83,14 @@ describe("ReportCardMini", () => {
 
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Defunct")).toBeTruthy();
+  });
+
+  it("hides the inline methodology version label when configured for tooltip-only badges", () => {
+    const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel as string;
+    expect(versionLabel).toBeTruthy();
+
+    render(<ReportCardMini card={makeCard()} gradeVersionVariant="tooltip-only" />);
+
+    expect(screen.queryByText(versionLabel)).toBeNull();
   });
 });
