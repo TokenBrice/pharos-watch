@@ -109,7 +109,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="pharos-focus-ring min-h-10 rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm normal-case tracking-normal text-foreground sm:min-h-8 sm:py-1.5"
+        className="pharos-focus-ring min-h-11 rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm normal-case tracking-normal text-foreground sm:min-h-8 sm:py-1.5"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -273,7 +273,7 @@ export function YieldLeaderboardControls({
             id={currencyTabsId}
             value={options.currencyTabs.some((option) => option.value === filters.peg) ? filters.peg : "all"}
             onChange={(event) => onFilterChange("peg", event.target.value)}
-            className="pharos-focus-ring min-h-10 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
+            className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
           >
             {options.currencyTabs.map((option) => (
               <option key={option.value} value={option.value}>

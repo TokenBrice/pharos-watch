@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground" +
+  "inline-flex items-center rounded-full border px-2 py-0.5 font-mono tabular-nums text-muted-foreground sm:px-2.5 sm:py-1" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 interface MetricPill {
@@ -78,10 +78,10 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   );
 
   return (
-    <div className="pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5">
-      <div className="flex min-w-0 items-center gap-3 md:gap-4">
+    <div className="pharos-card-shell flex flex-col gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5">
+      <div className="flex min-w-0 items-center gap-2.5 md:gap-4">
         <span className="md:hidden">
-          <PharosLogo size={28} className="shrink-0 rounded-lg shadow-sm" priority />
+          <PharosLogo size={26} className="shrink-0 rounded-lg shadow-sm" priority />
         </span>
         <span className="hidden md:block">
           <PharosLogo size={40} className="rounded-xl shadow-sm" priority />

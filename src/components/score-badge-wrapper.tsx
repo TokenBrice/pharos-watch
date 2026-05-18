@@ -55,7 +55,7 @@ const ScoreBadgeTrigger = forwardRef<
         onKeyDown?.(event);
       }}
       className={cn(
-        "pharos-focus-ring inline-flex appearance-none items-center rounded-full border-0 bg-transparent p-0 text-inherit",
+        "pharos-focus-ring inline-flex min-h-6 appearance-none items-center rounded-full border-0 bg-transparent p-0 text-inherit",
         className,
       )}
     >

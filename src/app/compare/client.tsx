@@ -23,6 +23,7 @@ import {
   COMPARISON_PRESETS,
   MAX_COMPARE_COINS,
 } from "@/lib/compare-config";
+import type { CoinOption } from "@/lib/compare-types";
 
 const ComparisonTable = dynamic(() => import("@/components/comparison-table").then((m) => m.ComparisonTable), {
   loading: () => <ChartSkeleton className="h-[340px] rounded-xl" />,
@@ -41,6 +42,75 @@ const FlowComparisonChart = dynamic(
   { loading: () => <div className="h-[280px] rounded-xl animate-pulse bg-muted/20" /> },
 );
 
+interface CompareMobileSelectionControlsProps {
+  selectedIds: readonly string[];
+  selectedCoins: readonly (CoinOption | null)[];
+  coinOptions: CoinOption[];
+  logos?: Record<string, string>;
+  disabledIds: Set<string>;
+  onSelect: (slotIndex: number, coin: CoinOption) => void;
+  onRemove: (slotIndex: number) => void;
+  onClear: () => void;
+}
+
+export function CompareMobileSelectionControls({
+  selectedIds,
+  selectedCoins,
+  coinOptions,
+  logos,
+  disabledIds,
+  onSelect,
+  onRemove,
+  onClear,
+}: CompareMobileSelectionControlsProps) {
+  const mobileAddSlotIndex = selectedIds.length;
+
+  return (
+    <div className="space-y-3 sm:hidden">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="pharos-kicker">Selection</p>
+          <p className="text-xs text-muted-foreground">
+            {selectedIds.length}/{MAX_COMPARE_COINS} selected
+          </p>
+        </div>
+        {selectedIds.length > 0 ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {selectedCoins.map((coin, index) =>
+        coin ? (
+          <CoinSelector
+            key={coin.id}
+            coins={coinOptions}
+            selected={coin}
+            logos={logos}
+            disabledIds={disabledIds}
+            onSelect={(selectedCoin) => onSelect(index, selectedCoin)}
+            onRemove={() => onRemove(index)}
+          />
+        ) : null,
+      )}
+      {selectedIds.length < MAX_COMPARE_COINS ? (
+        <CoinSelector
+          coins={coinOptions}
+          selected={null}
+          logos={logos}
+          disabledIds={disabledIds}
+          onSelect={(selectedCoin) => onSelect(mobileAddSlotIndex, selectedCoin)}
+          onRemove={() => {}}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function CompareClient() {
   const { data: logos } = useLogos();
   const {
@@ -53,6 +123,7 @@ export function CompareClient() {
     range,
     selectedCoins,
     selectedIds,
+    setSelectedIds,
     setFlowHours,
     setRange,
   } = useCompareSelection();
@@ -246,7 +317,7 @@ export function CompareClient() {
           <button
             onClick={handleTwitterShare}
             disabled={shareLoading}
-            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
             aria-label="Share comparison on Twitter"
             title="Share on Twitter/X"
           >
@@ -256,7 +327,7 @@ export function CompareClient() {
           <button
             onClick={handleWebShare}
             disabled={shareLoading}
-            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
             aria-label="Share comparison link or image"
             title="Share comparison"
           >
@@ -266,7 +337,7 @@ export function CompareClient() {
           <button
             onClick={handleDownload}
             disabled={shareLoading}
-            className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors disabled:opacity-50"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:py-1.5"
             aria-label="Download comparison as image"
             title="Download comparison image"
           >
@@ -275,7 +346,17 @@ export function CompareClient() {
           </button>
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
+      <CompareMobileSelectionControls
+        selectedIds={selectedIds}
+        selectedCoins={selectedCoins}
+        coinOptions={coinOptions}
+        logos={logos}
+        disabledIds={disabledIds}
+        onSelect={handleSelect}
+        onRemove={handleRemove}
+        onClear={() => setSelectedIds(() => [])}
+      />
+      <div className="hidden gap-3 sm:grid sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
         <CompareEmptyState

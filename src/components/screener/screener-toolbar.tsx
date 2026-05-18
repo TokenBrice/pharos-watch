@@ -369,7 +369,7 @@ function ThresholdField({
           value={minValue || ""}
           placeholder={placeholder ?? String(defaultMin)}
           onChange={(e) => onMinChange(parseValue(e.target.value, defaultMin))}
-          className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums"
+          className="pharos-focus-ring min-h-11 w-full rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm tabular-nums sm:min-h-9"
         />
       </div>
     </div>

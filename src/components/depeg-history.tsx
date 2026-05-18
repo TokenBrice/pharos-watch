@@ -7,6 +7,7 @@ import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
+import { TablePagination } from "@/components/table-pagination";
 import {
   TableCell,
   TableRow,
@@ -192,9 +193,27 @@ export function DepegHistory({
           {isFetchingNextPage ? "" : " loaded"}
         </p>
       ) : null}
+      <ol className="space-y-2 md:hidden" aria-label="Compact depeg event history">
+        {paginatedRows.map((event) => (
+          <DepegEventCard key={event.id} event={event} pegCurrency={pegCurrency} />
+        ))}
+      </ol>
+      {isFullyLoaded && totalEvents > 0 ? (
+        <TablePagination
+          page={effectivePage}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalEvents}
+          onPrevious={onPreviousPage}
+          onNext={onNextPage}
+          noun="events"
+          className="mt-3 rounded-xl border border-border/60 md:hidden"
+        />
+      ) : null}
       <DataTableShell
         columns={DEPEG_HISTORY_COLUMNS}
-        containerClassName="rounded-xl border overflow-hidden"
+        containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"
         pagination={isFullyLoaded && totalEvents > 0 ? {
           page: effectivePage,
@@ -212,6 +231,64 @@ export function DepegHistory({
         ))}
       </DataTableShell>
     </Card>
+  );
+}
+
+function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency: string }) {
+  const isOngoing = event.endedAt === null;
+  const absBps = Math.abs(event.peakDeviationBps);
+  const devColor = deviationColorClass(absBps);
+
+  return (
+    <li className="rounded-lg border border-border/60 bg-background/45 px-3 py-2">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-xs text-muted-foreground">{formatEventDate(event.startedAt)}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={
+                event.direction === "below"
+                  ? "border-red-500/20 bg-red-500/10 text-xs text-red-700 dark:text-red-400"
+                  : "border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
+              }
+            >
+              {event.direction === "below" ? "Below" : "Above"}
+            </Badge>
+            <span className="text-[11px] text-muted-foreground">{event.source}</span>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`font-mono text-sm font-semibold tabular-nums ${devColor}`}>
+            {event.peakDeviationBps > 0 ? "+" : ""}
+            {event.peakDeviationBps} bps
+          </p>
+          <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
+            {isOngoing ? "Ongoing" : formatDuration(event.startedAt, event.endedAt)}
+          </p>
+        </div>
+      </div>
+      <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-border/40 pt-2 text-[11px]">
+        <div>
+          <dt className="text-muted-foreground">Start</dt>
+          <dd className="mt-0.5 font-mono tabular-nums">
+            {formatNativePrice(event.startPrice, pegCurrency, event.pegReference)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Peak</dt>
+          <dd className="mt-0.5 font-mono tabular-nums">
+            {event.peakPrice != null ? formatNativePrice(event.peakPrice, pegCurrency, event.pegReference) : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Recovery</dt>
+          <dd className="mt-0.5 font-mono tabular-nums">
+            {event.recoveryPrice != null ? formatNativePrice(event.recoveryPrice, pegCurrency, event.pegReference) : "—"}
+          </dd>
+        </div>
+      </dl>
+    </li>
   );
 }
 

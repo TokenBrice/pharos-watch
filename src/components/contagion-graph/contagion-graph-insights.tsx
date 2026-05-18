@@ -3,6 +3,7 @@
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { ResolvedLink } from "@/components/contagion-graph-graph";
 import type { GraphNode } from "@/lib/contagion-layout";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
 
 interface ContagionGraphInsightsProps {
@@ -11,6 +12,7 @@ interface ContagionGraphInsightsProps {
   nodeMap: ReadonlyMap<string, GraphNode>;
   logos?: Record<string, string>;
   onTraceNode: (nodeId: string) => void;
+  variant?: "overlay" | "panel";
 }
 
 interface NodeLinkSummary {
@@ -69,6 +71,7 @@ export function ContagionGraphInsights({
   nodeMap,
   logos,
   onTraceNode,
+  variant = "overlay",
 }: ContagionGraphInsightsProps) {
   if (!inspectedNode) return null;
 
@@ -87,7 +90,12 @@ export function ContagionGraphInsights({
 
   return (
     <aside
-      className="pointer-events-auto absolute right-2 top-2 z-10 block w-[260px] max-w-[calc(100%-1rem)] rounded-sm border backdrop-blur-sm sm:w-[280px]"
+      className={cn(
+        "pointer-events-auto rounded-sm border backdrop-blur-sm",
+        variant === "overlay"
+          ? "absolute right-2 top-2 z-10 hidden w-[280px] max-w-[calc(100%-1rem)] sm:block"
+          : "block w-full sm:hidden",
+      )}
       style={{ backgroundColor: "var(--graph-panel-bg)", borderColor: "var(--graph-grid-line)" }}
       role="region"
       aria-label="Selected node details"

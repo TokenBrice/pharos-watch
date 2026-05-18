@@ -117,12 +117,12 @@ interface TapeFiltersProps {
 // Wire-service chip primitives (see docs/tape-page.md Aesthetic Lock).
 // Square borders, mono uppercase, active state via foreground color.
 const CHIP_BASE =
-  "pharos-focus-ring inline-flex items-center border px-2 py-0.5 text-xs uppercase tracking-wide transition-colors";
+  "pharos-focus-ring inline-flex min-h-11 items-center border px-3 py-2 text-xs uppercase tracking-wide transition-colors sm:min-h-0 sm:px-2 sm:py-0.5";
 const CHIP_INACTIVE = "border-border/50 text-muted-foreground hover:border-foreground/40 hover:text-foreground";
 const CHIP_ACTIVE = "border-foreground bg-foreground/10 text-foreground";
 
 const COMBOBOX_TRIGGER =
-  "border border-border/50 px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground hover:border-foreground/40 hover:text-foreground";
+  "min-h-11 border border-border/50 px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground hover:border-foreground/40 hover:text-foreground sm:min-h-0 sm:px-2 sm:py-0.5";
 
 // `q` is server-driven (`/api/events?q=`) so each keystroke would refetch.
 // Debounce 200ms locally and only push to the URL after the user stops
@@ -144,7 +144,7 @@ function DebouncedSearchInput({ value, onCommit }: { value: string; onCommit: (v
       onValueChange={setLocal}
       placeholder="Search events..."
       className="relative w-full sm:w-56"
-      inputClassName="pl-8 h-8 text-xs"
+      inputClassName="h-11 pl-8 text-sm sm:h-8 sm:text-xs"
       ariaLabel="Search events by title or summary"
     />
   );
@@ -174,7 +174,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   const [mobileClassesOpen, setMobileClassesOpen] = useState(activeClassCount > 0);
 
   const classChips = (
-    <div className="flex flex-wrap items-center gap-1" aria-label="Filter by event type">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Filter by event type">
       {TAPE_CLASSES.map((cls) => {
         const slug = `${cls.slug}.*`;
         const active = activeClassSet.has(slug);
@@ -206,13 +206,13 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   );
 
   return (
-    <div className="border-y border-border/30 px-3 py-3 space-y-3 font-mono text-xs">
+    <div className="space-y-3 border-y border-border/30 px-3 py-3 font-mono text-xs">
       <button
         type="button"
         onClick={() => setMobileClassesOpen((v) => !v)}
         aria-expanded={mobileClassesOpen}
         aria-controls="tape-class-chips-mobile"
-        className="pharos-focus-ring inline-flex cursor-pointer items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground sm:hidden"
+        className="pharos-focus-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground sm:hidden"
       >
         <span className={`inline-block transition-transform ${mobileClassesOpen ? "rotate-90" : ""}`} aria-hidden="true">▸</span>
         {activeClassCount > 0 ? `Filter by class · ${activeClassCount} active` : `Filter by class`}
@@ -226,8 +226,8 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
 
       <div className="hidden sm:block">{classChips}</div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-x-3 sm:gap-y-2">
+        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex flex-wrap gap-2 sm:gap-1">
           {WINDOW_OPTIONS.map((opt) => {
             const active = state.window === opt.value;
             return (
@@ -248,7 +248,7 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap gap-1">
+              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap gap-2 sm:gap-1">
                 {TAPE_FILTER_SEVERITY_VALUES.map((sev) => {
                   const active = state.severity === sev;
                   return (

@@ -98,7 +98,7 @@ export function PegBrowseStrip({
         {hasFiatOverflow && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="pharos-focus-ring min-h-11 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:px-0 sm:py-0"
           >
             {expanded ? "Show fewer" : `+${(groups.find((group) => group.label === "Fiat")?.pegs.length ?? 0) - fiatPreview.length} more pegs`}
           </button>

@@ -117,7 +117,7 @@ const InlineHintTrigger = forwardRef<
         onKeyDown?.(event);
       }}
       className={cn(
-        "pharos-focus-ring inline underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground data-[state=open]:decoration-foreground",
+        "pharos-focus-ring inline leading-6 underline decoration-dotted decoration-muted-foreground/60 underline-offset-4 transition-colors hover:decoration-foreground data-[state=open]:decoration-foreground",
         className,
       )}
     >

@@ -271,18 +271,14 @@ export function useContagionGraphModel({
     setHoveredId(null);
     setFocusedId(null);
   }, []);
-  const dragMoveSuppressClick = useRef(false);
   const handleNodeClick = useCallback(
     (nodeId: string) => {
       if (drag.dragId) return;
-      if (dragMoveSuppressClick.current) {
-        dragMoveSuppressClick.current = false;
-        return;
-      }
+      if (drag.consumeDragMovedSincePointerDown()) return;
       setInspectedId(nodeId);
       setSelectedNeighborhoodId(nodeId);
     },
-    [drag.dragId],
+    [drag],
   );
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {

@@ -197,6 +197,9 @@ function YieldLeaderboardTableRowBase({
         onActivate={() => onToggleExpanded(row.id)}
         onHover={() => onPrefetch(row.id)}
         className={warningSignalCount >= 2 ? "border-l-2 border-amber-500/50 hover:bg-muted/30" : "hover:bg-muted/30"}
+        ariaLabel={`${expanded ? "Collapse" : "Expand"} ${row.symbol} yield history`}
+        ariaControls={`yield-row-${row.id}-details`}
+        ariaExpanded={expanded}
       >
         {/* WHY: below md we render a single full-width card cell; the per-column cells stay as table cells above md. */}
         <TableCell colSpan={columnCount} className="md:hidden">
@@ -418,7 +421,7 @@ function YieldLeaderboardTableRowBase({
         </TableCell>
       </InteractiveTableRow>
       {expanded ? (
-        <TableRow>
+        <TableRow id={`yield-row-${row.id}-details`}>
           <TableCell colSpan={columnCount} className="bg-muted/30 px-4 py-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
               <div className="min-w-0">

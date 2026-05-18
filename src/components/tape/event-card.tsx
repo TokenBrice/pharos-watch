@@ -471,9 +471,9 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         </span>
         <span id={titleId} className="sr-only">{event.title}</span>
         {ticker ? (
-          <span aria-hidden="true" className="shrink-0 font-semibold text-foreground">{ticker}</span>
+          <span aria-hidden="true" className="max-w-full break-words font-semibold text-foreground sm:shrink-0">{ticker}</span>
         ) : null}
-        <span className="shrink-0 text-muted-foreground">{event.type}</span>
+        <span className="max-w-full break-all text-muted-foreground sm:shrink-0">{event.type}</span>
         <span className={`shrink-0 uppercase tracking-wide ${severityText}`} aria-label={`severity ${severityLabel}`}>
           {severityLabel}
         </span>
@@ -485,12 +485,12 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         {event.chain ? (
           <span className="shrink-0 uppercase tracking-wide text-muted-foreground">[{event.chain}]</span>
         ) : null}
-        <span className="flex-1" aria-hidden="true" />
+        <span className="hidden flex-1 sm:block" aria-hidden="true" />
         <button
           type="button"
           onClick={handleCopyPermalink}
           aria-label={copied ? "Permalink copied" : "Copy permalink to this event"}
-          className="pharos-focus-ring shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+          className="pharos-focus-ring shrink-0 rounded p-1.5 text-muted-foreground transition-opacity hover:text-foreground sm:p-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>

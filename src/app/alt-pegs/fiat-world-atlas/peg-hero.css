@@ -779,8 +779,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(circle at 64% 16%, oklch(0.18 0.045 252 / 0.24), transparent 36%),
-    oklch(0.035 0.012 255 / 0.98);
+    radial-gradient(circle at 64% 16%, oklch(0.18 0.045 252 / 0.24), transparent 36%), oklch(0.035 0.012 255 / 0.98);
 }
 
 .atlas-fullscreen-dialog__content:fullscreen {
@@ -889,6 +888,42 @@
   }
 
   .atlas-fullscreen-dialog__toolbar {
-    padding: 8px 12px;
+    min-height: 56px;
+    padding: 6px 10px 6px 12px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    gap: 8px;
+  }
+
+  .atlas-fullscreen-dialog__title {
+    font-size: 12px;
+    max-width: calc(100vw - 5.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__scale-key {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    max-width: none;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 7px 8px;
+    border: 1px solid oklch(0.8 0.03 250 / 0.16);
+    border-radius: 999px;
+    background: oklch(0.035 0.012 255 / 0.82);
+    backdrop-filter: blur(10px);
+    scrollbar-width: none;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__scale-key::-webkit-scrollbar {
+    display: none;
+  }
+
+  .peg-hero__live-shell--fullscreen .peg-hero__scale-item {
+    flex: 0 0 auto;
   }
 }

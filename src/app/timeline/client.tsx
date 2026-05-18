@@ -70,7 +70,7 @@ function EmptyState({
                 key={chip.key}
                 type="button"
                 onClick={chip.onClear}
-                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-none border border-border/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40"
+                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-none border border-border/60 px-3 py-2 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40 sm:min-h-0 sm:px-2 sm:py-0.5"
               >
                 <span>{chip.label}</span>
                 <span aria-hidden="true">×</span>
@@ -213,7 +213,7 @@ function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
     <section aria-labelledby="tape-open-incidents-heading" className="space-y-1">
       <h2
         id="tape-open-incidents-heading"
-        className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
+        className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
         ⚠ Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
@@ -244,15 +244,16 @@ function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigestSection
   return (
     <section aria-label={`${primary} ${secondary}`}>
       <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-        <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          <span aria-hidden="true">───</span>
-          <h3 className="shrink-0 text-foreground">
+        <div className="flex min-w-0 flex-col items-start gap-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground sm:flex-row sm:items-center sm:gap-3">
+          <span aria-hidden="true" className="hidden sm:inline">───</span>
+          <h3 className="max-w-full break-words leading-snug text-foreground sm:shrink-0">
             {primary} <span className="text-muted-foreground">· {secondary}</span>
           </h3>
-          <span className="shrink-0 tabular-nums text-muted-foreground">
-            · {day.totalCount} {day.totalCount === 1 ? "event" : "events"} · {classCount} {classCount === 1 ? "class" : "classes"}
+          <span className="max-w-full break-words leading-snug tabular-nums text-muted-foreground sm:shrink-0">
+            <span aria-hidden="true" className="hidden sm:inline">· </span>
+            {day.totalCount} {day.totalCount === 1 ? "event" : "events"} · {classCount} {classCount === 1 ? "class" : "classes"}
           </span>
-          <span aria-hidden="true" className="flex-1 border-t border-border/40" />
+          <span aria-hidden="true" className="w-full border-t border-border/40 sm:flex-1" />
         </div>
       </div>
       <div>
@@ -470,7 +471,7 @@ export function TimelineClient() {
           <button
             type="button"
             onClick={() => setParam("coin", "")}
-            className="pharos-focus-ring inline-flex items-center gap-1.5 border border-border/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40"
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 border border-border/60 px-3 py-2 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40 sm:min-h-0 sm:px-2 sm:py-0.5"
             aria-label={`Clear coin filter ${filters.coin}`}
           >
             <span>Filtered to <span className="font-semibold">{filters.coin}</span></span>

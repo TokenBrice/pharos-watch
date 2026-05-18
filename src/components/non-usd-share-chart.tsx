@@ -157,7 +157,7 @@ export function NonUsdShareChart({
               type="button"
               onClick={onCloseFocus}
               aria-label="Return share chart to overview"
-              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
             >
               <Minimize2 className="h-3.5 w-3.5" />
               Return share chart to overview
@@ -167,7 +167,7 @@ export function NonUsdShareChart({
               type="button"
               onClick={() => onOpenFocus?.(range)}
               aria-label="Open large share chart"
-              className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+              className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
             >
               <Maximize2 className="h-3.5 w-3.5" />
               Open large share chart

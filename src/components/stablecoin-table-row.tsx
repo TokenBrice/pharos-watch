@@ -101,6 +101,9 @@ function StablecoinVirtualRowBase({
   const prevDay = getPrevDayRaw(coin);
   const prevWeek = getPrevWeekRaw(coin);
   const meta = TRACKED_META_BY_ID.get(coin.id);
+  const reportCard = reportCards?.[coin.id];
+  const pegScore = pegScores?.get(coin.id)?.pegScore ?? null;
+  const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const variantDisplay = meta?.variantKind ? getVariantDisplay(meta.variantKind) : null;
   const variantContext = meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]);
@@ -144,7 +147,7 @@ function StablecoinVirtualRowBase({
               aria-label={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
               aria-pressed={isPinned}
               title={`${isPinned ? "Unstar" : "Star"} ${coin.symbol}`}
-              className={`pharos-focus-ring inline-flex size-6 items-center justify-center rounded-md transition-colors ${
+              className={`pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors sm:size-6 ${
                 isPinned
                   ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
                   : "text-muted-foreground opacity-80 hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -200,6 +203,32 @@ function StablecoinVirtualRowBase({
                   }`}
                 >
                   {coin.name}
+                </span>
+                <span className="mt-1 flex min-w-0 items-center gap-1 sm:hidden" aria-label="Mobile risk summary">
+                  {reportCard ? (
+                    <span
+                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 text-[10px] font-mono font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+                      title={`Safety grade ${reportCard.overallGrade}`}
+                    >
+                      {reportCard.overallGrade}
+                    </span>
+                  ) : (
+                    <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-[10px] text-muted-foreground">
+                      NR
+                    </span>
+                  )}
+                  <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
+                    Peg{" "}
+                    <span className={`ml-1 font-mono tabular-nums ${pegScore !== null ? pegScoreColor(pegScore) : "text-muted-foreground"}`}>
+                      {pegScore !== null ? pegScore : "—"}
+                    </span>
+                  </span>
+                  <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
+                    Liq{" "}
+                    <span className={`ml-1 font-mono tabular-nums ${liquidityScore ? getScoreColor(liquidityScore) : "text-muted-foreground"}`}>
+                      {liquidityScore ? liquidityScore : "—"}
+                    </span>
+                  </span>
                 </span>
               </span>
             </Link>
@@ -282,19 +311,19 @@ function StablecoinVirtualRowBase({
       )}
       {isVisible("grade") && (
         <TableCell className="px-3 py-2 text-center">
-          {reportCards?.[coin.id] && (
+          {reportCard && (
             <Badge
               variant="outline"
               className={`text-xs font-mono px-1.5 py-0.5 transition-all duration-200 ${
-                REPORT_CARD_GRADE_COLORS[reportCards[coin.id].overallGrade]
+                REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]
               } ${
-                ["D", "F"].includes(reportCards[coin.id].overallGrade)
+                ["D", "F"].includes(reportCard.overallGrade)
                   ? "animate-risk-pulse border-red-500/60 bg-red-500/5"
                   : ""
               }`}
-              title={`Pharos grade: ${reportCards[coin.id].overallGrade}${reportCards[coin.id].overallScore ? ` (${reportCards[coin.id].overallScore}/100)` : ""}`}
+              title={`Pharos grade: ${reportCard.overallGrade}${reportCard.overallScore ? ` (${reportCard.overallScore}/100)` : ""}`}
             >
-              {reportCards[coin.id].overallGrade}
+              {reportCard.overallGrade}
             </Badge>
           )}
         </TableCell>
@@ -305,24 +334,20 @@ function StablecoinVirtualRowBase({
             if (meta?.flags.navToken) {
               return <span className="text-muted-foreground">—</span>;
             }
-            const pegCoin = pegScores?.get(coin.id);
-            if (!pegCoin || pegCoin.pegScore === null) {
+            if (pegScore === null) {
               return <span className="text-muted-foreground">—</span>;
             }
-            const score = pegCoin.pegScore;
-            return <span className={pegScoreColor(score)}>{score}</span>;
+            return <span className={pegScoreColor(pegScore)}>{pegScore}</span>;
           })()}
         </TableCell>
       )}
       {isVisible("liquidity") && (
         <TableCell className="text-right font-mono tabular-nums text-sm">
           {(() => {
-            const liq = dexLiquidity?.[coin.id];
-            if (!liq || liq.liquidityScore === null || liq.liquidityScore === 0) {
+            if (liquidityScore === null || liquidityScore === 0) {
               return <span className="text-muted-foreground">—</span>;
             }
-            const score = liq.liquidityScore;
-            return <span className={getScoreColor(score)}>{score}</span>;
+            return <span className={getScoreColor(liquidityScore)}>{liquidityScore}</span>;
           })()}
         </TableCell>
       )}

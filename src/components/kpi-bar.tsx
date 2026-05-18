@@ -112,22 +112,22 @@ export function KpiBar() {
   if (isLoading) {
     return (
       <Card className="pharos-card-shell overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5">
           <p className="pharos-kicker">Market Snapshot</p>
           <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
         </div>
-        <div className="space-y-2.5 px-3 py-3 lg:hidden">
-          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-4">
+        <div className="space-y-2 px-2.5 py-2.5 sm:space-y-2.5 sm:px-3 sm:py-3 lg:hidden">
+          <div className="rounded-xl border border-border/60 bg-background/40 px-3 py-3 sm:rounded-2xl sm:px-4 sm:py-4">
             <Skeleton className="h-3 w-24" />
-            <Skeleton className="mt-3 h-10 w-28" />
-            <div className="mt-3 flex gap-2">
+            <Skeleton className="mt-2 h-9 w-24 sm:mt-3 sm:h-10 sm:w-28" />
+            <div className="mt-2 flex gap-2 sm:mt-3">
               <Skeleton className="h-6 w-20 rounded-full" />
               <Skeleton className="h-6 w-20 rounded-full" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {SKELETON_CARDS.map((i) => (
-              <div key={i} className="pharos-card-shell min-h-[92px] px-3 py-2.5">
+              <div key={i} className="pharos-card-shell min-h-[78px] px-2.5 py-2 sm:min-h-[92px] sm:px-3 sm:py-2.5">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="mt-2 h-6 w-16" />
                 <Skeleton className="mt-2 h-3 w-24" />
@@ -261,7 +261,7 @@ export function KpiBar() {
   return (
     <>
     <Card aria-label="Market snapshot" className="pharos-card-shell overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
       </div>
@@ -278,7 +278,7 @@ export function KpiBar() {
         </div>
       )}
 
-      <div className="space-y-2.5 px-3 py-3 lg:hidden">
+      <div className="space-y-2 px-2.5 py-2.5 sm:space-y-2.5 sm:px-3 sm:py-3 lg:hidden">
         <div
           style={{
             animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",

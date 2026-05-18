@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
@@ -23,6 +24,7 @@ import { CoverageMobileCard } from "./coverage-mobile-card";
 import type { useCoveragePageModel } from "./use-coverage-page-model";
 
 type CoveragePageModel = ReturnType<typeof useCoveragePageModel>;
+const MOBILE_COVERAGE_BATCH_SIZE = 24;
 
 export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "error" }) {
   const isError = state === "error";
@@ -317,7 +319,7 @@ export function CoverageMatrixCard(
                 value={model.search}
                 onChange={(event) => model.setSearch(event.target.value)}
                 placeholder="Search stablecoin or ticker"
-                className="h-10 rounded-2xl border-border/65 bg-background/45 pl-10"
+                className="h-11 rounded-2xl border-border/65 bg-background/45 pl-10 sm:h-10"
                 aria-label="Search stablecoin coverage table"
               />
             </div>
@@ -327,7 +329,7 @@ export function CoverageMatrixCard(
               <select
                 value={model.sort}
                 onChange={(event) => model.setSort(event.target.value as CoverageSortKey)}
-                className="pharos-focus-ring h-10 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors"
+                className="pharos-focus-ring h-11 rounded-2xl border border-border/65 bg-background/45 px-3 text-sm text-foreground transition-colors sm:h-10"
                 aria-label="Sort coverage table"
               >
                 {SORT_OPTIONS.map((group) => (
@@ -467,15 +469,15 @@ export function CoverageMatrixCard(
         ) : (
           <>
             {isMobileLayout ? (
-              <div className="space-y-3 md:hidden">
-                {model.filteredRows.map((row) => (
-                  <CoverageMobileCard key={row.id} row={row} logoSrc={model.logos?.[row.id]} />
-                ))}
-              </div>
+              <CoverageMobileResults
+                key={`${model.filter}:${model.search}:${model.sort}`}
+                rows={model.filteredRows}
+                logos={model.logos}
+              />
             ) : (
               <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-background/30 md:block">
                 <div className="overflow-auto">
-                  <table className="min-w-[54rem] w-full caption-bottom text-sm">
+                  <table className="min-w-[54rem] w-full table-fixed caption-bottom text-sm">
                     <TableCaption className="sr-only">
                       Per-coin feature availability across {model.rows.length} active stablecoins.
                     </TableCaption>
@@ -528,5 +530,48 @@ export function CoverageMatrixCard(
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export function CoverageMobileResults({
+  rows,
+  logos,
+}: {
+  rows: CoveragePageModel["filteredRows"];
+  logos: CoveragePageModel["logos"];
+}) {
+  const [visibleCount, setVisibleCount] = useState(MOBILE_COVERAGE_BATCH_SIZE);
+  const visibleRows = rows.slice(0, visibleCount);
+  const hasMoreRows = visibleCount < rows.length;
+
+  return (
+    <div className="space-y-3 md:hidden">
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+        <span aria-live="polite">
+          Showing {visibleRows.length} of {rows.length} matching coins
+        </span>
+        {visibleCount > MOBILE_COVERAGE_BATCH_SIZE ? (
+          <button
+            type="button"
+            onClick={() => setVisibleCount(MOBILE_COVERAGE_BATCH_SIZE)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full px-3 font-medium text-foreground hover:bg-accent"
+          >
+            Collapse
+          </button>
+        ) : null}
+      </div>
+      {visibleRows.map((row) => (
+        <CoverageMobileCard key={row.id} row={row} logoSrc={logos?.[row.id]} />
+      ))}
+      {hasMoreRows ? (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((count) => Math.min(count + MOBILE_COVERAGE_BATCH_SIZE, rows.length))}
+          className="pharos-focus-ring flex min-h-11 w-full items-center justify-center rounded-xl border border-border/70 bg-background/55 px-4 py-3 text-sm font-medium text-foreground hover:bg-accent"
+        >
+          Show next {Math.min(MOBILE_COVERAGE_BATCH_SIZE, rows.length - visibleCount)} coins
+        </button>
+      ) : null}
+    </div>
   );
 }

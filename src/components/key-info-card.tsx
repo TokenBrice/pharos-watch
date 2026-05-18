@@ -65,6 +65,14 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
 
   const openContract = hasContracts ? (contracts.find((c) => c.chain === openChain) ?? null) : null;
+  const quickCopyContract = openContract ?? contracts[0] ?? null;
+
+  function copyContractAddress(chain: string, address: string) {
+    void navigator.clipboard?.writeText(address);
+    trackEvent("contract_copied", { coin_id: meta.id, chain });
+    setCopiedChain(chain);
+    setTimeout(() => setCopiedChain(null), 2000);
+  }
 
   return (
     <Card className="rounded-xl">
@@ -236,7 +244,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     </div>
                     <Link
                       href={getMechanismExplainerPath(meta.mechanismArchetype)}
-                      className="pharos-focus-ring inline-flex items-center gap-1 text-xs font-medium text-frost-blue hover:underline"
+                      className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-xs font-medium text-frost-blue hover:underline sm:min-h-0 sm:py-0"
                     >
                       Learn how {getMechanismArchetypeLabel(meta.mechanismArchetype)} stablecoins work
                       <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
@@ -282,7 +290,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="pharos-focus-ring inline-flex items-center gap-1 text-frost-blue hover:underline"
+                    className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-frost-blue hover:underline sm:min-h-0 sm:py-0"
                   >
                     View reserves<ExternalLink className="h-3 w-3" />
                   </a>
@@ -326,7 +334,60 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             {contractSummary && (
               <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>
             )}
-            <div className="grid grid-cols-6 gap-2 sm:hidden">
+            {quickCopyContract &&
+              (() => {
+                const chain = CHAIN_META[quickCopyContract.chain];
+                const explorerUrl = buildExplorerUrl({
+                  chainKey: quickCopyContract.chain,
+                  entityType: "contract",
+                  value: quickCopyContract.address,
+                });
+                return (
+                  <div className="mb-3 rounded-lg border border-border/50 bg-background/55 px-3 py-2 sm:hidden">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {openContract ? "Selected contract" : "Primary contract"}
+                        </p>
+                        <Link
+                          href={`/chains/${quickCopyContract.chain}/`}
+                          className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
+                        >
+                          <span className="truncate">{chain?.name ?? quickCopyContract.chain}</span>
+                        </Link>
+                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                          {formatAddress(quickCopyContract.address)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyContractAddress(quickCopyContract.chain, quickCopyContract.address)}
+                        className="pharos-focus-ring inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                        title="Copy address"
+                        aria-label={`Copy ${chain?.name ?? quickCopyContract.chain} contract address`}
+                      >
+                        {copiedChain === quickCopyContract.chain ? (
+                          <Check className="h-4 w-4 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {explorerUrl && (
+                      <a
+                        href={explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+                      >
+                        View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
+            <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
               {visibleMobileContracts.map((c) => (
                 <ContractChainButton
                   key={`${c.chain}-${c.address}`}
@@ -381,12 +442,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         {formatAddress(openContract.address)}
                       </span>
                       <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(openContract.address);
-                          trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain });
-                          setCopiedChain(openContract.chain);
-                          setTimeout(() => setCopiedChain(null), 2000);
-                        }}
+                        onClick={() => copyContractAddress(openContract.chain, openContract.address)}
                         className="pharos-focus-ring inline-flex size-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
                         title="Copy address"
                         aria-label="Copy address"

@@ -57,7 +57,7 @@ export default function HomePage() {
   const itemListCount = itemListElements.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -84,9 +84,9 @@ export default function HomePage() {
           ]),
         }}
       />
-      <div className="space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         <SiteHeader total={total} pegCount={ACTIVE_PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4 sm:gap-5">
           <div className="empty:hidden">
             <HomepageStartHereCallout />
           </div>

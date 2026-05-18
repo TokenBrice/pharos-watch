@@ -7,7 +7,7 @@ type TrendDirection = "up" | "down" | "flat";
 const KPI_CHIP_BASE =
   "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
 const SNAPSHOT_PILL_BASE =
-  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground" +
+  "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:px-3 sm:py-1 sm:text-xs" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 export function trendDirection(value: number): TrendDirection {
@@ -128,13 +128,13 @@ export function KpiMiniTile({
   valueClassName?: string;
 }) {
   return (
-    <div className="pharos-card-shell flex min-h-[96px] flex-col px-3 py-2.5">
+    <div className="pharos-card-shell flex min-h-[82px] flex-col px-2.5 py-2 sm:min-h-[96px] sm:px-3 sm:py-2.5">
       <p className="pharos-kicker tracking-[0.08em]">{label}</p>
-      <p className={`mt-1 text-lg font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
+      <p className={`mt-1 text-base font-extrabold font-mono tabular-nums leading-tight sm:text-lg ${valueClassName ?? ""}`}>
         {value}
       </p>
       {(metaPrimary || metaSecondary) && (
-        <div className="mt-auto space-y-0.5 pt-2 text-[11px] font-mono leading-snug">
+        <div className="mt-auto space-y-0.5 pt-1.5 text-[10px] font-mono leading-snug sm:pt-2 sm:text-[11px]">
           {metaPrimary && <div>{metaPrimary}</div>}
           {metaSecondary && <div>{metaSecondary}</div>}
         </div>
@@ -177,7 +177,7 @@ export function PrimarySnapshotCard({
 
   return (
     <div
-      className={`@container rounded-[1.4rem] border px-4 py-3.5 transition-all duration-500 @sm:px-5 @sm:py-4 ${
+      className={`@container rounded-xl border px-3 py-2.5 transition-all duration-500 sm:rounded-[1.4rem] sm:px-4 sm:py-3.5 @sm:px-5 @sm:py-4 ${
         isCrisis ? "animate-pulse" : ""
       }`}
       style={{
@@ -192,11 +192,11 @@ export function PrimarySnapshotCard({
             : "var(--surface-featured-shadow)",
       }}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
-        <div className="min-w-0 space-y-2">
-          <div className="flex w-fit flex-col items-center gap-1.5">
+      <div className="grid grid-cols-1 items-center gap-x-3 gap-y-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="min-w-0 space-y-1.5 sm:space-y-2">
+          <div className="flex w-fit flex-col items-center gap-1 sm:gap-1.5">
             <div className="flex items-center gap-1.5">
-              <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 @sm:text-[13px]">
+              <p className="text-center text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 sm:text-[14px] @sm:text-[13px]">
                 PSI
               </p>
               <span className="relative flex h-2 w-2">
@@ -206,7 +206,7 @@ export function PrimarySnapshotCard({
             </div>
             <div
               aria-live="polite"
-              className={`font-mono text-[3.2rem] font-extrabold leading-none tabular-nums @sm:text-[3.4rem] ${valueClassName ?? ""}`}
+              className={`font-mono text-[2.45rem] font-extrabold leading-none tabular-nums sm:text-[3.2rem] @sm:text-[3.4rem] ${valueClassName ?? ""}`}
             >
               {value}
             </div>
@@ -219,13 +219,13 @@ export function PrimarySnapshotCard({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
             )}
-            <p className={`font-semibold whitespace-nowrap ${isElevated ? "text-base" : "text-sm"} ${valueClassName ?? "text-foreground"}`}>
+            <p className={`font-semibold whitespace-nowrap ${isElevated ? "text-sm sm:text-base" : "text-xs sm:text-sm"} ${valueClassName ?? "text-foreground"}`}>
               {band || "No current PSI band"}
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end justify-center gap-2">
-          <div className="flex flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-start justify-center gap-2 sm:items-end">
+          <div className="flex flex-wrap items-center gap-1.5 sm:flex-col sm:items-end sm:gap-2">
             <span
               className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap`}
             >

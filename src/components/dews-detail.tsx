@@ -385,7 +385,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
               <button
                 type="button"
                 onClick={() => setShowBreakdown((v) => !v)}
-                className="pharos-focus-ring rounded-sm text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+                className="pharos-focus-ring min-h-11 rounded-sm py-2 text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
               >
                 {showBreakdown ? "Show composite" : "Show signal breakdown"}
               </button>

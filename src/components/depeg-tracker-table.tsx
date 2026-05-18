@@ -155,6 +155,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 onActivate={() => onRowClick(coin.id)}
                 onHover={() => prefetch(coin.id)}
                 role="link"
+                ariaLabel={`Open ${coin.symbol} depeg detail`}
               >
                 <TableCell className="text-right font-mono tabular-nums text-muted-foreground text-sm">
                   {rank}

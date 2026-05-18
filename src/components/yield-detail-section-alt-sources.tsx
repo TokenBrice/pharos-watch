@@ -64,7 +64,87 @@ export function YieldDetailSectionAltSources({
           </p>
         ) : null}
       </div>
-      <div className="mt-3 overflow-x-auto">
+      <div className="mt-3 flex gap-2 md:hidden" aria-label="Sort retained yield sources">
+        <button
+          type="button"
+          onClick={() => toggleSort("apy")}
+          className={cn(
+            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
+            sortField === "apy" && "text-foreground",
+          )}
+        >
+          APY {sortField === "apy" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleSort("tvl")}
+          className={cn(
+            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
+            sortField === "tvl" && "text-foreground",
+          )}
+        >
+          TVL {sortField === "tvl" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+        </button>
+      </div>
+      <ol className="mt-3 space-y-2 md:hidden" aria-label="Compact retained yield sources">
+        {visible.map((source) => {
+          const isSelected = selectedSourceKeys.has(source.sourceKey);
+          const isBest = source.sourceKey === bestSourceKey;
+          const delta = source.apy30d - bestApy;
+          const deltaSign = delta >= 0 ? "+" : "";
+          return (
+            <li key={source.sourceKey} className={cn(
+              "rounded-lg border border-border/60 bg-background/55 px-3 py-2",
+              isSelected && "border-primary/40 bg-primary/5",
+            )}>
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <YieldSourceLink href={source.url} className="max-w-full truncate text-sm font-medium text-foreground">
+                      {source.displayLabel}
+                    </YieldSourceLink>
+                    {isBest ? (
+                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                        Best
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className={cn("text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}>
+                      {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
+                    </Badge>
+                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      TVL {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
+                    </span>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-mono text-sm font-semibold tabular-nums">{formatPercent(source.apy30d)}</p>
+                  <p className={cn("mt-0.5 font-mono text-[11px] tabular-nums", delta >= 0 ? "text-emerald-500" : "text-muted-foreground")}>
+                    {deltaSign}
+                    {formatPercent(delta)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectSource(source.sourceKey)}
+                className={cn(
+                  "pharos-focus-ring mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-border/60 text-xs transition-colors",
+                  isSelected
+                    ? "bg-primary/10 text-primary hover:bg-primary/20"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                aria-label={`${isSelected ? "Remove" : "Show"} ${source.displayLabel} in compact chart`}
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                {isSelected ? "Remove from chart" : "Show on chart"}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-3 hidden overflow-x-auto md:block">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border/40 text-muted-foreground">

@@ -46,9 +46,9 @@ export function AiSummary({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <DetailSectionTitle>{title}</DetailSectionTitle>
-          <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={isoDate}>
+          <time className="text-xs text-muted-foreground sm:whitespace-nowrap" dateTime={isoDate}>
             Updated {dateline}
           </time>
         </div>

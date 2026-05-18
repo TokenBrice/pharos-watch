@@ -369,7 +369,7 @@ export function HomepageClient() {
                 </div>
                 <Link
                   href="/depeg/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   View Depeg Tracker
                   <ArrowRight className="h-3 w-3" />
@@ -394,7 +394,7 @@ export function HomepageClient() {
                 <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
                 <Link
                   href="/safety-scores/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   View Safety Scores
                   <ArrowRight className="h-3 w-3" />
@@ -411,7 +411,7 @@ export function HomepageClient() {
                 <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
                 <Link
                   href="/stability-index/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   More Information on PSI
                   <ArrowRight className="h-3 w-3" />

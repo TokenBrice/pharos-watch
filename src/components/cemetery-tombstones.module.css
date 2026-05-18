@@ -426,7 +426,22 @@
   }
 
   .plaque {
-    bottom: calc(100% - 13.5rem);
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--mobile-utility-safe-offset, 4.75rem) + 0.75rem);
+    max-height: min(62vh, 26rem);
+    overflow: auto;
+    transform: translateX(-50%) scale(0.98);
+    width: min(18rem, calc(100vw - 2rem));
+  }
+
+  .plaque::before {
+    display: none;
+  }
+
+  .tombRoot:hover .plaque,
+  .tombRoot:focus-visible .plaque {
+    transform: translateX(-50%) scale(1);
   }
 }
 

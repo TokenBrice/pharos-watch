@@ -67,22 +67,26 @@ export function NauticalChart({
   );
 
   const geometries = useMemo(
-    () => model.entries.map((entry, i) => {
-      const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
-      const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
-      const supplyScale = maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
-      return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
-    }),
+    () =>
+      model.entries.map((entry, i) => {
+        const hullW = hullWidth(entry.totalUsd, maxSupply, laneWidth * 1.1);
+        const x = PIER_X + i * laneWidth + (laneWidth - hullW) / 2;
+        const supplyScale = maxSupply > 0 ? Math.max(0.1, Math.min(1, Math.sqrt(entry.totalUsd / maxSupply))) : 0.1;
+        return { entry, geom: shipDimensions(entry, x, hullW, WATERLINE_Y - 18, supplyScale) };
+      }),
     [laneWidth, maxSupply, model.entries],
   );
   const activeGeometry = geometries.find(({ entry }) => entry.id === activeChainId) ?? geometries[0];
   const beamTargetX = activeGeometry ? activeGeometry.geom.deckLeft + activeGeometry.geom.hullW / 2 : PIER_X;
   const beamTargetY = activeGeometry ? activeGeometry.geom.hullTop - 42 : WATERLINE_Y - 96;
-  const handleShipKeyDown = useCallback((event: KeyboardEvent<SVGGElement>, chainId: string) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    onSelectChain?.(chainId);
-  }, [onSelectChain]);
+  const handleShipKeyDown = useCallback(
+    (event: KeyboardEvent<SVGGElement>, chainId: string) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      onSelectChain?.(chainId);
+    },
+    [onSelectChain],
+  );
 
   if (model.entries.length === 0) return null;
 
@@ -125,6 +129,10 @@ export function NauticalChart({
         />
         <HealthBandLegend />
       </div>
+
+      <p className="border-b border-border/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:hidden">
+        Swipe harbor chart horizontally. Tap a vessel to inspect the selected harbor below.
+      </p>
 
       <div
         className="nc-chart-viewport"

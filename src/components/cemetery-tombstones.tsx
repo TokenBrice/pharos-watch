@@ -201,6 +201,7 @@ function Tombstone({
   const handleF = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "f" || e.key === "F") {
+        if (e.target === tombRef.current) return;
         onPayRespects(coin.id);
       }
     },

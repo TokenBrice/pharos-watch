@@ -42,21 +42,21 @@ interface FlowTableProps {
 }
 
 const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
-  { id: "coin", label: "Coin" },
+  { id: "coin", label: "Coin", className: "w-[126px] max-w-[126px] sm:w-[150px] sm:max-w-[150px]" },
   {
     id: "pressure",
     label: "Pressure vs 30D",
     headerAdornment: <MethodologyHint topic="pressureShift" />,
     sortKey: "pressure",
-    className: "text-right",
+    className: "w-[130px] text-right",
   },
-  { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "text-right" },
-  { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden text-right sm:table-cell" },
-  { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden text-right sm:table-cell" },
-  { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden text-right md:table-cell" },
-  { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden text-right lg:table-cell" },
-  { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden text-right xl:table-cell" },
-  { id: "largest", label: "Largest Event", sortKey: "largest", className: "hidden text-right xl:table-cell" },
+  { id: "net24h", label: "Net 24h", sortKey: "net24h", className: "w-[108px] text-right" },
+  { id: "mint24h", label: "Minted 24h", sortKey: "mint24h", className: "hidden w-[112px] text-right sm:table-cell" },
+  { id: "burn24h", label: "Burned 24h", sortKey: "burn24h", className: "hidden w-[112px] text-right sm:table-cell" },
+  { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
+  { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden w-[112px] text-right lg:table-cell" },
+  { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden w-[112px] text-right xl:table-cell" },
+  { id: "largest", label: "Largest Event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
 ] as const;
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
@@ -87,6 +87,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
     <DataTableShell
       columns={FLOW_TABLE_COLUMNS}
       striped
+      tableClassName="min-w-[364px] table-fixed"
       sort={{
         sortKey,
         sortDirection,
@@ -108,14 +109,20 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 key={coin.stablecoinId}
                 onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
+                role="link"
+                ariaLabel={`Open ${coin.symbol} flow detail`}
+                className="h-11 sm:h-auto"
               >
-                <TableCell>
+                <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
                   <StablecoinIdentity
                     logoSrc={logos?.[coin.stablecoinId]}
                     name={name}
                     symbol={coin.symbol}
                     logoSize={24}
+                    className="min-w-0"
                     textClassName="flex min-w-0 flex-col items-start gap-0.5"
+                    symbolRowClassName="min-w-0 gap-1.5"
+                    symbolClassName="truncate"
                     details={
                       coverageBadge ? (
                         <span

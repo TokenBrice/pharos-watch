@@ -42,10 +42,10 @@ export function AiDisclosureBadge(props: DisclosureFields) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <Badge
         variant="outline"
-        className="text-[11px] font-medium text-muted-foreground"
+        className="min-w-0 max-w-full shrink whitespace-normal break-words text-left text-[11px] font-medium leading-snug text-muted-foreground"
         data-slot="ai-disclosure-badge"
       >
         {segments.join(" · ")}

@@ -34,13 +34,13 @@ export function EmptyStateSurface({
   return (
     <section
       className={cn(
-        "rounded-[1.5rem] border border-border/70 px-4 py-5 shadow-[0_22px_60px_oklch(0_0_0_/0.22)] sm:px-6 sm:py-6",
+        "w-full max-w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-border/70 px-4 py-5 shadow-[0_22px_60px_oklch(0_0_0_/0.22)] sm:px-6 sm:py-6",
         className,
       )}
       style={{ background: "var(--surface-onboarding-gradient)" }}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-start">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-start">
+        <div className="min-w-0 space-y-5">
           <div className="space-y-3">
             <p className="pharos-kicker text-primary/80">{eyebrow}</p>
             <div className="space-y-2">
@@ -73,7 +73,7 @@ export function EmptyStateSurface({
         </div>
 
         {preview ? (
-          <div className="rounded-[1.35rem] border border-border/70 bg-background/60 p-4 shadow-[inset_0_1px_0_oklch(1_0_0_/0.06)]">
+          <div className="min-w-0 rounded-[1.35rem] border border-border/70 bg-background/60 p-4 shadow-[inset_0_1px_0_oklch(1_0_0_/0.06)]">
             {preview}
           </div>
         ) : null}

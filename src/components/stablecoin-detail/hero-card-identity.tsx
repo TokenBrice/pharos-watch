@@ -326,7 +326,7 @@ export function FreezablePill({
     <Link
       href={href}
       aria-label={ariaLabel}
-      className={`pharos-focus-ring inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${toneClass}`}
+      className={`pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border px-3 py-2 text-[11px] font-semibold sm:min-h-0 sm:px-2.5 sm:py-0.5 ${toneClass}`}
     >
       <Snowflake className="h-3 w-3" aria-hidden />
       {label}

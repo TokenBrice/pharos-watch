@@ -7,6 +7,7 @@ import { TableBody, TableHead, TableCaption, TableHeader, TableRow } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableToolbar } from "./table-toolbar";
 import { useTableDensity, DENSITY_CONFIGS } from "@/hooks/use-table-density";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { SortableTableHead } from "@/components/sortable-table-head";
@@ -36,6 +37,37 @@ import {
 const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const OVERSCAN = 12;
 const EMPTY_PINNED_STABLECOIN_IDS: readonly string[] = [];
+const MOBILE_TABLE_BASE_MIN_WIDTH_PX = 420;
+const PINNED_COLUMN_MIN_WIDTH_PX = 56;
+const MOBILE_COLUMN_MIN_WIDTH_PX: Record<ColumnId, number> = {
+  rank: 40,
+  name: 168,
+  price: 88,
+  peg: 92,
+  mcap: 112,
+  change24h: 92,
+  change7d: 96,
+  grade: 76,
+  stability: 96,
+  liquidity: 72,
+  blacklistable: 108,
+  backing: 92,
+  type: 92,
+  flags: 72,
+};
+
+function sameColumnSet(left: readonly ColumnId[], right: readonly ColumnId[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((id, index) => id === right[index]);
+}
+
+function getMobileTableMinWidthPx(visibleColumns: readonly ColumnId[], showPinnedControls: boolean): number {
+  const selectedWidth = visibleColumns.reduce(
+    (total, id) => total + MOBILE_COLUMN_MIN_WIDTH_PX[id],
+    showPinnedControls ? PINNED_COLUMN_MIN_WIDTH_PX : 0,
+  );
+  return Math.max(MOBILE_TABLE_BASE_MIN_WIDTH_PX, selectedWidth);
+}
 
 interface StablecoinHeaderDef {
   id: ColumnId;
@@ -49,7 +81,12 @@ interface StablecoinHeaderDef {
 
 const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
   { id: "rank", label: "#", className: "w-[40px] text-right" },
-  { id: "name", label: "Name", sortKey: "name", className: "w-[90px] xl:w-[150px] max-w-[90px] xl:max-w-[150px]" },
+  {
+    id: "name",
+    label: "Name",
+    sortKey: "name",
+    className: "w-[168px] max-w-[168px] sm:w-[90px] sm:max-w-[90px] xl:w-[150px] xl:max-w-[150px]",
+  },
   { id: "price", label: "Price", sortKey: "price", className: "text-right" },
   {
     id: "peg",
@@ -144,6 +181,7 @@ export function StablecoinTable({
   }, [router]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const isMobileColumns = useIsMobile(640);
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -151,20 +189,33 @@ export function StablecoinTable({
 
   // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
   const deviceDefault = useMemo(
-    () => (typeof window !== "undefined" && window.innerWidth < 640 ? MOBILE_DEFAULT_COLUMNS : DEFAULT_VISIBLE_COLUMNS),
-    [],
+    () => (isMobileColumns ? MOBILE_DEFAULT_COLUMNS : DEFAULT_VISIBLE_COLUMNS),
+    [isMobileColumns],
   );
+  const columnPreferenceKey = isMobileColumns ? "pharos-table-columns-mobile" : "pharos-table-columns";
   const [visibleColumns, setVisibleColumns, resetColumns] = usePreference<ColumnId[]>(
-    "pharos-table-columns",
+    columnPreferenceKey,
     deviceDefault,
     {
       decode: (raw) => normalizeVisibleColumns(raw, deviceDefault),
     },
   );
+  const previousDefaultColumnsRef = useRef<readonly ColumnId[]>(deviceDefault);
+  useEffect(() => {
+    setVisibleColumns((current) => {
+      const previousDefault = previousDefaultColumnsRef.current;
+      previousDefaultColumnsRef.current = deviceDefault;
+      return sameColumnSet(current, previousDefault) ? [...deviceDefault] : current;
+    });
+  }, [deviceDefault, setVisibleColumns]);
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const showPinnedControls = typeof onTogglePinnedStablecoin === "function";
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
   const pinnedStablecoinSet = useMemo(() => new Set(pinnedStablecoinIds), [pinnedStablecoinIds]);
+  const mobileTableMinWidthPx = useMemo(
+    () => getMobileTableMinWidthPx(visibleColumns, showPinnedControls),
+    [showPinnedControls, visibleColumns],
+  );
 
   // Keyboard shortcut: focus table
   useEffect(() => {
@@ -216,12 +267,20 @@ export function StablecoinTable({
     prevRef.current = { rows: displayed, sort };
   }, [displayed, sort]);
 
+  const virtualDensityConfig = useMemo(
+    () => ({
+      ...densityConfig,
+      rowHeight: isMobileColumns ? Math.max(densityConfig.rowHeight, 68) : densityConfig.rowHeight,
+    }),
+    [densityConfig, isMobileColumns],
+  );
+
   // Virtual scrolling with density-aware row height
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
     count: displayed.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => densityConfig.rowHeight,
+    estimateSize: () => virtualDensityConfig.rowHeight,
     overscan: OVERSCAN,
   });
 
@@ -275,15 +334,20 @@ export function StablecoinTable({
       {filterPanel}
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-y-auto overflow-x-auto px-0 pb-2 pr-2 sm:max-h-[70vh] sm:pr-0">
+      <div className="border-y border-border/50 px-4 py-2 text-[11px] font-medium text-muted-foreground sm:hidden">
+        Swipe sideways for more columns. Risk cues stay visible in each row.
+      </div>
+
+      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0">
         <table
           className={`min-w-[420px] sm:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
+          style={isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined}
         >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {showPinnedControls && (
-                <TableHead scope="col" className="w-[26px] text-center">
+                <TableHead scope="col" className="w-[44px] text-center sm:w-[26px]">
                   <span className="sr-only">Starred</span>
                 </TableHead>
               )}
@@ -323,7 +387,7 @@ export function StablecoinTable({
                   coin={coin}
                   rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
                   isStriped={virtualRow.index % 2 === 1}
-                  densityConfig={densityConfig}
+                  densityConfig={virtualDensityConfig}
                   density={density}
                   isVisible={isVisible}
                   logos={logos}

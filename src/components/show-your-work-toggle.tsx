@@ -16,7 +16,7 @@ export function ShowYourWorkToggle({ className }: { className?: string }) {
       aria-pressed={enabled}
       className={
         className ??
-        "pharos-focus-ring rounded-sm text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+        "pharos-focus-ring min-h-11 rounded-sm py-2 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
       }
     >
       {enabled ? "Hide inputs" : "Show inputs"}

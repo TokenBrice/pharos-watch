@@ -48,7 +48,7 @@ export function SectionBanner({
           href={`#${id}`}
           onClick={handleCopy}
           aria-label={`Copy link to ${label} section`}
-          className="pharos-focus-ring group inline-flex items-center gap-2.5 rounded-sm"
+          className="pharos-focus-ring group inline-flex min-h-11 items-center gap-2.5 rounded-sm px-2 py-2 sm:min-h-0 sm:px-0 sm:py-0"
         >
           {Icon ? (
             <Icon aria-hidden className="h-4 w-4 text-muted-foreground" />

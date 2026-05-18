@@ -111,7 +111,7 @@ export function Footer() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
+                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4 sm:min-h-0 sm:py-0"
               >
                 {link.label}
                 <ArrowUpRight className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
@@ -129,7 +129,7 @@ export function Footer() {
         </nav>
 
         <details className="sm:hidden">
-          <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground transition-colors">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground">
             Browse stablecoins by category
           </summary>
           <nav

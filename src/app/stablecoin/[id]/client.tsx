@@ -28,6 +28,7 @@ import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { AiSummary } from "@/components/ai-summary";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
+import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
@@ -120,7 +121,7 @@ const SafetyScoreHistorySection = dynamic(
 );
 
 const DETAIL_SECTION_DEFS = {
-  overview: { id: "overview", label: "Overview", icon: Compass },
+  overview: { id: "overview", label: "Risk", icon: Compass },
   context: { id: "context", label: "Context", icon: Network },
   liquidity: { id: "liquidity", label: "Liquidity", icon: Droplets },
   activity: { id: "activity", label: "Activity", icon: Activity },
@@ -310,6 +311,8 @@ export default function StablecoinDetailClient({
         ) : null}
 
         {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+
+        <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
       </div>
 
       <MobileStickySummary

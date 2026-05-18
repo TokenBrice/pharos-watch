@@ -131,77 +131,79 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         />
       ) : null}
 
-      <section aria-label="Mint/burn overview">
-        <FlowBrrrOverview
-          gauge={gauge ?? null}
-          coins={coins}
-          weeklyHourly={weeklyHourly}
-          isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
-          scopeLabel={scopeLabel}
-          syncWarning={syncWarning}
-        />
-      </section>
+      <div className="flex flex-col gap-6">
+        <section aria-label="Mint/burn overview" className="order-1">
+          <FlowBrrrOverview
+            gauge={gauge ?? null}
+            coins={coins}
+            weeklyHourly={weeklyHourly}
+            isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
+            scopeLabel={scopeLabel}
+            syncWarning={syncWarning}
+          />
+        </section>
 
-      <section aria-labelledby="table-heading">
-        <h2 id="table-heading" className="pharos-kicker">
-          Per-Coin Flows
-        </h2>
-        <div className="mt-3">
-          <FlowTable coins={coins} isLoading={isSummaryLoading} />
-        </div>
-      </section>
-
-      <section aria-labelledby="chart-heading">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="chart-heading" className="pharos-kicker">
-            Aggregate Flows
+        <section aria-labelledby="table-heading" className="order-3 md:order-2">
+          <h2 id="table-heading" className="pharos-kicker">
+            Per-Coin Flows
           </h2>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            value={String(hours)}
-            onValueChange={(value) => {
-              if (value) setHours(Number(value));
-            }}
-            aria-label="Time range"
-          >
-            {TIME_RANGES.map((range) => (
-              <ToggleGroupItem key={range.value} value={range.value}>
-                {range.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        <div className="mt-3">
-          <FlowChart hourly={hourly} isLoading={isChartLoading} />
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
-          <p className="pharos-kicker">Flow Interpretation</p>
-          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              Mint and burn totals are useful, but the pressure shift is the stress signal: it asks whether the current
-              flow is unusual for that coin, not just whether mints outnumber burns today.
-            </p>
-            <p>
-              Read sharp burn pressure alongside depeg alerts, DEX liquidity, and redemption-backstop coverage before
-              treating it as a standalone bank-run signal.
-            </p>
+          <div className="mt-3">
+            <FlowTable coins={coins} isLoading={isSummaryLoading} />
           </div>
-        </div>
-        <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" />
-      </section>
+        </section>
 
-      <div className="flex justify-end">
-        <Link
-          href="/timeline/?type=mint_burn.*"
-          className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
-        >
-          See all mint/burn events on the Timeline →
-        </Link>
+        <section aria-labelledby="chart-heading" className="order-2 md:order-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="chart-heading" className="pharos-kicker">
+              Aggregate Flows
+            </h2>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              value={String(hours)}
+              onValueChange={(value) => {
+                if (value) setHours(Number(value));
+              }}
+              aria-label="Time range"
+            >
+              {TIME_RANGES.map((range) => (
+                <ToggleGroupItem key={range.value} value={range.value} className="min-h-11 md:min-h-0">
+                  {range.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <div className="mt-3">
+            <FlowChart hourly={hourly} isLoading={isChartLoading} />
+          </div>
+        </section>
+
+        <section className="order-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
+            <p className="pharos-kicker">Flow Interpretation</p>
+            <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
+              <p>
+                Mint and burn totals are useful, but the pressure shift is the stress signal: it asks whether the
+                current flow is unusual for that coin, not just whether mints outnumber burns today.
+              </p>
+              <p>
+                Read sharp burn pressure alongside depeg alerts, DEX liquidity, and redemption-backstop coverage before
+                treating it as a standalone bank-run signal.
+              </p>
+            </div>
+          </div>
+          <FaqSection items={faqItems} title="Mint/Burn Flow FAQ" />
+        </section>
+
+        <div className="order-5 flex justify-end">
+          <Link
+            href="/timeline/?type=mint_burn.*"
+            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+          >
+            See all mint/burn events on the Timeline →
+          </Link>
+        </div>
       </div>
     </FeaturePageShell>
   );

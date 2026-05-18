@@ -9,6 +9,8 @@ interface InteractiveTableRowProps {
   className?: string;
   role?: React.AriaRole;
   ariaLabel?: string;
+  ariaControls?: string;
+  ariaExpanded?: boolean;
   children: React.ReactNode;
 }
 
@@ -17,8 +19,10 @@ export function InteractiveTableRow({
   onActivate,
   onHover,
   className = "",
-  role,
+  role = "button",
   ariaLabel,
+  ariaControls,
+  ariaExpanded,
   children,
 }: InteractiveTableRowProps) {
   return (
@@ -37,6 +41,8 @@ export function InteractiveTableRow({
       tabIndex={0}
       role={role}
       aria-label={ariaLabel}
+      aria-controls={ariaControls}
+      aria-expanded={ariaExpanded}
     >
       {children}
     </TableRow>

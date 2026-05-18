@@ -43,7 +43,7 @@ export function HomepageAltPegsTeaser({
         </div>
         <Link
           href="/alt-pegs/"
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
         >
           Open Non-USD Route
           <ArrowRight className="h-3 w-3" />
