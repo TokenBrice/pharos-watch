@@ -73,7 +73,7 @@ function renderMetricLabel(metric: HeroTertiaryMetricViewModel, mobile = false):
         <span className="sr-only">Freezable</span>
         <MethodologyHint
           topic={metric.methodologyTopic}
-          buttonClassName="!h-6 !w-6 !min-h-0 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
+          buttonClassName="!h-11 !w-11 !min-h-11 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
         />
       </>
     );
