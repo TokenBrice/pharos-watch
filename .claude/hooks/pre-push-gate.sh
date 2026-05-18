@@ -10,8 +10,9 @@ if ! echo "$COMMAND" | grep -qE 'git\s+push'; then
 fi
 
 echo "Pre-push gate: running merge gate before push..." >&2
+PAGES_SMOKE_FLAG="${MERGE_GATE_PAGES_SMOKE:-1}"
 
-if npm run test:merge-gate; then
+if MERGE_GATE_PAGES_SMOKE="$PAGES_SMOKE_FLAG" npm run test:merge-gate; then
   exit 0
 else
   echo "BLOCKED: merge gate failed. Fix the errors above before pushing." >&2

@@ -50,9 +50,9 @@ git config core.hooksPath .githooks
 
 Hook behavior:
 
-1. Pushes that update `refs/heads/main`: runs `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`.
+1. Pushes that update `refs/heads/main`: runs `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`, and defaults `MERGE_GATE_PAGES_SMOKE=1` (override with `MERGE_GATE_PAGES_SMOKE=0`).
 2. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path.
-3. Other pushes fall back to the default local merge-gate range (`origin/main...HEAD`) so branch pushes still receive the existing safety check.
+3. Other pushes fall back to the default local merge-gate range (`origin/main...HEAD`) so branch pushes still receive the existing safety check (with the same default `MERGE_GATE_PAGES_SMOKE=1` behavior unless overridden).
 4. Push is blocked on failure.
 
 ## What `test:merge-gate` Does
@@ -80,7 +80,7 @@ Default policy:
 
 After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/non-critical-test/critical-coverage/typecheck groups **serially by default** to avoid CPU contention on developer machines. The non-critical Vitest lane is still emitted as three `npm run test:noncritical -- --shard=N/3` shards to match the CI fan-out (each shard runs on its own CI runner), but locally they execute sequentially. Set `MERGE_GATE_PARALLEL=1` to opt into the parallel matrix when you want the faster wall-clock time and have the cores to spare. This keeps the validation surface aligned with deploy CI while keeping the local default reliable. The gate also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` at the very top of every run; it warns when `package-lock.json` is newer than `node_modules/` and fails fast only when `node_modules/` is missing entirely. The fast static-check audit also pulled `check:hook-polling-window`, `check:shared-types-imports`, and `check:reserve-fixture-freshness` into the shared prebuild registry; intentionally skipped: `check:safe-browsing` and `check:telegram-load` (own scheduled workflows). Pages validate lanes cover feature-flag inlining, phishing/classifier scans, build-size, build-attribution, and methodology PDF drift/budget checks after the static export exists.
 
-Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure. The gate still skips deploy-time smoke suites locally unless they are explicitly opted in via `MERGE_GATE_PAGES_SMOKE=1` or `MERGE_GATE_WORKER_SMOKE=1`; when Pages smoke is opted in, local mobile smoke now follows the same UI-impact matcher and canary profile as production deploys.
+Pages-impacting files now use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, including Worker operational scripts and shared validate/guardrail infrastructure. `test:merge-gate` still treats deploy-time smoke suites as opt-in flags, but the repo pre-push hook now defaults Pages smoke on (`MERGE_GATE_PAGES_SMOKE=1` unless overridden) so pushed ranges rehearse the same local artifact smoke path as production deploys; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`. When Pages smoke runs, local mobile smoke follows the same UI-impact matcher and canary profile as production deploys.
 
 Useful merge-gate controls:
 
@@ -90,7 +90,7 @@ Useful merge-gate controls:
 - `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_PARALLEL=1` to opt into the parallel post-validate execution (default is serial to avoid local CPU contention; CI always runs the parallel matrix via separate runners)
-- `MERGE_GATE_PAGES_SMOKE=1` to opt in to `npm run validate:pages-smoke` after build for Pages-impacting diffs; this serves the static export, always runs desktop/local `smoke-ui`, and runs strict mobile smoke only when the changed files hit the same `pages_ui_changed` UI-surface matcher used in deploy (mobile canary defaults mirror deploy: focused routes, two mobile viewports, desktop pass disabled, 3 workers, 1500 ms settle)
+- `MERGE_GATE_PAGES_SMOKE=1` to run `npm run validate:pages-smoke` after build for Pages-impacting diffs (default in the repo pre-push hook); set `MERGE_GATE_PAGES_SMOKE=0` to skip it. This serves the static export, always runs desktop/local `smoke-ui`, and runs strict mobile smoke only when the changed files hit the same `pages_ui_changed` UI-surface matcher used in deploy (mobile canary defaults mirror deploy: focused routes, two mobile viewports, desktop pass disabled, 3 workers, 1500 ms settle)
 - `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker typechecks for worker-impacting diffs (slow, ~1-2 min)
 - `MERGE_GATE_NO_FETCH=1` to skip the best-effort `git fetch origin main` that keeps the diff base honest (use when offline)
 - `MERGE_GATE_NATIVE_ENV=1` to skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection (use when debugging TZ-specific bugs)

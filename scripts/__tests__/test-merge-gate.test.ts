@@ -302,12 +302,14 @@ describe("getChangedFiles", () => {
 });
 
 describe("pre-push hook", () => {
-  it("passes exact main push refs into the local merge gate", () => {
+  it("passes exact main push refs into the local merge gate and defaults Pages smoke on", () => {
     const hook = readFileSync(resolve(process.cwd(), ".githooks/pre-push"), "utf8");
 
+    expect(hook).toContain('pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"');
     expect(hook).toContain('remote_ref" != "refs/heads/main"');
-    expect(hook).toContain('MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
-    expect(hook).toContain('MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" npm run test:merge-gate');
   });
 });
 

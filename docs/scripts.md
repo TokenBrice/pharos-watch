@@ -296,7 +296,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Adds `npm run build`, `npm run check:feature-flag-inlining`, `npm run seo:check`, and the built-artifact guardrails only when the changed-file set is Pages-impacting, using the same matcher as `classify-deploy-changes.mjs`.
 - Adds Worker runtime typecheck only when the changed-file set is worker-impacting.
 - After `npm run validate:prebuild` passes, uses `buildCommandPlan` to construct a per-trigger execution plan covering Pages build/SEO, non-critical-test, critical-coverage, and Worker typecheck groups, then runs them **serially by default** to avoid local CPU contention. Set `MERGE_GATE_PARALLEL=1` to opt into parallel execution; when enabled, a failing parallel group aborts siblings and reports the failing command explicitly. CI always runs the parallel matrix via separate runners regardless of this env var.
-- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_PARALLEL=1`. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range.
+- Supports `--staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, and `MERGE_GATE_PARALLEL=1`. The repo pre-push hook passes Git's exact pushed main ref range through `MERGE_GATE_BASE_REF` and `MERGE_GATE_HEAD_REF` so local classification matches the Cloudflare deploy workflow's push range, and defaults `MERGE_GATE_PAGES_SMOKE=1` (override with `MERGE_GATE_PAGES_SMOKE=0`).
 
 ### `generate-agent-code-map.mjs`
 
