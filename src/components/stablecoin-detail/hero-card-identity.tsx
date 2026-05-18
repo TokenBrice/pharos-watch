@@ -78,16 +78,18 @@ const GOVERNANCE_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["governance"], 
 
 const BACKING_SENTENCE_LABELS: Record<StablecoinMeta["flags"]["backing"], string> = {
   "rwa-backed": "RWA-backed",
-  "crypto-backed": "crypto-backed",
+  "crypto-backed": "Crypto-backed",
   algorithmic: "algorithmic",
 };
 
 function HeroClassificationLine({
   coin,
   infrastructures,
+  stackedSegments = false,
 }: {
   coin: StablecoinMeta;
   infrastructures: Infrastructure[];
+  stackedSegments?: boolean;
 }) {
   const pegHref = buildPegLandingUrl(coin.flags.pegCurrency);
   const governanceHref = buildGovernanceTaxonomyUrl(coin.flags.governance);
@@ -137,10 +139,23 @@ function HeroClassificationLine({
     "pharos-focus-ring rounded-sm underline-offset-2 transition-colors hover:text-foreground hover:underline";
   const pillClass =
     "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
-
-  return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-      {sentenceSegments.length > 0 && (
+  const sentenceNode =
+    sentenceSegments.length > 0 ? (
+      stackedSegments ? (
+        <span className="flex flex-col items-start leading-relaxed">
+          {sentenceSegments.map((segment) => (
+            <span key={segment.key} className="block">
+              {segment.href ? (
+                <Link href={segment.href} className={segmentLinkClass} aria-label={segment.aria}>
+                  {segment.label}
+                </Link>
+              ) : (
+                <span>{segment.label}</span>
+              )}
+            </span>
+          ))}
+        </span>
+      ) : (
         <span className="inline-flex flex-wrap items-baseline">
           {sentenceSegments.map((segment, index) => (
             <span key={segment.key} className="inline">
@@ -155,7 +170,10 @@ function HeroClassificationLine({
             </span>
           ))}
         </span>
-      )}
+      )
+    ) : null;
+  const taxonomyNodes = (
+    <>
       {isDecentralized && (
         <Link
           href={governanceHref}
@@ -185,6 +203,24 @@ function HeroClassificationLine({
       {infrastructures.map((value) => (
         <InfrastructureBadge key={value} value={value} />
       ))}
+    </>
+  );
+
+  if (stackedSegments) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        {sentenceNode}
+        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          {taxonomyNodes}
+        </span>
+      </p>
+    );
+  }
+
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+      {sentenceNode}
+      {taxonomyNodes}
     </p>
   );
 }
@@ -200,7 +236,7 @@ export function SafetyGradeHero({
     return (
       <div
         className={`flex flex-col items-center justify-center rounded-xl border border-border/60 bg-background/50 ${
-          mobile ? "min-w-[8.75rem] px-2.5 py-2" : "px-4 py-3"
+          mobile ? "h-full min-w-[9rem] px-2.5 py-2.5" : "px-4 py-3"
         }`}
       >
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -211,12 +247,14 @@ export function SafetyGradeHero({
     );
   }
 
-  const sizeClasses = mobile ? "px-2.5 py-1 text-2xl" : "text-5xl px-6 py-3";
+  const sizeClasses = mobile ? "px-3 py-1.5 text-[2rem] leading-none" : "text-5xl px-6 py-3";
 
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-xl border-2 border-border/60 bg-background/50 ${
-        mobile ? "min-w-[8.75rem] gap-1 px-2.5 py-2" : "gap-2.5 px-5 py-4"
+      className={`flex flex-col items-center rounded-xl border-2 border-border/60 bg-background/50 ${
+        mobile
+          ? "h-full min-w-[9rem] justify-between gap-2 px-2.5 py-2.5"
+          : "justify-center gap-2.5 px-5 py-4"
       }`}
     >
       <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -233,7 +271,7 @@ export function SafetyGradeHero({
       {reportCard.overallScore !== null && (
         <span
           className={`font-mono tabular-nums tracking-tight text-foreground ${
-            mobile ? "text-sm" : "text-lg"
+            mobile ? "text-base leading-none" : "text-lg"
           }`}
         >
           {reportCard.overallScore}
@@ -377,7 +415,9 @@ export function HeroMobileIdentity({
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-start gap-3">
-        <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+        <div className="shrink-0 pt-10">
+          <StablecoinLogo src={logoSrc} name={coin.name} size={48} />
+        </div>
         <div className="min-w-0 flex-1">
           <h2
             className="text-2xl font-black tracking-tighter"
@@ -392,7 +432,11 @@ export function HeroMobileIdentity({
           </div>
           {condensed ? (
             <div className="mt-1">
-              <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
+              <HeroClassificationLine
+                coin={coin}
+                infrastructures={infrastructures}
+                stackedSegments
+              />
             </div>
           ) : null}
         </div>
@@ -412,7 +456,11 @@ export function HeroMobileIdentityDetails({
     <>
       {includeClassification ? (
         <div className="mt-1">
-          <HeroClassificationLine coin={coin} infrastructures={infrastructures} />
+          <HeroClassificationLine
+            coin={coin}
+            infrastructures={infrastructures}
+            stackedSegments
+          />
         </div>
       ) : null}
       {coin.oneLiner ? (
