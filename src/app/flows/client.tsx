@@ -44,7 +44,7 @@ function FlowsHeaderSupplement({ scopeLabel, syncWarning }: { scopeLabel: string
     <div className="space-y-3">
       <p className="pharos-lead hidden sm:block">
         Net flow tells you whether tokens are being minted or burned right now. Pressure Shift vs 30D tells you
-        whether today's activity is stronger or weaker than each coin's recent norm, and the Bank Run Gauge
+        whether today&apos;s activity is stronger or weaker than each coin&apos;s recent norm, and the Bank Run Gauge
         aggregates that baseline-relative pressure across tracked issuance and redemption activity.
       </p>
       <div className="flex flex-wrap items-center gap-2">
