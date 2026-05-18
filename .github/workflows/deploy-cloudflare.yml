@@ -54,7 +54,7 @@ jobs:
     needs:
       - detect-changes
     if: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     outputs:
       previous_version_id: ${{ steps.current-deployment.outputs.previous_version_id }}
       version_id: ${{ steps.upload-version.outputs.version_id }}
@@ -69,11 +69,12 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           node-version: 24
+          install-deps: "false"
       - name: Capture current production version
         id: current-deployment
         run: |
           cd worker
-          npx --no-install wrangler deployments status --json > /tmp/wrangler-deployment-status.json
+          npx --yes wrangler@4.91.0 deployments status --json > /tmp/wrangler-deployment-status.json
           node <<'NODE' >> "$GITHUB_OUTPUT"
           const fs = require("node:fs");
           const status = JSON.parse(fs.readFileSync("/tmp/wrangler-deployment-status.json", "utf8"));
@@ -88,7 +89,7 @@ jobs:
         run: |
           rm -f "$WRANGLER_OUTPUT_FILE_PATH"
           cd worker
-          npx --no-install wrangler versions upload --message "GitHub Actions candidate ${GITHUB_SHA}"
+          npx --yes wrangler@4.91.0 versions upload --message "GitHub Actions candidate ${GITHUB_SHA}"
           cd ..
           node .github/scripts/parse-version-upload.mjs >> "$GITHUB_OUTPUT"
 
@@ -102,7 +103,7 @@ jobs:
         && needs.detect-changes.outputs.worker_promotion_required == 'true'
         && needs.upload-worker-version.result == 'success'
       }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -131,7 +132,7 @@ jobs:
               success)
                 exit 0
                 ;;
-              failure|cancelled|timed_out|action_required)
+              failure|cancelled|timed_out|action_required|skipped)
                 echo "validate / validate result was ${result}; stopping production Worker deployment."
                 exit 1
                 ;;
@@ -151,6 +152,7 @@ jobs:
         run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ needs.upload-worker-version.outputs.preview_url }}
+          SMOKE_API_SCOPE: "canary"
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           SMOKE_API_REQUIRE_KEY: "true"
       - name: Promote uploaded worker version to production
@@ -169,6 +171,7 @@ jobs:
         run: npm run test:smoke-api
         env:
           SMOKE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          SMOKE_API_SCOPE: "canary"
           SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           SMOKE_API_REQUIRE_KEY: "true"
           SMOKE_API_RETRY_COUNT: "3"
@@ -221,26 +224,21 @@ jobs:
   pages-release:
     needs:
       - detect-changes
-      - upload-worker-version
     if: >-
       ${{
         always()
         && needs.detect-changes.result == 'success'
         && needs.detect-changes.outputs.pages_changed == 'true'
-        && (
-          needs.detect-changes.outputs.worker_promotion_required != 'true'
-          || needs.upload-worker-version.result == 'success'
-        )
       }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      DIGEST_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DIGEST_API_URL: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
-      DEPEG_EVENTS_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DEPEG_EVENTS_API_URL: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
-      PUBLIC_DATASETS_API_URL: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      PUBLIC_DATASETS_API_URL: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
       PUBLIC_DATASETS_REQUIRE_API: "1"
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
@@ -329,8 +327,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Start local export smoke server
         env:
-          STATIC_EXPORT_API_BASE: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
-          STATIC_EXPORT_SITE_API_BASE: ${{ needs.detect-changes.outputs.worker_promotion_required == 'true' && needs.upload-worker-version.outputs.preview_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+          STATIC_EXPORT_SITE_API_BASE: ${{ vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
           STATIC_EXPORT_SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
           STATIC_EXPORT_API_KEY: ${{ secrets.SMOKE_API_KEY }}
           STATIC_EXPORT_HOST: 127.0.0.1
@@ -388,7 +386,7 @@ jobs:
               success)
                 exit 0
                 ;;
-              failure|cancelled|timed_out|action_required)
+              failure|cancelled|timed_out|action_required|skipped)
                 echo "validate / validate result was ${result}; stopping production Pages deployment."
                 exit 1
                 ;;
@@ -419,7 +417,7 @@ jobs:
               success)
                 exit 0
                 ;;
-              failure|cancelled|timed_out|action_required)
+              failure|cancelled|timed_out|action_required|skipped)
                 echo "deploy-worker result was ${result}; stopping production Pages deployment."
                 exit 1
                 ;;

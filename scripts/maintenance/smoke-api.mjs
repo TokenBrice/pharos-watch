@@ -30,6 +30,14 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stress-signals",
 ];
 
+export const CANARY_CONTRACT_SMOKE_PATHS = [
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/report-cards",
+  "/api/mint-burn-flows",
+  "/api/stress-signals",
+];
+
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_RETRY_DELAY_MS = 1_500;
@@ -41,6 +49,7 @@ function parseArgs(argv) {
     timeoutMs: readPositiveIntEnv("SMOKE_API_TIMEOUT_MS", DEFAULT_TIMEOUT_MS),
     retryCount: readNonNegativeIntEnv("SMOKE_API_RETRY_COUNT", DEFAULT_RETRY_COUNT),
     retryDelayMs: readPositiveIntEnv("SMOKE_API_RETRY_DELAY_MS", DEFAULT_RETRY_DELAY_MS),
+    scope: (process.env.SMOKE_API_SCOPE ?? "full").trim().toLowerCase() || "full",
   };
   parseCliOptions(argv, {
     "--base-url": ({ readValue }) => {
@@ -63,6 +72,16 @@ function parseArgs(argv) {
       args.retryDelayMs = parsePositiveInt(readValue(), args.retryDelayMs);
       return "value";
     },
+    "--scope": ({ readValue }) => {
+      args.scope = readValue().trim().toLowerCase();
+      return "value";
+    },
+    "--canary": () => {
+      args.scope = "canary";
+    },
+    "--full": () => {
+      args.scope = "full";
+    },
     "--require-api-key": () => {
       args.requireApiKey = true;
     },
@@ -82,6 +101,14 @@ function ensureBaseUrl(input) {
   const normalized = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
   new URL(normalized);
   return normalized;
+}
+
+function ensureScope(input) {
+  const normalized = (input ?? "").trim().toLowerCase();
+  if (normalized === "full" || normalized === "canary") {
+    return normalized;
+  }
+  throw new Error(`Invalid smoke scope "${input}". Use "full" or "canary".`);
 }
 
 function assertHttpUrl(value, pathPrefix) {
@@ -188,6 +215,15 @@ function stripMeta(body) {
 
 function loadStrictContractPaths() {
   const parsed = [...STRICT_CONTRACT_SMOKE_PATHS];
+  for (const p of parsed) {
+    assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
+  }
+  return parsed;
+}
+
+export function resolveContractSmokePaths(scope = "full") {
+  const selected = scope === "canary" ? CANARY_CONTRACT_SMOKE_PATHS : STRICT_CONTRACT_SMOKE_PATHS;
+  const parsed = [...selected];
   for (const p of parsed) {
     assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
   }
@@ -661,25 +697,37 @@ export const ENDPOINT_ASSERTIONS = {
   },
 };
 
-export function assertPathCoverage(strictPaths, endpointAssertions) {
+export function assertPathCoverage(strictPaths, endpointAssertions, { allowExtraAssertions = false } = {}) {
   const strict = new Set(strictPaths);
   const defined = new Set(Object.keys(endpointAssertions));
   const missing = [...strict].filter((p) => !defined.has(p));
   const extra = [...defined].filter((p) => !strict.has(p));
 
   assert(
-    missing.length === 0 && extra.length === 0,
+    missing.length === 0 && (allowExtraAssertions || extra.length === 0),
     `Smoke assertion drift detected (missing: ${missing.join(", ") || "none"}; extra: ${extra.join(", ") || "none"})`,
   );
 }
 
 async function run() {
-  const { baseUrl: rawBaseUrl, requireApiKey, timeoutMs, retryCount, retryDelayMs } = parseArgs(process.argv.slice(2));
+  const {
+    baseUrl: rawBaseUrl,
+    requireApiKey,
+    timeoutMs,
+    retryCount,
+    retryDelayMs,
+    scope: rawScope,
+  } = parseArgs(process.argv.slice(2));
   const baseUrl = ensureBaseUrl(rawBaseUrl);
-  const strictPaths = loadStrictContractPaths();
-  assertPathCoverage(strictPaths, ENDPOINT_ASSERTIONS);
+  const scope = ensureScope(rawScope);
+  const strictPaths = resolveContractSmokePaths(scope);
+  if (scope === "full") {
+    assertPathCoverage(loadStrictContractPaths(), ENDPOINT_ASSERTIONS);
+  } else {
+    assertPathCoverage(strictPaths, ENDPOINT_ASSERTIONS, { allowExtraAssertions: true });
+  }
   console.log(
-    `[smoke-api] Running checks against ${baseUrl} (timeout=${timeoutMs}ms, retries=${retryCount}, retryDelay=${retryDelayMs}ms)`,
+    `[smoke-api] Running ${scope} checks against ${baseUrl} (timeout=${timeoutMs}ms, retries=${retryCount}, retryDelay=${retryDelayMs}ms)`,
   );
 
   const health = await fetchJsonWithRetry(baseUrl, "/api/health", timeoutMs, retryCount, retryDelayMs);

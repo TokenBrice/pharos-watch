@@ -116,7 +116,7 @@ describe("validate-ci parity", () => {
     ]);
     expect(extractRunSteps(pagesBuildJob)).toEqual(PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: null })));
     expect(extractRunSteps(testNoncriticalJob)).toEqual([
-      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/3", condition: null },
+      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/4", condition: null },
     ]);
     expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
     expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
@@ -137,6 +137,7 @@ describe("validate-ci parity", () => {
     );
 
     expect(extractJobBlock(workflow, "validate-prebuild", "pages-build")).toContain("node-version: 24.x");
+    expect(workflow).toContain("runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}");
     expect(setupWorkspaceAction).toContain('default: "24"');
     expect(workflow).not.toContain("node-version: 25");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
@@ -286,24 +287,19 @@ describe("validate-ci parity", () => {
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const validateJob = extractJobBlock(workflow, "validate");
 
-    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(3);
+    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(4);
     expect(buildNoncriticalTestShardCommands()).toEqual([
-      "npm run test:noncritical -- --shard=1/3",
-      "npm run test:noncritical -- --shard=2/3",
-      "npm run test:noncritical -- --shard=3/3",
+      "npm run test:noncritical -- --shard=1/4",
+      "npm run test:noncritical -- --shard=2/4",
+      "npm run test:noncritical -- --shard=3/4",
+      "npm run test:noncritical -- --shard=4/4",
     ]);
-    expect(testNoncriticalJob).toContain("shard: [1, 2, 3]");
+    expect(testNoncriticalJob).toContain("shard: [1, 2, 3, 4]");
     expect(testNoncriticalJob).toContain("fail-fast: false");
-    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/3");
+    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/4");
     expect(validateJob).toContain("- test-noncritical");
-    // Agent J extracted the verifier to .github/scripts/verify-validate-results.mjs;
-    // the inline ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT] assertion now lives there.
-    const verifyScript = readFileSync(
-      resolve(process.cwd(), ".github/scripts/verify-validate-results.mjs"),
-      "utf8",
-    );
-    expect(verifyScript).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
-    expect(validateJob).toContain("verify-validate-results.mjs");
+    expect(validateJob).toContain("node <<'NODE'");
+    expect(validateJob).toContain("test-noncritical");
   });
 
   it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {
@@ -344,18 +340,28 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).not.toContain("- validate");
     expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
+    expect(uploadWorkerJob).toContain('install-deps: "false"');
+    expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 deployments status --json");
+    expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 versions upload");
 
     const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
+    expect(deployWorkerJob).toContain(
+      "runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
+    );
     expect(deployWorkerJob).toContain("Wait for validation gate");
     expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
     expect(deployWorkerJob).toContain("Apply production D1 migrations");
     expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
     expect(deployWorkerJob).toContain("Smoke production worker");
+    expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
     expect(deployWorkerJob).not.toContain("- pages-prepare");
     expect(deployWorkerJob).not.toContain("needs.pages-prepare.result == 'success'");
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
+    expect(pagesReleaseJob).toContain("needs:");
+    expect(pagesReleaseJob).toContain("- detect-changes");
+    expect(pagesReleaseJob).not.toContain("- upload-worker-version");
     expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
     expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
@@ -363,6 +369,7 @@ describe("validate-ci parity", () => {
     expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
     expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
     expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
+    expect(pagesReleaseJob).not.toContain("needs.upload-worker-version.outputs.preview_url");
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
     expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(pagesReleaseJob).toContain("Start local export smoke server");

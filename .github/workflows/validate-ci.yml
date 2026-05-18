@@ -31,7 +31,7 @@ env:
 
 jobs:
   validate-prebuild:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -47,7 +47,7 @@ jobs:
 
   pages-build:
     if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     env:
@@ -78,14 +78,14 @@ jobs:
       - run: npm run check:methodology-pdfs
 
   test-noncritical:
-    name: Noncritical Vitest (${{ matrix.shard }}/3)
-    runs-on: ubuntu-latest
+    name: Noncritical Vitest (${{ matrix.shard }}/4)
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -95,10 +95,10 @@ jobs:
         with:
           node-version: 24.x
           tooling-cache: "true"
-      - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/3
+      - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/4
 
   coverage-critical:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     env:
@@ -117,7 +117,7 @@ jobs:
 
   typecheck-worker:
     if: ${{ inputs.worker_changed }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -139,13 +139,10 @@ jobs:
       - coverage-critical
       - typecheck-worker
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
       - name: Verify validate results
         env:
           COVERAGE_CRITICAL_RESULT: ${{ needs.coverage-critical.result }}
@@ -155,4 +152,25 @@ jobs:
           VALIDATE_PREBUILD_RESULT: ${{ needs.validate-prebuild.result }}
           WORKER_CHANGED: ${{ inputs.worker_changed }}
           TYPECHECK_WORKER_RESULT: ${{ needs.typecheck-worker.result }}
-        run: node .github/scripts/verify-validate-results.mjs
+        run: |
+          node <<'NODE'
+          const expectedPagesBuild = process.env.PAGES_BUILD_EXPECTED === "true";
+          const checks = [
+            ["validate-prebuild", process.env.VALIDATE_PREBUILD_RESULT],
+            ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT],
+            ["coverage-critical", process.env.COVERAGE_CRITICAL_RESULT],
+            ...(
+              process.env.WORKER_CHANGED === "true"
+                ? [["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]]
+                : []
+            ),
+            ...(expectedPagesBuild ? [["pages-build", process.env.PAGES_BUILD_RESULT]] : []),
+          ];
+
+          const failures = checks.filter(([, result]) => result !== "success");
+          if (failures.length > 0) {
+            const message = failures.map(([job, result]) => `${job}=${result ?? "missing"}`).join(", ");
+            console.error(`validate gate failed: ${message}`);
+            process.exit(1);
+          }
+          NODE

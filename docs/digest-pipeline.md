@@ -358,7 +358,7 @@ npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.co
 CI now runs digest sync inside `.github/workflows/pages-prepare.yml`:
 
 1. `build-pages` fetches `GET /api/digest-archive` once from the selected API environment and writes the normalized JSON directly to `data/digests.json` before `next build`.
-2. On combined worker + Pages deploys, that selected API environment is the uploaded worker preview URL, so the static digest pages are built against the exact candidate worker before production promotion completes.
+2. In the direct production deploy workflow, that selected API environment is `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; reusable Pages workflows can still override it through `api_base_url`.
 
 This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
 

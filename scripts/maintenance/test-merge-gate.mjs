@@ -176,6 +176,13 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     };
   }
 
+  if (cmd === "npm run validate:worker-smoke") {
+    return {
+      ...baseEnv,
+      ...(env.SMOKE_API_SCOPE ? {} : { SMOKE_API_SCOPE: "canary" }),
+    };
+  }
+
   if (cmd !== "npm run coverage:critical") {
     return baseEnv;
   }

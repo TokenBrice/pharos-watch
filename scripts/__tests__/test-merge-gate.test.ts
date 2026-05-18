@@ -161,6 +161,25 @@ describe("buildCommandPlan", () => {
     });
   });
 
+  it("defaults local worker smoke to canary API scope", () => {
+    expect(getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      SMOKE_API_SCOPE: "canary",
+    });
+  });
+
+  it("preserves explicit local worker smoke API scope overrides", () => {
+    expect(
+      getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], { SMOKE_API_SCOPE: "full" }),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+    });
+  });
+
   it("groups independent post-validate checks for parallel local execution", () => {
     const plan = buildCommandPlan(["shared/lib/classification.ts"]);
     expect(
@@ -178,9 +197,10 @@ describe("buildCommandPlan", () => {
           "npm run check:build-attribution",
           "npm run check:methodology-pdfs",
         ],
-        ["npm run test:noncritical -- --shard=1/3"],
-        ["npm run test:noncritical -- --shard=2/3"],
-        ["npm run test:noncritical -- --shard=3/3"],
+        ["npm run test:noncritical -- --shard=1/4"],
+        ["npm run test:noncritical -- --shard=2/4"],
+        ["npm run test:noncritical -- --shard=3/4"],
+        ["npm run test:noncritical -- --shard=4/4"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
@@ -227,9 +247,10 @@ describe("buildCommandPlan", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm run test:noncritical -- --shard=1/3",
-      "npm run test:noncritical -- --shard=2/3",
-      "npm run test:noncritical -- --shard=3/3",
+      "npm run test:noncritical -- --shard=1/4",
+      "npm run test:noncritical -- --shard=2/4",
+      "npm run test:noncritical -- --shard=3/4",
+      "npm run test:noncritical -- --shard=4/4",
       "npm run coverage:critical",
       "npm run typecheck:worker",
     ]);
@@ -398,9 +419,10 @@ describe("opt-in smoke wiring", () => {
           "npm run check:build-attribution",
           "npm run check:methodology-pdfs",
         ],
-        ["npm run test:noncritical -- --shard=1/3"],
-        ["npm run test:noncritical -- --shard=2/3"],
-        ["npm run test:noncritical -- --shard=3/3"],
+        ["npm run test:noncritical -- --shard=1/4"],
+        ["npm run test:noncritical -- --shard=2/4"],
+        ["npm run test:noncritical -- --shard=3/4"],
+        ["npm run test:noncritical -- --shard=4/4"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
       ],
