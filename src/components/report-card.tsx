@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
-import { DIMENSION_LABELS, DIMENSION_ORDER, METHODOLOGY_VERSION } from "@shared/lib/report-cards";
+import { DIMENSION_LABELS, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { ReportCardRadar } from "@/components/radar-chart";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -294,7 +294,7 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <SafetyGradeBadge grade="F" size="defunct" versionTopic="safetyScore" />
+            <SafetyGradeBadge grade="F" size="defunct" versionTopic="safetyScore" versionVariant="tooltip-only" />
             <div>
               <p className="text-lg font-medium text-muted-foreground">Defunct</p>
               <p className="text-sm text-muted-foreground">This stablecoin is no longer active.</p>
@@ -328,12 +328,14 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
           size="lg"
           className="sm:hidden"
           versionTopic="safetyScore"
+          versionVariant="tooltip-only"
         />
         <SafetyGradeBadge
           grade={card.overallGrade}
           size="hero"
           className="hidden sm:inline-flex"
           versionTopic="safetyScore"
+          versionVariant="tooltip-only"
         />
         <div className="flex min-w-0 flex-col">
           {card.overallScore !== null && (
@@ -410,12 +412,9 @@ export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, right
           <CardTitle as="h2" className="text-xl font-bold tracking-tight">
             <span className="flex items-center justify-between gap-2">
               <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-              <span className="flex items-center gap-2">
-                {updatedAtMs != null ? (
-                  <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={CRON_24H} labelPrefix="Updated" />
-                ) : null}
-                <span className="text-xs font-normal text-muted-foreground">v{METHODOLOGY_VERSION}</span>
-              </span>
+              {updatedAtMs != null ? (
+                <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={CRON_24H} labelPrefix="Updated" />
+              ) : null}
             </span>
           </CardTitle>
         </CardHeader>

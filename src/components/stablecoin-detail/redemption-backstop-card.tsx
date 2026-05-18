@@ -28,7 +28,7 @@ export function RedemptionBackstopCard({
       <CardContent className="space-y-4">
         {/* ── arrange: Hero score + Exit, separated from metadata ── */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <ScoreBadgeWrapper topic="redemptionBackstop">
+          <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
             <Badge variant="outline" className={cn("px-2.5 py-1 font-mono text-lg", viewModel.scoreToneClass)}>
               {viewModel.heroScoreLabel}
             </Badge>

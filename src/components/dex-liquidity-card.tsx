@@ -90,7 +90,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             </Badge>
           </div>
           {isRated ? (
-            <ScoreBadgeWrapper topic="liquidityScore">
+            <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
               <span className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
                 {score}
                 <span className="text-sm text-muted-foreground">/100</span>

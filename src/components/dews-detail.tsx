@@ -215,7 +215,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         <DetailSectionTitle>
           <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
         </DetailSectionTitle>
-        <ScoreBadgeWrapper topic="dews">
+        <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
           <span className="flex items-center gap-2">
             <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
             <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
