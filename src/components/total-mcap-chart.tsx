@@ -86,12 +86,12 @@ export function TotalMcapChart() {
             aggregate line.
           </p>
         </div>
-        <CardAction className="flex min-w-0 items-center gap-2">
+        <CardAction className="col-start-1 row-start-2 mt-2 flex w-full min-w-0 items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
           <Button
             variant="ghost"
             size="icon-sm"
-            className="shrink-0"
+            className="hidden shrink-0 sm:inline-flex"
             onClick={handlePngExport}
             title="Save chart as PNG"
           >
