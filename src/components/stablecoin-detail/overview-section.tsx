@@ -290,12 +290,12 @@ export function OverviewSection({
         </div>
       ) : null}
       {reserves && (
-        <section id="reserves" aria-label="Reserve composition">
+        <section id="reserves" aria-label="Reserve composition" className="min-w-0">
           <ReserveTreemap
             reserves={reserves.reserves}
             badge={reserves.displayBadge}
           />
-          <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <div className="mt-1 flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
             {buildReserveFootnote(reserves, isLiveEnabled) ?? (
               reserves.estimated ? (
                 <span>

@@ -131,9 +131,9 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <DetailSectionTitle className="flex items-center gap-2">
+    <Card className="min-w-0 overflow-hidden rounded-xl">
+      <CardHeader className="min-w-0 pb-2">
+        <DetailSectionTitle className="flex min-w-0 flex-wrap items-center gap-2">
           Reserve Composition
           {badge && (
             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${RESERVE_BADGE_CLASSNAMES[badge.kind]}`}>
@@ -141,19 +141,19 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             </span>
           )}
         </DetailSectionTitle>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
-            <div key={risk} className="flex items-center gap-1">
+            <div key={risk} className="flex min-w-0 items-center gap-1">
               <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: RISK_COLORS[risk], opacity: 0.6 }} />
-              {label}
+              <span className="truncate">{label}</span>
             </div>
           ))}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 overflow-hidden">
         <div
           ref={chartContainerRef}
-          className="h-48"
+          className="h-48 min-w-0 overflow-hidden"
           role="figure"
           aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
         >
