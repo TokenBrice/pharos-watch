@@ -46,7 +46,7 @@ function publicApiUnavailableResponse(): Response {
 function unauthorizedResponse(): Response {
   return errorResponse(
     401,
-    "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+    "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
   );
 }
 

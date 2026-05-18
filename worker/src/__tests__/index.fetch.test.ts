@@ -1049,7 +1049,7 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
     });
   });
 
@@ -1151,7 +1151,7 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
     });
   });
 });
