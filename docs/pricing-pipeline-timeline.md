@@ -1,6 +1,14 @@
 # Pricing Pipeline Methodology - Version Timeline
 
-Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.03` (2026-02-01 -> 2026-05-14).
+Internal changelog reconstructed from the machine-readable methodology version source. Covers Pricing Pipeline `v1.0` through `v6.04` (2026-02-01 -> 2026-05-18).
+
+---
+
+## v6.04 - DexScreener address augmentation throttle (May 18, 2026)
+
+- DexScreener exact-address primary augmentation is now capped at one 30-address batch per stablecoin sync
+- The address augmentation run stops immediately when DexScreener returns a hard upstream refusal such as `429` / Cloudflare 1015 instead of continuing through the remaining optional batches
+- Valid empty DexScreener token-batch responses still count as healthy coverage misses, preserving sparse-address breaker semantics while reducing repeated rate-limit opens
 
 ---
 

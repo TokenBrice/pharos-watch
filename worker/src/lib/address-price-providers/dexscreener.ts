@@ -11,7 +11,10 @@ import {
 import type { AddressPriceProviderRunResult, AddressPriceQuote, AddressPriceTarget } from "./types";
 import type { PricingProviderRejectionReason } from "../pricing-provider-diagnostics";
 
-const DEXSCREENER_ADDRESS_MAX_REQUESTS = 10;
+// DexScreener's public endpoint sits behind a Cloudflare WAF. Keep this
+// opportunistic augmentation lane to one batch per sync so quarter-hourly
+// primary pricing does not trip source-wide 1015 rate limits.
+const DEXSCREENER_ADDRESS_MAX_REQUESTS = 1;
 
 function isDsPair(value: unknown): value is DsPair {
   if (!isRecord(value)) return false;
@@ -119,7 +122,11 @@ export async function runDexScreenerAddressProvider(
         diagnostic.rejectionReasonCounts = { "invalid-shape": 1 };
       }
       diagnostics.push(diagnostic);
+      if (!diagnostic.success) {
+        break;
+      }
     }
+    if (attemptedRequests >= DEXSCREENER_ADDRESS_MAX_REQUESTS || Date.now() >= deadlineMs) break;
   }
 
   return {

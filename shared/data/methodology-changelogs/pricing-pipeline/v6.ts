@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.04",
+      title: "DexScreener address augmentation throttle",
+      date: "2026-05-18",
+      effectiveAt: 1779134950,
+      summary:
+        "DexScreener exact-address primary augmentation now limits itself to one token batch per stablecoin sync and stops immediately on hard upstream refusal.",
+      impact: [
+        "`dexscreener-address` remains a weight-1 soft primary-consensus source, but its public `/tokens/v1/{chain}/{addresses}` lane is now explicitly opportunistic under the 15-minute sync cadence",
+        "A DexScreener `429` / Cloudflare 1015 response no longer causes the same sync run to send the remaining address batches, reducing repeated source-wide breaker opens",
+        "Valid empty DexScreener token-batch responses still count as healthy coverage misses, so thin or unindexed addresses do not poison breaker state",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.03",
       title: "XOF secondary FX peg support",
       date: "2026-05-14",
