@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -59,10 +59,6 @@
       "risk": "high"
     }
   ],
-  "yieldConfig": {
-    "yieldSource": "Hermetica staking (sUSDh)",
-    "yieldType": "lending-vault"
-  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",

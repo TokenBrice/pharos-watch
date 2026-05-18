@@ -88,6 +88,5 @@
       }
     }
   },
-  "collateralQuality": "rwa",
-  "governanceQuality": "wrapper"
+  "collateralQuality": "rwa"
 }

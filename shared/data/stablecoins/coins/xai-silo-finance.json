@@ -62,8 +62,14 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Silo ETH and USDC credit-line collateral",
-      "pct": 100,
+      "name": "USDC Silo credit-line collateral",
+      "pct": 89.45,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "ETH Silo credit-line collateral",
+      "pct": 10.55,
       "risk": "medium"
     }
   ],
@@ -86,5 +92,12 @@
     "params": {
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
-  }
+  },
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "type": "collateral",
+      "weight": 0.8945
+    }
+  ]
 }

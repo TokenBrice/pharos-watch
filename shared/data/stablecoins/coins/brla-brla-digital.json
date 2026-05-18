@@ -91,5 +91,6 @@
       "pct": 100,
       "risk": "low"
     }
-  ]
+  ],
+  "chainTier": "established-alt-l1"
 }

@@ -45,11 +45,21 @@
   "contracts": [
     {
       "chain": "ethereum",
+      "address": "0xb16eb11db006230d13fc0d9679e50a5a4d389809",
+      "decimals": 18
+    },
+    {
+      "chain": "manta",
       "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
       "decimals": 6
     },
     {
-      "chain": "manta",
+      "chain": "metis",
+      "address": "0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
       "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
       "decimals": 6
     }

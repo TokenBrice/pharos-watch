@@ -111,5 +111,6 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     }
-  }
+  },
+  "chainTier": "unproven"
 }

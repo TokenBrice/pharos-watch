@@ -75,7 +75,8 @@
     {
       "name": "Nest Treasury Vault nTBILL buffer",
       "pct": 0.9,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "ntbill-nest"
     }
   ],
   "liveReservesConfig": {

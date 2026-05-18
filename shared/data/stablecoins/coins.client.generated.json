@@ -479,7 +479,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "decentralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -2411,8 +2411,7 @@
     },
     "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
     "mechanismArchetype": "cdp",
-    "geckoId": "inter-stable-token",
-    "canBeBlacklisted": false
+    "geckoId": "inter-stable-token"
   },
   {
     "id": "iusd-indigo-protocol",
@@ -2438,11 +2437,11 @@
     "symbol": "IUSD",
     "oneLiner": "IUSD is infiniFi's USDC-collateralized dollar stablecoin, with reserves deployed duration-matched across institutional private credit and liquid DeFi lending.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion available for instant withdrawals, illiquid portion deployed to time-locked institutional lending strategies; redemptions queue when liquid reserves are insufficient",
@@ -3066,7 +3065,6 @@
     },
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "moneta-digital",
     "canBeBlacklisted": "possible"
   },
   {
@@ -3209,7 +3207,7 @@
   },
   {
     "id": "musd-metamask",
-    "name": "Metamask USD",
+    "name": "MetaMask USD",
     "symbol": "MUSD",
     "oneLiner": "MetaMask USD is a Bridge-issued (Stripe) dollar stablecoin on M0 protocol, backed by short-dated U.S. T-bills and cash with on-chain Validator attestations.",
     "flags": {
@@ -4433,7 +4431,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": false
+      "navToken": true
     },
     "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
     "mechanismArchetype": "tbill",
@@ -4488,7 +4486,7 @@
       "navToken": true
     },
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
-    "geckoId": "usdai",
+    "geckoId": "susdai",
     "variantOf": "usdai-usd-ai",
     "variantKind": "strategy-vault"
   },
@@ -4963,7 +4961,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -5007,18 +5005,18 @@
     },
     "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "susdai"
+    "geckoId": "usdai"
   },
   {
     "id": "usdat-saturn",
     "name": "Saturn USDat",
     "symbol": "USDat",
-    "oneLiner": "USDat is Saturn's yield-bearing dollar wrapper on M0, backed 100% by M (M0 tokenized short-term U.S. T-bills) with KYC-gated mint/redeem via the Swap Facility.",
+    "oneLiner": "USDat is Saturn's non-yield-bearing M0-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": true,
       "navToken": false
     },
@@ -5186,7 +5184,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -5273,7 +5271,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -5589,6 +5587,7 @@
     },
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
+    "geckoId": "quill-usdq",
     "canBeBlacklisted": true,
     "infrastructures": [
       "liquity-v2"
@@ -6107,7 +6106,6 @@
     },
     "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "unity-2",
     "canBeBlacklisted": "possible"
   },
   {
@@ -6365,16 +6363,16 @@
     "id": "wemix-dollar-wemix",
     "name": "WEMIX Dollar",
     "symbol": "WEMIX$",
-    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, with issuer-managed reserves and liquidity on the non-EVM-indexed WEMIX chain.",
+    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed by USDC and fiat reserve assets on the non-EVM-indexed WEMIX chain.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
-    "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+    "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ treasury collateral, DIOS stabilization, and USDC/fiat reserve management to keep WEMIX$ near one U.S. dollar.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wemix-dollar",
     "protocolSlug": "wemix"
@@ -6497,7 +6495,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": true
+      "navToken": false
     },
     "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
     "mechanismArchetype": "tbill",

@@ -78,5 +78,6 @@
       "label": "CNH cash reserves",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

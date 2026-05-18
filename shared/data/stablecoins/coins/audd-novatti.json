@@ -126,5 +126,6 @@
       "label": "AUD bank deposits",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

@@ -129,7 +129,7 @@
     "params": {
       "porFeedAddress": "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
       "assetLabel": "USD reserves (Moore Hong Kong attested)",
-      "assetRisk": "very-low"
+      "assetRisk": "very-high"
     }
   }
 }

@@ -100,5 +100,6 @@
       "label": "CAD bank deposits",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

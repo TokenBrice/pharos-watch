@@ -1,6 +1,6 @@
 {
   "id": "musd-metamask",
-  "name": "Metamask USD",
+  "name": "MetaMask USD",
   "symbol": "MUSD",
   "oneLiner": "MetaMask USD is a Bridge-issued (Stripe) dollar stablecoin on M0 protocol, backed by short-dated U.S. T-bills and cash with on-chain Validator attestations.",
   "flags": {

@@ -51,13 +51,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "dependencies": [
-    {
-      "id": "usdf-falcon",
-      "weight": 1,
-      "type": "mechanism"
-    }
-  ],
   "reserves": [
     {
       "name": "FalconX institutional credit-line exposure via Pareto vault",
@@ -66,7 +59,7 @@
     }
   ],
   "yieldConfig": {
-    "yieldSource": "MEV Capital Falcon USDC Senior tranche",
+    "yieldSource": "Pareto FalconX Credit Vault",
     "yieldType": "lending-vault"
   },
   "notices": [

@@ -56,6 +56,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-sanctioned",
     "reserves": [
       {
@@ -124,13 +125,6 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "usdf-falcon",
-        "weight": 1,
-        "type": "mechanism"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -161,7 +155,7 @@
       }
     ],
     "yieldConfig": {
-      "yieldSource": "MEV Capital Falcon USDC Senior tranche",
+      "yieldSource": "Pareto FalconX Credit Vault",
       "yieldType": "lending-vault"
     }
   },
@@ -571,6 +565,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "single-entity",
@@ -857,7 +852,7 @@
       "reviewedAt": "2026-05-12"
     },
     "chainTier": "ethereum",
-    "deploymentModel": "third-party-bridge",
+    "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
     "governanceQuality": "wrapper",
@@ -1150,6 +1145,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -1442,6 +1438,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -1456,48 +1459,10 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "usds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -2062,6 +2027,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -2154,6 +2120,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "unproven",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -2892,7 +2859,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "decentralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -3030,10 +2997,6 @@
           "selector": "0xc52861f2"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
-      "yieldType": "lending-vault"
     }
   },
   {
@@ -3431,6 +3394,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "established-alt-l1",
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-unregulated",
@@ -3490,6 +3454,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -3504,48 +3475,10 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "usds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -4374,6 +4307,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -4586,6 +4520,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -4600,48 +4541,10 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "usds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -5000,6 +4903,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "mature-alt-l1",
     "deploymentModel": "native-multichain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
@@ -5217,6 +5121,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "established-alt-l1",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -5276,6 +5181,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "stage1-l2",
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
@@ -5464,6 +5370,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -5480,7 +5393,8 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -5771,6 +5685,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "cusd-celo",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": "inherited",
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
@@ -5785,48 +5706,10 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-        "pct": 43,
+        "name": "USDm (Mento Dollar) CDP collateral",
+        "pct": 100,
         "risk": "low",
-        "coinId": "usds-sky"
-      },
-      {
-        "name": "CELO",
-        "pct": 17,
-        "risk": "high"
-      },
-      {
-        "name": "EURC",
-        "pct": 14,
-        "risk": "low",
-        "coinId": "eurc-circle"
-      },
-      {
-        "name": "USDC",
-        "pct": 11,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 7,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "axlEUROC",
-        "pct": 5,
-        "risk": "medium"
-      },
-      {
-        "name": "stETH",
-        "pct": 2,
-        "risk": "low"
-      },
-      {
-        "name": "AUSD and smaller reserve assets",
-        "pct": 1,
-        "risk": "low"
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -6086,6 +5969,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
+    "chainTier": "unproven",
     "deploymentModel": "single-chain",
     "collateralQuality": "rwa",
     "custodyModel": "institutional-regulated",
@@ -6180,8 +6064,8 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
-    "governanceQuality": "wrapper",
     "reserves": [
       {
         "name": "USDC (Circle)",
@@ -6866,6 +6750,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "third-party-bridge",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -8495,6 +8380,11 @@
         "decimals": 18
       },
       {
+        "chain": "base",
+        "address": "0xbf6e2966a9c3d99c9e4d069e04f7bdb9c8aa762c",
+        "decimals": 18
+      },
+      {
         "chain": "linea",
         "address": "0x3ff47c5bf409c86533fe1f4907524d304062428d",
         "decimals": 18
@@ -9996,7 +9886,7 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.firstdigitallabs.com/transparency",
-      "provider": "IAPA International / Prism",
+      "provider": "AOGB CPA Limited",
       "attestorTier": "niche",
       "cadence": "monthly"
     },
@@ -10509,7 +10399,6 @@
       "reviewedAt": "2026-05-12"
     },
     "collateralQuality": "rwa",
-    "governanceQuality": "wrapper",
     "reserves": [
       {
         "name": "FRAX stablecoin reserves",
@@ -11749,12 +11638,6 @@
     "mechanismArchetype": "cdp",
     "geckoId": "gho",
     "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
-    "proofOfReserves": {
-      "type": "independent-audit",
-      "url": "https://github.com/aave-dao/gho-origin/tree/main/audits",
-      "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora",
-      "attestorTier": "self"
-    },
     "links": [
       {
         "label": "Website",
@@ -13904,6 +13787,15 @@
     "pegMechanism": "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; the issuer publishes bank-reporting and smart-contract audit materials",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "rupiah-token",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z",
+      "provider": "Johannes Juara & Rekan / Hari Manurung, CPA",
+      "attestorTier": "regional",
+      "cadence": "monthly",
+      "attestorJurisdiction": "Indonesia",
+      "attestorLicense": "Public Accountant License No. AP. 1456"
+    },
     "links": [
       {
         "label": "Website",
@@ -14332,23 +14224,12 @@
         "decimals": 6
       }
     ],
-    "canBeBlacklisted": false,
     "blacklistabilityReview": {
-      "reviewedStatus": false,
-      "sources": [
-        {
-          "label": "Docs",
-          "url": "https://docs.inter.trade/"
-        },
-        {
-          "label": "GitHub",
-          "url": "https://github.com/Agoric/agoric-sdk/tree/master/packages/inter-protocol"
-        }
-      ],
-      "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-      "reviewer": "Codex status/data pass",
-      "reviewedAt": "2026-05-12",
-      "upstreamSuppressionRationale": "The reviewed override is scoped to the IST holder-facing token. PSM assets are upstream IBC reserve collateral, so this override records no direct IST holder blacklist surface while documenting the deliberate reserve-side suppression."
+      "reviewedStatus": "inherited",
+      "sourceFreeRationale": "Agoric Inter Protocol PSM collateral design",
+      "evidence": "IST itself is minted by the protocol, but PSM collateral assets can inherit issuer-level freeze controls.",
+      "reviewer": "OpenAI Codex review",
+      "reviewedAt": "2026-05-18"
     },
     "chainTier": "established-alt-l1",
     "deploymentModel": "single-chain",
@@ -14441,11 +14322,11 @@
     "symbol": "IUSD",
     "oneLiner": "IUSD is infiniFi's USDC-collateralized dollar stablecoin, with reserves deployed duration-matched across institutional private credit and liquid DeFi lending.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "collateral": "USDC; deployed across institutional private credit strategies (Fasanara, Sentora, FalconX, Maple) and liquid DeFi markets (Spark, Fluid, Aave), duration-matched to user lock-up periods",
@@ -14491,6 +14372,7 @@
       "reviewedAt": "2026-05-12"
     },
     "collateralQuality": "exotic",
+    "custodyModel": "institutional-unregulated",
     "reserves": [
       {
         "name": "Fasanara Capital (mGLOBAL + Genesis, private credit illiquid)",
@@ -18142,7 +18024,6 @@
     "collateral": "Mexican peso fiat reserves self-reported by Moneta Digital and held in undisclosed Mexican banking partners; no SAT (Tax Administration Service) registration is independently verified for the issuer and no third-party accounting attestation cadence is currently published",
     "pegMechanism": "Issuer-managed 1:1 mint and redemption against MXN deposits, operated directly by Moneta Digital with TruBit as a SPEI-bank off-ramp partner; reserve composition and bank custodians are self-reported by the issuer with no independent attestation, audit cadence, or proof-of-reserves feed",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "moneta-digital",
     "cmcSlug": "moneta-digital",
     "proofOfReserves": {
       "type": "self-reported",
@@ -18255,6 +18136,7 @@
       "url": "https://www.mnee.io/transparency",
       "provider": "Wolf and Company, P.C.",
       "attestorTier": "regional",
+      "cadence": "monthly",
       "attestorJurisdiction": "United States"
     },
     "links": [
@@ -18345,10 +18227,6 @@
     "geckoId": "defi-money",
     "protocolSlug": "defi-money",
     "links": [
-      {
-        "label": "Website",
-        "url": "https://defi.money/"
-      },
       {
         "label": "Twitter",
         "url": "https://x.com/defidotmoney"
@@ -18995,7 +18873,7 @@
     "id": "musd-metamask",
     "llamaId": "313",
     "detailProvider": "defillama",
-    "name": "Metamask USD",
+    "name": "MetaMask USD",
     "symbol": "MUSD",
     "oneLiner": "MetaMask USD is a Bridge-issued (Stripe) dollar stablecoin on M0 protocol, backed by short-dated U.S. T-bills and cash with on-chain Validator attestations.",
     "flags": {
@@ -19806,7 +19684,8 @@
       {
         "name": "Nest Treasury Vault nTBILL buffer",
         "pct": 0.9,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ntbill-nest"
       }
     ],
     "liveReservesConfig": {
@@ -20229,7 +20108,8 @@
       {
         "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
         "pct": 3,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "ntbill-nest"
       },
       {
         "name": "Stablecoin liquidity buffer (USDC / pUSD)",
@@ -20436,6 +20316,13 @@
     "collateral": "Tokenized exposure to OnRe-managed structured insurance and reinsurance yield products, designed to hold stable value while distributing real-world insurance-market returns through NAV appreciation",
     "pegMechanism": "ONYC is a yield-bearing stable-value token rather than a fixed $1 wrapper; the token value accrues yield from OnRe's structured insurance collateral strategies, with primary-market access governed by OnRe's platform terms",
     "geckoId": "onyc",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.onre.finance/introduction/transparency-dashboard",
+      "provider": "OnRe transparency dashboard",
+      "attestorTier": "self",
+      "cadence": "daily-nav"
+    },
     "links": [
       {
         "label": "Website",
@@ -25884,7 +25771,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": false
+      "navToken": true
     },
     "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
     "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
@@ -26160,7 +26047,7 @@
     "pegReferenceId": "usdai-usd-ai",
     "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
-    "geckoId": "usdai",
+    "geckoId": "susdai",
     "proofOfReserves": {
       "type": "real-time",
       "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
@@ -28146,7 +28033,7 @@
       "params": {
         "porFeedAddress": "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
         "assetLabel": "USD reserves (Moore Hong Kong attested)",
-        "assetRisk": "very-low"
+        "assetRisk": "very-high"
       }
     }
   },
@@ -29293,7 +29180,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -29389,11 +29276,7 @@
         "pct": 15,
         "risk": "high"
       }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Avalon savings (sUSDa)",
-      "yieldType": "lending-vault"
-    }
+    ]
   },
   {
     "id": "usdaf-asymmetry",
@@ -29522,7 +29405,7 @@
     "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
     "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "susdai",
+    "geckoId": "usdai",
     "pythFeedId": "0x2062b35e2893383ffcd1699b01622618fec1d95d1bc6fa81111df38940ee3134",
     "proofOfReserves": {
       "type": "real-time",
@@ -29609,12 +29492,12 @@
     "detailProvider": "coingecko",
     "name": "Saturn USDat",
     "symbol": "USDat",
-    "oneLiner": "USDat is Saturn's yield-bearing dollar wrapper on M0, backed 100% by M (M0 tokenized short-term U.S. T-bills) with KYC-gated mint/redeem via the Swap Facility.",
+    "oneLiner": "USDat is Saturn's non-yield-bearing M0-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": true,
       "navToken": false
     },
@@ -29715,10 +29598,6 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Saturn staking (sUSDat → STRC + Treasuries)",
-      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -30846,7 +30725,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -30955,10 +30834,6 @@
           "url": "https://api.falcon.finance/api/v1/transparency"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Falcon Finance savings (sUSDf)",
-      "yieldType": "lending-vault"
     }
   },
   {
@@ -31378,7 +31253,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -31434,11 +31309,7 @@
         "pct": 100,
         "risk": "high"
       }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Hermetica staking (sUSDh)",
-      "yieldType": "lending-vault"
-    }
+    ]
   },
   {
     "id": "usdh-hubble",
@@ -33274,6 +33145,7 @@
     "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
     "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
     "mechanismArchetype": "cdp",
+    "geckoId": "quill-usdq",
     "links": [
       {
         "label": "Website",
@@ -35949,13 +35821,6 @@
         "decimals": 18
       }
     ],
-    "dependencies": [
-      {
-        "id": "frxusd-frax",
-        "weight": 1,
-        "type": "wrapper"
-      }
-    ],
     "canBeBlacklisted": true,
     "blacklistabilityReview": {
       "reviewedStatus": true,
@@ -35993,7 +35858,8 @@
       {
         "name": "WisdomTree WTGXX (Government Money Market Digital Fund)",
         "pct": 20,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "wtgxx-wisdomtree"
       }
     ],
     "liveReservesConfig": {
@@ -36602,7 +36468,6 @@
     "collateral": "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
     "pegMechanism": "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
     "mechanismArchetype": "synthetic-delta-neutral",
-    "geckoId": "unity-2",
     "links": [
       {
         "label": "Website",
@@ -38163,17 +38028,17 @@
     "detailProvider": "coingecko",
     "name": "WEMIX Dollar",
     "symbol": "WEMIX$",
-    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, with issuer-managed reserves and liquidity on the non-EVM-indexed WEMIX chain.",
+    "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed by USDC and fiat reserve assets on the non-EVM-indexed WEMIX chain.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
-    "collateral": "WEMIX ecosystem reserve assets and issuer-managed liquidity on WEMIX chain",
-    "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+    "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets.",
+    "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ treasury collateral, DIOS stabilization, and USDC/fiat reserve management to keep WEMIX$ near one U.S. dollar.",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "wemix-dollar",
     "protocolSlug": "wemix",
@@ -38194,6 +38059,13 @@
     "jurisdiction": {
       "country": "Singapore"
     },
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 1,
+        "type": "collateral"
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -38205,9 +38077,10 @@
     "deploymentModel": "single-chain",
     "reserves": [
       {
-        "name": "WEMIX ecosystem reserve assets",
+        "name": "USDC and fiat reserve assets",
         "pct": 100,
-        "risk": "high"
+        "risk": "low",
+        "coinId": "usdc-circle"
       }
     ],
     "notices": [
@@ -38925,7 +38798,7 @@
       "governance": "centralized",
       "yieldBearing": true,
       "rwa": true,
-      "navToken": true
+      "navToken": false
     },
     "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
     "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
@@ -39305,6 +39178,13 @@
         "decimals": 18
       }
     ],
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 0.8945,
+        "type": "collateral"
+      }
+    ],
     "canBeBlacklisted": "dilutable",
     "canBeBlacklistedSource": {
       "label": "Etherscan contract source",
@@ -39329,8 +39209,14 @@
     "governanceQuality": "dao-governance",
     "reserves": [
       {
-        "name": "Silo ETH and USDC credit-line collateral",
-        "pct": 100,
+        "name": "USDC Silo credit-line collateral",
+        "pct": 89.45,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "ETH Silo credit-line collateral",
+        "pct": 10.55,
         "risk": "medium"
       }
     ],
@@ -39427,7 +39313,7 @@
       },
       {
         "chain": "plume",
-        "address": "0x1e950e8b306bf87c90fa2c7b477e2d676775d94c",
+        "address": "0xa0c4f78a29ead4abf6b7f5b3f0d05c0f3eab8ddf",
         "decimals": 18
       },
       {
@@ -39662,6 +39548,23 @@
         "url": "https://help.xprnetwork.org/hc/en-us/articles/26897441891735-What-is-Metal-Dollar-XMD"
       }
     ],
+    "dependencies": [
+      {
+        "id": "usdc-circle",
+        "weight": 0.34,
+        "type": "collateral"
+      },
+      {
+        "id": "pyusd-paypal",
+        "weight": 0.33,
+        "type": "collateral"
+      },
+      {
+        "id": "usdp-paxos",
+        "weight": 0.33,
+        "type": "collateral"
+      }
+    ],
     "canBeBlacklisted": "possible",
     "blacklistabilityReview": {
       "reviewedStatus": "possible",
@@ -39682,9 +39585,22 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "USDC, PYUSD, and Paxos dollar stablecoin basket",
-        "pct": 100,
-        "risk": "low"
+        "name": "USDC reserve basket component",
+        "pct": 34,
+        "risk": "low",
+        "coinId": "usdc-circle"
+      },
+      {
+        "name": "PYUSD reserve basket component",
+        "pct": 33,
+        "risk": "low",
+        "coinId": "pyusd-paypal"
+      },
+      {
+        "name": "Paxos dollar reserve basket component",
+        "pct": 33,
+        "risk": "low",
+        "coinId": "usdp-paxos"
       }
     ],
     "notices": [
@@ -41761,11 +41677,21 @@
     "contracts": [
       {
         "chain": "ethereum",
+        "address": "0xb16eb11db006230d13fc0d9679e50a5a4d389809",
+        "decimals": 18
+      },
+      {
+        "chain": "manta",
         "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
         "decimals": 6
       },
       {
-        "chain": "manta",
+        "chain": "metis",
+        "address": "0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
         "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
         "decimals": 6
       }

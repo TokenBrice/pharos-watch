@@ -87,5 +87,6 @@
   "yieldConfig": {
     "yieldSource": "cgUSD daily T-bill rebase",
     "yieldType": "rebase"
-  }
+  },
+  "chainTier": "stage1-l2"
 }

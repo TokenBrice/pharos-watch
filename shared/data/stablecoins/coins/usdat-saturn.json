@@ -2,12 +2,12 @@
   "id": "usdat-saturn",
   "name": "Saturn USDat",
   "symbol": "USDat",
-  "oneLiner": "USDat is Saturn's yield-bearing dollar wrapper on M0, backed 100% by M (M0 tokenized short-term U.S. T-bills) with KYC-gated mint/redeem via the Swap Facility.",
+  "oneLiner": "USDat is Saturn's non-yield-bearing M0-backed dollar token, mintable and redeemable through KYC-gated Swap Facility flows.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": true,
     "navToken": false
   },
@@ -109,9 +109,5 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Saturn staking (sUSDat → STRC + Treasuries)",
-    "yieldType": "nav-appreciation"
   }
 }

@@ -83,5 +83,6 @@
       "label": "Russian ruble bank deposits",
       "risk": "very-high"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

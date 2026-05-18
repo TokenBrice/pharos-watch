@@ -54,7 +54,7 @@
     }
   ],
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",

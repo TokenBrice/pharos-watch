@@ -22,7 +22,8 @@
     "url": "https://www.mnee.io/transparency",
     "provider": "Wolf and Company, P.C.",
     "attestorTier": "regional",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "cadence": "monthly"
   },
   "links": [
     {

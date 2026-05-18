@@ -69,7 +69,8 @@
     {
       "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
       "pct": 3,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "ntbill-nest"
     },
     {
       "name": "Stablecoin liquidity buffer (USDC / pUSD)",

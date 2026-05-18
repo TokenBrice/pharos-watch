@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -118,9 +118,5 @@
         "url": "https://api.falcon.finance/api/v1/transparency"
       }
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Falcon Finance savings (sUSDf)",
-    "yieldType": "lending-vault"
   }
 }

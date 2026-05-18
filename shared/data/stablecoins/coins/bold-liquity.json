@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -147,9 +147,5 @@
         }
       ]
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
-    "yieldType": "lending-vault"
   }
 }

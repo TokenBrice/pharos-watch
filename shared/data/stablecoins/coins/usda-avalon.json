@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -105,9 +105,5 @@
       "pct": 15,
       "risk": "high"
     }
-  ],
-  "yieldConfig": {
-    "yieldSource": "Avalon savings (sUSDa)",
-    "yieldType": "lending-vault"
-  }
+  ]
 }

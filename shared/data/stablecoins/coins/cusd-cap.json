@@ -113,7 +113,6 @@
       "decimals": 18
     }
   ],
-  "governanceQuality": "wrapper",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
@@ -146,5 +145,6 @@
       "risk": "low",
       "coinId": "pyusd-paypal"
     }
-  ]
+  ],
+  "deploymentModel": "third-party-bridge"
 }

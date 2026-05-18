@@ -113,5 +113,6 @@
   "yieldConfig": {
     "yieldSource": "Mexican government CETES bonds",
     "yieldType": "nav-appreciation"
-  }
+  },
+  "chainTier": "mature-alt-l1"
 }

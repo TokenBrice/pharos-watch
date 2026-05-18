@@ -93,5 +93,6 @@
       "label": "U.S. Treasury and accepted stablecoin reserves",
       "risk": "low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

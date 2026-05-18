@@ -85,5 +85,6 @@
       "label": "Allocated LBMA gold bars (PAMP SA vaults)",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "third-party-bridge"
 }
