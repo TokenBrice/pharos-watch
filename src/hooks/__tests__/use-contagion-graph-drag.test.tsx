@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { useRef } from "react";
 import { useContagionGraphDrag } from "@/hooks/use-contagion-graph-drag";
 
@@ -39,6 +39,7 @@ function DragHarness() {
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    consumeDragMovedSincePointerDown,
   } = useContagionGraphDrag({
     svgRef,
     nodeMap: new Map([["node-1", { r: 12 }]]),
@@ -57,6 +58,11 @@ function DragHarness() {
       <g
         data-testid="drag-node"
         onPointerDown={(event) => handlePointerDown(event, "node-1")}
+        onClick={() => {
+          if (!consumeDragMovedSincePointerDown()) {
+            document.body.dataset.clicked = "true";
+          }
+        }}
       >
         <circle cx={pos?.x} cy={pos?.y} r={12} />
       </g>
@@ -65,6 +71,11 @@ function DragHarness() {
 }
 
 describe("useContagionGraphDrag", () => {
+  afterEach(() => {
+    cleanup();
+    delete document.body.dataset.clicked;
+  });
+
   it("persists dragged positions within the active simulation key", async () => {
     const { container } = render(<DragHarness />);
     const node = screen.getByTestId("drag-node");
@@ -82,5 +93,22 @@ describe("useContagionGraphDrag", () => {
       expect(circle?.getAttribute("cx")).not.toBe("100");
       expect(circle?.getAttribute("cy")).not.toBe("100");
     });
+  });
+
+  it("lets consumers suppress the click that follows a drag", async () => {
+    render(<DragHarness />);
+    const node = screen.getByTestId("drag-node");
+    const svg = screen.getByTestId("drag-svg");
+
+    fireEvent.pointerDown(node, { pointerId: 1, clientX: 100, clientY: 100, isPrimary: true });
+    fireEvent.pointerMove(svg, { pointerId: 1, clientX: 140, clientY: 150 });
+    fireEvent.pointerUp(svg, { pointerId: 1 });
+    fireEvent.click(node);
+
+    expect(document.body.dataset.clicked).toBeUndefined();
+
+    fireEvent.click(node);
+
+    expect(document.body.dataset.clicked).toBe("true");
   });
 });

@@ -76,4 +76,14 @@ describe("CemeteryClient", () => {
     expect(document.getElementById("obituary-usdl-second-usdl-2025-01")?.className).toContain("ring-2");
     expect(document.getElementById("obituary-usdl-first-usdl-2024-01")?.className).not.toContain("ring-2");
   });
+
+  it("pays respects once when F is pressed on a focused tombstone", () => {
+    render(<CemeteryClient />);
+
+    const tombstone = screen.getAllByRole("button", { name: /First USDL/ })[0]!;
+    tombstone.focus();
+    fireEvent.keyDown(tombstone, { key: "F" });
+
+    expect(document.querySelectorAll("svg.animate-in")).toHaveLength(1);
+  });
 });

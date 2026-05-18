@@ -114,6 +114,7 @@ jobs:
       - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      - run: npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log

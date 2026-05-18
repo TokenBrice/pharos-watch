@@ -49,6 +49,7 @@
     "test:smoke-transport": "node scripts/maintenance/smoke-transport.mjs",
     "test:smoke-ops": "node scripts/maintenance/smoke-ops.mjs",
     "test:smoke-ui": "node scripts/maintenance/smoke-ui.mjs",
+    "test:smoke-ui:mobile": "node scripts/maintenance/smoke-mobile-ui.mjs --strict-touch-targets",
     "check:worker-boundary": "node scripts/ci/check-worker-import-boundary.mjs",
     "check:cron-abort-contract": "node scripts/ci/check-cron-abort-contract.mjs",
     "check:cemetery-dataset": "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",

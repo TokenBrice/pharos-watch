@@ -124,18 +124,21 @@ console.log("[pages-smoke] Server ready. Running smoke ...");
 // ------------------------------------------------------------------
 // Smoke run
 // ------------------------------------------------------------------
-const smokeEnv = { ...process.env, ...pickEnv("SMOKE_UI_") };
+const smokeEnv = { ...process.env, ...pickEnv("SMOKE_UI_"), ...pickEnv("SMOKE_MOBILE_UI_") };
 let smokeExit = 1;
 
-try {
-  smokeExit = await new Promise((resolve) => {
-    const smoke = spawn(
-      "npm",
-      ["run", "test:smoke-ui", "--", "--url", "http://127.0.0.1:4173", "--mode", "local"],
-      { env: smokeEnv, stdio: "inherit" },
-    );
+function runNpmScript(args) {
+  return new Promise((resolve) => {
+    const smoke = spawn("npm", args, { env: smokeEnv, stdio: "inherit" });
     smoke.on("close", resolve);
   });
+}
+
+try {
+  smokeExit = await runNpmScript(["run", "test:smoke-ui", "--", "--url", "http://127.0.0.1:4173", "--mode", "local"]);
+  if (smokeExit === 0) {
+    smokeExit = await runNpmScript(["run", "test:smoke-ui:mobile", "--", "--url", "http://127.0.0.1:4173"]);
+  }
 } finally {
   if (smokeExit !== 0) {
     console.error("[pages-smoke] Smoke failed. Server log:");

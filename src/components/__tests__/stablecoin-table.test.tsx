@@ -12,6 +12,23 @@ const { virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
   virtualTotalSizeMock: { current: 40 },
 }));
 
+function setMobileMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 afterEach(() => {
   cleanup();
 });
@@ -121,6 +138,7 @@ describe("StablecoinTable", () => {
   beforeEach(() => {
     localStorage.clear();
     push.mockReset();
+    setMobileMedia(false);
     virtualItemsMock.splice(0, virtualItemsMock.length, { index: 0, start: 0, end: 40 });
     virtualTotalSizeMock.current = 40;
     HTMLElement.prototype.scrollTo = vi.fn();
@@ -141,6 +159,61 @@ describe("StablecoinTable", () => {
     await waitFor(() => {
       expect(screen.getByText("Market Cap")).toBeTruthy();
       expect(screen.queryByText("Price")).toBeNull();
+    });
+  });
+
+  it("keeps desktop column preferences from overriding mobile defaults", async () => {
+    setMobileMedia(true);
+    localStorage.setItem("pharos-table-columns", JSON.stringify([
+      "rank",
+      "name",
+      "price",
+      "peg",
+      "mcap",
+      "change24h",
+      "change7d",
+      "grade",
+      "stability",
+      "liquidity",
+      "blacklistable",
+      "backing",
+      "type",
+    ]));
+
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        reportCards={{ [coin.id]: reportCard }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Market Cap")).toBeTruthy();
+      expect(screen.queryByText("Blacklistable")).toBeNull();
+      expect(screen.queryByText("Peg Score")).toBeNull();
+    });
+  });
+
+  it("honors mobile-specific column preferences on mobile", async () => {
+    setMobileMedia(true);
+    localStorage.setItem("pharos-table-columns-mobile", JSON.stringify(["rank", "name", "blacklistable"]));
+
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        reportCards={{ [coin.id]: reportCard }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Blacklistable").length).toBeGreaterThan(0);
+      expect(screen.queryByText("Market Cap")).toBeNull();
     });
   });
 

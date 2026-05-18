@@ -27,11 +27,11 @@ describe("DataTableShell", () => {
     );
 
     const table = screen.getByRole("table");
-    const shell = table.parentElement?.parentElement;
+    const scrollRegion = table.parentElement;
 
-    expect(shell?.className).toContain("overflow-x-auto");
-    expect(shell?.className).not.toContain("overflow-x-hidden");
-    expect(shell?.className).not.toContain("lg:overflow-x-hidden");
+    expect(scrollRegion?.className).toContain("overflow-x-auto");
+    expect(scrollRegion?.className).not.toContain("overflow-x-hidden");
+    expect(scrollRegion?.className).not.toContain("lg:overflow-x-hidden");
   });
 
   it("keeps sortable header adornments outside the native sort button", () => {

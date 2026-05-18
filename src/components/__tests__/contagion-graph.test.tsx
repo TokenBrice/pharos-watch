@@ -177,6 +177,29 @@ describe("ContagionGraph", () => {
     expect(nodePicker.value).toBe("usde-ethena");
   });
 
+  it("does not retarget the selected neighborhood on the click emitted after a drag", () => {
+    const { container } = render(
+      <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Selected neighborhood" }));
+
+    const nodePicker = screen.getByLabelText("Trace coin") as HTMLSelectElement;
+    const initialValue = nodePicker.value;
+    const dragTarget = screen
+      .getAllByRole("button", { name: /market cap/i })
+      .find((node) => node.getAttribute("data-node-id") !== initialValue);
+    expect(dragTarget).toBeTruthy();
+
+    fireEvent.pointerDown(dragTarget!, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
+    const svg = container.querySelector('[role="figure"] svg');
+    fireEvent.pointerMove(svg!, { clientX: 270, clientY: 330, pointerId: 1 });
+    fireEvent.pointerUp(svg!, { pointerId: 1 });
+    fireEvent.click(dragTarget!);
+
+    expect(nodePicker.value).toBe(initialValue);
+  });
+
   it("shows an edge tooltip on edge hover", async () => {
     const { container } = render(
       <ContagionGraph cards={CARDS} dependencyEdges={DEPENDENCY_EDGES} mcapMap={MCAP_MAP} />,
@@ -262,7 +285,7 @@ describe("ContagionGraph", () => {
     const usdeNode = screen.getByRole("button", { name: /USDe/i });
     // Simulate a drag to pin the node.
     fireEvent.pointerDown(usdeNode, { isPrimary: true, clientX: 220, clientY: 300, pointerId: 1 });
-    const svg = container.querySelector("svg");
+    const svg = container.querySelector('[role="figure"] svg');
     fireEvent.pointerMove(svg!, { clientX: 260, clientY: 320, pointerId: 1 });
     fireEvent.pointerUp(svg!, { pointerId: 1 });
 

@@ -60,8 +60,8 @@ describe("BlacklistTable", () => {
   it("renders amount provenance and unresolved status badges", () => {
     renderTable();
 
-    expect(screen.getByText("Snapshot")).toBeTruthy();
-    expect(screen.getByText("provider failed")).toBeTruthy();
+    expect(screen.getAllByText("Snapshot").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("provider failed").length).toBeGreaterThan(0);
   });
 
   it("exports provenance and contract metadata columns in CSV", () => {
