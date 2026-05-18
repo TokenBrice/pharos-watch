@@ -874,7 +874,7 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
-Sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
+Sortable, paginated leaderboard (25 rows/page). Default sort: PYS descending. From `md` upward it renders the dense table; below `md` it renders first-class mobile cards with the same sort and pagination state plus direct Detail, Provider, Source, and History actions. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
 The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `depth`, `sourceChanged`, `sourceConfidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
 

@@ -125,6 +125,7 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - `smoke-ops.mjs` via `npm run test:smoke-ops`
 - `smoke-transport.mjs` via `npm run test:smoke-transport`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
+- `smoke-mobile-ui.mjs` via `npm run test:smoke-ui:mobile`
 - `check-worker-import-boundary.mjs` via `npm run check:worker-boundary`
 - `check-shared-cycles.mjs` via `npm run check:shared-cycles`
 - `check-unused-code.mjs` via `npm run check:unused-code`
@@ -237,6 +238,13 @@ These are wired into the GitHub Actions CI workflows (`.github/workflows/validat
 - Live mode keeps the homepage/GA checks and a narrow canary overflow route set (`/yield/`, `/alt-pegs/`, `/freezewatch/`, `/stability-index/` by default; override with `SMOKE_UI_CANARY_ROUTE`) unless `--skip-overflow` is set.
 - Overflow detection samples layout multiple times and retries once before failing, which filters transient layout jitter while still catching sustained overflow regressions.
 - Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), choose `--mode local|live`, tune overflow parallelism with `SMOKE_UI_OVERFLOW_WORKERS` (`1`-`6`; default `2` local and `1` live), or skip overflow checks with `--skip-overflow`.
+
+### `smoke-mobile-ui.mjs`
+
+- Runs the strict mobile rendered smoke used by `npm run test:smoke-ui:mobile`. The default route set covers `/`, `/stablecoins/`, `/screener/`, `/stablecoin/usdt-tether/`, `/timeline/`, `/compare/`, `/dependency-map/`, `/flows/`, `/alt-pegs/`, `/liquidity/`, `/chains/`, `/yield/`, `/freezewatch/`, `/coverage/`, `/portfolio/`, and `/cemetery/`.
+- Checks 360×740, 390×844, and 414×896 mobile viewports plus one 1280×900 desktop spot viewport unless `--skip-desktop` is set.
+- Fails on HTTP/framework/blank-page errors, document-level horizontal overflow, mobile table geometry issues such as overlapped or overflowing headers/cells, and strict sub-44px common-control touch targets. Browser console errors and warnings are reported in the smoke log so runtime noise is visible during review.
+- `validate:pages-smoke` and the Pages production artifact smoke run this after the existing desktop/local `smoke-ui` pass against the served `out/` export. Override routes with `SMOKE_MOBILE_UI_ROUTES` or `--routes`, tune viewports with `SMOKE_MOBILE_UI_VIEWPORTS` or `--viewports`, and write failure screenshots with `--failure-screenshot-dir`.
 
 ### `smoke-ops.mjs`
 

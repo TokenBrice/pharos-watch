@@ -889,6 +889,10 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination |
 
+On mobile, the event ledger renders event cards instead of the dense table. The same server-side sort, filter, search,
+pagination, and CSV export state is preserved; cards prioritize asset, chain, action, event time, amount provenance,
+address, and transaction link. From `md` upward, the full table remains the primary ledger.
+
 ### Amount Display Logic
 
 - `null` or (`0` and not destroy): show the amount status/source instead of implying a confirmed value

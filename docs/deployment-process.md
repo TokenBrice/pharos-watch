@@ -90,7 +90,7 @@ Useful merge-gate controls:
 - `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
 - `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
 - `MERGE_GATE_PARALLEL=1` to opt into the parallel post-validate execution (default is serial to avoid local CPU contention; CI always runs the parallel matrix via separate runners)
-- `MERGE_GATE_PAGES_SMOKE=1` to opt in to `npm run validate:pages-smoke` after build for Pages-impacting diffs (slow, ~3-5 min)
+- `MERGE_GATE_PAGES_SMOKE=1` to opt in to `npm run validate:pages-smoke` after build for Pages-impacting diffs; this serves the static export and runs both desktop/local UI smoke and strict mobile UI smoke (slow, ~3-5 min)
 - `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker typechecks for worker-impacting diffs (slow, ~1-2 min)
 - `MERGE_GATE_NO_FETCH=1` to skip the best-effort `git fetch origin main` that keeps the diff base honest (use when offline)
 - `MERGE_GATE_NATIVE_ENV=1` to skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection (use when debugging TZ-specific bugs)

@@ -165,6 +165,7 @@ Edge encoding:
 - **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap). Connected edges restyle to the brand-blue highlight color (`--p-frost-blue`) at `0.9` opacity and `1.2px` stroke; non-connected nodes dim to `0.25`, non-connected edges to `0.1`.
 - **Hover edge**: shows tooltip with dependency pair + percentage weight + dependency type.
 - **Click node**: surfaces the node in the Selection overlay and sets it as the pending trace target. In `Selected neighborhood` mode this also retargets the visible neighborhood. A persistent brand-blue halo marks the pinned node when not currently hovered.
+- **Drag release**: a drag that moves the node suppresses the follow-up click emitted by the browser, so repositioning a node does not accidentally retarget the selected neighborhood.
 - **Click empty canvas**: clears the pinned selection, hover state, and ripple. The Selection overlay hides until the next hover or click.
 - **Escape**: clears the pinned selection, hover state, and ripple. Skipped while a text input is focused.
 - **Trace picker / rail action**: switches to `Selected neighborhood` and shows the selected coin's direct graph neighborhood.
@@ -172,7 +173,9 @@ Edge encoding:
 ## Mobile Layout
 
 - The interactive graph renders on all screen sizes, including phones.
-- The SVG viewport takes the full width of the workspace at every breakpoint. The Selection overlay floats over the top-right corner of the SVG when active; on narrow viewports it falls back to a 260px width and respects a `max-w-[calc(100%-1rem)]` clamp.
+- The SVG viewport takes the full width of the workspace at every breakpoint. The Selection overlay floats over the top-right corner of the SVG when active on wider screens.
+- On phones, the graph exposes a fullscreen action. The fullscreen dialog renders the same interactive SVG stage with the mobile inspect panel below it, giving selected-node facts and trace actions outside the constrained canvas.
+- The non-fullscreen mobile graph keeps inspect details in a panel below the stage instead of forcing the desktop overlay into the narrow viewport.
 - The `DependencyMapMobileSummary` card remains below the graph as a quick ranked companion view; it no longer replaces the graph and uses the same `buildDependencyHubsModel()` output as the desktop board.
 - Graph controls stack vertically on narrow widths.
 

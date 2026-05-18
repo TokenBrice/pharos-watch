@@ -131,7 +131,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 - Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`).
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
-- On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
+- On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states. Mobile renders the result set in batches with explicit "show next" and collapse controls so large filtered sets do not mount hundreds of cards before the user asks for them.
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.
 - A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.

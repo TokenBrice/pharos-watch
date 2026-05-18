@@ -90,16 +90,17 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 4. `ExploitNoticeBanner`
 5. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
 6. `AiSummary` when a summary is available
-7. `MobileStickySummary`
-8. `LongformScrollspyNav`
-9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
-10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `CoinNotices` → `DEWSDetail` for non-NAV coins
-11. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
-12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when price transparency or a redemption backstop is available, `PriceTransparencyCard` and `RedemptionBackstopCard` sit in a two-column grid beneath
-13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
-14. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
-15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
-16. `FeedbackModal`
+7. `MobileRiskSnapshot` on `<lg`, using the current report-card/resilience payload so phone users see the grade, peg state, collateral/custody posture, and key caveat before the full report card
+8. `MobileStickySummary`
+9. `LongformScrollspyNav`
+10. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
+11. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `CoinNotices` → `DEWSDetail` for non-NAV coins
+12. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
+13. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when price transparency or a redemption backstop is available, `PriceTransparencyCard` and `RedemptionBackstopCard` sit in a two-column grid beneath
+14. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
+15. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
+16. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
+17. `FeedbackModal`
 
 `StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 
