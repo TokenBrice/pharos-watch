@@ -50,6 +50,121 @@
       "chain": "ethereum",
       "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
       "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "hyperevm",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "zircuit",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "metis",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "morph-l2",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "kava",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "swellchain",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "mode",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "mantle",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "manta",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "blast",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
+    },
+    {
+      "chain": "ton",
+      "address": "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
+      "decimals": 9
+    },
+    {
+      "chain": "zksync",
+      "address": "0xad17d2dd3e576dc084050090eb3773dcd49d2ebc",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,
@@ -69,7 +184,7 @@
     "reviewer": "Codex status/data pass",
     "reviewedAt": "2026-05-12"
   },
-  "deploymentModel": "single-chain",
+  "deploymentModel": "third-party-bridge",
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "wrapper",

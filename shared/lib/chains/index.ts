@@ -134,10 +134,12 @@ const CHAIN_ALIASES: Record<string, string> = {
   // DL display names that differ from our CHAIN_META names
   "OP Mainnet": "optimism",
   "Plume Mainnet": "plume",
+  "Citrea": "citrea",
   "zkSync Era": "zksync",
   "ZKsync Era": "zksync",
   "XRPL": "xrpl",
   "Bsquared": "bsquared",
+  "BSquared": "bsquared",
   "Abcore": "abcore",
   "Kaia": "klaytn",  // Klaytn rebranded to Kaia
   "XDC": "xdc",

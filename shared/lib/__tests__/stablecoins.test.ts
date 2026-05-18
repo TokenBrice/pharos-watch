@@ -321,16 +321,15 @@ describe("tracked stablecoin metadata", () => {
     });
   });
 
-  it("keeps base USDAI on the curated PYUSD reserve path while sUSDai owns the mixed protocol feed", () => {
+  it("keeps base USDAI on the curated supply path while sUSDai owns the mixed protocol reserve feed", () => {
     const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
     const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");
 
     expect(usdai?.reserves).toEqual([
       {
-        name: "PYUSD (PayPal USD)",
+        name: "USDC / USDT stablecoin reserves (variable mix)",
         pct: 100,
         risk: "low",
-        coinId: "pyusd-paypal",
       },
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({

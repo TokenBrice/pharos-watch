@@ -15,7 +15,7 @@
   "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
-  "geckoId": "jpycoin",
+  "geckoId": "jpyc",
   "protocolSlug": "jpyc",
   "links": [
     {

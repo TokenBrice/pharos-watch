@@ -46,6 +46,11 @@
       "chain": "celo",
       "address": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+      "decimals": 9
     }
   ],
   "blacklistabilityReview": {
@@ -83,5 +88,12 @@
       "label": "GBP cash & equivalents",
       "risk": "very-low"
     }
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
+    "provider": "VNX proof-of-reserves disclosures",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   }
 }

@@ -4,11 +4,11 @@
   "symbol": "nOPAL",
   "oneLiner": "nOPAL is Nest's vault token wrapping BlackOpal LiquidStone II tokenized credit positions; references a dollar base but behaves like a credit vault share.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
@@ -62,20 +62,20 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "BlackOpal LiquidStone II tokenised credit positions",
-      "pct": 90,
+      "name": "BlackOpal LiquidStone II tokenized credit positions",
+      "pct": 96.66,
       "risk": "high"
     },
     {
-      "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-      "pct": 5,
-      "risk": "low"
-    },
-    {
-      "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-      "pct": 5,
+      "name": "Stablecoin liquidity buffer",
+      "pct": 2.44,
       "risk": "low",
       "coinId": "usdc-circle"
+    },
+    {
+      "name": "Nest Treasury Vault nTBILL buffer",
+      "pct": 0.9,
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

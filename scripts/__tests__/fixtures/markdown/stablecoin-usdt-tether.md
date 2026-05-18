@@ -2,7 +2,7 @@
 title: "Tether (USDT) Stablecoin Analytics"
 canonical: "https://pharos.watch/stablecoin/usdt-tether/"
 description: "Build-time stablecoin profile for Tether (USDT). Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
-dateModified: "2026-05-15"
+dateModified: "2026-05-18"
 ---
 
 
@@ -19,11 +19,11 @@ dateModified: "2026-05-15"
 
 ## Overview
 
-At $184.4B across 107 chains, USDT is crypto's de facto monetary base, with reserves that look more like a sovereign wealth fund (gold, secured loans, BTC) than a payments instrument. At $184.4 billion across 107 chains, Tether is less a stablecoin and more the de facto monetary base of crypto -- a position reinforced by $2.5 billion in DEX TVL spread across 1,771 pools with the lowest concentration risk of any stablecoin in the dashboard. The reserve composition has matured to 63% {{term:treasury}}T-bills{{/term}} and 10% overnight repos, though the 9% in gold, 9% in secured loans, and 4% in Bitcoin -- alongside other {{term:rwa}}RWA{{/term}} positions -- give USDT a reserve profile that looks more like a sovereign wealth fund than a payments instrument. The B safety grade at 70 captures the paradox: overwhelming market presence and near-perfect peg stability held back by centralized governance from El Salvador and a {{term:redemption}}redemption{{/term}} path that runs through Tether's own API with undisclosed minimums and Tether's own {{term:custody}}custody{{/term}} arrangements. The 248 lifetime depeg events with a worst deviation of nearly 25% below peg are relics of earlier eras, but they remain on the permanent record of an issuer whose transparency evolution from opacity to BDO Italia {{term:attestation}}attestations{{/term}} has been reluctant at every step.
+USDT remains the largest dollar stablecoin, with Tether's Q1 2026 attestation showing $191.77B of assets against $183.54B of liabilities. The reserve stack is still Treasury-heavy, with about $141B in direct and indirect U.S. T-bill exposure, plus material gold and Bitcoin positions. The core risk is issuer concentration, discretionary redemption access, and reliance on Tether's quarterly attestation model.
 
 ## Collateral
 
-U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)
+Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.
 
 ## Peg Mechanism
 

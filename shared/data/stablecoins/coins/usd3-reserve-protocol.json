@@ -15,7 +15,6 @@
   },
   "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",
   "pegMechanism": "Reserve RToken/DTF whose holders can redeem into the backing basket subject to Reserve protocol throttles and basket mechanics; RSR stakers govern and absorb losses",
-  "mechanismArchetype": "cdp",
   "geckoId": "web-3-dollar",
   "protocolSlug": "reserve-protocol",
   "links": [
@@ -29,7 +28,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://reserve.org/protocol/"
+      "url": "https://docs.reserve.org/"
     },
     {
       "label": "Transparency",

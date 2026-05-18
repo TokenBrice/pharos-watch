@@ -141,5 +141,6 @@
         }
       ]
     }
-  }
+  },
+  "mechanismArchetype": "fiat-cash"
 }

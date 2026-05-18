@@ -36,6 +36,11 @@
       "chain": "ethereum",
       "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x55380fe7a1910dff29a47b622057ab4139da42c5",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

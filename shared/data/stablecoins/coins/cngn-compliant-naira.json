@@ -31,7 +31,9 @@
     }
   ],
   "jurisdiction": {
-    "country": "Nigeria"
+    "country": "Nigeria",
+    "regulator": "Securities and Exchange Commission Nigeria",
+    "license": "SEC-supervised regulated digital asset"
   },
   "contracts": [
     {

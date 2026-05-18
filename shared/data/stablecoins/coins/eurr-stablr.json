@@ -46,6 +46,11 @@
       "chain": "ethereum",
       "address": "0x50753cfaf86c094925bf976f218d043f8791e408",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

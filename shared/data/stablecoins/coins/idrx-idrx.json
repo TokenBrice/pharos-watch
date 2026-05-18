@@ -28,6 +28,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/idrx_co"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://home.idrx.co/en/docs"
     }
   ],
   "jurisdiction": {
@@ -102,5 +106,12 @@
       "pct": 100,
       "risk": "low"
     }
-  ]
+  ],
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://home.idrx.co/en/docs",
+    "provider": "IDRX transparency and audit documents",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc"
+  }
 }

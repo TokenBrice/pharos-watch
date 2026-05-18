@@ -2,7 +2,7 @@
   "id": "syzusd-yuzu",
   "name": "Staked Yuzu USD",
   "symbol": "syzUSD",
-  "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma with KYC-gated primary redemption.",
+  "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma and Monad.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

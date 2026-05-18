@@ -21,11 +21,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.bitgo.com/usd1/attestations/",
-    "provider": "BitGo",
-    "attestorTier": "self",
+    "provider": "Independent accounting firm via BitGo",
+    "attestorTier": "niche",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States",
-    "attestorLicense": "South Dakota Trust Charter"
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

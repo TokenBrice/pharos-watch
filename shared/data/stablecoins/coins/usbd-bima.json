@@ -56,6 +56,11 @@
       "chain": "bsc",
       "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
       "decimals": 18
+    },
+    {
+      "chain": "nibiru",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

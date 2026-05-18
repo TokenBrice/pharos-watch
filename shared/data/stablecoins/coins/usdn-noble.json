@@ -82,5 +82,9 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     }
+  },
+  "yieldConfig": {
+    "yieldSource": "M0 T-bill rebase",
+    "yieldType": "rebase"
   }
 }

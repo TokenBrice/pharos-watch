@@ -18,18 +18,18 @@
   },
   {
     "id": "aa-falconx-mev-capital",
-    "name": "MEV Capital Falcon USDC Senior Tranche",
+    "name": "Pareto FalconX Credit Vault",
     "symbol": "AA_FalconXUSDC",
-    "oneLiner": "AA_FalconXUSDC is the senior tranche of an Idle CDO routing USDC into Morpho lending markets collateralized by Falcon Finance's USDf.",
+    "oneLiner": "AA_FalconXUSDC is a Pareto FalconX Credit Vault token: USDC exposure to FalconX institutional credit lines curated by M11 Credit.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
-    "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",
+    "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
     "variantOf": "usdc-circle",
     "variantKind": "strategy-vault",
     "canBeBlacklisted": true
@@ -951,7 +951,10 @@
     "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
     "mechanismArchetype": "cdp",
     "geckoId": "convertible-jpy-token",
-    "canBeBlacklisted": false
+    "canBeBlacklisted": false,
+    "infrastructures": [
+      "liquity-v1"
+    ]
   },
   {
     "id": "cngn-compliant-naira",
@@ -1060,8 +1063,7 @@
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Mento AMM: users mint USDm (formerly cUSD) by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
-    "mechanismArchetype": "cdp",
+    "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
     "geckoId": "celo-dollar"
   },
   {
@@ -1153,7 +1155,7 @@
       "navToken": false
     },
     "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "djed",
     "canBeBlacklisted": false
   },
@@ -2304,6 +2306,7 @@
       "navToken": false
     },
     "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "honey-3"
   },
   {
@@ -2495,7 +2498,7 @@
     },
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "jpycoin",
+    "geckoId": "jpyc",
     "protocolSlug": "jpyc",
     "canBeBlacklisted": "possible"
   },
@@ -2585,7 +2588,7 @@
       "rwa": true,
       "navToken": true
     },
-    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AAAf / S1+ to the fund",
     "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-treasury-fund",
     "protocolSlug": "centrifuge",
@@ -3105,16 +3108,16 @@
     "id": "moveusd-cfx",
     "name": "CFX MoveUSD",
     "symbol": "MOVEUSD",
-    "oneLiner": "MOVEUSD is CFX's USD stablecoin on Solana, issuer-managed against USD deposits, cash equivalents, and U.S. Treasury securities for approved customers.",
+    "oneLiner": "MOVEUSD is CFX's Solana bank-deposit dollar token backed 1:1 by USD deposits in beneficiary accounts at FDIC-insured banks.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+    "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to settle one-to-one against bank deposits rather than a Treasury reserve portfolio.",
     "mechanismArchetype": "fiat-cash",
     "canBeBlacklisted": "possible"
   },
@@ -3283,11 +3286,11 @@
     "symbol": "nBASIS",
     "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
@@ -3322,11 +3325,11 @@
     "symbol": "nOPAL",
     "oneLiner": "nOPAL is Nest's vault token wrapping BlackOpal LiquidStone II tokenized credit positions; references a dollar base but behaves like a credit vault share.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
@@ -3625,6 +3628,7 @@
       "navToken": false
     },
     "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
+    "mechanismArchetype": "cdp",
     "status": "pre-launch",
     "launchPhase": "testnet",
     "canBeBlacklisted": false
@@ -3649,7 +3653,7 @@
     "id": "pht-pht",
     "name": "PHT Stablecoin",
     "symbol": "PHT",
-    "oneLiner": "PHT is APACX's Philippine Peso stablecoin minted from overcollateralized CDP vaults (MakerDAO MCD fork) against apcxUSDT and Chainlink PHP/USD oracle.",
+    "oneLiner": "PHT is APACX's Philippine peso CDP stablecoin using approved stablecoin collateral such as USDC/USDT, with apcxUSDT live in beta transparency.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "PHP",
@@ -4480,11 +4484,11 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
-    "geckoId": "susdai",
+    "geckoId": "usdai",
     "variantOf": "usdai-usd-ai",
     "variantKind": "strategy-vault"
   },
@@ -4520,7 +4524,6 @@
       "navToken": true
     },
     "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
-    "mechanismArchetype": "algorithmic",
     "geckoId": "savings-usdd",
     "variantOf": "usdd-tron-dao-reserve",
     "variantKind": "savings-passthrough"
@@ -4657,7 +4660,7 @@
     "id": "syzusd-yuzu",
     "name": "Staked Yuzu USD",
     "symbol": "syzUSD",
-    "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma with KYC-gated primary redemption.",
+    "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma and Monad.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -4692,7 +4695,7 @@
     "id": "tgbp-tokenised",
     "name": "Tokenised GBP",
     "symbol": "tGBP",
-    "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP and gilts custodied by Enumis.",
+    "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP reserves and short UK government paper.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GBP",
@@ -4779,13 +4782,13 @@
     "id": "u-united-stables",
     "name": "United Stables",
     "symbol": "U",
-    "oneLiner": "U is a BVI-issued multi-stablecoin wrapper dollar minted 1:1 against USD, USDC, USDT, and USD1, with Bermuda trustee custody via Wallets Trust Limited.",
+    "oneLiner": "U is a BVI-issued dollar stablecoin backed by a variable mix of cash, U.S. Treasury bills, and approved fiat-referenced stablecoins.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
@@ -4913,7 +4916,6 @@
       "navToken": true
     },
     "pegMechanism": "Reserve RToken/DTF whose holders can redeem into the backing basket subject to Reserve protocol throttles and basket mechanics; RSR stakers govern and absorb losses",
-    "mechanismArchetype": "cdp",
     "geckoId": "web-3-dollar",
     "protocolSlug": "reserve-protocol"
   },
@@ -4994,18 +4996,18 @@
     "id": "usdai-usd-ai",
     "name": "USD.AI",
     "symbol": "USDai",
-    "oneLiner": "USDai is USD.AI's base stablecoin, minted and redeemed on a PYUSD settlement rail; the yield-bearing sUSDai variant is a separate queued product.",
+    "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
+    "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "usdai"
+    "geckoId": "susdai"
   },
   {
     "id": "usdat-saturn",
@@ -5249,13 +5251,13 @@
     "id": "usdgo-osl",
     "name": "USDGO",
     "symbol": "USDGO",
-    "oneLiner": "USDGO is OSL's dollar stablecoin on Solana, issued 1:1 under U.S. OCC federal bank oversight via Anchorage Digital Bank with U.S. Treasury and cash backing.",
+    "oneLiner": "USDGO is OSL's yield-bearing Solana dollar issued with Anchorage Digital Bank, passing EFFR-linked reserve yield to holders.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
+      "yieldBearing": true,
+      "rwa": true,
       "navToken": false
     },
     "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
@@ -5511,11 +5513,12 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield."
+    "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
+    "geckoId": "parallel-usdp"
   },
   {
     "id": "usdp-paxos",
@@ -5551,6 +5554,7 @@
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdpt-western-union",
     "status": "pre-launch",
+    "launchDate": "2026-05-04",
     "launchPhase": "launching-soon"
   },
   {
@@ -5895,16 +5899,16 @@
     "id": "usn-noon",
     "name": "Noon USN",
     "symbol": "USN",
-    "oneLiner": "USN is Noon's yield-portfolio dollar minted 1:1 against USDC/USDT, backed by Fasanara private credit, JAAA CLOs, DeFi lending, Pendle PTs, and T-bills.",
+    "oneLiner": "USN is Noon's base dollar, minted 1:1 from USDC/USDT or short-term T-bills while yield accrues through separate sUSN.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": false,
+      "yieldBearing": false,
+      "rwa": true,
       "navToken": false
     },
-    "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
+    "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
     "geckoId": "noon-usn",
     "canBeBlacklisted": "possible"
   },
@@ -6073,9 +6077,9 @@
   },
   {
     "id": "usyc-hashnote",
-    "name": "Hashnote USYC",
+    "name": "Circle USYC",
     "symbol": "USYC",
-    "oneLiner": "USYC is Hashnote's tokenized T-bill share backed by short-term U.S. Treasuries and reverse repos, with same-day USDC subscription and redemption at NAV.",
+    "oneLiner": "Circle USYC is Hashnote's tokenized T-bill fund share backed by short-term U.S. Treasuries and reverse repos, redeemable at NAV.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",

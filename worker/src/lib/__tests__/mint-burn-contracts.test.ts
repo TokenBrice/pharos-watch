@@ -363,7 +363,7 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "a7a5-old-vector", symbol: "A7A5", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "usda-avalon", symbol: "USDA", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "brz-transfero", symbol: "BRZ", address: "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839", decimals: 18, dustThreshold: 10_000 },
-    { stablecoinId: "kag-kinesis", symbol: "KAG", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9, dustThreshold: 10 },
+    { stablecoinId: "kag-kinesis", symbol: "KAG", address: "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e", decimals: 18, dustThreshold: 10 },
     { stablecoinId: "satusd-river", symbol: "satUSD", address: "0x1958853a8be062dc4f401750eb233f5850f0d0d2", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "rwausdi-multipli", symbol: "rwaUSDi", address: "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "fpi-frax", symbol: "FPI", address: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", decimals: 18, dustThreshold: 10_000 },

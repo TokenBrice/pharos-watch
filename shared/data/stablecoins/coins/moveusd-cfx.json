@@ -4,17 +4,17 @@
   "detailProvider": "defillama",
   "name": "CFX MoveUSD",
   "symbol": "MOVEUSD",
-  "oneLiner": "MOVEUSD is CFX's USD stablecoin on Solana, issuer-managed against USD deposits, cash equivalents, and U.S. Treasury securities for approved customers.",
+  "oneLiner": "MOVEUSD is CFX's Solana bank-deposit dollar token backed 1:1 by USD deposits in beneficiary accounts at FDIC-insured banks.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": true,
+    "rwa": false,
     "navToken": false
   },
-  "collateral": "USD deposits, cash-equivalent instruments, and marketable U.S. Treasury securities supporting the CFX-issued MoveUSD token at a 1:1 U.S. dollar target",
-  "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+  "collateral": "U.S. dollar deposits held 1:1 in beneficiary accounts at participating FDIC-insured banks for approved CFX customers.",
+  "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to settle one-to-one against bank deposits rather than a Treasury reserve portfolio.",
   "mechanismArchetype": "fiat-cash",
   "links": [
     {
@@ -62,9 +62,9 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "USD deposits, cash equivalents, and marketable U.S. Treasury securities",
+      "name": "USD deposits in beneficiary accounts at FDIC-insured banks",
       "pct": 100,
-      "risk": "low"
+      "risk": "very-low"
     }
   ],
   "notices": [

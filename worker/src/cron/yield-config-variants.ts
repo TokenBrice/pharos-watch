@@ -101,14 +101,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "f(x) Protocol Savings (fxSAVE)",
     yieldType: "lending-vault",
   },
-  // Noon USN -> sUSN (savings wrapper, $24M TVL — governance-set rate)
-  "usn-noon": {
-    variantSymbol: "sUSN",
-    variantAddress: "0xE24a3DC889621612422A64E6388927901608B91D",
-    variantChain: "ethereum",
-    yieldSource: "Noon savings (sUSN)",
-    yieldType: "governance-set",
-  },
   // dUSD -> sdUSD (dTRINITY dStake ERC-4626 vault)
   "dusd-dtrinity": {
     variantSymbol: "sdUSD",
@@ -116,14 +108,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantChain: "ethereum",
     yieldSource: "dTRINITY dStake (sdUSD)",
     yieldType: "lending-vault",
-  },
-  // USDp -> sUSDp (Parallel Savings ERC-4626 vault — captures 70% of Parallelizer/bridge/flashloan fees)
-  "usdp-parallel": {
-    variantSymbol: "sUSDp",
-    variantAddress: "0x472ed57b376fe400259fb28e5c46eb53f0e3e7e7",
-    variantChain: "base",
-    yieldSource: "Parallel Savings (sUSDp)",
-    yieldType: "governance-set",
   },
   // ftUSD -> sftUSD (Flying Tulip EpochRewardsVault — delta-neutral carry yield)
   "ftusd-flying-tulip": {

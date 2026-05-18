@@ -69,6 +69,11 @@
       "chain": "base",
       "address": "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x646beea7a02fdada34c8e118949fe32350ab2206",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

@@ -96,6 +96,11 @@
       "chain": "icp",
       "address": "wu6g4-6qaaa-aaaan-qmrza-cai",
       "decimals": 8
+    },
+    {
+      "chain": "stellar",
+      "address": "VEUR-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+      "decimals": 7
     }
   ],
   "blacklistabilityReview": {

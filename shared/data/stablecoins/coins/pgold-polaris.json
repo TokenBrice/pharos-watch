@@ -100,5 +100,6 @@
       "description": "Long-form post outlining Polaris's three-pillar mission and the multi-stablecoin factory vision that includes pGOLD; mainnet timeline still uncommitted.",
       "sourceUrl": "https://polarisfinance.io/blog/path-to-the-north-star/"
     }
-  ]
+  ],
+  "mechanismArchetype": "cdp"
 }

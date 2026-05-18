@@ -92,7 +92,7 @@
     {
       "type": "warning",
       "title": "Prolonged depeg",
-      "message": "sUSD has been trading at ~$0.83-0.85 since the SIP-420 C-ratio reduction in late 2024. Peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
+      "message": "sUSD has traded materially below its $1 target since the SIP-420 C-ratio reduction. Use live runtime data for the current price; peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
     }
   ]
 }

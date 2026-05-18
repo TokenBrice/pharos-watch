@@ -2,7 +2,7 @@
   "id": "pht-pht",
   "name": "PHT Stablecoin",
   "symbol": "PHT",
-  "oneLiner": "PHT is APACX's Philippine Peso stablecoin minted from overcollateralized CDP vaults (MakerDAO MCD fork) against apcxUSDT and Chainlink PHP/USD oracle.",
+  "oneLiner": "PHT is APACX's Philippine peso CDP stablecoin using approved stablecoin collateral such as USDC/USDT, with apcxUSDT live in beta transparency.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "PHP",
@@ -11,7 +11,7 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
+  "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
   "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
   "mechanismArchetype": "cdp",
   "llamaId": "299",
@@ -76,11 +76,9 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "apcxUSDT (custodial 1:1 USDT wrapper)",
+      "name": "Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)",
       "pct": 100,
-      "risk": "high",
-      "coinId": "usdt-tether",
-      "depType": "wrapper"
+      "risk": "high"
     }
   ],
   "liveReservesConfig": {

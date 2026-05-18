@@ -17,7 +17,7 @@
   },
   "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
   "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
-  "mechanismArchetype": "cdp",
+  "mechanismArchetype": "algorithmic",
   "links": [
     {
       "label": "Website",

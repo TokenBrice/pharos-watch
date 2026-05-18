@@ -73,16 +73,28 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "JPYT uses chain-specific USDT and USDC collateral paths, so no single fixed reserve coinId or weight is representative.",
   ],
   [
-    "frax-frax::Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)::FRAX",
+    "frax-frax::Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity::FRAX",
     "FRAX's intra-protocol slice is a mixed self/protocol-owned bucket, not an upstream reserve asset that should inherit a single coinId.",
   ],
   [
-    "frax-frax::Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)::FRXUSD",
+    "frax-frax::Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity::FRXUSD",
     "FRAX's intra-protocol slice mixes frxUSD and related Frax-owned wrappers, so no single tracked coinId is representative.",
   ],
   [
-    "frax-frax::Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)::BUIDL",
-    "FRAX's other-tokenized-assets slice aggregates BUIDL with USCC, AUSD, and JTRSY, so no single tracked coinId is representative.",
+    "usdai-usd-ai::USDC / USDT stablecoin reserves (variable mix)::USDC",
+    "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
+  ],
+  [
+    "usdai-usd-ai::USDC / USDT stablecoin reserves (variable mix)::USDT",
+    "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
+  ],
+  [
+    "pht-pht::Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)::USDC",
+    "PHT's approved collateral bucket references wrapped/current and planned stablecoin collateral, so no single direct tracked coinId is representative.",
+  ],
+  [
+    "pht-pht::Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)::USDT",
+    "PHT's approved collateral bucket references wrapped/current and planned stablecoin collateral, so no single direct tracked coinId is representative.",
   ],
   [
     "hbusdt-hyperbeat::hoUSDT strategy exposure (Hyperbeat USDT strategy product)::USDT",

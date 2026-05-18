@@ -43,6 +43,11 @@
       "chain": "celo",
       "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
       "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

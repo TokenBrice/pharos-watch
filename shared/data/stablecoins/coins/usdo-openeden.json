@@ -108,5 +108,9 @@
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       }
     }
+  },
+  "yieldConfig": {
+    "yieldSource": "OpenEden USDO daily rebase",
+    "yieldType": "rebase"
   }
 }

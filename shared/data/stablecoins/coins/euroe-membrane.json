@@ -29,12 +29,10 @@
   "detailProvider": "defillama",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.euroe.com/transparency-and-regulation",
-    "provider": "Membrane Finance attestations",
+    "url": "https://www.paxos.com/euroe-redemptions",
+    "provider": "Paxos Issuance Europe redemption notice",
     "attestorTier": "self",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Finland",
-    "attestorLicense": "Electronic Money Institution"
+    "cadence": "none"
   },
   "links": [
     {

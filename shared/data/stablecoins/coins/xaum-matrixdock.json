@@ -52,6 +52,31 @@
       "chain": "bsc",
       "address": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xa7e22972a19dd924afeedf3db28033b146801081",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
+      "decimals": 18
+    },
+    {
+      "chain": "sui",
+      "address": "0x9d297676e7a4b771ab023291377b2adfaa4938fb9080b8d12430e4b108b836a9::xaum::XAUM",
+      "decimals": 9
+    },
+    {
+      "chain": "plume",
+      "address": "0x1e950e8b306bf87c90fa2c7b477e2d676775d94c",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "5aLhp9VnUEKcsdtkfsf2DUgpJfomx7GmYVny24dHUZoB",
+      "decimals": 9
     }
   ],
   "blacklistabilityReview": {

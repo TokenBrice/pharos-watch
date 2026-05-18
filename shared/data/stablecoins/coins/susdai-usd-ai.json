@@ -8,7 +8,7 @@
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "blacklistabilityReview": {
@@ -24,7 +24,7 @@
   "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
   "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
   "detailProvider": "coingecko",
-  "geckoId": "susdai",
+  "geckoId": "usdai",
   "links": [
     {
       "label": "Website",
@@ -40,7 +40,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "United States"
+    "country": "Cayman Islands"
   },
   "contracts": [
     {
@@ -69,14 +69,14 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "PYUSD (PayPal USD)",
-      "pct": 94.4,
+      "name": "PYUSD liquid sleeve",
+      "pct": 82.35,
       "risk": "low",
       "coinId": "pyusd-paypal"
     },
     {
-      "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
-      "pct": 5.6,
+      "name": "GPU-backed infrastructure loans",
+      "pct": 17.65,
       "risk": "high"
     }
   ],
@@ -89,7 +89,10 @@
     "version": 2,
     "semantics": "collateral-mix",
     "scoring": {
-      "allowedDegradedWarningCodes": ["source-timestamp-spread", "usdai-share-coverage-gap"]
+      "allowedDegradedWarningCodes": [
+        "source-timestamp-spread",
+        "usdai-share-coverage-gap"
+      ]
     },
     "breakerScope": "susdai-usd-ai",
     "display": {
@@ -102,5 +105,12 @@
         "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+    "provider": "USD.AI proof-of-reserves API",
+    "attestorTier": "self",
+    "cadence": "real-time"
   }
 }

@@ -94,5 +94,6 @@
         "url": "https://ripple.com/solutions/stablecoin/transparency/"
       }
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

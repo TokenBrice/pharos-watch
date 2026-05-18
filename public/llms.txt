@@ -128,8 +128,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Savings Dai (sDAI)](https://pharos.watch/stablecoin/sdai-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [PayPal USD (PYUSD)](https://pharos.watch/stablecoin/pyusd-paypal/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Falcon USD (USDf)](https://pharos.watch/stablecoin/usdf-falcon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [MEV Capital Falcon USDC Senior Tranche (AA_FalconXUSDC)](https://pharos.watch/stablecoin/aa-falconx-mev-capital/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Hashnote USYC (USYC)](https://pharos.watch/stablecoin/usyc-hashnote/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [Pareto FalconX Credit Vault (AA_FalconXUSDC)](https://pharos.watch/stablecoin/aa-falconx-mev-capital/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
+- [Circle USYC (USYC)](https://pharos.watch/stablecoin/usyc-hashnote/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Global Dollar (USDG)](https://pharos.watch/stablecoin/usdg-paxos/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ripple USD (RLUSD)](https://pharos.watch/stablecoin/rlusd-ripple/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ondo US Dollar Yield (USDY)](https://pharos.watch/stablecoin/usdy-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
@@ -151,8 +151,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Ethena USDtb (USDTB)](https://pharos.watch/stablecoin/usdtb-ethena/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [BFUSD (BFUSD)](https://pharos.watch/stablecoin/bfusd-binance/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [M by M0 (M)](https://pharos.watch/stablecoin/m-m0/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [United Stables (U)](https://pharos.watch/stablecoin/u-united-stables/): centralized stablecoin collateralized by crypto assets pegged to US Dollar.
-- [USD.AI (USDai)](https://pharos.watch/stablecoin/usdai-usd-ai/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
+- [United Stables (U)](https://pharos.watch/stablecoin/u-united-stables/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [USD.AI (USDai)](https://pharos.watch/stablecoin/usdai-usd-ai/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Staked USDai (sUSDai)](https://pharos.watch/stablecoin/susdai-usd-ai/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Usual USD (USD0)](https://pharos.watch/stablecoin/usd0-usual/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Bond USD0 (bUSD0)](https://pharos.watch/stablecoin/busd0-usual/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
@@ -237,7 +237,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [USDB Blast (USDB)](https://pharos.watch/stablecoin/usdb-blast/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Zoth ZeUSD (ZeUSD)](https://pharos.watch/stablecoin/zeusd-zoth/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Monerium EUR emoney (EURE)](https://pharos.watch/stablecoin/eure-monerium/): centralized stablecoin backed by real-world assets pegged to Euro.
-- [Noon USN (USN)](https://pharos.watch/stablecoin/usn-noon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Noon USN (USN)](https://pharos.watch/stablecoin/usn-noon/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Staked USN (sUSN)](https://pharos.watch/stablecoin/susn-noon/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Nectar (NECT)](https://pharos.watch/stablecoin/nect-beraborrow/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Electronic USD (EUSD)](https://pharos.watch/stablecoin/eusd-electronic-usd/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -381,8 +381,8 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Yield Optimizer USD (yoUSD)](https://pharos.watch/stablecoin/yousd-yield-optimizer/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Nest Alpha Vault LP (inALPHA)](https://pharos.watch/stablecoin/inalpha-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Nest Treasury Vault (nTBILL)](https://pharos.watch/stablecoin/ntbill-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
-- [Nest Basis Vault (nBASIS)](https://pharos.watch/stablecoin/nbasis-nest/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Nest BlackOpal LiquidStone II Vault (nOPAL)](https://pharos.watch/stablecoin/nopal-nest/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [Nest Basis Vault (nBASIS)](https://pharos.watch/stablecoin/nbasis-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
+- [Nest BlackOpal LiquidStone II Vault (nOPAL)](https://pharos.watch/stablecoin/nopal-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Nest Wisdom Vault (nWISDOM)](https://pharos.watch/stablecoin/nwisdom-nest/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [eUSD (eUSD)](https://pharos.watch/stablecoin/eusd-telcoin/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Freedom Dollar (FUSD)](https://pharos.watch/stablecoin/fusd-freedom-dollar/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.

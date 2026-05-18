@@ -45,8 +45,8 @@
   "contracts": [
     {
       "chain": "ethereum",
-      "address": "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157",
-      "decimals": 9
+      "address": "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

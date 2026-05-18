@@ -5,7 +5,7 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 
 describe("handleStablecoinReserves", () => {
-  it("keeps USDAI on the reserve endpoint with the curated PYUSD fallback until a validated snapshot is synced", async () => {
+  it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
     const db = mockD1();
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
 
@@ -18,10 +18,9 @@ describe("handleStablecoinReserves", () => {
       displayUrl: "https://usd.ai/usdai",
       reserves: [
         {
-          name: "PYUSD (PayPal USD)",
+          name: "USDC / USDT stablecoin reserves (variable mix)",
           pct: 100,
           risk: "low",
-          coinId: "pyusd-paypal",
         },
       ],
       sync: {

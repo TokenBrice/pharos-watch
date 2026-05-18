@@ -67,6 +67,21 @@
       "chain": "base",
       "address": "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy",
+      "decimals": 6
+    },
+    {
+      "chain": "hedera",
+      "address": "0.0.1985922",
+      "decimals": 6
+    },
+    {
+      "chain": "xrpl",
+      "address": "XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {

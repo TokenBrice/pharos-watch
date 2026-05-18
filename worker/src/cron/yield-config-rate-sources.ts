@@ -24,15 +24,6 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "usdp-parallel",
-    chain: "base",
-    contract: "0x472ed57b376fe400259fb28e5c46eb53f0e3e7e7",
-    selector: "0x07a2d13a",
-    decimals: 18,
-    inputAmount:
-      "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
-  },
-  {
     stablecoinId: "susds-sky",
     chain: "ethereum",
     contract: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -96,7 +87,7 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
   {
-    stablecoinId: "usn-noon",
+    stablecoinId: "susn-noon",
     chain: "ethereum",
     contract: "0xE24a3DC889621612422A64E6388927901608B91D",
     selector: "0x07a2d13a",
@@ -175,6 +166,7 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "bfusd-binance": "Binance account yield product with no reliable runtime APY source wired yet",
   "bd-basedollar": "asset with no reliable runtime yield source yet",
   "brd-volpon": "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
+  "cgusd-cygnus-finance": "daily NAV rebase asset with no reliable runtime APY source wired yet",
   "gldy-streamex": "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
   "gusd-gate": "Gate account-product yield has no reliable runtime APY source wired yet",
   "pc0000031-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
@@ -185,4 +177,6 @@ export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
   "stbt-matrixdock": "Matrixdock STBT rebases daily off T-bill yield distributed off-chain; no public APY oracle wired yet",
   "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
   "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
+  "usdn-noble": "M0-backed Noble rebase yield has no reliable runtime APY source wired yet",
+  "usdgo-osl": "EFFR-linked issuer yield has no reliable runtime APY source wired yet",
 };

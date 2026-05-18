@@ -89,36 +89,32 @@
   {
     "id": "aa-falconx-mev-capital",
     "detailProvider": "coingecko",
-    "name": "MEV Capital Falcon USDC Senior Tranche",
+    "name": "Pareto FalconX Credit Vault",
     "symbol": "AA_FalconXUSDC",
-    "oneLiner": "AA_FalconXUSDC is the senior tranche of an Idle CDO routing USDC into Morpho lending markets collateralized by Falcon Finance's USDf.",
+    "oneLiner": "AA_FalconXUSDC is a Pareto FalconX Credit Vault token: USDC exposure to FalconX institutional credit lines curated by M11 Credit.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegReferenceId": "usdc-circle",
-    "collateral": "Senior (AA) tranche of an Idle CDO over MEV-Capital-curated Morpho lending markets routed into Falcon Finance's USDf collateral; the senior class has first claim on USDC collected from interest and exit liquidity",
-    "pegMechanism": "Pareto Idle CDO senior tranche shares appreciate against USDC as borrower interest accrues; redemption depends on USDf exit liquidity through Falcon's mint/burn rails and on Morpho market liquidity. Tranche economics absorb losses junior-first, but exit pricing tracks USDf solvency",
+    "collateral": "USDC base asset in the Pareto FalconX Credit Vault, providing fixed-rate exposure to FalconX institutional credit lines curated by M11 Credit.",
+    "pegMechanism": "NAV-style credit vault token with monthly redemption mechanics; not a Falcon Finance USDf or MEV Capital strategy token.",
     "links": [
       {
-        "label": "Pareto vault",
-        "url": "https://pareto.credit/vaults/1/0xC26A6Fa2C37b38E549a4a1807543801Db684f99C"
+        "label": "RWA.xyz asset",
+        "url": "https://app.rwa.xyz/assets/%24ParetoFAL-USDC"
       },
       {
-        "label": "MEV Capital",
-        "url": "https://mevcapital.com"
+        "label": "Pareto docs",
+        "url": "https://docs.pareto.credit/product/credit-vaults/live-vaults"
       },
       {
-        "label": "Falcon Finance",
-        "url": "https://falcon.finance"
-      },
-      {
-        "label": "Idle docs",
-        "url": "https://docs.idle.finance/products/perpetual-yield-tranches"
+        "label": "Launch note",
+        "url": "https://paragraph.com/%40pareto/pareto-structured-products-falconx-m11credit-termfinance"
       }
     ],
     "contracts": [
@@ -152,18 +148,16 @@
     "variantKind": "strategy-vault",
     "reserves": [
       {
-        "name": "USDC routed through MEV-Capital Falcon strategy (USDf-collateralised Morpho markets)",
+        "name": "FalconX institutional credit-line exposure via Pareto vault",
         "pct": 100,
-        "risk": "high",
-        "coinId": "usdc-circle",
-        "depType": "wrapper"
+        "risk": "high"
       }
     ],
     "notices": [
       {
         "type": "warning",
-        "title": "Exit liquidity depends on Falcon USDf",
-        "message": "AA_FalconXUSDC is the senior tranche of a CDO over Falcon Finance USDf-collateralised Morpho markets. USDC redemption rates and exit timing are tied to USDf's mint/burn liquidity; sustained USDf stress can degrade vault liquidity even when the senior tranche absorbs no principal loss."
+        "title": "Private-credit vault exposure",
+        "message": "AA_FalconXUSDC is a Pareto credit-vault share, not a par-redeemable Falcon Finance USDf wrapper. Monthly exits depend on the vault credit line and Pareto redemption process."
       }
     ],
     "yieldConfig": {
@@ -310,7 +304,7 @@
     "links": [
       {
         "label": "Website",
-        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
       },
       {
         "label": "Twitter",
@@ -318,7 +312,7 @@
       },
       {
         "label": "Securitize Markets",
-        "url": "https://markets.securitize.io/"
+        "url": "https://securitize.io/invest"
       }
     ],
     "jurisdiction": {
@@ -721,6 +715,13 @@
     "collateral": "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
     "pegMechanism": "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
     "geckoId": "apxusd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+      "provider": "Apyx transparency documentation",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -813,6 +814,13 @@
     "collateral": "apxUSD deposited into the Apyx ERC-4626 yield vault; apxUSD itself is backed by preferred equity shares from Digital Asset Treasury companies and liquidity buffers",
     "pegMechanism": "Users deposit apxUSD to mint apyUSD; cash dividends and preferred-equity yield accrue inside the vault, increasing apyUSD's exchange rate against apxUSD over time",
     "geckoId": "apyusd",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+      "provider": "Apyx transparency documentation",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -838,11 +846,6 @@
       {
         "chain": "ethereum",
         "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
-        "decimals": 18
-      },
-      {
-        "chain": "base",
-        "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
         "decimals": 18
       }
     ],
@@ -1123,6 +1126,21 @@
         "chain": "xrpl",
         "address": "4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
         "decimals": 8
+      },
+      {
+        "chain": "solana",
+        "address": "AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+        "decimals": 6
+      },
+      {
+        "chain": "hedera",
+        "address": "0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+        "decimals": 6
+      },
+      {
+        "chain": "redbelly",
+        "address": "0x54a210e824b0f89da988e4b5586440ab354f0e46",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -2227,6 +2245,36 @@
         "chain": "ethereum",
         "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
         "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": true,
@@ -2389,7 +2437,7 @@
       },
       {
         "label": "Benji App",
-        "url": "https://benji.franklintempleton.com/"
+        "url": "https://digitalassets.franklintempleton.com/benji/"
       }
     ],
     "jurisdiction": {
@@ -4741,7 +4789,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://docs.enosys.global/"
+        "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
       }
     ],
     "contracts": [
@@ -5155,6 +5203,13 @@
       "regulator": "DAFZA",
       "license": "DAFZA; endorsed by DMCC"
     },
+    "contracts": [
+      {
+        "chain": "xdc",
+        "address": "0x8f9920283470f52128bf11b0c14e798be704fd15",
+        "decimals": 18
+      }
+    ],
     "blacklistabilityReview": {
       "reviewedStatus": true,
       "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -5515,6 +5570,9 @@
     "deploymentModel": "single-chain",
     "custodyModel": "onchain",
     "governanceQuality": "dao-governance",
+    "infrastructures": [
+      "liquity-v1"
+    ],
     "reserves": [
       {
         "name": "ETH",
@@ -5580,7 +5638,9 @@
       }
     ],
     "jurisdiction": {
-      "country": "Nigeria"
+      "country": "Nigeria",
+      "regulator": "Securities and Exchange Commission Nigeria",
+      "license": "SEC-supervised regulated digital asset"
     },
     "contracts": [
       {
@@ -6228,8 +6288,7 @@
       "navToken": false
     },
     "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
-    "pegMechanism": "Mento AMM: users mint USDm (formerly cUSD) by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
-    "mechanismArchetype": "cdp",
+    "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
     "geckoId": "celo-dollar",
     "cmcSlug": "celo-dollar",
     "proofOfReserves": {
@@ -6265,6 +6324,11 @@
         "chain": "near",
         "address": "cusd.token.a11bd.near",
         "decimals": 24
+      },
+      {
+        "chain": "monad",
+        "address": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -6849,7 +6913,7 @@
     },
     "collateral": "ADA reserves held by the Cardano Djed protocol, with SHEN reserve-coin holders absorbing surplus reserve volatility",
     "pegMechanism": "Overcollateralized Cardano stablecoin where DJED can be minted and burned against ADA while SHEN maintains the reserve ratio band",
-    "mechanismArchetype": "cdp",
+    "mechanismArchetype": "algorithmic",
     "geckoId": "djed",
     "cmcSlug": "djed",
     "links": [
@@ -8683,12 +8747,10 @@
     "mechanismArchetype": "fiat-cash",
     "proofOfReserves": {
       "type": "self-reported",
-      "url": "https://www.euroe.com/transparency-and-regulation",
-      "provider": "Membrane Finance attestations",
+      "url": "https://www.paxos.com/euroe-redemptions",
+      "provider": "Paxos Issuance Europe redemption notice",
       "attestorTier": "self",
-      "cadence": "monthly",
-      "attestorJurisdiction": "Finland",
-      "attestorLicense": "Electronic Money Institution"
+      "cadence": "none"
     },
     "links": [
       {
@@ -8836,7 +8898,7 @@
       },
       {
         "chain": "xrpl",
-        "address": "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+        "address": "EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
         "decimals": 6
       },
       {
@@ -9106,6 +9168,11 @@
       {
         "chain": "ethereum",
         "address": "0x50753cfaf86c094925bf976f218d043f8791e408",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ",
         "decimals": 6
       }
     ],
@@ -11214,6 +11281,11 @@
         "chain": "ethereum",
         "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
         "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x55380fe7a1910dff29a47b622057ab4139da42c5",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -11333,6 +11405,11 @@
         "chain": "base",
         "address": "0xc4759ed641da77cbdc9fa2f37e9260a29bf7cc52",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x646beea7a02fdada34c8e118949fe32350ab2206",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -11415,6 +11492,11 @@
       {
         "chain": "celo",
         "address": "0xccf663b1ff11028f0b19058d0f7b674004a40746",
+        "decimals": 18
+      },
+      {
+        "chain": "monad",
+        "address": "0x39bb4e0a204412bb98e821d25e7d955e69d40fd1",
         "decimals": 18
       }
     ],
@@ -13059,8 +13141,8 @@
     "mechanismArchetype": "fiat-cash",
     "links": [
       {
-        "label": "Website",
-        "url": "https://anchorpoint.fi"
+        "label": "Standard Chartered source",
+        "url": "https://www.sc.com/en/press-release/standard-chartered-backed-anchorpoint-granted-stablecoin-issuer-licence-by-the-hong-kong-monetary-authority/"
       },
       {
         "label": "License announcement",
@@ -13602,6 +13684,7 @@
     },
     "collateral": "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
     "pegMechanism": "Direct 1:1 mint/redeem against centralized stablecoin collateral with Basket Mode safety",
+    "mechanismArchetype": "fiat-cash",
     "geckoId": "honey-3",
     "pythFeedId": "0xf67b033925d73d43ba4401e00308d9b0f26ab4fbd1250e8b5407b9eaade7e1f4",
     "links": [
@@ -13912,6 +13995,13 @@
     "pegMechanism": "Direct 1:1 mint and redemption of IDRX for Indonesian rupiah through IDRX platform after KYC verification; native multichain deployment with built-in bridge functions",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "idrx",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://home.idrx.co/en/docs",
+      "provider": "IDRX transparency and audit documents",
+      "attestorTier": "niche",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -13924,6 +14014,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/idrx_co"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://home.idrx.co/en/docs"
       }
     ],
     "jurisdiction": {
@@ -14312,7 +14406,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://indigo-labs.gitbook.io/indigo-protocol/"
+        "url": "https://docs.indigoprotocol.io/"
       }
     ],
     "contracts": [
@@ -14724,7 +14818,7 @@
     "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
     "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "jpycoin",
+    "geckoId": "jpyc",
     "protocolSlug": "jpyc",
     "links": [
       {
@@ -15201,7 +15295,7 @@
       "navToken": true
     },
     "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
-    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+    "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AAAf / S1+ to the fund",
     "mechanismArchetype": "tbill",
     "geckoId": "janus-henderson-anemoy-treasury-fund",
     "protocolSlug": "centrifuge",
@@ -15235,6 +15329,41 @@
       {
         "chain": "ethereum",
         "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "decimals": 6
+      },
+      {
+        "chain": "base",
+        "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "decimals": 6
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "decimals": 6
+      },
+      {
+        "chain": "plume",
+        "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "decimals": 6
+      },
+      {
+        "chain": "monad",
+        "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
         "decimals": 6
       }
     ],
@@ -15326,6 +15455,13 @@
     "geckoId": "jupusd",
     "cmcSlug": "jupusd",
     "pythFeedId": "0x8ed858a2214e892c9371694fb6c8a9037b6ed4052c4edf209f8cb988484e81d9",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://jupusd.money/",
+      "provider": "JupUSD transparency page",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -15334,6 +15470,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/JupiterExchange"
+      },
+      {
+        "label": "Transparency",
+        "url": "https://jupusd.money/"
       }
     ],
     "contracts": [
@@ -15611,8 +15751,8 @@
     "contracts": [
       {
         "chain": "ethereum",
-        "address": "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157",
-        "decimals": 9
+        "address": "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -16976,6 +17116,36 @@
         "chain": "plume",
         "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
         "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "linea",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "soneium",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "citrea",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "sei",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
+      },
+      {
+        "chain": "mantra",
+        "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -18239,17 +18409,17 @@
     "detailProvider": "defillama",
     "name": "CFX MoveUSD",
     "symbol": "MOVEUSD",
-    "oneLiner": "MOVEUSD is CFX's USD stablecoin on Solana, issuer-managed against USD deposits, cash equivalents, and U.S. Treasury securities for approved customers.",
+    "oneLiner": "MOVEUSD is CFX's Solana bank-deposit dollar token backed 1:1 by USD deposits in beneficiary accounts at FDIC-insured banks.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": true,
+      "rwa": false,
       "navToken": false
     },
-    "collateral": "USD deposits, cash-equivalent instruments, and marketable U.S. Treasury securities supporting the CFX-issued MoveUSD token at a 1:1 U.S. dollar target",
-    "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to trade and settle at one U.S. dollar on Solana",
+    "collateral": "U.S. dollar deposits held 1:1 in beneficiary accounts at participating FDIC-insured banks for approved CFX customers.",
+    "pegMechanism": "Issuer-managed mint and redemption route for approved CFX customers, with MOVEUSD intended to settle one-to-one against bank deposits rather than a Treasury reserve portfolio.",
     "mechanismArchetype": "fiat-cash",
     "links": [
       {
@@ -18297,9 +18467,9 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "USD deposits, cash equivalents, and marketable U.S. Treasury securities",
+        "name": "USD deposits in beneficiary accounts at FDIC-insured banks",
         "pct": 100,
-        "risk": "low"
+        "risk": "very-low"
       }
     ],
     "notices": [
@@ -18454,6 +18624,11 @@
       {
         "chain": "ethereum",
         "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
+        "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
         "decimals": 18
       }
     ],
@@ -19195,11 +19370,11 @@
     "symbol": "nBASIS",
     "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
@@ -19231,6 +19406,11 @@
         "chain": "plume",
         "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
         "decimals": 6
+      },
+      {
+        "chain": "plasma",
+        "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "decimals": 6
       }
     ],
     "canBeBlacklisted": true,
@@ -19253,14 +19433,19 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Superstate USTB / USCC Treasury and credit collateral",
-        "pct": 95,
-        "risk": "very-low",
+        "name": "Superstate USCC crypto carry fund",
+        "pct": 63.91,
+        "risk": "medium"
+      },
+      {
+        "name": "Superstate USTB tokenized Treasury fund",
+        "pct": 36.08,
+        "risk": "low",
         "coinId": "ustb-superstate"
       },
       {
         "name": "Stablecoin liquidity buffer",
-        "pct": 5,
+        "pct": 0.01,
         "risk": "low",
         "coinId": "usdc-circle"
       }
@@ -19551,11 +19736,11 @@
     "symbol": "nOPAL",
     "oneLiner": "nOPAL is Nest's vault token wrapping BlackOpal LiquidStone II tokenized credit positions; references a dollar base but behaves like a credit vault share.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
@@ -19608,20 +19793,20 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "BlackOpal LiquidStone II tokenised credit positions",
-        "pct": 90,
+        "name": "BlackOpal LiquidStone II tokenized credit positions",
+        "pct": 96.66,
         "risk": "high"
       },
       {
-        "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
-        "pct": 5,
-        "risk": "low"
-      },
-      {
-        "name": "Stablecoin liquidity buffer (USDC / pUSD)",
-        "pct": 5,
+        "name": "Stablecoin liquidity buffer",
+        "pct": 2.44,
         "risk": "low",
         "coinId": "usdc-circle"
+      },
+      {
+        "name": "Nest Treasury Vault nTBILL buffer",
+        "pct": 0.9,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -19697,6 +19882,11 @@
       },
       {
         "chain": "plume",
+        "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
+        "decimals": 6
+      },
+      {
+        "chain": "arbitrum",
         "address": "0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9",
         "decimals": 6
       }
@@ -21133,6 +21323,7 @@
     },
     "collateral": "Synthetic gold exposure minted through Polaris CDP infrastructure using pETH / ETH-derived collateral, with no physical gold reserve or custodian",
     "pegMechanism": "Pre-launch CDP-style pAsset: users are expected to post pETH collateral, borrow pGOLD debt that tracks one troy ounce of gold, and redeem or liquidate through Polaris protocol mechanics rather than issuer-managed bullion redemption",
+    "mechanismArchetype": "cdp",
     "links": [
       {
         "label": "Website",
@@ -21355,7 +21546,7 @@
     "detailProvider": "defillama",
     "name": "PHT Stablecoin",
     "symbol": "PHT",
-    "oneLiner": "PHT is APACX's Philippine Peso stablecoin minted from overcollateralized CDP vaults (MakerDAO MCD fork) against apcxUSDT and Chainlink PHP/USD oracle.",
+    "oneLiner": "PHT is APACX's Philippine peso CDP stablecoin using approved stablecoin collateral such as USDC/USDT, with apcxUSDT live in beta transparency.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "PHP",
@@ -21364,7 +21555,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
+    "collateral": "MakerDAO-style CDP vaults using approved stablecoin collateral, with USDC/USDT described for the initial stage; APACX transparency currently lists apcxUSDT and planned apcxUSDC beta reserve wallets.",
     "pegMechanism": "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
     "mechanismArchetype": "cdp",
     "geckoId": "pht-stablecoin",
@@ -21427,11 +21618,9 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "apcxUSDT (custodial 1:1 USDT wrapper)",
+        "name": "Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)",
         "pct": 100,
-        "risk": "high",
-        "coinId": "usdt-tether",
-        "depType": "wrapper"
+        "risk": "high"
       }
     ],
     "liveReservesConfig": {
@@ -22570,6 +22759,7 @@
       "reviewer": "Codex inferred-status backfill",
       "reviewedAt": "2026-05-12"
     },
+    "deploymentModel": "native-multichain",
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
@@ -25858,7 +26048,7 @@
       {
         "type": "warning",
         "title": "Prolonged depeg",
-        "message": "sUSD has been trading at ~$0.83-0.85 since the SIP-420 C-ratio reduction in late 2024. Peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
+        "message": "sUSD has traded materially below its $1 target since the SIP-420 C-ratio reduction. Use live runtime data for the current price; peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy."
       }
     ]
   },
@@ -25964,13 +26154,20 @@
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": true,
-      "rwa": false,
+      "rwa": true,
       "navToken": true
     },
     "pegReferenceId": "usdai-usd-ai",
     "collateral": "Yield-bearing USD.AI position backed by a mixed reserve stack that currently pairs a large PYUSD liquid sleeve with GPU-backed infrastructure loans financing AI compute; current issuer materials describe value-warranty coverage on new GPU loans",
     "pegMechanism": "Stake USDai to receive sUSDai; the token appreciates versus USDai as yield accrues, while unstaking enters the protocol's queued withdrawal flow with fixed 30-day processing windows and a limited instant-liquidity buffer",
-    "geckoId": "susdai",
+    "geckoId": "usdai",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+      "provider": "USD.AI proof-of-reserves API",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -25986,7 +26183,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "United States"
+      "country": "Cayman Islands"
     },
     "contracts": [
       {
@@ -26024,14 +26221,14 @@
     "variantKind": "strategy-vault",
     "reserves": [
       {
-        "name": "PYUSD (PayPal USD)",
-        "pct": 94.4,
+        "name": "PYUSD liquid sleeve",
+        "pct": 82.35,
         "risk": "low",
         "coinId": "pyusd-paypal"
       },
       {
-        "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
-        "pct": 5.6,
+        "name": "GPU-backed infrastructure loans",
+        "pct": 17.65,
         "risk": "high"
       }
     ],
@@ -26180,7 +26377,6 @@
     "pegReferenceId": "usdd-tron-dao-reserve",
     "collateral": "USDD deposited into the USDD savings system; sUSDD remains economically backed by USDD while savings yield accrues through the wrapper exchange rate",
     "pegMechanism": "Users deposit USDD to receive sUSDD, whose value appreciates versus USDD as savings yield accrues; final par exit inherits USDD's PSM and reserve mechanics",
-    "mechanismArchetype": "algorithmic",
     "geckoId": "savings-usdd",
     "links": [
       {
@@ -26308,6 +26504,121 @@
         "chain": "ethereum",
         "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
         "decimals": 18
+      },
+      {
+        "chain": "plasma",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "hyperevm",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "zircuit",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "metis",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "xlayer",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "base",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "bsc",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "morph-l2",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "scroll",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "kava",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "swellchain",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "mode",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "mantle",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "manta",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "blast",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "optimism",
+        "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "decimals": 18
+      },
+      {
+        "chain": "ton",
+        "address": "EQDQ5UUyPHrLcQJlPAczd_fjxn8SLrlNQwolBznxCdSlfQwr",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
+        "decimals": 9
+      },
+      {
+        "chain": "zksync",
+        "address": "0xad17d2dd3e576dc084050090eb3773dcd49d2ebc",
+        "decimals": 18
       }
     ],
     "canBeBlacklisted": true,
@@ -26327,7 +26638,7 @@
       "reviewer": "Codex status/data pass",
       "reviewedAt": "2026-05-12"
     },
-    "deploymentModel": "single-chain",
+    "deploymentModel": "third-party-bridge",
     "collateralQuality": "exotic",
     "custodyModel": "cex",
     "governanceQuality": "wrapper",
@@ -26859,6 +27170,16 @@
         "chain": "ethereum",
         "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
         "decimals": 6
+      },
+      {
+        "chain": "plasma",
+        "address": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+        "decimals": 6
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -27018,7 +27339,7 @@
     "detailProvider": "coingecko",
     "name": "Staked Yuzu USD",
     "symbol": "syzUSD",
-    "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma with KYC-gated primary redemption.",
+    "oneLiner": "syzUSD is Yuzu's staking wrapper of yzUSD; share price accrues yield from overcollateralized DeFi strategies on Plasma and Monad.",
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
@@ -27246,7 +27567,7 @@
     "detailProvider": "defillama",
     "name": "Tokenised GBP",
     "symbol": "tGBP",
-    "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP and gilts custodied by Enumis.",
+    "oneLiner": "tGBP is BCP Technologies' UK-FCA-registered pound stablecoin, redeemable 1:1 against GBP reserves and short UK government paper.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "GBP",
@@ -27255,7 +27576,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "Cash and short-term UK government bonds (zero-coupon gilts) held in a segregated account at a UK-regulated financial institution, custodied by Enumis Limited",
+    "collateral": "GBP reserves held in regulated financial institutions and/or backed by short-term UK government paper.",
     "pegMechanism": "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tokenised-gbp",
@@ -27320,7 +27641,7 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "GBP & UK gilts, custodied by Enumis",
+        "name": "GBP reserves and short-term UK government paper",
         "pct": 100,
         "risk": "very-low"
       }
@@ -27644,6 +27965,16 @@
         "chain": "solana",
         "address": "A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf",
         "decimals": 6
+      },
+      {
+        "chain": "codex",
+        "address": "0x92932acf15928c2007912bb9f90094a5b6fe7160",
+        "decimals": 6
+      },
+      {
+        "chain": "worldchain",
+        "address": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -27825,16 +28156,16 @@
     "detailProvider": "defillama",
     "name": "United Stables",
     "symbol": "U",
-    "oneLiner": "U is a BVI-issued multi-stablecoin wrapper dollar minted 1:1 against USD, USDC, USDT, and USD1, with Bermuda trustee custody via Wallets Trust Limited.",
+    "oneLiner": "U is a BVI-issued dollar stablecoin backed by a variable mix of cash, U.S. Treasury bills, and approved fiat-referenced stablecoins.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
       "yieldBearing": false,
-      "rwa": false,
+      "rwa": true,
       "navToken": false
     },
-    "collateral": "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
+    "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
     "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "united-stables",
@@ -27879,27 +28210,9 @@
     "custodyModel": "institutional-unregulated",
     "reserves": [
       {
-        "name": "USDC",
-        "pct": 35,
-        "risk": "low",
-        "coinId": "usdc-circle"
-      },
-      {
-        "name": "USDT",
-        "pct": 35,
-        "risk": "low",
-        "coinId": "usdt-tether"
-      },
-      {
-        "name": "USD1 (WLFI stablecoin)",
-        "pct": 15,
-        "risk": "medium",
-        "coinId": "usd1-world-liberty-financial"
-      },
-      {
-        "name": "Fiat USD / U.S. Treasury Bills",
-        "pct": 15,
-        "risk": "very-low"
+        "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+        "pct": 100,
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -28060,10 +28373,18 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
+    "collateral": "Cash and reverse repurchase agreements collateralized by U.S. Treasuries, held for USAT reserves under Anchorage Digital Bank issuance.",
     "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usa",
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
+      "provider": "Anchorage Digital Bank reserve attestations",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States"
+    },
     "links": [
       {
         "label": "Website",
@@ -28072,6 +28393,10 @@
       {
         "label": "Twitter",
         "url": "https://x.com/usat"
+      },
+      {
+        "label": "Reserve attestations",
+        "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
       }
     ],
     "jurisdiction": {
@@ -28102,7 +28427,7 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "U.S. Treasury bills",
+        "name": "Treasury-collateralized reverse repos",
         "pct": 80,
         "risk": "very-low"
       },
@@ -28190,6 +28515,11 @@
       },
       {
         "chain": "bsc",
+        "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+        "decimals": 18
+      },
+      {
+        "chain": "nibiru",
         "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
         "decimals": 18
       }
@@ -28534,11 +28864,10 @@
     "proofOfReserves": {
       "type": "independent-audit",
       "url": "https://www.bitgo.com/usd1/attestations/",
-      "provider": "BitGo",
-      "attestorTier": "self",
+      "provider": "Independent accounting firm via BitGo",
+      "attestorTier": "niche",
       "cadence": "monthly",
-      "attestorJurisdiction": "United States",
-      "attestorLicense": "South Dakota Trust Charter"
+      "attestorJurisdiction": "United States"
     },
     "links": [
       {
@@ -28667,7 +28996,6 @@
     },
     "collateral": "Reserve Protocol DTF basket made up of Savings USDS, Aave USDC, wrapped Compound USDCv3, and Steakhouse USDC strategy exposure",
     "pegMechanism": "Reserve RToken/DTF whose holders can redeem into the backing basket subject to Reserve protocol throttles and basket mechanics; RSR stakers govern and absorb losses",
-    "mechanismArchetype": "cdp",
     "geckoId": "web-3-dollar",
     "protocolSlug": "reserve-protocol",
     "proofOfReserves": {
@@ -28688,7 +29016,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://reserve.org/protocol/"
+        "url": "https://docs.reserve.org/"
       },
       {
         "label": "Transparency",
@@ -29182,20 +29510,27 @@
     "detailProvider": "defillama",
     "name": "USD.AI",
     "symbol": "USDai",
-    "oneLiner": "USDai is USD.AI's base stablecoin, minted and redeemed on a PYUSD settlement rail; the yield-bearing sUSDai variant is a separate queued product.",
+    "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
     "flags": {
-      "backing": "rwa-backed",
+      "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
-    "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
-    "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
+    "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
+    "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
     "mechanismArchetype": "fiat-cash",
-    "geckoId": "usdai",
+    "geckoId": "susdai",
     "pythFeedId": "0x2062b35e2893383ffcd1699b01622618fec1d95d1bc6fa81111df38940ee3134",
+    "proofOfReserves": {
+      "type": "real-time",
+      "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+      "provider": "USD.AI proof-of-reserves API",
+      "attestorTier": "self",
+      "cadence": "real-time"
+    },
     "links": [
       {
         "label": "Website",
@@ -29211,7 +29546,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "United States"
+      "country": "Cayman Islands"
     },
     "contracts": [
       {
@@ -29246,10 +29581,9 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "PYUSD (PayPal USD)",
+        "name": "USDC / USDT stablecoin reserves (variable mix)",
         "pct": 100,
-        "risk": "low",
-        "coinId": "pyusd-paypal"
+        "risk": "low"
       }
     ],
     "liveReservesConfig": {
@@ -30099,7 +30433,7 @@
     "contracts": [
       {
         "chain": "tron",
-        "address": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+        "address": "TCrEVahRbhDFB6uRXEWUg7wkptXvg47GKs",
         "decimals": 18
       },
       {
@@ -30110,26 +30444,6 @@
       {
         "chain": "bsc",
         "address": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
-        "decimals": 18
-      },
-      {
-        "chain": "near",
-        "address": "0c10bf8fcb7bf5412187a595ab97a3609160b5c6.factory.bridge.near",
-        "decimals": 18
-      },
-      {
-        "chain": "avalanche",
-        "address": "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2",
-        "decimals": 18
-      },
-      {
-        "chain": "arbitrum",
-        "address": "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f",
-        "decimals": 18
-      },
-      {
-        "chain": "bittorrent",
-        "address": "0x392004bee213f1ff580c867359c246924f21e6ad",
         "decimals": 18
       }
     ],
@@ -30977,16 +31291,16 @@
     "detailProvider": "defillama",
     "name": "USDGO",
     "symbol": "USDGO",
-    "oneLiner": "USDGO is OSL's dollar stablecoin on Solana, issued 1:1 under U.S. OCC federal bank oversight via Anchorage Digital Bank with U.S. Treasury and cash backing.",
+    "oneLiner": "USDGO is OSL's yield-bearing Solana dollar issued with Anchorage Digital Bank, passing EFFR-linked reserve yield to holders.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized",
-      "yieldBearing": false,
-      "rwa": false,
+      "yieldBearing": true,
+      "rwa": true,
       "navToken": false
     },
-    "collateral": "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
+    "collateral": "U.S. Treasuries, cash, and high-quality liquid assets held by Anchorage Digital Bank, with reserve yield linked to the Effective Federal Funds Rate.",
     "pegMechanism": "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "usdgo",
@@ -31047,6 +31361,10 @@
           "url": "https://www.usdgo.com/api/lark-bitable"
         }
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "USDGO EFFR-linked reserve yield",
+      "yieldType": "governance-set"
     }
   },
   {
@@ -31068,6 +31386,13 @@
     "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
     "mechanismArchetype": "synthetic-delta-neutral",
     "geckoId": "hermetica-usdh",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+      "provider": "Hermetica custodian attestations",
+      "attestorTier": "self",
+      "cadence": "monthly"
+    },
     "links": [
       {
         "label": "Website",
@@ -31898,6 +32223,10 @@
           "url": "https://protocol-api.m0.org/graphql"
         }
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "M0 T-bill rebase",
+      "yieldType": "rebase"
     }
   },
   {
@@ -32241,6 +32570,10 @@
           "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
         }
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "OpenEden USDO daily rebase",
+      "yieldType": "rebase"
     }
   },
   {
@@ -32374,12 +32707,13 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
     "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
     "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
+    "geckoId": "parallel-usdp",
     "links": [
       {
         "label": "Website",
@@ -32459,6 +32793,56 @@
         "chain": "xlayer",
         "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0x1250304f66404cd153fa39388ddcdaec7e0f1707",
+        "decimals": 18
+      },
+      {
+        "chain": "berachain",
+        "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "decimals": 18
+      },
+      {
+        "chain": "gnosis",
+        "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "decimals": 18
+      },
+      {
+        "chain": "unichain",
+        "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+        "decimals": 18
+      },
+      {
+        "chain": "linea",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
+      },
+      {
+        "chain": "plume",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
+      },
+      {
+        "chain": "plasma",
+        "address": "0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+        "decimals": 18
+      },
+      {
+        "chain": "katana",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
+      },
+      {
+        "chain": "hemi",
+        "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -32508,11 +32892,7 @@
         "title": "Not the cemetery PAR or Paxos USDP",
         "message": "Parallel USDp (llamaId 291, Parallel V3) is distinct from the abandoned Mimo Labs PAR (Euro CDP, llamaId 56) and from Paxos USDP / PAX Dollar. The Parallelizer is a licensed fork of Angle Protocol's Transmuter; Mimo Labs and Cooper Labs hold commercial use rights to the codebase."
       }
-    ],
-    "yieldConfig": {
-      "yieldSource": "Parallel Savings (sUSDp)",
-      "yieldType": "governance-set"
-    }
+    ]
   },
   {
     "id": "usdp-paxos",
@@ -32664,6 +33044,7 @@
     },
     "custodyModel": "institutional-regulated",
     "status": "pre-launch",
+    "launchDate": "2026-05-04",
     "announcedDate": "2025-10",
     "expectedLaunchDate": "2026-05",
     "launchPhase": "launching-soon",
@@ -33229,7 +33610,7 @@
       },
       {
         "label": "Docs",
-        "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+        "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
       },
       {
         "label": "Dapp",
@@ -33240,6 +33621,11 @@
       {
         "chain": "rootstock",
         "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+        "decimals": 18
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
         "decimals": 18
       }
     ],
@@ -33619,7 +34005,7 @@
       "rwa": false,
       "navToken": false
     },
-    "collateral": "U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)",
+    "collateral": "Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.",
     "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "tether",
@@ -33845,33 +34231,23 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "U.S. Treasury Bills",
-        "pct": 63,
+        "name": "U.S. Treasury bill exposure",
+        "pct": 73.5,
         "risk": "very-low"
       },
       {
-        "name": "Overnight Reverse Repos",
-        "pct": 10,
-        "risk": "very-low"
-      },
-      {
-        "name": "Precious Metals (Gold)",
-        "pct": 9,
-        "risk": "medium"
-      },
-      {
-        "name": "Secured Loans",
-        "pct": 9,
+        "name": "Physical gold",
+        "pct": 10.4,
         "risk": "medium"
       },
       {
         "name": "Bitcoin",
-        "pct": 4,
+        "pct": 3.7,
         "risk": "high"
       },
       {
-        "name": "Other Investments (cash, corporate bonds)",
-        "pct": 5,
+        "name": "Other reserve assets and excess buffer",
+        "pct": 12.4,
         "risk": "medium"
       }
     ],
@@ -34938,17 +35314,17 @@
     "detailProvider": "defillama",
     "name": "Noon USN",
     "symbol": "USN",
-    "oneLiner": "USN is Noon's yield-portfolio dollar minted 1:1 against USDC/USDT, backed by Fasanara private credit, JAAA CLOs, DeFi lending, Pendle PTs, and T-bills.",
+    "oneLiner": "USN is Noon's base dollar, minted 1:1 from USDC/USDT or short-term T-bills while yield accrues through separate sUSN.",
     "flags": {
-      "backing": "crypto-backed",
+      "backing": "rwa-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
-      "rwa": false,
+      "yieldBearing": false,
+      "rwa": true,
       "navToken": false
     },
-    "collateral": "Current Accountable deployment disclosure is concentrated in Fasanara private credit, Janus Henderson JAAA CLOs, DeFi lending, Pendle principal tokens, and a smaller tokenized U.S. Treasury bill sleeve; USN is minted and redeemed 1:1 against USDC or USDT",
-    "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
+    "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
+    "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
     "geckoId": "noon-usn",
     "proofOfReserves": {
       "type": "real-time",
@@ -34982,7 +35358,17 @@
       },
       {
         "chain": "sophon",
+        "address": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
+        "decimals": 18
+      },
+      {
+        "chain": "zksync",
         "address": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+        "decimals": 18
+      },
+      {
+        "chain": "starknet",
+        "address": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
         "decimals": 18
       }
     ],
@@ -35058,10 +35444,6 @@
           "Funding Rate (BTC)": "high"
         }
       }
-    },
-    "yieldConfig": {
-      "yieldSource": "Noon savings (sUSN)",
-      "yieldType": "governance-set"
     }
   },
   {
@@ -36098,9 +36480,9 @@
     "id": "usyc-hashnote",
     "llamaId": "237",
     "detailProvider": "defillama",
-    "name": "Hashnote USYC",
+    "name": "Circle USYC",
     "symbol": "USYC",
-    "oneLiner": "USYC is Hashnote's tokenized T-bill share backed by short-term U.S. Treasuries and reverse repos, with same-day USDC subscription and redemption at NAV.",
+    "oneLiner": "Circle USYC is Hashnote's tokenized T-bill fund share backed by short-term U.S. Treasuries and reverse repos, redeemable at NAV.",
     "flags": {
       "backing": "rwa-backed",
       "pegCurrency": "USD",
@@ -36109,7 +36491,7 @@
       "rwa": true,
       "navToken": true
     },
-    "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
+    "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts.",
     "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
     "mechanismArchetype": "tbill",
     "geckoId": "hashnote-usyc",
@@ -36129,7 +36511,7 @@
       }
     ],
     "jurisdiction": {
-      "country": "Bermuda",
+      "country": "Bermuda / Cayman Islands",
       "regulator": "BMA",
       "license": "DABA License"
     },
@@ -36142,6 +36524,11 @@
       {
         "chain": "bsc",
         "address": "0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
         "decimals": 6
       }
     ],
@@ -36612,6 +36999,13 @@
     "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-swiss-franc",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
+      "provider": "VNX proof-of-reserves disclosures",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -36656,6 +37050,41 @@
         "chain": "solana",
         "address": "AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
         "decimals": 9
+      },
+      {
+        "chain": "celo",
+        "address": "0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+        "decimals": 18
+      },
+      {
+        "chain": "tezos",
+        "address": "KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+        "decimals": 18
+      },
+      {
+        "chain": "xrpl",
+        "address": "VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+        "decimals": 6
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x418126bb59457afdba1ecf376f97400b4157425d",
+        "decimals": 18
+      },
+      {
+        "chain": "icp",
+        "address": "ly36x-wiaaa-aaaai-aqj7q-cai",
+        "decimals": 8
+      },
+      {
+        "chain": "stellar",
+        "address": "VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -36875,6 +37304,11 @@
         "chain": "icp",
         "address": "wu6g4-6qaaa-aaaan-qmrza-cai",
         "decimals": 8
+      },
+      {
+        "chain": "stellar",
+        "address": "VEUR-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+        "decimals": 7
       }
     ],
     "blacklistabilityReview": {
@@ -36934,6 +37368,13 @@
     "pegMechanism": "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
     "mechanismArchetype": "fiat-cash",
     "geckoId": "vnx-british-pound",
+    "proofOfReserves": {
+      "type": "self-reported",
+      "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
+      "provider": "VNX proof-of-reserves disclosures",
+      "attestorTier": "self",
+      "cadence": "ad-hoc"
+    },
     "links": [
       {
         "label": "Website",
@@ -36963,6 +37404,11 @@
         "chain": "celo",
         "address": "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f",
         "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "5H4voZhzySsVvwVYDAKku8MZGuYBC7cXaBKDPW4YHWW1",
+        "decimals": 9
       }
     ],
     "blacklistabilityReview": {
@@ -38963,6 +39409,31 @@
         "chain": "bsc",
         "address": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
         "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xa7e22972a19dd924afeedf3db28033b146801081",
+        "decimals": 18
+      },
+      {
+        "chain": "tron",
+        "address": "TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
+        "decimals": 18
+      },
+      {
+        "chain": "sui",
+        "address": "0x9d297676e7a4b771ab023291377b2adfaa4938fb9080b8d12430e4b108b836a9::xaum::XAUM",
+        "decimals": 9
+      },
+      {
+        "chain": "plume",
+        "address": "0x1e950e8b306bf87c90fa2c7b477e2d676775d94c",
+        "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "5aLhp9VnUEKcsdtkfsf2DUgpJfomx7GmYVny24dHUZoB",
+        "decimals": 9
       }
     ],
     "blacklistabilityReview": {
@@ -39588,6 +40059,21 @@
         "chain": "base",
         "address": "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b",
         "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy",
+        "decimals": 6
+      },
+      {
+        "chain": "hedera",
+        "address": "0.0.1985922",
+        "decimals": 6
+      },
+      {
+        "chain": "xrpl",
+        "address": "XSGD.rK67JczCpaYXVtfw3qJVmqwpSfa1bYTptw",
+        "decimals": 6
       }
     ],
     "blacklistabilityReview": {
@@ -39925,6 +40411,11 @@
       {
         "chain": "bsc",
         "address": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+        "decimals": 6
+      },
+      {
+        "chain": "solana",
+        "address": "4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
         "decimals": 6
       }
     ],
@@ -41013,6 +41504,11 @@
         "chain": "polygon",
         "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
         "decimals": 18
+      },
+      {
+        "chain": "solana",
+        "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+        "decimals": 18
       }
     ],
     "blacklistabilityReview": {
@@ -41101,7 +41597,7 @@
       },
       {
         "chain": "optimism",
-        "address": "0x4f8a84c442f9675610c680990eddb2ccddb8ab6f",
+        "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
         "decimals": 18
       },
       {
@@ -41116,6 +41612,21 @@
       },
       {
         "chain": "arbitrum",
+        "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+        "decimals": 18
+      },
+      {
+        "chain": "polygon",
+        "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+        "decimals": 18
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
+        "decimals": 18
+      },
+      {
+        "chain": "sonic",
         "address": "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553",
         "decimals": 18
       }
@@ -41539,7 +42050,7 @@
       {
         "name": "ZSD yield reserve backing ZYS shares",
         "pct": 100,
-        "risk": "low",
+        "risk": "high",
         "coinId": "zsd-zephyr-protocol",
         "depType": "wrapper"
       }

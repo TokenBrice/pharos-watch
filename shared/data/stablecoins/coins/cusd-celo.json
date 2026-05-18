@@ -12,8 +12,7 @@
     "navToken": false
   },
   "collateral": "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
-  "pegMechanism": "Mento AMM: users mint USDm (formerly cUSD) by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
-  "mechanismArchetype": "cdp",
+  "pegMechanism": "Mento V3 reserve-backed model: users mint and redeem USDm against reserve assets through Mento rails, with oracle pricing, circuit breakers, and reserve governance replacing the old CDP framing.",
   "llamaId": "24",
   "detailProvider": "defillama",
   "geckoId": "celo-dollar",
@@ -51,6 +50,11 @@
       "chain": "near",
       "address": "cusd.token.a11bd.near",
       "decimals": 24
+    },
+    {
+      "chain": "monad",
+      "address": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

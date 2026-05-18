@@ -27,6 +27,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/JupiterExchange"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://jupusd.money/"
     }
   ],
   "contracts": [
@@ -84,5 +88,12 @@
       "snapshotsUrl": "https://api.jupusd.money/api/snapshots",
       "oracleUrl": "https://api.jupusd.money/api/oracle"
     }
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://jupusd.money/",
+    "provider": "JupUSD transparency page",
+    "attestorTier": "self",
+    "cadence": "real-time"
   }
 }

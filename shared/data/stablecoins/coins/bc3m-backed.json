@@ -48,6 +48,36 @@
       "chain": "ethereum",
       "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
       "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
     }
   ],
   "canBeBlacklisted": true,

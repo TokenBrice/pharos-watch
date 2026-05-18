@@ -24,7 +24,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+      "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
     },
     {
       "label": "Dapp",
@@ -35,6 +35,11 @@
     {
       "chain": "rootstock",
       "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
       "decimals": 18
     }
   ],

@@ -61,6 +61,41 @@
       "chain": "solana",
       "address": "AhhdRu5YZdjVkKR3wbnUDaymVQL2ucjMQ63sZ3LFHsch",
       "decimals": 9
+    },
+    {
+      "chain": "celo",
+      "address": "0xc5ebea9984c485ec5d58ca5a2d376620d93af871",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xcdb3867935247049e87c38ea270edd305d84c9ae",
+      "decimals": 18
+    },
+    {
+      "chain": "tezos",
+      "address": "KT1LssxZqfQtRFv1CRkzX9E9gzap9iFrtWmq",
+      "decimals": 18
+    },
+    {
+      "chain": "xrpl",
+      "address": "VCHF-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3",
+      "decimals": 6
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x418126bb59457afdba1ecf376f97400b4157425d",
+      "decimals": 18
+    },
+    {
+      "chain": "icp",
+      "address": "ly36x-wiaaa-aaaai-aqj7q-cai",
+      "decimals": 8
+    },
+    {
+      "chain": "stellar",
+      "address": "VCHF-GDXLSLCOPPHTWOQXLLKSVN4VN3G67WD2ENU7UMVAROEYVJLSPSEWXIZN",
+      "decimals": 7
     }
   ],
   "blacklistabilityReview": {
@@ -98,5 +133,12 @@
       "label": "CHF cash & equivalents",
       "risk": "very-low"
     }
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://faq.vnx.li/en/articles/6948507-how-can-i-check-the-proof-of-reserves",
+    "provider": "VNX proof-of-reserves disclosures",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   }
 }

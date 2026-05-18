@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -94,6 +94,56 @@
       "chain": "xlayer",
       "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x1250304f66404cd153fa39388ddcdaec7e0f1707",
+      "decimals": 18
+    },
+    {
+      "chain": "berachain",
+      "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x9ee1963f05553ef838604dd39403be21cef26aa4",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+      "decimals": 18
+    },
+    {
+      "chain": "plasma",
+      "address": "0xc2f8b5d893217462ae9c9879c9285a5a3aabcb8f",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+      "decimals": 18
+    },
+    {
+      "chain": "hemi",
+      "address": "0x8fcf9118fdd359f6277cdd143c2da206e64140f3",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -107,10 +157,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "yieldConfig": {
-    "yieldSource": "Parallel Savings (sUSDp)",
-    "yieldType": "governance-set"
-  },
   "notices": [
     {
       "type": "info",
@@ -147,5 +193,6 @@
       "coinId": "usdc-circle",
       "depType": "collateral"
     }
-  ]
+  ],
+  "geckoId": "parallel-usdp"
 }

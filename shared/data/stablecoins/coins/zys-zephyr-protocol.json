@@ -72,7 +72,7 @@
     {
       "name": "ZSD yield reserve backing ZYS shares",
       "pct": 100,
-      "risk": "low",
+      "risk": "high",
       "coinId": "zsd-zephyr-protocol",
       "depType": "wrapper"
     }

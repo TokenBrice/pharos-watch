@@ -37,6 +37,11 @@
       "chain": "ethereum",
       "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
       "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

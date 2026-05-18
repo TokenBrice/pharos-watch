@@ -63,6 +63,11 @@
       "chain": "polygon",
       "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {

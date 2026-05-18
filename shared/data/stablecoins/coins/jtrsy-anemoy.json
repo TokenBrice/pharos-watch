@@ -12,7 +12,7 @@
     "navToken": true
   },
   "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
-  "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+  "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AAAf / S1+ to the fund",
   "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "janus-henderson-anemoy-treasury-fund",
@@ -47,6 +47,41 @@
     {
       "chain": "ethereum",
       "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
       "decimals": 6
     }
   ],

@@ -44,7 +44,7 @@
   "contracts": [
     {
       "chain": "tron",
-      "address": "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz",
+      "address": "TCrEVahRbhDFB6uRXEWUg7wkptXvg47GKs",
       "decimals": 18
     },
     {
@@ -55,26 +55,6 @@
     {
       "chain": "bsc",
       "address": "0x45e51bc23d592eb2dba86da3985299f7895d66ba",
-      "decimals": 18
-    },
-    {
-      "chain": "near",
-      "address": "0c10bf8fcb7bf5412187a595ab97a3609160b5c6.factory.bridge.near",
-      "decimals": 18
-    },
-    {
-      "chain": "avalanche",
-      "address": "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2",
-      "decimals": 18
-    },
-    {
-      "chain": "arbitrum",
-      "address": "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f",
-      "decimals": 18
-    },
-    {
-      "chain": "bittorrent",
-      "address": "0x392004bee213f1ff580c867359c246924f21e6ad",
       "decimals": 18
     }
   ],

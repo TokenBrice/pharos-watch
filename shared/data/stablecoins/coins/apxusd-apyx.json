@@ -88,5 +88,12 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Apyx transparency documentation",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   }
 }

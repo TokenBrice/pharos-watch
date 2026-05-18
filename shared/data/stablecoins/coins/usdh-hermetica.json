@@ -62,5 +62,12 @@
   "yieldConfig": {
     "yieldSource": "Hermetica staking (sUSDh)",
     "yieldType": "lending-vault"
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+    "provider": "Hermetica custodian attestations",
+    "attestorTier": "self",
+    "cadence": "monthly"
   }
 }
