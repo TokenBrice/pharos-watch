@@ -202,7 +202,7 @@ export function MethodologyLabel({
         topic={topic}
         buttonClassName={
           compact
-            ? "!h-6 !w-6 !min-h-0 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
+            ? "!h-11 !w-11 !min-h-11 border-frost-blue/35 bg-frost-blue/12 text-frost-blue md:!h-6 md:!w-6 md:!min-h-0"
             : undefined
         }
       />
