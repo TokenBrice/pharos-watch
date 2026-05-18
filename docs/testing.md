@@ -107,6 +107,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Skips the heavy deploy workflow entirely when neither Pages nor worker deploy surfaces changed
    - Forces the full path on `workflow_dispatch`
 4. `upload-worker-version` (needs `detect-changes`):
+   - Uses `setup-workspace` with `install-deps: "false"` and installs only production dependencies for the root + `worker` workspace before upload packaging
    - Capture the currently live production Worker version ID with `wrangler deployments status --json`
    - Upload a candidate Worker version with `wrangler versions upload` before validation completes; this is non-mutating preparation for the promotion lane and keeps preview URL smoke available before production traffic shifts
    - Skipped on Pages-only, validation-only, or non-deploy `push` events where `worker_promotion_required=false`

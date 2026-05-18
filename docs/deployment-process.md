@@ -144,7 +144,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - records an explicit no-op outcome for docs-only or other non-deploy pushes to `main`
 4. `deploy-worker`
    - split into early non-mutating candidate preparation and gated production promotion:
-     - `upload-worker-version` captures the currently live production version ID and uploads the candidate with pinned CLI calls (`npx --yes wrangler@4.91.0 ...`) as soon as `detect-changes` confirms Worker promotion is required; this prep lane skips `npm ci`
+    - `upload-worker-version` captures the currently live production version ID and uploads the candidate with pinned CLI calls (`npx --yes wrangler@4.91.0 ...`) as soon as `detect-changes` confirms Worker promotion is required; this prep lane skips the shared full-install path (`setup-workspace` with `install-deps: "false"`) and installs only production dependencies for the root + `worker` workspace before upload
      - `deploy-worker` waits for the aggregate `validate / validate` job, reruns `npm run check:migrations`, applies D1 migrations via `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, runs deploy-canary `smoke-api` checks against the uploaded preview URL with `SMOKE_API_KEY`, and then promotes that exact preview-smoked version with `cd worker && npx --no-install wrangler versions deploy <version-id>@100`
    - runs `cd worker && npx --no-install wrangler triggers deploy` after promotion to explicitly sync cron/routes/domain triggers and other non-versioned trigger settings
    - uploads the candidate before validation completes; remote D1 apply and production promotion still wait for validation and the migration guard

@@ -70,6 +70,8 @@ jobs:
         with:
           node-version: 24
           install-deps: "false"
+      - name: Install worker upload dependencies (production-only)
+        run: npm install --workspace worker --include-workspace-root --omit=dev --no-audit --no-fund
       - name: Capture current production version
         id: current-deployment
         run: |
