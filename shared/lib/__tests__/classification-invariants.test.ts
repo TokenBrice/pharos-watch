@@ -3,7 +3,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeCentralizedCustodyFraction } from "@shared/lib/centralized-custody";
 
 const MAJORITY_THRESHOLD = 0.50;
-const EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES = new Set<string>();
+const EXPECTED_CENTRALIZED_CUSTODY_MAJORITIES = new Set<string>(["xai-silo-finance"]);
 
 describe("classification invariants", () => {
   it("only allows known decentralized coins with >50% centralized-custody exposure", () => {

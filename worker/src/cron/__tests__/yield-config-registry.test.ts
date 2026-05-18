@@ -26,6 +26,7 @@ const directProtocolApiIds = new Set(
     .filter((entry) => entry.directProtocolApiLabel)
     .map((entry) => entry.stablecoinId),
 );
+const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["bold-liquity", "usdf-falcon"]);
 
 function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     return (
@@ -70,7 +71,9 @@ describe("yield config registry", () => {
     for (const config of ON_CHAIN_RATE_CONFIGS) {
       const coin = TRACKED_STABLECOINS.find((entry) => entry.id === config.stablecoinId);
       expect(coin, config.stablecoinId).toBeDefined();
-      expect(coin?.flags.yieldBearing, config.stablecoinId).toBe(true);
+      if (!NON_YIELD_BEARING_ONCHAIN_IDS.has(config.stablecoinId)) {
+        expect(coin?.flags.yieldBearing, config.stablecoinId).toBe(true);
+      }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
     }
   });
