@@ -32,7 +32,8 @@ const TOKEN_META = {
   wstETH: {
     chain: "ethereum",
     address: "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
-    decimals: 18,
+    apiDecimals: 18,
+    onchainRawDecimals: 18,
     risk: getCanonicalReserveAssetRisk("WSTETH") ?? "low",
     name: "wstETH (Lido)",
     poolAddress: "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8",
@@ -40,7 +41,8 @@ const TOKEN_META = {
   wbtc: {
     chain: "ethereum",
     address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
-    decimals: 8,
+    apiDecimals: 8,
+    onchainRawDecimals: 18,
     risk: getCanonicalReserveAssetRisk("WBTC") ?? "medium",
     name: "WBTC",
     poolAddress: "0xAB709e26Fa6B0A30c119D8c55B887DeD24952473",
@@ -95,6 +97,7 @@ async function buildFxResult(
   ctx: AdapterContext | undefined,
   freshnessMetadata: Record<string, unknown>,
   sourceUrls: string[],
+  amountDecimalsByKey: Record<keyof typeof TOKEN_META, number>,
 ): Promise<AdapterResult> {
   if (balances.length === 0) {
     throw new Error("fx returned no positive collateral balances");
@@ -116,7 +119,7 @@ async function buildFxResult(
       throw new Error(`Missing DefiLlama price for ${key}`);
     }
     return {
-      value: valueUsdFromBigIntPrice(amountRaw, TOKEN_META[key].decimals, price),
+      value: valueUsdFromBigIntPrice(amountRaw, amountDecimalsByKey[key], price),
       name: TOKEN_META[key].name,
       risk: TOKEN_META[key].risk,
     };
@@ -172,6 +175,10 @@ async function fetchFxApiReserves(
       "https://api.aladdin.club/api1/get_fx_tvl",
       "https://fxprotocol.gitbook.io/fx-docs",
     ],
+    {
+      wstETH: TOKEN_META.wstETH.apiDecimals,
+      wbtc: TOKEN_META.wbtc.apiDecimals,
+    },
   );
 }
 
@@ -220,6 +227,10 @@ async function fetchFxOnchainReserves(
     [
       "https://fxprotocol.gitbook.io/fx-docs",
     ],
+    {
+      wstETH: TOKEN_META.wstETH.onchainRawDecimals,
+      wbtc: TOKEN_META.wbtc.onchainRawDecimals,
+    },
   );
 }
 

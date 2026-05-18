@@ -90,7 +90,8 @@ describe("adaptFx", () => {
     vi.mocked(fetchOnchainUint256)
       .mockResolvedValueOnce(2n * 10n ** 18n)
       .mockResolvedValueOnce(3_000n * 10n ** 18n)
-      .mockResolvedValueOnce(1n * 10n ** 8n)
+      // fx getTotalRawCollaterals uses a unified 1e18 raw scale, even for WBTC.
+      .mockResolvedValueOnce(1n * 10n ** 18n)
       .mockResolvedValueOnce(60_000n * 10n ** 18n);
     vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
       ["wstETH", 4_000],
