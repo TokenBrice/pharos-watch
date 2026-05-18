@@ -77,8 +77,14 @@ export default createClientFeaturePage({
     statusBadge: { status: "experimental" },
     leadParagraphs: [
       "See hidden systemic risk: the live graph of who backs whom.",
-      "Stablecoins that look safe in isolation can collapse when their collateral fails. This graph maps transitive collateral dependencies across the ecosystem. Drag nodes to trace exposure chains — then take the insight to the Safety Scores contagion simulator to model the cascade.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        Stablecoins that look safe in isolation can collapse when their collateral fails. This graph maps transitive
+        collateral dependencies across the ecosystem. Drag nodes to trace exposure chains — then take the insight to
+        the Safety Scores contagion simulator to model the cascade.
+      </p>
+    ),
   },
   beforeClient: DEPENDENCY_MAP_STATIC_SECTION,
   afterClient: <FaqSection items={DEPENDENCY_MAP_FAQ_ITEMS} includeJsonLd />,

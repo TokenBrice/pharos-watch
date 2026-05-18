@@ -99,15 +99,22 @@ export default createClientFeaturePage({
     breadcrumbName: "Yield Intelligence",
     path: "/yield/",
     title: "Yield Intelligence",
-    statusBadge: { status: "beta", version: YIELD_METHODOLOGY_VERSION_LABEL },
+    statusBadge: { status: "beta" },
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
       "Yield ranked against safety and real-world benchmarks — not just raw APY.",
-      "The Pharos Yield Score (PYS) balances 30-day APY against source risk, safety grades, benchmark spread, and sustainability. A 15% APY on a D-grade stablecoin or thin source evidence scores lower than 5% on an A-grade. Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine or just risk compensation.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        The Pharos Yield Score (PYS) balances 30-day APY against source risk, safety grades, benchmark spread, and
+        sustainability. A 15% APY on a D-grade stablecoin or thin source evidence scores lower than 5% on an A-grade.
+        Benchmarks include USD T-bill, EUR €STR, and CHF SARON rates so you know whether a yield premium is genuine
+        or just risk compensation.
+      </p>
+    ),
   },
   beforeClient: YIELD_STATIC_SECTION,
   afterClient: (

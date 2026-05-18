@@ -27,7 +27,12 @@ export default createClientFeaturePage({
     statusBadge: { status: "mature" },
     leadParagraphs: [
       "Build a live peer set, then read peg behavior, liquidity, safety scores, and structural differences without bouncing between detail pages.",
-      "Select two to five tracked assets. Presets are starting angles, not canned answers: the useful work starts once the comparison is on screen.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        Select two to five tracked assets. Presets are starting angles, not canned answers: the useful work starts
+        once the comparison is on screen.
+      </p>
+    ),
   },
 });

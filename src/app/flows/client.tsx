@@ -29,7 +29,6 @@ const FLOWS_SHELL_PROPS = {
   title: "Mint/Burn Flows",
   statusBadge: {
     status: "mature" as const,
-    version: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
   },
   methodology: {
     version: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
@@ -37,13 +36,17 @@ const FLOWS_SHELL_PROPS = {
   },
   leadParagraphs: [
     "Minting and redemption flows on each tracked stablecoin's configured issuance chain.",
-    "Net flow tells you whether tokens are being minted or burned right now. Pressure Shift vs 30D tells you whether today's activity is stronger or weaker than each coin's recent norm, and the Bank Run Gauge aggregates that baseline-relative pressure across tracked issuance and redemption activity.",
   ],
 } as const;
 
 function FlowsHeaderSupplement({ scopeLabel, syncWarning }: { scopeLabel: string; syncWarning: string | null }) {
   return (
     <div className="space-y-3">
+      <p className="pharos-lead hidden sm:block">
+        Net flow tells you whether tokens are being minted or burned right now. Pressure Shift vs 30D tells you
+        whether today's activity is stronger or weaker than each coin's recent norm, and the Bank Run Gauge
+        aggregates that baseline-relative pressure across tracked issuance and redemption activity.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300">
           {scopeLabel}

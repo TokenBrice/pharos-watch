@@ -44,15 +44,21 @@ export default createClientFeaturePage({
     breadcrumbName: "Stability Index",
     path: "/stability-index/",
     title: "Pharos Stability Index",
-    statusBadge: { status: "mature", version: PSI_METHODOLOGY_VERSION_LABEL },
+    statusBadge: { status: "mature" },
     methodology: {
       version: PSI_METHODOLOGY_VERSION_LABEL,
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
       "A VIX for stablecoins: read the market regime before you trade.",
-      "PSI combines peg deviation severity, depeg breadth, DEWS stress breadth, and market-cap trend into a single 0–100 score. Mega-cap depegs are weighted disproportionately using log₂ amplifiers, and chronic zombie events depreciate over time so the index reflects real systemic risk, not noise.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        PSI combines peg deviation severity, depeg breadth, DEWS stress breadth, and market-cap trend into a single
+        0–100 score. Mega-cap depegs are weighted disproportionately using log₂ amplifiers, and chronic zombie events
+        depreciate over time so the index reflects real systemic risk, not noise.
+      </p>
+    ),
   },
   afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
 });
