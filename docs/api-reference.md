@@ -71,7 +71,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is exported from `shared/lib/stablecoins/index.ts`, with editable per-coin metadata stored in `shared/data/stablecoins/coins/*.json`, the checked-in generated aggregate at `shared/data/stablecoins/coins.generated.json`, and validation in `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
+The full list is exported from `shared/lib/stablecoins/registry.ts`, with editable per-coin metadata stored in `shared/data/stablecoins/coins/*.json`, the checked-in generated aggregate at `shared/data/stablecoins/coins.generated.json`, and validation in `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
 
 ---
 
@@ -139,7 +139,8 @@ These profiles apply while the dataset is within its generic freshness runway. O
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
 | slow               | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                                                 |
-| archive            | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                                                                                             |
+| archive            | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                                                                                                                                                                                                            |
+| immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                          |
 | public-status      | `public, max-age=60`                   | public-status-history                                                                                                                                                                                                                                                                                                                                       |
 | og-image           | `public, max-age=900, s-maxage=900`    | dynamic Open Graph images                                                                                                                                                                                                                                                                                                                                   |
 | reserve-live       | `public, s-maxage=3600, max-age=300`   | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                               |
@@ -161,7 +162,8 @@ Recommended minimum polling cadence for external integrations:
 | standard      | 300 seconds           | Preferred baseline for most dashboards                          |
 | per-coin      | 300 seconds           | `GET /api/stablecoin/:id` is history-heavy; avoid short loops   |
 | slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
-| archive       | 86400 seconds         | Historical snapshot payload for digest SSG and recap pages      |
+| archive       | 86400 seconds         | Historical digest snapshots and public snapshot index listings   |
+| immutable-snapshot | On-demand only        | Dated public dataset snapshots are content-addressed and immutable |
 | no-store      | On-demand only        | Health/admin diagnostics; avoid high-frequency polling          |
 
 Client best practices:
@@ -258,6 +260,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/backfill-yield-history`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `POST /api/backfill-tape`
 - `POST /api/reclassify-atomic-roundtrips`
 - `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`
@@ -1563,6 +1566,122 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 | `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                                                          |
 
 **Error responses:** `400` for missing/invalid date, `404` if no digest exists for that date.
+
+---
+
+### `GET /api/snapshots/index`
+
+Lists immutable public daily dataset snapshots written by the `snapshot-public-dataset` cron. Each row points to a dated payload that can be fetched through `GET /api/snapshots/:date.json`.
+
+**Cache:** archive
+
+**Response**
+
+```json
+{
+  "snapshots": [
+    {
+      "snapshotDate": "2026-05-17",
+      "methodologyVersions": { "safetyScore": "5.9", "psi": "3.0" },
+      "contentHash": "sha256-hex",
+      "byteSize": 1234567,
+      "createdAt": 1778976000
+    }
+  ]
+}
+```
+
+| Field                               | Type                       | Description                                      |
+| ----------------------------------- | -------------------------- | ------------------------------------------------ |
+| `snapshots`                         | `array`                    | Snapshot index sorted newest first               |
+| `snapshots[].snapshotDate`          | `string`                   | UTC snapshot date in `YYYY-MM-DD` format         |
+| `snapshots[].methodologyVersions`   | `Record<string, string>?`  | Methodology versions embedded in the snapshot    |
+| `snapshots[].contentHash`           | `string`                   | Snapshot payload hash used by dated `ETag`s      |
+| `snapshots[].byteSize`              | `number`                   | Uncompressed JSON payload size in bytes          |
+| `snapshots[].createdAt`             | `number`                   | Snapshot creation timestamp in Unix seconds      |
+
+---
+
+### `GET /api/snapshots/:date.json`
+
+Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
+
+**Cache:** immutable-snapshot
+
+**Path parameters**
+
+| Param  | Type     | Description                             |
+| ------ | -------- | --------------------------------------- |
+| `date` | `string` | UTC snapshot date in `YYYY-MM-DD` form  |
+
+**Response**
+
+```text
+PublicSnapshotEnvelope {
+  snapshotDate,
+  generatedAt,
+  methodologyVersions,
+  stablecoinRows,
+  fxFallbackRates,
+  reportCards,
+  psi,
+  dewsRows,
+  liquidityRows
+}
+```
+
+**Headers:** `ETag: "<contentHash>"`.
+
+**Error responses:** `400` for invalid date format, `404` if no snapshot exists for that date, `500` if the stored snapshot payload is unreadable or corrupted.
+
+---
+
+### `GET /api/snapshot/:date/stablecoin/:id`
+
+Returns a per-stablecoin projection from a dated public dataset snapshot. The projection includes the stablecoin row plus the matching report-card, DEWS, and liquidity rows when those datasets were present in the snapshot.
+
+**Cache:** immutable-snapshot
+
+**Path parameters**
+
+| Param  | Type     | Description                            |
+| ------ | -------- | -------------------------------------- |
+| `date` | `string` | UTC snapshot date in `YYYY-MM-DD` form |
+| `id`   | `string` | Canonical Pharos stablecoin ID         |
+
+**Response**
+
+```text
+{
+  snapshotDate: "2026-05-17",
+  stablecoinId: "usdt-tether",
+  generatedAt: 1778976000,
+  methodologyVersions: { safetyScore: "5.9", psi: "3.0" },
+  stablecoin: { id: "usdt-tether", symbol: "USDT" },
+  scores: {
+    reportCard,
+    psi,
+    dews,
+    liquidity
+  }
+}
+```
+
+| Field                  | Type      | Description                                                    |
+| ---------------------- | --------- | -------------------------------------------------------------- |
+| `snapshotDate`          | `string`  | Served snapshot date                                           |
+| `stablecoinId`          | `string`  | Requested stablecoin ID                                        |
+| `generatedAt`           | `number`  | Snapshot generation timestamp                                  |
+| `methodologyVersions`   | `object?` | Methodology versions embedded in the snapshot                  |
+| `stablecoin`            | `object`  | Stablecoin row from the dated public dataset                   |
+| `scores.reportCard`     | `object?` | Matching report-card score, or `null`                          |
+| `scores.psi`            | `object?` | Snapshot-level PSI object, or `null`                           |
+| `scores.dews`           | `object?` | Matching DEWS stress-signal row, or `null`                     |
+| `scores.liquidity`      | `object?` | Matching DEX-liquidity row, or `null`                          |
+
+**Headers:** `ETag: "<contentHash>-<stablecoinId>"`.
+
+**Error responses:** `400` for invalid date format, `404` if no snapshot exists or the stablecoin is absent from that snapshot, `500` if the stored snapshot payload is unreadable or corrupted.
 
 ---
 
@@ -3897,6 +4016,43 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 | `stablecoin` | `string`  | —       | Process a single supported stablecoin ID |
 | `batchSize`  | `integer` | `10`    | Coins per batch                          |
 | `batch`      | `integer` | `0`     | Batch offset for chunked processing      |
+
+### `POST /api/backfill-tape`
+
+Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. First-observation projectors such as methodology, cemetery, and lifecycle ignore `since` / `until` because they scan static sources keyed by ID.
+
+**Request body or query parameters**
+
+Query parameters win when the same field is supplied in both places.
+
+| Param     | Type      | Default | Description                                                                 |
+| --------- | --------- | ------- | --------------------------------------------------------------------------- |
+| `class`   | `string`  | all     | Repeatable projector class filter, for example `class=depeg.opened`         |
+| `since`   | `integer` | none    | Lower source-row timestamp bound in Unix seconds                            |
+| `until`   | `integer` | none    | Upper source-row timestamp bound in Unix seconds                            |
+| `maxRows` | `integer` | `5000`  | Per-class scan cap, min `1`, max `50000`                                    |
+| `dryRun`  | `boolean` | `false` | Compute results without writing rows or advancing projector watermarks      |
+| `dry-run` | `boolean` | `false` | Query/body alias for `dryRun`                                               |
+
+Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_worsened`, `freeze.blocked`, `freeze.unblocked`, `freeze.destroyed`, `score.upgraded`, `score.downgraded`, `psi.band_changed`, `dews.escalated`, `dews.deescalated`, `mint_burn.large_flow`, `yield.warning_emitted`, `yield.pys_dropped`, `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen`.
+
+**Response**
+
+```json
+{
+  "ok": true,
+  "dryRun": false,
+  "maxRows": 5000,
+  "since": null,
+  "until": null,
+  "selectedClasses": ["depeg.opened"],
+  "projected": 12,
+  "perClass": { "depeg.opened": 12 },
+  "errors": []
+}
+```
+
+**Error responses:** `400` for unknown `class` values, invalid negative timestamps, `since > until`, or `maxRows` outside `1..50000`.
 
 ### `POST /api/backfill-mint-burn-prices`
 

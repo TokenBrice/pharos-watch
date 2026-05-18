@@ -27,7 +27,9 @@ Rotate Telegram secrets one at a time. The webhook secret supports a short overl
    ```bash
    cd worker
    npx wrangler tail stablecoin-api --format pretty
-   curl -sS https://api.pharos.watch/api/status | jq '.telegramBot'
+   curl -sS -H "CF-Access-Client-Id: $CF_ID" \
+           -H "CF-Access-Client-Secret: $CF_SECRET" \
+           https://ops-api.pharos.watch/api/status | jq '.telegramBot'
    ```
 
    Confirm the five-minute Telegram slot can send, the registration reconciliation succeeds, and `POST /api/telegram-mini-app/session` accepts fresh Mini App launches.

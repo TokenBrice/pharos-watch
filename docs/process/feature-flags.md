@@ -47,7 +47,7 @@ What must be true before turning each flag on in production:
 
 - [x] Hero verdict surface lands behind the flag (`<AiSummary>` hoisted above grid when on).
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
-- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current: 35/391 oneLiners; ~32/200 AI summaries rewritten — curation in flight.**
+- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current coverage: 391/391 one-liners and 391/391 AI summaries are present; TL;DR-first top-60 editorial QA remains in flight.**
 
 ### `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`
 

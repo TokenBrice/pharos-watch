@@ -204,7 +204,7 @@ These normalization rules live in code because they are provider quirks, not bus
 
 ## Authoritative Overrides
 
-After market/oracle consensus, `worker/src/lib/authoritative-price-sources.ts` can replace the chosen live price for specific redeemable assets whose executable value is better represented by direct protocol redemption, or by an instantly redeemable tracked base asset, than by secondary-market liquidity.
+After market/oracle consensus, the provider registry under `worker/src/lib/authoritative-price-sources/` can replace the chosen live price for specific redeemable assets whose executable value is better represented by direct protocol redemption, or by an instantly redeemable tracked base asset, than by secondary-market liquidity.
 
 ### Current Scope
 
@@ -399,7 +399,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 3. [data-pipeline.md](./data-pipeline.md) if broader sync/integrity semantics changed
 4. `/methodology` pricing copy in `src/app/methodology/sections/core-sections-pricing.tsx`
 5. `shared/lib/pricing-pipeline-version.ts` and [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) if methodology semantics changed
-6. [about-page.md](./about-page.md) and `src/app/about/page.tsx` when externally visible data sources change
+6. [about-page.md](./about-page.md) and `src/app/about/content.ts` when externally visible data sources change
 
 ---
 
@@ -411,7 +411,7 @@ When changing live pricing behavior, update all relevant surfaces in the same ch
 | `worker/src/cron/sync-stablecoins/enrich-prices.ts`         | Fallback enrichment orchestrator (`enrichMissingPrices()`) for still-missing prices                                                                                                                      |
 | `worker/src/cron/sync-stablecoins/enrich-prices-passes.ts`  | Barrel re-export for individual pass runners (DefiLlama, CMC, Jupiter, DexScreener)                                                                                                                      |
 | `worker/src/lib/price-consensus.ts`                         | N-source clustering and confidence resolution                                                                                                                                                            |
-| `worker/src/lib/authoritative-price-sources.ts`             | Redeem-quote live/historical override registry                                                                                                                                                           |
+| `worker/src/lib/authoritative-price-sources/`               | Redeem-quote live/historical override provider registry                                                                                                                                                   |
 | `worker/src/lib/pyth.ts`                                    | Pyth Hermes integration and feed-ID normalization                                                                                                                                                        |
 | `worker/src/lib/redstone.ts`                                | Exact-case RedStone allowlist, batching, and retry behavior                                                                                                                                              |
 | `worker/src/lib/cex-tickers.ts`                             | Binance, Kraken, Bitstamp, and Coinbase price fetchers                                                                                                                                                   |

@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through the generated aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/index.ts` + `shared/lib/stablecoins/schema.ts`. Each entry carries these flags:
+Each tracked stablecoin is defined in the checked-in per-coin data assets under `shared/data/stablecoins/coins/*.json`, loaded through the generated aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/registry.ts` + `shared/lib/stablecoins/schema.ts`. The legacy `shared/lib/stablecoins/index.ts` barrel is only a compatibility facade for lightweight helpers; use the registry module for the full catalog and active/pre-launch/frozen splits. Each entry carries these flags:
 
 ### Type (governance field internally)
 
@@ -37,7 +37,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Additional Metadata
 
-Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interface):
+Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/stablecoin-meta-schemas.ts` for the typed/schema source):
 
 - `id: string` — stablecoin ID in canonical ticker-issuer format (e.g., `"usdt-tether"`, `"usdc-circle"`)
 - `llamaId?: string` — DefiLlama numeric stablecoin ID for `stablecoins.llama.fi` calls when internal IDs diverge
@@ -107,7 +107,7 @@ The `infrastructures` field is an array because a coin could in principle belong
 
 ### Bluechip Grade
 
-`BluechipGrade` is a union type in `shared/types/index.ts`: `"A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F"`. It is used by `GRADE_ORDER` in `src/lib/bluechip.ts` for compile-time completeness checking.
+`BluechipGrade` is a union type in `shared/types/core.ts`: `"A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F"`. It is used by `GRADE_ORDER` in `src/lib/bluechip.ts` for compile-time completeness checking.
 
 ## Non-USD Peg Handling
 
@@ -115,7 +115,7 @@ Peg deviation for non-USD stablecoins requires knowing the USD value of the peg 
 
 For thin peg groups (often <3 qualifying coins), live `fxFallbackRates` from `sync-fx-rates.ts` are used when available. In `derivePegRates()`, if a peg group has fewer than 3 qualifying coins and a fallback rate exists, the fallback is used directly instead of the peer median. If a peg group has no qualifying live contributors at all, the same fallback rate is still published when available instead of silently reverting the peg reference to `1`. This prevents one or two coins from becoming their own unstable peg reference and keeps thin non-USD groups stable when a provider temporarily zeroes the only live asset in that peg.
 
-`sync-fx-rates.ts` is triggered in the 15-minute quarter-hourly slot, but an internal `sync-fx-rates:last-write` cooldown gates upstream work to every 30 minutes. Frankfurter's maintained hosted API at `api.frankfurter.dev` (ECB data) covers EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, and MXN. CNH, RUB, UAH, ARS, KGS, NGN, XOF, and VND are filled from the secondary `fawazahmed0/currency-api` path because Frankfurter/ECB does not cover the full set needed for peg evaluation. When Frankfurter is temporarily unavailable, that same dated secondary feed can backstop the wider fiat set. If both Frankfurter and the existing secondary mirrors are unavailable, the worker falls through to ExchangeRate-API's daily USD reference snapshot before dropping to cached-only mode. If none of the live FX fetch paths respond but the last published daily references are still within their freshness cadence, the cron now carries those dated references forward as a successful live refresh instead of classifying the run as a degraded cached fallback. When `OPENEXCHANGERATES_API_KEY` is configured, the cron also runs a real-time Open Exchange Rates cross-validation pass and can promote validated realtime quotes into the cached fallback-rate set for supported pegs.
+`sync-fx-rates.ts` is triggered in the 15-minute quarter-hourly slot, but an internal `sync-fx-rates:last-write` cooldown gates upstream work to every 30 minutes. Frankfurter's maintained hosted API at `api.frankfurter.dev` (ECB data) covers EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, MYR, and KRW. CNH, RUB, UAH, ARS, KGS, NGN, XOF, and VND are filled from the secondary `fawazahmed0/currency-api` path because Frankfurter/ECB does not cover the full set needed for peg evaluation. When Frankfurter is temporarily unavailable, that same dated secondary feed can backstop the wider fiat set. If both Frankfurter and the existing secondary mirrors are unavailable, the worker falls through to ExchangeRate-API's daily USD reference snapshot before dropping to cached-only mode. If none of the live FX fetch paths respond but the last published daily references are still within their freshness cadence, the cron now carries those dated references forward as a successful live refresh instead of classifying the run as a degraded cached fallback. When `OPENEXCHANGERATES_API_KEY` is configured, the cron also runs a real-time Open Exchange Rates cross-validation pass and can promote validated realtime quotes into the cached fallback-rate set for supported pegs.
 
 ## Commodity & Non-DefiLlama Stablecoins
 

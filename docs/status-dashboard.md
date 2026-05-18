@@ -464,7 +464,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - The dashboard labels these as **browser-origin probes** to distinguish them from the worker-origin `status-self-check` synthetic probe stored in `/api/status`
 - Parameterized routes should probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses. `GET /api/status-probe-history` uses `/api/status-probe-history?path=%2Fapi%2Fhealth` as its stable admin canary so the browser probe loop validates the route without hitting the endpoint's required-query guard.
 - The stablecoin-detail probe also uses a curated canary `probePath` rather than the heaviest history payload, so route-health checks are less sensitive to oversized per-coin datasets.
-- Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
+- Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest; dated public snapshot detail routes are omitted because valid dates come from `GET /api/snapshots/index`.
 - Returned result shape: `{ path, status, latencyMs, error? }`
 
 ### Canary Endpoint Aliases
@@ -497,9 +497,11 @@ Status-page manual actions are router-dispatched from shared endpoint metadata (
 - `POST /api/backfill-depegs`
 - `POST /api/backfill-supply-history`
 - `POST /api/backfill-cg-prices`
+- `POST /api/backfill-yield-history`
 - `POST /api/backfill-stability-index`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `POST /api/backfill-tape`
 - `POST /api/reclassify-atomic-roundtrips`
 - `GET /api/audit-depeg-history?dry-run=true`
 - `GET /api/backfill-dews`

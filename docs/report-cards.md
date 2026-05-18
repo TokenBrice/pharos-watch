@@ -1,6 +1,6 @@
 # Risk Lab
 
-Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
+Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
 
 The stablecoin registry currently contains 391 tracked metadata entries. Report-card snapshots score the 362 active tracked assets plus the 91 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 

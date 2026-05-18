@@ -5,7 +5,7 @@ Two metadata entries are maintained outside the tracked public stablecoin set fo
 - `ust-terra`
 - `iron-iron-finance`
 
-They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/index.ts`, backed by per-coin files in `shared/data/stablecoins/coins/*.json` plus `shared/data/stablecoins/coins.generated.json`).
+They live in `shared/lib/shadow-stablecoins.ts` and are intentionally separated from the tracked stablecoin registry (`shared/lib/stablecoins/registry.ts`, backed by per-coin files in `shared/data/stablecoins/coins/*.json` plus `shared/data/stablecoins/coins.generated.json`).
 
 ---
 
@@ -51,7 +51,7 @@ They are used where historical continuity matters:
 Shadow stablecoins are not part of the public tracked-set metadata used for dashboard counts, filters, and table inclusion:
 
 - `ACTIVE_STABLECOINS.length` drives public counts in page metadata and copy
-- `ACTIVE_IDS` is the default inclusion set used by `src/components/stablecoin-table-logic.ts`, and filtered table subsets are built from `ACTIVE_STABLECOINS`
+- `src/components/stablecoin-table-logic.ts` uses the client registry projection (`CLIENT_ACTIVE_IDS` / `CLIENT_ACTIVE_STABLECOINS` from `shared/lib/stablecoins/client-registry.ts`) as its default inclusion set
 - taxonomy/filter pages derive their selectable universe from tracked metadata, not shadow metadata
 
 Operational consequence:

@@ -7,7 +7,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const description =
-  "Interactive graph of collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
+  "Interactive graph of collateral dependencies between up to 200 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
 
 export const metadata = buildPageMetadata({
   title: "Dependency Map: Stablecoin Collateral Graph",

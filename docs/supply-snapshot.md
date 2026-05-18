@@ -163,7 +163,7 @@ All in `shared/lib/supply.ts`:
 
 ### Decimal handling
 
-Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the per-coin metadata assets under `shared/data/stablecoins/coins/*.json`, loaded via `shared/lib/stablecoins/index.ts`. The exact exception set changes as metadata evolves; use the live metadata, not hardcoded examples.
+Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in the per-coin metadata assets under `shared/data/stablecoins/coins/*.json`, loaded via `shared/lib/stablecoins/registry.ts`. The exact exception set changes as metadata evolves; use the live metadata, not hardcoded examples.
 
 ---
 
@@ -284,7 +284,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 | `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
 | `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
 | `shared/types/index.ts` | `StablecoinMeta` types |
-| `shared/lib/stablecoins/index.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/coins/*.json` and `shared/data/stablecoins/coins.generated.json` |
+| `shared/lib/stablecoins/registry.ts` | Stablecoin metadata loader backed by `shared/data/stablecoins/coins/*.json` and `shared/data/stablecoins/coins.generated.json` |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook for `/api/supply-history` |
 | `src/hooks/use-compare-data-model.ts` | Compare-page supply-history queries |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |

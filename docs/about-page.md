@@ -13,6 +13,7 @@ The `/about/` route is the product overview for Pharos. It explains:
 Primary implementation file:
 
 - `src/app/about/page.tsx`
+- `src/app/about/content.ts` for the visible source roster and reusable section copy
 
 ## Route Shell Contract
 

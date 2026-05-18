@@ -25,10 +25,10 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` computes three server-side counts for the masthead:
+`src/app/page.tsx` reads three server-side counts for the masthead:
 
-- tracked stablecoins from `ACTIVE_STABLECOINS.length`
-- peg count from `PEG_CURRENCY_COUNT`
+- tracked stablecoins from `ACTIVE_STABLECOIN_COUNT`, the static projection of `ACTIVE_STABLECOINS.length`
+- peg count from `ACTIVE_PEG_CURRENCY_COUNT`
 - chain count from `CHAIN_META`
 
 The visible top fold is split across four independently composed surfaces:
@@ -48,15 +48,20 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomepageClient`
 
-Core query inputs:
+Critical query inputs:
 
 - `useStablecoins()`
 - `useLogos()`
 - `usePegSummary()`
+- `usePinnedStablecoins()` for local pinned-watchlist state
+
+Deferred optional query inputs:
+
 - `useDexLiquidity()`
 - `useReportCards()`
 - `useStressSignals()`
-- `usePinnedStablecoins()` for local pinned-watchlist state
+
+`useDeferredHomepageOptionalQueries()` enables the optional live datasets after the stablecoins and peg-summary queries settle, so the table-critical data path remains separate from deeper monitoring panels.
 
 Derived helpers:
 

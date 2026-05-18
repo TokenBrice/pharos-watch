@@ -249,6 +249,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
 | `/help` | Sends command reference; private replies include a Mini App settings button |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples; private replies include a Mini App presets button |
+| `/sample` | Private-chat-only preview of a synthetic USDC DEWS alert so users can inspect the alert format before subscribing. It does not read live data or mutate subscription state. |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat. When the chat has at least one explicit coin subscription the reply carries a `[ Manage ]` inline button that opens a paginated keyboard (5 coins per page) where each row is a one-tap `[ ❌ <SYMBOL> ]` removal. The keyboard edits the same message in place via `editMessageText`. Group chats apply the same admin gate as `/unsubscribe`. |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
 | `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated compatibility alias and shares the same cooldown bucket. |
@@ -287,6 +288,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
 | `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
 | `setup` | Opens the standard two-branch setup wizard. |
+| `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 
 Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.

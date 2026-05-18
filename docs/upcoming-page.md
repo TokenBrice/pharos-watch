@@ -21,7 +21,7 @@ Primary audience:
 - **Server shell:** `src/app/upcoming/page.tsx`
 - **Client implementation:** `src/components/upcoming-client.tsx`
 - **Shared helpers:** `src/lib/pre-launch.ts`
-- **Primary dataset:** `PRE_LAUNCH_STABLECOINS` from `@shared/lib/stablecoins`, filtered from the generated catalog aggregate backed by `shared/data/stablecoins/coins/*.json`
+- **Primary dataset:** `PRE_LAUNCH_STABLECOINS` from `@shared/lib/stablecoins/registry`, filtered from the generated catalog aggregate backed by `shared/data/stablecoins/coins/*.json`
 
 The route renders through `FeaturePageShell` with:
 
@@ -87,7 +87,9 @@ Each card:
 
 The empty-state copy is:
 
-`No pre-launch stablecoins match the current filters.`
+`No pre-launch coins match. Drop a filter or two.`
+
+It appears with a `Clear filters` action.
 
 ## Launch Alert Promotion
 

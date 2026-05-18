@@ -57,6 +57,8 @@ The Pages middleware generates a random nonce per HTML request, rewrites inline 
 
 Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 
+Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface, so `shared/lib/site-csp.ts` extends that route's CSP with `https://telegram.org` in `script-src` and `frame-ancestors https://telegram.org https://*.telegram.org`. Do not broaden that exception to the root layout or other public pages.
+
 ## Positive trust signals (already shipped)
 
 These are already in the build; documented here so they aren't accidentally regressed.

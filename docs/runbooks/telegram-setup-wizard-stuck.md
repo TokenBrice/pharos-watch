@@ -35,7 +35,7 @@ Confirm the disambiguation cleanup is current:
 ```bash
 curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
-        https://api.pharos.watch/api/status \
+        https://ops-api.pharos.watch/api/status \
   | jq '.crons["telegram-disambiguation-cleanup"]'
 ```
 

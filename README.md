@@ -269,14 +269,14 @@ Cloudflare Worker (API layer)
   ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
   ├── Cron: 10,40 * * * *                       → DEX liquidity
   ├── Cron: 16,46 * * * *                       → stablecoin charts (1h cooldown)
-  ├── Cron: 26,56 * * * *                       → DEWS + PSI DB-only compute
+  ├── Cron: 26,56 * * * *                       → DEWS + PSI + Live Tape DB-only compute/projector lane
   ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
-  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + degradation watchdog + disambiguation cleanup
+  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + bot registration reconciliation + degradation watchdog + disambiguation cleanup + pulse snapshot
   ├── Cron: */5 * * * *                         → manual digest trigger poll
   ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + weekly-gated Telegram inactive cleanup
-  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
+  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + public dataset snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
   ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
@@ -380,18 +380,19 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
-1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
+1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run check:feature-flag-inlining` + `npm run seo:check` plus built-artifact guardrails when Pages-impacting files changed → three `npm run test:noncritical -- --shard=N/3` shards → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
 2. **Worker candidate upload:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` to expose the candidate preview URL before validation finishes
 3. **Worker migration + preview smoke:** after the aggregate validate gate passes, rerun the migration checker, apply D1 migrations with `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, then run `npm run test:smoke-api` against the uploaded preview URL
 4. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 5. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
-6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive` once into `data/digests.json` → `npm run build` → `npm run seo:check` → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
+6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive`, confirmed depeg events, and public dataset mirrors once from the selected API environment → `npm run build` → `npm run check:feature-flag-inlining` → `npm run seo:check` plus built-artifact guardrails → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
 7. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then run public live UI, ops, and transport smokes in parallel
 8. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
 9. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `deploy-pages` inside the Pages publish workflow, or after `smoke-api` on worker-only deploys
 10. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and scheduled/manual Pages rebuilds, in parallel with the other live smokes
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+Optional dedicated GitHub secrets for Pages data sync: `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` (both fall back to `DIGEST_API_KEY`)
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`

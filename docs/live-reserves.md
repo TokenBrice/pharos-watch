@@ -21,7 +21,7 @@ This pipeline is intentionally separate from curated reserve metadata in `Stable
 
 ## Metadata Contract
 
-Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/coins/*.json` via `shared/lib/stablecoins/index.ts` and validated by `shared/lib/stablecoins/schema.ts`).
+Live reserve support is declared per coin in `StablecoinMeta.liveReservesConfig` (`shared/types/live-reserves.ts`, loaded from `shared/data/stablecoins/coins/*.json` via `shared/lib/stablecoins/registry.ts` and validated by `shared/lib/stablecoins/schema.ts`).
 
 `LiveReservesConfig` fields:
 
@@ -614,7 +614,7 @@ export async function fetchMyAdapterReserves(
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `shared/types/live-reserves.ts`                  | `LiveReservesConfig`, `StablecoinReservesResponse`, sync-state types                                   |
 | `shared/lib/live-reserve-adapters.ts`            | Shared adapter registry, source/evidence classes, validation policy, and config schemas                |
-| `shared/lib/stablecoins/index.ts`                | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
+| `shared/lib/stablecoins/registry.ts`             | Loader for per-coin `liveReservesConfig` declarations backed by `shared/data/stablecoins/coins/*.json` |
 | `worker/src/cron/sync-live-reserves.ts`          | 4-hourly sync orchestration and cron result statuses                                                   |
 | `worker/src/cron/reserve-adapters/index.ts`      | Adapter registry                                                                                       |
 | `worker/src/cron/reserve-adapters/helpers.ts`    | Shared adapter fetch / normalization helpers                                                           |

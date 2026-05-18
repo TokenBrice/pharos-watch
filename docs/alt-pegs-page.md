@@ -51,11 +51,14 @@ This route stays frontend-only and uses existing public data sources:
 
 | Source                                  | Used for                                                         |
 | --------------------------------------- | ---------------------------------------------------------------- |
-| `useStablecoins()`                      | live alt-peg snapshot, current peg distribution, coin/peg counts |
+| `useStablecoins()`                      | live alt-peg snapshot, current peg distribution, asset table inputs |
+| `usePegSummary()`                       | peg-score/source context for the alt-peg asset table             |
+| `useDexLiquidity()` / `useReportCards()` | DEX and safety overlays for the alt-peg asset table              |
 | `useNonUsdShare()`                      | non-USD share history and 1y trend context                       |
 | `useStablecoinCharts()`                 | historical cohort-growth chart                                   |
 | `PEG_TAXONOMY_PAGES` / `peg-taxonomy.ts` | stable peg labels, hrefs, and cohort links                      |
 | `ACTIVE_META_BY_ID`                     | joining live API rows to tracked peg metadata                    |
+| `buildStablecoinTableInputs(...)`       | converts joined live rows into the shared `AltPegStablecoinTable` model |
 
 Important contract:
 
@@ -73,14 +76,14 @@ Important contract:
 1. `StaleDataBanner`
 2. `AltPegSnapshotHero` for the current non-USD segment
 3. `FiatWorldAtlas`
-4. `AltPegCohortDirectory`
+4. `AltPegStablecoinTable`
 5. `NonUsdShareChart`
 6. `AltPegCohortHistoryChart`
 7. `AltPegDistributionCard`
 
-At every breakpoint, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry (`public/maps/world-countries.svg`), wired through `src/app/alt-pegs/fiat-world-atlas/world-map.tsx`; Antarctica is omitted before projection fitting so the populated atlas uses the vertical space instead of preserving an unused South Pole band. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Narrow screens keep the same atlas in a responsive viewport that fits the card first, with smaller mobile labels and scaled visual markers to avoid horizontal panning as the default interaction. The downstream cohort directory appears immediately after the current-structure snapshot and atlas so the detailed region list follows the visual map before the historical chart modules. The atlas card header exposes an Expand atlas affordance that opens a viewport-sized inspection overlay built on Radix Dialog; when `document.fullscreenEnabled` is true the overlay also requests browser fullscreen as a progressive enhancement. The overlay reuses the same `PegDiversityHeroLive` composition with a `--fullscreen` CSS variant and does not alter route query-state or section order.
+At every breakpoint, the `FiatWorldAtlas` hero carries the full non-USD drill-down surface: Gold (sun), Silver (moon), and CPI/Index (orbital glyph) float over the map's ocean deadspots, while the top-cohort market-cap summary sits outside the plotted sky layer so it does not cover CPI-linked markers. The map itself is a pre-rendered static SVG of 1:110m Natural Earth geometry (`public/maps/world-countries.svg`), wired through `src/app/alt-pegs/fiat-world-atlas/world-map.tsx`; Antarctica is omitted before projection fitting so the populated atlas uses the vertical space instead of preserving an unused South Pole band. The SVG is regenerated with `npm run build:world-map` (dev-only d3-geo + topojson-client). Narrow screens keep the same atlas in a responsive viewport that fits the card first, with smaller mobile labels and scaled visual markers to avoid horizontal panning as the default interaction. The asset-level stablecoin table appears immediately after the current-structure snapshot and atlas so individual non-USD assets follow the visual map before the historical chart modules. The atlas card header exposes an Expand atlas affordance that opens a viewport-sized inspection overlay built on Radix Dialog; when `document.fullscreenEnabled` is true the overlay also requests browser fullscreen as a progressive enhancement. The overlay reuses the same `PegDiversityHeroLive` composition with a `--fullscreen` CSS variant and does not alter route query-state or section order.
 
-The route intentionally shows the live snapshot first, then the visible atlas, then the client-side cohort directory before historical trend cards and the current distribution module so the analysis reads from current segment context into geography, the cohort roster, and then market-share history.
+The route intentionally shows the live snapshot first, then the visible atlas, then the shared asset table before historical trend cards and the current distribution module so the analysis reads from current segment context into geography, the asset roster, and then market-share history.
 
 Current Release 1 behavior:
 
@@ -97,7 +100,7 @@ Current Release 1 behavior:
 - `src/lib/nav-config.ts` includes `/alt-pegs` in the primary nav block immediately after `/yield`, labeled `Non-USD Stables`.
 - The command palette picks the route up automatically through shared nav config.
 - `scripts/maintenance/generate-llms-txt.ts` includes `/alt-pegs/` in the generated `public/llms.txt`.
-- The visible atlas lives in `AltPegsClient` as `FiatWorldAtlas`: Gold, Silver, and CPI/Index reference markers sit on the same geography-driven visual surface used by the live route, while the downstream cohort directory provides the visible cohort details and the stacked `MobileRegionList` on narrower viewports.
+- The visible atlas lives in `AltPegsClient` as `FiatWorldAtlas`: Gold, Silver, and CPI/Index reference markers sit on the same geography-driven visual surface used by the live route, while `AltPegStablecoinTable` provides asset-level details and `AltPegDistributionCard` covers the current cohort distribution.
 
 ---
 

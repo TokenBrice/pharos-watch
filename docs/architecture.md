@@ -166,6 +166,8 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/learn/mechanisms/` and `/learn/mechanisms/[archetype]/` — see [learn-mechanisms-page.md](./learn-mechanisms-page.md)
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`
   - `/about/api/`
+  - `/about/editorial/`
+  - `/about/principles/`
   - `/api/`
   - `/changelog/`
   - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/freezewatch/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/screener/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
@@ -199,7 +201,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
 - `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `Person`, `WebApplication`) with stable `#website`, `#organization`, `#person-tokenbrice`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
-- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/maintenance/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/maintenance/generate-docs-metadata.ts` for git-derived first/last modified dates.
+- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, `/admin/`, `/admin-api/`, and `/pharoswatchbot/app/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/maintenance/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/maintenance/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy and the sitemap location. Operator surfaces (`/admin/`, `/admin-api/`, and `/api/admin/*`) rely on route metadata, Pages host gates, and `X-Robots-Tag: noindex, nofollow` headers for deindexing so crawlers can observe the noindex/404 or Access-gated response instead of reporting a robots.txt block.
 
 ### Standalone PharosVille

@@ -245,7 +245,8 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Standard | `public, s-maxage=300, max-age=60`     | stablecoin-charts, redemption-backstops, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Custom   | `public, s-maxage=300, max-age=300`    | dex-liquidity                                                                                                                                                      |
 | Slow     | `public, s-maxage=3600, max-age=300`   | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, non-usd-share                                                        |
-| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                    |
+| Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                   |
+| Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`) |
 
 Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
 
@@ -318,6 +319,7 @@ These router-dispatched admin routes honor an optional `Idempotency-Key` header:
 - `POST /api/backfill-yield-history`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `POST /api/backfill-tape`
 - `POST /api/reclassify-atomic-roundtrips`
 - `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`

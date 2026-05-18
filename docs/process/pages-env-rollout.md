@@ -40,7 +40,7 @@ No code changes required to add or remove a flag — but if you add a new flag, 
 
 ## Recommended sequence
 
-All remaining flags are code-ready according to the checked-in flag table below and `src/lib/feature-flags.ts`. Flip one per deploy window so a regression is unambiguous:
+All remaining flags are code-ready according to [feature-flags.md](./feature-flags.md) and `src/lib/feature-flags.ts`. Flip one per deploy window so a regression is unambiguous:
 
 1. `QUIET_DEVIATIONS` — visual-only, lowest risk.
 2. `CHART_ANNOTATIONS` — verify dashed lines around March 2023 on USDC's market-cap chart.

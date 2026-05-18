@@ -40,7 +40,7 @@ Graph construction logic lives in `src/lib/contagion-layout.ts` (called via `use
 
 Edges are derived from the report-card edge set:
 
-- Each dependency edge is included only if both coins are in the selected top-50 set.
+- Each dependency edge is included only if both coins are in the selected displayed subset after the runtime Limit toggle and isolated-node pruning.
 - Edge `type` defaults to `"collateral"` when not explicitly provided.
 
 ## Dependency Hubs Model And Board

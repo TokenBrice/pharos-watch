@@ -3,7 +3,7 @@
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
 - **Current methodology version:** `v1.2`
-- **Runtime source:** `shared/lib/chain-health.ts`
+- **Runtime source:** `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`)
 - **Version source:** `shared/lib/chain-health-version.ts`
 - **API source:** `worker/src/api/chains.ts`
 - **Route contract:** [chains-page.md](./chains-page.md)
@@ -54,7 +54,7 @@ The score is `null` when `quality` is `null`; otherwise the weighted total is ro
 
 When Chain Health behavior changes, update these files together:
 
-1. `shared/lib/chain-health.ts`
+1. `shared/lib/chains/health.ts` and the `shared/lib/chain-health.ts` facade if exports change
 2. `shared/lib/chain-health-version.ts`
 3. `docs/chain-health.md`
 4. `docs/chain-health-timeline.md`

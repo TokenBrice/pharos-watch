@@ -73,11 +73,11 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
-Token identity now resolves from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
+Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
 
 ### Representative Stablecoins
 
-Current scope: **142 contract configs** across **141 stablecoin IDs** (7 critical + 135 extended).
+Current scope: **141 contract configs** across **140 stablecoin IDs** (7 critical + 134 extended).
 
 March 24, 2026 expansion: an additional 40 transfer-only configs were added for tracked assets that already had shared contract metadata but were not yet wired into the mint/burn registry. That wave initially included USDai on Ethereum, but canonical USDai issuance tracking now runs on native Arbitrum after LayerZero bridge-transfer filtering work. GYD was later removed when the asset moved to the cemetery. The broader active wave includes `U`, `A7A5`, `USDA` (Avalon), `BRZ`, `KAG`, `satUSD`, `rwaUSDi`, `FPI`, `AEUR`, `USDQ`, `USDX`, `MIM`, `USA₮`, `ZeUSD`, `GGBR`, `XSGD`, `IDRT`, `TRYB`, `EURS`, `pUSD` (Plume), `USBD`, `DGLD`, `AxCNH`, `EURQ`, `GYEN`, `USDU Finance`, `ZARP`, `USDp`, `PHT`, `VCHF`, `USSD`, `CADC`, `VEUR`, `dUSD` (dTRINITY), `USDaf`, `EURAU`, `DUSD` (Alto), and `ebUSD`.
 

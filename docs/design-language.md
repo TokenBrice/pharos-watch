@@ -174,7 +174,7 @@ The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthe
 
 This is a third intentional non-Geist-Sans treatment alongside the Digest dual-font system (Newsreader serif + Courier italic) and the stablecoin-detail `AiSummary` Georgia paragraph. Tape is distinct from both: it leans on Geist Mono as the primary typeface across the stream, not serif for editorial gravitas.
 
-The absence of `pharos-card-shell` on event rows, day groups, and the currently-open / linked-event bands is **intentional, not an oversight**. The filter row above the stream keeps `pharos-card-shell` because it is a control surface and shares utilities with the rest of the site.
+The absence of `pharos-card-shell` on event rows, day groups, the currently-open / linked-event bands, and the filter row is **intentional, not an oversight**. The filter row is a flat wire-control surface with hairline `border-y` dividers and shared control primitives, not a card shell.
 
 The canonical contract — rules, structured row layout, day-separator format, and the Aesthetic Lock against harmonization — lives in [tape-page.md](./tape-page.md) under `## Visual Identity` and `## Aesthetic Lock`. Update both docs together when the wire-service treatment changes.
 

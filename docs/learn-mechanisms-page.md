@@ -25,7 +25,7 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The five values (`
 - **Slug source:** `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`
 - **Diagram reuse:** `mechanismDiagramFor(archetype, "USDX")` from `src/components/stablecoin-detail/mechanism-diagrams/index.tsx`
 
-Both routes are static-exported via `generateStaticParams()` driven by `MECHANISM_ARCHETYPE_VALUES`. No client-only state.
+The hub is a static route with no client-only state. The archetype route is static-exported via `generateStaticParams()` driven by `MECHANISM_ARCHETYPE_VALUES`.
 
 ---
 
@@ -65,7 +65,7 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 7. **"Variations"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`).
 8. **"Continue reading"** — section above a top border. 2-column grid of underline-on-hover row links, with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Five ways a stablecoin holds its peg`) and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`05`) + tracked-coin count (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
+The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Five ways a stablecoin holds its peg`) and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`05`) + active tracked-coin count from `ACTIVE_STABLECOINS` (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
 ---
 
@@ -75,7 +75,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 - Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
-- JSON-LD: `BreadcrumbJsonLd` via `FeaturePageShell`. Article-level structured data is owned by future work; not in v1.
+- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`. Article-level structured data is owned by future work; not in v1.
 
 ---
 

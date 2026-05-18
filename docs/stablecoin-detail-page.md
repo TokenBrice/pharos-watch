@@ -89,26 +89,28 @@ The client `loading` state now mirrors the server fallback more closely: it keep
 3. `HeroCard`
 4. `ExploitNoticeBanner`
 5. `FrozenStateBanner` for frozen tracked assets with `obituary` and `frozenAt` metadata
-6. `LongformScrollspyNav`
-7. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
-8. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `CoinNotices` → `DEWSDetail` for non-NAV coins
-9. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
-10. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when price transparency or a redemption backstop is available, `PriceTransparencyCard` and `RedemptionBackstopCard` sit in a two-column grid beneath
-11. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
-12. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
-13. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
-14. `FeedbackModal`
+6. `AiSummary` when a summary is available
+7. `MobileStickySummary`
+8. `LongformScrollspyNav`
+9. `KeyInfoCard` (wrapped in `<section id="info">`, not surfaced in the scrollspy rail) — renders immediately after `LongformScrollspyNav`, before the Overview `SectionBanner`, so the metadata anchor is visible at the top of the dossier rather than buried deep below the chart
+10. Overview zone under a `SectionBanner`: `ReportCardDetail` (which embeds `OverviewSection` as its `rightColumn` slot to render the reserves panel) → `CoinNotices` → `DEWSDetail` for non-NAV coins
+11. Context zone under a `SectionBanner`: `ContagionSnapshot` (with `UnderlyingAssetCard` or `ParentVariantsCard` passed as the variant relationship card when applicable, and `hasCollateralUsage` driving the collateral-usage row), `MarketDataSection` for USD-pegged non-NAV coins with supply history (otherwise a standalone `McapChart` inside `<section id="chart">`), then `DistributionSection`
+12. Liquidity zone under a `SectionBanner`: `DexLiquidityCard` inside `<section id="dex-liquidity">`; when price transparency or a redemption backstop is available, `PriceTransparencyCard` and `RedemptionBackstopCard` sit in a two-column grid beneath
+13. Activity zone under a `SectionBanner`: `YieldDetailSection` for yield-bearing coins or coins with a live ranking, `FlowsSection`, and `BlacklistSection` when supported
+14. History zone under a `SectionBanner`: `TapeForCoinTeaser`, `SafetyScoreHistorySection`, `DepegHistory` for non-NAV coins, `FlowHistorySection`, and `BlacklistHistorySection`
+15. Explore zone under a `SectionBanner` when `exploreNextContent` is provided
+16. `FeedbackModal`
 
-`StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. The server shell then appends `ExploreNextSection` after the client-rendered analytics stack.
+`StablecoinDetailSeoContent` is rendered by the server `Suspense` fallback in `page.tsx` so crawlers see visible profile text before the client island mounts; it is not part of the client section stream above. The server shell passes `ExploreNextSection` into `StablecoinDetailClient` as `exploreNextContent`, and the client renders it inside the Explore zone.
 
 ### Rail vs section rules
 
-- `LongformScrollspyNav` pill order is: `report-card` (Safety), `overview`, optional `reserves`, optional `price`, `liquidity`, `chart` (Market), optional `yield`, optional `flows`, optional `blacklist`, `history`, `explore-next`. `YieldDetailSection` renders between `DistributionSection` and `FlowsSection`. Optional pills appear only when their source data is present (`reserves != null`, `hasPriceTransparency`, `hasYieldSection`, `hasFlows`, `hasBlacklist`); the `history` pill is currently always present even though the target section is omitted for NAV tokens.
-- Section ids are stable; do not rename them. In particular: the Safety pill still targets `#report-card`, and the Market pill still targets `#chart`.
+- `LongformScrollspyNav` pill order is: `overview` (Risk), `context`, `liquidity`, `activity`, `history`, `explore`. Child cards can still expose deep-link anchors such as `#report-card`, `#reserves`, `#price`, `#chart`, `#yield`, `#flows`, `#blacklist`, `#coin-timeline`, and `#explore-next`, but they are not top-level rail pills.
+- Section ids are stable; do not rename them. In particular, the top-level Explore pill targets `#explore`; the reusable `ExploreNextSection` keeps its inner `#explore-next` anchor for existing deep links.
 - The outer detail composition owns the single `#overview` anchor. Nested overview subcomponents do not publish a second `#overview` id.
 - `UnderlyingAssetCard`, `ParentVariantsCard`, and `CollateralUsageSection` render inline within the overview zone and are not top-level scrollspy entries.
 - `DistributionSection` renders after the chart, outside the top-level rail.
-- `DepegHistory` is omitted for NAV tokens, leaving the always-present `history` rail pill without a rendered target on those pages.
+- `DepegHistory` is omitted for NAV tokens, but the top-level history section remains mounted for timeline and score-history content.
 - `YieldDetailSection` decides its own empty/loading/null behavior from the cached yield rankings plus static coin metadata. Non-yield-bearing coins can still render the section when the yield stack publishes a live lending-opportunity or curated ranking row for that asset.
 
 ### Hero signals rail (desktop) / SafetyGradeHero (mobile)
@@ -125,8 +127,8 @@ Below the identity block, the classification line renders three small focus-ring
 
 - **Component:** `PriceTransparencyCard` (`src/components/stablecoin-detail/price-transparency-card.tsx`)
 - **Data:** `coinData.price`, `coinData.priceSource`, `coinData.priceConfidence`, `coinData.priceUpdatedAt` from stablecoins API; `consensusSources` and `dexPriceCheck` from peg-summary API
-- **Scrollspy ID:** `price` (label: "Price"); the nested card still carries the legacy `price-transparency` id
-- **Mount point:** nested inside `OverviewSection` (`src/components/stablecoin-detail/overview-section.tsx`)
+- **Deep-link ID:** `price`; the nested card still carries the legacy `price-transparency` id
+- **Mount point:** liquidity zone grid below `#dex-liquidity`, alongside the redemption backstop
 - **Hidden when:** there is no `coinData`, or both `coinData.price == null` and no `dexPriceCheck`
 - Shows current price, source label, confidence badge, source-depth target (`0/3`, `1/3`, `2/3`, or `3+/3`), update recency, and a table of all known price sources with their status (Used/Available/No data). When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists.
 
@@ -136,7 +138,7 @@ When reserves render, the treemap block is wrapped in `<section id="reserves">` 
 
 ### Explore Next anchor
 
-`ExploreNextSection` wraps itself in `<section id="explore-next">` so the scrollspy's terminal Explore pill is reachable. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare+Related -> Taxonomy -> Trackers. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers ->` overflow pill when more exist.
+The outer Explore `SectionBanner` publishes the scrollspy target `#explore`. `ExploreNextSection` wraps itself in `<section id="explore-next">` for existing deep links. Layout rebalanced to three equal columns at `xl+` (Taxonomy | Trackers | Compare+Related), two columns at `lg`, stacked below `lg` in order Compare+Related -> Taxonomy -> Trackers. Per-pair compare affordance now primaries `Open comparison` (filled button) with a secondary `Read the one-page brief` text link. Related pills cap at 4 entries with a `See all peers ->` overflow pill when more exist.
 
 ---
 
@@ -202,12 +204,12 @@ That shared retry is used by the page-level error surfaces.
 | `HeroCard`                  | Price, supply deltas, peg metrics, liquidity headline, top-level blacklist / excess-yield / DEWS badges, optional `1Y vs USD` context for eligible non-USD and commodity pegs, feedback entrypoint, and first-touch methodology hints for Peg Score / Liquidity                                                                                                                             |
 | `ReportCardDetail`          | Overall Safety Score plus radar/dimension detail, contextual methodology hints, and a methodology footer line                                                                                                                                                                                                                                                                               |
 | `SafetyScoreHistorySection` | Grade-transition timeline                                                                                                                                                                                                                                                                                                                                                                   |
-| `OverviewSection`           | AI summary, reserve treemap, reserve/live-fallback notices, redemption-backstop card with explicit fixed or documented variable fee messaging, eventual-only vs immediate-capacity messaging, reviewed source context, and resolution / confidence state when the route is configured but currently unrated, DEWS detail, and the nested `price` anchor when price data exists |
+| `OverviewSection`           | Reserve treemap, reserve/live-fallback notices, reviewed source context, and resolution / confidence state when the route is configured but currently unrated |
 | `CoinNotices`               | Coin-specific warnings/info blocks from metadata                                                                                                                                                                                                                                                                                                                                            |
 | `KeyInfoCard`               | Classification, collateral, peg mechanism, links, proof-of-reserves, jurisdiction                                                                                                                                                                                                                                                                                                           |
 | `McapChart`                 | Historical supply / market-cap chart                                                                                                                                                                                                                                                                                                                                                        |
 | `DistributionSection`       | Holder and supply distribution view after market history                                                                                                                                                                                                                                                                                                                                    |
-| `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered inside `OverviewSection` under `<section id="price" aria-label="Price transparency">`. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists      |
+| `PriceTransparencyCard`     | Current price, source label, confidence badge, update recency, and a table of all known price sources with their status (Used/Available/No data). It is rendered in the liquidity zone under `<section id="price" aria-label="Price transparency">`. When protocol-redeem overrides are active, all market sources show "Not applicable". DEX Price Check section renders when `dexPriceCheck` data exists      |
 | `YieldDetailSection`        | Yield rankings row, clickable source links, warnings, history chart, alt-source/provenance detail, and contextual PYS / Stability help. Renders for statically yield-bearing coins and for non-yield-bearing coins that currently have a published yield ranking (for example auto-discovered lending coverage).                                                                            |
 | `DexLiquidityCard`          | Liquidity score, top pools, DEX-implied price context, and contextual methodology hints / footer links. For `unobserved` rows it now shows an explicit no-direct-market state and an unobserved-history panel instead of hiding history entirely.                                                                                                                                       |
 | `FlowsSection`              | Per-coin mint/burn summary plus the separate `flow-history` event-feed section, with contextual Pressure Shift help on the summary card; rendered below liquidity and included in the top-level scrollspy rail when `hasFlows` is true                                                                                                                                                       |

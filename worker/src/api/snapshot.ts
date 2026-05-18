@@ -9,8 +9,8 @@
  *   GET /api/snapshot/<YYYY-MM-DD>/stablecoin/<id>              — projection
  *
  * Per-day payloads are stored gzipped in D1 and round-trip through
- * DecompressionStream before serving. All three responses are immutable, so
- * Cache-Control is sticky.
+ * DecompressionStream before serving. The index uses the archive cache profile;
+ * dated payload and per-coin projection responses are immutable.
  */
 import {
   SNAPSHOT_DATE_PATTERN,

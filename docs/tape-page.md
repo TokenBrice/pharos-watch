@@ -6,7 +6,7 @@ Route contract for the public `/timeline/` surface. The codebase term "tape" per
 
 ## Purpose
 
-`/timeline/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, methodology bumps, lifecycle entries, and (as new projector classes ship) DEWS / PSI band shifts, mint/burn, reserves, redemption, yield, and liquidity events in one digestable view.
+`/timeline/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, DEWS / PSI band shifts, mint/burn, yield, methodology bumps, and lifecycle entries in one digestible view. Reserve, redemption, and liquidity classes are reserved filter-chip slots until their projectors ship.
 
 The dedicated trackers (`/depeg/`, `/freezewatch/`, `/flows/`, `/safety-scores/`) remain the canonical surfaces for any single class. `/timeline/` is the unified view for users who want everything for one coin, everything in one severity tier, or a cross-class read across event classes.
 
@@ -49,7 +49,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 7. **Day separator** — full-width mono rule with the date inline (`─── TODAY · MAY 15, 2026 ─────────────`), not a thin underline header.
 8. **Currently-open band** — mono uppercase eyebrow (`⚠ CURRENTLY OPEN · N INCIDENTS`) over hairline-divided rows; no rounded shell.
 9. **Linked-event band** — mono uppercase eyebrow (`↗ YOU FOLLOWED A LINK TO THIS EVENT`) over a single event row; no shell.
-10. **Filter row keeps `pharos-card-shell`** — it is a control surface, not part of the stream.
+10. **Filter row is a flat wire-control surface** — it uses hairline `border-y` dividers and shared control primitives, but it does not use `pharos-card-shell`.
 
 ---
 
@@ -64,11 +64,11 @@ Filter state is read from URL search params via `useUrlFilters`, parsed in `read
 | `coin`     | canonical ticker-issuer id                                                            | empty    | Forwarded to `/api/events?coin=`                                                       |
 | `peg`      | `all` or one of the entries in `PEG_FILTER_OPTIONS` from `@shared/lib/classification` | `all`    | Applied client-side after the API response (mirrors `pegCurrency` API param when set)  |
 | `chain`    | `all` or any id present in `CHAIN_META` from `@shared/lib/chains`                     | `all`    | Forwarded to `/api/events?chain=`                                                      |
-| `window`   | `24h`, `7d`, `30d`, `90d`, `all`                                                      | `7d`     | Converted to `since=<epoch_ms>` by `tapeWindowSince(...)`                              |
+| `window`   | `24h`, `7d`, `30d`, `90d`, `alltime`                                                   | `7d`     | Converted to `since=<epoch_ms>` by `tapeWindowSince(...)`; parser also accepts legacy `all`, but the UI emits `alltime` |
 | `q`        | free-text                                                                             | empty    | Client-side fuzzy match against title, summary, and `coinId`                           |
 | `event`    | event id (`${ts_ms}-${type}-${hash8}`)                                                | empty    | Permalink target; resolved through a 200-row latest-events buffer when out of view     |
 
-`severity`, `peg`, `chain`, and `window` are always set; clearing them returns to the defaults shown above.
+`severity`, `peg`, `chain`, and `window` are always set; clearing them returns to the defaults shown above. The all-time empty-state CTA writes `window=alltime`.
 
 ---
 
@@ -90,18 +90,22 @@ The route is a thin client over `GET /api/events` (handler `worker/src/api/event
 
 The feed is a materialized projection of existing producer tables. The `project-tape` cron job (`worker/src/cron/project-tape.ts`) runs on the DEWS/PSI `26,56 * * * *` DB-only lane and is idempotent on `(source_table, source_row_id, transition)` so re-runs are no-ops. The projector adds zero outbound connection budget — it is purely D1-bound.
 
-v1 projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project-tape.ts`):
+Current projector roster (from `TAPE_PROJECTOR_JOBS` in `worker/src/cron/project-tape.ts`):
 
 | Projector                       | Source                                                  | Emits                                                                |
 | ------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
 | `depeg.opened` / `.resolved` / `.peak_worsened` | `depeg_events`                          | Confirmed peg deviations and their resolution / peak transitions     |
 | `freeze.blocked` / `.unblocked` / `.destroyed`  | `blacklist_events`                      | Issuer freeze, unblock, and fund-destroy actions                     |
 | `score.upgraded` / `.downgraded`                | `safety_grade_history`                  | Stablecoin Safety Score grade transitions                            |
+| `psi.band_changed`                              | `psi_snapshots`                         | PSI regime-band transitions                                          |
+| `dews.escalated` / `.deescalated`               | `dews_summary_snapshots`                | DEWS stress-level changes                                            |
+| `mint_burn.large_flow`                          | `mint_burn_flow_events`                 | Large net mint/burn flow observations                                |
+| `yield.warning_emitted` / `.pys_dropped`        | `yield_events`                          | Yield-risk warnings and PYS drops                                    |
 | `methodology.bumped:<domain>`                   | `shared/lib/*-version` modules          | Methodology version bumps (first-observation pattern)                |
 | `cemetery.entry.added`                          | `shared/lib/cemetery-merged.ts`         | Newly added cemetery entries                                         |
 | `lifecycle.tracked.frozen`                      | `shared/lib/stablecoins/` (frozen status)| Tracked coin frozen-lifecycle entries                                |
 
-Future projectors (`dews`, `psi`, `mint_burn`, `reserve`, `redemption`, `yield`, `liquidity`) are listed in `TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) for the filter chip set and `ItemList` JSON-LD; their projector implementations land as those source pipelines mature.
+Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLASSES` (`src/components/tape/tape-classes.ts`) for the filter chip set, but `hasProjector: false` keeps them subdued in the UI and out of the `ItemList` JSON-LD until their projector implementations land.
 
 `tape_events` schema lives in `worker/migrations/0129_tape_events.sql`. The wire `event_id` is `${ts_ms}-${type}-${hash8}` and is reused as the `?event=<id>` permalink.
 
@@ -117,7 +121,7 @@ Future projectors (`dews`, `psi`, `mint_burn`, `reserve`, `redemption`, `yield`,
 - **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
 - **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered above the day stream. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
-- **Empty state:** if filters return nothing, the CTA resets filters or widens the window to `all` (whichever applies).
+- **Empty state:** if filters return nothing, the CTA resets filters or widens the window to `alltime` (whichever applies).
 - **Stale data banner + retry:** standard `StaleDataBanner` and `QueryErrorNotice` wrap the feed.
 
 ---
@@ -127,7 +131,7 @@ Future projectors (`dews`, `psi`, `mint_burn`, `reserve`, `redemption`, `yield`,
 - The route is indexable. `src/app/sitemap.ts` includes `${SITE_URL}/timeline/`.
 - `src/app/timeline/page.tsx` emits two JSON-LD blocks:
   - `CollectionPage` with `@id=${TIMELINE_URL}#collection`, `isPartOf` the site `WebSite` node
-  - `ItemList` of the 12 tape classes from `TAPE_CLASSES`, each linking to `?type=<slug>.*`
+  - `ItemList` of projector-backed classes from `TAPE_CLASSES.filter(cls => cls.hasProjector)`, each linking to `?type=<slug>.*`
 - Per-class deep-links into `/timeline/` (e.g., `/timeline/?type=depeg.*`) are the canonical "See all on Timeline" targets used from `/depeg/`, `/freezewatch/`, and `/flows/`.
 
 ---
