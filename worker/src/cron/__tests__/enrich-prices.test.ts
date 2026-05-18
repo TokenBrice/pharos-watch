@@ -1511,6 +1511,94 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("closes stale DexScreener circuits when no exact or search candidates remain", async () => {
+    const openedAt = Math.floor(Date.now() / 1000) - 3600;
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+            updated_at: openedAt,
+          },
+          {
+            key: `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`,
+            value: JSON.stringify({
+              state: "open",
+              consecutiveFailures: 3,
+              lastFailureAt: openedAt,
+              lastSuccessAt: null,
+              openedAt,
+            }),
+            updated_at: openedAt,
+          },
+        ],
+      },
+    ]);
+    const assets: PeggedAsset[] = [
+      {
+        id: "search-usd",
+        name: "Search USD",
+        symbol: "CHFAU",
+        price: 0,
+        pegType: "peggedUSD",
+        circulating: {},
+      },
+    ];
+
+    const fetchSpy = mockFetch();
+    const result = await runDexScreenerPass(assets, undefined, db);
+
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        source: "dexscreener-exact",
+        stage: "no-candidates",
+        status: null,
+        ok: true,
+        success: true,
+        candidateCount: 0,
+      }),
+      expect.objectContaining({
+        source: "dexscreener-search",
+        stage: "no-candidates",
+        status: null,
+        ok: true,
+        success: true,
+        candidateCount: 0,
+      }),
+    ]));
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    const exactWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`
+      );
+    const searchWrite = db
+      .getHistory()
+      .find((entry) =>
+        entry.sql.includes("INSERT OR REPLACE INTO cache") &&
+        entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_SEARCH}`
+      );
+    expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+    expect(JSON.parse(String(searchWrite?.binds[1]))).toMatchObject({
+      state: "closed",
+      consecutiveFailures: 0,
+    });
+  });
+
   it("skips the CMC breaker check when no assets are missing", async () => {
     const assets: PeggedAsset[] = [
       {

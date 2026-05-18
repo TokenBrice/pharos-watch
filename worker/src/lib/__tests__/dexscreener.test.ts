@@ -49,4 +49,26 @@ describe("dexscreener", () => {
       pairs: [validPair],
     });
   });
+
+  it("accepts object-style payloads that wrap pools under pairs[]", async () => {
+    const validPair = {
+      chainId: "base",
+      dexId: "aerodrome",
+      pairAddress: "0xpair",
+      baseToken: { address: "0xabc", name: "USD Test", symbol: "USDTST" },
+      quoteToken: { address: "0xdef", name: "USD Coin", symbol: "USDC" },
+      priceUsd: "1.0001",
+      liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+      volume: { h24: 1_000, h6: 100, h1: 10, m5: 1 },
+      pairCreatedAt: Date.now(),
+    };
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ schemaVersion: "1.0.0", pairs: [validPair] }), { status: 200 }),
+    );
+
+    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
+      ok: true,
+      pairs: [validPair],
+    });
+  });
 });

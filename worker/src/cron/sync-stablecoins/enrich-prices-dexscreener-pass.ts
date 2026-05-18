@@ -11,6 +11,7 @@ import {
   applyNonOkProviderDiagnostic,
   buildPricingProviderDiagnostic,
   isProviderCircuitAllowed,
+  recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
 import { cancelResponseBodyQuietly } from "../../lib/response-body";
@@ -244,53 +245,101 @@ export async function runDexScreenerPass(
     console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_REQUESTS} requests`);
   }
 
-  const dexscreenerAllowed = await isProviderCircuitAllowed({
-    db,
-    circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
-    diagnostic: {
-      source: "dexscreener-exact",
-      stage: "fallback",
-      endpoint: "api.dexscreener.com/tokens/v1",
-      candidateCount: stillMissing.length,
-    },
-    diagnostics,
-    errorMessage: "DexScreener exact circuit open",
-  });
-  const dexscreenerSearchAllowed = await isProviderCircuitAllowed({
-    db,
-    circuitSource: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
-    diagnostic: {
-      source: "dexscreener-search",
-      stage: "fallback",
-      endpoint: "api.dexscreener.com/latest/dex/search",
-      candidateCount: stillMissing.length,
-    },
-    diagnostics,
-    errorMessage: "DexScreener search circuit open",
-  });
+  const dexCandidates = [...stillMissing]
+    .map((entry) => {
+      const exactTargets = buildDexScreenerTargets(entry.asset);
+      const allowSymbolSearch = shouldAllowDexScreenerSymbolSearch(entry.asset, exactTargets);
+      const allowedSearchChains = allowSymbolSearch
+        ? buildAllowedDexSearchChains(entry.asset)
+        : new Set<string>();
+      return {
+        ...entry,
+        exactTargets,
+        allowSymbolSearch,
+        allowedSearchChains,
+      };
+    })
+    .sort((left, right) => {
+      if (right.exactTargets.length !== left.exactTargets.length) {
+        return right.exactTargets.length - left.exactTargets.length;
+      }
+
+      const leftCirculating = sumCirculatingValue(left.asset);
+      const rightCirculating = sumCirculatingValue(right.asset);
+      if (rightCirculating !== leftCirculating) {
+        return rightCirculating - leftCirculating;
+      }
+
+      return left.asset.id.localeCompare(right.asset.id);
+    });
+
+  const exactCandidateCount = dexCandidates.filter((entry) => entry.exactTargets.length > 0).length;
+  const searchCandidateCount = dexCandidates.filter(
+    (entry) => entry.allowSymbolSearch && entry.allowedSearchChains.size > 0,
+  ).length;
+
+  if (exactCandidateCount === 0) {
+    await recoverProviderOnNoCandidates({
+      db,
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+      diagnostic: {
+        source: "dexscreener-exact",
+        stage: "no-candidates",
+        endpoint: "api.dexscreener.com/tokens/v1",
+      },
+      diagnostics,
+    });
+  }
+  if (searchCandidateCount === 0) {
+    await recoverProviderOnNoCandidates({
+      db,
+      circuitSource: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
+      diagnostic: {
+        source: "dexscreener-search",
+        stage: "no-candidates",
+        endpoint: "api.dexscreener.com/latest/dex/search",
+      },
+      diagnostics,
+    });
+  }
+  if (exactCandidateCount === 0 && searchCandidateCount === 0) {
+    return diagnostics.length > 0 ? { resolved, failures: [], diagnostics } : { resolved, failures: [] };
+  }
+
+  const dexscreenerAllowed = exactCandidateCount > 0
+    ? await isProviderCircuitAllowed({
+        db,
+        circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES,
+        diagnostic: {
+          source: "dexscreener-exact",
+          stage: "fallback",
+          endpoint: "api.dexscreener.com/tokens/v1",
+          candidateCount: exactCandidateCount,
+        },
+        diagnostics,
+        errorMessage: "DexScreener exact circuit open",
+      })
+    : false;
+  const dexscreenerSearchAllowed = searchCandidateCount > 0
+    ? await isProviderCircuitAllowed({
+        db,
+        circuitSource: CIRCUIT_SOURCE.DEXSCREENER_SEARCH,
+        diagnostic: {
+          source: "dexscreener-search",
+          stage: "fallback",
+          endpoint: "api.dexscreener.com/latest/dex/search",
+          candidateCount: searchCandidateCount,
+        },
+        diagnostics,
+        errorMessage: "DexScreener search circuit open",
+      })
+    : false;
   let dexExactAttempts = 0;
   let dexExactSuccessfulCalls = 0;
   let dexSearchAttempts = 0;
   let dexSuccessfulSearchCalls = 0;
 
   if (dexscreenerAllowed || dexscreenerSearchAllowed) {
-    const dexCandidates = [...stillMissing]
-      .sort((left, right) => {
-        const leftExactTargets = buildDexScreenerTargets(left.asset).length;
-        const rightExactTargets = buildDexScreenerTargets(right.asset).length;
-        if (rightExactTargets !== leftExactTargets) {
-          return rightExactTargets - leftExactTargets;
-        }
-
-        const leftCirculating = sumCirculatingValue(left.asset);
-        const rightCirculating = sumCirculatingValue(right.asset);
-        if (rightCirculating !== leftCirculating) {
-          return rightCirculating - leftCirculating;
-        }
-
-        return left.asset.id.localeCompare(right.asset.id);
-      });
-
     const totalAttempts = () => dexExactAttempts + dexSearchAttempts;
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
     for (const entry of dexCandidates) {
@@ -304,8 +353,7 @@ export async function runDexScreenerPass(
         }
 
         let resolvedFromDex = false;
-        const exactTargets = buildDexScreenerTargets(entry.asset);
-        for (const target of dexscreenerAllowed ? exactTargets : []) {
+        for (const target of dexscreenerAllowed ? entry.exactTargets : []) {
           if (totalAttempts() >= DEXSCREENER_MAX_REQUESTS) break;
 
           const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
@@ -358,7 +406,7 @@ export async function runDexScreenerPass(
           console.warn(`[enrich] DexScreener pass budget exhausted after ${totalAttempts()}/${DEXSCREENER_MAX_REQUESTS} requests`);
           break;
         }
-        if (!shouldAllowDexScreenerSymbolSearch(entry.asset, exactTargets)) {
+        if (!entry.allowSymbolSearch) {
           continue;
         }
         if (!dexscreenerSearchAllowed) {
@@ -366,7 +414,7 @@ export async function runDexScreenerPass(
         }
 
         const symbolKey = entry.asset.symbol.toUpperCase();
-        const allowedChains = buildAllowedDexSearchChains(entry.asset);
+        const allowedChains = entry.allowedSearchChains;
         if (allowedChains.size === 0) {
           continue;
         }
