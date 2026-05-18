@@ -37,10 +37,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "DOLA live reserves aggregate multiple stablecoin markets into one mixed collateral bucket, so no single coinId is representative.",
   ],
   [
-    "xai-silo-finance::Silo ETH and USDC credit-line collateral::USDC",
-    "XAI reserve metadata describes a mixed Silo credit-line collateral bucket, so no single stablecoin coinId is representative.",
-  ],
-  [
     "apxusd-apyx::Cash & Equivalents (USDC, U.S. Treasury Bills)::USDC",
     "apxUSD's cash bucket aggregates USDC and short-duration U.S. Treasury Bills, so no single coinId is representative.",
   ],
@@ -59,10 +55,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "lvusd-leverup::USDC and MON liquidity-layer collateral::USDC",
     "lvUSD's reserve slice mixes USDC with MON protocol collateral, so no single tracked stablecoin coinId is representative.",
-  ],
-  [
-    "xmd-metal-dollar::USDC, PYUSD, and Paxos dollar stablecoin basket::USDC",
-    "XMD's reserve slice aggregates a multi-stablecoin Paxos-dollar basket, so no single tracked stablecoin coinId is representative.",
   ],
   [
     "jpyt-dephaser::Locked USDT on Optimism and USDC on Base::USDC",
@@ -110,12 +102,20 @@ describe("reserve coinId validation", () => {
     // underlying treasury products (BUIDL/USTB) via coinId for blacklist inheritance.
     const ALLOWED_BOTH = new Set([
       "aa-falconx-mev-capital",
+      "audm-mento",
+      "brlm-mento",
+      "cadm-mento",
+      "chfm-mento",
+      "copm-mento",
       "dusd-dtrinity",
       "buck-buck-assets",
       "frxusd-frax",
       "ftusd-flying-tulip",
       "susd1plus-lorenzo",
       "ussd-sonic-labs",
+      "wemix-dollar-wemix",
+      "xai-silo-finance",
+      "xmd-metal-dollar",
     ]);
     const conflicts: string[] = [];
     for (const meta of TRACKED_STABLECOINS) {

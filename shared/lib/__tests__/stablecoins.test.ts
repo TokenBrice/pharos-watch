@@ -311,14 +311,11 @@ describe("tracked stablecoin metadata", () => {
     )).toBe(true);
   });
 
-  it("classifies BOLD yield as a native wrapper over the Liquity Stability Pool", () => {
+  it("keeps BOLD itself as non-yield-bearing metadata", () => {
     const coin = TRACKED_META_BY_ID.get("bold-liquity");
 
     expect(coin).toBeDefined();
-    expect(coin?.yieldConfig).toMatchObject({
-      yieldSource: "Liquity Stability Pool (via Yearn yBOLD)",
-      yieldType: "lending-vault",
-    });
+    expect(coin?.yieldConfig).toBeUndefined();
   });
 
   it("keeps base USDAI on the curated supply path while sUSDai owns the mixed protocol reserve feed", () => {

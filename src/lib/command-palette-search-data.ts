@@ -120,7 +120,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usdx-hex-trust", "Hex Trust USDX", "USDX"],
   ["hbd-hive", "Hive Backed Dollar", "HBD"],
   ["xusd-straitsx", "StraitsX XUSD", "XUSD"],
-  ["musd-metamask", "Metamask USD", "MUSD"],
+  ["musd-metamask", "MetaMask USD", "MUSD"],
   ["yusd-aegis", "Aegis YUSD", "YUSD"],
   ["syusd-aegis", "Aegis Staked YUSD", "sYUSD"],
   ["susd-synthetix", "sUSD", "SUSD"],
