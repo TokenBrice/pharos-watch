@@ -2,7 +2,14 @@
 
 import { ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
-import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
+import {
+  PYS_BENCHMARK_SPREAD_WEIGHT,
+  PYS_DEFAULT_SAFETY_SCORE,
+  PYS_MAX_SOURCE_RISK_PENALTY,
+  PYS_SUSTAINABILITY_FLOOR,
+  computePYS,
+  computeSourceRiskScoreFromPenalty,
+} from "@shared/lib/yield-scoring";
 import { formatScore, formatSignedPercent } from "@shared/lib/format";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
@@ -32,6 +39,10 @@ export interface PysBreakdownProps {
   safetyScore: number | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   pysNullReason?: YieldPysNullReason | null;
+  // WHY: Callers may not yet pass scalingFactor; deltas are computed against
+  // scaling=1 in that case, which is the conservative approximation.
+  scalingFactor?: number;
+  sourceRiskScore?: number | null;
 }
 
 const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
@@ -81,21 +92,132 @@ function NullPysScore({
   );
 }
 
-function PysBreakdownBody({
-  apy30d,
-  effectiveYield,
-  benchmarkAdjustment,
-  benchmarkSpread,
-  benchmarkLabel,
-  sourceRiskPenalty,
-  adjustedRiskPenalty,
-  sustainabilityMult,
-  grade,
-  safetyScore,
-  sourceRiskDrivers,
-  score,
+interface NeutralizeInput {
+  apy30d: number;
+  safetyScore: number | null;
+  apyVarianceScore: number;
+  scalingFactor: number;
+  benchmarkRate: number | null;
+  sourceRiskPenalty: number;
+}
+
+// WHY: per-factor attribution via neutralize-and-rescore (see Presentation Contracts
+// in docs/yield-intelligence.md). Deltas are not strictly additive.
+function neutralizeFactorAndRescore(
+  actualScore: number,
+  factor: "sourceRisk" | "safety" | "sustainability",
+  components: NeutralizeInput,
+): number {
+  const neutralized: NeutralizeInput = { ...components };
+  switch (factor) {
+    case "sourceRisk":
+      neutralized.sourceRiskPenalty = 1;
+      break;
+    case "safety":
+      neutralized.safetyScore = 100;
+      break;
+    case "sustainability":
+      neutralized.apyVarianceScore = 0;
+      break;
+  }
+  const neutralizedScore = computePYS({
+    apy30d: neutralized.apy30d,
+    safetyScore: neutralized.safetyScore,
+    apyVarianceScore: neutralized.apyVarianceScore,
+    scalingFactor: neutralized.scalingFactor,
+    benchmarkRate: neutralized.benchmarkRate,
+    sourceRiskPenalty: neutralized.sourceRiskPenalty,
+  });
+  return actualScore - neutralizedScore;
+}
+
+function formatSignedPysDelta(delta: number): string {
+  if (!Number.isFinite(delta)) return "";
+  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
+  return `${sign}${rounded} PYS`;
+}
+
+function shouldShowDefaultSafetyBadge(props: PysBreakdownProps): boolean {
+  return props.safetyScore == null;
+}
+
+function shouldShowSustainabilityFloorBadge(props: PysBreakdownProps): boolean {
+  return props.sustainabilityMult === PYS_SUSTAINABILITY_FLOOR;
+}
+
+function shouldShowSourceRiskClampBadge(props: PysBreakdownProps): boolean {
+  return props.sourceRiskPenalty === PYS_MAX_SOURCE_RISK_PENALTY;
+}
+
+function shouldShowBenchmarkFallbackBadge(props: PysBreakdownProps): boolean {
+  return props.benchmarkSelectionMode === "fallback-usd";
+}
+
+const CLAMP_BADGE_BASE_CLASS =
+  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium";
+const CLAMP_BADGE_SLATE_CLASS = cn(
+  CLAMP_BADGE_BASE_CLASS,
+  "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+);
+const CLAMP_BADGE_AMBER_CLASS = cn(
+  CLAMP_BADGE_BASE_CLASS,
+  "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+);
+
+function ClampBadge({
+  mode,
+  label,
+  tooltip,
   toneClass,
-}: Omit<PysBreakdownProps, "mode" | "benchmarkSelectionMode" | "pysNullReason">) {
+  ariaLabel,
+}: {
+  mode: PysBreakdownMode;
+  label: string;
+  tooltip: string;
+  toneClass: string;
+  ariaLabel: string;
+}) {
+  // WHY: mirror NullPysScore's pattern — popover mode is already nested in a tooltip,
+  // so use `title` there and a real Tooltip in inline mode.
+  if (mode === "popover") {
+    return (
+      <span className={toneClass} title={tooltip} aria-label={ariaLabel}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={cn(toneClass, "cursor-help")} aria-label={ariaLabel}>
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[220px] text-[11px]">{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
+  const {
+    mode,
+    apy30d,
+    effectiveYield,
+    benchmarkAdjustment,
+    benchmarkSpread,
+    benchmarkLabel,
+    sourceRiskPenalty,
+    adjustedRiskPenalty,
+    sustainabilityMult,
+    grade,
+    safetyScore,
+    sourceRiskDrivers,
+    score,
+    toneClass,
+    scalingFactor,
+    sourceRiskScore,
+  } = props;
   const safetyLabel = grade && grade !== "NR"
     ? `${grade}${safetyScore !== null ? ` (${Math.round(safetyScore)}/100)` : ""}`
     : safetyScore !== null
@@ -103,6 +225,36 @@ function PysBreakdownBody({
     : "Safety unavailable";
   const consistencyPct = Math.round(sustainabilityMult * 100);
   const benchmarkRefLabel = benchmarkLabel ?? "benchmark";
+
+  const effectiveScalingFactor = typeof scalingFactor === "number" && scalingFactor > 0 ? scalingFactor : 1;
+  const apyVarianceScore = Math.max(0, Math.min(1, 1 - sustainabilityMult));
+  const benchmarkRate = benchmarkSpread === null ? null : apy30d - benchmarkSpread;
+  const neutralizeComponents: NeutralizeInput = {
+    apy30d,
+    safetyScore,
+    apyVarianceScore,
+    scalingFactor: effectiveScalingFactor,
+    benchmarkRate,
+    sourceRiskPenalty,
+  };
+
+  const hasScore = typeof score === "number" && Number.isFinite(score);
+  const sourceRiskDelta = hasScore
+    ? neutralizeFactorAndRescore(score, "sourceRisk", neutralizeComponents)
+    : null;
+  const safetyDelta = hasScore
+    ? neutralizeFactorAndRescore(score, "safety", neutralizeComponents)
+    : null;
+  const sustainabilityDelta = hasScore
+    ? neutralizeFactorAndRescore(score, "sustainability", neutralizeComponents)
+    : null;
+
+  const resolvedSourceRiskScore = sourceRiskScore ?? computeSourceRiskScoreFromPenalty(sourceRiskPenalty);
+
+  const showDefaultSafety = shouldShowDefaultSafetyBadge(props);
+  const showSustainabilityFloor = shouldShowSustainabilityFloorBadge(props);
+  const showSourceRiskClamp = shouldShowSourceRiskClampBadge(props);
+  const showBenchmarkFallback = shouldShowBenchmarkFallbackBadge(props);
 
   return (
     <div className="space-y-2 text-xs" role="group" aria-label="PYS breakdown">
@@ -127,6 +279,15 @@ function PysBreakdownBody({
               >
                 <Info className="h-3 w-3" aria-hidden="true" />
               </span>
+              {showBenchmarkFallback ? (
+                <ClampBadge
+                  mode={mode}
+                  label="USD fallback"
+                  tooltip="Benchmark resolved via USD fallback — score uses USD T-bill rate"
+                  toneClass={CLAMP_BADGE_AMBER_CLASS}
+                  ariaLabel="Benchmark resolved via USD fallback"
+                />
+              ) : null}
             </span>
             <span aria-hidden="true" className="font-mono tabular-nums">{formatSignedPercent(benchmarkAdjustment, 1)}</span>
           </div>
@@ -144,10 +305,31 @@ function PysBreakdownBody({
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Divided by source-risk penalty ${sourceRiskPenalty.toFixed(2)} times`}
+          aria-label={`Divided by source-risk penalty ${sourceRiskPenalty.toFixed(2)} times${sourceRiskDelta !== null ? ` (${formatSignedPysDelta(sourceRiskDelta)})` : ""}`}
         >
-          <span aria-hidden="true" className="text-muted-foreground">{"÷"} source-risk penalty</span>
-          <span aria-hidden="true" className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}{"×"}</span>
+          <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
+            <span>{"÷"} source-risk penalty</span>
+            {showSourceRiskClamp ? (
+              <ClampBadge
+                mode={mode}
+                label="cap 2.5×"
+                tooltip="Source-risk penalty hit the methodology cap"
+                toneClass={CLAMP_BADGE_AMBER_CLASS}
+                ariaLabel="Source-risk penalty hit the methodology cap"
+              />
+            ) : null}
+          </span>
+          <span aria-hidden="true" className="flex items-baseline gap-1.5">
+            <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}{"×"}</span>
+            {resolvedSourceRiskScore !== null ? (
+              <span className="text-[10px] text-muted-foreground/80">({resolvedSourceRiskScore}/100)</span>
+            ) : null}
+            {sourceRiskDelta !== null ? (
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+                ({formatSignedPysDelta(sourceRiskDelta)})
+              </span>
+            ) : null}
+          </span>
         </div>
         {sourceRiskDrivers.length === 0 ? (
           <div className="text-[11px] text-muted-foreground" aria-label="Source risk neutral">
@@ -177,10 +359,28 @@ function PysBreakdownBody({
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(1)} times`}
+          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(1)} times${safetyDelta !== null ? ` (${formatSignedPysDelta(safetyDelta)})` : ""}`}
         >
-          <span aria-hidden="true" className="text-muted-foreground">{"÷"} safety penalty</span>
-          <span aria-hidden="true" className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
+          <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
+            <span>{"÷"} safety penalty</span>
+            {showDefaultSafety ? (
+              <ClampBadge
+                mode={mode}
+                label={`default ${PYS_DEFAULT_SAFETY_SCORE}`}
+                tooltip={`No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE} (D-tier)`}
+                toneClass={CLAMP_BADGE_SLATE_CLASS}
+                ariaLabel={`No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`}
+              />
+            ) : null}
+          </span>
+          <span aria-hidden="true" className="flex items-baseline gap-1.5">
+            <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
+            {safetyDelta !== null ? (
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+                ({formatSignedPysDelta(safetyDelta)})
+              </span>
+            ) : null}
+          </span>
         </div>
         <div className="text-[11px] text-muted-foreground">{safetyLabel}</div>
       </div>
@@ -188,10 +388,28 @@ function PysBreakdownBody({
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Multiplied by consistency ${consistencyPct} percent (30-day APY variance)`}
+          aria-label={`Multiplied by consistency ${consistencyPct} percent (30-day APY variance)${sustainabilityDelta !== null ? ` (${formatSignedPysDelta(sustainabilityDelta)})` : ""}`}
         >
-          <span aria-hidden="true" className="text-muted-foreground">{"×"} consistency</span>
-          <span aria-hidden="true" className="font-mono tabular-nums">{consistencyPct}%</span>
+          <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
+            <span>{"×"} consistency</span>
+            {showSustainabilityFloor ? (
+              <ClampBadge
+                mode={mode}
+                label="floor 30%"
+                tooltip="Volatility put consistency at the methodology floor; underlying 30d variance ≥ 70%"
+                toneClass={CLAMP_BADGE_AMBER_CLASS}
+                ariaLabel="Consistency hit the methodology floor"
+              />
+            ) : null}
+          </span>
+          <span aria-hidden="true" className="flex items-baseline gap-1.5">
+            <span className="font-mono tabular-nums">{consistencyPct}%</span>
+            {sustainabilityDelta !== null ? (
+              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+                ({formatSignedPysDelta(sustainabilityDelta)})
+              </span>
+            ) : null}
+          </span>
         </div>
         <div className="text-[11px] text-muted-foreground" aria-hidden="true">30d APY variance</div>
       </div>
