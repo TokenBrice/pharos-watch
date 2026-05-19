@@ -3908,5 +3908,15 @@
     "reviewedBy": "@TokenBrice",
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
+  },
+  "gynusd-gyndore": {
+    "title": "BTC Liquidity Without the Middleman",
+    "text": "gynUSD is a pre-launch CDP stablecoin built around a single, blunt proposition: cbBTC is the only collateral. By focusing exclusively on Bitcoin through Coinbase's wrapper, Gyndore sidesteps the generalized risk models that force multi-asset lending markets into conservative LTV ratios — and then passes the capital efficiency benefit directly to borrowers, with a 110% minimum collateralization ratio enabling up to 90.91% LTV. Seventy percent of borrow fees flow to Stability Pool depositors, removing the idle-liquidity drag that burdens pool-based lending markets. The governance story has two possible endings depending on launch conditions: the protocol can either start with a bootstrapping admin key and transition to GYND token governance once the fee switch triggers, or mint GYND from day one if pre-launch capital formation is sufficient. The Pareto Controller constrains GYND voters to ±10bps rate adjustments and requires 80% consensus — governance that behaves more like a thermostat than a parliament. The cbBTC dependency is the structural asterisk: Coinbase custody sits at the base of every loan, so the trust-minimized pitch has a ceiling.",
+    "updatedAt": "2026-05-19",
+    "authoredBy": "ai",
+    "model": "claude-sonnet-4-6",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-05-19",
+    "factsAsOf": "2026-05-19"
   }
 }

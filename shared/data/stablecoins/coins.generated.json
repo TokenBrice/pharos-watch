@@ -12693,6 +12693,85 @@
     ]
   },
   {
+    "id": "gynusd-gyndore",
+    "detailProvider": "defillama",
+    "name": "Gyndore",
+    "symbol": "gynUSD",
+    "oneLiner": "gynUSD is Gyndore's cbBTC-backed CDP stablecoin on Base, minted at up to 90.91% LTV with on-chain redemptions and Stability Pool liquidations holding the peg.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "collateral": "cbBTC (Coinbase Wrapped Bitcoin); single-collateral CDPs on Base with 110% minimum collateralization ratio, ~90.91% max LTV",
+    "pegMechanism": "CDP-based: gynUSD minted against cbBTC at 110% min collateralization ratio. If gynUSD trades below $1, on-chain redemptions allow users to swap gynUSD for $1 of cbBTC. Stability Pool absorbs liquidations; liquidators receive a $100 cbBTC bond per position. Borrow rate (1–20%) adjustable in ±10bps steps by GYND holders via the Pareto Controller (80% consensus, 24h challenge window), or by a bootstrapping admin key pre-fee-switch.",
+    "mechanismArchetype": "cdp",
+    "links": [
+      {
+        "label": "Website",
+        "url": "https://www.gyndore.com/"
+      },
+      {
+        "label": "X",
+        "url": "https://x.com/gyndore"
+      },
+      {
+        "label": "Telegram",
+        "url": "https://t.me/gyndore"
+      },
+      {
+        "label": "Medium",
+        "url": "https://medium.com/@gyndore"
+      },
+      {
+        "label": "YouTube",
+        "url": "https://www.youtube.com/@Gyndore"
+      },
+      {
+        "label": "GitHub",
+        "url": "https://github.com/Ayeteasea"
+      },
+      {
+        "label": "Whitepaper",
+        "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf"
+      }
+    ],
+    "canBeBlacklisted": "possible",
+    "blacklistabilityReview": {
+      "reviewedStatus": "possible",
+      "sources": [
+        {
+          "label": "Whitepaper",
+          "url": "https://www.gyndore.com/Gyndore-Whitepaper.pdf"
+        }
+      ],
+      "evidence": "gynUSD contracts are non-upgradable with no direct blacklist function; however, the sole collateral (cbBTC) is controlled by Coinbase, which can freeze cbBTC addresses and impair the protocol collateral pool.",
+      "reviewer": "Pharos pre-launch addition 2026-05-19",
+      "reviewedAt": "2026-05-19"
+    },
+    "yieldConfig": {
+      "yieldSource": "70% of protocol borrow fees distributed to gynUSD Stability Pool depositors",
+      "yieldType": "fee-sharing"
+    },
+    "status": "pre-launch",
+    "announcedDate": "2026-02",
+    "launchPhase": "announced",
+    "launchPhaseDetail": "Protocol announced with whitepaper published; website live with core metrics showing 'Soon'. Claims audit-first approach but no specific auditor or report confirmed. Two launch configurations planned: bootstrapping (team admin key for borrow rate, transitioning via one-time fee switch to GYND governance) or GYND-from-day-one.",
+    "featuredContent": [],
+    "milestones": [
+      {
+        "date": "2026-02-02",
+        "type": "announcement",
+        "title": "Gyndore announced — whitepaper published",
+        "description": "Bitcoin-backed CDP stablecoin protocol on Base announced by Ayeteasea, with whitepaper and website going live.",
+        "sourceUrl": "https://medium.com/@gyndore"
+      }
+    ]
+  },
+  {
     "id": "hbd-hive",
     "detailProvider": "coingecko",
     "name": "Hive Backed Dollar",

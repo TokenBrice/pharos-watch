@@ -2111,6 +2111,25 @@
     "geckoId": "gyen"
   },
   {
+    "id": "gynusd-gyndore",
+    "name": "Gyndore",
+    "symbol": "gynUSD",
+    "oneLiner": "gynUSD is Gyndore's cbBTC-backed CDP stablecoin on Base, minted at up to 90.91% LTV with on-chain redemptions and Stability Pool liquidations holding the peg.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "decentralized",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": false
+    },
+    "pegMechanism": "CDP-based: gynUSD minted against cbBTC at 110% min collateralization ratio. If gynUSD trades below $1, on-chain redemptions allow users to swap gynUSD for $1 of cbBTC. Stability Pool absorbs liquidations; liquidators receive a $100 cbBTC bond per position. Borrow rate (1–20%) adjustable in ±10bps steps by GYND holders via the Pareto Controller (80% consensus, 24h challenge window), or by a bootstrapping admin key pre-fee-switch.",
+    "mechanismArchetype": "cdp",
+    "status": "pre-launch",
+    "launchPhase": "announced",
+    "canBeBlacklisted": "possible"
+  },
+  {
     "id": "hbd-hive",
     "name": "Hive Backed Dollar",
     "symbol": "HBD",
