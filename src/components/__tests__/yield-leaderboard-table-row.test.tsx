@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-row";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -69,7 +69,15 @@ const baseRow = {
   sourceDepthLens: "moderate",
 } as unknown as YieldViewModelRow;
 
-function renderRow(row: YieldViewModelRow, expanded: boolean = false) {
+function renderRow(
+  row: YieldViewModelRow,
+  expanded: boolean = false,
+  overrides: {
+    isCompared?: boolean;
+    compareDisabled?: boolean;
+    onToggleCompare?: (id: string) => void;
+  } = {},
+) {
   return render(
     <TooltipProvider>
       <Table>
@@ -81,9 +89,12 @@ function renderRow(row: YieldViewModelRow, expanded: boolean = false) {
             medianApy={4}
             columnCount={11}
             expanded={expanded}
+            isCompared={overrides.isCompared ?? false}
+            compareDisabled={overrides.compareDisabled ?? false}
             onPrefetch={vi.fn()}
             onToggleExpanded={vi.fn()}
             onOpenSourceSheet={vi.fn()}
+            onToggleCompare={overrides.onToggleCompare ?? vi.fn()}
           />
         </TableBody>
       </Table>
@@ -146,6 +157,15 @@ describe("YieldLeaderboardTableRow", () => {
 
     const link = screen.getByRole("link", { name: "Open full yield analysis for USDT" });
     expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
+  });
+
+  it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
+    const onToggleCompare = vi.fn();
+    renderRow(baseRow, false, { onToggleCompare });
+
+    fireEvent.click(screen.getByLabelText("Add USDT to compare"));
+
+    expect(onToggleCompare).toHaveBeenCalledWith("usdt-tether");
   });
 });
 

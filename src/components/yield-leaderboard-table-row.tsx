@@ -5,7 +5,6 @@ import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
@@ -44,9 +43,12 @@ interface YieldLeaderboardTableRowProps {
   medianApy: number;
   columnCount: number;
   expanded: boolean;
+  isCompared: boolean;
+  compareDisabled: boolean;
   onPrefetch: (stablecoinId: string) => void;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
+  onToggleCompare: (stablecoinId: string) => void;
 }
 
 function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number; max: number }) {
@@ -75,13 +77,13 @@ function YieldLeaderboardTableRowBase({
   medianApy,
   columnCount,
   expanded,
+  isCompared,
+  compareDisabled,
   onPrefetch,
   onToggleExpanded,
   onOpenSourceSheet,
+  onToggleCompare,
 }: YieldLeaderboardTableRowProps) {
-  const compare = useYieldCompareSelection();
-  const isCompared = compare.has(row.id);
-  const compareDisabled = !isCompared && !compare.canAdd;
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
   const warningSignalCount = row.warningSignals.length;
@@ -331,7 +333,7 @@ function YieldLeaderboardTableRowBase({
                 type="checkbox"
                 checked={isCompared}
                 disabled={compareDisabled}
-                onChange={() => compare.toggle(row.id)}
+                onChange={() => onToggleCompare(row.id)}
                 onClick={(event) => event.stopPropagation()}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") event.stopPropagation();

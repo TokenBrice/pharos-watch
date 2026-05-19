@@ -70,8 +70,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={onToggleExpanded}
           onOpenSourceSheet={onOpenSourceSheet}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -94,8 +97,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -114,8 +120,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -131,8 +140,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={true}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -156,8 +168,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={true}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -178,8 +193,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -200,8 +218,11 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -217,13 +238,39 @@ describe("YieldMobileCard", () => {
           riskFreeRate={3.5}
           medianApy={4}
           expanded={false}
+          isCompared={false}
+          compareDisabled={false}
           onToggleExpanded={vi.fn()}
           onOpenSourceSheet={vi.fn()}
+          onToggleCompare={vi.fn()}
         />
       </TooltipProvider>,
     );
 
     expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
     expect(screen.queryByText("small peer set")).toBeNull();
+  });
+
+  it("invokes onToggleCompare with the row id when the compare checkbox is clicked", () => {
+    const onToggleCompare = vi.fn();
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={row}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          isCompared={false}
+          compareDisabled={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+          onToggleCompare={onToggleCompare}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByLabelText("Add USDT to compare"));
+
+    expect(onToggleCompare).toHaveBeenCalledWith("usdt-tether");
   });
 });

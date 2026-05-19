@@ -183,6 +183,7 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
   const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
+  const compare = useYieldCompareSelection();
   const sheetRanking = useMemo(
     () => (sheetRankingId ? rows.find((r) => r.id === sheetRankingId) ?? null : null),
     [rows, sheetRankingId],
@@ -264,18 +265,25 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
         ) : (
           <>
             <div className="space-y-3">
-              {paginated.map((row) => (
-                <YieldMobileCard
-                  key={row.id}
-                  row={row}
-                  logo={logos[row.id]}
-                  riskFreeRate={riskFreeRate}
-                  medianApy={medianApy}
-                  expanded={visibleExpandedId === row.id}
-                  onToggleExpanded={handleToggleExpanded}
-                  onOpenSourceSheet={setSheetRankingId}
-                />
-              ))}
+              {paginated.map((row) => {
+                const isCompared = compare.has(row.id);
+                const compareDisabled = !isCompared && !compare.canAdd;
+                return (
+                  <YieldMobileCard
+                    key={row.id}
+                    row={row}
+                    logo={logos[row.id]}
+                    riskFreeRate={riskFreeRate}
+                    medianApy={medianApy}
+                    expanded={visibleExpandedId === row.id}
+                    isCompared={isCompared}
+                    compareDisabled={compareDisabled}
+                    onToggleExpanded={handleToggleExpanded}
+                    onOpenSourceSheet={setSheetRankingId}
+                    onToggleCompare={compare.toggle}
+                  />
+                );
+              })}
             </div>
             <TablePagination
               page={effectivePage}
@@ -315,20 +323,27 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
             noun: "coins",
           } : undefined}
         >
-          {paginated.map((row) => (
-            <YieldLeaderboardTableRow
-              key={row.id}
-              row={row}
-              logos={logos}
-              riskFreeRate={riskFreeRate}
-              medianApy={medianApy}
-              columnCount={COLUMN_COUNT}
-              expanded={visibleExpandedId === row.id}
-              onPrefetch={prefetch}
-              onToggleExpanded={handleToggleExpanded}
-              onOpenSourceSheet={setSheetRankingId}
-            />
-          ))}
+          {paginated.map((row) => {
+            const isCompared = compare.has(row.id);
+            const compareDisabled = !isCompared && !compare.canAdd;
+            return (
+              <YieldLeaderboardTableRow
+                key={row.id}
+                row={row}
+                logos={logos}
+                riskFreeRate={riskFreeRate}
+                medianApy={medianApy}
+                columnCount={COLUMN_COUNT}
+                expanded={visibleExpandedId === row.id}
+                isCompared={isCompared}
+                compareDisabled={compareDisabled}
+                onPrefetch={prefetch}
+                onToggleExpanded={handleToggleExpanded}
+                onOpenSourceSheet={setSheetRankingId}
+                onToggleCompare={compare.toggle}
+              />
+            );
+          })}
           {sorted.length === 0 && (
             <DataTableEmptyRow colSpan={COLUMN_COUNT}>
               {emptyMessage ?? "No yield data available."}
@@ -361,20 +376,23 @@ export function YieldMobileCard({
   riskFreeRate,
   medianApy,
   expanded,
+  isCompared,
+  compareDisabled,
   onToggleExpanded,
   onOpenSourceSheet,
+  onToggleCompare,
 }: {
   row: YieldViewModelRow;
   logo?: string;
   riskFreeRate: number;
   medianApy: number;
   expanded: boolean;
+  isCompared: boolean;
+  compareDisabled: boolean;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
+  onToggleCompare: (stablecoinId: string) => void;
 }) {
-  const compare = useYieldCompareSelection();
-  const isCompared = compare.has(row.id);
-  const compareDisabled = !isCompared && !compare.canAdd;
   const pysColor = getPysColor(row.pharosYieldScore);
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
@@ -437,7 +455,7 @@ export function YieldMobileCard({
             type="checkbox"
             checked={isCompared}
             disabled={compareDisabled}
-            onChange={() => compare.toggle(row.id)}
+            onChange={() => onToggleCompare(row.id)}
             aria-label={`Add ${row.symbol} to compare`}
             className="pharos-focus-ring h-4 w-4 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
           />
