@@ -308,6 +308,36 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         </div>
       ) : null}
 
+      <nav
+        aria-label="More yield analysis"
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
+      >
+        <span className="font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+          More on yield
+        </span>
+        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <Link
+          href={`${buildStablecoinUrl(stablecoinId)}yield/#warning-signals`}
+          className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Warning timeline
+        </Link>
+        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <Link
+          href={`${buildStablecoinUrl(stablecoinId)}yield/#source-switches`}
+          className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Source switches
+        </Link>
+        <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+        <Link
+          href={`${buildStablecoinUrl(stablecoinId)}yield/#source-comparison`}
+          className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          Source comparison
+        </Link>
+      </nav>
+
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
           href={`${buildStablecoinUrl(stablecoinId)}yield/`}

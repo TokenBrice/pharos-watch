@@ -181,6 +181,34 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
+  it("renders the deep-link breadcrumb with three named anchor links when ready", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    const nav = screen.getByRole("navigation", { name: "More yield analysis" });
+    const warningLink = screen.getByRole("link", { name: "Warning timeline" });
+    const switchesLink = screen.getByRole("link", { name: "Source switches" });
+    const comparisonLink = screen.getByRole("link", { name: "Source comparison" });
+
+    expect(nav).toBeTruthy();
+    // Next.js Link normalizes /foo/#bar → /foo#bar; the deep-link page is still served at /foo/.
+    expect(warningLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#warning-signals",
+    );
+    expect(switchesLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#source-switches",
+    );
+    expect(comparisonLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#source-comparison",
+    );
+  });
+
   it("renders source-risk penalty in the PYS breakdown", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
