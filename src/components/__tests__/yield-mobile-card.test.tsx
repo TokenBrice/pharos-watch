@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldMobileCard } from "@/components/yield-leaderboard";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 vi.mock("@/components/yield-history-chart", () => ({
   YieldHistoryChart: () => <div data-testid="yield-history-chart" />,
@@ -58,14 +64,16 @@ describe("YieldMobileCard", () => {
     const onOpenSourceSheet = vi.fn();
 
     render(
-      <YieldMobileCard
-        row={row}
-        riskFreeRate={3.5}
-        medianApy={4}
-        expanded={false}
-        onToggleExpanded={onToggleExpanded}
-        onOpenSourceSheet={onOpenSourceSheet}
-      />,
+      <TooltipProvider>
+        <YieldMobileCard
+          row={row}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={onToggleExpanded}
+          onOpenSourceSheet={onOpenSourceSheet}
+        />
+      </TooltipProvider>,
     );
 
     const historyButton = screen.getByRole("button", { name: "Show history" });
@@ -76,5 +84,42 @@ describe("YieldMobileCard", () => {
     expect(onToggleExpanded).toHaveBeenCalledWith("usdt-tether");
     expect(onOpenSourceSheet).toHaveBeenCalledWith("usdt-tether");
     expect(screen.getByText("Depth: Moderate")).toBeTruthy();
+  });
+
+  it("renders confidence pill, deep-dive link, and watchlist star", () => {
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={row}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Curated")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open full yield analysis for USDT" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /USDT.*watchlist/i })).toBeTruthy();
+  });
+
+  it("falls back to bare em-dash when PYS is null without a reason", () => {
+    const fallbackRow = { ...row, pharosYieldScore: null } as YieldViewModelRow;
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={fallbackRow}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("PYS —")).toBeTruthy();
   });
 });

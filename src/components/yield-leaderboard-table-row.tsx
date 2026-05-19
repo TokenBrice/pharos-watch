@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, memo, useMemo } from "react";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ArrowUpRight, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +10,13 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { YieldSourceLink } from "@/components/yield-source-link";
+import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import {
   computePysBreakdown,
@@ -21,10 +25,28 @@ import {
   getPysColor,
 } from "@/lib/yield-constants";
 import {
+  YIELD_RANK_CHANGE_DRIVER_LABELS,
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
+  classifyYieldSourceFreshness,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
+import type { YieldPysNullReason } from "@shared/types";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+
+const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
+  "apy-non-positive": "30d APY ≤ 0",
+  "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark",
+  "scaling-invalid": "Scaling factor unavailable",
+  "missing-inputs": "Missing inputs",
+};
+
+function formatSignedPysDelta(delta: number): string {
+  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
+  return `${sign}${rounded} PYS`;
+}
 
 interface YieldLeaderboardTableRowProps {
   row: YieldViewModelRow;
@@ -89,6 +111,43 @@ function YieldLeaderboardTableRowBase({
     ),
     [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore],
   );
+  const confidenceTier = row.provenance?.confidenceTier ?? null;
+  const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
+  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
+  const freshness = useMemo(
+    () => classifyYieldSourceFreshness(row.sourceRisk?.sourceAgeSeconds ?? null),
+    [row.sourceRisk?.sourceAgeSeconds],
+  );
+  const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
+  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
+  const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
+  const rankAttribution = row.rankChangeAttribution ?? null;
+  const rankChip = useMemo(() => {
+    if (!rankAttribution) return null;
+    const { rankDelta, pysDelta, primaryDriver } = rankAttribution;
+    if (rankDelta == null || primaryDriver == null) return null;
+    if (Math.abs(pysDelta ?? 0) < 1) return null;
+    const driver = YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver];
+    if (!driver) return null;
+    const arrow = rankDelta < 0 ? "▲" : rankDelta > 0 ? "▼" : "■";
+    const colorClass =
+      rankDelta < 0
+        ? "text-emerald-700 dark:text-emerald-400"
+        : rankDelta > 0
+        ? "text-red-700 dark:text-red-400"
+        : "text-muted-foreground";
+    const signedRank = rankDelta < 0 ? `+${Math.abs(rankDelta)}` : rankDelta > 0 ? `-${rankDelta}` : "0";
+    return {
+      arrow,
+      colorClass,
+      signedRank,
+      short: driver.short,
+      long: driver.long,
+      pysDeltaLabel: pysDelta != null ? formatSignedPysDelta(pysDelta) : null,
+    };
+  }, [rankAttribution]);
+  const pysNullReasonText =
+    row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
   const sourceRiskDrivers = useMemo(
     () => getYieldSourceRiskDrivers({
@@ -140,6 +199,27 @@ function YieldLeaderboardTableRowBase({
       ? `30-day stability: ${stabilityPct} percent`
       : "30-day stability unavailable";
 
+  const rankChipNode = rankChip ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={`inline-flex cursor-help items-center gap-0.5 rounded-full border border-border/40 bg-background/60 px-1.5 py-0 text-[10px] font-medium ${rankChip.colorClass}`}
+          aria-label={`Rank change: ${rankChip.signedRank}, driver ${rankChip.short}`}
+        >
+          <span aria-hidden="true">{rankChip.arrow}</span>
+          <span className="font-mono tabular-nums">{rankChip.signedRank}</span>
+          <span className="ml-0.5">{rankChip.short}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[260px] text-[11px]">
+        <span className="block">{rankChip.long}</span>
+        {rankChip.pysDeltaLabel ? (
+          <span className="block font-mono tabular-nums text-muted-foreground">{rankChip.pysDeltaLabel}</span>
+        ) : null}
+      </TooltipContent>
+    </Tooltip>
+  ) : null;
+
   const pysCell = row.pharosYieldScore !== null ? (
     <span className="inline-flex items-center gap-1">
       <Tooltip>
@@ -185,7 +265,15 @@ function YieldLeaderboardTableRowBase({
           </TooltipContent>
         </Tooltip>
       ) : null}
+      {rankChipNode}
     </span>
+  ) : pysNullReasonText ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={`cursor-help font-mono tabular-nums ${pysColor}`}>{"—"}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[220px] text-[11px]">{pysNullReasonText}</TooltipContent>
+    </Tooltip>
   ) : (
     <span className={`font-mono tabular-nums ${pysColor}`}>{"—"}</span>
   );
@@ -214,7 +302,7 @@ function YieldLeaderboardTableRowBase({
                     <span className="truncate text-xs text-muted-foreground">{row.name}</span>
                   </div>
                   <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                    {row.provenance?.confidenceTier ?? "source"} {"·"} {row.yieldSource}
+                    {row.yieldSource}
                   </div>
                 </div>
               </div>
@@ -267,9 +355,14 @@ function YieldLeaderboardTableRowBase({
         <TableCell className="hidden md:table-cell">
           <span className="sr-only">{row.rankLabel}</span>
           <div className="min-w-[104px]">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
               <span className="font-medium">{row.symbol}</span>
+              <YieldWatchlistStar
+                stablecoinId={row.id}
+                symbol={row.symbol}
+                className="h-6 w-6"
+              />
               <span className="hidden max-w-[140px] truncate text-xs text-muted-foreground xl:inline">
                 {row.name}
               </span>
@@ -309,9 +402,23 @@ function YieldLeaderboardTableRowBase({
         >
           {pysCell}
         </TableCell>
-        <TableCell className="hidden max-w-[160px] text-left text-sm text-muted-foreground md:table-cell">
+        <TableCell className="hidden max-w-[180px] text-left text-sm text-muted-foreground md:table-cell">
           <div title={row.provenance?.selectionReason ?? row.yieldSource}>
             <div className="flex items-center gap-1">
+              {confidenceStyle && confidenceLabel ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={confidenceStyle.dot}
+                      role="img"
+                      aria-label={`${confidenceLabel} confidence`}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="text-[11px]">
+                    {confidenceLabel} confidence
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
               <YieldSourceLink href={row.yieldSourceUrl} className="max-w-[160px]" iconClassName="h-3 w-3" stopPropagation>
                 {row.yieldSource}
               </YieldSourceLink>
@@ -321,6 +428,21 @@ function YieldLeaderboardTableRowBase({
                 </span>
               ) : null}
             </div>
+            <div className="mt-1">
+              <YieldSourceRiskBar score={sourceRiskScore} tooltip />
+            </div>
+            {freshness ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <p className={`mt-1 cursor-help text-[11px] ${freshness.textClassName}`}>
+                    Updated {freshness.relativeText}
+                  </p>
+                </TooltipTrigger>
+                <TooltipContent className="text-[11px]">
+                  Source observed {freshness.relativeText} ({freshness.tier})
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
             <p className="mt-0.5 text-[11px] text-muted-foreground">{benchmarkReferenceText}</p>
             <p className="mt-0.5 text-[11px] text-muted-foreground" title={YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].description}>
               Depth: {YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label}
@@ -369,8 +491,27 @@ function YieldLeaderboardTableRowBase({
           )}
         </TableCell>
         <TableCell className="hidden text-center md:table-cell">
-          {warningSignalCount === 0 ? (
+          {warningSignalCount === 0 && !sourceRiskMaterial ? (
             <span className="text-muted-foreground">&mdash;</span>
+          ) : warningSignalCount === 0 && sourceRiskMaterial ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+                  }}
+                  className="mx-auto inline-flex pharos-focus-ring"
+                  aria-label={`Source-risk penalty ${(rawSourceRiskPenalty ?? 0).toFixed(2)} times`}
+                >
+                  <AlertTriangle className="h-4 w-4 text-amber-500/70" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[260px] text-xs">
+                Source-risk penalty {(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)
+              </TooltipContent>
+            </Tooltip>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -394,30 +535,54 @@ function YieldLeaderboardTableRowBase({
               </TooltipTrigger>
               <TooltipContent className="max-w-[300px]">
                 <ul className="space-y-2 text-xs">
-                  {row.warningSignals.map((signal) => (
-                    <li key={signal}>
-                      <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
-                      <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
-                    </li>
-                  ))}
+                  {row.warningSignals.map((signal, index) => {
+                    const isLast = index === row.warningSignals.length - 1;
+                    return (
+                      <li key={signal}>
+                        <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
+                        <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
+                        {isLast && sourceRiskMaterial ? (
+                          <span className="mt-1 block text-amber-500">
+                            + source-risk {(rawSourceRiskPenalty ?? 0).toFixed(2)}×
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               </TooltipContent>
             </Tooltip>
           )}
         </TableCell>
         <TableCell className="hidden px-2 py-2 text-right md:table-cell">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleExpanded(row.id);
-            }}
-            className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={expanded ? "Hide yield history" : "Show yield history"}
-            title={expanded ? "Hide yield history" : "Show yield history"}
-          >
-            <ChevronDown className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"} />
-          </button>
+          <div className="inline-flex items-center gap-1">
+            <Link
+              href={`${buildStablecoinUrl(row.id)}yield/`}
+              prefetch={false}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+              }}
+              className="pharos-focus-ring inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={`Open full yield analysis for ${row.symbol}`}
+              title="Open full yield analysis"
+            >
+              <span>Deep dive</span>
+              <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpanded(row.id);
+              }}
+              className="pharos-focus-ring inline-flex items-center justify-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={expanded ? "Hide yield history" : "Show yield history"}
+              title={expanded ? "Hide yield history" : "Show yield history"}
+            >
+              <ChevronDown className={expanded ? "h-4 w-4 rotate-180 transition-transform" : "h-4 w-4 transition-transform"} />
+            </button>
+          </div>
         </TableCell>
       </InteractiveTableRow>
       {expanded ? (
