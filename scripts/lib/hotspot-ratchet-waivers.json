@@ -67,6 +67,14 @@
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
   },
+  "worker/src/cron/yield-sync/publication.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield publication now owns source arbitration output shaping, decision evidence persistence, atomic publication metadata, and alternative-source projection for v8 decision ledgers. Keep waived for this rollout; split decision persistence and ranking row projection into narrower modules in the next yield-sync cleanup."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Yield history chart coordinates responsive chart sizing, tooltip state, history data shaping, and source-decision overlays for the per-coin yield surface. Keep waived for the v8 rollout; extract chart model preparation and overlay rendering before adding more chart modes."
+  },
   "src/components/key-info-card.tsx": {
     "disposition": "queued-p4",
     "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass."
