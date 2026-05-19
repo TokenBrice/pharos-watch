@@ -2,8 +2,6 @@
 
 import { useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldRankings } from "@/hooks/api-hooks";
@@ -17,7 +15,6 @@ import { YieldLeaderboardControls } from "@/components/yield-leaderboard-control
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import {
   buildYieldViewModel,
   YIELD_PRESET_SPECS,
@@ -30,78 +27,6 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
-import type { YieldRankingsResponse } from "@shared/types";
-
-interface YieldScatterCardProps {
-  data: YieldRankingsResponse;
-  logos: Record<string, string> | undefined;
-  rows: YieldViewModel["visibleRows"];
-  stats: YieldViewModel["stats"];
-  headingId: string;
-  onDotClick: (id: string) => void;
-}
-
-function YieldScatterCard({ data, logos, rows, stats, headingId, onDotClick }: YieldScatterCardProps) {
-  return (
-    <Card className="rounded-2xl border-border/70 bg-card/80">
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <h2 id={headingId} className="text-xl font-semibold">
-              Yield vs Safety
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-prose">
-              {stats.hasMixedBenchmarks
-                ? "Each logo marks a stablecoin. Mixed views keep the USD frame for orientation, while each row still carries its local benchmark context."
-                : "Each logo marks a stablecoin. Click a point to open the detail page."}
-            </p>
-          </div>
-          <div className="flex animate-fade-in flex-wrap items-start gap-x-6 gap-y-2 sm:shrink-0 sm:text-right">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Avg Yield</p>
-              <p className="text-lg font-bold font-mono tabular-nums leading-tight">{formatPercent(stats.avgApy)}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {stats.usesDefaultBenchmarkFrame ? "Frame (USD)" : "Benchmark"}
-              </p>
-              <p className="text-lg font-bold font-mono tabular-nums leading-tight">
-                {formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {stats.referenceBenchmark
-                  ? getYieldBenchmarkDisplayLabel({
-                    benchmarkLabel: stats.referenceBenchmark.label,
-                    benchmarkIsFallback: stats.referenceBenchmark.isFallback,
-                  })
-                  : "USD default"}
-              </p>
-            </div>
-            {stats.bestPys ? (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Best PYS</p>
-                <p className="text-lg font-bold leading-tight">{stats.bestPys.symbol}</p>
-                <p className="text-[10px] font-mono text-muted-foreground tabular-nums">PYS {stats.bestPys.score.toFixed(1)}</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <YieldScatterPlot
-          rankings={rows}
-          benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
-          benchmarkLabel={stats.referenceBenchmark?.label}
-          benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
-          showBenchmarkReference
-          usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
-          logos={logos}
-          onDotClick={onDotClick}
-        />
-      </CardContent>
-    </Card>
-  );
-}
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
@@ -405,7 +330,7 @@ export function YieldClient() {
         </section>
 
         {visibleRows.length > 0 ? (
-          <div className="order-2 space-y-3">
+          <section aria-label="Yield vs Safety landscape" className="order-2">
             <YieldScatterPlot
               rankings={visibleRows}
               benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
@@ -417,33 +342,7 @@ export function YieldClient() {
               onDotClick={handleNavigate}
               compact
             />
-            <details className="group lg:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-sm font-medium text-foreground select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                Open full chart
-              </summary>
-              <div className="mt-3">
-                <YieldScatterCard
-                  data={data}
-                  logos={logos}
-                  rows={visibleRows}
-                  stats={stats}
-                  headingId="scatter-heading-mobile"
-                  onDotClick={handleNavigate}
-                />
-              </div>
-            </details>
-            <section aria-labelledby="scatter-heading" className="hidden lg:block">
-              <YieldScatterCard
-                data={data}
-                logos={logos}
-                rows={visibleRows}
-                stats={stats}
-                headingId="scatter-heading"
-                onDotClick={handleNavigate}
-              />
-            </section>
-          </div>
+          </section>
         ) : null}
 
         <section className="order-3" aria-label="Yield filters">

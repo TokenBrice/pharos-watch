@@ -34,6 +34,10 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
+import {
+  ETHERFUSE_CETES_BENCHMARK_SOURCE,
+  fetchEtherfuseCetesIssuance,
+} from "./yield-sync/etherfuse-cetes";
 import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../lib/env";
@@ -223,18 +227,20 @@ function buildRetainedBenchmark(
     previous.lastMarketSource &&
     previous.lastMarketSource !== "hardcoded-fallback"
   ) {
+    const retained = withYieldBenchmarkStaticMeta(previous.key ?? "USD", {
+      rate: previous.lastMarketRate,
+      recordDate: previous.lastMarketRecordDate,
+      fetchedAt: previous.lastMarketFetchedAt,
+      ageSeconds: previous.lastMarketFetchedAt != null
+        ? Math.max(0, Math.floor(Date.now() / 1000) - previous.lastMarketFetchedAt)
+        : null,
+      source: previous.lastMarketSource,
+      isFallback: true,
+      fallbackMode: `${fallbackMode}-retained`,
+    });
     return {
-      ...withYieldBenchmarkStaticMeta(previous.key ?? "USD", {
-        rate: previous.lastMarketRate,
-        recordDate: previous.lastMarketRecordDate,
-        fetchedAt: previous.lastMarketFetchedAt,
-        ageSeconds: previous.lastMarketFetchedAt != null
-          ? Math.max(0, Math.floor(Date.now() / 1000) - previous.lastMarketFetchedAt)
-          : null,
-        source: previous.lastMarketSource,
-        isFallback: true,
-        fallbackMode: `${fallbackMode}-retained`,
-      }),
+      ...retained,
+      isProxy: previous.isProxy,
       lastMarketRate: previous.lastMarketRate,
       lastMarketRecordDate: previous.lastMarketRecordDate,
       lastMarketFetchedAt: previous.lastMarketFetchedAt,
@@ -251,17 +257,22 @@ function buildResolvedBenchmark(params: {
   recordDate: string;
   fetchedAt: number;
   source: string;
+  isFallback?: boolean;
+  fallbackMode?: string | null;
+  isProxy?: boolean;
 }): ParsedYieldBenchmarkMeta {
+  const resolved = withYieldBenchmarkStaticMeta(params.key, {
+    rate: params.rate,
+    recordDate: params.recordDate,
+    fetchedAt: params.fetchedAt,
+    ageSeconds: 0,
+    source: params.source,
+    isFallback: params.isFallback ?? false,
+    fallbackMode: params.fallbackMode ?? null,
+  });
   return {
-    ...withYieldBenchmarkStaticMeta(params.key, {
-      rate: params.rate,
-      recordDate: params.recordDate,
-      fetchedAt: params.fetchedAt,
-      ageSeconds: 0,
-      source: params.source,
-      isFallback: false,
-      fallbackMode: null,
-    }),
+    ...resolved,
+    isProxy: params.isProxy ?? resolved.isProxy,
     lastMarketRate: params.rate,
     lastMarketRecordDate: params.recordDate,
     lastMarketFetchedAt: params.fetchedAt,
@@ -614,6 +625,10 @@ async function resolveBenchmarkProvider(params: {
   signal?: AbortSignal;
 }): Promise<ResolvedBenchmarkProvider> {
   const { provider, previous, fetchedAt, env, signal } = params;
+  if (provider.key === "MXN") {
+    return resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal });
+  }
+
   const missingRequiredEnv = provider.requiredEnv ? !env?.[provider.requiredEnv]?.trim() : false;
   const fallbackMode = missingRequiredEnv
     ? (provider.missingEnvFallbackMode ?? provider.fallbackMode)
@@ -634,6 +649,69 @@ async function resolveBenchmarkProvider(params: {
     parsed,
     meta,
     failureMode: parsed ? null : (meta?.fallbackMode ?? fallbackMode),
+  };
+}
+
+async function resolveMxnBenchmarkProvider(params: {
+  previous: ParsedYieldBenchmarkRegistry;
+  fetchedAt: number;
+  env?: Pick<Env, "BANXICO_TOKEN">;
+  signal?: AbortSignal;
+}): Promise<ResolvedBenchmarkProvider> {
+  const { previous, fetchedAt, env, signal } = params;
+  const token = env?.BANXICO_TOKEN?.trim() || null;
+  const banxicoParsed = token ? await tryBanxicoCetes(token, signal) : null;
+  if (banxicoParsed) {
+    return {
+      key: "MXN",
+      parsed: banxicoParsed,
+      meta: buildResolvedBenchmark({
+        key: "MXN",
+        rate: banxicoParsed.rate,
+        recordDate: banxicoParsed.recordDate,
+        fetchedAt,
+        source: "banxico-cetes-28d",
+      }),
+      failureMode: null,
+    };
+  }
+
+  const baseFallbackMode = token ? "banxico-cetes-failed" : "banxico-token-missing";
+  const etherfuseIssuance = await fetchEtherfuseCetesIssuance({
+    signal,
+    timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
+    retries: BENCHMARK_FETCH_MAX_RETRIES,
+  });
+
+  if (etherfuseIssuance && isValidBenchmarkRate(etherfuseIssuance.apyPercent)) {
+    const fallbackMode = `${baseFallbackMode}-etherfuse-stablebond`;
+    const parsed = {
+      rate: etherfuseIssuance.apyPercent,
+      recordDate: etherfuseIssuance.recordDate,
+    };
+    return {
+      key: "MXN",
+      parsed,
+      meta: buildResolvedBenchmark({
+        key: "MXN",
+        rate: parsed.rate,
+        recordDate: parsed.recordDate,
+        fetchedAt,
+        source: ETHERFUSE_CETES_BENCHMARK_SOURCE,
+        isFallback: true,
+        fallbackMode,
+        isProxy: true,
+      }),
+      failureMode: fallbackMode,
+    };
+  }
+
+  const meta = buildRetainedBenchmark(previous.MXN, baseFallbackMode);
+  return {
+    key: "MXN",
+    parsed: null,
+    meta,
+    failureMode: meta?.fallbackMode ?? baseFallbackMode,
   };
 }
 

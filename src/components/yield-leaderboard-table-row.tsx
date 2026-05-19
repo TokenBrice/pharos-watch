@@ -721,8 +721,8 @@ function YieldLeaderboardTableRowBase({
                 sourceRiskDriverLabel={sourceRiskDrivers[0]?.label ?? null}
               />
             ) : null}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px]">
-              <div className="min-w-0">
+            <div className="grid grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_220px]">
+              <div className="min-w-0 max-w-full overflow-hidden">
                 <YieldHistoryChart
                   stablecoinId={row.id}
                   benchmarkRate={row.benchmarkRate ?? riskFreeRate}

@@ -4,6 +4,7 @@ export {
 } from "./sources-optional-protocols-onchain";
 export {
   fetchBimaSusbdSource,
+  fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
   fetchZephyrZysSource,

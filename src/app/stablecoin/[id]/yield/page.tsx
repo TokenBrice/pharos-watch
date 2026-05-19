@@ -9,15 +9,18 @@ import { logosById } from "@/lib/logos";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import YieldAnalysisClient from "./client";
 
+// WHY: lending-opportunity rows can appear for any tracked stablecoin (per yield methodology),
+// so the yield deep-link must be reachable for every active coin — not just those flagged
+// `yieldBearing`. The client renders an empty-state card when no live yield row exists.
 export function generateStaticParams() {
-  return TRACKED_STABLECOINS.filter((coin) => coin.flags?.yieldBearing).map((coin) => ({ id: coin.id }));
+  return TRACKED_STABLECOINS.filter((coin) => coin.status !== "pre-launch").map((coin) => ({ id: coin.id }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
 
-  if (!coin || !coin.flags?.yieldBearing) {
+  if (!coin) {
     return { title: "Stablecoin Not Found", robots: { index: false } };
   }
 
@@ -32,7 +35,7 @@ export default async function StablecoinYieldDetailPage({ params }: { params: Pr
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
 
-  if (!coin || !coin.flags?.yieldBearing) {
+  if (!coin) {
     notFound();
   }
 

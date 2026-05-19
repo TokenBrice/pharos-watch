@@ -8,6 +8,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
@@ -78,21 +79,23 @@ function renderCohortPercentileLabel(
 
 function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNode; children: ReactNode }) {
   return (
-    <section id="yield" aria-labelledby="yield-intelligence-heading">
-      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-        <CardHeader className="pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <DetailSectionTitle id="yield-intelligence-heading">
-                <MethodologyLabel topic="pys">Yield Intelligence</MethodologyLabel>
-              </DetailSectionTitle>
+    <TooltipProvider>
+      <section id="yield" aria-labelledby="yield-intelligence-heading">
+        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+          <CardHeader className="pb-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <DetailSectionTitle id="yield-intelligence-heading">
+                  <MethodologyLabel topic="pys">Yield Intelligence</MethodologyLabel>
+                </DetailSectionTitle>
+              </div>
+              {headerEnd}
             </div>
-            {headerEnd}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">{children}</CardContent>
-      </Card>
-    </section>
+          </CardHeader>
+          <CardContent className="space-y-4">{children}</CardContent>
+        </Card>
+      </section>
+    </TooltipProvider>
   );
 }
 

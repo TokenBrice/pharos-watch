@@ -175,7 +175,7 @@ export function YieldScatterPlot({
   const isMobile = useIsMobile();
   const compactMarker = compact || isMobile;
   const hideAxisLabels = compact || isMobile;
-  const hideQuadrantLabels = compact || isMobile;
+  const hideQuadrantLabels = isMobile;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
     return rankings
@@ -281,7 +281,7 @@ export function YieldScatterPlot({
       <div
         className={
           compact
-            ? "h-[210px] overflow-hidden rounded-xl border border-border/70 bg-card/60 p-1.5"
+            ? "h-[420px] overflow-hidden rounded-xl border border-border/70 bg-card/60 p-2"
             : "h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"

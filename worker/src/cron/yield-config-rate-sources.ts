@@ -184,6 +184,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "scrvusd-curve": "Curve scrvUSD current-rate reader",
   "lusd-liquity": "B.Protocol LQTY-only",
   "usbd-bima": "BIMA savings",
+  "cetes-etherfuse": "Etherfuse CETES current issuance",
   "usyc-hashnote": "Hashnote NAV feed",
   "usdy-ondo-finance": "Ondo USDY oracle",
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
