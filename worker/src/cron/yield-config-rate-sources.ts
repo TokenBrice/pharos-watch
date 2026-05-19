@@ -152,7 +152,7 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  * - dusd-dtrinity: current convertToAssets probe reverts
  * - reusd-re-protocol: current convertToAssets probe returns empty data
  */
-export const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
   "scrvusd-curve": {
     code: "wrapper-not-yet-supported",
     since: "2026-04-11",
@@ -190,7 +190,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
 
-export const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
   "bfusd-binance": {
     code: "off-chain-account-product",
     since: "2026-04-14",

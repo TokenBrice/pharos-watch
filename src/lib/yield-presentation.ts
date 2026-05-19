@@ -8,7 +8,7 @@ export const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
   "missing-inputs": "Missing inputs",
 };
 
-export function formatSignedPysDelta(delta: number): string {
+function formatSignedPysDelta(delta: number): string {
   const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
   const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
   return `${sign}${rounded} PYS`;

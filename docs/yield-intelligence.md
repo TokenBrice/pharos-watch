@@ -1073,9 +1073,12 @@ The embedded yield section on the stablecoin detail page
 (`src/components/yield-detail-section.tsx`) is at-a-glance: current state,
 recent narrative, one chart, and the top alternates. The deep-link
 `/stablecoin/<id>/yield/` surface
-(`src/app/stablecoin/[slug]/yield/client.tsx`) is history-first: full
+(`src/app/stablecoin/[id]/yield/client.tsx`) is history-first: full
 timelines, decision rationale, and (planned) peer rail. Embedded summarises;
 deep-link reveals. Both surfaces must avoid duplicating panels.
+Deep-link yield pages are `noindex` and omitted from `sitemap.xml`; the indexable
+SEO surface remains `/yield/` plus each stablecoin detail page because the
+deep-link pages are runtime-data workbenches rather than static crawl targets.
 
 ### PYS attribution convention
 

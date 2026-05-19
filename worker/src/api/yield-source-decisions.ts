@@ -251,42 +251,6 @@ async function loadStablecoinDecisions(
   );
 }
 
-const AUDIT_RETENTION_DAYS_DEFAULT = 30;
-const AUDIT_RETENTION_DAY_SECONDS = 86_400;
-
-/**
- * Deletes `yield_source_decisions` rows whose retention_reason is "audit" and
- * which are older than `olderThanDays` days. Trend-tagged rows are preserved
- * for long-running analytics; this is intended to run from existing yield
- * cleanup crons (not as a new trigger).
- *
- * Returns the number of rows deleted.
- */
-export async function pruneAuditOnlyDecisions(
-  db: D1Database,
-  olderThanDays: number = AUDIT_RETENTION_DAYS_DEFAULT,
-): Promise<number> {
-  const cutoffSec = Math.floor(Date.now() / 1000) - olderThanDays * AUDIT_RETENTION_DAY_SECONDS;
-  const decisionResult = await db
-    .prepare(
-      `DELETE FROM yield_source_decisions
-       WHERE retention_reason = 'audit' AND created_at < ?`,
-    )
-    .bind(cutoffSec)
-    .run();
-  // Cascade delete sibling alternatives for any decisions we just pruned.
-  await db
-    .prepare(
-      `DELETE FROM yield_source_decision_alternatives
-       WHERE recorded_at < ?
-         AND (generation_id, stablecoin_id) NOT IN (
-           SELECT generation_id, stablecoin_id FROM yield_source_decisions
-         )`,
-    )
-    .bind(cutoffSec)
-    .run();
-  return Number(decisionResult.meta?.changes ?? 0);
-}
 
 export const handleYieldSourceDecisions = makeAdminRoute<AdminRouteContext>(
   "route-yield-source-decisions",

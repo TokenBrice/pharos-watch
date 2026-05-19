@@ -26,7 +26,7 @@ function finiteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-export function deriveRejectionReasonCode(
+function deriveRejectionReasonCode(
   selected: EvaluatedYieldSource,
   candidate: EvaluatedYieldSource,
 ): YieldDecisionRejectionReasonCode {
@@ -73,7 +73,7 @@ export function deriveRejectionReasonCode(
   return "unspecified";
 }
 
-export function deriveSelectedReasonCode(params: {
+function deriveSelectedReasonCode(params: {
   selected: EvaluatedYieldSource;
   candidates: EvaluatedYieldSource[];
   rejectedCount: number;
