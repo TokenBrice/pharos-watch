@@ -24,6 +24,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:migrations",
   "npm run check:redemption-backstops",
   "npm run check:reserve-fixture-freshness",
+  "npm run check:selector-banned-phrases",
   "npm run check:shared-cycles",
   "npm run check:shared-types-imports",
   "npm run check:sql-safety",

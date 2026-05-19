@@ -99,6 +99,7 @@
     "check:safe-browsing": "node scripts/ci/check-safe-browsing.mjs",
     "check:llms-txt": "tsx scripts/maintenance/generate-llms-txt.ts --check",
     "check:reserve-fixture-freshness": "node scripts/ci/check-reserve-fixture-freshness.mjs",
+    "check:selector-banned-phrases": "node scripts/ci/check-selector-banned-phrases.mjs",
     "check:feature-flag-inlining": "node scripts/ci/check-feature-flag-inlining.mjs",
     "check:docs-api-reference": "node scripts/maintenance/generate-api-reference.mjs --check",
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",

@@ -590,6 +590,14 @@ export const ENV_BINDINGS = [
       pagesSiteData: { order: 3, status: "required" },
     },
   },
+  {
+    key: "SELECTOR_SNAPSHOTS",
+    valueType: "KVNamespace",
+    description: "KV namespace binding for the Pages-only Stablecoin Selector snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries.",
+    runtimes: {
+      pagesSiteData: { order: 5, status: "required" },
+    },
+  },
 ] satisfies readonly EnvBindingDefinition[];
 
 export type EnvBindingKey = (typeof ENV_BINDINGS)[number]["key"];
