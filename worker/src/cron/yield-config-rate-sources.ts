@@ -224,6 +224,11 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
   },
+  "gynusd-gyndore": {
+    code: "pre-launch",
+    since: "2026-05-19",
+    note: "pre-launch stability-pool yield with no reliable runtime APY source yet",
+  },
   "gusd-gate": {
     code: "off-chain-account-product",
     since: "2026-04-14",
