@@ -119,6 +119,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `OPS_API_SERVICE_TOKEN_SECRET` | `string` | - | required | - | Pages-managed Access service-token client secret used on the server-to-server hop to `ops-api.pharos.watch`. |
 | `SITE_ORIGIN` | `string` | - | - | optional | Site origin override used by the Pages `/_site-data/*` proxy when classifying production hosts. |
 | `SITE_API_ORIGIN` | `string` | - | - | required | Site-data upstream origin; production Pages hosts require `https://site-api.pharos.watch`. |
+| `SELECTOR_SNAPSHOTS` | `KVNamespace` | - | - | required | KV namespace binding for the Pages-only Stablecoin Selector snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries. |
 <!-- ENV-CONTRACT:WORKER-INFRASTRUCTURE:END -->
 
 ---

@@ -3294,6 +3294,72 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 
 ---
 
+## Pages Function endpoints
+
+These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
+
+Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that scrapes share URLs.
+
+### `GET /selector-snapshot/:sid`
+
+Returns a previously stored Stablecoin Selector output JSON identified by content-addressed `sid` (32 hex chars).
+
+**Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
+
+**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation per `agents/selector-implementation-plan.md` §0.
+
+**Response (200):**
+
+```json
+{
+  "profile": "treasury",
+  "engineVersion": "selector-v1.0",
+  "datasetHash": "<content hash>",
+  "timestamp": 1715000000,
+  "input": { "profile": "treasury", "horizon": "6mplus", "depegTolerance": "zero" },
+  "recommended": [ /* ranked shortlist entries */ ],
+  "lowerRanked": [ /* lower-ranked entries */ ],
+  "coverageWarnings": { "sparse": false, "uneven": false, "skippedForCoverage": [] },
+  "methodologyVersions": { "safetyScore": "v7.25" }
+}
+```
+
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. Readers should treat unknown fields permissively; `engineVersion` carries the bump on weight or exclusion-rule changes.
+
+**Cache:** `public, max-age=300, s-maxage=86400, immutable` — snapshots are immutable by construction.
+
+**Failure modes:**
+
+| Status | When |
+| --- | --- |
+| 404 | Origin disallowed, sid not 32 hex chars, or KV miss. |
+| 500 | `SELECTOR_SNAPSHOTS` KV binding missing on the Pages project. |
+| 502 | Stored KV value is corrupt or fails the shape check. |
+| 503 | KV read throws transiently (Cloudflare KV outage). |
+
+### `POST /selector-snapshot`
+
+Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Selector wizard at `https://pharos.watch/screener/selector/`).
+
+**Authentication:** exempt — same-origin gated.
+
+**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap.
+
+**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with freshness-derived fields stripped (top-level `timestamp` / `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+
+**Failure modes:**
+
+| Status | When |
+| --- | --- |
+| 400 | Body parse error, unsupported JSON, or missing required top-level fields. |
+| 404 | Origin disallowed. |
+| 405 | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment. |
+| 413 | Payload exceeds 100 KB defensive cap. |
+| 500 | `SELECTOR_SNAPSHOTS` KV binding missing. |
+| 503 | KV write throws transiently. |
+
+---
+
 ## Admin Endpoints
 
 Preferred operator access now splits by surface:
