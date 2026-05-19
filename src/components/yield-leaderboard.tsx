@@ -100,7 +100,7 @@ function LeaderboardHeading({
         <TooltipTrigger asChild>
           <button
             type="button"
-            className="pharos-focus-ring inline-flex max-w-full items-center rounded-md text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="pharos-focus-ring inline-flex min-h-11 max-w-full items-center rounded-md py-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-8 sm:py-1"
             aria-label="Filter summary; click for details"
           >
             <span className="truncate">{sentence}</span>
@@ -450,15 +450,28 @@ export function YieldMobileCard({
               </span>
             </span>
           </Link>
-          <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} />
-          <input
-            type="checkbox"
-            checked={isCompared}
-            disabled={compareDisabled}
-            onChange={() => onToggleCompare(row.id)}
-            aria-label={`Add ${row.symbol} to compare`}
-            className="pharos-focus-ring h-4 w-4 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
+          <YieldWatchlistStar
+            stablecoinId={row.id}
+            symbol={row.symbol}
+            className="h-11 w-11 min-w-11"
           />
+          <button
+            type="button"
+            aria-pressed={isCompared}
+            disabled={compareDisabled}
+            onClick={() => onToggleCompare(row.id)}
+            aria-label={`Add ${row.symbol} to compare`}
+            className="pharos-focus-ring inline-flex h-11 w-11 min-w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              aria-hidden="true"
+              className={`h-4 w-4 rounded border ${
+                isCompared
+                  ? "border-frost-blue bg-frost-blue ring-2 ring-inset ring-background"
+                  : "border-border/70 bg-background/60"
+              }`}
+            />
+          </button>
         </div>
         <div className="shrink-0 text-right">
           <p className="font-mono text-lg font-semibold leading-none tabular-nums text-foreground">
