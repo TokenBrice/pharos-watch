@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.13`
+- **Current methodology version:** `v8.14`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.14 ships the public adapter manifest endpoint at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset. Each entry carries `stablecoinId`, `coinSymbol`, `family` (`onchain` / `protocol-api` / `defillama` / `defillama-auto` / `rate-derived` / `price-derived` / `intentional-gap`), `sourceKey`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), `quarantineReason` when lifecycle is `quarantined`, the current `methodologyVersion` label, and a build-time `updatedAt`. Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only.
 
 The `/yield` route-level Yield Sources board is presentation-only: it derives chosen sources and retained alternate source observations from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
 

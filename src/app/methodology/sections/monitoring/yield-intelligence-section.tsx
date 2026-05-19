@@ -74,6 +74,24 @@ export function YieldIntelligenceMethodologySection() {
                   ]}
                 />
               </div>
+              <div className="space-y-2">
+                <h3 className="text-foreground font-medium">Adapter manifest</h3>
+                <p>
+                  The adapter manifest is the canonical machine-readable source list for every yield-bearing
+                  asset Pharos tracks. It enumerates the deterministic on-chain readers, curated DeFiLlama
+                  pools, protocol-API venues, rate-derived benchmark fallbacks, price-derived NAV
+                  fallbacks, auto-discovery lending overrides, and intentional coverage gaps that feed the
+                  ranking pipeline, along with each entry&apos;s lifecycle (`active`, `quarantined`,
+                  `intentional-gap`, `experimental`). The manifest is published at{" "}
+                  <a
+                    href="/api/yield-adapter-manifest"
+                    className="text-foreground underline underline-offset-2 hover:text-foreground/80 transition-colors"
+                  >
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/yield-adapter-manifest</code>
+                  </a>
+                  {" "}with a 5-minute cache, stamped with the current methodology version on every entry.
+                </p>
+              </div>
               <WorkedExample summary="Worked example (verified against computePYS)">
                 <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>
                 <p className="font-mono">

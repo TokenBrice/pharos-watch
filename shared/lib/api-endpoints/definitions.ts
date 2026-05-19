@@ -322,6 +322,15 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
   },
   {
+    key: "yield-adapter-manifest",
+    path: API_PATHS.yieldAdapterManifest(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
     key: "yield-history",
     path: API_PATHS.yieldHistoryBase(),
     methods: ["GET"],

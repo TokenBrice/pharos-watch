@@ -60,6 +60,7 @@ export const API_PATHS = {
   snapshotCoin: (date: string, stablecoinId: string) =>
     `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
   yieldRankings: () => "/api/yield-rankings",
+  yieldAdapterManifest: () => "/api/yield-adapter-manifest",
   yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
     buildQueryPath("/api/yield-history", {

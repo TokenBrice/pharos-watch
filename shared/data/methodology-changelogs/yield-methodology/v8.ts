@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.14",
+    title: "Adapter Manifest Public Endpoint",
+    date: "2026-05-19",
+    effectiveAt: 1779148800,
+    summary:
+      "The yield adapter manifest is now published at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset, with per-entry family, source key, label, chain/project hints, lifecycle, and methodology version stamping.",
+    impact: [
+      "New public endpoint `/api/yield-adapter-manifest` enumerates every adapter row (deterministic on-chain, curated DeFiLlama, protocol-API, auto-discovery lending overrides, rate-derived, price-derived, and intentional coverage gaps) with a 5-minute cache profile",
+      "Each entry exposes `stablecoinId`, `coinSymbol`, `family`, `sourceKey`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), and the current `methodologyVersion`",
+      "Quarantined adapter rows are surfaced through the `lifecycle` field on the underlying family entry rather than duplicated as separate `quarantined`-family rows, with the quarantine rationale carried in `quarantineReason`",
+      "Methodology version stamp is the canonical Yield Intelligence label and is included on every entry so downstream consumers can pin against a known methodology snapshot",
+      "Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.13",
     title: "Benchmark Registry Expansion + First Venue Tier Batch",
     date: "2026-05-15",

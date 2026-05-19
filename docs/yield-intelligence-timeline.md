@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.13` (2026-03-01 -> 2026-05-15).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.14` (2026-03-01 -> 2026-05-19).
+
+---
+
+## v8.14 - Adapter Manifest Public Endpoint (May 19, 2026)
+
+- New public endpoint `/api/yield-adapter-manifest` publishes the canonical machine-readable source list for every yield-bearing asset, derived from the existing `YIELD_ADAPTER_MANIFEST` registry
+- Each entry exposes `stablecoinId`, `coinSymbol`, `family` (`onchain` / `protocol-api` / `defillama` / `defillama-auto` / `rate-derived` / `price-derived` / `intentional-gap`), `sourceKey`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), and the current `methodologyVersion` label
+- `quarantineReason` is populated only when an entry's lifecycle is `quarantined`; quarantined adapter rows surface through the lifecycle field on the underlying family rather than as a separate `quarantined`-family entry
+- Cache profile is `standard` (s-maxage=300) because the manifest is build-time stable and only changes when the worker rolls out a new deploy
+- The methodology subsection on the public methodology page now links to the endpoint so operators and integrators have one canonical reference
+- No scoring, source resolution, history semantics, or publication-rule changes; the version bump tracks the new public contract only
 
 ---
 
