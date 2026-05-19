@@ -19,13 +19,13 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass."
   },
-  "worker/src/lib/telegram-usage-analytics.ts": {
+  "shared/lib/selector/engine.ts": {
     "disposition": "queued-p4",
-    "notes": "Telegram usage-analytics aggregation now spans event ingestion, retention windowing, redaction, and digest-friendly projection. Surfaced as a hotspot after the worker/lib telegram cluster reorg (commit c900c7b9). Split projection vs. retention/redaction in a follow-up telegram analytics cleanup."
+    "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests."
   },
-  "worker/src/lib/evm-rpc.ts": {
+  "src/app/screener/selector/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "EVM RPC helper centralizes JSON-RPC retries, Etherscan proxy access, Multicall3 ABI encoding/decoding, and timestamp-to-block search. It surfaced after the format helper split removed another branch-count candidate; split ABI codec helpers from transport/block-search utilities before adding more RPC behavior."
+    "notes": "Selector client still coordinates wizard history, query hydration, data loading, snapshot fetch/post, and result rendering. This remediation extracted dataset adaptation, but the route shell remains a hotspot; split snapshot lifecycle and wizard orchestration hooks before adding more selector UI modes."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
