@@ -9,6 +9,7 @@ import {
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
+  derivePysNullReason,
   detectWarningSignals,
   getRankingStaleThresholdMs,
   matchAllDlPools,
@@ -127,6 +128,53 @@ describe("computePYS", () => {
       scalingFactor: 8,
     });
     expect(result).toBe(27);
+  });
+});
+
+describe("derivePysNullReason", () => {
+  it("returns null when inputs yield a positive PYS", () => {
+    expect(
+      derivePysNullReason({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8 }),
+    ).toBeNull();
+  });
+
+  it("flags apy-non-positive for zero or negative apy30d", () => {
+    expect(
+      derivePysNullReason({ apy30d: 0, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8 }),
+    ).toBe("apy-non-positive");
+    expect(
+      derivePysNullReason({ apy30d: -1, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8 }),
+    ).toBe("apy-non-positive");
+  });
+
+  it("flags missing-inputs when apy30d is not finite", () => {
+    expect(
+      derivePysNullReason({ apy30d: Number.NaN, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 8 }),
+    ).toBe("missing-inputs");
+  });
+
+  it("flags scaling-invalid for zero or non-finite scaling factor", () => {
+    expect(
+      derivePysNullReason({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: 0 }),
+    ).toBe("scaling-invalid");
+    expect(
+      derivePysNullReason({ apy30d: 5, safetyScore: 80, apyVarianceScore: 0.1, scalingFactor: Number.NaN }),
+    ).toBe("scaling-invalid");
+  });
+
+  it("flags effective-yield-non-positive when benchmark wipes apy", () => {
+    // benchmarkSpread = apy30d - benchmarkRate = 0.1 - 100 = -99.9
+    // benchmarkAdjustment = -99.9 * 0.25 = -24.975
+    // effectiveYield = max(0, apy30d + adjustment) = max(0, 0.1 - 24.975) = 0
+    expect(
+      derivePysNullReason({
+        apy30d: 0.1,
+        benchmarkRate: 100,
+        safetyScore: 80,
+        apyVarianceScore: 0.1,
+        scalingFactor: 8,
+      }),
+    ).toBe("effective-yield-non-positive");
   });
 });
 

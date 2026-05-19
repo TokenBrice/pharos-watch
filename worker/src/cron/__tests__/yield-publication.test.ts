@@ -108,6 +108,7 @@ function makeEvaluatedSource(overrides: Partial<EvaluatedYieldSource> = {}): Eva
     benchmarkIsProxy: false,
     benchmarkMeta,
     pharosYieldScore: 28,
+    pysNullReason: null,
     prevExchangeRate: null,
     prevTvlUsd: 1_700_000,
     sourceDepthRatio: null,

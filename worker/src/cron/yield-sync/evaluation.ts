@@ -3,7 +3,7 @@ import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeApyVarianceScore, computePYS, computeYieldStability, detectWarningSignals } from "../yield-helpers";
+import { computeApyVarianceScore, computePYS, computeYieldStability, derivePysNullReason, detectWarningSignals } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
@@ -255,6 +255,16 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         benchmarkRate: benchmarkSelection.meta.rate,
         sourceRiskPenalty: sourceRiskPenaltyInput,
       });
+      const pysNullReason = pharosYieldScore > 0
+        ? null
+        : derivePysNullReason({
+            apy30d,
+            safetyScore,
+            apyVarianceScore,
+            scalingFactor: PYS_SCALING_FACTOR,
+            benchmarkRate: benchmarkSelection.meta.rate,
+            sourceRiskPenalty: sourceRiskPenaltyInput,
+          });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
       const anomalies: string[] = [];
@@ -307,6 +317,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         benchmarkIsProxy: benchmarkSelection.meta.isProxy ?? false,
         benchmarkMeta: benchmarkSelection.meta,
         pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
+        pysNullReason,
         prevExchangeRate,
         prevTvlUsd,
         sourceDepthRatio,

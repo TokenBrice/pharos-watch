@@ -1,10 +1,17 @@
-import type { YieldRanking, YieldSourceRisk } from "@shared/types";
+import type { YieldRanking, YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
 export type YieldSourceDepthLens = "deep" | "moderate" | "thin" | "unknown";
 
+export type YieldSourceRiskDriverKey =
+  | "reward-heavy"
+  | "thin-source-depth"
+  | "stale-source"
+  | "limited-history"
+  | "source-changed";
+
 export interface YieldSourceRiskDriver {
-  key: "reward-heavy" | "thin-source-depth" | "stale-source" | "limited-history" | "source-changed";
+  key: YieldSourceRiskDriverKey;
   label: string;
   description: string;
 }
@@ -137,3 +144,92 @@ export function formatYieldSourceRiskDriverSummary(drivers: readonly YieldSource
   }
   return drivers.map((driver) => `${driver.label}: ${driver.description}`).join(" ");
 }
+
+// Confidence tier styles — one consistent visual language per tier.
+// emerald = deterministic, sky = curated, amber = discovered, slate = fallback.
+export interface YieldSourceConfidenceStyle {
+  pill: string;
+  dot: string;
+  text: string;
+}
+
+export const YIELD_SOURCE_CONFIDENCE_STYLES: Record<YieldSourceConfidenceTier, YieldSourceConfidenceStyle> = {
+  deterministic: {
+    pill: "inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400",
+    dot: "inline-block size-1.5 rounded-full bg-emerald-500",
+    text: "text-emerald-700 dark:text-emerald-400",
+  },
+  curated: {
+    pill: "inline-flex items-center rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:text-sky-400",
+    dot: "inline-block size-1.5 rounded-full bg-sky-500",
+    text: "text-sky-700 dark:text-sky-400",
+  },
+  discovered: {
+    pill: "inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400",
+    dot: "inline-block size-1.5 rounded-full bg-amber-500",
+    text: "text-amber-700 dark:text-amber-400",
+  },
+  fallback: {
+    pill: "inline-flex items-center rounded-full border border-slate-500/20 bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-400",
+    dot: "inline-block size-1.5 rounded-full bg-slate-500",
+    text: "text-slate-700 dark:text-slate-400",
+  },
+};
+
+export type YieldSourceFreshnessTier = "fresh" | "recent" | "aging" | "stale";
+
+export interface YieldSourceFreshnessLabel {
+  tier: YieldSourceFreshnessTier;
+  relativeText: string;
+  textClassName: string;
+}
+
+const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourceFreshnessTier, string> = {
+  fresh: "text-emerald-700 dark:text-emerald-400",
+  recent: "text-sky-700 dark:text-sky-400",
+  aging: "text-amber-700 dark:text-amber-400",
+  stale: "text-muted-foreground",
+};
+
+function formatRelativeAge(ageSeconds: number): string {
+  if (ageSeconds < 60) return `${Math.max(0, Math.floor(ageSeconds))}s ago`;
+  if (ageSeconds < 60 * 60) return `${Math.floor(ageSeconds / 60)}m ago`;
+  if (ageSeconds < 24 * 60 * 60) return `${Math.floor(ageSeconds / (60 * 60))}h ago`;
+  const days = Math.floor(ageSeconds / (24 * 60 * 60));
+  if (days > 30) return ">30d ago";
+  return `${days}d ago`;
+}
+
+/** Tiers: <=6h fresh, <=12h recent, <=24h aging, >24h stale. Null sourceAgeSeconds -> null. */
+export function classifyYieldSourceFreshness(
+  sourceAgeSeconds: number | null | undefined,
+): YieldSourceFreshnessLabel | null {
+  if (sourceAgeSeconds == null) return null;
+  if (typeof sourceAgeSeconds !== "number" || !Number.isFinite(sourceAgeSeconds) || sourceAgeSeconds < 0) {
+    return null;
+  }
+  let tier: YieldSourceFreshnessTier;
+  if (sourceAgeSeconds <= 6 * 60 * 60) tier = "fresh";
+  else if (sourceAgeSeconds <= 12 * 60 * 60) tier = "recent";
+  else if (sourceAgeSeconds <= 24 * 60 * 60) tier = "aging";
+  else tier = "stale";
+  return {
+    tier,
+    relativeText: formatRelativeAge(sourceAgeSeconds),
+    textClassName: YIELD_SOURCE_FRESHNESS_STYLES[tier],
+  };
+}
+
+export const YIELD_RANK_CHANGE_DRIVER_LABELS: Record<
+  NonNullable<NonNullable<YieldRankChangeAttribution["primaryDriver"]>>,
+  { short: string; long: string }
+> = {
+  apy: { short: "APY", long: "30-day APY moved" },
+  benchmark: { short: "Benchmark", long: "Benchmark rate moved" },
+  "stablecoin-safety": { short: "Safety", long: "Stablecoin safety re-graded" },
+  "source-risk": { short: "Source risk", long: "Source-risk penalty changed" },
+  "source-switch": { short: "Source switch", long: "Selected source changed" },
+  freshness: { short: "Freshness", long: "Source freshness changed" },
+  volatility: { short: "Volatility", long: "30-day APY volatility changed" },
+  "tvl-depth": { short: "Depth", long: "Source TVL depth changed" },
+};

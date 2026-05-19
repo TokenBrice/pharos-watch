@@ -312,4 +312,36 @@ describe("buildYieldViewModel", () => {
     expect(model.filters.peg).toBe("aud-cad");
     expect(model.invalidParamKeys).not.toContain("peg");
   });
+
+  it("defaults to all when watchlistIds is not provided", () => {
+    const model = buildYieldViewModel(rows, {});
+
+    expect(model.filters.watchlist).toBe("all");
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "eurc-circle", "usdt-tether"]);
+    expect(model.options.watchlist.find((option) => option.value === "only")?.count).toBe(0);
+  });
+
+  it("counts watchlist matches and filters to only watchlist rows", () => {
+    const watchlistIds = new Set(["usdc-circle", "usdt-tether"]);
+
+    const allModel = buildYieldViewModel(rows, {}, { watchlistIds });
+    expect(allModel.options.watchlist.find((option) => option.value === "only")?.count).toBe(2);
+    expect(allModel.visibleRows).toHaveLength(3);
+
+    const onlyModel = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds });
+    expect(onlyModel.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
+  it("normalizes invalid watchlist URL params back to default", () => {
+    const model = buildYieldViewModel(rows, { watchlist: "bogus" });
+
+    expect(model.filters.watchlist).toBe("all");
+    expect(model.invalidParamKeys).toContain("watchlist");
+  });
+
+  it("yields empty visible rows when watchlist=only and no ids are provided", () => {
+    const model = buildYieldViewModel(rows, { watchlist: "only" });
+
+    expect(model.visibleRows).toEqual([]);
+  });
 });

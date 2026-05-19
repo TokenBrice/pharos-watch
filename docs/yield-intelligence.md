@@ -1032,3 +1032,48 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/__tests__/yield-resolve.test.ts`    | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                     |
 | `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and benchmark caches                                                                                        |
 | `worker/src/lib/__tests__/yield-source-links.test.ts` | Yield source link resolution tests (curated, protocol, metadata fallback)                                                                   |
+
+---
+
+## Presentation Contracts (v8.13.x)
+
+These conventions govern how `/yield/`-adjacent surfaces render the data already
+published by `/api/yield-rankings`. They are presentation rules, not methodology
+changes; the underlying scores and warnings are unchanged.
+
+### Row visual budget
+
+Every leaderboard row carries at most three fixed chip positions, in this order:
+(a) confidence tier pill, (b) freshness stamp, (c) severity glyph stack that
+combines warning-signal count with the source-risk penalty severity. New
+row-level affordances must reuse one of these three positions or be deferred
+to the expanded panel or detail page; the row itself stays scannable.
+
+### Sparkbar grammar
+
+The page exposes exactly two sparkbar idioms. The source-risk score (0-100)
+sparkbar lives only in the source cell of leaderboard rows and in the
+chosen-source card of the source sheet. The PYS history sparkline (planned
+Phase 4) lives only in the expanded-row panel. No other sparkbar grammars
+are introduced on `/yield/`.
+
+### Embedded vs deep-link contract
+
+The embedded yield section on the stablecoin detail page
+(`src/components/yield-detail-section.tsx`) is at-a-glance: current state,
+recent narrative, one chart, and the top alternates. The deep-link
+`/stablecoin/<id>/yield/` surface
+(`src/app/stablecoin/[slug]/yield/client.tsx`) is history-first: full
+timelines, decision rationale, and (planned) peer rail. Embedded summarises;
+deep-link reveals. Both surfaces must avoid duplicating panels.
+
+### PYS attribution convention
+
+To express a PYS component as a marginal-point delta, neutralize the factor
+under inspection (set it to its neutral baseline: source-risk penalty &rarr;
+`1.0`, sustainability multiplier &rarr; `1.0`, safety penalty &rarr; `1.0`)
+and recompute PYS via `computePYS`. The signed difference vs the actual PYS
+is that factor's contribution in PYS points. Because attribution is
+per-factor and not sequential, the attributed points may not sum exactly to
+the total PYS; this caveat must accompany any rendered attribution so users
+read it as decomposition, not a residual-free reconciliation.

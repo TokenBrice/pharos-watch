@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyYieldSourceDepth,
+  classifyYieldSourceFreshness,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
@@ -42,5 +43,58 @@ describe("yield source risk UI helpers", () => {
     })).toBe("thin");
     expect(classifyYieldSourceDepth({ sourceRisk: { sourceDepthRatio: 0.02 }, sourceTvlUsd: null })).toBe("unknown");
     expect(classifyYieldSourceDepth({ sourceRisk: null, sourceTvlUsd: 10_000_000 })).toBe("unknown");
+  });
+});
+
+describe("classifyYieldSourceFreshness", () => {
+  it("returns null for null or undefined input", () => {
+    expect(classifyYieldSourceFreshness(null)).toBeNull();
+    expect(classifyYieldSourceFreshness(undefined)).toBeNull();
+  });
+
+  it("returns fresh tier for 0s", () => {
+    const result = classifyYieldSourceFreshness(0);
+    expect(result?.tier).toBe("fresh");
+    expect(result?.relativeText).toBe("0s ago");
+  });
+
+  it("returns fresh tier for 1h", () => {
+    const result = classifyYieldSourceFreshness(60 * 60);
+    expect(result?.tier).toBe("fresh");
+    expect(result?.relativeText).toBe("1h ago");
+  });
+
+  it("returns fresh tier at the 6h boundary", () => {
+    const result = classifyYieldSourceFreshness(6 * 60 * 60);
+    expect(result?.tier).toBe("fresh");
+    expect(result?.relativeText).toBe("6h ago");
+  });
+
+  it("returns recent tier at the 12h boundary", () => {
+    const result = classifyYieldSourceFreshness(12 * 60 * 60);
+    expect(result?.tier).toBe("recent");
+    expect(result?.relativeText).toBe("12h ago");
+  });
+
+  it("returns aging tier at the 24h boundary", () => {
+    const result = classifyYieldSourceFreshness(24 * 60 * 60);
+    expect(result?.tier).toBe("aging");
+    expect(result?.relativeText).toBe("1d ago");
+  });
+
+  it("returns stale tier for 7d with days formatting", () => {
+    const result = classifyYieldSourceFreshness(7 * 24 * 60 * 60);
+    expect(result?.tier).toBe("stale");
+    expect(result?.relativeText).toBe("7d ago");
+  });
+
+  it("clamps days formatting at >30d for 31d", () => {
+    const result = classifyYieldSourceFreshness(31 * 24 * 60 * 60);
+    expect(result?.tier).toBe("stale");
+    expect(result?.relativeText).toBe(">30d ago");
+  });
+
+  it("returns null for NaN", () => {
+    expect(classifyYieldSourceFreshness(Number.NaN)).toBeNull();
   });
 });

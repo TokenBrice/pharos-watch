@@ -26,6 +26,7 @@ export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportuni
 export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
 export type YieldTrendingFilter = "all" | "rising";
+export type YieldWatchlistFilter = "all" | "only";
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -40,6 +41,7 @@ export interface YieldViewModelUrlParams {
   depth?: string | null;
   sourceChanged?: string | null;
   trending?: string | null;
+  watchlist?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -61,6 +63,7 @@ export interface YieldViewModelFilters {
   depth: YieldDepthFilter;
   sourceChanged: YieldSourceChangedFilter;
   trending: YieldTrendingFilter;
+  watchlist: YieldWatchlistFilter;
 }
 
 export interface YieldViewModelOptions {
@@ -75,6 +78,7 @@ export interface YieldViewModelOptions {
   opportunity: YieldFilterOption<YieldOpportunityFilter>[];
   depth: YieldFilterOption<YieldDepthFilter>[];
   sourceChanged: YieldFilterOption<YieldSourceChangedFilter>[];
+  watchlist: YieldFilterOption<YieldWatchlistFilter>[];
 }
 
 export type YieldPresetKey =
@@ -120,6 +124,7 @@ interface YieldRowFacet {
   hasWarning: boolean;
   sourceChanged: boolean;
   isRising: boolean;
+  inWatchlist: boolean;
 }
 
 export interface YieldViewModelStats {
@@ -156,6 +161,7 @@ export interface YieldViewModel {
 export interface BuildYieldViewModelOptions {
   benchmarks?: YieldBenchmarkRegistry | null;
   fallbackBenchmark?: YieldBenchmarkMeta | null;
+  watchlistIds?: ReadonlySet<string> | null;
 }
 
 const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
@@ -213,6 +219,7 @@ const DEFAULT_FILTERS: YieldViewModelFilters = {
   depth: "all",
   sourceChanged: "all",
   trending: "all",
+  watchlist: "all",
 };
 
 interface YieldPresetSpec {
@@ -329,7 +336,7 @@ function isRowRising(row: YieldRanking): boolean {
   return row.currentApy > row.apy30d && observations != null && observations >= 7;
 }
 
-function buildYieldRowFacet(row: YieldRanking): YieldRowFacet {
+function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
   return {
     row,
     peg: getYieldRankingPeg(row.id),
@@ -340,11 +347,12 @@ function buildYieldRowFacet(row: YieldRanking): YieldRowFacet {
     hasWarning: row.warningSignals.length > 0,
     sourceChanged: row.provenance?.sourceSwitch === true,
     isRising: isRowRising(row),
+    inWatchlist: watchlistIds != null && watchlistIds.has(row.id),
   };
 }
 
-function buildYieldRowFacets(rows: readonly YieldRanking[]): YieldRowFacet[] {
-  return rows.map(buildYieldRowFacet);
+function buildYieldRowFacets(rows: readonly YieldRanking[], watchlistIds: ReadonlySet<string> | null): YieldRowFacet[] {
+  return rows.map((row) => buildYieldRowFacet(row, watchlistIds));
 }
 
 function matchesSearch(row: YieldRanking, query: string): boolean {
@@ -430,6 +438,7 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
   let lendingOpportunityCount = 0;
   let sourceChangedCount = 0;
   let sourceUnchangedCount = 0;
+  let watchlistCount = 0;
   const depthCounts = new Map<YieldSourceDepthLens, number>();
 
   for (const facet of facets) {
@@ -450,6 +459,8 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
 
     if (facet.sourceChanged) sourceChangedCount += 1;
     else sourceUnchangedCount += 1;
+
+    if (facet.inWatchlist) watchlistCount += 1;
 
     depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
   }
@@ -523,6 +534,10 @@ function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
       { value: "only", label: "Source changed", count: sourceChangedCount },
       { value: "none", label: "No source change", count: sourceUnchangedCount },
     ],
+    watchlist: [
+      { value: "all", label: "All rows", count: facets.length },
+      { value: "only", label: "Watchlist only", count: watchlistCount },
+    ],
   };
 }
 
@@ -551,6 +566,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   const validDepth = new Set(options.depth.map((option) => option.value));
   const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
   const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
+  const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -565,6 +581,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
     sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
     trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
+    watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
@@ -580,6 +597,7 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
     sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
     trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
+    watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
   };
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
@@ -610,6 +628,7 @@ function rowMatchesFilters(facet: YieldRowFacet, filters: YieldViewModelFilters)
   if (filters.sourceChanged === "only" && !facet.sourceChanged) return false;
   if (filters.sourceChanged === "none" && facet.sourceChanged) return false;
   if (filters.trending === "rising" && !facet.isRising) return false;
+  if (filters.watchlist === "only" && !facet.inWatchlist) return false;
 
   return true;
 }
@@ -779,7 +798,7 @@ export function buildYieldViewModel(
   params: YieldViewModelUrlParams,
   buildOptionsParams: BuildYieldViewModelOptions = {},
 ): YieldViewModel {
-  const rowFacets = buildYieldRowFacets(rows);
+  const rowFacets = buildYieldRowFacets(rows, buildOptionsParams.watchlistIds ?? null);
   const filterOptions = buildOptions(rowFacets);
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
   const visibleFacets = rowFacets.filter((facet) => rowMatchesFilters(facet, filters));

@@ -108,6 +108,7 @@ function evaluatedSourceToRanking(
     dataSource: source.dataSource,
     sourceTvlUsd: source.sourceTvlUsd,
     pharosYieldScore: source.pharosYieldScore,
+    pysNullReason: source.pysNullReason,
     safetyScore: source.safetyScore,
     safetyGrade: source.safetyGrade,
     yieldToRisk: source.yieldToRisk,

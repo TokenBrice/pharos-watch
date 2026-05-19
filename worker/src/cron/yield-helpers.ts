@@ -35,6 +35,8 @@ export {
   PYS_MAX_SOURCE_RISK_PENALTY,
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
+import { computePysComponents } from "@shared/lib/yield-scoring";
+import type { YieldPysNullReason } from "@shared/types/yield";
 import { resolveChainId } from "@shared/lib/chains";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
@@ -52,6 +54,34 @@ const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
   /\bresolv\b/i,
   /\b(?:usr|stusr|wstusr)\b/i,
 ];
+
+interface PysNullReasonInput {
+  apy30d: number;
+  safetyScore: number | null;
+  apyVarianceScore: number;
+  scalingFactor: number;
+  benchmarkRate?: number | null;
+  sourceRiskPenalty?: number | null;
+}
+
+/**
+ * Mirrors the null/zero branches of `computePYS` so the UI can explain why a
+ * row's score is null. Returns null when the inputs would yield a positive PYS.
+ */
+export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
+  if (!Number.isFinite(input.apy30d)) return "missing-inputs";
+  if (input.apy30d <= 0) return "apy-non-positive";
+  if (!Number.isFinite(input.scalingFactor) || input.scalingFactor <= 0) return "scaling-invalid";
+  const { effectiveYield } = computePysComponents({
+    apy30d: input.apy30d,
+    safetyScore: input.safetyScore,
+    apyVarianceScore: input.apyVarianceScore,
+    benchmarkRate: input.benchmarkRate,
+    sourceRiskPenalty: input.sourceRiskPenalty,
+  });
+  if (effectiveYield <= 0) return "effective-yield-non-positive";
+  return null;
+}
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
   if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;

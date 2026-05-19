@@ -8,6 +8,7 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types/yield";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { derivePysNullReason } from "../cron/yield-helpers";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,
@@ -190,6 +191,16 @@ function hydrateYieldRankingsWithLiveSafety(
       const card = reportCardById.get(row.id);
       const safetyInputScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
       const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
+      const pysNullReason = pharosYieldScore > 0
+        ? null
+        : derivePysNullReason({
+            apy30d: row.apy30d,
+            safetyScore: safetyInputScore,
+            apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+            scalingFactor: payload.scalingFactor,
+            benchmarkRate: row.benchmarkRate ?? null,
+            sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
+          });
 
       return {
         originalRow: row,
@@ -199,6 +210,7 @@ function hydrateYieldRankingsWithLiveSafety(
           safetyScore: safetyInputScore,
           safetyGrade: card?.overallGrade ?? "NR",
           pharosYieldScore,
+          pysNullReason,
           yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
           provenance: row.provenance
             ? {

@@ -17,6 +17,13 @@ export const YIELD_BENCHMARK_KEY_VALUES = [
   "SGD",
 ] as const;
 export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
+export const YIELD_PYS_NULL_REASONS = [
+  "apy-non-positive",
+  "effective-yield-non-positive",
+  "scaling-invalid",
+  "missing-inputs",
+] as const;
+export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
 export type YieldPublicationStatus = "staged" | "published" | "failed";
@@ -368,6 +375,7 @@ export interface YieldRanking {
   dataSource: string;
   sourceTvlUsd: number | null;
   pharosYieldScore: number | null;
+  pysNullReason?: YieldPysNullReason | null;
   safetyScore: number | null;
   safetyGrade: ReportCardGrade | null;
   yieldToRisk: number | null;
@@ -410,6 +418,7 @@ const YieldRankingSchema = z.object({
   dataSource: z.string(),
   sourceTvlUsd: z.number().nullable(),
   pharosYieldScore: z.number().nullable(),
+  pysNullReason: z.enum(YIELD_PYS_NULL_REASONS).nullable().optional(),
   safetyScore: z.number().nullable(),
   safetyGrade: ReportCardGradeSchema.nullable(),
   yieldToRisk: z.number().nullable(),
