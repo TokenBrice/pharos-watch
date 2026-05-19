@@ -12,8 +12,10 @@ const stops: YieldRiskBudgetStop[] = [
   { key: "conservative", label: "Conservative", description: "", count: 3, active: false, overrides: {} },
   { key: "balanced", label: "Balanced", description: "", count: 19, active: true, overrides: {} },
   { key: "opportunistic", label: "Opportunistic", description: "", count: 70, active: false, overrides: {} },
-  { key: "aggressive", label: "Aggressive", description: "", count: 163, active: false, overrides: {} },
+  { key: "all", label: "All", description: "", count: 163, active: false, overrides: {} },
 ];
+
+const unmatchedStops: YieldRiskBudgetStop[] = stops.map((stop) => ({ ...stop, active: false }));
 
 describe("YieldRiskBudgetSlider", () => {
   it("renders all stops with their counts and labels", () => {
@@ -22,7 +24,7 @@ describe("YieldRiskBudgetSlider", () => {
     expect(screen.getByText("Conservative")).toBeTruthy();
     expect(screen.getByText("Balanced")).toBeTruthy();
     expect(screen.getByText("Opportunistic")).toBeTruthy();
-    expect(screen.getByText("Aggressive")).toBeTruthy();
+    expect(screen.getByText("All")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("19")).toBeTruthy();
     expect(screen.getByText("70")).toBeTruthy();
@@ -32,7 +34,7 @@ describe("YieldRiskBudgetSlider", () => {
   it("exposes a single range slider control wired to the active stop index", () => {
     render(<YieldRiskBudgetSlider stops={stops} onSelect={vi.fn()} />);
 
-    const slider = screen.getByRole("slider", { name: "Risk budget" }) as HTMLInputElement;
+    const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
     expect(slider.min).toBe("0");
     expect(slider.max).toBe("3");
     expect(slider.step).toBe("1");
@@ -44,7 +46,7 @@ describe("YieldRiskBudgetSlider", () => {
     const onSelect = vi.fn();
     render(<YieldRiskBudgetSlider stops={stops} onSelect={onSelect} />);
 
-    const slider = screen.getByRole("slider", { name: "Risk budget" }) as HTMLInputElement;
+    const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "2" } });
     expect(onSelect).toHaveBeenCalledWith("opportunistic");
   });
@@ -53,7 +55,7 @@ describe("YieldRiskBudgetSlider", () => {
     const onSelect = vi.fn();
     render(<YieldRiskBudgetSlider stops={stops} onSelect={onSelect} />);
 
-    const slider = screen.getByRole("slider", { name: "Risk budget" }) as HTMLInputElement;
+    const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
     fireEvent.change(slider, { target: { value: "1" } });
     expect(onSelect).not.toHaveBeenCalled();
   });
@@ -66,5 +68,14 @@ describe("YieldRiskBudgetSlider", () => {
 
     const inactiveStops = document.querySelectorAll('[data-active="false"]');
     expect(inactiveStops.length).toBe(3);
+  });
+
+  it("reports the no-match state via aria-valuetext when no stop is active", () => {
+    render(<YieldRiskBudgetSlider stops={unmatchedStops} onSelect={vi.fn()} />);
+
+    const slider = screen.getByRole("slider", { name: "Risk tolerance" }) as HTMLInputElement;
+    expect(slider.getAttribute("aria-valuetext")).toBe("No band selected — custom filters active");
+    expect(document.querySelector('[data-active="true"]')).toBeNull();
+    expect(document.querySelectorAll('[data-active="false"]').length).toBe(stops.length);
   });
 });

@@ -436,12 +436,12 @@ describe("buildYieldViewModel", () => {
     });
     expect(opportunistic.riskBudget.matching).toBe("opportunistic");
 
-    const aggressive = buildYieldViewModel(rows, {});
-    expect(aggressive.riskBudget.matching).toBe("aggressive");
+    const all = buildYieldViewModel(rows, {});
+    expect(all.riskBudget.matching).toBe("all");
 
-    const stops = aggressive.riskBudget.stops.map((stop) => stop.key);
-    expect(stops).toEqual(["conservative", "balanced", "opportunistic", "aggressive"]);
-    expect(aggressive.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
+    const stops = all.riskBudget.stops.map((stop) => stop.key);
+    expect(stops).toEqual(["conservative", "balanced", "opportunistic", "all"]);
+    expect(all.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
   });
 
   it("returns null matchingRiskBudget when filters don't match any stop", () => {

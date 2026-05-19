@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
-import { CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_AMBER, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE, CHART_TEAL } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -48,6 +48,17 @@ interface YieldScatterPlotProps {
 
 const SCATTER_Y_VISUAL_PADDING = 0.4;
 
+// Mirrors YIELD_RISK_BUDGET_SPECS thresholds so the risk-tolerance slider
+// acts as the legend for the scatter: each dot's ring tier matches the band
+// that would just barely include it.
+function safetyTierColor(safetyScore: number | null): string {
+  if (safetyScore === null) return "var(--color-border)";
+  if (safetyScore >= 80) return CHART_GREEN;
+  if (safetyScore >= 70) return CHART_TEAL;
+  if (safetyScore >= 50) return CHART_AMBER;
+  return CHART_ORANGE;
+}
+
 interface LogoScatterShapeProps {
   cx?: number;
   cy?: number;
@@ -67,7 +78,7 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
   const radius = diameter / 2;
   const haloRadius = radius + (emphasized ? 3 : 2);
   const clipId = `yield-logo-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
-  const ringStroke = emphasized ? CHART_BLUE : "var(--color-border)";
+  const ringStroke = emphasized ? CHART_BLUE : safetyTierColor(payload.x);
 
   return (
     <g transform={`translate(${cx}, ${cy})`}>

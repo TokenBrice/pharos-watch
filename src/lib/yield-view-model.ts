@@ -102,7 +102,7 @@ export type YieldRiskBudgetKey =
   | "conservative"
   | "balanced"
   | "opportunistic"
-  | "aggressive";
+  | "all";
 
 export interface YieldRiskBudgetStop {
   key: YieldRiskBudgetKey;
@@ -287,7 +287,7 @@ interface YieldRiskBudgetSpec {
 }
 
 // Risk budget collapses safety/depth/source-confidence/warnings into a single
-// conservative→aggressive dimension. Stops are stackable on top of other
+// conservative→all dimension. Stops are stackable on top of other
 // filters via merge semantics in `handleApplyRiskBudget`.
 export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
@@ -320,8 +320,8 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
     },
   },
   {
-    key: "aggressive",
-    label: "Aggressive",
+    key: "all",
+    label: "All",
     description: "No constraints — show all rows",
     overrides: {},
   },
