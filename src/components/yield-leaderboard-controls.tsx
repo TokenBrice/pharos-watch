@@ -59,17 +59,79 @@ function FilterGroup({ label, children }: { label: string; children: ReactNode }
   );
 }
 
+type FilterTabTone =
+  | "brand"
+  | "neutral"
+  | "emerald"
+  | "sky"
+  | "orange"
+  | "purple"
+  | "cyan"
+  | "amber";
+
+// Selected/unselected variants per tone. Classes must be static strings so
+// Tailwind's purge can see them.
+const TONE_STYLES: Record<FilterTabTone, { active: string; inactive: string }> = {
+  brand: {
+    active: "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    inactive: "border-border/70 bg-background/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+  },
+  neutral: {
+    active: "border-foreground/40 bg-foreground/10 text-foreground font-semibold",
+    inactive: "border-border/70 bg-background/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+  },
+  emerald: {
+    active: "border-emerald-500/60 bg-emerald-500/20 text-emerald-700 dark:text-emerald-200 font-semibold",
+    inactive: "border-emerald-500/25 bg-emerald-500/5 text-emerald-700/80 hover:bg-emerald-500/10 dark:text-emerald-400/90",
+  },
+  sky: {
+    active: "border-sky-500/60 bg-sky-500/20 text-sky-700 dark:text-sky-200 font-semibold",
+    inactive: "border-sky-500/25 bg-sky-500/5 text-sky-700/80 hover:bg-sky-500/10 dark:text-sky-400/90",
+  },
+  orange: {
+    active: "border-orange-500/60 bg-orange-500/20 text-orange-700 dark:text-orange-200 font-semibold",
+    inactive: "border-orange-500/25 bg-orange-500/5 text-orange-700/80 hover:bg-orange-500/10 dark:text-orange-400/90",
+  },
+  purple: {
+    active: "border-purple-500/60 bg-purple-500/20 text-purple-700 dark:text-purple-200 font-semibold",
+    inactive: "border-purple-500/25 bg-purple-500/5 text-purple-700/80 hover:bg-purple-500/10 dark:text-purple-400/90",
+  },
+  cyan: {
+    active: "border-cyan-500/60 bg-cyan-500/20 text-cyan-700 dark:text-cyan-200 font-semibold",
+    inactive: "border-cyan-500/25 bg-cyan-500/5 text-cyan-700/80 hover:bg-cyan-500/10 dark:text-cyan-400/90",
+  },
+  amber: {
+    active: "border-amber-500/60 bg-amber-500/20 text-amber-700 dark:text-amber-200 font-semibold",
+    inactive: "border-amber-500/25 bg-amber-500/5 text-amber-700/80 hover:bg-amber-500/10 dark:text-amber-400/90",
+  },
+};
+
+// Mirrors YIELD_TYPE_STYLES in shared/lib/classification/badges.ts so each
+// yield-type tab wears the same hue as its badge elsewhere in the app.
+const YIELD_TYPE_TONE: Record<string, FilterTabTone> = {
+  "nav-appreciation": "emerald",
+  "lending-opportunity": "sky",
+  "lending-vault": "orange",
+  "governance-set": "orange",
+  rebase: "purple",
+  "fee-sharing": "cyan",
+  "lp-receipt": "amber",
+};
+
 function FilterTab({
   label,
   count,
   active,
   onClick,
+  tone = "brand",
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  tone?: FilterTabTone;
 }) {
+  const variant = TONE_STYLES[tone];
   return (
     <button
       type="button"
@@ -77,20 +139,11 @@ function FilterTab({
       aria-pressed={active}
       className={cn(
         "pharos-focus-ring min-h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition-colors sm:min-h-8",
-        active
-          ? "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-          : "border-border/70 bg-background/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+        active ? variant.active : variant.inactive,
       )}
     >
       <span>{label}</span>
-      <span
-        className={cn(
-          "ml-1.5 font-mono text-[10px] tabular-nums",
-          active ? "text-sky-700/80 dark:text-sky-300/80" : "text-muted-foreground/80",
-        )}
-      >
-        {count}
-      </span>
+      <span className="ml-1.5 font-mono text-[10px] tabular-nums opacity-70">{count}</span>
     </button>
   );
 }
@@ -238,74 +291,87 @@ export function YieldLeaderboardControls({
         ) : null}
       </div>
 
-      {options.currencyTabs.length > 1 ? (
-        <>
-          <label className="sr-only" htmlFor={currencyTabsId}>
-            Filter by currency
-          </label>
-          <select
-            id={currencyTabsId}
-            value={options.currencyTabs.some((option) => option.value === filters.peg) ? filters.peg : "all"}
-            onChange={(event) => onFilterChange("peg", event.target.value)}
-            className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
-          >
-            {options.currencyTabs.map((option) => (
-              <option key={option.value} value={option.value}>
-                {`${option.label} (${option.count})`}
-              </option>
-            ))}
-          </select>
-          <div
-            role="tablist"
-            aria-label="Filter by currency"
-            className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
-          >
-            {options.currencyTabs.map((option) => (
-              <FilterTab
-                key={option.value}
-                label={option.label}
-                count={option.count}
-                active={filters.peg === option.value}
-                onClick={() => onFilterChange("peg", option.value)}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
+      {options.currencyTabs.length > 1 || yieldTypeTabs.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {options.currencyTabs.length > 1 ? (
+            <>
+              <label className="sr-only" htmlFor={currencyTabsId}>
+                Filter by currency
+              </label>
+              <select
+                id={currencyTabsId}
+                value={options.currencyTabs.some((option) => option.value === filters.peg) ? filters.peg : "all"}
+                onChange={(event) => onFilterChange("peg", event.target.value)}
+                className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
+              >
+                {options.currencyTabs.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {`${option.label} (${option.count})`}
+                  </option>
+                ))}
+              </select>
+              <div
+                role="tablist"
+                aria-label="Filter by currency"
+                className="hidden flex-wrap items-center gap-1.5 sm:flex"
+              >
+                {options.currencyTabs.map((option) => (
+                  <FilterTab
+                    key={option.value}
+                    label={option.label}
+                    count={option.count}
+                    active={filters.peg === option.value}
+                    onClick={() => onFilterChange("peg", option.value)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : null}
 
-      {yieldTypeTabs.length > 1 ? (
-        <>
-          <label className="sr-only" htmlFor={yieldTypeTabsId}>
-            Filter by yield type
-          </label>
-          <select
-            id={yieldTypeTabsId}
-            value={yieldTypeTabs.some((option) => option.value === filters.yieldType) ? filters.yieldType : "all"}
-            onChange={(event) => onFilterChange("yieldType", event.target.value)}
-            className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
-          >
-            {yieldTypeTabs.map((option) => (
-              <option key={option.value} value={option.value}>
-                {`${option.label} (${option.count})`}
-              </option>
-            ))}
-          </select>
-          <div
-            role="tablist"
-            aria-label="Filter by yield type"
-            className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
-          >
-            {yieldTypeTabs.map((option) => (
-              <FilterTab
-                key={option.value}
-                label={option.label}
-                count={option.count}
-                active={filters.yieldType === option.value}
-                onClick={() => onFilterChange("yieldType", option.value)}
-              />
-            ))}
-          </div>
-        </>
+          {options.currencyTabs.length > 1 && yieldTypeTabs.length > 1 ? (
+            <div aria-hidden="true" className="hidden h-6 w-px bg-border/60 sm:block" />
+          ) : null}
+
+          {yieldTypeTabs.length > 1 ? (
+            <>
+              <label className="sr-only" htmlFor={yieldTypeTabsId}>
+                Filter by yield type
+              </label>
+              <select
+                id={yieldTypeTabsId}
+                value={yieldTypeTabs.some((option) => option.value === filters.yieldType) ? filters.yieldType : "all"}
+                onChange={(event) => onFilterChange("yieldType", event.target.value)}
+                className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
+              >
+                {yieldTypeTabs.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {`${option.label} (${option.count})`}
+                  </option>
+                ))}
+              </select>
+              <div
+                role="tablist"
+                aria-label="Filter by yield type"
+                className="hidden flex-wrap items-center gap-1.5 sm:flex"
+              >
+                {yieldTypeTabs.map((option) => {
+                  const tone: FilterTabTone =
+                    option.value === "all" ? "neutral" : (YIELD_TYPE_TONE[option.value] ?? "neutral");
+                  return (
+                    <FilterTab
+                      key={option.value}
+                      label={option.label}
+                      count={option.count}
+                      active={filters.yieldType === option.value}
+                      onClick={() => onFilterChange("yieldType", option.value)}
+                      tone={tone}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="-mx-1 flex flex-wrap items-center gap-x-1 gap-y-1 px-1">
