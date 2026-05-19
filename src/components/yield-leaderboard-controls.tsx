@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { ChevronDown, Search, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
@@ -18,7 +18,6 @@ interface YieldLeaderboardControlsProps {
   onClearFilters: () => void;
   onApplyPreset: (presetKey: YieldPresetKey) => void;
 }
-
 
 function FilterSelect({
   label,
@@ -49,7 +48,18 @@ function FilterSelect({
   );
 }
 
-function CurrencyTab({
+function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+        {label}
+      </span>
+      <div className="flex flex-wrap items-end gap-2">{children}</div>
+    </div>
+  );
+}
+
+function FilterTab({
   label,
   count,
   active,
@@ -85,94 +95,48 @@ function CurrencyTab({
   );
 }
 
-function PresetChip({
+function ViewLink({
   label,
   description,
   count,
   active,
   onClick,
+  leadingIcon,
+  dataActive,
 }: {
   label: string;
   description: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  leadingIcon?: ReactNode;
+  dataActive?: boolean;
 }) {
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="sm"
       onClick={onClick}
       aria-pressed={active}
       title={description}
+      {...(dataActive !== undefined ? { "data-active": String(dataActive) } : {})}
       className={cn(
-        "h-auto whitespace-normal rounded-full px-3 py-1.5 text-xs font-medium",
+        "pharos-focus-ring inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
         active
-          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-          : "text-foreground",
+          ? "bg-foreground/10 text-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
+      {leadingIcon}
       <span>{label}</span>
       <span
         className={cn(
-          "ml-1 font-mono text-[10px] tabular-nums",
-          active ? "text-primary-foreground/80" : "text-muted-foreground",
+          "font-mono text-[10px] tabular-nums",
+          active ? "text-foreground/70" : "text-muted-foreground/60",
         )}
       >
         {count}
       </span>
-    </Button>
-  );
-}
-
-function WatchingPresetChip({
-  count,
-  active,
-  onClick,
-}: {
-  count: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const disabled = count === 0;
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      aria-disabled={disabled}
-      aria-pressed={active}
-      data-active={active}
-      title={
-        disabled
-          ? "Star yields on the leaderboard to follow them here"
-          : "Show only yields you are watching"
-      }
-      className={cn(
-        "h-auto whitespace-normal rounded-full px-3 py-1.5 text-xs font-medium",
-        active
-          ? "border-amber-500 bg-amber-500 text-white hover:bg-amber-500/90 hover:text-white"
-          : "text-foreground",
-        disabled && "cursor-not-allowed opacity-60 hover:bg-transparent hover:text-muted-foreground",
-      )}
-    >
-      <Star
-        aria-hidden="true"
-        className={cn("h-3 w-3", active ? "fill-white" : "fill-none")}
-      />
-      <span>Watching</span>
-      <span
-        className={cn(
-          "ml-1 font-mono text-[10px] tabular-nums",
-          active ? "text-white/80" : "text-muted-foreground",
-        )}
-      >
-        {count}
-      </span>
-    </Button>
+    </button>
   );
 }
 
@@ -210,6 +174,7 @@ export function YieldLeaderboardControls({
   const yieldTypeTabs = options.yieldType.filter((option) => option.count > 0);
   const { ids: watchlistIds } = useYieldWatchlist();
   const watchlistActive = filters.watchlist === "only";
+  const showWatching = watchlistIds.size > 0;
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
   const activeFilterCount = activeFilterSummaries.length;
@@ -220,11 +185,12 @@ export function YieldLeaderboardControls({
     filters.trending !== "all";
   const filtersToggleLabel =
     activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters";
+  const activePreset = presets.find((preset) => preset.active);
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="relative w-full md:max-w-sm">
+    <div className="space-y-3 border-b border-border/60 pb-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full min-w-[200px] flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
@@ -235,11 +201,37 @@ export function YieldLeaderboardControls({
           />
         </div>
 
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFilters((value) => !value)}
+          aria-expanded={showFilters}
+          aria-controls={panelId}
+          className="text-xs font-medium"
+        >
+          {filtersToggleLabel}
+          <ChevronDown
+            aria-hidden="true"
+            className={cn("h-3.5 w-3.5 transition-transform", showFilters ? "rotate-180" : "rotate-0")}
+          />
+        </Button>
+
+        {!showFilters
+          ? activeFilterSummaries.map((summary) => (
+              <ActiveFilterPill
+                key={summary.key}
+                label={summary.label}
+                onClear={() => onFilterChange(summary.key, "all")}
+              />
+            ))
+          : null}
+
         {hasResettableState ? (
           <button
             type="button"
             onClick={onClearFilters}
-            className="pharos-focus-ring self-start rounded-full border border-border/70 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:self-center md:py-1.5"
+            className="pharos-focus-ring ml-auto rounded-full border border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Reset
           </button>
@@ -269,7 +261,7 @@ export function YieldLeaderboardControls({
             className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
           >
             {options.currencyTabs.map((option) => (
-              <CurrencyTab
+              <FilterTab
                 key={option.value}
                 label={option.label}
                 count={option.count}
@@ -282,7 +274,7 @@ export function YieldLeaderboardControls({
       ) : null}
 
       {yieldTypeTabs.length > 1 ? (
-        <div className="border-b border-border/70 pb-3">
+        <>
           <label className="sr-only" htmlFor={yieldTypeTabsId}>
             Filter by yield type
           </label>
@@ -304,7 +296,7 @@ export function YieldLeaderboardControls({
             className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
           >
             {yieldTypeTabs.map((option) => (
-              <CurrencyTab
+              <FilterTab
                 key={option.value}
                 label={option.label}
                 count={option.count}
@@ -313,17 +305,31 @@ export function YieldLeaderboardControls({
               />
             ))}
           </div>
-        </div>
+        </>
       ) : null}
 
-      <div className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible md:pb-0">
-        <WatchingPresetChip
-          count={watchlistIds.size}
-          active={watchlistActive}
-          onClick={() => onFilterChange("watchlist", watchlistActive ? "all" : "only")}
-        />
+      <div className="-mx-1 flex flex-wrap items-center gap-x-1 gap-y-1 px-1">
+        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+          Views
+        </span>
+        {showWatching ? (
+          <ViewLink
+            label="Watching"
+            description="Show only yields you are watching"
+            count={watchlistIds.size}
+            active={watchlistActive}
+            dataActive={watchlistActive}
+            onClick={() => onFilterChange("watchlist", watchlistActive ? "all" : "only")}
+            leadingIcon={
+              <Star
+                aria-hidden="true"
+                className={cn("h-3 w-3", watchlistActive ? "fill-amber-500 text-amber-500" : "fill-none")}
+              />
+            }
+          />
+        ) : null}
         {presets.map((preset) => (
-          <PresetChip
+          <ViewLink
             key={preset.key}
             label={preset.label}
             description={preset.description}
@@ -334,89 +340,69 @@ export function YieldLeaderboardControls({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowFilters((value) => !value)}
-          aria-expanded={showFilters}
-          aria-controls={panelId}
-          className="text-xs font-medium"
-        >
-          {filtersToggleLabel}
-          <ChevronDown
-            aria-hidden="true"
-            className={cn("h-3.5 w-3.5 transition-transform", showFilters ? "rotate-180" : "rotate-0")}
-          />
-        </Button>
-        {!showFilters
-          ? activeFilterSummaries.map((summary) => (
-              <ActiveFilterPill
-                key={summary.key}
-                label={summary.label}
-                onClear={() => onFilterChange(summary.key, "all")}
-              />
-            ))
-          : null}
-      </div>
+      {activePreset ? (
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{activePreset.label}:</span>{" "}
+          {activePreset.description}
+        </p>
+      ) : null}
 
       {showFilters ? (
-        <div id={panelId} className="flex flex-wrap items-end gap-2">
-          <FilterSelect
-            label="Type"
-            value={filters.yieldType}
-            options={options.yieldType}
-            onChange={(value) => onFilterChange("yieldType", value)}
-          />
-          <FilterSelect
-            label="Warnings"
-            value={filters.warnings}
-            options={options.warnings}
-            onChange={(value) => onFilterChange("warnings", value)}
-          />
-          <FilterSelect
-            label="Safety"
-            value={filters.minSafety === null ? "all" : String(filters.minSafety)}
-            options={options.minSafety}
-            onChange={(value) => onFilterChange("minSafety", value)}
-          />
-          <FilterSelect
-            label="TVL"
-            value={filters.minTvl === null ? "all" : String(filters.minTvl)}
-            options={options.minTvl}
-            onChange={(value) => onFilterChange("minTvl", value)}
-          />
-          <FilterSelect
-            label="Depth"
-            value={filters.depth}
-            options={options.depth}
-            onChange={(value) => onFilterChange("depth", value)}
-          />
-          <FilterSelect
-            label="Source changed"
-            value={filters.sourceChanged}
-            options={options.sourceChanged}
-            onChange={(value) => onFilterChange("sourceChanged", value)}
-          />
-          <FilterSelect
-            label="Confidence"
-            value={filters.sourceConfidence}
-            options={options.sourceConfidence}
-            onChange={(value) => onFilterChange("sourceConfidence", value)}
-          />
-          <FilterSelect
-            label="Benchmark"
-            value={filters.benchmark}
-            options={options.benchmark}
-            onChange={(value) => onFilterChange("benchmark", value)}
-          />
-          <FilterSelect
-            label="Opportunity"
-            value={filters.opportunity}
-            options={options.opportunity}
-            onChange={(value) => onFilterChange("opportunity", value)}
-          />
+        <div id={panelId} className="flex flex-wrap items-start gap-x-6 gap-y-4 pt-1">
+          <FilterGroup label="Safety & risk">
+            <FilterSelect
+              label="Warnings"
+              value={filters.warnings}
+              options={options.warnings}
+              onChange={(value) => onFilterChange("warnings", value)}
+            />
+            <FilterSelect
+              label="Safety"
+              value={filters.minSafety === null ? "all" : String(filters.minSafety)}
+              options={options.minSafety}
+              onChange={(value) => onFilterChange("minSafety", value)}
+            />
+            <FilterSelect
+              label="Depth"
+              value={filters.depth}
+              options={options.depth}
+              onChange={(value) => onFilterChange("depth", value)}
+            />
+          </FilterGroup>
+          <FilterGroup label="Source quality">
+            <FilterSelect
+              label="Confidence"
+              value={filters.sourceConfidence}
+              options={options.sourceConfidence}
+              onChange={(value) => onFilterChange("sourceConfidence", value)}
+            />
+            <FilterSelect
+              label="Source changed"
+              value={filters.sourceChanged}
+              options={options.sourceChanged}
+              onChange={(value) => onFilterChange("sourceChanged", value)}
+            />
+          </FilterGroup>
+          <FilterGroup label="Yield framing">
+            <FilterSelect
+              label="TVL"
+              value={filters.minTvl === null ? "all" : String(filters.minTvl)}
+              options={options.minTvl}
+              onChange={(value) => onFilterChange("minTvl", value)}
+            />
+            <FilterSelect
+              label="Benchmark"
+              value={filters.benchmark}
+              options={options.benchmark}
+              onChange={(value) => onFilterChange("benchmark", value)}
+            />
+            <FilterSelect
+              label="Opportunity"
+              value={filters.opportunity}
+              options={options.opportunity}
+              onChange={(value) => onFilterChange("opportunity", value)}
+            />
+          </FilterGroup>
         </div>
       ) : null}
     </div>

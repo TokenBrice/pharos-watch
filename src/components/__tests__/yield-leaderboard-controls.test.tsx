@@ -58,7 +58,7 @@ describe("YieldLeaderboardControls", () => {
     expect(screen.getByPlaceholderText("Search stablecoin...")).toBeTruthy();
   });
 
-  it("renders the Watching chip as disabled when the watchlist is empty", () => {
+  it("does not render the Watching chip when the watchlist is empty", () => {
     render(
       <YieldLeaderboardControls
         viewModel={buildModel()}
@@ -68,11 +68,7 @@ describe("YieldLeaderboardControls", () => {
       />,
     );
 
-    const chip = screen.getByRole("button", { name: /^Watching\d+$/ });
-    expect(chip.hasAttribute("disabled")).toBe(true);
-    expect(chip.getAttribute("aria-disabled")).toBe("true");
-    expect(chip.getAttribute("data-active")).toBe("false");
-    expect(chip.getAttribute("title")).toBe("Star yields on the leaderboard to follow them here");
+    expect(screen.queryByRole("button", { name: /^Watching\d+$/ })).toBeNull();
   });
 
   it("shows the watchlist count and toggles the filter when clicked", () => {
