@@ -37,11 +37,29 @@ export interface YieldSourceBoardGroup {
   yieldTypeLabel: string;
   dataSource: string;
   dataSourceLabel: string;
+  laneConfidenceTier: YieldSourceConfidenceTier | null;
   selectedCount: number;
   alternateCount: number;
   representedSourceCount: number;
   apy: YieldSourceBoardApySummary | null;
   sourceLabels: YieldSourceBoardLabelCount[];
+}
+
+export function inferLaneConfidenceTier(dataSource: string): YieldSourceConfidenceTier | null {
+  switch (dataSource) {
+    case "onchain":
+    case "rate-derived":
+      return "deterministic";
+    case "defillama":
+    case "protocol-api":
+      return "curated";
+    case "defillama-auto":
+      return "discovered";
+    case "price-derived":
+      return "fallback";
+    default:
+      return null;
+  }
 }
 
 export interface YieldSourceBoardModel {
@@ -268,6 +286,7 @@ export function buildYieldSourceBoardModel(
       yieldTypeLabel: group.yieldTypeLabel,
       dataSource: group.dataSource,
       dataSourceLabel: group.dataSourceLabel,
+      laneConfidenceTier: inferLaneConfidenceTier(group.dataSource),
       selectedCount: group.selectedCount,
       alternateCount: group.alternateCount,
       representedSourceCount: group.selectedCount + group.alternateCount,
