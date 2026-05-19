@@ -43,7 +43,7 @@ const safetySnapshot: YieldSafetySnapshotMeta = {
   kind: "ok",
   coverageRatio: 0.91,
   coveredCount: 356,
-  trackedCount: 391,
+  trackedCount: 392,
   reason: null,
 };
 

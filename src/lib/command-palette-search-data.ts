@@ -400,4 +400,5 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["ist-agoric", "Inter Stable Token", "IST"],
   ["usdh-hubble", "Hubble USDH", "USDH"],
   ["zkusd-goal3", "zkUSD Dollar", "zkUSD"],
+  ["gynusd-gyndore", "Gyndore", "gynUSD", "pre-launch"],
 ] as const satisfies readonly CommandPaletteStablecoinSearchItem[];
