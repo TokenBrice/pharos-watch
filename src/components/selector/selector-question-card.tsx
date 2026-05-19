@@ -31,8 +31,9 @@ export interface SelectorQuestionCardProps<TValue extends string> {
   preHighlight?: TValue;
   softConfirmation?: SelectorQuestionCardSoftConfirmation<TValue>;
   onBack?: () => void;
-  onNext: () => void;
+  onNext?: () => void;
   nextLabel?: string;
+  showActions?: boolean;
   /** Optional content rendered above the option grid (e.g. tooltips). */
   helper?: ReactNode;
 }
@@ -98,10 +99,12 @@ function SelectorQuestionCardInner<TValue extends string>(
     onBack,
     onNext,
     nextLabel,
+    showActions = true,
     helper,
   } = props;
 
   const isValid = isMulti(value) ? value.length > 0 : value != null;
+  const shouldShowActions = showActions && onNext != null;
 
   const showSoftConfirmation =
     softConfirmation != null && matchesSoftConfirmation(value, softConfirmation.triggerWhen);
@@ -218,29 +221,31 @@ function SelectorQuestionCardInner<TValue extends string>(
         ) : null}
       </fieldset>
 
-      <div className="flex items-center justify-between gap-3 pt-1">
-        {onBack ? (
+      {shouldShowActions ? (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 px-4 text-sm font-medium text-foreground hover:bg-muted/35 sm:min-h-9"
+            >
+              Back
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <button
             type="button"
-            onClick={onBack}
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 px-4 text-sm font-medium text-foreground hover:bg-muted/35 sm:min-h-9"
+            onClick={onNext}
+            disabled={!isValid}
+            className={cn(
+              "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-55 sm:min-h-9",
+            )}
           >
-            Back
+            {nextLabelFor({ step, totalSteps, custom: nextLabel })}
           </button>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!isValid}
-          className={cn(
-            "pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-55 sm:min-h-9",
-          )}
-        >
-          {nextLabelFor({ step, totalSteps, custom: nextLabel })}
-        </button>
-      </div>
+        </div>
+      ) : null}
     </section>
   );
 }

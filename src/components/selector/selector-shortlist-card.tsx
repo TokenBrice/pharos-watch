@@ -154,14 +154,14 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             {rank}
           </span>
           <span className="pharos-kicker">
-            {rank === 1 ? `Best fit for ${profileLabel}` : `Alternative for ${profileLabel}`}
+            {profileLabel} profile result
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <Badge variant="outline" className="border-frost-blue/45 bg-frost-blue/[0.08] text-[10px] font-semibold uppercase tracking-[0.12em] text-frost-blue">
             Beta
           </Badge>
-          <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground" aria-label="Filter output — not a recommendation">
+          <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground" aria-label="Filter output, not advice">
             Filter output
           </Badge>
         </div>
@@ -192,49 +192,71 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         </div>
       </div>
 
-      <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Evidence chips">
-        {chips.map((chip) => (
-          <li key={chip.text}>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[11px] font-medium",
-                chip.tone === "watch" && "border-amber-500/45 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200",
-              )}
-              aria-label={chip.ariaLabel}
-            >
-              {chip.text}
-            </Badge>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-3 space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          Evidence checked
+        </p>
+        <ul className="flex flex-wrap gap-1.5" aria-label="Profile-conditioned evidence">
+          {chips.map((chip) => (
+            <li key={chip.text}>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[11px] font-medium",
+                  chip.tone === "watch" && "border-amber-500/45 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200",
+                )}
+                aria-label={chip.ariaLabel}
+              >
+                {chip.text}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-foreground">
         {/* TODO(integration): engine should attach pre-rendered prose to each
           * recommendation: `whyText` (from `whyKeys[]` + templates) and `watchText`
           * (from `lowestSubDimension` + templates). The fallback below renders the
           * raw keys + dimension so the card never ships an empty block. */}
-        {"whyText" in rec && typeof rec.whyText === "string" && rec.whyText.length > 0 ? (
-          <p>{rec.whyText}</p>
-        ) : rec.whyKeys.length > 0 ? (
-          <p>Fits because: {rec.whyKeys.slice(0, 2).join(", ")}.</p>
-        ) : null}
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Why it ranked here
+          </p>
+          {"whyText" in rec && typeof rec.whyText === "string" && rec.whyText.length > 0 ? (
+            <p>{rec.whyText}</p>
+          ) : rec.whyKeys.length > 0 ? (
+            <p>Profile-conditioned signals: {rec.whyKeys.slice(0, 2).join(", ")}.</p>
+          ) : (
+            <p>This entry survived the profile filters and ranked under the current weight set.</p>
+          )}
+        </div>
         {"watchText" in rec && typeof rec.watchText === "string" && rec.watchText.length > 0 ? (
-          <p className="text-muted-foreground">
-            {rec.watchText}{" "}
-            <em className="text-xs">Historical readings; future behaviour may differ.</em>
-          </p>
+          <div className="space-y-1 text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+              What to watch
+            </p>
+            <p>
+              {rec.watchText}{" "}
+              <em className="text-xs">Historical readings; future behaviour may differ.</em>
+            </p>
+          </div>
         ) : (
-          <p className="text-muted-foreground">
-            What to watch — {rec.lowestSubDimension.key} scores {Math.round(rec.lowestSubDimension.score)}.{" "}
-            <em className="text-xs">Historical readings; future behaviour may differ.</em>
-          </p>
+          <div className="space-y-1 text-muted-foreground">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+              What to watch
+            </p>
+            <p>
+              {rec.lowestSubDimension.key} scores {Math.round(rec.lowestSubDimension.score)} under this profile.{" "}
+              <em className="text-xs">Historical readings; future behaviour may differ.</em>
+            </p>
+          </div>
         )}
       </div>
 
       {rec.profile === "yield" && rec.recommendedSource ? (
         <p className="mt-3 flex flex-wrap items-baseline gap-1.5 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Recommended source:</span>
+          <span className="font-semibold text-foreground">Yield rail:</span>
           <span>
             {rec.recommendedSource.protocol} on {rec.recommendedSource.chain} at{" "}
             {rec.recommendedSource.apy30d.toFixed(1)}%

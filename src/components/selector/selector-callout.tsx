@@ -12,14 +12,18 @@ import {
 } from "@/lib/browser-storage";
 import { cn } from "@/lib/utils";
 
-const CALLOUT_KEY = "pharos-selector-callout-v1";
+const CALLOUT_KEY = "pharos.selector.callout.v1";
+const LEGACY_CALLOUT_KEY = "pharos-selector-callout-v1";
 
 type CalloutState = "default" | "dismissed";
 
 function readCalloutState(): CalloutState {
   const storage = getWindowStorage("local");
   if (!storage) return "default";
-  return safeStorageGetItem(storage, CALLOUT_KEY) === "dismissed" ? "dismissed" : "default";
+  return safeStorageGetItem(storage, CALLOUT_KEY) === "dismissed" ||
+    safeStorageGetItem(storage, LEGACY_CALLOUT_KEY) === "dismissed"
+    ? "dismissed"
+    : "default";
 }
 
 function persistCalloutState(next: CalloutState): void {

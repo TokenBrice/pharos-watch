@@ -45,6 +45,12 @@ export const SELECTOR_VENUE_VALUES = [
 ] as const;
 export type SelectorVenue = (typeof SELECTOR_VENUE_VALUES)[number];
 
+export const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue[]> = {
+  treasury: ["custody", "some", "active"],
+  yield: ["lend", "dex", "wrap", "all"],
+  trading: ["cex", "perps", "spot", "all"],
+};
+
 export const SELECTOR_STEP_VALUES = ["1", "2", "3", "4", "5", "result"] as const;
 export type SelectorStepRaw = (typeof SELECTOR_STEP_VALUES)[number];
 export type SelectorStep = 1 | 2 | 3 | 4 | 5 | "result";
@@ -118,11 +124,14 @@ function decodeString(raw: string | null): string | null {
 
 export function decodeSelectorState(search: string | URLSearchParams): SelectorWizardState {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  const profile = decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES);
+  const decodedVenue = decodeEnumList(params.get("v"), SELECTOR_VENUE_VALUES);
+  const venue = profile ? pruneVenueForProfile(profile, decodedVenue) : [];
   return {
-    profile: decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES),
+    profile,
     horizon: decodeEnum(params.get("h"), SELECTOR_HORIZON_VALUES),
     depegTolerance: decodeEnum(params.get("d"), SELECTOR_DEPEG_VALUES),
-    venue: decodeEnumList(params.get("v"), SELECTOR_VENUE_VALUES),
+    venue,
     exitSpeed: decodeEnum(params.get("u"), SELECTOR_EXIT_VALUES),
     step: decodeStep(params.get("step")),
     sid: decodeString(params.get("sid")),
@@ -161,11 +170,26 @@ export function shouldSkipExitStep(
   return profile === "treasury" && horizon === "6mplus" && depeg === "zero";
 }
 
+function pruneVenueForProfile(
+  profile: SelectorProfile,
+  venue: readonly SelectorVenue[],
+): readonly SelectorVenue[] {
+  const allowed = SELECTOR_VENUES_BY_PROFILE[profile];
+  const filtered = venue.filter((value) => allowed.includes(value));
+  if (filtered.includes("all")) return ["all"];
+  if (profile === "treasury") return filtered.slice(0, 1);
+  return filtered;
+}
+
+function hasValidVenue(state: SelectorWizardState): boolean {
+  return state.profile != null && pruneVenueForProfile(state.profile, state.venue).length > 0;
+}
+
 export function highestValidStep(state: SelectorWizardState): SelectorStep {
   if (!state.profile) return 1;
   if (!state.horizon) return 2;
   if (!state.depegTolerance) return 3;
-  if (state.venue.length === 0) return 4;
+  if (!hasValidVenue(state)) return 4;
   if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
     return "result";
   }
@@ -179,6 +203,7 @@ export function highestValidStep(state: SelectorWizardState): SelectorStep {
 
 export type SelectorAction =
   | { type: "answer-profile"; value: SelectorProfile }
+  | { type: "set-horizon"; value: SelectorHorizon }
   | { type: "answer-horizon"; value: SelectorHorizon }
   | { type: "answer-depeg"; value: SelectorDepeg }
   // `set-venue` updates the venue selection without advancing the step;
@@ -196,32 +221,46 @@ export function transition(
   state: SelectorWizardState,
   action: SelectorAction,
 ): SelectorWizardState {
+  const withoutSnapshot = { ...state, sid: null, ev: null };
   switch (action.type) {
     case "answer-profile":
-      return { ...state, profile: action.value, step: 2 };
+      return {
+        ...withoutSnapshot,
+        profile: action.value,
+        horizon: null,
+        depegTolerance: null,
+        venue: [],
+        exitSpeed: null,
+        step: 2,
+      };
+    case "set-horizon":
+      return { ...withoutSnapshot, horizon: action.value };
     case "answer-horizon":
-      return { ...state, horizon: action.value, step: 3 };
+      return { ...withoutSnapshot, horizon: action.value, step: 3 };
     case "answer-depeg":
-      return { ...state, depegTolerance: action.value, step: 4 };
+      return { ...withoutSnapshot, depegTolerance: action.value, step: 4 };
     case "set-venue":
-      return { ...state, venue: action.value };
+      return {
+        ...withoutSnapshot,
+        venue: state.profile ? pruneVenueForProfile(state.profile, action.value) : [],
+      };
     case "answer-venue": {
-      const venue = action.value;
+      const venue = state.profile ? pruneVenueForProfile(state.profile, action.value) : [];
       if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
-        return { ...state, venue, exitSpeed: "any", step: "result" };
+        return { ...withoutSnapshot, venue, exitSpeed: "any", step: "result" };
       }
-      return { ...state, venue, step: 5 };
+      return { ...withoutSnapshot, venue, step: 5 };
     }
     case "answer-exit":
-      return { ...state, exitSpeed: action.value, step: "result" };
+      return { ...withoutSnapshot, exitSpeed: action.value, step: "result" };
     case "advance-to-result":
-      return { ...state, step: "result" };
+      return { ...withoutSnapshot, step: "result" };
     case "go-back":
       return { ...state, step: previousStep(state) };
     case "adjust":
-      return { ...state, step: 1 };
+      return { ...withoutSnapshot, step: 1 };
     case "relax": {
-      const next = { ...state };
+      const next = { ...withoutSnapshot };
       if (action.constraint === "depegTolerance" && state.depegTolerance === "zero") {
         next.depegTolerance = "tight";
       } else if (action.constraint === "depegTolerance" && state.depegTolerance === "tight") {
@@ -265,7 +304,7 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
     !state.profile ||
     !state.horizon ||
     !state.depegTolerance ||
-    state.venue.length === 0
+    !hasValidVenue(state)
   ) {
     return null;
   }
@@ -382,12 +421,13 @@ export function useSelectorState(): UseSelectorStateResult {
     (action: SelectorAction) => {
       const next = transition(state, action);
       const isRelax = action.type === "relax";
+      const isBack = action.type === "go-back";
       const updater = (params: URLSearchParams) => {
         for (const key of SELECTOR_URL_KEYS) params.delete(key);
         const fresh = encodeSelectorState(next);
         for (const [k, v] of fresh) params.set(k, v);
       };
-      if (isRelax) {
+      if (isRelax || isBack) {
         replaceParams(updater);
       } else {
         pushSearchParams(updater);

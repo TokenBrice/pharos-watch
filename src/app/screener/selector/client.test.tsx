@@ -129,6 +129,10 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-hydrated", () => ({
+  useHydrated: () => true,
+}));
+
 vi.mock("@/hooks/api-hooks", () => {
   const stub = () => ({ data: { coins: [] }, dataUpdatedAt: 1, error: null });
   return {
@@ -157,6 +161,7 @@ vi.mock("@/hooks/api-hooks", () => {
     useDexLiquidity: () => ({ data: {}, dataUpdatedAt: 1, error: null }),
     useYieldRankings: () => ({ data: { rankings: [] }, dataUpdatedAt: 1, error: null }),
     useBluechipRatings: () => ({ data: {}, dataUpdatedAt: 1, error: null }),
+    useRedemptionBackstops: () => ({ data: { coins: {} }, dataUpdatedAt: 1, error: null }),
     _stub: stub,
   };
 });
@@ -248,7 +253,7 @@ describe("SelectorClient — state machine", () => {
     // Shortlist heading + first card.
     expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
     expect(screen.getByText("USDC")).toBeTruthy();
-    expect(screen.getByText(/Best fit for Treasury/i)).toBeTruthy();
+    expect(screen.getByText(/Treasury profile result/i)).toBeTruthy();
   });
 });
 
@@ -268,6 +273,28 @@ describe("SelectorClient — empty state", () => {
 });
 
 describe("SelectorClient — snapshot recall", () => {
+  it("renders sid-only share links from the frozen snapshot output", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockSelectorOutput(),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
+    expect(screen.getByText("USDC")).toBeTruthy();
+    expect(screen.getByText(/Showing snapshot/i)).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/selector-snapshot/00112233445566778899aabbccddeeff",
+      expect.objectContaining({ method: "GET" }),
+    );
+
+    vi.unstubAllGlobals();
+  });
+
   it("shows a snapshot-miss banner when GET 404s and falls back to live engine", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
@@ -288,6 +315,28 @@ describe("SelectorClient — snapshot recall", () => {
     expect(
       await screen.findByText(/Original snapshot no longer cached/i),
     ).toBeTruthy();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("clears the snapshot id when adjusting a frozen result", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockSelectorOutput(),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    const adjust = await screen.findByText(/Adjust answers/i);
+    fireEvent.click(adjust);
+
+    expect(window.location.search).not.toContain("sid=");
+    expect(
+      screen.getAllByText(/What are you using this stablecoin for/i).length,
+    ).toBeGreaterThan(0);
 
     vi.unstubAllGlobals();
   });

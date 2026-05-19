@@ -99,7 +99,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         options={horizonOptions}
         value={state.horizon}
         onChange={(v) => onSetHorizon(v as SelectorHorizon)}
-        onNext={() => {}}
+        showActions={false}
       />
 
       <SelectorQuestionCard<SelectorDepeg>
@@ -113,7 +113,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         value={state.depegTolerance}
         onChange={(v) => onSetDepeg(v as SelectorDepeg)}
         preHighlight={preHighlightDepeg}
-        onNext={() => {}}
+        showActions={false}
       />
 
       <SelectorQuestionCard<SelectorVenue>
@@ -127,7 +127,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         options={venueOptions}
         value={venueValue}
         onChange={(v) => onSetVenue(Array.isArray(v) ? v : [v as SelectorVenue])}
-        onNext={() => {}}
+        showActions={false}
       />
 
       {!skipExit ? (
@@ -140,7 +140,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
           options={exitOptions}
           value={state.exitSpeed}
           onChange={(v) => onSetExit(v as SelectorExit)}
-          onNext={() => {}}
+          showActions={false}
         />
       ) : null}
 

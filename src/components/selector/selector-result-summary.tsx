@@ -83,7 +83,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
 
         <h2 id="selector-summary" className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-          {universe.active.toLocaleString()} tracked → {universe.surviving.toLocaleString()} filtered → {shortlistCount} picks
+          {universe.active.toLocaleString()} tracked → {universe.surviving.toLocaleString()} filtered → {shortlistCount} shortlist entries
         </h2>
 
         <p className="pharos-page-title text-base font-extrabold leading-snug tracking-tight text-foreground sm:text-lg">

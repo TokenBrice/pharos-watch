@@ -27,19 +27,17 @@ import {
   useDexLiquidity,
   useYieldRankings,
   useBluechipRatings,
+  useRedemptionBackstops,
 } from "@/hooks/api-hooks";
-import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   buildScreenerUrl,
-  canonicalizeForDatasetHash,
   getTemplate,
   runSelector,
   type SelectorInput,
   type SelectorOutput,
-  type MergedRow,
   type SelectorRecommendation,
 } from "@shared/lib/selector";
+import { buildSelectorRows } from "./selector-data-adapter";
 import {
   SelectorQuestionCard,
   type SelectorOption,
@@ -139,6 +137,7 @@ export function SelectorClient() {
 
   const selector = useSelector(input, state.sid);
   const output = "output" in selector ? selector.output : null;
+  const renderResult = state.step === "result" || state.sid != null;
 
   // Programmatic focus to the active legend on step change.
   useEffect(() => {
@@ -182,7 +181,7 @@ export function SelectorClient() {
       throw new Error("Share link service unavailable");
     }
     const payload = (await response.json()) as { sid: string; ev?: string };
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
     params.set("sid", payload.sid);
     if (payload.ev) params.set("ev", payload.ev);
     const shareUrl = `${window.location.origin}/screener/selector/?${params.toString()}`;
@@ -199,6 +198,15 @@ export function SelectorClient() {
   // the engine output's staleness is not yet populated.
   const tradingStaleExceeded = false;
 
+  if (!hydrated) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
   // Render
   return (
     <div className="space-y-6">
@@ -211,7 +219,18 @@ export function SelectorClient() {
       />
 
       {/* Wizard or result */}
-      {state.step === 1 ? (
+      {renderResult ? (
+        <ResultPane
+          selectorResult={selector}
+          input={input}
+          stateProfile={state.profile}
+          isMobile={hydrated && isMobile}
+          onAdjust={handleAdjust}
+          onRelax={(key) => dispatch({ type: "relax", constraint: key })}
+          onCopyShareLink={handleCopyShareLink}
+          tradingStaleExceeded={tradingStaleExceeded}
+        />
+      ) : state.step === 1 ? (
         <SelectorQuestionCard<SelectorProfile>
           ref={legendRef as React.Ref<HTMLLegendElement>}
           questionId="q1"
@@ -263,7 +282,7 @@ export function SelectorClient() {
           legend="How long do you plan to hold this position?"
           options={HORIZON_OPTIONS}
           value={state.horizon}
-          onChange={(v) => dispatch({ type: "answer-horizon", value: v as SelectorHorizon })}
+          onChange={(v) => dispatch({ type: "set-horizon", value: v as SelectorHorizon })}
           softConfirmation={
             softConfirmationForHorizon(state.profile, state.horizon)
               ? {
@@ -345,17 +364,6 @@ export function SelectorClient() {
             if (state.exitSpeed) dispatch({ type: "answer-exit", value: state.exitSpeed });
           }}
         />
-      ) : state.step === "result" ? (
-        <ResultPane
-          selectorResult={selector}
-          input={input}
-          stateProfile={state.profile}
-          isMobile={hydrated && isMobile}
-          onAdjust={handleAdjust}
-          onRelax={(key) => dispatch({ type: "relax", constraint: key })}
-          onCopyShareLink={handleCopyShareLink}
-          tradingStaleExceeded={tradingStaleExceeded}
-        />
       ) : null}
     </div>
   );
@@ -408,6 +416,7 @@ function ResultPane({
 
   const output = selectorResult.output;
   const profile = (output?.profile ?? stateProfile) as SelectorProfile;
+  const effectiveInput = input ?? output.input;
   const screenerHandoffHref = buildScreenerHref(output);
   const snapshotBanner =
     selectorResult.status === "snapshot-found" ? (
@@ -424,7 +433,7 @@ function ResultPane({
         <SelectorEmptyState
           profile={profile}
           closestSurvivors={buildClosestSurvivorsFromOutput(output)}
-          relaxableConstraints={defaultRelaxableConstraintsFor(profile, input)}
+          relaxableConstraints={defaultRelaxableConstraintsFor(profile, effectiveInput)}
           onRelax={onRelax}
           screenerHandoffHref={screenerHandoffHref}
         />
@@ -437,7 +446,7 @@ function ResultPane({
       {/* Mobile reorders: profile chip + headline (in summary) first; rest below. */}
       <SelectorResultSummary
         profile={profile}
-        input={input!}
+        input={effectiveInput}
         universe={output.universe}
         shortlistCount={output.recommended.length}
         screenerHandoffHref={screenerHandoffHref}
@@ -650,17 +659,25 @@ export type UseSelectorResult =
   | { status: "snapshot-miss"; output: SelectorOutput; bannerKey: "snapshot-miss" }
   | { status: "error"; reason: string };
 
-async function defaultFetchSnapshot(sid: string): Promise<SelectorOutput | null> {
+type SnapshotFetchResult =
+  | { kind: "found"; output: SelectorOutput }
+  | { kind: "missing" }
+  | { kind: "error"; reason: string };
+
+async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
   try {
     const response = await fetch(`/selector-snapshot/${encodeURIComponent(sid)}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
-    if (response.status === 404) return null;
+    if (response.status === 404) return { kind: "missing" };
     if (!response.ok) throw new Error(`Snapshot fetch failed: ${response.status}`);
-    return (await response.json()) as SelectorOutput;
-  } catch {
-    return null;
+    return { kind: "found", output: (await response.json()) as SelectorOutput };
+  } catch (error) {
+    return {
+      kind: "error",
+      reason: error instanceof Error ? error.message : "snapshot-fetch-failed",
+    };
   }
 }
 
@@ -675,12 +692,14 @@ export function useSelector(
   const dexLiquidity = useDexLiquidity();
   const yieldRankings = useYieldRankings();
   const bluechipRatings = useBluechipRatings();
+  const redemptionBackstops = useRedemptionBackstops();
 
   const [snapshotState, setSnapshotState] = useState<
     | { kind: "idle" }
     | { kind: "loading"; sid: string }
     | { kind: "found"; sid: string; output: SelectorOutput }
     | { kind: "miss"; sid: string }
+    | { kind: "error"; sid: string; reason: string }
   >(sid ? { kind: "loading", sid } : { kind: "idle" });
 
   useEffect(() => {
@@ -690,12 +709,14 @@ export function useSelector(
     }
     setSnapshotState({ kind: "loading", sid });
     let cancelled = false;
-    void defaultFetchSnapshot(sid).then((output) => {
+    void defaultFetchSnapshot(sid).then((result) => {
       if (cancelled) return;
-      if (output) {
-        setSnapshotState({ kind: "found", sid, output });
-      } else {
+      if (result.kind === "found") {
+        setSnapshotState({ kind: "found", sid, output: result.output });
+      } else if (result.kind === "missing") {
         setSnapshotState({ kind: "miss", sid });
+      } else {
+        setSnapshotState({ kind: "error", sid, reason: result.reason });
       }
     });
     return () => {
@@ -704,7 +725,14 @@ export function useSelector(
   }, [sid]);
 
   const datasetReady =
-    stablecoins.data?.peggedAssets != null && reportCards.data?.cards != null;
+    stablecoins.data?.peggedAssets != null &&
+    reportCards.data?.cards != null &&
+    queryDataOrErrorSettled(pegSummary) &&
+    queryDataOrErrorSettled(stressSignals) &&
+    queryDataOrErrorSettled(dexLiquidity) &&
+    queryDataOrErrorSettled(bluechipRatings) &&
+    queryDataOrErrorSettled(redemptionBackstops) &&
+    (input?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
   const rowsByKey = useMemo(() => {
     if (!datasetReady) return null;
@@ -716,6 +744,7 @@ export function useSelector(
       dexData: dexLiquidity.data ?? null,
       yieldData: yieldRankings.data ?? null,
       bluechipData: bluechipRatings.data ?? null,
+      redemptionData: redemptionBackstops.data ?? null,
       now: Date.now(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -728,6 +757,7 @@ export function useSelector(
     dexLiquidity.dataUpdatedAt,
     yieldRankings.dataUpdatedAt,
     bluechipRatings.dataUpdatedAt,
+    redemptionBackstops.dataUpdatedAt,
   ]);
 
   const engineOutput = useMemo<SelectorOutput | null>(() => {
@@ -752,7 +782,11 @@ export function useSelector(
     if (snapshotState.kind === "found") {
       return { status: "snapshot-found", output: snapshotState.output, isFrozen: true };
     }
+    if (snapshotState.kind === "error") {
+      return { status: "error", reason: snapshotState.reason };
+    }
     if (snapshotState.kind === "miss") {
+      if (!input) return { status: "error", reason: "snapshot-not-found" };
       if (!engineOutput) return { status: "snapshot-loading" };
       return { status: "snapshot-miss", output: engineOutput, bannerKey: "snapshot-miss" };
     }
@@ -765,222 +799,8 @@ export function useSelector(
   return { status: "ready", output: engineOutput };
 }
 
-// ---------------------------------------------------------------------------
-// buildSelectorRows
-// Hook responses do not yet expose every field the engine consumes (depeg
-// history, yield variance/source-switch, peg deviation bps, per-input
-// staleness). Those default to null/empty and route through the engine's
-// Penalty + redistribute / coverage-too-thin paths.
-// ---------------------------------------------------------------------------
-
-interface BuildSelectorRowsArgs {
-  stablecoinsData: { peggedAssets?: unknown[] } | null;
-  pegData: { coins?: Array<{ id: string; pegScore: number | null }> } | null;
-  reportData: {
-    cards?: Array<{
-      id: string;
-      overallGrade: string | null;
-      overallScore: number | null;
-      dimensions: {
-        pegStability: { score: number | null };
-        liquidity: { score: number | null };
-        resilience: { score: number | null };
-        decentralization: { score: number | null };
-        dependencyRisk: { score: number | null };
-      };
-    }>;
-    methodology?: { version?: string };
-  } | null;
-  stressData: { signals?: Record<string, { score: number | null; activeDepeg?: boolean }> } | null;
-  dexData: Record<string, {
-    liquidityScore?: number | null;
-    effectiveTvlUsd?: number | null;
-    concentrationHhi?: number | null;
-    chainTvl?: Record<string, number>;
-    effectiveExitScore?: number | null;
-  }> | null;
-  yieldData: { rankings?: Array<{
-    id: string;
-    pharosYieldScore: number | null;
-    apy30d: number | null;
-    source?: { protocol: string; chain: string; sourceRiskTier?: "low" | "mid" | "high" };
-  }> } | null;
-  bluechipData: Record<string, { grade?: string | null }> | null;
-  now: number;
-}
-
-interface BuildSelectorRowsResult {
-  rows: ReadonlyMap<string, MergedRow>;
-  timestamp: number;
-  datasetHash: string;
-  methodologyVersions: SelectorOutput["methodologyVersions"];
-}
-
-function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRowsResult {
-  const rows = new Map<string, MergedRow>();
-  const pegById = new Map<string, number | null>();
-  for (const coin of args.pegData?.coins ?? []) {
-    pegById.set(coin.id, coin.pegScore);
-  }
-  const dewsById = new Map<string, { score: number | null; activeDepeg: boolean }>();
-  for (const [id, entry] of Object.entries(args.stressData?.signals ?? {})) {
-    dewsById.set(id, { score: entry.score ?? null, activeDepeg: entry.activeDepeg ?? false });
-  }
-  type ReportCard = NonNullable<NonNullable<BuildSelectorRowsArgs["reportData"]>["cards"]>[number];
-  const reportById = new Map<string, ReportCard>();
-  for (const card of args.reportData?.cards ?? []) {
-    reportById.set(card.id, card);
-  }
-  type YieldEntry = NonNullable<NonNullable<BuildSelectorRowsArgs["yieldData"]>["rankings"]>[number];
-  const yieldById = new Map<string, YieldEntry>();
-  for (const ranking of args.yieldData?.rankings ?? []) {
-    yieldById.set(ranking.id, ranking);
-  }
-
-  const supplyById = new Map<string, number>();
-  for (const asset of args.stablecoinsData?.peggedAssets ?? []) {
-    const a = asset as { id?: string };
-    if (a.id) {
-      supplyById.set(a.id, getCirculatingRaw(asset as Parameters<typeof getCirculatingRaw>[0]));
-    }
-  }
-
-  for (const meta of CLIENT_TRACKED_STABLECOINS) {
-    const id = meta.id;
-    const lifecycle = (meta.status ?? "active") as MergedRow["lifecycle"];
-    if (lifecycle !== "active") continue;
-    if (meta.flags.pegCurrency !== "USD") continue;
-
-    const safety = reportById.get(id);
-    const dews = dewsById.get(id);
-    const dex = args.dexData?.[id];
-    const yieldEntry = yieldById.get(id);
-    const bluechip = args.bluechipData?.[id];
-
-    const row: MergedRow = {
-      id,
-      symbol: meta.symbol,
-      name: meta.name,
-      protocolSlug: null,
-      variantOf: meta.variantOf ?? null,
-      isYieldBearing: Boolean(meta.flags.yieldBearing),
-      pegCurrency: meta.flags.pegCurrency,
-      lifecycle,
-      governance: meta.flags.governance,
-      canBeBlacklisted: meta.canBeBlacklisted ?? null,
-      mechanismArchetype: meta.mechanismArchetype ?? null,
-
-      supplyUsd: supplyById.get(id) ?? 0,
-
-      pegScore: pegById.get(id) ?? null,
-      pegStabilityScore: safety?.dimensions.pegStability.score ?? null,
-      activeDepeg: dews?.activeDepeg ?? false,
-      // currentDeviationBps stays null → engine treats as data-unavailable.
-      // depegEventCount + lastEventAt come from depeg-events ingestion which
-      // the slim client hooks do not yet expose; documented limitation, see
-      // §11 of the implementation plan ("MergedRow half-null" residual gap).
-      currentDeviationBps: null,
-      depegEventCount: 0,
-      lastEventAt: null,
-
-      dewsScore: dews?.score ?? null,
-      safetyGrade: (safety?.overallGrade ?? null) as MergedRow["safetyGrade"],
-      safetyScore: safety?.overallScore ?? null,
-      safetyResilienceScore: safety?.dimensions.resilience.score ?? null,
-      safetyDependencyRiskScore: safety?.dimensions.dependencyRisk.score ?? null,
-      safetyDecentralizationScore: safety?.dimensions.decentralization.score ?? null,
-      safetyLiquidityScore: safety?.dimensions.liquidity.score ?? null,
-      collateralQuality: null,
-      custodyModel: null,
-      bluechipGrade: (bluechip?.grade ?? null) as MergedRow["bluechipGrade"],
-
-      liquidityScore: dex?.liquidityScore ?? null,
-      effectiveTvlUsd: dex?.effectiveTvlUsd ?? null,
-      concentrationHhi: dex?.concentrationHhi ?? null,
-      chainTvl: dex?.chainTvl ?? {},
-      effectiveExitScore: dex?.effectiveExitScore ?? null,
-
-      pharosYieldScore: yieldEntry?.pharosYieldScore ?? null,
-      apy30d: yieldEntry?.apy30d ?? null,
-      apyVariance30d: null,
-      benchmarkRate: null,
-      sourceRiskScore: null,
-      venueRiskTier: yieldEntry?.source?.sourceRiskTier ?? null,
-      warningSignals: [],
-      deploymentPlace: null,
-      sourceSwitch: false,
-      yieldProtocolSlug: yieldEntry?.source?.protocol ?? null,
-      yieldVenueChain: yieldEntry?.source?.chain ?? null,
-      yieldHistoryDays: 0,
-      yieldFreshness: null,
-
-      trackingSpanDays: 0,
-      isRecentListing: false,
-      pegSummaryAgeSec: null,
-      dexTvlAgeSec: null,
-      dewsAgeSec: null,
-    };
-    rows.set(id, row);
-  }
-
-  // Content-addressed dataset hash: SHA-256-ish digest over the canonical
-  // serialization of the merged-universe content fields (id + scores + grades).
-  // Two clients viewing the same producer snapshot must produce the same hash;
-  // we therefore exclude any `dataUpdatedAt` / `ageSeconds` style fields.
-  const datasetContent = Array.from(rows.entries())
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([id, row]) => ({
-      id,
-      safetyGrade: row.safetyGrade,
-      overallScore: row.safetyScore,
-      pegScore: row.pegScore,
-      dewsScore: row.dewsScore,
-      liquidityScore: row.liquidityScore,
-      safetyPegStabilityScore: row.pegStabilityScore,
-      safetyResilienceScore: row.safetyResilienceScore,
-      safetyDependencyRiskScore: row.safetyDependencyRiskScore,
-      safetyDecentralizationScore: row.safetyDecentralizationScore,
-      safetyLiquidityScore: row.safetyLiquidityScore,
-      pharosYieldScore: row.pharosYieldScore,
-      apy30d: row.apy30d,
-      bluechipGrade: row.bluechipGrade,
-      supplyUsd: row.supplyUsd,
-    }));
-  const datasetHash = djb2Hex(canonicalizeForDatasetHash(datasetContent));
-
-  // Methodology versions: read what's exposed on the response envelope. Only
-  // `/api/report-cards` carries it on the typed response today (per Step-4
-  // adversarial review residual gap); others fall back to `"unversioned"`
-  // until the M0 worker precursors are completed for those endpoints.
-  const safetyScoreVersion = args.reportData?.methodology?.version ?? "unversioned";
-
-  return {
-    rows,
-    timestamp: args.now,
-    datasetHash,
-    methodologyVersions: {
-      safetyScore: safetyScoreVersion,
-      pegScoreAndDews: "unversioned",
-      yieldIntelligence: "unversioned",
-      bluechipAlignment: "unversioned",
-      exclusionFilters: "selector-v1.0",
-    },
-  };
-}
-
-/**
- * Stable 32-bit djb2 hash → 8-char hex. Pure CPU, no async, no Web Crypto;
- * used for the dataset content hash that needs to be byte-identical across
- * clients. Collision odds for our universe (~270 coins × dataset variants)
- * are immaterial because the hash is a memoization key, not a cryptographic
- * primitive. The snapshot `sid` uses real SHA-256 server-side.
- */
-function djb2Hex(input: string): string {
-  let hash = 5381;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash * 33) ^ input.charCodeAt(i);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+function queryDataOrErrorSettled(query: { data?: unknown; error?: unknown }): boolean {
+  return query.data !== undefined || query.error != null;
 }
 
 // Re-export to satisfy the import surface used by `client.test.tsx`.

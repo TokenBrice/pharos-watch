@@ -5,7 +5,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { SelectorCallout } from "@/components/selector/selector-callout";
 
-const CALLOUT_KEY = "pharos-selector-callout-v1";
+const CALLOUT_KEY = "pharos.selector.callout.v1";
+const LEGACY_CALLOUT_KEY = "pharos-selector-callout-v1";
 
 beforeEach(() => {
   // jsdom: each test starts with a clean localStorage and viewport.
@@ -47,6 +48,12 @@ describe("SelectorCallout", () => {
     fireEvent.click(restore);
     expect(screen.queryByText(/Selector hidden/i)).toBeNull();
     expect(window.localStorage.getItem(CALLOUT_KEY)).toBe("default");
+  });
+
+  it("respects the legacy hyphenated dismissal key", () => {
+    window.localStorage.setItem(LEGACY_CALLOUT_KEY, "dismissed");
+    render(<SelectorCallout />);
+    expect(screen.getByText(/Selector hidden/i)).toBeTruthy();
   });
 
   it("dismissing the default desktop card persists dismissed state", () => {
