@@ -39,8 +39,8 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "acd90c1c36c882189df84a13662c31143f90a3f2ff55045710d48414cd556753",
-      "textLength": 29807
+      "textHash": "22cbcd923428f6fc7a3b55abaad6fca1f4f711c5b4c21e366c6f6feba9087a87",
+      "textLength": 29820
     },
     {
       "filename": "liquidity-score-v5.6.pdf",
@@ -93,14 +93,14 @@
       "textLength": 6643
     },
     {
-      "filename": "yield-v8.15.pdf",
+      "filename": "yield-v8.16.pdf",
       "key": "yield",
       "path": "/methodology/yield-changelog/",
       "title": "Yield Intelligence Changelog",
-      "version": "8.15",
-      "urn": "urn:pharos:methodology:yield@v8.15",
-      "textHash": "3019236a3d11df7bf30e89b2524a0720710bdb13ee7790ddb07059abe0e5e634",
-      "textLength": 49396
+      "version": "8.16",
+      "urn": "urn:pharos:methodology:yield@v8.16",
+      "textHash": "e8e086b1a343d2b399ef4a00b3da6c8b370f2a0fe6d7d254f7591e2779194152",
+      "textLength": 49327
     }
   ]
 }
