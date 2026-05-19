@@ -225,7 +225,7 @@ These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). Th
 | Endpoint | Description |
 | --- | --- |
 | `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, 5-year TTL. See [Screener Selector Page](./screener-selector-page.md). |
-| `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored `SelectorOutput` or `404`. Cached at the edge for 24h, immutable. |
+| `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored `SelectorOutput` or `404`. Origin-gated and `private, no-store` so public shared caches cannot bypass the gate. |
 
 ---
 

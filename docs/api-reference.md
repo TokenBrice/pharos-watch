@@ -3316,17 +3316,26 @@ Returns a previously stored Stablecoin Selector output JSON identified by conten
   "engineVersion": "selector-v1.0",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
-  "input": { "profile": "treasury", "horizon": "6mplus", "depegTolerance": "zero" },
+  "input": { "profile": "treasury", "pegCurrency": "USD", "horizon": "6mplus", "depegTolerance": "zero" },
+  "universe": { "active": 392, "surviving": 12 },
   "recommended": [ /* ranked shortlist entries */ ],
   "lowerRanked": [ /* lower-ranked entries */ ],
-  "coverageWarnings": { "sparse": false, "uneven": false, "skippedForCoverage": [] },
+  "coverageWarnings": {
+    "skippedForCoverageCount": 0,
+    "sparse": false,
+    "uneven": false,
+    "skippedForCoverage": [],
+    "newListingCount": 0,
+    "redistributionCount": 0
+  },
+  "lowConfidence": false,
   "methodologyVersions": { "safetyScore": "v7.25" }
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. Readers should treat unknown fields permissively; `engineVersion` carries the bump on weight or exclusion-rule changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, coverage warning counts, and basic recommendation/lower-ranked row fields). Readers should treat unknown fields permissively; `engineVersion` carries the bump on weight or exclusion-rule changes.
 
-**Cache:** `public, max-age=300, s-maxage=86400, immutable` — snapshots are immutable by construction.
+**Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
 **Failure modes:**
 
@@ -3345,13 +3354,13 @@ Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempo
 
 **Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap.
 
-**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with freshness-derived fields stripped (top-level `timestamp` / `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with freshness-derived fields stripped (top-level `timestamp` / `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
 
 **Failure modes:**
 
 | Status | When |
 | --- | --- |
-| 400 | Body parse error, unsupported JSON, or missing required top-level fields. |
+| 400 | Body parse error, unsupported JSON, missing required replay fields, or malformed recommendation / coverage-warning basics. |
 | 404 | Origin disallowed. |
 | 405 | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment. |
 | 413 | Payload exceeds 100 KB defensive cap. |

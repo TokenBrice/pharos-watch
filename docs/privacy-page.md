@@ -54,12 +54,11 @@ Portfolio holdings are explicitly described as browser-local only, which matches
 
 ### Stablecoin Selector storage
 
-The Stablecoin Selector at `/screener/selector/` writes two `localStorage` keys on the local browser:
+The Stablecoin Selector at `/screener/selector/` writes one `localStorage` key on the local browser:
 
 - `pharos.selector.callout.v1` — Screener-page callout dismissal state.
-- `pharos.selector.lastRun.v1` — last selector run inputs plus `sid` and a `ranAt` timestamp, used to surface the "Reopen last run" callout state.
 
-Both are functional storage. Neither contains an IP address, a user identifier, or a cross-site beacon; both are scoped to the browser and survive only until the user clears site data. If a user clears one key manually and the other key drifts (e.g. `callout="has-run"` while `lastRun` is missing), the Selector downgrades to its default state.
+This is functional storage. It does not contain an IP address, a user identifier, or a cross-site beacon; it is scoped to the browser and survives only until the user clears site data. No last-run recovery key ships in the current Selector build.
 
 Snapshot share links (`/screener/selector/?sid={sid}`) reference a server-side KV-backed JSON payload that captures the selector output that was generated. The payload contains the form answers and the resulting shortlist; it does not contain an IP, a browser fingerprint, or any other identifier. Snapshot identifiers are **content-addressed** — two users who run the Selector with identical answers against an identical dataset produce the same identifier. The store is a per-Pages KV namespace (`SELECTOR_SNAPSHOTS`) with a 5-year retention TTL, sized to meet record-keeping minima for adjacent legal frameworks (FINRA 4511, MiCA Art. 66, NYDFS Part 200). Because no personal data is stored, there is no right-to-erasure action a user can take on a specific snapshot.
 

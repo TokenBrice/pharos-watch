@@ -92,26 +92,136 @@ function hasSnapshotSegments(params: SelectorSnapshotContext["params"]): boolean
 }
 
 /**
- * Lightweight shape check on the incoming POST payload. The engine package owns full validation;
- * this proxy-thin function asserts only the top-level structure so that obvious garbage cannot
- * reach KV. Tamper evidence comes from the sid recomputation rather than schema enforcement.
+ * Local snapshot contract checks for the fields the selector frontend reads
+ * when replaying a frozen KV value. The engine owns the full schema; this
+ * Pages Function keeps a deliberately small runtime guard so obvious partial
+ * or stale shapes cannot be persisted without importing frontend code.
  */
-function isSelectorOutputShape(value: unknown): value is Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const candidate = value as Record<string, unknown>;
+const SELECTOR_PROFILES = new Set(["treasury", "yield", "trading"]);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isSelectorInputShape(value: unknown, profile: string): boolean {
+  if (!isPlainObject(value)) return false;
   return (
-    typeof candidate.profile === "string"
-    && typeof candidate.engineVersion === "string"
-    && typeof candidate.datasetHash === "string"
-    && typeof candidate.timestamp === "number"
+    value.profile === profile
+    && isNonEmptyString(value.pegCurrency)
+    && isNonEmptyString(value.horizon)
+    && isNonEmptyString(value.depegTolerance)
+    && isNonEmptyString(value.composability)
+    && isNonEmptyString(value.exitSpeed)
+  );
+}
+
+function isUniverseShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return isNonNegativeInteger(value.active) && isNonNegativeInteger(value.surviving);
+}
+
+function isSkippedCoinShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    isNonEmptyString(value.id)
+    && isNonEmptyString(value.symbol)
+    && isStringArray(value.missingSignals)
+  );
+}
+
+function isCoverageWarningsShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    isNonNegativeInteger(value.skippedForCoverageCount)
+    && Array.isArray(value.skippedForCoverage)
+    && value.skippedForCoverage.every(isSkippedCoinShape)
+    && typeof value.sparse === "boolean"
+    && typeof value.uneven === "boolean"
+    && isNonNegativeInteger(value.newListingCount)
+    && isNonNegativeInteger(value.redistributionCount)
+  );
+}
+
+function isRecommendationShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    SELECTOR_PROFILES.has(String(value.profile))
+    && isNonEmptyString(value.id)
+    && isNonEmptyString(value.symbol)
+    && isNonEmptyString(value.name)
+    && Number.isInteger(value.rank)
+    && (value.rank as number) >= 1
+    && (value.rank as number) <= 3
+    && isFiniteNumber(value.score)
+    && isFiniteNumber(value.confidence)
+    && Array.isArray(value.components)
+    && isStringArray(value.whyKeys)
+    && isPlainObject(value.lowestSubDimension)
+    && isPlainObject(value.chainHints)
+    && typeof value.isRecentListing === "boolean"
+    && typeof value.safetyGrade === "string"
+    && isFiniteNumber(value.supplyUsd)
+    && value.isBeta === true
+    && Object.prototype.hasOwnProperty.call(value, "recommendedSource")
+    && Object.prototype.hasOwnProperty.call(value, "perInputStaleness")
+  );
+}
+
+function isLowerRankedShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    isNonEmptyString(value.id)
+    && isNonEmptyString(value.symbol)
+    && isNonEmptyString(value.name)
+    && (value.slot === "A" || value.slot === "B")
+    && isNonEmptyString(value.reasonKey)
+    && (value.failedComponent === null || typeof value.failedComponent === "string")
+    && (value.hypotheticalScore === null || isFiniteNumber(value.hypotheticalScore))
+  );
+}
+
+function isMethodologyVersionsShape(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return Object.values(value).every(isNonEmptyString);
+}
+
+function isSelectorOutputShape(value: unknown): value is Record<string, unknown> {
+  if (!isPlainObject(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (!isNonEmptyString(candidate.profile) || !SELECTOR_PROFILES.has(candidate.profile)) {
+    return false;
+  }
+  return (
+    isNonEmptyString(candidate.engineVersion)
+    && isNonEmptyString(candidate.datasetHash)
+    && isFiniteNumber(candidate.timestamp)
+    && isSelectorInputShape(candidate.input, candidate.profile)
+    && isUniverseShape(candidate.universe)
     && Array.isArray(candidate.recommended)
+    && candidate.recommended.length <= 3
+    && candidate.recommended.every(isRecommendationShape)
     && Array.isArray(candidate.lowerRanked)
-    && candidate.input !== null
-    && typeof candidate.input === "object"
-    && candidate.coverageWarnings !== null
-    && typeof candidate.coverageWarnings === "object"
-    && candidate.methodologyVersions !== null
-    && typeof candidate.methodologyVersions === "object"
+    && candidate.lowerRanked.length <= 2
+    && candidate.lowerRanked.every(isLowerRankedShape)
+    && isCoverageWarningsShape(candidate.coverageWarnings)
+    && typeof candidate.lowConfidence === "boolean"
+    && isMethodologyVersionsShape(candidate.methodologyVersions)
   );
 }
 
@@ -243,11 +353,9 @@ async function handleGet(context: SelectorSnapshotContext, sid: string): Promise
     status: 200,
     headers: {
       ...STANDARD_RESPONSE_HEADERS,
-      // GET is cache-friendly (snapshots are content-addressed; same sid →
-      // same content). Drop `immutable` since Cloudflare's CDN respects
-      // s-maxage just fine without it, and `immutable` plus shared caches
-      // create awkward debugging when KV is purged.
-      "Cache-Control": "public, max-age=300, s-maxage=86400",
+      // The endpoint is origin-gated via Origin/Referer. Do not make GET
+      // responses public-cacheable, or a shared cache could bypass that gate.
+      "Cache-Control": "private, no-store",
     },
   });
 }

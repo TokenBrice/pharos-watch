@@ -9,6 +9,9 @@ export const metadata = buildPageMetadata({
   title: "Stablecoin Selector — Match a Profile to a Shortlist",
   description,
   canonical: "/screener/selector/",
+  ogImage: "/og-selector-default.png",
+  ogWidth: 1200,
+  ogHeight: 630,
   robots: {
     index: false,
     follow: true,

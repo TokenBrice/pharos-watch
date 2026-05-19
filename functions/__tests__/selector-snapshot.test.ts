@@ -54,30 +54,74 @@ function makeEnv(overrides: MakeEnvOverrides = {}) {
   };
 }
 
+function buildRecommendation(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "usdc-circle",
+    symbol: "USDC",
+    name: "USD Coin",
+    profile: "treasury",
+    rank: 1,
+    score: 87.4,
+    confidence: 92,
+    components: [],
+    whyKeys: ["top-safety"],
+    lowestSubDimension: {
+      key: "dependencyRisk",
+      score: 84,
+      contextKeys: [],
+    },
+    chainHints: {
+      topByLiquidity: ["ethereum"],
+      topByYield: [],
+      primary: "ethereum",
+    },
+    isRecentListing: false,
+    bluechipGrade: "A",
+    safetyGrade: "A",
+    supplyUsd: 34000000000,
+    isBeta: true,
+    recommendedSource: null,
+    perInputStaleness: null,
+    ...overrides,
+  };
+}
+
 function buildSelectorOutput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     profile: "treasury",
     engineVersion: "selector-v1.0",
     datasetHash: "abc123",
     timestamp: 1715000000,
-    input: { profile: "treasury", horizon: "6mplus", depegTolerance: "zero" },
-    recommended: [
-      {
-        id: "usdc-circle",
-        rank: 1,
-        score: 87.4,
-        confidence: 92,
-        whyKeys: ["top-safety"],
-      },
-    ],
+    input: {
+      profile: "treasury",
+      pegCurrency: "USD",
+      horizon: "6mplus",
+      depegTolerance: "zero",
+      composability: "moderate",
+      exitSpeed: "any",
+      minApy: null,
+      yieldNativeOnly: false,
+      decentralization: "any",
+      custodyOk: "any",
+    },
+    universe: { active: 392, surviving: 12 },
+    recommended: [buildRecommendation()],
     lowerRanked: [],
     coverageWarnings: {
+      skippedForCoverageCount: 0,
       sparse: false,
       uneven: false,
       skippedForCoverage: [],
+      newListingCount: 0,
+      redistributionCount: 0,
     },
+    lowConfidence: false,
     methodologyVersions: {
       safetyScore: "v7.25",
+      pegScoreAndDews: "v5.9",
+      yieldIntelligence: "v8.0",
+      bluechipAlignment: "v1.0",
+      exclusionFilters: "selector-v1.0",
     },
     ...overrides,
   };
@@ -255,17 +299,12 @@ describe("selector-snapshot Pages Function", () => {
           body: JSON.stringify(
             buildSelectorOutput({
               recommended: [
-                {
-                  id: "usdc-circle",
-                  rank: 1,
-                  score: 87.4,
-                  confidence: 92,
-                  whyKeys: ["top-safety"],
+                buildRecommendation({
                   recommendedSource: {
                     venue: "aave",
                     freshness: { capturedAt: 1715000123, ageSeconds: 42 },
                   },
-                },
+                }),
               ],
             }),
           ),
@@ -285,17 +324,12 @@ describe("selector-snapshot Pages Function", () => {
           body: JSON.stringify(
             buildSelectorOutput({
               recommended: [
-                {
-                  id: "usdc-circle",
-                  rank: 1,
-                  score: 87.4,
-                  confidence: 92,
-                  whyKeys: ["top-safety"],
+                buildRecommendation({
                   recommendedSource: {
                     venue: "aave",
                     freshness: { capturedAt: 1715000123, ageSeconds: 42 },
                   },
-                },
+                }),
               ],
             }),
           ),
@@ -310,17 +344,12 @@ describe("selector-snapshot Pages Function", () => {
           body: JSON.stringify(
             buildSelectorOutput({
               recommended: [
-                {
-                  id: "usdc-circle",
-                  rank: 1,
-                  score: 87.4,
-                  confidence: 92,
-                  whyKeys: ["top-safety"],
+                buildRecommendation({
                   recommendedSource: {
                     venue: "aave",
                     freshness: { capturedAt: 1799999999, ageSeconds: 9999 },
                   },
-                },
+                }),
               ],
             }),
           ),
@@ -354,6 +383,66 @@ describe("selector-snapshot Pages Function", () => {
         request: new Request("https://pharos.watch/selector-snapshot", {
           method: "POST",
           body: JSON.stringify({ profile: "treasury" }),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when the selector input is missing pegCurrency", async () => {
+      const output = buildSelectorOutput();
+      const input = { ...(output.input as Record<string, unknown>) };
+      delete input.pegCurrency;
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput({ input })),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when frontend-required output fields are missing", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput({ universe: undefined })),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when coverage warning counts are missing", async () => {
+      const coverageWarnings = {
+        sparse: false,
+        uneven: false,
+        skippedForCoverage: [],
+      };
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput({ coverageWarnings })),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when recommendations are missing frontend basics", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput({ recommended: [{ id: "usdc-circle" }] })),
           headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
         }),
         env: makeEnv(),
@@ -468,10 +557,12 @@ describe("selector-snapshot Pages Function", () => {
         params: { path: sid },
       });
       expect(get.status).toBe(200);
-      expect(get.headers.get("Cache-Control")).toBe("public, max-age=300, s-maxage=86400");
+      expect(get.headers.get("Cache-Control")).toBe("private, no-store");
       const body = (await get.json()) as Record<string, unknown>;
       expect(body.profile).toBe("treasury");
       expect(body.timestamp).toBe(1715000000);
+      expect(body.universe).toEqual({ active: 392, surviving: 12 });
+      expect(body.lowConfidence).toBe(false);
     });
   });
 
