@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, Search, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
 import {
   labelYieldFilterOption,
   type YieldFilterOption,
@@ -45,6 +46,9 @@ function getActiveFilterSummaries(viewModel: YieldViewModel): ActiveFilterSummar
       key: "warnings",
       label: findOptionLabel(options.warnings, filters.warnings),
     });
+  }
+  if (filters.watchlist === "only") {
+    summaries.push({ key: "watchlist", label: "Watching only" });
   }
   if (filters.minSafety !== null) {
     summaries.push({
@@ -198,6 +202,56 @@ function PresetChip({
   );
 }
 
+function WatchingPresetChip({
+  count,
+  active,
+  onClick,
+}: {
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const disabled = count === 0;
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      aria-disabled={disabled}
+      aria-pressed={active}
+      data-active={active}
+      title={
+        disabled
+          ? "Star yields on the leaderboard to follow them here"
+          : "Show only yields you are watching"
+      }
+      className={cn(
+        "h-auto whitespace-normal rounded-full px-3 py-1.5 text-xs font-medium",
+        active
+          ? "border-amber-500 bg-amber-500 text-white hover:bg-amber-500/90 hover:text-white"
+          : "text-foreground",
+        disabled && "cursor-not-allowed opacity-60 hover:bg-transparent hover:text-muted-foreground",
+      )}
+    >
+      <Star
+        aria-hidden="true"
+        className={cn("h-3 w-3", active ? "fill-white" : "fill-none")}
+      />
+      <span>Watching</span>
+      <span
+        className={cn(
+          "ml-1 font-mono text-[10px] tabular-nums",
+          active ? "text-white/80" : "text-muted-foreground",
+        )}
+      >
+        {count}
+      </span>
+    </Button>
+  );
+}
+
 function ActiveFilterPill({
   label,
   onClear,
@@ -228,6 +282,8 @@ export function YieldLeaderboardControls({
   const panelId = useId();
   const currencyTabsId = useId();
   const [showFilters, setShowFilters] = useState(false);
+  const { ids: watchlistIds } = useYieldWatchlist();
+  const watchlistActive = filters.watchlist === "only";
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
   const activeFilterCount = activeFilterSummaries.length;
@@ -300,6 +356,11 @@ export function YieldLeaderboardControls({
       ) : null}
 
       <div className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible md:pb-0">
+        <WatchingPresetChip
+          count={watchlistIds.size}
+          active={watchlistActive}
+          onClick={() => onFilterChange("watchlist", watchlistActive ? "all" : "only")}
+        />
         {presets.map((preset) => (
           <PresetChip
             key={preset.key}
