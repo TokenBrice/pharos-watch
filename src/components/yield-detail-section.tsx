@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -10,17 +10,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { useYieldHistory } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import {
+  YIELD_RANK_CHANGE_DRIVER_LABELS,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+} from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
-import type { YieldType } from "@shared/types";
-import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import type { YieldRankChangeAttribution, YieldRanking, YieldType } from "@shared/types";
+import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { YieldDetailSectionStatCard } from "@/components/yield-detail-section-stat-card";
+import {
+  classifyApyChange,
+  type YieldChangeAttributionDecisionLedger,
+  type YieldChangeAttributionResult,
+} from "@/lib/yield-change-attribution";
+
+// WHY: BE will publish `decisionLedger` on YieldRanking after this lands. Mirror the
+// shape locally so this component compiles regardless of merge order. Render nothing
+// related to the ledger when absent — `classifyApyChange` already degrades gracefully.
+interface DecisionLedgerOnRanking {
+  decisionLedger?: YieldChangeAttributionDecisionLedger | null;
+}
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
@@ -82,6 +98,20 @@ function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNod
 
 export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionProps) {
   const view = useYieldDetailSectionModel(stablecoinId);
+  const historyQuery = useYieldHistory(stablecoinId, { days: 30, mode: "best" });
+  const rankingForAttribution = view.status === "ready" ? view.ranking : null;
+  const attribution = useMemo(
+    () =>
+      rankingForAttribution
+        ? classifyApyChange({
+            history: historyQuery.data?.history ?? [],
+            decisionLedger:
+              (rankingForAttribution as YieldRanking & DecisionLedgerOnRanking).decisionLedger ?? null,
+            yieldStability: rankingForAttribution.yieldStability ?? null,
+          })
+        : null,
+    [historyQuery.data, rankingForAttribution],
+  );
 
   if (view.status === "hidden") {
     return null;
@@ -184,6 +214,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         </div>
       ) : null}
 
+      {attribution ? <YieldChangeAttributionCard attribution={attribution} /> : null}
+
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
           APY trend against the current benchmark hurdle rate and peer median.
@@ -257,6 +289,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           value={view.stabilityValue}
         />
       </div>
+
+      <YieldRankMovementCard attribution={ranking.rankChangeAttribution ?? null} />
 
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
@@ -389,5 +423,250 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         <MethodologyCardActions topic="pys" className="border-t-0 pt-0" />
       </div>
     </YieldDetailSectionFrame>
+  );
+}
+
+const ATTRIBUTION_TONE: Record<
+  YieldChangeAttributionResult["attribution"],
+  { wrapper: string; kicker: string }
+> = {
+  organic: {
+    wrapper: "border-emerald-500/25 bg-emerald-500/5",
+    kicker: "text-emerald-700 dark:text-emerald-400",
+  },
+  "source-switch": {
+    wrapper: "border-sky-500/25 bg-sky-500/5",
+    kicker: "text-sky-700 dark:text-sky-300",
+  },
+  benchmark: {
+    wrapper: "border-violet-500/25 bg-violet-500/5",
+    kicker: "text-violet-700 dark:text-violet-300",
+  },
+  mixed: {
+    wrapper: "border-amber-500/25 bg-amber-500/5",
+    kicker: "text-amber-700 dark:text-amber-300",
+  },
+  "insufficient-data": {
+    wrapper: "border-border/60 bg-muted/20",
+    kicker: "text-muted-foreground",
+  },
+};
+
+export function YieldChangeAttributionCard({
+  attribution,
+}: {
+  attribution: YieldChangeAttributionResult;
+}) {
+  const tone = ATTRIBUTION_TONE[attribution.attribution];
+  const hasEvidence =
+    attribution.largestDelta !== null ||
+    attribution.sourceSwitchDetail !== undefined ||
+    attribution.benchmarkDetail !== undefined;
+  return (
+    <div className={cn("rounded-xl border px-4 py-3", tone.wrapper)}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p
+          className={cn(
+            "text-xs font-semibold uppercase tracking-[0.12em]",
+            tone.kicker,
+          )}
+        >
+          Why this APY changed
+        </p>
+        <span className="text-muted-foreground/40">·</span>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          {attribution.confidence} confidence
+        </span>
+        <MethodologyHint topic="pys" />
+      </div>
+      <p className="mt-1.5 text-sm text-foreground">{attribution.headline}</p>
+      {hasEvidence ? (
+        <details className="mt-2 text-xs text-muted-foreground">
+          <summary className="cursor-pointer select-none rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
+            Show evidence
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {attribution.largestDelta ? (
+              <li>
+                Largest 30d move:{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {formatSignedPercent(attribution.largestDelta.value, 2)}
+                </span>{" "}
+                on{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {new Date(attribution.largestDelta.ts).toISOString().slice(0, 10)}
+                </span>
+                .
+              </li>
+            ) : null}
+            {attribution.sourceSwitchDetail ? (
+              <li>
+                Source switched from{" "}
+                <span className="text-foreground">
+                  {attribution.sourceSwitchDetail.previousSourceLabel ??
+                    attribution.sourceSwitchDetail.previousSourceKey}
+                </span>{" "}
+                with{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {formatSignedPercent(attribution.sourceSwitchDetail.apy30dDelta, 2)}
+                </span>{" "}
+                impact on 30d APY.
+              </li>
+            ) : null}
+            {attribution.benchmarkDetail ? (
+              <li>
+                Benchmark delta on that day:{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {formatSignedPercent(attribution.benchmarkDetail.benchmarkDeltaPp, 2)}
+                </span>
+                .
+              </li>
+            ) : null}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function formatSignedRankDelta(delta: number): string {
+  if (delta === 0) return "0";
+  // Rank UP (improvement) is negative delta (rank went from 10 to 5 = -5).
+  // We render UP movements with a + sign for user-friendliness, mirroring the
+  // leaderboard table chip.
+  return delta < 0 ? `+${Math.abs(delta)}` : `-${delta}`;
+}
+
+const DRIVER_CONTRIBUTION_TO_DRIVER_KEY: Record<
+  keyof NonNullable<YieldRankChangeAttribution["driverContributions"]>,
+  keyof typeof YIELD_RANK_CHANGE_DRIVER_LABELS
+> = {
+  apy: "apy",
+  benchmark: "benchmark",
+  stablecoinSafety: "stablecoin-safety",
+  sourceRisk: "source-risk",
+  sourceSwitch: "source-switch",
+  freshness: "freshness",
+  volatility: "volatility",
+  tvlDepth: "tvl-depth",
+};
+
+export function YieldRankMovementCard({
+  attribution,
+}: {
+  attribution: YieldRankChangeAttribution | null | undefined;
+}) {
+  const rankDelta = attribution?.rankDelta ?? null;
+  const pysDelta = attribution?.pysDelta ?? null;
+  const previousRank = attribution?.previousRank ?? null;
+  const primaryDriver = attribution?.primaryDriver ?? null;
+  const driverContributions = attribution?.driverContributions ?? null;
+
+  // Stable state: render explicit "no movement" card so users see continuity.
+  const allZero =
+    (rankDelta === null || rankDelta === 0) &&
+    (pysDelta === null || Math.abs(pysDelta) < 0.005);
+  if (!attribution || allZero) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Movement vs last publication
+        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Stable — no movement since last publication.
+        </p>
+      </div>
+    );
+  }
+
+  const arrow = rankDelta == null ? "■" : rankDelta < 0 ? "▲" : rankDelta > 0 ? "▼" : "■";
+  const rankColor =
+    rankDelta != null && rankDelta < 0
+      ? "text-emerald-700 dark:text-emerald-400"
+      : rankDelta != null && rankDelta > 0
+      ? "text-red-700 dark:text-red-400"
+      : "text-muted-foreground";
+
+  const driverLabel =
+    primaryDriver != null ? YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver]?.short ?? null : null;
+
+  // Top two driver contributions for the hover/disclosure.
+  const topDrivers = driverContributions
+    ? (Object.entries(driverContributions) as Array<[
+        keyof NonNullable<YieldRankChangeAttribution["driverContributions"]>,
+        number | null | undefined,
+      ]>)
+        .filter(([, value]) => value != null && Math.abs(value) >= 0.01)
+        .sort(([, a], [, b]) => Math.abs(b ?? 0) - Math.abs(a ?? 0))
+        .slice(0, 2)
+    : [];
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        Movement vs last publication
+      </p>
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span
+          className={cn("font-mono text-2xl tabular-nums", rankColor)}
+          aria-label={
+            rankDelta != null
+              ? rankDelta < 0
+                ? `Rank improved by ${Math.abs(rankDelta)}`
+                : rankDelta > 0
+                ? `Rank fell by ${rankDelta}`
+                : "Rank unchanged"
+              : "Rank delta unavailable"
+          }
+        >
+          {arrow} {rankDelta != null ? formatSignedRankDelta(rankDelta) : "—"}
+        </span>
+        {pysDelta != null ? (
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            PYS {formatSignedPercent(pysDelta, 2)}
+            {driverLabel ? ` (${driverLabel})` : ""}
+          </span>
+        ) : null}
+      </div>
+      {previousRank != null ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Previous rank{" "}
+          <span className="font-mono tabular-nums text-foreground">#{previousRank}</span>
+          {rankDelta != null ? (
+            <>
+              {" "}
+              → current rank{" "}
+              <span className="font-mono tabular-nums text-foreground">
+                #{previousRank + rankDelta}
+              </span>
+            </>
+          ) : null}
+          .
+        </p>
+      ) : null}
+      {topDrivers.length > 0 ? (
+        <details className="mt-2 text-xs text-muted-foreground">
+          <summary className="cursor-pointer select-none rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
+            Driver breakdown
+          </summary>
+          <ul className="mt-1.5 space-y-0.5">
+            {topDrivers.map(([key, value]) => {
+              const driverKey = DRIVER_CONTRIBUTION_TO_DRIVER_KEY[key];
+              const label = driverKey ? YIELD_RANK_CHANGE_DRIVER_LABELS[driverKey] : null;
+              if (!label || value == null) return null;
+              return (
+                <li key={key}>
+                  <span className="text-foreground">{label.short}</span>:{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {formatSignedPercent(value, 2)} PYS
+                  </span>{" "}
+                  <span className="text-muted-foreground/80">— {label.long}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   );
 }

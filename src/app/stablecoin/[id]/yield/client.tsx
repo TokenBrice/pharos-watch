@@ -11,6 +11,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { PysBreakdown } from "@/components/pys-breakdown";
+import { YieldChangeAttributionCard } from "@/components/yield-detail-section";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
@@ -19,10 +20,20 @@ import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/components/yield-history-chart-model";
+import {
+  classifyApyChange,
+  type YieldChangeAttributionDecisionLedger,
+} from "@/lib/yield-change-attribution";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatChartDate, formatPercent } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
+
+// WHY: BE will add `decisionLedger` on YieldRanking after this lands. Mirror locally so
+// the page compiles regardless of merge order.
+interface DecisionLedgerOnRanking {
+  decisionLedger?: YieldChangeAttributionDecisionLedger | null;
+}
 
 interface YieldAnalysisClientProps {
   id: string;
@@ -199,6 +210,19 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     [historyQuery.data],
   );
 
+  const apyChangeAttribution = useMemo(
+    () =>
+      ranking
+        ? classifyApyChange({
+            history: historyQuery.data?.history ?? [],
+            decisionLedger:
+              (ranking as YieldRanking & DecisionLedgerOnRanking).decisionLedger ?? null,
+            yieldStability: ranking.yieldStability ?? null,
+          })
+        : null,
+    [historyQuery.data, ranking],
+  );
+
   const allSourceKeys = useMemo(() => {
     if (!sourceExplorer) return undefined;
     const keys = sourceExplorer.allSources.map((source) => source.sourceKey);
@@ -303,6 +327,10 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         ranking={ranking}
         sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
       />
+
+      {apyChangeAttribution ? (
+        <YieldChangeAttributionCard attribution={apyChangeAttribution} />
+      ) : null}
 
       <Card id="source-comparison" className="scroll-mt-24 rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-2">

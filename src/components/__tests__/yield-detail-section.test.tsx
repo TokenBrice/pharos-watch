@@ -10,8 +10,9 @@ import {
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
-const { useYieldRankingsMock, replaceParamsMock } = vi.hoisted(() => ({
+const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
+  useYieldHistoryMock: vi.fn(),
   replaceParamsMock: vi.fn(),
 }));
 
@@ -19,6 +20,7 @@ let sourcesParam = "";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
+  useYieldHistory: useYieldHistoryMock,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -66,6 +68,7 @@ vi.mock("@/components/yield-source-link", () => ({
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MethodologyCardActions: () => null,
+  MethodologyHint: () => null,
 }));
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
@@ -124,6 +127,13 @@ describe("YieldDetailSection", () => {
   beforeEach(() => {
     sourcesParam = "";
     useYieldRankingsMock.mockReset();
+    useYieldHistoryMock.mockReset();
+    useYieldHistoryMock.mockReturnValue({
+      data: { current: null, history: [], methodology: { version: "v8.14" } },
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
     replaceParamsMock.mockReset();
     replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(sourcesParam ? `sources=${sourcesParam}` : "");
@@ -435,5 +445,73 @@ describe("YieldDetailSection", () => {
     }
 
     expect(sourcesParam).toBe("alt-source-1,alt-source-2,alt-source-3,alt-source-4");
+  });
+
+  it("renders the 'Why this APY changed' attribution card with a headline", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText(/Why this APY changed/i)).toBeTruthy();
+    // No history points → insufficient-data path
+    expect(screen.getByText(/Not enough data to attribute/i)).toBeTruthy();
+  });
+
+  it("renders the rank-movement card as 'Stable' when rankChangeAttribution is null", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Movement vs last publication")).toBeTruthy();
+    expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+  });
+
+  it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          rankChangeAttribution: {
+            previousRank: 12,
+            rankDelta: -3,
+            previousPys: 60,
+            pysDelta: 4.5,
+            primaryDriver: "apy",
+            driverContributions: {
+              apy: 3.2,
+              benchmark: 0.8,
+              stablecoinSafety: null,
+              sourceRisk: null,
+              sourceSwitch: null,
+              freshness: null,
+              volatility: null,
+              tvlDepth: null,
+            },
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Movement vs last publication")).toBeTruthy();
+    // Arrow + signed delta together: "▲ +3"
+    expect(container.textContent ?? "").toMatch(/▲\s*\+3/);
+    expect(container.textContent ?? "").toMatch(/PYS\s+\+4\.50%/);
+    expect(container.textContent ?? "").toMatch(/Previous rank/);
+    expect(container.textContent ?? "").toMatch(/#12/);
+    expect(container.textContent ?? "").toMatch(/#9/);
   });
 });
