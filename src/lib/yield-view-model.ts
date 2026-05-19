@@ -1000,12 +1000,6 @@ function buildEmptyState(
 
 const EMPTY_STATE_SUGGESTION_LIMIT = 3;
 
-interface FilterRelaxationDescriptor {
-  filterKey: keyof YieldViewModelFilters;
-  targetValue: string | null;
-  describe: () => string;
-}
-
 function describeOption<T extends string>(
   options: ReadonlyArray<YieldFilterOption<T>>,
   value: T | string,
@@ -1013,126 +1007,134 @@ function describeOption<T extends string>(
   return options.find((option) => option.value === value)?.label ?? String(value);
 }
 
-function listFilterRelaxations(
-  filters: YieldViewModelFilters,
-  options: YieldViewModelOptions,
-): FilterRelaxationDescriptor[] {
-  const relaxations: FilterRelaxationDescriptor[] = [];
-
-  if (filters.peg !== DEFAULT_FILTERS.peg) {
-    relaxations.push({
-      filterKey: "peg",
-      targetValue: null,
-      describe: () => `Drop peg filter (${describeOption(options.peg, filters.peg)})`,
-    });
-  }
-  if (filters.yieldType !== DEFAULT_FILTERS.yieldType) {
-    relaxations.push({
-      filterKey: "yieldType",
-      targetValue: null,
-      describe: () => `Drop type filter (${describeOption(options.yieldType, filters.yieldType)})`,
-    });
-  }
-  if (filters.q !== DEFAULT_FILTERS.q) {
-    relaxations.push({
-      filterKey: "q",
-      targetValue: null,
-      describe: () => `Clear search "${filters.q}"`,
-    });
-  }
-  if (filters.warnings !== DEFAULT_FILTERS.warnings) {
-    relaxations.push({
-      filterKey: "warnings",
-      targetValue: null,
-      describe: () => `Drop warnings filter (${describeOption(options.warnings, filters.warnings)})`,
-    });
-  }
-  if (filters.minSafety !== null) {
-    relaxations.push({
-      filterKey: "minSafety",
-      targetValue: null,
-      describe: () => `Drop ${filters.minSafety}+ safety floor`,
-    });
-  }
-  if (filters.minTvl !== null) {
-    relaxations.push({
-      filterKey: "minTvl",
-      targetValue: null,
-      describe: () => `Drop ${formatTvlOption(filters.minTvl!)} TVL floor`,
-    });
-  }
-  if (filters.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence) {
-    relaxations.push({
-      filterKey: "sourceConfidence",
-      targetValue: null,
-      describe: () => `Drop confidence filter (${describeOption(options.sourceConfidence, filters.sourceConfidence)})`,
-    });
-  }
-  if (filters.benchmark !== DEFAULT_FILTERS.benchmark) {
-    relaxations.push({
-      filterKey: "benchmark",
-      targetValue: null,
-      describe: () => `Drop benchmark filter (${describeOption(options.benchmark, filters.benchmark)})`,
-    });
-  }
-  if (filters.opportunity !== DEFAULT_FILTERS.opportunity) {
-    relaxations.push({
-      filterKey: "opportunity",
-      targetValue: null,
-      describe: () => `Drop opportunity filter (${describeOption(options.opportunity, filters.opportunity)})`,
-    });
-  }
-  if (filters.depth !== DEFAULT_FILTERS.depth) {
-    relaxations.push({
-      filterKey: "depth",
-      targetValue: null,
-      describe: () => `Drop depth filter (${describeOption(options.depth, filters.depth)})`,
-    });
-  }
-  if (filters.sourceChanged !== DEFAULT_FILTERS.sourceChanged) {
-    relaxations.push({
-      filterKey: "sourceChanged",
-      targetValue: null,
-      describe: () => `Drop source-changed filter (${describeOption(options.sourceChanged, filters.sourceChanged)})`,
-    });
-  }
-  if (filters.trending !== DEFAULT_FILTERS.trending) {
-    relaxations.push({
-      filterKey: "trending",
-      targetValue: null,
-      describe: () => `Drop trending filter`,
-    });
-  }
-  if (filters.watchlist !== DEFAULT_FILTERS.watchlist) {
-    relaxations.push({
-      filterKey: "watchlist",
-      targetValue: null,
-      describe: () => `Drop watchlist-only filter`,
-    });
-  }
-
-  return relaxations;
+interface YieldFilterAxisDescriptor {
+  key: keyof YieldViewModelFilters;
+  isActive: (filters: YieldViewModelFilters) => boolean;
+  // Empty-state chip label ("Drop type filter (Lending Opp.)") + URL reset target.
+  describeRelax: (filters: YieldViewModelFilters, options: YieldViewModelOptions) => string;
+  relaxTargetValue: string | null;
+  // Active-filter summary chip label. Undefined = axis has its own UI elsewhere
+  // (currency tabs / search box / trending toggle) and shouldn't appear as a chip.
+  describeActive?: (filters: YieldViewModelFilters, options: YieldViewModelOptions) => string;
 }
+
+// Single source of truth for every filter axis. Active-summary order = array order;
+// `listFilterRelaxations` walks the same array. Adding a 13th axis = one entry, both
+// surfaces update — guards against drift (watchlist was previously in summary but not
+// in relax suggestions).
+const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = [
+  {
+    key: "yieldType",
+    isActive: (f) => f.yieldType !== DEFAULT_FILTERS.yieldType,
+    describeRelax: (f, o) => `Drop type filter (${describeOption(o.yieldType, f.yieldType)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Type: ${describeOption(o.yieldType, f.yieldType)}`,
+  },
+  {
+    key: "warnings",
+    isActive: (f) => f.warnings !== DEFAULT_FILTERS.warnings,
+    describeRelax: (f, o) => `Drop warnings filter (${describeOption(o.warnings, f.warnings)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.warnings, f.warnings),
+  },
+  {
+    key: "watchlist",
+    isActive: (f) => f.watchlist !== DEFAULT_FILTERS.watchlist,
+    describeRelax: () => `Drop watchlist-only filter`,
+    relaxTargetValue: null,
+    describeActive: () => "Watching only",
+  },
+  {
+    key: "minSafety",
+    isActive: (f) => f.minSafety !== DEFAULT_FILTERS.minSafety,
+    describeRelax: (f) => `Drop ${f.minSafety}+ safety floor`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.minSafety, String(f.minSafety)),
+  },
+  {
+    key: "minTvl",
+    isActive: (f) => f.minTvl !== DEFAULT_FILTERS.minTvl,
+    describeRelax: (f) => `Drop ${formatTvlOption(f.minTvl!)} TVL floor`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.minTvl, String(f.minTvl)),
+  },
+  {
+    key: "depth",
+    isActive: (f) => f.depth !== DEFAULT_FILTERS.depth,
+    describeRelax: (f, o) => `Drop depth filter (${describeOption(o.depth, f.depth)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Depth: ${describeOption(o.depth, f.depth)}`,
+  },
+  {
+    key: "sourceChanged",
+    isActive: (f) => f.sourceChanged !== DEFAULT_FILTERS.sourceChanged,
+    describeRelax: (f, o) => `Drop source-changed filter (${describeOption(o.sourceChanged, f.sourceChanged)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.sourceChanged, f.sourceChanged),
+  },
+  {
+    key: "sourceConfidence",
+    isActive: (f) => f.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence,
+    describeRelax: (f, o) => `Drop confidence filter (${describeOption(o.sourceConfidence, f.sourceConfidence)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Confidence: ${describeOption(o.sourceConfidence, f.sourceConfidence)}`,
+  },
+  {
+    key: "benchmark",
+    isActive: (f) => f.benchmark !== DEFAULT_FILTERS.benchmark,
+    describeRelax: (f, o) => `Drop benchmark filter (${describeOption(o.benchmark, f.benchmark)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Benchmark: ${describeOption(o.benchmark, f.benchmark)}`,
+  },
+  {
+    key: "opportunity",
+    isActive: (f) => f.opportunity !== DEFAULT_FILTERS.opportunity,
+    describeRelax: (f, o) => `Drop opportunity filter (${describeOption(o.opportunity, f.opportunity)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.opportunity, f.opportunity),
+  },
+  // Axes that DON'T render as active-summary chips — they have dedicated UI
+  // (currency tabs, search box, trending toggle), but the empty state still
+  // proposes relaxing them so users can recover rows in one click.
+  {
+    key: "peg",
+    isActive: (f) => f.peg !== DEFAULT_FILTERS.peg,
+    describeRelax: (f, o) => `Drop peg filter (${describeOption(o.peg, f.peg)})`,
+    relaxTargetValue: null,
+  },
+  {
+    key: "q",
+    isActive: (f) => f.q !== DEFAULT_FILTERS.q,
+    describeRelax: (f) => `Clear search "${f.q}"`,
+    relaxTargetValue: null,
+  },
+  {
+    key: "trending",
+    isActive: (f) => f.trending !== DEFAULT_FILTERS.trending,
+    describeRelax: () => `Drop trending filter`,
+    relaxTargetValue: null,
+  },
+];
 
 function buildEmptyStateSuggestions(
   facets: readonly YieldRowFacet[],
   filters: YieldViewModelFilters,
   options: YieldViewModelOptions,
 ): YieldEmptyStateSuggestion[] {
-  const candidates = listFilterRelaxations(filters, options);
   const scored: YieldEmptyStateSuggestion[] = [];
-  for (const candidate of candidates) {
+  for (const axis of YIELD_FILTER_AXIS_REGISTRY) {
+    if (!axis.isActive(filters)) continue;
     const relaxed: YieldViewModelFilters = {
       ...filters,
-      [candidate.filterKey]: DEFAULT_FILTERS[candidate.filterKey],
+      [axis.key]: DEFAULT_FILTERS[axis.key],
     } as YieldViewModelFilters;
     const gain = countRowsMatchingFilters(facets, relaxed);
     if (gain > 0) {
       scored.push({
-        filterKey: candidate.filterKey,
-        targetValue: candidate.targetValue,
+        filterKey: axis.key,
+        targetValue: axis.relaxTargetValue,
         gain,
-        label: candidate.describe(),
+        label: axis.describeRelax(filters, options),
       });
     }
   }
@@ -1257,39 +1259,11 @@ export interface YieldActiveFilterSummary {
 }
 
 export function getActiveFilterSummaries(viewModel: YieldViewModel): YieldActiveFilterSummary[] {
-  const { filters, options } = viewModel;
   const summaries: YieldActiveFilterSummary[] = [];
-
-  if (filters.yieldType !== "all") {
-    summaries.push({ key: "yieldType", label: `Type: ${describeOption(options.yieldType, filters.yieldType)}` });
+  for (const axis of YIELD_FILTER_AXIS_REGISTRY) {
+    if (!axis.describeActive) continue;
+    if (!axis.isActive(viewModel.filters)) continue;
+    summaries.push({ key: axis.key, label: axis.describeActive(viewModel.filters, viewModel.options) });
   }
-  if (filters.warnings !== "all") {
-    summaries.push({ key: "warnings", label: describeOption(options.warnings, filters.warnings) });
-  }
-  if (filters.watchlist === "only") {
-    summaries.push({ key: "watchlist", label: "Watching only" });
-  }
-  if (filters.minSafety !== null) {
-    summaries.push({ key: "minSafety", label: describeOption(options.minSafety, String(filters.minSafety)) });
-  }
-  if (filters.minTvl !== null) {
-    summaries.push({ key: "minTvl", label: describeOption(options.minTvl, String(filters.minTvl)) });
-  }
-  if (filters.depth !== "all") {
-    summaries.push({ key: "depth", label: `Depth: ${describeOption(options.depth, filters.depth)}` });
-  }
-  if (filters.sourceChanged !== "all") {
-    summaries.push({ key: "sourceChanged", label: describeOption(options.sourceChanged, filters.sourceChanged) });
-  }
-  if (filters.sourceConfidence !== "all") {
-    summaries.push({ key: "sourceConfidence", label: `Confidence: ${describeOption(options.sourceConfidence, filters.sourceConfidence)}` });
-  }
-  if (filters.benchmark !== "all") {
-    summaries.push({ key: "benchmark", label: `Benchmark: ${describeOption(options.benchmark, filters.benchmark)}` });
-  }
-  if (filters.opportunity !== "all") {
-    summaries.push({ key: "opportunity", label: describeOption(options.opportunity, filters.opportunity) });
-  }
-
   return summaries;
 }

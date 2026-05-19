@@ -478,6 +478,16 @@ describe("buildYieldViewModel", () => {
     expect(model.emptyState.suggestions).toEqual([]);
   });
 
+  it("suggests relaxing the watchlist filter when it leaves zero visible rows", () => {
+    // WHY: regression guard — getActiveFilterSummaries and listFilterRelaxations
+    // used to drift; watchlist used to surface as an active chip but not as a relax
+    // candidate. The registry now drives both.
+    const model = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds: new Set<string>() });
+    expect(model.visibleRows).toEqual([]);
+    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
+    expect(keys).toContain("watchlist");
+  });
+
   it("computes cohort percentile per row and suppresses small cohorts", () => {
     const cohortRows = Array.from({ length: 12 }, (_, i) =>
       makeYieldRanking({
