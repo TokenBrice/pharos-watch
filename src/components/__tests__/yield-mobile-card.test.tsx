@@ -164,4 +164,66 @@ describe("YieldMobileCard", () => {
 
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
+
+  it("renders the cohort percentile chip when cohortPercentile has a numeric value", () => {
+    const cohortRow = {
+      ...row,
+      cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
+    } as YieldViewModelRow;
+
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={cohortRow}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("p64 of 18")).toBeTruthy();
+  });
+
+  it("renders the small-peer-set chip when cohortPercentile.value is null", () => {
+    const cohortRow = {
+      ...row,
+      cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
+    } as YieldViewModelRow;
+
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={cohortRow}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("small peer set")).toBeTruthy();
+  });
+
+  it("renders nothing in place of the cohort chip when cohortPercentile is null", () => {
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={row}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={false}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
+    expect(screen.queryByText("small peer set")).toBeNull();
+  });
 });

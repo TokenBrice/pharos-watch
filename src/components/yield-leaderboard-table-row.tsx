@@ -49,6 +49,36 @@ function formatSignedPysDelta(delta: number): string {
   return `${sign}${rounded} PYS`;
 }
 
+// WHY: ω3 owns the canonical type on YieldViewModelRow; we mirror the shape here so this
+// component compiles independently of merge order.
+interface CohortPercentile {
+  value: number | null;
+  cohortSize: number;
+  cohortKey: string;
+}
+
+function renderCohortChip(cohort: CohortPercentile | null) {
+  if (cohort === null) return null;
+  if (cohort.value === null) {
+    return (
+      <span
+        title="Cohort smaller than 8 peers"
+        className="text-[10px] text-muted-foreground tabular-nums"
+      >
+        small peer set
+      </span>
+    );
+  }
+  return (
+    <span
+      title={`Percentile ${cohort.value} in ${cohort.cohortSize} peers`}
+      className="text-[10px] text-muted-foreground tabular-nums"
+    >
+      p{cohort.value} of {cohort.cohortSize}
+    </span>
+  );
+}
+
 interface YieldLeaderboardTableRowProps {
   row: YieldViewModelRow;
   logos: Record<string, string>;
@@ -286,6 +316,11 @@ function YieldLeaderboardTableRowBase({
     </Tooltip>
   ) : null;
 
+  // WHY: ω3 adds cohortPercentile to YieldViewModelRow concurrently; consume via local
+  // assertion so this commit compiles regardless of merge order.
+  const cohortPercentile = (row as { cohortPercentile?: CohortPercentile }).cohortPercentile ?? null;
+  const cohortChipNode = renderCohortChip(cohortPercentile);
+
   const pysCell = row.pharosYieldScore !== null ? (
     <span className="inline-flex items-center gap-1">
       <Tooltip>
@@ -332,6 +367,7 @@ function YieldLeaderboardTableRowBase({
         </Tooltip>
       ) : null}
       {rankChipNode}
+      {cohortChipNode}
     </span>
   ) : pysNullReasonText ? (
     <Tooltip>

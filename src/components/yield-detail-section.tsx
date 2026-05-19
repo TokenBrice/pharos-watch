@@ -12,7 +12,9 @@ import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
+import type { YieldType } from "@shared/types";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
@@ -22,6 +24,40 @@ import { YieldDetailSectionStatCard } from "@/components/yield-detail-section-st
 
 interface YieldDetailSectionProps {
   stablecoinId: string;
+}
+
+// WHY: ω3 owns the canonical cohort field on YieldViewModelRow; mirror the shape locally so
+// this component compiles regardless of merge order. Render nothing when the data is absent.
+interface CohortPercentile {
+  value: number | null;
+  cohortSize: number;
+  cohortKey: string;
+}
+
+function renderCohortPercentileLabel(
+  cohort: CohortPercentile | null,
+  yieldType: YieldType,
+) {
+  if (cohort === null) return null;
+  if (cohort.value === null) {
+    return (
+      <p
+        title="Cohort smaller than 8 peers"
+        className="mt-1 text-[11px] text-muted-foreground tabular-nums"
+      >
+        Small peer set
+      </p>
+    );
+  }
+  const typeLabel = YIELD_TYPE_LABELS[yieldType] ?? yieldType;
+  return (
+    <p
+      title={`Percentile ${cohort.value} in ${cohort.cohortSize} ${typeLabel} peers`}
+      className="mt-1 text-[11px] text-muted-foreground tabular-nums"
+    >
+      Percentile {cohort.value} in {cohort.cohortSize} {typeLabel} peers
+    </p>
+  );
 }
 
 function YieldDetailSectionFrame({ headerEnd, children }: { headerEnd?: ReactNode; children: ReactNode }) {
@@ -211,6 +247,10 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           {view.ranking.provenance?.usedDefaultSafety ? (
             <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
+          {renderCohortPercentileLabel(
+            (view.ranking as { cohortPercentile?: CohortPercentile }).cohortPercentile ?? null,
+            view.ranking.yieldType,
+          )}
         </YieldDetailSectionStatCard>
         <YieldDetailSectionStatCard
           label={<MethodologyLabel topic="yieldStability">Stability</MethodologyLabel>}

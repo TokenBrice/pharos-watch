@@ -180,3 +180,36 @@ describe("YieldLeaderboardTableRow — Why this PYS strip", () => {
     expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
 });
+
+describe("YieldLeaderboardTableRow — cohort percentile chip", () => {
+  it("renders the percentile chip when cohortPercentile has a numeric value", () => {
+    const row = {
+      ...baseRow,
+      cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" },
+    } as YieldViewModelRow;
+
+    renderRow(row);
+
+    expect(screen.getByText("p64 of 18")).toBeTruthy();
+  });
+
+  it("renders the small-peer-set chip when cohortPercentile.value is null", () => {
+    const row = {
+      ...baseRow,
+      cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" },
+    } as YieldViewModelRow;
+
+    renderRow(row);
+
+    expect(screen.getByText("small peer set")).toBeTruthy();
+  });
+
+  it("renders nothing when cohortPercentile is null", () => {
+    const row = { ...baseRow, cohortPercentile: null } as YieldViewModelRow;
+
+    renderRow(row);
+
+    expect(screen.queryByText(/^p\d+ of \d+/)).toBeNull();
+    expect(screen.queryByText("small peer set")).toBeNull();
+  });
+});

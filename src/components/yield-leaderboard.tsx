@@ -58,6 +58,124 @@ function formatSignedPysDelta(delta: number): string {
   return `${sign}${rounded} PYS`;
 }
 
+// WHY: ω3 owns the canonical type on YieldViewModelRow; mirror the shape locally so this
+// component compiles regardless of merge order.
+interface CohortPercentile {
+  value: number | null;
+  cohortSize: number;
+  cohortKey: string;
+}
+
+function readCohortPercentile(row: YieldViewModelRow): CohortPercentile | null {
+  return (row as { cohortPercentile?: CohortPercentile }).cohortPercentile ?? null;
+}
+
+function renderCohortChip(cohort: CohortPercentile | null) {
+  if (cohort === null) return null;
+  if (cohort.value === null) {
+    return (
+      <span
+        title="Cohort smaller than 8 peers"
+        className="text-[10px] text-muted-foreground tabular-nums"
+      >
+        small peer set
+      </span>
+    );
+  }
+  return (
+    <span
+      title={`Percentile ${cohort.value} in ${cohort.cohortSize} peers`}
+      className="text-[10px] text-muted-foreground tabular-nums"
+    >
+      p{cohort.value} of {cohort.cohortSize}
+    </span>
+  );
+}
+
+const SORT_KEY_LABELS: Record<YieldTableSortKey, string> = {
+  pys: "PYS",
+  apy30d: "APY (30d)",
+  safetyScore: "Safety",
+  tvl: "TVL",
+  yieldStability: "Stability",
+  yieldType: "Type",
+  sourceCount: "Sources",
+};
+
+export interface YieldLeaderboardFilterSummary {
+  visibleCount: number;
+  totalCount: number;
+  comparisonLabel: string;
+  activeFilters: ReadonlyArray<{ key: string; label: string }>;
+}
+
+function LeaderboardHeading({
+  summary,
+  sortKey,
+  sortDirection,
+}: {
+  summary: YieldLeaderboardFilterSummary;
+  sortKey: YieldTableSortKey;
+  sortDirection: "asc" | "desc";
+}) {
+  const [copied, setCopied] = useState(false);
+  const sortLabel = SORT_KEY_LABELS[sortKey] ?? sortKey;
+  const arrow = sortDirection === "asc" ? "↑" : "↓";
+  const appended = summary.comparisonLabel ? `, ${summary.comparisonLabel} rows` : "";
+  const sentence = `Showing ${summary.visibleCount} of ${summary.totalCount} rows · sorted by ${sortLabel}${arrow}${appended}`;
+
+  const handleCopy = useCallback(async () => {
+    if (typeof window === "undefined" || !navigator?.clipboard?.writeText) return;
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // WHY: clipboard API can throw in non-secure contexts; degrade silently.
+    }
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+      <h2 id="leaderboard-heading" className="text-xl font-semibold">
+        Yield Leaderboard
+      </h2>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="pharos-focus-ring inline-flex max-w-full items-center rounded-md text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Filter summary; click for details"
+          >
+            <span className="truncate">{sentence}</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[320px] border border-border bg-popover p-3 text-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Active filters
+          </p>
+          {summary.activeFilters.length > 0 ? (
+            <ul className="mt-1 space-y-0.5 text-[11px] text-foreground">
+              {summary.activeFilters.map((filter) => (
+                <li key={filter.key}>{filter.label}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-[11px] text-muted-foreground">No filters applied.</p>
+          )}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="pharos-focus-ring mt-2 inline-flex items-center text-[11px] font-medium text-frost-blue underline-offset-2 hover:underline"
+          >
+            {copied ? "Copied!" : "Copy URL"}
+          </button>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "hidden md:table-cell text-right", title: "30-day average annual percentage yield" },
@@ -102,9 +220,10 @@ interface YieldLeaderboardProps {
   riskFreeRate: number;
   medianApy: number;
   emptyMessage?: string;
+  filterSummary?: YieldLeaderboardFilterSummary;
 }
 
-export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMessage }: YieldLeaderboardProps) {
+export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMessage, filterSummary }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
   const sheetRanking = useMemo(
@@ -144,6 +263,13 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
 
   return (
     <TooltipProvider>
+      {filterSummary ? (
+        <LeaderboardHeading
+          summary={filterSummary}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+        />
+      ) : null}
       <div className="space-y-3 md:hidden">
         <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
           <p className="pharos-kicker mb-2">Sort Leaderboard</p>
@@ -420,6 +546,7 @@ export function YieldMobileCard({
     sourceRisk: row.sourceRisk,
     sourceChanged: row.provenance?.sourceSwitch ?? false,
   });
+  const cohortChip = renderCohortChip(readCohortPercentile(row));
 
   return (
     <article className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}>
@@ -466,6 +593,7 @@ export function YieldMobileCard({
                     </TooltipContent>
                   </Tooltip>
                 ) : null}
+                {cohortChip}
               </>
             ) : pysNullReasonText ? (
               <Tooltip>
