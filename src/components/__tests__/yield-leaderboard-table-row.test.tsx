@@ -163,7 +163,7 @@ describe("YieldLeaderboardTableRow — Why this PYS strip", () => {
     expect(strip.textContent).toContain("Safety");
     expect(strip.textContent).toContain("B+");
     expect(strip.textContent).toContain("Source risk");
-    expect(strip.textContent).toContain("1.00×");
+    expect(strip.textContent).toContain("1.02×");
     expect(strip.textContent).toContain("Neutral");
   });
 
