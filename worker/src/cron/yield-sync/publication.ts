@@ -209,16 +209,18 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
         : null;
     const sourceSwitch =
       previousBestSourceKey != null && previousBestSourceKey !== source.sourceKey;
+    const apy30dDeltaFromPrevious = resolveApy30dDeltaFromPrevious({
+      selected: source,
+      candidates,
+      previousBestSourceKey,
+    });
     const decisionLedger = buildPublicDecisionLedger({
       selected: source,
       candidates,
       rejectedCount,
       previousBestSourceKey,
       sourceSwitch,
-      // apy30dDeltaFromPrevious is null in this iteration; populating it
-      // requires plumbing prior-published APY30d through the publisher
-      // (deferred — surfaces as null on the wire today).
-      apy30dDeltaFromPrevious: null,
+      apy30dDeltaFromPrevious,
     });
     const ranking = evaluatedSourceToRanking(
       source,
@@ -386,6 +388,28 @@ function serializeBoundedDecisionAlternatives(
   return "[]";
 }
 
+function resolveApy30dDeltaFromPrevious(input: {
+  selected: EvaluatedYieldSource;
+  candidates: EvaluatedYieldSource[];
+  previousBestSourceKey: string | null;
+}): number | null {
+  if (
+    input.previousBestSourceKey == null ||
+    input.previousBestSourceKey === "legacy-best" ||
+    input.previousBestSourceKey === input.selected.sourceKey
+  ) {
+    return null;
+  }
+
+  const previous = input.candidates.find(
+    (candidate) => candidate.sourceKey === input.previousBestSourceKey,
+  );
+  if (!previous || !Number.isFinite(previous.apy30d) || !Number.isFinite(input.selected.apy30d)) {
+    return null;
+  }
+  return input.selected.apy30d - previous.apy30d;
+}
+
 function buildYieldSourceDecisionEvidence(params: {
   source: EvaluatedYieldSource;
   evaluatedSources: EvaluatedYieldSource[];
@@ -413,6 +437,11 @@ function buildYieldSourceDecisionEvidence(params: {
   });
   const previousBestSourceKey =
     typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null;
+  const apy30dDeltaFromPrevious = resolveApy30dDeltaFromPrevious({
+    selected: params.source,
+    candidates,
+    previousBestSourceKey,
+  });
 
   return {
     selectedReason: typeof provenance.selectionReason === "string" ? provenance.selectionReason : "Selected source",
@@ -426,7 +455,7 @@ function buildYieldSourceDecisionEvidence(params: {
       rejectedCount,
       previousBestSourceKey,
       sourceSwitch: provenance.sourceSwitch === true,
-      apy30dDeltaFromPrevious: null,
+      apy30dDeltaFromPrevious,
     }),
   };
 }
@@ -437,7 +466,7 @@ function classifyDecisionRetentionReason(input: {
   candidates: EvaluatedYieldSource[];
 }): "trend" | "audit" {
   if (input.sourceSwitch) return "trend";
-  if (input.source.anomalies.length > 0) return "trend";
+  if (input.candidates.some((candidate) => candidate.anomalies.length > 0)) return "trend";
   const selectedConfidence = getConfidencePriority(input.source.confidenceTier);
   const rejectedHigherConfidence = input.candidates.some(
     (candidate) =>
@@ -846,7 +875,45 @@ export async function pruneYieldTables(
     await db
       .prepare(
         `DELETE FROM yield_source_decisions
-         WHERE retention_reason = 'audit' AND created_at < ?`,
+         WHERE created_at < ?
+           AND (
+             retention_reason = 'audit'
+             OR (
+               retention_reason IS NULL
+               AND COALESCE(source_switch, 0) != 1
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM json_each(
+                   CASE
+                     WHEN json_valid(yield_source_decisions.alternatives_json)
+                     THEN yield_source_decisions.alternatives_json
+                     ELSE '[]'
+                   END
+                 ) AS alternative
+                 WHERE CASE
+                   WHEN json_valid(alternative.value) AND json_type(alternative.value, '$.anomalies') = 'array'
+                   THEN COALESCE(json_array_length(json_extract(alternative.value, '$.anomalies')), 0)
+                   ELSE 0
+                 END > 0
+                   OR (
+                     json_valid(alternative.value)
+                     AND
+                     json_extract(alternative.value, '$.rejected') = 1
+                     AND CASE json_extract(alternative.value, '$.confidenceTier')
+                       WHEN 'deterministic' THEN 4
+                       WHEN 'curated' THEN 3
+                       WHEN 'discovered' THEN 2
+                       ELSE 1
+                     END > CASE selected_confidence_tier
+                       WHEN 'deterministic' THEN 4
+                       WHEN 'curated' THEN 3
+                       WHEN 'discovered' THEN 2
+                       ELSE 1
+                     END
+                   )
+               )
+             )
+           )`,
       )
       .bind(auditCutoffSec)
       .run();

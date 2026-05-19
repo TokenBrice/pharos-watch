@@ -135,6 +135,32 @@ describe("buildYieldViewModel", () => {
     });
   });
 
+  it("keeps expanded benchmark registry values valid when matching rows exist", () => {
+    const model = buildYieldViewModel(
+      [
+        makeYieldRanking({
+          id: "mxn-yield-row",
+          symbol: "MXNY",
+          name: "MXN Yield",
+          benchmarkKey: "MXN",
+          benchmarkLabel: "MXN short rate",
+          benchmarkRate: 10.5,
+          provenance: makeYieldProvenance({
+            benchmarkKey: "MXN",
+            benchmarkLabel: "MXN short rate",
+            benchmarkRate: 10.5,
+          }),
+        }),
+      ],
+      { benchmark: "MXN" },
+    );
+
+    expect(model.filters.benchmark).toBe("MXN");
+    expect(model.invalidParamKeys).not.toContain("benchmark");
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["mxn-yield-row"]);
+    expect(model.options.benchmark).toContainEqual({ value: "MXN", label: "MXN", count: 1 });
+  });
+
   it("excludes null safety and TVL only when minimum filters are set", () => {
     expect(buildYieldViewModel(rows, {}).visibleRows.map((row) => row.id)).toContain("eurc-circle");
 

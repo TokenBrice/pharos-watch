@@ -108,27 +108,11 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const { getParam, replaceParams } = useUrlFilters();
   const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
 
-  const selectedSourceKeys = useMemo(
+  const rawSelectedSourceKeys = useMemo(
     () => new Set(getParam("sources").split(",").filter(Boolean)),
     [getParam],
   );
   const [showAllSources, setShowAllSources] = useState(false);
-
-  const toggleSource = (sourceKey: string) => {
-    const next = new Set(selectedSourceKeys);
-    if (next.has(sourceKey)) {
-      next.delete(sourceKey);
-    } else if (next.size < 4) {
-      next.add(sourceKey);
-    }
-    replaceParams((params) => {
-      if (next.size > 0) {
-        params.set("sources", [...next].join(","));
-      } else {
-        params.delete("sources");
-      }
-    });
-  };
 
   const ranking = data?.rankings.find((row) => row.id === stablecoinId);
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -169,8 +153,29 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
+  const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
+  const selectedSourceKeys = new Set(
+    [...rawSelectedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey)),
+  );
+  const externalSourceKeys = selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
+  const toggleSource = (sourceKey: string) => {
+    if (!availableSourceKeys.has(sourceKey)) return;
+    const next = new Set(selectedSourceKeys);
+    if (next.has(sourceKey)) {
+      next.delete(sourceKey);
+    } else if (next.size < 4) {
+      next.add(sourceKey);
+    }
+    replaceParams((params) => {
+      if (next.size > 0) {
+        params.set("sources", [...next].join(","));
+      } else {
+        params.delete("sources");
+      }
+    });
+  };
 
   return {
     status: "ready",
@@ -183,7 +188,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     sourceExplorer,
     sourceDepthLens: sourceExplorer.sourceDepthLens,
     sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
-    externalSourceKeys: selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined,
+    externalSourceKeys,
     historySources: sourceExplorer.historySources,
     dataSourceMeta,
     warningSignals: ranking.warningSignals,

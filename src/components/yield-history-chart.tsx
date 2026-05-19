@@ -349,7 +349,7 @@ export function YieldHistoryChart({
             <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
           )}
         </div>
-        {compact ? (
+        {pysSparklinePoints.some((point) => point.pysAtPublish !== null) ? (
           <div className="mt-2 border-t border-border/40 pt-2">
             <PysHistorySparkline history={pysSparklinePoints} />
           </div>

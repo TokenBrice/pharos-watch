@@ -7,14 +7,15 @@ import {
 } from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { ReportCardGrade } from "@shared/types";
-import type {
-  PegCurrency,
-  YieldBenchmarkKey,
-  YieldBenchmarkMeta,
-  YieldBenchmarkRegistry,
-  YieldRanking,
-  YieldType,
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import {
+  type PegCurrency,
+  type ReportCardGrade,
+  type YieldBenchmarkKey,
+  type YieldBenchmarkMeta,
+  type YieldBenchmarkRegistry,
+  type YieldRanking,
+  type YieldType,
 } from "@shared/types";
 
 export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
@@ -248,7 +249,7 @@ const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "al
   "discovered",
   "fallback",
 ];
-const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = ["USD", "EUR", "CHF"];
+const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
 const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
 const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
 

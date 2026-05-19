@@ -393,7 +393,7 @@ function render() {
             methodologyVersion: { type: "string" },
             updatedAt: {
               type: "number",
-              description: "Unix seconds when the manifest was generated.",
+              description: "Unix seconds for the methodology snapshot backing the manifest.",
             },
             entries: {
               type: "array",
@@ -430,7 +430,14 @@ function render() {
                 "intentional-gap",
               ],
             },
-            sourceKey: { type: "string" },
+            sourceKey: {
+              type: ["string", "null"],
+              description: "Exact runtime source key when the strategy publishes a joinable yield_history/rankings source; null for disabled or runtime-resolved strategies.",
+            },
+            sourceKeyPattern: {
+              ...stringOrNull,
+              description: "Human-readable source-key pattern or would-be key for runtime-resolved or disabled strategies.",
+            },
             label: { type: "string" },
             chain: stringOrNull,
             project: stringOrNull,
@@ -439,7 +446,7 @@ function render() {
             methodologyVersion: { type: "string" },
             updatedAt: {
               type: "number",
-              description: "Unix seconds when the manifest entry was generated.",
+              description: "Unix seconds for the methodology snapshot backing the manifest entry.",
             },
           },
           additionalProperties: true,

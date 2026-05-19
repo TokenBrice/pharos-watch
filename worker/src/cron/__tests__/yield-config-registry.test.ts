@@ -78,6 +78,11 @@ describe("yield config registry", () => {
     }
   });
 
+  it("keeps rate-derived configs unique", () => {
+    const ids = RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("requires every safety-bypass id to have a deterministic lending override", () => {
     for (const stablecoinId of AUTO_LENDING_SAFETY_BYPASS_IDS) {
       expect(AUTO_LENDING_POOL_MAP[stablecoinId], stablecoinId).toBeTruthy();
@@ -209,6 +214,42 @@ describe("yield config registry", () => {
         strategies: [
           expect.objectContaining({
             kind: "rate-derived",
+          }),
+        ],
+      });
+    }
+  });
+
+  it("wires v8.16 coverage additions to runtime source keys", () => {
+    for (const stablecoinId of [
+      "fpi-frax",
+      "silk-shade-protocol",
+      "isc-international-stable-currency",
+    ]) {
+      const coin = TRACKED_STABLECOINS.find((entry) => entry.id === stablecoinId);
+      expect(coin?.flags.yieldBearing, stablecoinId).toBe(true);
+      expect(coin?.flags.navToken, stablecoinId).toBe(true);
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "price-derived",
+            sourceKey: "price-derived",
+          }),
+        ],
+      });
+    }
+
+    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+      expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "rate-derived",
+            sourceKey: "rate-derived",
           }),
         ],
       });

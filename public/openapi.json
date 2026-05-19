@@ -1381,7 +1381,7 @@
           "Yield"
         ],
         "summary": "Yield adapter manifest",
-        "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, source key, label, chain/project hints, lifecycle state, and methodology version.",
+        "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
         "operationId": "yieldAdapterManifest",
         "parameters": [],
         "responses": {
@@ -2596,7 +2596,7 @@
           },
           "updatedAt": {
             "type": "number",
-            "description": "Unix seconds when the manifest was generated."
+            "description": "Unix seconds for the methodology snapshot backing the manifest."
           },
           "entries": {
             "type": "array",
@@ -2640,7 +2640,18 @@
             ]
           },
           "sourceKey": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Exact runtime source key when the strategy publishes a joinable yield_history/rankings source; null for disabled or runtime-resolved strategies."
+          },
+          "sourceKeyPattern": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable source-key pattern or would-be key for runtime-resolved or disabled strategies."
           },
           "label": {
             "type": "string"
@@ -2671,7 +2682,7 @@
           },
           "updatedAt": {
             "type": "number",
-            "description": "Unix seconds when the manifest entry was generated."
+            "description": "Unix seconds for the methodology snapshot backing the manifest entry."
           }
         },
         "additionalProperties": true

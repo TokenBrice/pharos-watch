@@ -1,6 +1,3 @@
-// worker/src/cron/yield-config.ts
-// Static configuration for the yield intelligence pipeline.
-
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   deriveYieldRegistry,
@@ -17,6 +14,7 @@ import {
 import { YIELD_POOL_MAP as RAW_YIELD_POOL_MAP } from "./yield-config-pools";
 import {
   DIRECT_PROTOCOL_API_STRATEGIES as RAW_DIRECT_PROTOCOL_API_STRATEGIES,
+  DIRECT_PROTOCOL_API_SOURCE_KEYS as RAW_DIRECT_PROTOCOL_API_SOURCE_KEYS,
   INTENTIONAL_GAP_REASONS as RAW_INTENTIONAL_GAP_REASONS,
   ON_CHAIN_RATE_CONFIGS as RAW_ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS as RAW_PRICE_DERIVED_FALLBACK_IDS,
@@ -40,8 +38,10 @@ const derivedYieldConfig = deriveYieldRegistry({
   ),
   variantMap: RAW_YIELD_VARIANT_MAP,
   poolMap: RAW_YIELD_POOL_MAP,
+  weightedPoolGroups: YIELD_WEIGHTED_POOL_GROUPS,
   onChainRateConfigs: RAW_ON_CHAIN_RATE_CONFIGS,
   directProtocolApiStrategies: RAW_DIRECT_PROTOCOL_API_STRATEGIES,
+  directProtocolApiSourceKeys: RAW_DIRECT_PROTOCOL_API_SOURCE_KEYS,
   priceDerivedFallbackIds: RAW_PRICE_DERIVED_FALLBACK_IDS,
   rateDerivedConfigs: RAW_RATE_DERIVED_CONFIGS,
   autoLendingPoolMap: RAW_AUTO_LENDING_POOL_MAP,

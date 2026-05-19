@@ -5,6 +5,7 @@ import {
   type RateDerivedConfig,
   type YieldAdapterLifecycleEntry,
 } from "./yield-config-registry";
+import { buildOnChainSourceKey } from "../lib/yield-utils";
 
 /**
  * Tier 1: On-chain exchange rate sources.
@@ -190,6 +191,16 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "usyc-hashnote": "Hashnote NAV feed",
   "usdy-ondo-finance": "Ondo USDY oracle",
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
+};
+
+export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
+  "scrvusd-curve": "onchain:scrvusd-curve:scrvusd-current-rate",
+  "lusd-liquity": buildOnChainSourceKey("lusd-liquity"),
+  "usbd-bima": "protocol-api:bima-susbd",
+  "cetes-etherfuse": "protocol-api:etherfuse-cetes-current-issuance",
+  "usyc-hashnote": "protocol-api:hashnote-usyc",
+  "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
+  "zys-zephyr-protocol": "protocol-api:zys-zephyr-protocol",
 };
 
 const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {

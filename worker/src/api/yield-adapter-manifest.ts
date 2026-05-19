@@ -1,16 +1,19 @@
 import {
-  jsonFreshResponse,
+  jsonResponse,
   withErrorHandler,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { YIELD_ADAPTER_MANIFEST } from "../cron/yield-config";
 import {
-  getYieldAdapterLifecycle,
   type YieldAdapterManifestEntry,
   type YieldStrategyDescriptor,
 } from "../cron/yield-config-registry";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import { YIELD_METHODOLOGY_VERSION_LABEL } from "@shared/lib/yield-methodology-version";
+import {
+  YIELD_METHODOLOGY_CHANGELOG,
+  YIELD_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/yield-methodology-version";
 import type {
   YieldAdapterManifestFamily,
   YieldAdapterManifestPublicEntry,
@@ -21,39 +24,42 @@ const SYMBOL_BY_STABLECOIN_ID = new Map<string, string>(
   YIELD_BEARING_STABLECOINS.map((meta) => [meta.id, meta.symbol]),
 );
 
-const BUILD_UPDATED_AT_MS = Date.now();
-const MANIFEST_CACHE_MAX_AGE_SEC = 300;
+const MANIFEST_UPDATED_AT_SEC =
+  YIELD_METHODOLOGY_CHANGELOG.find((entry) => entry.version === YIELD_METHODOLOGY_VERSION)?.effectiveAt
+  ?? 0;
 
 interface FamilyMapping {
   family: YieldAdapterManifestFamily;
-  sourceKey: string;
+  sourceKey: string | null;
+  sourceKeyPattern?: string | null;
 }
 
-function familyFromStrategy(
-  entry: YieldAdapterManifestEntry,
-  strategy: YieldStrategyDescriptor,
-): FamilyMapping | null {
-  const id = entry.stablecoinId;
+function familyFromStrategy(strategy: YieldStrategyDescriptor): FamilyMapping | null {
+  const sourceKey = strategy.sourceKey ?? null;
   switch (strategy.kind) {
     case "deterministic-onchain":
-      return { family: "onchain", sourceKey: `onchain:${id}` };
-    case "protocol-api":
-      return { family: "protocol-api", sourceKey: `protocol-api:${id}` };
+      return { family: "onchain", sourceKey };
+    case "protocol-api": {
+      const family: YieldAdapterManifestFamily = sourceKey?.startsWith("onchain:")
+        ? "onchain"
+        : "protocol-api";
+      return { family, sourceKey };
+    }
     case "native-pool":
+    case "weighted-pool":
+      return { family: "defillama", sourceKey };
     case "variant-pool":
-      return { family: "defillama", sourceKey: `defillama:${id}` };
+      return { family: "defillama", sourceKey, sourceKeyPattern: strategy.sourceKeyPattern ?? null };
     case "auto-discovery-override":
-      return { family: "defillama-auto", sourceKey: `defillama-auto:${id}` };
+      return { family: "defillama-auto", sourceKey };
     case "rate-derived":
-      return { family: "rate-derived", sourceKey: `rate-derived:${id}` };
+      return { family: "rate-derived", sourceKey };
     case "price-derived":
-      return { family: "price-derived", sourceKey: `price-derived:${id}` };
+      return { family: "price-derived", sourceKey };
     case "intentional-gap":
-      return { family: "intentional-gap", sourceKey: `intentional-gap:${id}` };
+      return { family: "intentional-gap", sourceKey };
     case "quarantined":
-      // Quarantined strategies surface via lifecycle on the underlying family;
-      // they do not produce their own entry row.
-      return null;
+      return { family: "onchain", sourceKey, sourceKeyPattern: strategy.sourceKeyPattern ?? null };
   }
 }
 
@@ -87,29 +93,35 @@ function buildPublicEntries(
   const entries: YieldAdapterManifestPublicEntry[] = [];
   for (const manifestEntry of YIELD_ADAPTER_MANIFEST) {
     const coinSymbol = SYMBOL_BY_STABLECOIN_ID.get(manifestEntry.stablecoinId) ?? manifestEntry.stablecoinId;
-    const lifecycleEntry = getYieldAdapterLifecycle(manifestEntry.stablecoinId);
-    const quarantineStrategy = manifestEntry.strategies.find((strategy) => strategy.kind === "quarantined");
-    const quarantineReason = quarantineStrategy?.rationale
-      ?? manifestEntry.deterministicQuarantineReason
-      ?? lifecycleEntry.reason?.note
-      ?? null;
 
     const seenSourceKeys = new Set<string>();
     for (const strategy of manifestEntry.strategies) {
-      const mapping = familyFromStrategy(manifestEntry, strategy);
-      if (!mapping || seenSourceKeys.has(mapping.sourceKey)) continue;
-      seenSourceKeys.add(mapping.sourceKey);
+      const mapping = familyFromStrategy(strategy);
+      if (!mapping) continue;
+      const dedupeKey = [
+        mapping.family,
+        mapping.sourceKey ?? mapping.sourceKeyPattern ?? strategy.label,
+        strategy.lifecycle ?? "active",
+      ].join(":");
+      if (seenSourceKeys.has(dedupeKey)) continue;
+      seenSourceKeys.add(dedupeKey);
+
+      const lifecycle = strategy.lifecycle ?? "active";
+      const quarantineReason = lifecycle === "quarantined"
+        ? strategy.lifecycleReason?.note ?? strategy.rationale ?? manifestEntry.deterministicQuarantineReason ?? null
+        : null;
 
       entries.push({
         stablecoinId: manifestEntry.stablecoinId,
         coinSymbol,
         family: mapping.family,
         sourceKey: mapping.sourceKey,
+        sourceKeyPattern: mapping.sourceKeyPattern ?? null,
         label: strategy.label,
         chain: resolveChain(manifestEntry, strategy),
         project: resolveProject(manifestEntry, strategy),
-        lifecycle: lifecycleEntry.lifecycle,
-        quarantineReason: lifecycleEntry.lifecycle === "quarantined" ? quarantineReason : null,
+        lifecycle,
+        quarantineReason,
         methodologyVersion,
         updatedAt,
       });
@@ -121,17 +133,17 @@ function buildPublicEntries(
 export const handleYieldAdapterManifest = withErrorHandler(
   "yield-adapter-manifest",
   async (): Promise<Response> => {
-    const updatedAtSec = Math.floor(BUILD_UPDATED_AT_MS / 1000);
+    const updatedAtSec = MANIFEST_UPDATED_AT_SEC;
     const entries = buildPublicEntries(YIELD_METHODOLOGY_VERSION_LABEL, updatedAtSec);
     const payload: YieldAdapterManifestResponse = {
       methodologyVersion: YIELD_METHODOLOGY_VERSION_LABEL,
       updatedAt: updatedAtSec,
       entries,
     };
-    return jsonFreshResponse(payload, {
-      cacheControl: CACHE_PROFILES.standard,
-      updatedAt: updatedAtSec,
-      maxAgeSec: MANIFEST_CACHE_MAX_AGE_SEC,
+    return jsonResponse(payload, {
+      headers: {
+        "Cache-Control": CACHE_PROFILES.standard,
+      },
     });
   },
 );

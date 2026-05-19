@@ -17,6 +17,10 @@ import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
 } from "@/lib/yield-source-risk";
+import {
+  YIELD_DECISION_REASON_LABELS,
+  YIELD_DECISION_REJECTION_REASON_LABELS,
+} from "@/lib/yield-presentation";
 import { formatCurrency, formatPercent, formatSignedPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
@@ -130,6 +134,17 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const sourceTvl = view.sourceExplorer.selectedSource.sourceTvlUsd;
   const sourceDepthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[view.sourceDepthLens];
   const excessYield = ranking.excessYield;
+  const selectedDecisionReason = ranking.decisionLedger?.selectedReasonCode
+    ? YIELD_DECISION_REASON_LABELS[ranking.decisionLedger.selectedReasonCode]
+    : null;
+  const legacySelectionReason = ranking.provenance?.selectionReason ?? null;
+  const selectionReason = selectedDecisionReason ?? legacySelectionReason;
+  const rejectedAlternatives = ranking.decisionLedger?.alternatives
+    .map((alternative) => {
+      const reason = YIELD_DECISION_REJECTION_REASON_LABELS[alternative.rejectionReasonCode];
+      return reason ? `${alternative.yieldSource}: ${reason}` : null;
+    })
+    .filter((label): label is string => Boolean(label)) ?? [];
 
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
@@ -293,9 +308,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </>
           ) : null}
         </div>
-        {view.ranking.provenance?.selectionReason ? (
+        {selectionReason ? (
           <p className="mt-2 text-[11px] text-muted-foreground">
-            {view.ranking.provenance.selectionReason}
+            {selectionReason}
+          </p>
+        ) : null}
+        {rejectedAlternatives.length > 0 ? (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Alternates: {rejectedAlternatives.join("; ")}.
           </p>
         ) : null}
       </div>
@@ -484,10 +504,8 @@ export function YieldChangeAttributionCard({
 
 function formatSignedRankDelta(delta: number): string {
   if (delta === 0) return "0";
-  // Rank UP (improvement) is negative delta (rank went from 10 to 5 = -5).
-  // We render UP movements with a + sign for user-friendliness, mirroring the
-  // leaderboard table chip.
-  return delta < 0 ? `+${Math.abs(delta)}` : `-${delta}`;
+  // Backend contract: previousRank - liveRank. Positive means rank improved.
+  return delta > 0 ? `+${delta}` : `-${Math.abs(delta)}`;
 }
 
 const DRIVER_CONTRIBUTION_TO_DRIVER_KEY: Record<
@@ -532,11 +550,11 @@ export function YieldRankMovementCard({
     );
   }
 
-  const arrow = rankDelta == null ? "■" : rankDelta < 0 ? "▲" : rankDelta > 0 ? "▼" : "■";
+  const arrow = rankDelta == null ? "■" : rankDelta > 0 ? "▲" : rankDelta < 0 ? "▼" : "■";
   const rankColor =
-    rankDelta != null && rankDelta < 0
+    rankDelta != null && rankDelta > 0
       ? "text-emerald-700 dark:text-emerald-400"
-      : rankDelta != null && rankDelta > 0
+      : rankDelta != null && rankDelta < 0
       ? "text-red-700 dark:text-red-400"
       : "text-muted-foreground";
 
@@ -564,10 +582,10 @@ export function YieldRankMovementCard({
           className={cn("font-mono text-2xl tabular-nums", rankColor)}
           aria-label={
             rankDelta != null
-              ? rankDelta < 0
+              ? rankDelta > 0
                 ? `Rank improved by ${Math.abs(rankDelta)}`
-                : rankDelta > 0
-                ? `Rank fell by ${rankDelta}`
+                : rankDelta < 0
+                ? `Rank fell by ${Math.abs(rankDelta)}`
                 : "Rank unchanged"
               : "Rank delta unavailable"
           }
@@ -590,7 +608,7 @@ export function YieldRankMovementCard({
               {" "}
               → current rank{" "}
               <span className="font-mono tabular-nums text-foreground">
-                #{previousRank + rankDelta}
+                #{previousRank - rankDelta}
               </span>
             </>
           ) : null}

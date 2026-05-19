@@ -336,6 +336,49 @@ describe("YieldDetailSection", () => {
     expect(sourcesParam).toBe("");
   });
 
+  it("drops stale sources URL values before forwarding chart overlays", () => {
+    sourcesParam = "stale-source,alt-source";
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          altSources: [
+            {
+              sourceKey: "alt-source",
+              yieldSource: "Alt Source",
+              yieldSourceUrl: "https://example.com/alt",
+              yieldType: "lending-vault",
+              currentApy: 0.049,
+              apy30d: 0.048,
+              sourceTvlUsd: 750_000,
+              dataSource: "defillama",
+            },
+          ],
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
+  });
+
+  it("falls back to best chart source when all sources URL values are stale", () => {
+    sourcesParam = "stale-source";
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("");
+  });
+
   it("limits the chart source selection to four alternatives", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
@@ -428,6 +471,53 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText(/Not enough data to attribute/i)).toBeTruthy();
   });
 
+  it("uses decision-ledger reason codes for source arbitration copy", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          provenance: {
+            sourceKey: "primary-source",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 60,
+            confidenceTier: "curated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "legacy freeform selection reason",
+            sourceSwitch: false,
+            previousBestSourceKey: null,
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+          decisionLedger: {
+            selectedReasonCode: "curated-over-discovered",
+            sourceSwitch: false,
+            rejectedCount: 1,
+            alternatives: [
+              {
+                sourceKey: "alt-source",
+                yieldSource: "Alt Source",
+                apy30dDelta: 0.01,
+                rejectionReasonCode: "lower-confidence",
+              },
+            ],
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Curated source preferred")).toBeTruthy();
+    expect(screen.getByText("Alternates: Alt Source: lower confidence.")).toBeTruthy();
+    expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
+  });
+
   it("renders the rank-movement card as 'Stable' when rankChangeAttribution is null", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([makeRanking()]),
@@ -448,7 +538,7 @@ describe("YieldDetailSection", () => {
         makeRanking({
           rankChangeAttribution: {
             previousRank: 12,
-            rankDelta: -3,
+            rankDelta: 3,
             previousPys: 60,
             pysDelta: 4.5,
             primaryDriver: "apy",

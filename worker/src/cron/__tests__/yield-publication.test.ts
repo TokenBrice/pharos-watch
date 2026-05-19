@@ -7,6 +7,7 @@ import {
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -16,6 +17,7 @@ import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evalua
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
+  pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
@@ -304,6 +306,47 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources", () => {
     });
 
     expect(payload.rankings[0]?.sourceRisk?.rewardShare).toBeNull();
+  });
+
+  it("populates source-switch APY30d delta when the previous selected source is evaluated", () => {
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const benchmark = makeBenchmarkMeta();
+    const selected = makeEvaluatedSource({
+      sourceKey: "defillama:selected",
+      yieldSource: "Selected",
+      currentApy: 5.3,
+      apy30d: 5,
+      pharosYieldScore: 50,
+      confidenceTier: "curated",
+      previousBestSourceKey: "price-derived:previous",
+    });
+    const previous = makeEvaluatedSource({
+      sourceKey: "price-derived:previous",
+      yieldSource: "Previous",
+      currentApy: 3.4,
+      apy30d: 3.2,
+      pharosYieldScore: 20,
+      confidenceTier: "fallback",
+      dataSource: "price-derived",
+      previousBestSourceKey: "price-derived:previous",
+    });
+
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [selected, previous],
+      bestSourceKeyByCoin: new Map([[selected.id, selected.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: benchmark.rate,
+      riskFreeRateMeta: benchmark,
+      riskFreeRateRegistry: { USD: benchmark, EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    expect(payload.rankings[0]?.decisionLedger?.sourceSwitch).toBe(true);
+    expect(payload.rankings[0]?.decisionLedger?.previousBestSourceKey).toBe("price-derived:previous");
+    expect(payload.rankings[0]?.decisionLedger?.apy30dDeltaFromPrevious).toBeCloseTo(1.8, 6);
   });
 });
 
@@ -833,6 +876,131 @@ describe("publishYieldCoordinatorResults", () => {
     const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
     const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
     expect(decisionRows[0]?.retention_reason).toBe("audit");
+  });
+
+  it("classifies retention_reason as 'trend' when a rejected alternative has anomalies", async () => {
+    const db = makePublicationDb(1);
+    const best = makeEvaluatedSource({
+      sourceKey: "defillama:best",
+      currentApy: 5,
+      apy30d: 5,
+      pharosYieldScore: 35,
+      confidenceTier: "curated",
+    });
+    const rejected = makeEvaluatedSource({
+      sourceKey: "defillama-auto:rejected",
+      currentApy: 9,
+      apy30d: 8,
+      pharosYieldScore: 45,
+      confidenceTier: "discovered",
+      dataSource: "defillama-auto",
+      rejected: true,
+      anomalies: ["diverges-from-canonical"],
+    });
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({
+      db,
+      evaluatedSources: [best, rejected],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+    }));
+    expect(result).toMatchObject({ ok: true });
+
+    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
+    expect(decisionRows[0]?.retention_reason).toBe("trend");
+  });
+});
+
+describe("pruneYieldTables", () => {
+  it("deletes old null rollout audit rows while retaining inferable trend rows", async () => {
+    const { DatabaseSync } = await import("node:sqlite");
+    const sqlite = new DatabaseSync(":memory:");
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const oldSec = startSec - 31 * 24 * 60 * 60;
+    const recentSec = startSec - 5 * 24 * 60 * 60;
+    try {
+      sqlite.exec(`
+        CREATE TABLE yield_data (
+          stablecoin_id TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE yield_history (
+          stablecoin_id TEXT NOT NULL,
+          recorded_at INTEGER NOT NULL
+        );
+        CREATE TABLE yield_source_decisions (
+          generation_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          selected_confidence_tier TEXT NOT NULL,
+          source_switch INTEGER NOT NULL DEFAULT 0,
+          alternatives_json TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          retention_reason TEXT
+        );
+        CREATE TABLE yield_source_decision_alternatives (
+          generation_id TEXT NOT NULL,
+          stablecoin_id TEXT NOT NULL,
+          recorded_at INTEGER NOT NULL
+        );
+      `);
+      const insertDecision = sqlite.prepare(
+        `INSERT INTO yield_source_decisions (
+          generation_id, stablecoin_id, selected_confidence_tier, source_switch,
+          alternatives_json, created_at, retention_reason
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      insertDecision.run("g-null-audit", "coin-a", "curated", 0, "[]", oldSec, null);
+      insertDecision.run("g-null-switch", "coin-b", "curated", 1, "[]", oldSec, null);
+      insertDecision.run(
+        "g-null-anomaly",
+        "coin-c",
+        "curated",
+        0,
+        JSON.stringify([{ confidenceTier: "discovered", rejected: true, anomalies: ["diverges-from-canonical"] }]),
+        oldSec,
+        null,
+      );
+      insertDecision.run(
+        "g-null-higher",
+        "coin-d",
+        "discovered",
+        0,
+        JSON.stringify([{ confidenceTier: "curated", rejected: true, anomalies: [] }]),
+        oldSec,
+        null,
+      );
+      insertDecision.run("g-old-audit", "coin-e", "curated", 0, "[]", oldSec, "audit");
+      insertDecision.run("g-old-trend", "coin-f", "curated", 0, "[]", oldSec, "trend");
+      insertDecision.run("g-recent-null", "coin-g", "curated", 0, "[]", recentSec, null);
+      const insertAlternative = sqlite.prepare(
+        `INSERT INTO yield_source_decision_alternatives (
+          generation_id, stablecoin_id, recorded_at
+        ) VALUES (?, ?, ?)`,
+      );
+      insertAlternative.run("g-null-audit", "coin-a", oldSec);
+      insertAlternative.run("g-null-switch", "coin-b", oldSec);
+
+      await pruneYieldTables(createSqliteD1(sqlite), startSec);
+
+      const generations = sqlite
+        .prepare("SELECT generation_id FROM yield_source_decisions ORDER BY generation_id ASC")
+        .all()
+        .map((row) => (row as { generation_id: string }).generation_id);
+      expect(generations).toEqual([
+        "g-null-anomaly",
+        "g-null-higher",
+        "g-null-switch",
+        "g-old-trend",
+        "g-recent-null",
+      ]);
+      const alternatives = sqlite
+        .prepare("SELECT generation_id FROM yield_source_decision_alternatives ORDER BY generation_id ASC")
+        .all()
+        .map((row) => (row as { generation_id: string }).generation_id);
+      expect(alternatives).toEqual(["g-null-switch"]);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

@@ -597,7 +597,8 @@ export interface YieldAdapterManifestPublicEntry {
   stablecoinId: string;
   coinSymbol: string;
   family: YieldAdapterManifestFamily;
-  sourceKey: string;
+  sourceKey: string | null;
+  sourceKeyPattern?: string | null;
   label: string;
   chain?: string | null;
   project?: string | null;

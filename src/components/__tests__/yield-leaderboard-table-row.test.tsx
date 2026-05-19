@@ -112,7 +112,7 @@ describe("YieldLeaderboardTableRow", () => {
     const row = {
       ...baseRow,
       rankChangeAttribution: {
-        rankDelta: -3,
+        rankDelta: 3,
         pysDelta: 2.4,
         primaryDriver: "apy",
       },
@@ -127,7 +127,7 @@ describe("YieldLeaderboardTableRow", () => {
     const row = {
       ...baseRow,
       rankChangeAttribution: {
-        rankDelta: -1,
+        rankDelta: 1,
         pysDelta: 0.3,
         primaryDriver: "apy",
       },

@@ -2597,6 +2597,39 @@ When present, `YieldRanking.provenance` includes:
 
 ---
 
+### `GET /api/yield-adapter-manifest`
+
+Yield adapter manifest for every yield-bearing asset. The route is public-read, uses the standard cache profile (`s-maxage=300`), and requires `X-API-Key` on the public API lane.
+
+`sourceKey` is an exact runtime key only when it can join to `/api/yield-history?sourceKey=...`, rankings provenance, or decision-ledger rows. Runtime-resolved DeFiLlama variant strategies and disabled/quarantined readers return `sourceKey: null` with `sourceKeyPattern` set to the runtime pattern or would-be disabled key instead of a synthetic non-runtime value.
+
+**Response**
+
+```text
+{
+  "methodologyVersion": "v8.16",
+  "updatedAt": 1779210000,
+  "entries": [
+    {
+      "stablecoinId": "susde-ethena",
+      "coinSymbol": "sUSDe",
+      "family": "defillama",
+      "sourceKey": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+      "sourceKeyPattern": null,
+      "label": "Curated DeFiLlama pool UUID",
+      "chain": null,
+      "project": null,
+      "lifecycle": "active",
+      "quarantineReason": null,
+      "methodologyVersion": "v8.16",
+      "updatedAt": 1779210000
+    }
+  ]
+}
+```
+
+---
+
 ### `GET /api/yield-history`
 
 Historical yield data for a single stablecoin. If a stored `warning_signals` payload is malformed, the API treats it as an empty array rather than failing the entire response. Generation-aware rows are returned only after their publication generation is marked `published`; legacy rows remain readable through the existing cutoff fallback. Returned rows are capped at the latest published `/api/yield-rankings` snapshot so history cannot advance past an unpublished yield cache state. If the cached rankings payload is missing or malformed, the cap degrades to the latest successful `sync-yield-data` cron timestamp instead of wall-clock `now`.
