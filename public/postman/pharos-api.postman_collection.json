@@ -615,6 +615,25 @@
           "response": []
         },
         {
+          "name": "Yield adapter manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/yield-adapter-manifest",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yield-adapter-manifest"
+              ]
+            },
+            "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, source key, label, chain/project hints, lifecycle state, and methodology version."
+          },
+          "response": []
+        },
+        {
           "name": "Chains",
           "request": {
             "method": "GET",

@@ -296,7 +296,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **35**.
+Total documented public operations: **36**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -333,6 +333,7 @@ Total documented public operations: **35**.
 | GET | `/api/supply-history` | Supply history | History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/usds-status` | USDS freeze status | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/yield-adapter-manifest` | Yield adapter manifest | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-history` | Yield history | Yield, History | X-API-Key | `stablecoin`, `days?`, `mode?`, `sourceKey?` | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 

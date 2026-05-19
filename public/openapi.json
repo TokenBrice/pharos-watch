@@ -1375,6 +1375,41 @@
         }
       }
     },
+    "/api/yield-adapter-manifest": {
+      "get": {
+        "tags": [
+          "Yield"
+        ],
+        "summary": "Yield adapter manifest",
+        "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, source key, label, chain/project hints, lifecycle state, and methodology version.",
+        "operationId": "yieldAdapterManifest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YieldAdapterManifestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
     "/api/yield-history": {
       "get": {
         "tags": [
@@ -2543,6 +2578,100 @@
               "failed",
               null
             ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAdapterManifestResponse": {
+        "type": "object",
+        "description": "Yield adapter source-list manifest payload.",
+        "required": [
+          "methodologyVersion",
+          "updatedAt",
+          "entries"
+        ],
+        "properties": {
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Unix seconds when the manifest was generated."
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/YieldAdapterManifestEntry"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAdapterManifestEntry": {
+        "type": "object",
+        "description": "One yield adapter manifest row.",
+        "required": [
+          "stablecoinId",
+          "coinSymbol",
+          "family",
+          "sourceKey",
+          "label",
+          "lifecycle",
+          "methodologyVersion",
+          "updatedAt"
+        ],
+        "properties": {
+          "stablecoinId": {
+            "type": "string"
+          },
+          "coinSymbol": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string",
+            "enum": [
+              "onchain",
+              "protocol-api",
+              "defillama",
+              "defillama-auto",
+              "rate-derived",
+              "price-derived",
+              "intentional-gap"
+            ]
+          },
+          "sourceKey": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "chain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lifecycle": {
+            "type": "string"
+          },
+          "quarantineReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Unix seconds when the manifest entry was generated."
           }
         },
         "additionalProperties": true

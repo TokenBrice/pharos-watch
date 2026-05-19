@@ -699,6 +699,18 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     },
   },
   {
+    key: "yield-adapter-manifest",
+    path: API_PATHS.yieldAdapterManifest(),
+    summary: "Yield adapter manifest",
+    description:
+      "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, source key, label, chain/project hints, lifecycle state, and methodology version.",
+    tags: ["Yield"],
+    responseSchema: "YieldAdapterManifestResponse",
+    postman: {
+      folder: "Flows, blacklist, yield, and chains",
+    },
+  },
+  {
     key: "yield-history",
     path: API_PATHS.yieldHistoryBase(),
     summary: "Yield history",
