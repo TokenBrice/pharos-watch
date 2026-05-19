@@ -122,4 +122,46 @@ describe("YieldMobileCard", () => {
 
     expect(screen.getByText("PYS —")).toBeTruthy();
   });
+
+  it("renders the Why this PYS strip when expanded with a non-null PYS", () => {
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={row}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={true}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    const strip = screen.getByRole("group", { name: "Why this PYS" });
+    expect(strip.textContent).toContain("Bench spread");
+    expect(strip.textContent).toContain("Stability");
+    expect(strip.textContent).toContain("Safety");
+    expect(strip.textContent).toContain("Source risk");
+    expect(strip.textContent).toContain("B+");
+    expect(strip.textContent).toContain("1.00×");
+    expect(strip.textContent).toContain("Neutral");
+  });
+
+  it("hides the Why this PYS strip when expanded with a null PYS", () => {
+    const noPysRow = { ...row, pharosYieldScore: null } as YieldViewModelRow;
+    render(
+      <TooltipProvider>
+        <YieldMobileCard
+          row={noPysRow}
+          riskFreeRate={3.5}
+          medianApy={4}
+          expanded={true}
+          onToggleExpanded={vi.fn()}
+          onOpenSourceSheet={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
+  });
 });

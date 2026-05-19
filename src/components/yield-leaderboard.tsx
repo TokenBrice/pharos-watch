@@ -26,6 +26,7 @@ import { YieldLeaderboardTableRow } from "@/components/yield-leaderboard-table-r
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import {
+  computePysBreakdown,
   formatYieldWarningSignal,
   getPysColor,
 } from "@/lib/yield-constants";
@@ -35,10 +36,12 @@ import {
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   classifyYieldSourceFreshness,
+  getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
+import { PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -262,6 +265,71 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
   );
 }
 
+interface WhyPysStripMobileProps {
+  benchmarkSpread: number | null;
+  benchmarkLabel?: string | null;
+  stabilityPct: number | null;
+  sustainabilityMult: number;
+  grade: string | null;
+  safetyScore: number | null;
+  adjustedRiskPenalty: number;
+  sourceRiskPenalty: number;
+  sourceRiskDriverLabel: string | null;
+}
+
+function WhyPysStripMobile({
+  benchmarkSpread,
+  benchmarkLabel,
+  stabilityPct,
+  sustainabilityMult,
+  grade,
+  safetyScore,
+  adjustedRiskPenalty,
+  sourceRiskPenalty,
+  sourceRiskDriverLabel,
+}: WhyPysStripMobileProps) {
+  const benchSpreadValue = benchmarkSpread !== null ? formatSignedPercent(benchmarkSpread, 1) : "—";
+  const benchSubLabel = benchmarkLabel ? `vs ${benchmarkLabel}` : "Benchmark unavailable";
+  const stabilityValue = stabilityPct !== null ? `${stabilityPct}%` : "—";
+  const stabilitySub = sustainabilityMult === PYS_SUSTAINABILITY_FLOOR ? "(floor)" : "30d APY variance";
+  const safetyValue =
+    grade && grade !== "NR"
+      ? grade
+      : safetyScore !== null
+      ? `${Math.round(safetyScore)}/100`
+      : "—";
+  const safetySub = `÷${adjustedRiskPenalty.toFixed(1)}× penalty`;
+  const sourceRiskValue = `${sourceRiskPenalty.toFixed(2)}×`;
+  const sourceRiskSub = sourceRiskPenalty === 1 ? "Neutral" : sourceRiskDriverLabel ?? "Neutral";
+
+  const cells: Array<{ title: string; value: string; sublabel: string }> = [
+    { title: "Bench spread", value: benchSpreadValue, sublabel: benchSubLabel },
+    { title: "Stability", value: stabilityValue, sublabel: stabilitySub },
+    { title: "Safety", value: safetyValue, sublabel: safetySub },
+    { title: "Source risk", value: sourceRiskValue, sublabel: sourceRiskSub },
+  ];
+
+  return (
+    <div
+      role="group"
+      aria-label="Why this PYS"
+      className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
+    >
+      {cells.map((cell) => (
+        <div
+          key={cell.title}
+          aria-label={`${cell.title}: ${cell.value}, ${cell.sublabel}`}
+          className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
+        >
+          <p className="text-xs text-muted-foreground">{cell.title}</p>
+          <p className="font-mono tabular-nums text-sm text-foreground">{cell.value}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{cell.sublabel}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function YieldMobileCard({
   row,
   logo,
@@ -281,6 +349,7 @@ export function YieldMobileCard({
 }) {
   const pysColor = getPysColor(row.pharosYieldScore);
   const grade = row.safetyGrade;
+  const safetyScore = row.safetyScore;
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
   const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
   const warningCount = row.warningSignals.length;
@@ -338,6 +407,19 @@ export function YieldMobileCard({
       }
     }
   }
+
+  // WHY: only used when expanded with a non-null PYS; cheap to compute inline rather than extracting a helper.
+  const { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult } = computePysBreakdown(
+    row.apy30d,
+    safetyScore,
+    row.yieldStability,
+    row.benchmarkRate,
+    row.sourceRisk?.sourceRiskPenalty ?? null,
+  );
+  const sourceRiskDrivers = getYieldSourceRiskDrivers({
+    sourceRisk: row.sourceRisk,
+    sourceChanged: row.provenance?.sourceSwitch ?? false,
+  });
 
   return (
     <article className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}>
@@ -523,6 +605,19 @@ export function YieldMobileCard({
 
       {expanded ? (
         <div className="mt-4 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
+          {row.pharosYieldScore !== null ? (
+            <WhyPysStripMobile
+              benchmarkSpread={benchmarkSpread}
+              benchmarkLabel={row.benchmarkLabel}
+              stabilityPct={stabilityPct}
+              sustainabilityMult={sustainabilityMult}
+              grade={grade}
+              safetyScore={safetyScore}
+              adjustedRiskPenalty={adjustedRiskPenalty}
+              sourceRiskPenalty={sourceRiskPenalty}
+              sourceRiskDriverLabel={sourceRiskDrivers[0]?.label ?? null}
+            />
+          ) : null}
           <YieldHistoryChart
             stablecoinId={row.id}
             benchmarkRate={row.benchmarkRate ?? riskFreeRate}

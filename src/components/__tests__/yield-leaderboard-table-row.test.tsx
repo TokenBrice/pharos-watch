@@ -32,7 +32,7 @@ const baseRow = {
   yieldToRisk: 1.1,
   excessYield: 0.6,
   benchmarkKey: "USD",
-  benchmarkLabel: "USD short rate",
+  benchmarkLabel: "USD 3M T-Bill",
   benchmarkCurrency: "USD",
   benchmarkRate: 3.7,
   benchmarkIsFallback: false,
@@ -69,7 +69,7 @@ const baseRow = {
   sourceDepthLens: "moderate",
 } as unknown as YieldViewModelRow;
 
-function renderRow(row: YieldViewModelRow) {
+function renderRow(row: YieldViewModelRow, expanded: boolean = false) {
   return render(
     <TooltipProvider>
       <Table>
@@ -80,7 +80,7 @@ function renderRow(row: YieldViewModelRow) {
             riskFreeRate={3.5}
             medianApy={4}
             columnCount={11}
-            expanded={false}
+            expanded={expanded}
             onPrefetch={vi.fn()}
             onToggleExpanded={vi.fn()}
             onOpenSourceSheet={vi.fn()}
@@ -136,7 +136,6 @@ describe("YieldLeaderboardTableRow", () => {
 
     renderRow(row);
 
-    // Find the em-dash trigger inside a span with cursor-help class (tooltip-wrapped).
     const dashes = screen.getAllByText("—");
     const cursorHelpDash = dashes.find((el) => el.className.includes("cursor-help"));
     expect(cursorHelpDash).toBeTruthy();
@@ -147,5 +146,37 @@ describe("YieldLeaderboardTableRow", () => {
 
     const link = screen.getByRole("link", { name: "Open full yield analysis for USDT" });
     expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/yield");
+  });
+});
+
+describe("YieldLeaderboardTableRow — Why this PYS strip", () => {
+  it("renders the strip with all four factor cells when expanded with a non-null PYS", () => {
+    renderRow(baseRow, true);
+
+    const strip = screen.getByRole("group", { name: "Why this PYS" });
+    expect(strip).toBeTruthy();
+    expect(strip.textContent).toContain("Bench spread");
+    expect(strip.textContent).toContain("vs USD 3M T-Bill");
+    expect(strip.textContent).toContain("Stability");
+    expect(strip.textContent).toContain("90%");
+    expect(strip.textContent).toContain("30d APY variance");
+    expect(strip.textContent).toContain("Safety");
+    expect(strip.textContent).toContain("B+");
+    expect(strip.textContent).toContain("Source risk");
+    expect(strip.textContent).toContain("1.00×");
+    expect(strip.textContent).toContain("Neutral");
+  });
+
+  it("hides the strip when expanded with a null PYS but still renders the chart", () => {
+    const row = { ...baseRow, pharosYieldScore: null } as YieldViewModelRow;
+    renderRow(row, true);
+
+    expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+  });
+
+  it("does not render the strip when the row is collapsed", () => {
+    renderRow(baseRow, false);
+    expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
 });
