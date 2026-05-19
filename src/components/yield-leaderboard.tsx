@@ -180,7 +180,6 @@ function LeaderboardHeading({
 }
 
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
-  { id: "compare", label: <span className="sr-only">Compare</span>, className: "hidden md:table-cell w-[36px]" },
   { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "hidden md:table-cell text-right", title: "30-day average annual percentage yield" },
   { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },

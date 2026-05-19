@@ -458,24 +458,22 @@ function YieldLeaderboardTableRowBase({
           </div>
         </TableCell>
 
-        <TableCell className="hidden w-[36px] md:table-cell">
-          <input
-            type="checkbox"
-            checked={isCompared}
-            disabled={compareDisabled}
-            onChange={() => compare.toggle(row.id)}
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") event.stopPropagation();
-            }}
-            aria-label={`Add ${row.symbol} to compare`}
-            className="pharos-focus-ring h-4 w-4 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
-          />
-        </TableCell>
         <TableCell className="hidden md:table-cell">
           <span className="sr-only">{row.rankLabel}</span>
           <div className="min-w-[104px]">
             <div className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={isCompared}
+                disabled={compareDisabled}
+                onChange={() => compare.toggle(row.id)}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+                }}
+                aria-label={`Add ${row.symbol} to compare`}
+                className="pharos-focus-ring h-3.5 w-3.5 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
+              />
               <StablecoinLogo src={logos[row.id]} name={row.name} size={24} />
               <span className="font-medium">{row.symbol}</span>
               <YieldWatchlistStar
