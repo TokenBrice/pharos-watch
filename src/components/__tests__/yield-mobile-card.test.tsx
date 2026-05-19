@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { YieldMobileCard } from "@/components/yield-leaderboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
@@ -52,6 +52,8 @@ const row = {
   sourceDepthLens: "moderate",
 } as YieldViewModelRow;
 
+afterEach(cleanup);
+
 describe("YieldMobileCard", () => {
   it("exposes mobile history and source-sheet controls", () => {
     const onToggleExpanded = vi.fn();
@@ -76,5 +78,43 @@ describe("YieldMobileCard", () => {
     expect(onToggleExpanded).toHaveBeenCalledWith("usdt-tether");
     expect(onOpenSourceSheet).toHaveBeenCalledWith("usdt-tether");
     expect(screen.getByText("Depth: Moderate")).toBeTruthy();
+  });
+
+  it("renders the Why this PYS strip when expanded with a non-null PYS", () => {
+    render(
+      <YieldMobileCard
+        row={row}
+        riskFreeRate={3.5}
+        medianApy={4}
+        expanded={true}
+        onToggleExpanded={vi.fn()}
+        onOpenSourceSheet={vi.fn()}
+      />,
+    );
+
+    const strip = screen.getByRole("group", { name: "Why this PYS" });
+    expect(strip.textContent).toContain("Bench spread");
+    expect(strip.textContent).toContain("Stability");
+    expect(strip.textContent).toContain("Safety");
+    expect(strip.textContent).toContain("Source risk");
+    expect(strip.textContent).toContain("B+");
+    expect(strip.textContent).toContain("1.00×");
+    expect(strip.textContent).toContain("Neutral");
+  });
+
+  it("hides the Why this PYS strip when expanded with a null PYS", () => {
+    const noPysRow = { ...row, pharosYieldScore: null } as YieldViewModelRow;
+    render(
+      <YieldMobileCard
+        row={noPysRow}
+        riskFreeRate={3.5}
+        medianApy={4}
+        expanded={true}
+        onToggleExpanded={vi.fn()}
+        onOpenSourceSheet={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("group", { name: "Why this PYS" })).toBeNull();
   });
 });
