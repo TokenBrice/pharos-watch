@@ -52,7 +52,6 @@ describe("YieldLeaderboardControls", () => {
         onFilterChange={vi.fn()}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
       />,
     );
 
@@ -66,7 +65,6 @@ describe("YieldLeaderboardControls", () => {
         onFilterChange={vi.fn()}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
       />,
     );
 
@@ -87,7 +85,6 @@ describe("YieldLeaderboardControls", () => {
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
       />,
     );
 
@@ -111,7 +108,6 @@ describe("YieldLeaderboardControls", () => {
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
       />,
     );
 
@@ -122,66 +118,6 @@ describe("YieldLeaderboardControls", () => {
 
     fireEvent.click(chip);
     expect(onFilterChange).toHaveBeenCalledWith("watchlist", "all");
-  });
-
-  it("renders the risk-budget slider with all four stops and their row counts", () => {
-    render(
-      <YieldLeaderboardControls
-        viewModel={buildModel()}
-        onFilterChange={vi.fn()}
-        onClearFilters={vi.fn()}
-        onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
-      />,
-    );
-
-    const slider = screen.getByRole("group", { name: "Risk budget" });
-    expect(slider).toBeTruthy();
-    const stops = slider.querySelectorAll("button[aria-pressed]");
-    expect(stops.length).toBe(4);
-    for (const stop of stops) {
-      expect(stop.textContent).toMatch(/\d/);
-    }
-  });
-
-  it("invokes onApplyRiskBudget with the matching stop key when a stop is clicked", () => {
-    const onApplyRiskBudget = vi.fn();
-
-    render(
-      <YieldLeaderboardControls
-        viewModel={buildModel()}
-        onFilterChange={vi.fn()}
-        onClearFilters={vi.fn()}
-        onApplyPreset={vi.fn()}
-        onApplyRiskBudget={onApplyRiskBudget}
-      />,
-    );
-
-    const slider = screen.getByRole("group", { name: "Risk budget" });
-    const balancedStop = slider.querySelectorAll("button[aria-pressed]")[1] as HTMLButtonElement;
-    fireEvent.click(balancedStop);
-
-    expect(onApplyRiskBudget).toHaveBeenCalledWith("balanced");
-  });
-
-  it("marks the active risk-budget stop and leaves others inactive", () => {
-    render(
-      <YieldLeaderboardControls
-        viewModel={buildModel({ minSafety: "70", depth: "hide-thin", warnings: "hide" })}
-        onFilterChange={vi.fn()}
-        onClearFilters={vi.fn()}
-        onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
-      />,
-    );
-
-    const slider = screen.getByRole("group", { name: "Risk budget" });
-    const stops = Array.from(
-      slider.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
-    );
-    const activeStops = stops.filter((stop) => stop.getAttribute("aria-pressed") === "true");
-    expect(activeStops).toHaveLength(1);
-    expect(activeStops[0]?.textContent).toContain("Balanced");
   });
 
   describe("yield-type cohort tab strip", () => {
@@ -235,7 +171,6 @@ describe("YieldLeaderboardControls", () => {
           onFilterChange={vi.fn()}
           onClearFilters={vi.fn()}
           onApplyPreset={vi.fn()}
-          onApplyRiskBudget={vi.fn()}
         />,
       );
 
@@ -260,7 +195,6 @@ describe("YieldLeaderboardControls", () => {
           onFilterChange={onFilterChange}
           onClearFilters={vi.fn()}
           onApplyPreset={vi.fn()}
-          onApplyRiskBudget={vi.fn()}
         />,
       );
 
@@ -281,7 +215,6 @@ describe("YieldLeaderboardControls", () => {
           onFilterChange={vi.fn()}
           onClearFilters={vi.fn()}
           onApplyPreset={vi.fn()}
-          onApplyRiskBudget={vi.fn()}
         />,
       );
 
@@ -305,7 +238,6 @@ describe("YieldLeaderboardControls", () => {
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
-        onApplyRiskBudget={vi.fn()}
       />,
     );
 

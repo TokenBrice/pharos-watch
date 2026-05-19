@@ -12,6 +12,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
+import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
@@ -327,7 +328,11 @@ export function YieldClient() {
         </section>
 
         {visibleRows.length > 0 ? (
-          <section aria-label="Yield vs Safety landscape" className="order-2">
+          <section aria-label="Yield vs Safety landscape" className="order-2 space-y-3">
+            <YieldRiskBudgetSlider
+              stops={viewModel.riskBudget.stops}
+              onSelect={handleApplyRiskBudget}
+            />
             <YieldScatterPlot
               rankings={visibleRows}
               benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
@@ -348,7 +353,6 @@ export function YieldClient() {
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
             onApplyPreset={handleApplyPreset}
-            onApplyRiskBudget={handleApplyRiskBudget}
           />
         </section>
 
