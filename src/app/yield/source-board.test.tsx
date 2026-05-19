@@ -1,15 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "./test-helpers";
-import type {
-  YieldBenchmarkRegistry,
-  YieldSafetySnapshotMeta,
-  YieldSourceInputMeta,
-} from "@shared/types";
 
 function makeBoardRanking(overrides = {}) {
   return makeYieldRanking({
@@ -29,7 +24,7 @@ describe("YieldSourceBoard", () => {
     cleanup();
   });
 
-  it("renders the source-mix heading, anomaly chips, and per-lane observation counts", () => {
+  it("renders the source-mix heading, disclosure toggles, and per-lane observation counts", () => {
     const model = buildYieldSourceBoardModel([
       makeBoardRanking(),
       makeBoardRanking({
@@ -53,18 +48,16 @@ describe("YieldSourceBoard", () => {
 
     expect(screen.getByRole("heading", { name: "Source mix in the current view" })).toBeTruthy();
     expect(screen.getByText(/Counts every chosen source plus retained alternates/i)).toBeTruthy();
-    expect(screen.getByText("1 source changed")).toBeTruthy();
-    expect(screen.getByText("1 chosen source with anomalies")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /1 source changed/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /1 chosen source with anomalies/i })).toBeTruthy();
 
     const laneList = screen.getByRole("list", { name: "Yield source lanes" });
     expect(within(laneList).getAllByRole("listitem").length).toBe(model.groups.length);
     expect(within(laneList).getAllByText(/observation/).length).toBe(model.groups.length);
 
-    expect(screen.queryByText(/Chosen-source confidence/i)).toBeNull();
-    expect(screen.queryByText(/Observation APY/i)).toBeNull();
-    expect(screen.queryByText(/Depth lens/i)).toBeNull();
-    expect(screen.queryByText(/Benchmarks in view/i)).toBeNull();
-    expect(screen.queryByText(/not guaranteed executable capacity/i)).toBeNull();
+    expect(screen.queryByText(/Provenance/i)).toBeNull();
+    expect(screen.queryByText(/Per-coin yield/i)).toBeNull();
+    expect(screen.queryByText(/Pharos Yield Score \(PYS\)/i)).toBeNull();
   });
 
   it("renders confidence and depth stack bars with segment widths and summary text", () => {
@@ -108,12 +101,10 @@ describe("YieldSourceBoard", () => {
     );
 
     const confidenceSegments = confidenceBar.querySelectorAll("span[style]");
-    // deterministic=1, curated=2 -> two non-zero segments
     expect(confidenceSegments.length).toBe(2);
     const widthValues = Array.from(confidenceSegments).map((node) =>
       (node as HTMLElement).style.width,
     );
-    // 1/3 and 2/3 of 100%
     expect(widthValues).toEqual([
       `${(1 / 3) * 100}%`,
       `${(2 / 3) * 100}%`,
@@ -126,7 +117,6 @@ describe("YieldSourceBoard", () => {
     const model = buildYieldSourceBoardModel([
       makeBoardRanking({ provenance: null, altSources: [] }),
     ]);
-    // override to simulate zero confidence/depth counts (everything unknown)
     const zeroModel = {
       ...model,
       selectedConfidenceCounts: { deterministic: 0, curated: 0, discovered: 0, fallback: 0 },
@@ -146,52 +136,57 @@ describe("YieldSourceBoard", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("renders the trust band, disclaimer footer, and coin-index navigation when props are supplied", () => {
-    const model = buildYieldSourceBoardModel([makeBoardRanking()]);
-    const benchmarks: YieldBenchmarkRegistry = {
-      USD: {
-        key: "USD",
-        label: "USD 3M T-Bill",
-        currency: "USD",
-        rate: 4.25,
-        recordDate: "2026-04-23",
-        fetchedAt: 1_776_000_000,
-        ageSeconds: 60,
-        source: "fred-dgs3mo",
-        isFallback: false,
-        fallbackMode: null,
-      },
-    };
-    const poolInputMeta: YieldSourceInputMeta = {
-      mode: "dex-cache",
-      updatedAt: 1_776_000_000,
-      ageSeconds: 240,
-      poolCount: 142,
-      fallbackMode: null,
-    };
-    const safetySnapshot: YieldSafetySnapshotMeta = {
-      kind: "ok",
-      coverageRatio: 0.91,
-      coveredCount: 356,
-      trackedCount: 391,
-      reason: null,
-    };
+  it("toggles the anomaly disclosure inline and lists affected coins with their reason", () => {
+    const model = buildYieldSourceBoardModel([
+      makeBoardRanking({ id: "usde-ethena", symbol: "USDe" }),
+    ]);
 
-    render(
-      <YieldSourceBoard
-        model={model}
-        benchmarks={benchmarks}
-        poolInputMeta={poolInputMeta}
-        safetySnapshot={safetySnapshot}
-      />,
+    render(<YieldSourceBoard model={model} />);
+
+    const trigger = screen.getByRole("button", { name: /1 chosen source with anomalies/i });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText("Low source TVL")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "USDe" })).toBeTruthy();
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("only shows the top 5 lanes by default and reveals the rest via the ledger toggle", () => {
+    const ranks = Array.from({ length: 7 }, (_, idx) =>
+      makeBoardRanking({
+        id: `coin-${idx}`,
+        symbol: `C${idx}`,
+        name: `Coin ${idx}`,
+        dataSource: `source-${idx}`,
+        altSources: [],
+        provenance: makeYieldProvenance({
+          sourceKey: `source-${idx}`,
+          confidenceTier: "curated",
+          sourceSwitch: false,
+          anomalies: [],
+        }),
+      }),
     );
+    const model = buildYieldSourceBoardModel(ranks);
+    expect(model.groups.length).toBe(7);
 
-    expect(screen.getByText("Provenance")).toBeTruthy();
-    expect(screen.getByText("USD 3M T-Bill")).toBeTruthy();
-    expect(screen.getByText(/as of 2026-04-23/i)).toBeTruthy();
-    expect(screen.getByText(/Pool input age 4m/i)).toBeTruthy();
-    expect(screen.getByText("91%")).toBeTruthy();
-    expect(screen.getByText(/Pharos Yield Score \(PYS\) is for informational/i)).toBeTruthy();
-    expect(screen.getByText("Per-coin yield analysis")).toBeTruthy();
+    render(<YieldSourceBoard model={model} />);
+
+    const visibleLanes = screen.getByRole("list", { name: "Yield source lanes" });
+    expect(within(visibleLanes).getAllByRole("listitem").length).toBe(5);
+
+    const toggle = screen.getByRole("button", { name: /Show full ledger \(2 more lanes\)/i });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+
+    const extraLanes = screen.getByRole("list", { name: "Additional yield source lanes" });
+    expect(within(extraLanes).getAllByRole("listitem").length).toBe(2);
+    expect(screen.getByRole("button", { name: /Collapse ledger/i })).toBeTruthy();
   });
 });

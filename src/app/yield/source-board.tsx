@@ -1,10 +1,13 @@
 "use client";
 
+import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_ORDER,
@@ -13,62 +16,25 @@ import {
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
 } from "@/lib/yield-source-risk";
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
-import { buildStablecoinUrl } from "@/lib/urls";
-import { formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
-  YieldBenchmarkMeta,
-  YieldBenchmarkRegistry,
-  YieldSafetySnapshotMeta,
-  YieldSourceInputMeta,
-} from "@shared/types";
-import type {
+  YieldSourceBoardAnomalyDetail,
   YieldSourceBoardGroup,
   YieldSourceBoardModel,
+  YieldSourceBoardRowDetail,
+  YieldSourceBoardSourceSwitchDetail,
 } from "@/app/yield/source-board-model";
 
 interface YieldSourceBoardProps {
   model: YieldSourceBoardModel;
-  benchmarks?: YieldBenchmarkRegistry | null;
-  poolInputMeta?: YieldSourceInputMeta | null;
-  safetySnapshot?: YieldSafetySnapshotMeta | null;
 }
 
-const YIELD_BEARING_COIN_INDEX = TRACKED_STABLECOINS
-  .filter((coin) => coin.flags?.yieldBearing)
-  .sort((a, b) => a.symbol.localeCompare(b.symbol));
+const LANE_DIGEST_COUNT = 5;
+
+type DisclosureKey = "switches" | "anomalies";
 
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function InfoBadge({
-  children,
-  description,
-  className,
-}: {
-  children: ReactNode;
-  description: string;
-  className?: string;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          tabIndex={0}
-          className={cn(
-            "pharos-focus-ring inline-flex cursor-help items-center rounded-full border px-2 py-1 text-xs font-medium",
-            className,
-          )}
-        >
-          {children}
-        </span>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-[260px] text-xs">{description}</TooltipContent>
-    </Tooltip>
-  );
 }
 
 const DEPTH_ORDER: readonly YieldSourceDepthLens[] = ["deep", "moderate", "thin", "unknown"];
@@ -284,94 +250,123 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
   );
 }
 
-function getBenchmarkChips(
-  benchmarks: YieldBenchmarkRegistry | null | undefined,
-): Array<{ key: string; label: string; rate: number; recordDate: string | null }> {
-  if (!benchmarks) return [];
-  return Object.values(benchmarks)
-    .filter((b): b is YieldBenchmarkMeta => b != null)
-    .map((b) => ({
-      key: b.key ?? b.label ?? b.currency ?? "USD",
-      label: getYieldBenchmarkDisplayLabel(b),
-      rate: b.rate,
-      recordDate: b.recordDate,
-    }));
-}
-
-function formatPoolInputAge(meta: YieldSourceInputMeta): string {
-  if (meta.ageSeconds != null) return `Pool input age ${Math.round(meta.ageSeconds / 60)}m`;
-  if (meta.fallbackMode) return `Pool input: ${meta.fallbackMode}`;
-  return "Pool input age unavailable";
-}
-
-function formatPoolInputMode(meta: YieldSourceInputMeta): string {
-  if (meta.mode === "dex-cache") return "DEX-sync cached DeFiLlama pools";
-  if (meta.mode === "direct-fetch") return "Direct DeFiLlama pool fetch";
-  return "DeFiLlama pool input unavailable";
-}
-
-function TrustBand({
-  benchmarks,
-  poolInputMeta,
-  safetySnapshot,
+function DisclosureRowFrame({
+  detail,
+  children,
 }: {
-  benchmarks: YieldBenchmarkRegistry | null | undefined;
-  poolInputMeta: YieldSourceInputMeta | null | undefined;
-  safetySnapshot: YieldSafetySnapshotMeta | null | undefined;
+  detail: YieldSourceBoardRowDetail;
+  children: ReactNode;
 }) {
-  const benchmarkChips = getBenchmarkChips(benchmarks);
-  if (benchmarkChips.length === 0 && !poolInputMeta && !safetySnapshot) return null;
-  const safetyPct = safetySnapshot ? Math.round(safetySnapshot.coverageRatio * 100) : null;
-
   return (
-    <div className="mb-3 space-y-2">
-      <p className="pharos-kicker">Provenance</p>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-        {benchmarkChips.map((chip) => (
-          <span
-            key={chip.key}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
-          >
-            <span className="text-muted-foreground">{chip.label}</span>
-            <span className="font-mono tabular-nums text-foreground">{formatPercent(chip.rate)}</span>
-            {chip.recordDate ? (
-              <span className="text-muted-foreground/80">as of {chip.recordDate}</span>
-            ) : null}
-          </span>
-        ))}
-        {poolInputMeta ? (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
-            title={formatPoolInputMode(poolInputMeta)}
-          >
-            <span className="text-muted-foreground">{formatPoolInputAge(poolInputMeta)}</span>
-          </span>
-        ) : null}
-        {safetySnapshot && safetyPct !== null ? (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
-            title={
-              safetySnapshot.kind === "ok"
-                ? "Confidence-weighted source arbitration active"
-                : safetySnapshot.reason ?? "Safety snapshot degraded"
-            }
-          >
-            <span className="font-mono tabular-nums text-foreground">{safetyPct}%</span>
-            <span className="text-muted-foreground">scored</span>
-          </span>
-        ) : null}
+    <li className="flex flex-col gap-1 py-2 sm:flex-row sm:items-baseline sm:gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:w-56">
+        <Badge
+          variant="outline"
+          className={cn("text-[11px]", YIELD_TYPE_STYLES[detail.yieldType]?.badge ?? "")}
+        >
+          {detail.yieldTypeLabel}
+        </Badge>
+        <Link
+          href={`${buildStablecoinUrl(detail.id)}yield/`}
+          className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          {detail.symbol}
+        </Link>
+        <span className="text-xs text-muted-foreground">{detail.dataSourceLabel}</span>
       </div>
-    </div>
+      <p className="min-w-0 text-xs leading-relaxed text-muted-foreground">{children}</p>
+    </li>
   );
 }
 
-export function YieldSourceBoard({
-  model,
-  benchmarks,
-  poolInputMeta,
-  safetySnapshot,
-}: YieldSourceBoardProps) {
+function SourceSwitchDisclosure({ details }: { details: YieldSourceBoardSourceSwitchDetail[] }) {
+  if (details.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">No source-switch detail captured for this view.</p>
+    );
+  }
+  return (
+    <ul className="divide-y divide-border/40">
+      {details.map((detail) => (
+        <DisclosureRowFrame key={`switch-${detail.id}`} detail={detail}>
+          {detail.previousSourceKey
+            ? <>was <span className="font-mono">{detail.previousSourceKey}</span> · now <span className="font-mono">{detail.currentYieldSource}</span></>
+            : <>now <span className="font-mono">{detail.currentYieldSource}</span></>}
+        </DisclosureRowFrame>
+      ))}
+    </ul>
+  );
+}
+
+function AnomalyDisclosure({ details }: { details: YieldSourceBoardAnomalyDetail[] }) {
+  if (details.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">No anomaly detail captured for this view.</p>
+    );
+  }
+  return (
+    <ul className="divide-y divide-border/40">
+      {details.map((detail) => (
+        <DisclosureRowFrame key={`anomaly-${detail.id}`} detail={detail}>
+          {detail.anomalies.map(formatYieldWarningSignal).join(" · ")}
+        </DisclosureRowFrame>
+      ))}
+    </ul>
+  );
+}
+
+function DisclosureToggle({
+  label,
+  description,
+  open,
+  controls,
+  toneClass,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  open: boolean;
+  controls: string;
+  toneClass: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      title={description}
+      className={cn(
+        "pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+        toneClass,
+      )}
+    >
+      <span>{label}</span>
+      <ChevronDown
+        aria-hidden="true"
+        className={cn("h-3 w-3 transition-transform", open ? "rotate-180" : "rotate-0")}
+      />
+    </button>
+  );
+}
+
+export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
+  const disclosureId = useId();
+  const ledgerId = useId();
+  const [openDisclosure, setOpenDisclosure] = useState<DisclosureKey | null>(null);
+  const [showAllLanes, setShowAllLanes] = useState(false);
+
   if (model.representedSourceCount === 0) return null;
+
+  const topLanes = model.groups.slice(0, LANE_DIGEST_COUNT);
+  const extraLanes = model.groups.slice(LANE_DIGEST_COUNT);
+  const extraLaneCount = extraLanes.length;
+  const hasDisclosureBadges = model.sourceSwitchCount > 0 || model.anomalyCount > 0;
+
+  function toggleDisclosure(key: DisclosureKey) {
+    setOpenDisclosure((current) => (current === key ? null : key));
+  }
 
   return (
     <TooltipProvider>
@@ -381,69 +376,111 @@ export function YieldSourceBoard({
       >
         <div className="pharos-panel-header space-y-3">
           <div className="space-y-1">
-            <TrustBand
-              benchmarks={benchmarks}
-              poolInputMeta={poolInputMeta}
-              safetySnapshot={safetySnapshot}
-            />
             <p className="pharos-kicker">Yield Sources</p>
-            <h2 id="yield-source-board-heading" className="text-lg font-semibold tracking-tight text-foreground">
+            <h2
+              id="yield-source-board-heading"
+              className="text-lg font-semibold tracking-tight text-foreground"
+            >
               Source mix in the current view
             </h2>
             <p className="max-w-3xl text-sm text-muted-foreground">
               Data families behind the visible rows. Counts every chosen source plus retained alternates.
             </p>
           </div>
+
           <SourceQualityBars model={model} />
-          {model.sourceSwitchCount > 0 || model.anomalyCount > 0 ? (
+
+          {hasDisclosureBadges ? (
             <div className="flex flex-wrap gap-2">
               {model.sourceSwitchCount > 0 ? (
-                <InfoBadge
-                  className="border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                  description="A source changed when the selected source differs from the prior published snapshot. It explains provenance churn, not a change in stablecoin safety."
-                >
-                  {pluralize(model.sourceSwitchCount, "source changed", "sources changed")}
-                </InfoBadge>
+                <DisclosureToggle
+                  label={pluralize(model.sourceSwitchCount, "source changed", "sources changed")}
+                  description="A source changed when the selected source differs from the prior published snapshot. Click for the audit list."
+                  open={openDisclosure === "switches"}
+                  controls={disclosureId}
+                  toneClass="border-sky-500/25 bg-sky-500/10 text-sky-700 hover:bg-sky-500/15 dark:text-sky-300"
+                  onClick={() => toggleDisclosure("switches")}
+                />
               ) : null}
               {model.anomalyCount > 0 ? (
-                <InfoBadge
-                  className="border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                  description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Inspect the source sheet before treating the row as durable."
-                >
-                  {pluralize(model.anomalyCount, "chosen source")} with anomalies
-                </InfoBadge>
+                <DisclosureToggle
+                  label={`${pluralize(model.anomalyCount, "chosen source")} with anomalies`}
+                  description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
+                  open={openDisclosure === "anomalies"}
+                  controls={disclosureId}
+                  toneClass="border-amber-500/25 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+                  onClick={() => toggleDisclosure("anomalies")}
+                />
               ) : null}
             </div>
           ) : null}
+
+          <div
+            id={disclosureId}
+            aria-hidden={openDisclosure === null}
+            className={cn(
+              "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+              openDisclosure ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="rounded-md border border-border/60 bg-muted/10 px-3 py-2">
+                {openDisclosure === "switches" ? (
+                  <SourceSwitchDisclosure details={model.sourceSwitchDetails} />
+                ) : null}
+                {openDisclosure === "anomalies" ? (
+                  <AnomalyDisclosure details={model.anomalyDetails} />
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
 
         <ul className="divide-y divide-border/60" aria-label="Yield source lanes">
-          {model.groups.map((group) => (
+          {topLanes.map((group) => (
             <SourceLaneRow key={group.key} group={group} />
           ))}
         </ul>
 
-        <div className="border-t border-border/60 px-4 py-3 sm:px-5">
-          <p className="pharos-kicker mb-2">Per-coin yield analysis</p>
-          <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
-            {YIELD_BEARING_COIN_INDEX.map((coin) => (
-              <li key={coin.id}>
-                <Link
-                  href={`${buildStablecoinUrl(coin.id)}yield/`}
-                  className="pharos-focus-ring rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  {coin.symbol}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <p className="border-t border-border/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-5">
-          The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
-          figures blend deterministic on-chain, benchmark-derived, DeFiLlama, and price-derived sources with
-          confidence-aware arbitration. Past yields do not guarantee future returns.
-        </p>
+        {extraLaneCount > 0 ? (
+          <>
+            <div
+              id={ledgerId}
+              aria-hidden={!showAllLanes}
+              className={cn(
+                "grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none",
+                showAllLanes ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+              )}
+            >
+              <div className="overflow-hidden">
+                <ul className="divide-y divide-border/60 border-t border-border/60" aria-label="Additional yield source lanes">
+                  {extraLanes.map((group) => (
+                    <SourceLaneRow key={group.key} group={group} />
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+              <button
+                type="button"
+                onClick={() => setShowAllLanes((value) => !value)}
+                aria-expanded={showAllLanes}
+                aria-controls={ledgerId}
+                className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <span>
+                  {showAllLanes
+                    ? "Collapse ledger"
+                    : `Show full ledger (${extraLaneCount} more ${extraLaneCount === 1 ? "lane" : "lanes"})`}
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn("h-3.5 w-3.5 transition-transform", showAllLanes ? "rotate-180" : "rotate-0")}
+                />
+              </button>
+            </div>
+          </>
+        ) : null}
       </section>
     </TooltipProvider>
   );

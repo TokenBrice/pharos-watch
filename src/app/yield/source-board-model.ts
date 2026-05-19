@@ -62,6 +62,24 @@ export function inferLaneConfidenceTier(dataSource: string): YieldSourceConfiden
   }
 }
 
+export interface YieldSourceBoardRowDetail {
+  id: string;
+  symbol: string;
+  name: string;
+  yieldType: YieldType;
+  yieldTypeLabel: string;
+  dataSourceLabel: string;
+}
+
+export interface YieldSourceBoardSourceSwitchDetail extends YieldSourceBoardRowDetail {
+  previousSourceKey: string | null;
+  currentYieldSource: string;
+}
+
+export interface YieldSourceBoardAnomalyDetail extends YieldSourceBoardRowDetail {
+  anomalies: string[];
+}
+
 export interface YieldSourceBoardModel {
   selectedCount: number;
   alternateCount: number;
@@ -72,6 +90,8 @@ export interface YieldSourceBoardModel {
   depthCounts: YieldSourceDepthCounts;
   sourceSwitchCount: number;
   anomalyCount: number;
+  sourceSwitchDetails: YieldSourceBoardSourceSwitchDetail[];
+  anomalyDetails: YieldSourceBoardAnomalyDetail[];
   sourceRowApy: YieldSourceBoardApySummary | null;
   benchmarkLabels: YieldSourceBoardLabelCount[];
   groups: YieldSourceBoardGroup[];
@@ -226,6 +246,8 @@ export function buildYieldSourceBoardModel(
   const groupMap = new Map<string, MutableGroup>();
   const sourceRowApyValues: number[] = [];
   const representedDataSources = new Set<string>();
+  const sourceSwitchDetails: YieldSourceBoardSourceSwitchDetail[] = [];
+  const anomalyDetails: YieldSourceBoardAnomalyDetail[] = [];
 
   let alternateCount = 0;
   let selectedConfidenceUnknownCount = 0;
@@ -245,8 +267,34 @@ export function buildYieldSourceBoardModel(
       sourceTvlUsd: ranking.sourceTvlUsd,
     })] += 1;
 
-    if (ranking.provenance?.sourceSwitch) sourceSwitchCount += 1;
-    if ((ranking.provenance?.anomalies?.length ?? 0) > 0) anomalyCount += 1;
+    const yieldTypeLabel = YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType;
+    const dataSourceLabel = formatDataSourceLabel(ranking.dataSource);
+
+    if (ranking.provenance?.sourceSwitch) {
+      sourceSwitchCount += 1;
+      sourceSwitchDetails.push({
+        id: ranking.id,
+        symbol: ranking.symbol,
+        name: ranking.name,
+        yieldType: ranking.yieldType,
+        yieldTypeLabel,
+        dataSourceLabel,
+        previousSourceKey: ranking.provenance.previousBestSourceKey ?? null,
+        currentYieldSource: ranking.yieldSource,
+      });
+    }
+    if ((ranking.provenance?.anomalies?.length ?? 0) > 0) {
+      anomalyCount += 1;
+      anomalyDetails.push({
+        id: ranking.id,
+        symbol: ranking.symbol,
+        name: ranking.name,
+        yieldType: ranking.yieldType,
+        yieldTypeLabel,
+        dataSourceLabel,
+        anomalies: ranking.provenance!.anomalies,
+      });
+    }
 
     const benchmarkLabel = getRankingBenchmarkLabel(ranking, options);
     if (benchmarkLabel) addCount(benchmarkLabelCounts, benchmarkLabel);
@@ -311,6 +359,8 @@ export function buildYieldSourceBoardModel(
     depthCounts,
     sourceSwitchCount,
     anomalyCount,
+    sourceSwitchDetails,
+    anomalyDetails,
     sourceRowApy: summarizeApy(sourceRowApyValues),
     benchmarkLabels: sortedLabelCounts(benchmarkLabelCounts),
     groups,
