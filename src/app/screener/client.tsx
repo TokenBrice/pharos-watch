@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
@@ -299,6 +300,8 @@ export function ScreenerClient() {
           },
         ]}
       />
+
+      <SelectorCallout />
 
       <ScreenerToolbar
         filters={filters}

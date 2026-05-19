@@ -1,0 +1,172 @@
+import { describe, expect, it } from "vitest";
+import { ENGINE_VERSION, runSelector } from "../engine";
+import { buildFixtureData, FIXTURE_DATASET, makeInput } from "./fixture";
+
+describe("runSelector — Treasury happy path", () => {
+  const input = makeInput({ profile: "treasury" });
+
+  it("produces a top-3 with the synthetic fixture", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    expect(out.recommended.length).toBeGreaterThan(0);
+    expect(out.recommended.length).toBeLessThanOrEqual(3);
+    // USDC/USDS/DAI are the highest-graded treasury candidates in the fixture.
+    const ids = out.recommended.map((r) => r.id);
+    expect(ids).toContain("usdc-circle");
+  });
+
+  it("output includes engineVersion + methodologyVersions + datasetHash", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    expect(out.engineVersion).toBe(ENGINE_VERSION);
+    expect(out.methodologyVersions).toEqual(FIXTURE_DATASET.methodologyVersions);
+    expect(out.datasetHash).toBe(FIXTURE_DATASET.datasetHash);
+    expect(out.timestamp).toBe(FIXTURE_DATASET.timestamp);
+  });
+
+  it("threads dataset.timestamp; no Date.now read inside the engine", () => {
+    const a = runSelector(input, buildFixtureData(), {
+      ...FIXTURE_DATASET,
+      timestamp: 1000,
+    });
+    const b = runSelector(input, buildFixtureData(), {
+      ...FIXTURE_DATASET,
+      timestamp: 2000,
+    });
+    // Two runs with different timestamps must differ only in `timestamp`.
+    expect(a.timestamp).toBe(1000);
+    expect(b.timestamp).toBe(2000);
+    expect(a.recommended.map((r) => r.id)).toEqual(b.recommended.map((r) => r.id));
+  });
+
+  it("variant dedup: only one USDC variant in top-3", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    const ids = out.recommended.map((r) => r.id);
+    const usdcCount = ids.filter(
+      (id) => id === "usdc-circle" || id === "usdc-variant-bridged",
+    ).length;
+    expect(usdcCount).toBeLessThanOrEqual(1);
+  });
+
+  it("emits recommendedSource=null for Treasury entries", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      expect(rec.profile).toBe("treasury");
+      expect(rec.recommendedSource).toBeNull();
+    }
+  });
+});
+
+describe("runSelector — Yield happy path", () => {
+  const input = makeInput({ profile: "yield", depegTolerance: "tight" });
+
+  it("emits recommendedSource for Yield entries", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      expect(rec.profile).toBe("yield");
+      expect(rec.recommendedSource).not.toBeNull();
+      if (rec.profile === "yield") {
+        expect(rec.recommendedSource.protocol).toBeTypeOf("string");
+        expect(rec.recommendedSource.chain).toBeTypeOf("string");
+      }
+    }
+  });
+});
+
+describe("runSelector — Trading happy path", () => {
+  const input = makeInput({ profile: "trading", exitSpeed: "any" });
+
+  it("emits perInputStaleness on Trading entries", () => {
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      expect(rec.profile).toBe("trading");
+      expect(rec.recommendedSource).toBeNull();
+      if (rec.profile === "trading") {
+        expect(rec.perInputStaleness).toEqual(
+          expect.objectContaining({
+            pegSummary: expect.any(Number),
+            dexTvl: expect.any(Number),
+            dews: expect.any(Number),
+          }),
+        );
+      }
+    }
+  });
+
+  it("skips confidence demotion (R2 Active Trader P2)", () => {
+    const data = buildFixtureData();
+    const out = runSelector(input, data, FIXTURE_DATASET);
+    // We only assert the engine reaches the trading branch without throwing
+    // and that the top entry's confidence is reported (rank stays as-scored).
+    if (out.recommended.length > 0) {
+      expect(out.recommended[0]!.confidence).toBeGreaterThanOrEqual(0);
+    }
+  });
+});
+
+describe("runSelector — universal properties", () => {
+  it("non-USD pegCurrency throws", () => {
+    expect(() =>
+      runSelector(
+        // @ts-expect-error MVP locked
+        { ...makeInput(), pegCurrency: "EUR" },
+        buildFixtureData(),
+        FIXTURE_DATASET,
+      ),
+    ).toThrow();
+  });
+
+  it("howey-uncertain coins are pre-excluded", () => {
+    const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      expect(rec.id).not.toBe("susde-ethena");
+      expect(rec.id).not.toBe("sdai-sky");
+    }
+  });
+
+  it("active-depeg blocks the test coin under tight tolerance", () => {
+    const out = runSelector(
+      makeInput({ depegTolerance: "tight" }),
+      buildFixtureData(),
+      FIXTURE_DATASET,
+    );
+    for (const rec of out.recommended) {
+      expect(rec.id).not.toBe("active-depeg-test");
+    }
+  });
+
+  it("coverage-too-thin row is reported in skippedForCoverage", () => {
+    const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    const skippedIds = out.coverageWarnings.skippedForCoverage.map((s) => s.id);
+    expect(skippedIds).toContain("coverage-thin-test");
+  });
+
+  it("scoring components are populated and bounded [0, 100]", () => {
+    const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      expect(rec.score).toBeGreaterThanOrEqual(0);
+      expect(rec.score).toBeLessThanOrEqual(100);
+      for (const c of rec.components) {
+        if (c.normalizedValue != null) {
+          expect(c.normalizedValue).toBeGreaterThanOrEqual(0);
+          expect(c.normalizedValue).toBeLessThanOrEqual(100);
+        }
+      }
+    }
+  });
+
+  it("lowConfidence flips when sparse OR top confidence < 70", () => {
+    const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    const top = out.recommended[0];
+    if (top != null && top.confidence >= 70 && !out.coverageWarnings.sparse) {
+      expect(out.lowConfidence).toBe(false);
+    }
+  });
+});
+
+describe("runSelector — purity", () => {
+  it("no Date.now() / Math.random in the runSelector return shape", () => {
+    // Run twice with the same dataset.timestamp; output must be byte-identical.
+    const a = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    const b = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});

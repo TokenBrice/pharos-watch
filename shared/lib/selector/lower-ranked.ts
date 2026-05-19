@@ -1,0 +1,201 @@
+/**
+ * Lower-ranked-list selection.
+ *
+ * Two slots:
+ *   - **Slot A** — highest-scoring excluded coin whose exclusion reason is in
+ *     the profile-defining set.
+ *   - **Slot B** — survivor at rank 4..N who is bottom-quartile on the user-
+ *     emphasized dimension.
+ *
+ * Anti-rules: no coverage-too-thin coins, no duplicate reasons across slots,
+ * no protocol-slug collisions with shortlisted coins.
+ *
+ * Binding: `agents/impl-plan-drafts/02-engine.md` §7.
+ */
+import { PROFILE_DEFINING_EXCLUSIONS } from "./exclusions";
+import type {
+  ExclusionRecord,
+  MergedRow,
+  SelectorComponent,
+  SelectorInput,
+  SelectorLowerRanked,
+  WeightKey,
+} from "./types";
+
+interface ScoredEntryLike {
+  row: MergedRow;
+  score: number;
+  components: SelectorComponent[];
+  confidence: number;
+}
+
+/**
+ * `userEmphasizedDimension(input)` mapping table (design §3.5).
+ * Returns the weight-vector key the lower-ranked Slot B grades against.
+ */
+export function userEmphasizedDimension(input: SelectorInput): WeightKey | null {
+  if (input.depegTolerance === "zero") {
+    return input.profile === "treasury" ? "pegStabilityHistory" : "pegStabilityLive";
+  }
+  if (input.composability === "high") return "liquidity";
+  if (input.exitSpeed === "1h") return "liquidity";
+  if (input.profile === "treasury" && input.horizon === "6mplus") {
+    return "dependencyRisk";
+  }
+  if (input.profile === "yield" && input.minApy != null) return "pharosYieldScore";
+  return "safetyOverall";
+}
+
+function quantile(values: number[], q: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] != null) {
+    return sorted[base]! + rest * (sorted[base + 1]! - sorted[base]!);
+  }
+  return sorted[base]!;
+}
+
+interface SlotACandidate {
+  record: ExclusionRecord;
+  row: MergedRow;
+  hypotheticalScore: number;
+  priority: number;
+}
+
+/**
+ * Build the lower-ranked list.
+ *
+ * @param scored Ranked survivor list (after dedup + tie-break + demotion).
+ * @param excluded Exclusion records from Layer 1.
+ * @param input The original selector input.
+ * @param allMerged Every merged row in the universe — used to look up rows
+ *                  for excluded coins by id.
+ * @param shortlistedIds Set of ids already in the top-3 (recommended) so the
+ *                  anti-rule on protocol-slug collisions can fire.
+ * @param scoreIgnoringExclusion Engine-provided scorer that returns the
+ *                  weighted score for a row as if its exclusion had not
+ *                  fired. Returns `null` when the row has no scorable
+ *                  signals (so the candidate is dropped).
+ */
+export function selectLowerRanked(
+  scored: ScoredEntryLike[],
+  excluded: ExclusionRecord[],
+  input: SelectorInput,
+  allMerged: readonly MergedRow[],
+  shortlistedIds: ReadonlySet<string>,
+  scoreIgnoringExclusion: (row: MergedRow, input: SelectorInput) => number | null,
+): SelectorLowerRanked[] {
+  const out: SelectorLowerRanked[] = [];
+  const profile = input.profile;
+
+  // --- Slot A -------------------------------------------------------------
+  const profileDefining = PROFILE_DEFINING_EXCLUSIONS[profile];
+  const priorityOrder: readonly string[] =
+    profile === "yield"
+      ? [
+          "high-venue-on-c-tier",
+          "yield-warning-unstable",
+          "yield-warning-thin-tvl",
+          "yield-source-recently-switched",
+          "peg-stability-floor",
+        ]
+      : profileDefining;
+
+  const rowsById = new Map<string, MergedRow>();
+  for (const row of allMerged) rowsById.set(row.id, row);
+
+  const slotACandidates: SlotACandidate[] = [];
+  for (const record of excluded) {
+    if (!profileDefining.includes(record.reason as never)) continue;
+    if (record.reason === "coverage-too-thin") continue;
+    const row = rowsById.get(record.id);
+    if (row == null) continue;
+    if (shortlistedIds.has(row.id)) continue;
+    const hypothetical = scoreIgnoringExclusion(row, input);
+    if (hypothetical == null) continue;
+    const priorityIndex = priorityOrder.indexOf(record.reason);
+    slotACandidates.push({
+      record,
+      row,
+      hypotheticalScore: hypothetical,
+      priority: priorityIndex === -1 ? priorityOrder.length : priorityIndex,
+    });
+  }
+  slotACandidates.sort((a, b) =>
+    a.priority !== b.priority
+      ? a.priority - b.priority
+      : b.hypotheticalScore - a.hypotheticalScore,
+  );
+
+  const slotA = slotACandidates[0];
+  if (slotA != null) {
+    out.push({
+      id: slotA.row.id,
+      symbol: slotA.row.symbol,
+      name: slotA.row.name,
+      slot: "A",
+      reasonKey: slotA.record.reason,
+      failedComponent: null,
+      hypotheticalScore: Math.round(slotA.hypotheticalScore * 10) / 10,
+    });
+  }
+
+  // --- Slot B -------------------------------------------------------------
+  const dim = userEmphasizedDimension(input);
+  if (dim == null || scored.length < 5) {
+    return out;
+  }
+  const candidates = scored.slice(3);
+  const dimValues = candidates
+    .map((c) => c.components.find((x) => x.key === dim)?.normalizedValue ?? null)
+    .filter((v): v is number => v != null);
+  if (dimValues.length === 0) return out;
+  const cutoff = quantile(dimValues, 0.25);
+  const bottomQuartile = candidates.filter((c) => {
+    const v = c.components.find((x) => x.key === dim)?.normalizedValue ?? null;
+    return v != null && v <= cutoff;
+  });
+  if (bottomQuartile.length === 0) return out;
+
+  // Pick highest-scoring within the bottom quartile.
+  const slotBPick = bottomQuartile.reduce((best, current) =>
+    current.score > best.score ? current : best,
+  );
+
+  // Anti-rules
+  if (shortlistedIds.has(slotBPick.row.id)) return out;
+  const shortlistedProtocolSlugs = new Set<string>();
+  for (const row of allMerged) {
+    if (shortlistedIds.has(row.id) && row.protocolSlug != null) {
+      shortlistedProtocolSlugs.add(row.protocolSlug);
+    }
+  }
+  if (
+    slotBPick.row.protocolSlug != null &&
+    shortlistedProtocolSlugs.has(slotBPick.row.protocolSlug)
+  ) {
+    return out;
+  }
+  const reasonKey = `weak-${dim}`;
+  if (slotA != null && slotA.record.reason === reasonKey) {
+    // Duplicate reason anti-rule (rare, but possible if Slot A reason happens
+    // to map identically — guard defensively).
+    return out;
+  }
+
+  out.push({
+    id: slotBPick.row.id,
+    symbol: slotBPick.row.symbol,
+    name: slotBPick.row.name,
+    slot: "B",
+    reasonKey,
+    failedComponent: dim,
+    hypotheticalScore: Math.round(slotBPick.score * 10) / 10,
+  });
+
+  return out;
+}
+
