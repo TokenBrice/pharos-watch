@@ -330,7 +330,7 @@ export interface MethodologyVersions {
   pegScoreAndDews: string;
   yieldIntelligence: string;
   bluechipAlignment: string;
-  /** Equals `ENGINE_VERSION` ("selector-v1.0"). */
+  /** Equals `ENGINE_VERSION`. */
   exclusionFilters: string;
 }
 
@@ -374,7 +374,7 @@ export interface SelectorOutput {
   timestamp: number;
   engineVersion: string;
   methodologyVersions: MethodologyVersions;
-  /** SHA-256 over content-only fields of the merged universe. */
+  /** Stable content hash over content-only fields of the merged universe. */
   datasetHash: string;
   /**
    * Debug-only: full ranked survivor list, gated by `SELECTOR_DEBUG=true` at

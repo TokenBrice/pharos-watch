@@ -12,11 +12,12 @@ import {
   type WeightKey,
   type WeightVector,
 } from "./types";
+import { SELECTOR_VERSION } from "./version";
 
 /**
  * Bumped on any weight or exclusion-rule change. Matches `ENGINE_VERSION`.
  */
-export const WEIGHTS_VERSION = "selector-v1.0";
+export const WEIGHTS_VERSION = SELECTOR_VERSION;
 
 /** R2-final Treasury weights — sum = 100. */
 const TREASURY_WEIGHTS: WeightVector<"treasury"> = {

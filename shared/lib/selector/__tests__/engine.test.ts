@@ -69,6 +69,32 @@ describe("runSelector — Yield happy path", () => {
       }
     }
   });
+
+  it("sourceRiskInverted null contributes neutral 50 while lowering confidence", () => {
+    const rows = new Map(buildFixtureData().rows);
+    const base = rows.get("usds-sky");
+    expect(base).toBeDefined();
+    rows.set("usds-sky", {
+      ...base!,
+      sourceRiskScore: null,
+    });
+
+    const out = runSelector(input, { rows }, FIXTURE_DATASET);
+    const rec = out.recommended.find((entry) => entry.id === "usds-sky");
+    expect(rec).toBeDefined();
+    const component = rec!.components.find((c) => c.key === "sourceRiskInverted");
+    expect(component).toEqual(
+      expect.objectContaining({
+        rawValue: null,
+        normalizedValue: 50,
+        redistributed: true,
+      }),
+    );
+    expect(component!.weight).toBeGreaterThan(0);
+    expect(component!.contribution).toBeGreaterThan(0);
+    expect(rec!.confidence).toBeLessThan(100);
+    expect(out.coverageWarnings.redistributionCount).toBeGreaterThan(0);
+  });
 });
 
 describe("runSelector — Trading happy path", () => {

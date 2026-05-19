@@ -42,10 +42,11 @@ import type {
   WhyKey,
   YieldRecommendation,
 } from "./types";
+import { SELECTOR_VERSION } from "./version";
 import { WEIGHT_VECTORS } from "./weights";
 import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
 
-export const ENGINE_VERSION = "selector-v1.0";
+export const ENGINE_VERSION = SELECTOR_VERSION;
 
 // ---------------------------------------------------------------------------
 // Component computation
@@ -224,16 +225,21 @@ function scoreRow(
 
   let redistributedSlots = 0;
   const present: NormalizedSlot[] = [];
+  const neutralMissing = new Set<NormalizedSlot>();
   for (const slot of slots) {
     if (slot.rawValue != null && slot.normalizedValue != null) {
       present.push(slot);
       continue;
     }
-    // For sourceRiskInverted the normalized value is 50 even when raw is null;
-    // we still treat the slot as redistributed for confidence accounting.
     const policy = missingPolicy(slot.key, profile);
     if (policy === "penalty") {
       redistributedSlots += 1;
+    }
+    // Source-risk null is a deliberately neutral score input for Yield, but
+    // still counts as missing for confidence and redistribution warnings.
+    if (slot.key === "sourceRiskInverted" && slot.normalizedValue != null) {
+      present.push(slot);
+      neutralMissing.add(slot);
     }
   }
 
@@ -258,7 +264,7 @@ function scoreRow(
       rawValue: slot.rawValue,
       normalizedValue: slot.normalizedValue,
       contribution,
-      redistributed: false,
+      redistributed: neutralMissing.has(slot),
     });
     score += contribution;
   }

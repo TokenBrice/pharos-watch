@@ -113,6 +113,13 @@ describe("universal exclusions", () => {
     expect(evaluateExclusions(within, makeInput({ depegTolerance: "zero" }))).toBeNull();
   });
 
+  it("active-depeg uses absolute current deviation", () => {
+    const offPegBelow = makeRow({ activeDepeg: true, currentDeviationBps: -60 });
+    expect(evaluateExclusions(offPegBelow, makeInput({ depegTolerance: "zero" }))).toEqual(
+      expect.objectContaining({ reason: "active-depeg" }),
+    );
+  });
+
   it("active-depeg scales with depegTolerance (tight=100bps)", () => {
     const over = makeRow({ activeDepeg: true, currentDeviationBps: 110 });
     expect(evaluateExclusions(over, makeInput({ depegTolerance: "tight" }))).toEqual(

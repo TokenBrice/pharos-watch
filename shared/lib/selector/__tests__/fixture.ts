@@ -10,6 +10,7 @@ import type {
   SelectorData,
   SelectorInput,
 } from "../types";
+import { SELECTOR_VERSION } from "../version";
 
 export const FIXTURE_ROWS = fixtureJson as unknown as MergedRow[];
 
@@ -29,7 +30,7 @@ export const FIXTURE_DATASET: DatasetMetadata = {
     pegScoreAndDews: "peg-dews-v1.0",
     yieldIntelligence: "yield-v1.0",
     bluechipAlignment: "bluechip-v1.0",
-    exclusionFilters: "selector-v1.0",
+    exclusionFilters: SELECTOR_VERSION,
   },
 };
 

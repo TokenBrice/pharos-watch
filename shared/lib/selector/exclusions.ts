@@ -108,7 +108,7 @@ export function applyUniversalExclusions(
   // Active depeg — scales with depegTolerance.
   if (row.activeDepeg && row.currentDeviationBps != null) {
     const ceiling = activeDepegThresholdBps(input.depegTolerance);
-    if (row.currentDeviationBps > ceiling) {
+    if (Math.abs(row.currentDeviationBps) > ceiling) {
       return fail(row.id, "active-depeg");
     }
   }

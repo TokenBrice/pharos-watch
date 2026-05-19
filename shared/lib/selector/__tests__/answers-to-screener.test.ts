@@ -12,6 +12,11 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(filters.lifecycle).toEqual(["active"]);
   });
 
+  it("base filter carries the selected peg into the Screener handoff", () => {
+    const { filters } = selectorAnswersToScreenerFilters(makeInput({ pegCurrency: "USD" }));
+    expect(filters.pegs).toEqual(["USD"]);
+  });
+
   it("Yield base filter allows down to C-", () => {
     const { filters } = selectorAnswersToScreenerFilters(makeInput({ profile: "yield" }));
     expect(filters.safetyGrades).toContain("C-");

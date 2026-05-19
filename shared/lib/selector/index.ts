@@ -8,6 +8,7 @@
  */
 
 export * from "./types";
+export { SELECTOR_VERSION } from "./version";
 export {
   WEIGHTS_VERSION,
   WEIGHT_VECTORS,

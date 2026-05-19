@@ -56,6 +56,7 @@ export function selectorAnswersToScreenerFilters(
     filters.safetyGrades = SAFETY_GRADES_YIELD_TRADING;
   }
   filters.lifecycle = ["active"];
+  filters.pegs = [input.pegCurrency];
 
   // 2. Per-profile deltas.
   switch (input.profile) {

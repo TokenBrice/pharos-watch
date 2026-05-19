@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SELECTOR_PROFILES } from "../types";
+import { SELECTOR_VERSION } from "../version";
 import { WEIGHTS_VERSION, WEIGHT_VECTORS, assertWeightsSumTo100 } from "../weights";
 
 describe("weights", () => {
@@ -17,8 +18,8 @@ describe("weights", () => {
     expect(() => assertWeightsSumTo100("treasury", bad)).toThrow();
   });
 
-  it("WEIGHTS_VERSION is selector-v1.0", () => {
-    expect(WEIGHTS_VERSION).toBe("selector-v1.0");
+  it("WEIGHTS_VERSION matches the central selector version", () => {
+    expect(WEIGHTS_VERSION).toBe(SELECTOR_VERSION);
   });
 
   it("Treasury R2-final weights match the design", () => {
