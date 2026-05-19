@@ -1022,7 +1022,7 @@ interface YieldFilterAxisDescriptor {
 // `listFilterRelaxations` walks the same array. Adding a 13th axis = one entry, both
 // surfaces update — guards against drift (watchlist was previously in summary but not
 // in relax suggestions).
-const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = [
+export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = [
   {
     key: "yieldType",
     isActive: (f) => f.yieldType !== DEFAULT_FILTERS.yieldType,

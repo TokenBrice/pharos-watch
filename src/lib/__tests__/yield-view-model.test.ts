@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/app/yield/test-helpers";
-import { buildYieldViewModel } from "@/lib/yield-view-model";
+import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel } from "@/lib/yield-view-model";
 
 const rows = [
   makeYieldRanking({
@@ -535,5 +535,17 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(flatRows, {});
     expect(model.stats.ledeFacts.aGradeAboveBenchmark).toBeNull();
     expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(0);
+  });
+
+  it("registers a descriptor for every YieldViewModelFilters key (no drift)", () => {
+    // Guards the invariant in yield-view-model.ts:1021-1024 — every filter key
+    // must have a registry entry, or the active-summary chip list and empty-
+    // state suggestion ranker silently miss it (watchlist drift, line 482-484).
+    const defaultFilterKeys = Object.keys(buildYieldViewModel([], {}).filters).sort();
+    const registryKeys = YIELD_FILTER_AXIS_REGISTRY.map((axis) => axis.key as string).sort();
+
+    expect(registryKeys).toEqual(defaultFilterKeys);
+    expect(YIELD_FILTER_AXIS_REGISTRY.length).toBe(defaultFilterKeys.length);
+    expect(new Set(registryKeys).size).toBe(registryKeys.length);
   });
 });
