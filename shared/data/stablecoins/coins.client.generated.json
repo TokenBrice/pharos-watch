@@ -1733,7 +1733,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },
@@ -2388,7 +2388,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },
@@ -4153,7 +4153,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "decentralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },

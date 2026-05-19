@@ -10343,7 +10343,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },
@@ -10422,6 +10422,10 @@
           "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
         }
       }
+    },
+    "yieldConfig": {
+      "yieldSource": "FPI CPI redemption price",
+      "yieldType": "nav-appreciation"
     }
   },
   {
@@ -14108,7 +14112,7 @@
       "backing": "rwa-backed",
       "pegCurrency": "VAR",
       "governance": "centralized-dependent",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },
@@ -14173,7 +14177,11 @@
         "pct": 20,
         "risk": "very-low"
       }
-    ]
+    ],
+    "yieldConfig": {
+      "yieldSource": "ISC purchasing-power basket appreciation",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "ist-agoric",
@@ -24334,7 +24342,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "VAR",
       "governance": "decentralized",
-      "yieldBearing": false,
+      "yieldBearing": true,
       "rwa": false,
       "navToken": true
     },
@@ -24407,7 +24415,11 @@
         "pct": 10,
         "risk": "high"
       }
-    ]
+    ],
+    "yieldConfig": {
+      "yieldSource": "SILK basket index appreciation",
+      "yieldType": "nav-appreciation"
+    }
   },
   {
     "id": "sofid-sofi",

@@ -192,12 +192,26 @@ describe("yield config registry", () => {
     expect(YIELD_POOL_MAP["aa-falconx-mev-capital"]).toBeUndefined();
 
     for (const stablecoinId of [
+      "cgusd-cygnus-finance",
+      "usdn-noble",
       "benji-franklin-templeton",
       "wtgxx-wisdomtree",
       "ustbl-spiko",
       "eutbl-spiko",
     ]) {
       expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
+    }
+
+    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "rate-derived",
+          }),
+        ],
+      });
     }
   });
 

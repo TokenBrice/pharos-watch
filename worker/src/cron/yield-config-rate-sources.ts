@@ -128,8 +128,10 @@ export const PRICE_DERIVED_FALLBACK_IDS = new Set([
 
 export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "buidl-blackrock", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
+  { stablecoinId: "cgusd-cygnus-finance", spreadBps: 35, label: "T-bill proxy (net of 0.35% protocol fee)" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy" },
+  { stablecoinId: "usdn-noble", spreadBps: 0, label: "M0 T-bill rebase proxy" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)" },
   { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy" },
   { stablecoinId: "benji-franklin-templeton", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)" },
@@ -206,11 +208,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     since: "2026-04-14",
     note: "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
   },
-  "cgusd-cygnus-finance": {
-    code: "nav-rebase-no-oracle",
-    since: "2026-04-14",
-    note: "daily NAV rebase asset with no reliable runtime APY source wired yet",
-  },
   "gldy-streamex": {
     code: "issuer-distributed-yield",
     since: "2026-04-14",
@@ -260,11 +257,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     code: "pre-launch",
     since: "2026-04-14",
     note: "pre-launch asset with no reliable runtime yield source yet",
-  },
-  "usdn-noble": {
-    code: "rebase-no-public-oracle",
-    since: "2026-04-14",
-    note: "M0-backed Noble rebase yield has no reliable runtime APY source wired yet",
   },
   "usdgo-osl": {
     code: "issuer-distributed-yield",

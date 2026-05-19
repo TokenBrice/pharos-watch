@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "VAR",
     "governance": "decentralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": true
   },
@@ -82,5 +82,9 @@
       "pct": 10,
       "risk": "high"
     }
-  ]
+  ],
+  "yieldConfig": {
+    "yieldSource": "SILK basket index appreciation",
+    "yieldType": "nav-appreciation"
+  }
 }
