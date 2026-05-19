@@ -11408,7 +11408,8 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -14966,7 +14967,8 @@
       {
         "name": "USDm (Mento Dollar) CDP collateral",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "cusd-celo"
       }
     ],
     "liveReservesConfig": {
@@ -19132,7 +19134,8 @@
       {
         "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
         "pct": 100,
-        "risk": "low"
+        "risk": "low",
+        "coinId": "cetes-etherfuse"
       }
     ]
   },
@@ -21512,9 +21515,11 @@
     "custodyModel": "institutional-regulated",
     "reserves": [
       {
-        "name": "Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)",
+        "name": "apcxUSDT custodial wrapper collateral",
         "pct": 100,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "usdt-tether",
+        "depType": "wrapper"
       }
     ],
     "liveReservesConfig": {
@@ -35283,7 +35288,8 @@
       {
         "name": "CLOs (JAAA)",
         "pct": 13,
-        "risk": "high"
+        "risk": "high",
+        "coinId": "jaaa-janus-henderson-anemoy"
       },
       {
         "name": "DeFi Lending",
@@ -40724,6 +40730,8 @@
         "slice": {
           "name": "USDC-denominated Yield Optimizer strategies",
           "risk": "high",
+          "coinId": "usdc-circle",
+          "depType": "wrapper",
           "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
         },
         "rpcUrl": "https://base-rpc.publicnode.com",

@@ -90,7 +90,8 @@
     {
       "name": "CLOs (JAAA)",
       "pct": 13,
-      "risk": "high"
+      "risk": "high",
+      "coinId": "jaaa-janus-henderson-anemoy"
     },
     {
       "name": "DeFi Lending",

@@ -81,14 +81,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "USDai's base-token reserve slice intentionally aggregates variable USDC and USDT collateral, so no single fixed coinId is representative.",
   ],
   [
-    "pht-pht::Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)::USDC",
-    "PHT's approved collateral bucket references wrapped/current and planned stablecoin collateral, so no single direct tracked coinId is representative.",
-  ],
-  [
-    "pht-pht::Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)::USDT",
-    "PHT's approved collateral bucket references wrapped/current and planned stablecoin collateral, so no single direct tracked coinId is representative.",
-  ],
-  [
     "hbusdt-hyperbeat::hoUSDT strategy exposure (Hyperbeat USDT strategy product)::USDT",
     "hoUSDT is a Hyperbeat strategy wrapper that uses USDT underneath rather than a direct USDT reserve, so coinId inheritance is two layers removed and not representative.",
   ],

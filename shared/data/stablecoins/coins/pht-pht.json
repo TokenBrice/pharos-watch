@@ -76,9 +76,11 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "Approved stablecoin collateral (apcxUSDT currently disclosed, apcxUSDC planned)",
+      "name": "apcxUSDT custodial wrapper collateral",
       "pct": 100,
-      "risk": "high"
+      "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "wrapper"
     }
   ],
   "liveReservesConfig": {
