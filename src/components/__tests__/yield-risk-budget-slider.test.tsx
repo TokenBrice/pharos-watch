@@ -22,13 +22,19 @@ describe("YieldRiskBudgetSlider", () => {
     render(<YieldRiskBudgetSlider stops={stops} onSelect={vi.fn()} />);
 
     expect(screen.getByText("Conservative")).toBeTruthy();
-    expect(screen.getByText("Balanced")).toBeTruthy();
+    // Active band label appears twice: once inline with the header, once as the stop label.
+    expect(screen.getAllByText("Balanced")).toHaveLength(2);
     expect(screen.getByText("Opportunistic")).toBeTruthy();
     expect(screen.getByText("All")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
     expect(screen.getByText("19")).toBeTruthy();
     expect(screen.getByText("70")).toBeTruthy();
     expect(screen.getByText("163")).toBeTruthy();
+  });
+
+  it("renders 'Custom' inline when no band matches", () => {
+    render(<YieldRiskBudgetSlider stops={unmatchedStops} onSelect={vi.fn()} />);
+    expect(screen.getByText("Custom")).toBeTruthy();
   });
 
   it("exposes a single range slider control wired to the active stop index", () => {
