@@ -1,4 +1,4 @@
-import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldPublicationMetadata, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, type AltYieldSource, type YieldBenchmarkMeta, type YieldBenchmarkRegistry, type YieldPublicDecisionLedger, type YieldPublicationMetadata, type YieldSafetySnapshotMeta, type YieldSourceInputMeta } from "@shared/types/yield";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -18,6 +18,7 @@ import { compareCandidates, getConfidencePriority } from "./evaluation-arbitrati
 import { publishYieldRowsAtomically } from "./publication-atomic-batch";
 import { buildYieldSourceProvenance } from "./provenance";
 import { buildYieldSourceRisk } from "./source-risk";
+import { buildPublicDecisionLedger } from "./decision-public";
 
 const MAX_SOURCE_DECISION_ALTERNATIVES = 4;
 const MAX_SOURCE_DECISION_ANOMALIES = 6;
@@ -87,6 +88,7 @@ function evaluatedSourceToRanking(
   provenance: Record<string, unknown> | null,
   publicationGenerationId?: string | null,
   publishedRank?: number,
+  decisionLedger?: YieldPublicDecisionLedger | null,
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
   return {
@@ -131,6 +133,7 @@ function evaluatedSourceToRanking(
     sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     ...(publishedRank ? { publishedRank } : {}),
+    ...(decisionLedger ? { decisionLedger } : {}),
     provenance: provenance
       ? {
           ...provenance,
@@ -196,7 +199,34 @@ export function buildYieldRankingsPayloadFromEvaluatedSources(
   const rankings = bestRows.map((source, index) => {
     const key = buildHistoryKey(source.id, source.sourceKey);
     const provenance = input.rankingProvenanceByKey.get(key) ?? null;
-    const ranking = evaluatedSourceToRanking(source, provenance, publicationGenerationId, index + 1);
+    const candidates = input.evaluatedSources
+      .filter((candidate) => candidate.id === source.id)
+      .sort(compareCandidates);
+    const rejectedCount = candidates.filter((candidate) => candidate.rejected).length;
+    const previousBestSourceKey =
+      source.previousBestSourceKey != null && source.previousBestSourceKey !== "legacy-best"
+        ? source.previousBestSourceKey
+        : null;
+    const sourceSwitch =
+      previousBestSourceKey != null && previousBestSourceKey !== source.sourceKey;
+    const decisionLedger = buildPublicDecisionLedger({
+      selected: source,
+      candidates,
+      rejectedCount,
+      previousBestSourceKey,
+      sourceSwitch,
+      // apy30dDeltaFromPrevious is null in this iteration; populating it
+      // requires plumbing prior-published APY30d through the publisher
+      // (deferred — surfaces as null on the wire today).
+      apy30dDeltaFromPrevious: null,
+    });
+    const ranking = evaluatedSourceToRanking(
+      source,
+      provenance,
+      publicationGenerationId,
+      index + 1,
+      decisionLedger,
+    );
     ranking.altSources = altSourcesByCoin.get(source.id) ?? [];
 
     const sourceObservedAt =
@@ -368,6 +398,7 @@ function buildYieldSourceDecisionEvidence(params: {
   previousBestSourceKey: string | null;
   rejectedCount: number;
   alternativesJson: string;
+  publicDecisionLedger: YieldPublicDecisionLedger;
 } {
   const candidates = params.evaluatedSources
     .filter((candidate) => candidate.id === params.source.id)
@@ -380,14 +411,42 @@ function buildYieldSourceDecisionEvidence(params: {
     startSec: params.startSec,
     dlPoolsMeta: params.dlPoolsMeta,
   });
+  const previousBestSourceKey =
+    typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null;
 
   return {
     selectedReason: typeof provenance.selectionReason === "string" ? provenance.selectionReason : "Selected source",
     sourceSwitch: provenance.sourceSwitch === true,
-    previousBestSourceKey: typeof provenance.previousBestSourceKey === "string" ? provenance.previousBestSourceKey : null,
+    previousBestSourceKey,
     rejectedCount,
     alternativesJson: serializeBoundedDecisionAlternatives(params.source, candidates),
+    publicDecisionLedger: buildPublicDecisionLedger({
+      selected: params.source,
+      candidates,
+      rejectedCount,
+      previousBestSourceKey,
+      sourceSwitch: provenance.sourceSwitch === true,
+      apy30dDeltaFromPrevious: null,
+    }),
   };
+}
+
+function classifyDecisionRetentionReason(input: {
+  sourceSwitch: boolean;
+  source: EvaluatedYieldSource;
+  candidates: EvaluatedYieldSource[];
+}): "trend" | "audit" {
+  if (input.sourceSwitch) return "trend";
+  if (input.source.anomalies.length > 0) return "trend";
+  const selectedConfidence = getConfidencePriority(input.source.confidenceTier);
+  const rejectedHigherConfidence = input.candidates.some(
+    (candidate) =>
+      candidate.sourceKey !== input.source.sourceKey &&
+      candidate.rejected &&
+      getConfidencePriority(candidate.confidenceTier) > selectedConfidence,
+  );
+  if (rejectedHigherConfidence) return "trend";
+  return "audit";
 }
 
 export async function stageYieldPublicationGeneration(
@@ -584,6 +643,7 @@ export async function persistEvaluatedYieldSources(
   const yieldDataRows: Array<Record<string, unknown>> = [];
   const historyRows: Array<Record<string, unknown>> = [];
   const decisionRows: Array<Record<string, unknown>> = [];
+  const decisionAlternativeRows: Array<Record<string, unknown>> = [];
   const rankingProvenanceByKey = new Map<string, Record<string, unknown>>();
 
   for (const source of input.evaluatedSources) {
@@ -593,6 +653,12 @@ export async function persistEvaluatedYieldSources(
     const safeVariance30d = source.stdDev30d != null && Number.isFinite(source.stdDev30d) ? source.stdDev30d : null;
     const safeStability =
       source.yieldStability != null && Number.isFinite(source.yieldStability) ? source.yieldStability : null;
+    const safePharosYieldScore =
+      source.pharosYieldScore != null && Number.isFinite(source.pharosYieldScore)
+        ? source.pharosYieldScore
+        : null;
+    const safeSafetyScore =
+      source.safetyScore != null && Number.isFinite(source.safetyScore) ? source.safetyScore : null;
 
     yieldDataRows.push({
       stablecoin_id: source.id,
@@ -642,6 +708,9 @@ export async function persistEvaluatedYieldSources(
       yield_type: source.yieldType,
       publication_generation_id: input.generationId,
       publication_state: "published",
+      pys_at_publish: safePharosYieldScore,
+      safety_at_publish: safeSafetyScore,
+      variance_at_publish: safeVariance30d,
     });
 
     rankingProvenanceByKey.set(
@@ -663,6 +732,14 @@ export async function persistEvaluatedYieldSources(
         startSec: input.startSec,
         dlPoolsMeta: input.dlPoolsMeta,
       });
+      const candidates = input.evaluatedSources
+        .filter((candidate) => candidate.id === source.id)
+        .sort(compareCandidates);
+      const retentionReason = classifyDecisionRetentionReason({
+        sourceSwitch: decisionEvidence.sourceSwitch,
+        source,
+        candidates,
+      });
       decisionRows.push({
         generation_id: input.generationId,
         stablecoin_id: source.id,
@@ -677,7 +754,21 @@ export async function persistEvaluatedYieldSources(
         rejected_count: decisionEvidence.rejectedCount,
         alternatives_json: decisionEvidence.alternativesJson,
         created_at: input.startSec,
+        retention_reason: retentionReason,
       });
+
+      for (const alternative of decisionEvidence.publicDecisionLedger.alternatives) {
+        decisionAlternativeRows.push({
+          generation_id: input.generationId,
+          stablecoin_id: source.id,
+          alt_source_key: alternative.sourceKey,
+          alt_yield_source: alternative.yieldSource,
+          alt_apy30d_delta:
+            Number.isFinite(alternative.apy30dDelta) ? alternative.apy30dDelta : null,
+          rejection_reason_code: alternative.rejectionReasonCode,
+          recorded_at: input.startSec,
+        });
+      }
     }
   }
 
@@ -699,6 +790,7 @@ export async function persistEvaluatedYieldSources(
     yieldDataRows,
     historyRows,
     decisionRows,
+    decisionAlternativeRows,
   });
   if (!cacheWrite.written) {
     return {
@@ -719,6 +811,11 @@ export async function persistEvaluatedYieldSources(
     cacheWrite,
   };
 }
+
+/** Days to retain audit-only yield_source_decisions rows. Trend-tagged rows
+ *  (source switches, anomalies, rejected higher-confidence sources) are
+ *  preserved beyond this window for long-running analytics. */
+const AUDIT_DECISION_RETENTION_DAYS = 30;
 
 export async function pruneYieldTables(
   db: D1Database,
@@ -743,4 +840,27 @@ export async function pruneYieldTables(
     .prepare(`DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
     .bind(pruneCutoff, ...frozenIdsList)
     .run();
+
+  if (options?.allowDestructiveCleanup ?? true) {
+    const auditCutoffSec = startSec - AUDIT_DECISION_RETENTION_DAYS * DAY_SECONDS;
+    await db
+      .prepare(
+        `DELETE FROM yield_source_decisions
+         WHERE retention_reason = 'audit' AND created_at < ?`,
+      )
+      .bind(auditCutoffSec)
+      .run();
+    await db
+      .prepare(
+        `DELETE FROM yield_source_decision_alternatives
+         WHERE recorded_at < ?
+           AND NOT EXISTS (
+             SELECT 1 FROM yield_source_decisions d
+             WHERE d.generation_id = yield_source_decision_alternatives.generation_id
+               AND d.stablecoin_id = yield_source_decision_alternatives.stablecoin_id
+           )`,
+      )
+      .bind(auditCutoffSec)
+      .run();
+  }
 }

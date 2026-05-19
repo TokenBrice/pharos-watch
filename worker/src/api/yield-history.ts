@@ -44,6 +44,9 @@ interface YieldHistoryRow {
   data_source: string | null;
   is_best: number | null;
   publication_generation_id?: string | null;
+  pys_at_publish?: number | null;
+  safety_at_publish?: number | null;
+  variance_at_publish?: number | null;
 }
 
 const LEGACY_LUSD_BPROTOCOL_SOURCE_KEY = "bprotocol-lqty-only";
@@ -296,12 +299,12 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
   const publicationFilter = "AND (publication_generation_id IS NULL OR publication_state = 'published')";
 
   const sql = mode === "source"
-    ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id
+    ? `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND source_key = ?
        ${publicationFilter}
        ORDER BY recorded_at ASC`
-    : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id
+    : `SELECT recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, warning_signals, source_key, yield_source, yield_type, data_source, is_best, publication_generation_id, pys_at_publish, safety_at_publish, variance_at_publish
        FROM yield_history
        WHERE stablecoin_id = ? AND recorded_at >= ? AND recorded_at <= ? AND is_best = 1
        ${publicationFilter}
@@ -330,6 +333,19 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
         previousSourceKey !== normalizedSourceKey;
       previousSourceKey = normalizedSourceKey;
 
+      const pysAtPublish =
+        typeof row.pys_at_publish === "number" && Number.isFinite(row.pys_at_publish)
+          ? row.pys_at_publish
+          : row.pys_at_publish === null ? null : undefined;
+      const safetyAtPublish =
+        typeof row.safety_at_publish === "number" && Number.isFinite(row.safety_at_publish)
+          ? row.safety_at_publish
+          : row.safety_at_publish === null ? null : undefined;
+      const varianceAtPublish =
+        typeof row.variance_at_publish === "number" && Number.isFinite(row.variance_at_publish)
+          ? row.variance_at_publish
+          : row.variance_at_publish === null ? null : undefined;
+
       return {
         date: row.recorded_at,
         apy: row.apy,
@@ -351,6 +367,9 @@ export const handleYieldHistory = withErrorHandler("yield-history", async (
         publicationGenerationId: row.publication_generation_id ?? null,
         ...(hasSourceRisk ? { sourceRisk: sourceRisk ?? null } : {}),
         sourceSwitch,
+        ...(pysAtPublish !== undefined ? { pysAtPublish } : {}),
+        ...(safetyAtPublish !== undefined ? { safetyAtPublish } : {}),
+        ...(varianceAtPublish !== undefined ? { varianceAtPublish } : {}),
       };
     });
 

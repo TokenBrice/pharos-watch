@@ -75,6 +75,9 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0129     | `0129_tape_events.sql`                                   | Add materialized `tape_events` stream projected from existing producer tables, idempotent on `(source_table, source_row_id, transition)`         |
 | 0130     | `0130_public_snapshots.sql`                              | Add `public_snapshots` table holding daily gzipped JSON payloads for `/api/snapshots/<date>.json` and `/api/snapshot/<date>/stablecoin/<id>`     |
 | 0131     | `0131_usg_tangent_inception_supply_repair.sql`           | Repair Tangent USG early `supply_history` rows so the on-chain-circulating exclusion applies from first tracked chart day                        |
+| 0132     | `0132_yield_history_pys_snapshot.sql`                    | Add `pys_at_publish`, `safety_at_publish`, `variance_at_publish` snapshot columns to `yield_history` for honest reconstruction                  |
+| 0133     | `0133_yield_decision_alternatives.sql`                   | Add sibling `yield_source_decision_alternatives` table for the bounded, public-safe retained alternates surfaced on `/api/yield-rankings`        |
+| 0134     | `0134_yield_decision_retention_reason.sql`               | Add nullable `retention_reason` column to `yield_source_decisions` for per-row trend/audit classification and selective pruning                   |
 
 ## Retired Individual Migrations
 

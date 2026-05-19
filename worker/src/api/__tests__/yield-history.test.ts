@@ -609,6 +609,50 @@ describe("handleYieldHistory", () => {
     expect(historyQuery?.binds[2]).toBe(publishedAt);
   });
 
+  it("exposes pysAtPublish / safetyAtPublish / varianceAtPublish snapshot fields on history points", async () => {
+    const snapshotRow = makeYieldHistoryRow({
+      pys_at_publish: 73.5,
+      safety_at_publish: 81,
+      variance_at_publish: 0.18,
+    });
+    const db = mockD1([{ match: "yield_history", rows: [snapshotRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      history: Array<{
+        pysAtPublish?: number | null;
+        safetyAtPublish?: number | null;
+        varianceAtPublish?: number | null;
+      }>;
+    };
+    expect(body.history[0]?.pysAtPublish).toBe(73.5);
+    expect(body.history[0]?.safetyAtPublish).toBe(81);
+    expect(body.history[0]?.varianceAtPublish).toBe(0.18);
+  });
+
+  it("returns nullable snapshot fields when not yet populated", async () => {
+    const legacyRow = makeYieldHistoryRow({
+      pys_at_publish: null,
+      safety_at_publish: null,
+      variance_at_publish: null,
+    });
+    const db = mockD1([{ match: "yield_history", rows: [legacyRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      history: Array<{
+        pysAtPublish?: number | null;
+        safetyAtPublish?: number | null;
+        varianceAtPublish?: number | null;
+      }>;
+    };
+    expect(body.history[0]?.pysAtPublish).toBeNull();
+    expect(body.history[0]?.safetyAtPublish).toBeNull();
+    expect(body.history[0]?.varianceAtPublish).toBeNull();
+  });
+
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));

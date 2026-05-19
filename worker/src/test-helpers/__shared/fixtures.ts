@@ -123,6 +123,9 @@ type YieldHistoryRow = {
   warning_signals?: string | null;
   yield_source?: string | null;
   yield_type?: string | null;
+  pys_at_publish?: number | null;
+  safety_at_publish?: number | null;
+  variance_at_publish?: number | null;
 };
 
 type DexLiquidityHistoryRow = {

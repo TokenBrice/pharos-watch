@@ -494,6 +494,7 @@ describe("publishYieldCoordinatorResults", () => {
       { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
       { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
       { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
+      { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },
       {
         match: "INSERT INTO cache (key, value, updated_at)",
         rows: [],
@@ -504,6 +505,8 @@ describe("publishYieldCoordinatorResults", () => {
       { match: "UPDATE yield_data SET publication_state", rows: [] },
       { match: "UPDATE yield_history SET publication_state", rows: [] },
       { match: "DELETE FROM yield_history", rows: [] },
+      { match: "DELETE FROM yield_source_decisions", rows: [] },
+      { match: "DELETE FROM yield_source_decision_alternatives", rows: [] },
     ]);
   }
 
@@ -705,6 +708,131 @@ describe("publishYieldCoordinatorResults", () => {
     });
     expect(history.some((entry) => entry.sql.includes("SET state = 'published'"))).toBe(true);
     expect(history.some((entry) => entry.sql.includes("UPDATE yield_data SET publication_state = ?"))).toBe(false);
+  });
+
+  it("emits a bounded public decisionLedger on the published rankings payload and persists alternatives + retention reason", async () => {
+    const db = makePublicationDb(1);
+    const best = makeEvaluatedSource({
+      sourceKey: "defillama:best",
+      currentApy: 5,
+      apy30d: 5,
+      pharosYieldScore: 35,
+      confidenceTier: "curated",
+      previousBestSourceKey: "price-derived:legacy",
+    });
+    const altA = makeEvaluatedSource({
+      sourceKey: "defillama-auto:alt-a",
+      currentApy: 4,
+      apy30d: 3,
+      pharosYieldScore: 25,
+      confidenceTier: "discovered",
+      dataSource: "defillama-auto",
+    });
+    const altB = makeEvaluatedSource({
+      sourceKey: "price-derived:alt-b",
+      currentApy: 2,
+      apy30d: 2,
+      pharosYieldScore: 10,
+      confidenceTier: "fallback",
+      dataSource: "price-derived",
+    });
+    const altC = makeEvaluatedSource({
+      sourceKey: "defillama-auto:alt-c",
+      currentApy: 4.5,
+      apy30d: 4.8,
+      pharosYieldScore: 22,
+      confidenceTier: "discovered",
+      dataSource: "defillama-auto",
+    });
+
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const previewRankingsPayload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: [best, altA, altB, altC],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+      rankingProvenanceByKey: new Map(),
+      riskFreeRate: makeBenchmarkMeta().rate,
+      riskFreeRateMeta: makeBenchmarkMeta(),
+      riskFreeRateRegistry: { USD: makeBenchmarkMeta(), EUR: null, CHF: null },
+      dlPoolsMeta: makeYieldSourceMeta(),
+      safetySnapshot: makeSafetySnapshotMeta(),
+      medianApy: 4.5,
+      startSec,
+    });
+
+    expect(previewRankingsPayload.rankings[0]?.decisionLedger).toBeTruthy();
+    const previewLedger = previewRankingsPayload.rankings[0]?.decisionLedger;
+    expect(previewLedger?.selectedReasonCode).toMatch(
+      /^(best-by-confidence-and-apy|deterministic-preferred|curated-over-discovered|tier-preference|tvl-floor|freshness-tiebreaker|fallback|no-alternatives)$/,
+    );
+    expect(previewLedger?.alternatives.length).toBeLessThanOrEqual(2);
+    expect(previewLedger?.sourceSwitch).toBe(true);
+
+    const result = await publishYieldCoordinatorResults(makePublishParams({
+      db,
+      previewRankingsPayload,
+      evaluatedSources: [best, altA, altB, altC],
+      bestSourceKeyByCoin: new Map([[best.id, best.sourceKey]]),
+    }));
+    expect(result).toMatchObject({ ok: true });
+
+    const history = db.getHistory();
+    const cacheWrite = history.find((entry) => entry.sql.includes("INSERT INTO cache (key, value, updated_at)"));
+    const cacheBody = JSON.parse(String(cacheWrite?.binds[1])) as {
+      rankings: Array<{ decisionLedger?: Record<string, unknown> }>;
+    };
+    expect(cacheBody.rankings[0]?.decisionLedger).toBeTruthy();
+    expect((cacheBody.rankings[0]?.decisionLedger?.alternatives as unknown[])?.length).toBeLessThanOrEqual(2);
+
+    const decisionInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
+    expect(decisionRows[0]?.retention_reason).toBe("trend");
+
+    const alternativesInsert = history.find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decision_alternatives"));
+    const alternativeRows = parseJsonBind<Array<{
+      alt_source_key: string;
+      rejection_reason_code: string;
+    }>>(alternativesInsert);
+    expect(alternativeRows.length).toBeLessThanOrEqual(2);
+    expect(alternativeRows.length).toBeGreaterThan(0);
+    for (const row of alternativeRows) {
+      expect(["thinner", "stale", "lower-confidence", "rewards-only", "smaller", "unspecified"]).toContain(
+        row.rejection_reason_code,
+      );
+    }
+
+    // The total decisionLedger size on the row must stay well under 1 KB.
+    const ledgerBytes = new TextEncoder().encode(JSON.stringify(cacheBody.rankings[0]?.decisionLedger)).length;
+    expect(ledgerBytes).toBeLessThan(1024);
+  });
+
+  it("persists pys / safety / variance snapshot columns on yield_history rows", async () => {
+    const db = makePublicationDb(1);
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+    expect(result).toMatchObject({ ok: true });
+
+    const history = db.getHistory();
+    const yieldHistoryInsert = history.find((entry) => entry.sql.includes("INSERT OR IGNORE INTO yield_history"));
+    expect(yieldHistoryInsert?.sql).toContain("pys_at_publish");
+    expect(yieldHistoryInsert?.sql).toContain("safety_at_publish");
+    expect(yieldHistoryInsert?.sql).toContain("variance_at_publish");
+    const historyRows = parseJsonBind<Array<{
+      pys_at_publish: number | null;
+      safety_at_publish: number | null;
+      variance_at_publish: number | null;
+    }>>(yieldHistoryInsert);
+    expect(historyRows[0]?.pys_at_publish).toBe(28);
+    expect(historyRows[0]?.safety_at_publish).toBe(82);
+    expect(historyRows[0]?.variance_at_publish).toBe(0.2);
+  });
+
+  it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {
+    const db = makePublicationDb(1);
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db }));
+    expect(result).toMatchObject({ ok: true });
+
+    const decisionInsert = db.getHistory().find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
+    const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
+    expect(decisionRows[0]?.retention_reason).toBe("audit");
   });
 });
 

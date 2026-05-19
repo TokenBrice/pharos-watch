@@ -72,6 +72,47 @@ const YIELD_RANK_CHANGE_DRIVER_VALUES = [
 export type YieldRankChangeDriver =
   (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
 
+export const YIELD_DECISION_REASON_CODES = [
+  "best-by-confidence-and-apy",
+  "deterministic-preferred",
+  "curated-over-discovered",
+  "tier-preference",
+  "tvl-floor",
+  "freshness-tiebreaker",
+  "fallback",
+  "no-alternatives",
+] as const;
+export type YieldDecisionReasonCode = (typeof YIELD_DECISION_REASON_CODES)[number];
+
+export const YIELD_DECISION_REJECTION_REASON_CODES = [
+  "thinner",
+  "stale",
+  "lower-confidence",
+  "rewards-only",
+  "smaller",
+  "unspecified",
+] as const;
+export type YieldDecisionRejectionReasonCode = (typeof YIELD_DECISION_REJECTION_REASON_CODES)[number];
+
+export interface YieldPublicDecisionAlternative {
+  sourceKey: string;
+  yieldSource: string;
+  /** alt.apy30d - selected.apy30d (signed). */
+  apy30dDelta: number;
+  rejectionReasonCode: YieldDecisionRejectionReasonCode;
+}
+
+export interface YieldPublicDecisionLedger {
+  selectedReasonCode: YieldDecisionReasonCode;
+  previousBestSourceKey?: string | null;
+  sourceSwitch: boolean;
+  /** Signed delta of selected.apy30d vs prior cycle's selected.apy30d; null if no prior. */
+  apy30dDeltaFromPrevious?: number | null;
+  rejectedCount: number;
+  /** Capped at 2 entries by absolute APY delta (largest first). */
+  alternatives: YieldPublicDecisionAlternative[];
+}
+
 export interface YieldResponseWarning {
   code: string;
   message: string;
@@ -277,6 +318,22 @@ const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
   investabilityFlags: z.array(z.string()).optional(),
 });
 
+const YieldPublicDecisionAlternativeSchema: z.ZodType<YieldPublicDecisionAlternative> = z.object({
+  sourceKey: z.string(),
+  yieldSource: z.string(),
+  apy30dDelta: z.number(),
+  rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES),
+});
+
+const YieldPublicDecisionLedgerSchema: z.ZodType<YieldPublicDecisionLedger> = z.object({
+  selectedReasonCode: z.enum(YIELD_DECISION_REASON_CODES),
+  previousBestSourceKey: z.string().nullable().optional(),
+  sourceSwitch: z.boolean(),
+  apy30dDeltaFromPrevious: z.number().nullable().optional(),
+  rejectedCount: z.number().int().min(0),
+  alternatives: z.array(YieldPublicDecisionAlternativeSchema).max(2),
+});
+
 const YieldRankChangeAttributionSchema: z.ZodType<YieldRankChangeAttribution> = z.object({
   previousRank: z.number().int().positive().nullable().optional(),
   rankDelta: z.number().int().nullable().optional(),
@@ -428,6 +485,7 @@ export interface YieldRanking {
   liveRank?: number | null;
   sourceRisk?: YieldSourceRisk | null;
   rankChangeAttribution?: YieldRankChangeAttribution | null;
+  decisionLedger?: YieldPublicDecisionLedger | null;
 }
 
 const YieldRankingSchema = z.object({
@@ -471,6 +529,7 @@ const YieldRankingSchema = z.object({
   liveRank: z.number().int().positive().nullable().optional(),
   sourceRisk: YieldSourceRiskSchema.nullable().optional(),
   rankChangeAttribution: YieldRankChangeAttributionSchema.nullable().optional(),
+  decisionLedger: YieldPublicDecisionLedgerSchema.nullable().optional(),
 });
 
 export interface YieldRankingsResponse {

@@ -34,6 +34,17 @@ interface YieldSourceDecisionRow {
   rejected_count: number;
   alternatives_json: string;
   created_at: number;
+  retention_reason: string | null;
+}
+
+interface YieldSourceDecisionAlternativeRow {
+  generation_id: string;
+  stablecoin_id: string;
+  alt_source_key: string;
+  alt_yield_source: string;
+  alt_apy30d_delta: number | null;
+  rejection_reason_code: string;
+  recorded_at: number;
 }
 
 interface AdminRouteContext {
@@ -100,7 +111,10 @@ function mapGeneration(row: YieldGenerationRow) {
   };
 }
 
-function mapDecision(row: YieldSourceDecisionRow) {
+function mapDecision(
+  row: YieldSourceDecisionRow,
+  publicAlternatives?: YieldSourceDecisionAlternativeRow[],
+) {
   const parsedAlternatives = parseJsonValue(row.alternatives_json);
   const alternatives = Array.isArray(parsedAlternatives.value) ? parsedAlternatives.value : [];
   const alternativesMalformed =
@@ -122,7 +136,19 @@ function mapDecision(row: YieldSourceDecisionRow) {
     rejectedCount: row.rejected_count,
     alternatives,
     alternativesMalformed,
+    retentionReason: row.retention_reason ?? null,
     createdAt: row.created_at,
+    ...(publicAlternatives
+      ? {
+          publicAlternatives: publicAlternatives.map((alt) => ({
+            sourceKey: alt.alt_source_key,
+            yieldSource: alt.alt_yield_source,
+            apy30dDelta: toNumberOrNull(alt.alt_apy30d_delta),
+            rejectionReasonCode: alt.rejection_reason_code,
+            recordedAt: alt.recorded_at,
+          })),
+        }
+      : {}),
   };
 }
 
@@ -159,6 +185,7 @@ async function loadStablecoinDecisions(
     generationId: string | null;
     state: GenerationState | null;
     limit: number;
+    includePublicAlternatives: boolean;
   },
 ) {
   const rows = await db
@@ -167,7 +194,7 @@ async function loadStablecoinDecisions(
          d.generation_id, d.stablecoin_id, d.selected_source_key, d.selected_confidence_tier,
          d.selected_data_source, d.selected_apy_30d, d.selected_score, d.selected_reason,
          d.previous_best_source_key, d.source_switch, d.rejected_count, d.alternatives_json,
-         d.created_at
+         d.created_at, d.retention_reason
        FROM yield_source_decisions d
        INNER JOIN yield_publication_generations g ON g.generation_id = d.generation_id
        WHERE d.stablecoin_id = ?
@@ -186,7 +213,79 @@ async function loadStablecoinDecisions(
     )
     .all<YieldSourceDecisionRow>();
 
-  return (rows.results ?? []).map(mapDecision);
+  const decisionRows = rows.results ?? [];
+  if (decisionRows.length === 0) return [];
+
+  let publicAlternativesByGeneration = new Map<string, YieldSourceDecisionAlternativeRow[]>();
+  if (params.includePublicAlternatives) {
+    const generationIds = [...new Set(decisionRows.map((row) => row.generation_id))];
+    if (generationIds.length > 0) {
+      const placeholders = generationIds.map(() => "?").join(",");
+      const altRows = await db
+        .prepare(
+          `SELECT generation_id, stablecoin_id, alt_source_key, alt_yield_source,
+                  alt_apy30d_delta, rejection_reason_code, recorded_at
+           FROM yield_source_decision_alternatives
+           WHERE stablecoin_id = ? AND generation_id IN (${placeholders})
+           ORDER BY recorded_at DESC, alt_source_key ASC`,
+        )
+        .bind(params.stablecoinId, ...generationIds)
+        .all<YieldSourceDecisionAlternativeRow>();
+      const grouped = new Map<string, YieldSourceDecisionAlternativeRow[]>();
+      for (const alt of altRows.results ?? []) {
+        const list = grouped.get(alt.generation_id) ?? [];
+        list.push(alt);
+        grouped.set(alt.generation_id, list);
+      }
+      publicAlternativesByGeneration = grouped;
+    }
+  }
+
+  return decisionRows.map((row) =>
+    mapDecision(
+      row,
+      params.includePublicAlternatives
+        ? publicAlternativesByGeneration.get(row.generation_id) ?? []
+        : undefined,
+    ),
+  );
+}
+
+const AUDIT_RETENTION_DAYS_DEFAULT = 30;
+const AUDIT_RETENTION_DAY_SECONDS = 86_400;
+
+/**
+ * Deletes `yield_source_decisions` rows whose retention_reason is "audit" and
+ * which are older than `olderThanDays` days. Trend-tagged rows are preserved
+ * for long-running analytics; this is intended to run from existing yield
+ * cleanup crons (not as a new trigger).
+ *
+ * Returns the number of rows deleted.
+ */
+export async function pruneAuditOnlyDecisions(
+  db: D1Database,
+  olderThanDays: number = AUDIT_RETENTION_DAYS_DEFAULT,
+): Promise<number> {
+  const cutoffSec = Math.floor(Date.now() / 1000) - olderThanDays * AUDIT_RETENTION_DAY_SECONDS;
+  const decisionResult = await db
+    .prepare(
+      `DELETE FROM yield_source_decisions
+       WHERE retention_reason = 'audit' AND created_at < ?`,
+    )
+    .bind(cutoffSec)
+    .run();
+  // Cascade delete sibling alternatives for any decisions we just pruned.
+  await db
+    .prepare(
+      `DELETE FROM yield_source_decision_alternatives
+       WHERE recorded_at < ?
+         AND (generation_id, stablecoin_id) NOT IN (
+           SELECT generation_id, stablecoin_id FROM yield_source_decisions
+         )`,
+    )
+    .bind(cutoffSec)
+    .run();
+  return Number(decisionResult.meta?.changes ?? 0);
 }
 
 export const handleYieldSourceDecisions = makeAdminRoute<AdminRouteContext>(
@@ -231,10 +330,18 @@ export const handleYieldSourceDecisions = makeAdminRoute<AdminRouteContext>(
     );
     if (stablecoinId instanceof Response) return stablecoinId;
 
+    const includePublicAlternatives = url.searchParams.get("includePublicAlternatives") === "1";
+
     const [generations, decisions] = await Promise.all([
       loadGenerations(db, { generationId, state, limit }),
       stablecoinId
-        ? loadStablecoinDecisions(db, { stablecoinId, generationId, state, limit: decisionLimit })
+        ? loadStablecoinDecisions(db, {
+            stablecoinId,
+            generationId,
+            state,
+            limit: decisionLimit,
+            includePublicAlternatives,
+          })
         : Promise.resolve([]),
     ]);
 
@@ -245,6 +352,7 @@ export const handleYieldSourceDecisions = makeAdminRoute<AdminRouteContext>(
         stablecoinId,
         limit,
         decisionLimit: stablecoinId ? decisionLimit : 0,
+        includePublicAlternatives,
       },
       generations,
       decisions,

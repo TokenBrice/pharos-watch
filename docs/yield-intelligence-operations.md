@@ -81,6 +81,14 @@ Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIEL
 
 When promoting an adapter out of `quarantined` or `intentional-gap`, remove the typed entry (the legacy string map derives from the typed map, so a single edit propagates). Always set `since` to the date the lifecycle change happens; set `nextReviewAt` when the gap is expected to be revisited soon.
 
+## Decision Ledger Retention (v8.14)
+
+- Every `yield_source_decisions` row is tagged with a `retention_reason` of `trend` or `audit`.
+- `trend` rows are persisted indefinitely. They cover source switches, evaluated-source anomalies, and decisions that rejected a higher-confidence-tier alternative.
+- `audit` rows are pruned after 30 days inside the existing `pruneYieldTables` cleanup pass that runs at the end of each successful publication. There is no new cron trigger.
+- Retained public alternates live in the sibling `yield_source_decision_alternatives` table; they are cascaded out when the referenced decision row is removed.
+- The legacy `alternatives_json` blob continues to be written for one cycle of co-existence. Operators reading `/api/yield-source-decisions` may pass `?includePublicAlternatives=1` to receive the typed alternates from the new table alongside the legacy blob.
+
 ## Failure Semantics
 
 - Deterministic on-chain rows, curated DeFiLlama rows, price-derived rows, and rate-derived rows remain the primary publication path.
