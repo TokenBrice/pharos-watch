@@ -17,6 +17,8 @@ import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
+import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
+import { YieldCoinIndex } from "@/app/yield/coin-index";
 import {
   buildYieldViewModel,
   getActiveFilterSummaries,
@@ -103,6 +105,19 @@ export function YieldClient() {
     }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, visibleRows],
   );
+
+  // Counts the full /yield ranking universe per peg currency (not filter-
+  // aware), so the reference-rates table can show how many tracked coins
+  // each benchmark currency covers.
+  const currencyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const option of viewModel.options.peg) {
+      if (option.value === "all" || option.value === "non-usd"
+        || option.value === "aud-cad" || option.value === "other") continue;
+      counts[option.value] = option.count;
+    }
+    return counts;
+  }, [viewModel.options.peg]);
 
   useEffect(() => {
     if (viewModel.invalidParamKeys.length === 0) return;
@@ -379,7 +394,7 @@ export function YieldClient() {
           </div>
         </section>
 
-        <section className="order-5 space-y-3" aria-label="Yield sources">
+        <section className="order-5 space-y-6" aria-label="Yield reference rates and sources">
           {viewModel.emptyState.isEmpty ? (
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-6 text-center">
               <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
@@ -406,13 +421,17 @@ export function YieldClient() {
             </div>
           ) : null}
           {visibleRows.length > 0 ? (
-            <YieldSourceBoard
-              model={sourceBoardModel}
-              benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
-              poolInputMeta={data.provenance?.dlPools ?? null}
-              safetySnapshot={data.provenance?.safetySnapshot ?? null}
-            />
+            <>
+              <ReferenceRatesStrip
+                benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+                poolInputMeta={data.provenance?.dlPools ?? null}
+                safetySnapshot={data.provenance?.safetySnapshot ?? null}
+                currencyCounts={currencyCounts}
+              />
+              <YieldSourceBoard model={sourceBoardModel} />
+            </>
           ) : null}
+          <YieldCoinIndex />
         </section>
       </div>
     </div>
