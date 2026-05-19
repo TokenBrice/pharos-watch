@@ -1,4 +1,10 @@
-import type { OnChainRateConfig, RateDerivedConfig } from "./yield-config-registry";
+import type { YieldAdapterLifecycleReason } from "@shared/types/yield";
+import {
+  registerYieldAdapterLifecycle,
+  type OnChainRateConfig,
+  type RateDerivedConfig,
+  type YieldAdapterLifecycleEntry,
+} from "./yield-config-registry";
 
 /**
  * Tier 1: On-chain exchange rate sources.
@@ -146,12 +152,33 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  * - dusd-dtrinity: current convertToAssets probe reverts
  * - reusd-re-protocol: current convertToAssets probe returns empty data
  */
-export const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = {
-  "scrvusd-curve":
-    "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
-  "dusd-dtrinity": "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
-  "reusd-re-protocol": "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
+export const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  "scrvusd-curve": {
+    code: "wrapper-not-yet-supported",
+    since: "2026-04-11",
+    note: "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
+  },
+  "dusd-dtrinity": {
+    code: "convert-to-assets-reverts",
+    since: "2026-03-10",
+    note: "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
+  },
+  "reusd-re-protocol": {
+    code: "convert-to-assets-empty",
+    since: "2026-03-15",
+    note: "generic convertToAssets probe returns empty data; requires protocol-specific deterministic reader",
+  },
 };
+
+/**
+ * Legacy free-form rationale map kept for backward compatibility with
+ * `deriveYieldRegistry` and existing manifest `rationale` fields. New code
+ * should consume `QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED` (or the typed
+ * `YIELD_ADAPTER_LIFECYCLE` registry exported from yield-config-registry).
+ */
+export const QUARANTINED_DETERMINISTIC_ADAPTERS: Record<string, string> = Object.fromEntries(
+  Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
+);
 
 export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "scrvusd-curve": "Curve scrvUSD current-rate reader",
@@ -162,21 +189,105 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
 
-export const INTENTIONAL_GAP_REASONS: Record<string, string> = {
-  "bfusd-binance": "Binance account yield product with no reliable runtime APY source wired yet",
-  "bd-basedollar": "asset with no reliable runtime yield source yet",
-  "brd-volpon": "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
-  "cgusd-cygnus-finance": "daily NAV rebase asset with no reliable runtime APY source wired yet",
-  "gldy-streamex": "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
-  "gusd-gate": "Gate account-product yield has no reliable runtime APY source wired yet",
-  "pc0000031-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
-  "pc0000033-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
-  "pc0000089-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
-  "pc0000101-tradable": "Tradable private-credit note has no reliable runtime APY source wired yet",
-  "pusd-polaris": "asset with no reliable runtime yield source yet",
-  "stbt-matrixdock": "Matrixdock STBT rebases daily off T-bill yield distributed off-chain; no public APY oracle wired yet",
-  "stkgho-umbrella-aave": "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
-  "trusd-tori": "pre-launch asset with no reliable runtime yield source yet",
-  "usdn-noble": "M0-backed Noble rebase yield has no reliable runtime APY source wired yet",
-  "usdgo-osl": "EFFR-linked issuer yield has no reliable runtime APY source wired yet",
+export const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
+  "bfusd-binance": {
+    code: "off-chain-account-product",
+    since: "2026-04-14",
+    note: "Binance account yield product with no reliable runtime APY source wired yet",
+  },
+  "bd-basedollar": {
+    code: "no-public-yield-source",
+    since: "2026-04-03",
+    note: "asset with no reliable runtime yield source yet",
+  },
+  "brd-volpon": {
+    code: "pre-launch",
+    since: "2026-04-14",
+    note: "pre-launch yield-bearing BRL asset with no reliable runtime yield source yet",
+  },
+  "cgusd-cygnus-finance": {
+    code: "nav-rebase-no-oracle",
+    since: "2026-04-14",
+    note: "daily NAV rebase asset with no reliable runtime APY source wired yet",
+  },
+  "gldy-streamex": {
+    code: "issuer-distributed-yield",
+    since: "2026-04-14",
+    note: "gold leasing yield is issuer-distributed; no reliable runtime APY source is wired yet",
+  },
+  "gusd-gate": {
+    code: "off-chain-account-product",
+    since: "2026-04-14",
+    note: "Gate account-product yield has no reliable runtime APY source wired yet",
+  },
+  "pc0000031-tradable": {
+    code: "private-credit-note",
+    since: "2026-04-14",
+    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+  },
+  "pc0000033-tradable": {
+    code: "private-credit-note",
+    since: "2026-04-14",
+    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+  },
+  "pc0000089-tradable": {
+    code: "private-credit-note",
+    since: "2026-04-14",
+    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+  },
+  "pc0000101-tradable": {
+    code: "private-credit-note",
+    since: "2026-04-14",
+    note: "Tradable private-credit note has no reliable runtime APY source wired yet",
+  },
+  "pusd-polaris": {
+    code: "no-public-yield-source",
+    since: "2026-04-14",
+    note: "asset with no reliable runtime yield source yet",
+  },
+  "stbt-matrixdock": {
+    code: "off-chain-distribution",
+    since: "2026-04-14",
+    note: "Matrixdock STBT rebases daily off T-bill yield distributed off-chain; no public APY oracle wired yet",
+  },
+  "stkgho-umbrella-aave": {
+    code: "external-emissions-only",
+    since: "2026-04-14",
+    note: "Umbrella rewards are external emissions over a 1:1 GHO staking receipt; no reliable APY source is wired yet",
+  },
+  "trusd-tori": {
+    code: "pre-launch",
+    since: "2026-04-14",
+    note: "pre-launch asset with no reliable runtime yield source yet",
+  },
+  "usdn-noble": {
+    code: "rebase-no-public-oracle",
+    since: "2026-04-14",
+    note: "M0-backed Noble rebase yield has no reliable runtime APY source wired yet",
+  },
+  "usdgo-osl": {
+    code: "issuer-distributed-yield",
+    since: "2026-05-18",
+    note: "EFFR-linked issuer yield has no reliable runtime APY source wired yet",
+  },
 };
+
+/**
+ * Legacy free-form rationale map kept for backward compatibility with
+ * `deriveYieldRegistry` and existing manifest `rationale` fields.
+ */
+export const INTENTIONAL_GAP_REASONS: Record<string, string> = Object.fromEntries(
+  Object.entries(INTENTIONAL_GAP_REASONS_TYPED).map(([id, reason]) => [id, reason.note ?? reason.code]),
+);
+
+// Register typed lifecycle entries into the shared registry so the coverage
+// audit, manifest endpoint, and any future admin UI can read the same source
+// of truth without re-deriving from the legacy string maps.
+const initialLifecycleEntries: Record<string, YieldAdapterLifecycleEntry> = {};
+for (const [id, reason] of Object.entries(QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED)) {
+  initialLifecycleEntries[id] = { lifecycle: "quarantined", reason };
+}
+for (const [id, reason] of Object.entries(INTENTIONAL_GAP_REASONS_TYPED)) {
+  initialLifecycleEntries[id] = { lifecycle: "intentional-gap", reason };
+}
+registerYieldAdapterLifecycle(initialLifecycleEntries);

@@ -68,6 +68,19 @@ The monthly coverage audit is an operator queue, not a persistent workflow store
 
 Do not add dismissal persistence until repeated monthly reports show that the same reviewed noise is consuming operator time. The admin queue rows are read-only; there are no `accept`/`dismiss` buttons and no stored operator state. Do not edit `yield-rankings` or source-risk fields to clear the queue; fix the source config, add an intentional gap, or leave the item on watch.
 
+## Adapter lifecycle states
+
+Each yield-bearing adapter sits in one of four lifecycle states tracked by `YIELD_ADAPTER_LIFECYCLE` in `worker/src/cron/yield-config-registry.ts`. The monthly coverage audit emits a `lifecycleSummary` count plus bounded `quarantinedAdapters` and `intentionalGaps` lists in the `yield-coverage-audit` cache so operators can act on structured reasons (`code`, `since`, optional `nextReviewAt`, `note`).
+
+| State | Use when | Operator classification cue |
+| --- | --- | --- |
+| `active` | Adapter ships an APY through the normal publication path | Default; no override needed |
+| `quarantined` | Adapter exists but is intentionally disabled pending a protocol-specific reader or evidence | Add a typed reason in `QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED` and link the reason `code` to the diagnosis (`convert-to-assets-empty`, `convert-to-assets-reverts`, `wrapper-not-yet-supported`) |
+| `intentional-gap` | Asset is yield-bearing but no reliable runtime APY source exists yet | Add a typed reason in `INTENTIONAL_GAP_REASONS_TYPED` with a stable `code` such as `no-public-yield-source`, `off-chain-account-product`, `nav-rebase-no-oracle`, or `pre-launch` |
+| `experimental` | Adapter is in trial; results should not block publication or alerts | Use sparingly while validating a new on-chain reader or rate source |
+
+When promoting an adapter out of `quarantined` or `intentional-gap`, remove the typed entry (the legacy string map derives from the typed map, so a single edit propagates). Always set `since` to the date the lifecycle change happens; set `nextReviewAt` when the gap is expected to be revisited soon.
+
 ## Failure Semantics
 
 - Deterministic on-chain rows, curated DeFiLlama rows, price-derived rows, and rate-derived rows remain the primary publication path.

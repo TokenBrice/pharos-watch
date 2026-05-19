@@ -1,5 +1,39 @@
 import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey } from "@shared/types/yield";
+import type {
+  YieldAdapterLifecycle,
+  YieldAdapterLifecycleReason,
+  YieldBenchmarkKey,
+} from "@shared/types/yield";
+
+export type { YieldAdapterLifecycle, YieldAdapterLifecycleReason };
+
+export interface YieldAdapterLifecycleEntry {
+  lifecycle: YieldAdapterLifecycle;
+  reason?: YieldAdapterLifecycleReason;
+}
+
+/**
+ * Typed registry mapping stablecoin IDs to their adapter lifecycle state.
+ *
+ * Default for unlisted IDs is `{ lifecycle: "active" }`. Quarantines and
+ * intentional gaps carry a structured reason that supersedes the legacy
+ * free-form rationale strings in `QUARANTINED_DETERMINISTIC_ADAPTERS` and
+ * `INTENTIONAL_GAP_REASONS`. The legacy string maps remain in place so the
+ * existing manifest descriptor `rationale` fields stay populated.
+ */
+export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {};
+
+export function getYieldAdapterLifecycle(stablecoinId: string): YieldAdapterLifecycleEntry {
+  return YIELD_ADAPTER_LIFECYCLE[stablecoinId] ?? { lifecycle: "active" };
+}
+
+export function registerYieldAdapterLifecycle(
+  entries: Record<string, YieldAdapterLifecycleEntry>,
+): void {
+  for (const [id, entry] of Object.entries(entries)) {
+    YIELD_ADAPTER_LIFECYCLE[id] = entry;
+  }
+}
 
 export interface YieldVariant {
   variantSymbol: string;

@@ -4,6 +4,25 @@ import type { MethodologyEnvelope, YieldType } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 import type { ReportCardGrade } from "./report-cards";
 
+export type YieldAdapterLifecycle =
+  | "active"
+  | "quarantined"
+  | "intentional-gap"
+  | "experimental";
+
+export interface YieldAdapterLifecycleReason {
+  /** Canonical short code such as "convert-to-assets-empty" or "no-public-yield-source". */
+  code: string;
+  /** ISO date (YYYY-MM-DD) the entry entered this lifecycle state. */
+  since: string;
+  /** Optional ISO date by which an operator should re-review the entry. */
+  nextReviewAt?: string;
+  /** Optional URL to docs, runbook, or evidence. */
+  evidenceUrl?: string;
+  /** Short free-form note (legacy rationale text lives here). */
+  note?: string;
+}
+
 export const YIELD_BENCHMARK_KEY_VALUES = [
   "USD",
   "EUR",
@@ -495,3 +514,34 @@ export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.obj
   methodology: MethodologyEnvelopeSchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
+
+export const YIELD_ADAPTER_MANIFEST_FAMILY_VALUES = [
+  "onchain",
+  "protocol-api",
+  "defillama",
+  "defillama-auto",
+  "rate-derived",
+  "price-derived",
+  "intentional-gap",
+] as const;
+export type YieldAdapterManifestFamily = (typeof YIELD_ADAPTER_MANIFEST_FAMILY_VALUES)[number];
+
+export interface YieldAdapterManifestPublicEntry {
+  stablecoinId: string;
+  coinSymbol: string;
+  family: YieldAdapterManifestFamily;
+  sourceKey: string;
+  label: string;
+  chain?: string | null;
+  project?: string | null;
+  lifecycle: YieldAdapterLifecycle;
+  quarantineReason?: string | null;
+  methodologyVersion: string;
+  updatedAt: number;
+}
+
+export interface YieldAdapterManifestResponse {
+  methodologyVersion: string;
+  updatedAt: number;
+  entries: YieldAdapterManifestPublicEntry[];
+}
