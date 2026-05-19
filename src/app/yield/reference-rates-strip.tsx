@@ -144,7 +144,7 @@ export function ReferenceRatesStrip({
               <table className="w-full min-w-[640px] border-collapse text-sm" aria-label="Per-currency reference rates">
                 <thead>
                   <tr className="border-b border-border/40 text-left text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70">
-                    <th scope="col" colSpan={2} className="py-2 pr-3 font-medium">
+                    <th scope="col" colSpan={2} className="py-2 pl-5 pr-3 font-medium">
                       Currency
                     </th>
                     {showCountColumn ? (
