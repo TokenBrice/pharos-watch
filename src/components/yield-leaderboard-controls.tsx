@@ -8,6 +8,7 @@ import {
   labelYieldFilterOption,
   type YieldFilterOption,
   type YieldPresetKey,
+  type YieldRiskBudgetKey,
   type YieldViewModel,
 } from "@/lib/yield-view-model";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ interface YieldLeaderboardControlsProps {
   onFilterChange: (key: string, value: string) => void;
   onClearFilters: () => void;
   onApplyPreset: (presetKey: YieldPresetKey) => void;
+  onApplyRiskBudget: (key: YieldRiskBudgetKey) => void;
 }
 
 interface ActiveFilterSummary {
@@ -161,6 +163,57 @@ function CurrencyTab({
   );
 }
 
+function RiskBudgetSlider({
+  stops,
+  onSelect,
+}: {
+  stops: YieldViewModel["riskBudget"]["stops"];
+  onSelect: (key: YieldRiskBudgetKey) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Risk budget"
+      className="flex flex-col gap-2 rounded-xl border border-border/70 bg-background/40 px-3 py-3"
+    >
+      <div className="flex items-baseline justify-between">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          Risk budget
+        </p>
+        <p className="text-[10px] text-muted-foreground">Conservative → Aggressive</p>
+      </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+        {stops.map((stop) => (
+          <button
+            key={stop.key}
+            type="button"
+            onClick={() => onSelect(stop.key)}
+            aria-pressed={stop.active}
+            data-active={stop.active}
+            title={stop.description}
+            className={cn(
+              "pharos-focus-ring flex min-h-11 flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-10",
+              stop.active
+                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                : "border-border/70 bg-background/60 text-foreground hover:bg-muted",
+            )}
+          >
+            <span>{stop.label}</span>
+            <span
+              className={cn(
+                "font-mono text-[10px] tabular-nums",
+                stop.active ? "text-primary-foreground/80" : "text-muted-foreground",
+              )}
+            >
+              {stop.count}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PresetChip({
   label,
   description,
@@ -277,8 +330,9 @@ export function YieldLeaderboardControls({
   onFilterChange,
   onClearFilters,
   onApplyPreset,
+  onApplyRiskBudget,
 }: YieldLeaderboardControlsProps) {
-  const { filters, options, presets } = viewModel;
+  const { filters, options, presets, riskBudget } = viewModel;
   const panelId = useId();
   const currencyTabsId = useId();
   const [showFilters, setShowFilters] = useState(false);
@@ -354,6 +408,8 @@ export function YieldLeaderboardControls({
           </div>
         </>
       ) : null}
+
+      <RiskBudgetSlider stops={riskBudget.stops} onSelect={onApplyRiskBudget} />
 
       <div className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible md:pb-0">
         <WatchingPresetChip

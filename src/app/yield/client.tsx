@@ -21,7 +21,9 @@ import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import {
   buildYieldViewModel,
   YIELD_PRESET_SPECS,
+  YIELD_RISK_BUDGET_SPECS,
   type YieldPresetKey,
+  type YieldRiskBudgetKey,
   type YieldViewModel,
 } from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -198,18 +200,39 @@ export function YieldClient() {
     (presetKey: YieldPresetKey) => {
       const spec = YIELD_PRESET_SPECS.find((entry) => entry.key === presetKey);
       if (!spec) return;
+      // Stackable presets: merge spec.overrides on top of current params.
+      // Re-clicking the active preset clears just that preset's keys.
       replaceParams((params) => {
-        for (const key of Object.keys(viewModel.normalizedParams)) {
-          params.delete(key);
+        if (viewModel.matchingPreset === presetKey) {
+          for (const key of Object.keys(spec.overrides)) {
+            params.delete(key);
+          }
+          return;
         }
-        if (viewModel.matchingPreset === presetKey) return;
         for (const [key, value] of Object.entries(spec.overrides)) {
           if (value == null) continue;
           params.set(key, String(value));
         }
       });
     },
-    [replaceParams, viewModel.matchingPreset, viewModel.normalizedParams],
+    [replaceParams, viewModel.matchingPreset],
+  );
+
+  const handleApplyRiskBudget = useCallback(
+    (key: YieldRiskBudgetKey) => {
+      const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
+      if (!spec) return;
+      replaceParams((params) => {
+        for (const paramKey of Object.keys(viewModel.normalizedParams)) {
+          params.delete(paramKey);
+        }
+        for (const [paramKey, value] of Object.entries(spec.overrides)) {
+          if (value == null) continue;
+          params.set(paramKey, String(value));
+        }
+      });
+    },
+    [replaceParams, viewModel.normalizedParams],
   );
 
   const handleNavigate = useCallback(
@@ -429,6 +452,7 @@ export function YieldClient() {
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
             onApplyPreset={handleApplyPreset}
+            onApplyRiskBudget={handleApplyRiskBudget}
           />
         </section>
 
@@ -452,6 +476,25 @@ export function YieldClient() {
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-6 text-center">
               <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{viewModel.emptyState.description}</p>
+              {viewModel.emptyState.suggestions.length > 0 ? (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {viewModel.emptyState.suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.filterKey}
+                      type="button"
+                      onClick={() =>
+                        handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")
+                      }
+                      className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <span>{suggestion.label}</span>
+                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                        +{suggestion.gain}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {visibleRows.length > 0 ? (

@@ -178,7 +178,7 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(rows, { q: "zzzz" });
 
     expect(model.visibleRows).toEqual([]);
-    expect(model.emptyState).toEqual({
+    expect(model.emptyState).toMatchObject({
       isEmpty: true,
       title: "No rows match this view",
       description: "Reset one or more filters to broaden the comparable set.",
@@ -391,6 +391,126 @@ describe("buildYieldViewModel", () => {
       bps: 225,
     });
     expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(1);
+  });
+
+  it("supports merging multiple preset overrides on a single model", () => {
+    // Simulates the stackable-preset wire flow: best-dollar then treasury-grade.
+    // best-dollar overrides: { peg: "USD", minSafety: 80 }
+    // treasury-grade overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" }
+    // Merge result (last-applied wins on conflict) should preserve all keys.
+    const merged = buildYieldViewModel(rows, {
+      peg: "USD",
+      minSafety: "80",
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+    });
+
+    expect(merged.filters).toMatchObject({
+      peg: "USD",
+      minSafety: 80,
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+    });
+    // No single preset matches the merged state.
+    expect(merged.matchingPreset).toBeNull();
+  });
+
+  it("matches each risk-budget stop's filter overrides to its matching key", () => {
+    const conservative = buildYieldViewModel(rows, {
+      minSafety: "80",
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+      warnings: "hide",
+    });
+    expect(conservative.riskBudget.matching).toBe("conservative");
+
+    const balanced = buildYieldViewModel(rows, {
+      minSafety: "70",
+      depth: "hide-thin",
+      warnings: "hide",
+    });
+    expect(balanced.riskBudget.matching).toBe("balanced");
+
+    const opportunistic = buildYieldViewModel(rows, {
+      minSafety: "50",
+      warnings: "hide",
+    });
+    expect(opportunistic.riskBudget.matching).toBe("opportunistic");
+
+    const aggressive = buildYieldViewModel(rows, {});
+    expect(aggressive.riskBudget.matching).toBe("aggressive");
+
+    const stops = aggressive.riskBudget.stops.map((stop) => stop.key);
+    expect(stops).toEqual(["conservative", "balanced", "opportunistic", "aggressive"]);
+    expect(aggressive.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
+  });
+
+  it("returns null matchingRiskBudget when filters don't match any stop", () => {
+    const model = buildYieldViewModel(rows, { minSafety: "65" });
+    expect(model.riskBudget.matching).toBeNull();
+    expect(model.riskBudget.stops.every((stop) => stop.active === false)).toBe(true);
+  });
+
+  it("computes empty-state suggestions ranked by row recovery", () => {
+    // Designed so dropping any of these three filters recovers a non-empty subset:
+    //   peg=USD ∧ warnings=only ∧ benchmark=EUR
+    // Drop peg → EURC matches (warnings+EUR). Drop benchmark → USDT matches.
+    // Drop warnings → still empty (USDC/USDT are USD-not-EUR). Top 3 by gain.
+    const model = buildYieldViewModel(rows, {
+      peg: "USD",
+      warnings: "only",
+      benchmark: "EUR",
+    });
+
+    expect(model.visibleRows).toEqual([]);
+    expect(model.emptyState.isEmpty).toBe(true);
+    expect(model.emptyState.suggestions.length).toBeGreaterThan(0);
+    expect(model.emptyState.suggestions.length).toBeLessThanOrEqual(3);
+    expect(model.emptyState.suggestions.every((s) => s.gain > 0)).toBe(true);
+    const gains = model.emptyState.suggestions.map((s) => s.gain);
+    expect(gains).toEqual([...gains].sort((a, b) => b - a));
+    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
+    expect(keys).toEqual(expect.arrayContaining(["peg", "benchmark"]));
+  });
+
+  it("emits no empty-state suggestions when the payload itself is empty", () => {
+    const model = buildYieldViewModel([], {});
+    expect(model.emptyState.isEmpty).toBe(true);
+    expect(model.emptyState.suggestions).toEqual([]);
+  });
+
+  it("computes cohort percentile per row and suppresses small cohorts", () => {
+    const cohortRows = Array.from({ length: 12 }, (_, i) =>
+      makeYieldRanking({
+        id: `lend-${i}`,
+        symbol: `LEND${i}`,
+        yieldType: "lending-opportunity",
+        safetyGrade: "A",
+        pharosYieldScore: i * 5,
+      }),
+    );
+    // 3 rows in a "B" band — too small (<8) for a percentile.
+    const smallCohort = Array.from({ length: 3 }, (_, i) =>
+      makeYieldRanking({
+        id: `vault-${i}`,
+        symbol: `VLT${i}`,
+        yieldType: "lending-vault",
+        safetyGrade: "B",
+        pharosYieldScore: i * 10,
+      }),
+    );
+
+    const model = buildYieldViewModel([...cohortRows, ...smallCohort], {});
+    const top = model.visibleRows.find((row) => row.id === "lend-11");
+    const bottom = model.visibleRows.find((row) => row.id === "lend-0");
+    const smallCohortRow = model.visibleRows.find((row) => row.id === "vault-2");
+
+    expect(top?.cohortPercentile?.cohortSize).toBe(12);
+    expect(top?.cohortPercentile?.value).toBe(100);
+    expect(bottom?.cohortPercentile?.value).toBeLessThan(20);
+
+    expect(smallCohortRow?.cohortPercentile?.cohortSize).toBe(3);
+    expect(smallCohortRow?.cohortPercentile?.value).toBeNull();
   });
 
   it("returns null ledeFacts halves when no rows meet either threshold", () => {

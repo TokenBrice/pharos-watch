@@ -7,6 +7,7 @@ import {
 } from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { ReportCardGrade } from "@shared/types";
 import type {
   PegCurrency,
   YieldBenchmarkKey,
@@ -97,6 +98,39 @@ export interface YieldPresetState {
   overrides: Partial<YieldViewModelFilters>;
 }
 
+export type YieldRiskBudgetKey =
+  | "conservative"
+  | "balanced"
+  | "opportunistic"
+  | "aggressive";
+
+export interface YieldRiskBudgetStop {
+  key: YieldRiskBudgetKey;
+  label: string;
+  description: string;
+  count: number;
+  active: boolean;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+export interface YieldRiskBudgetState {
+  matching: YieldRiskBudgetKey | null;
+  stops: YieldRiskBudgetStop[];
+}
+
+export interface YieldEmptyStateSuggestion {
+  filterKey: keyof YieldViewModelFilters;
+  targetValue: string | null;
+  gain: number;
+  label: string;
+}
+
+export interface YieldCohortPercentile {
+  value: number | null;
+  cohortSize: number;
+  cohortKey: string;
+}
+
 export interface YieldComparableSet {
   key: string;
   label: string;
@@ -112,6 +146,7 @@ export type YieldViewModelRow = YieldRanking & {
   comparableSetLabel: string;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
   sourceDepthLens: YieldSourceDepthLens;
+  cohortPercentile: YieldCohortPercentile | null;
 };
 
 interface YieldRowFacet {
@@ -159,12 +194,14 @@ export interface YieldViewModel {
     isEmpty: boolean;
     title: string;
     description: string;
+    suggestions: YieldEmptyStateSuggestion[];
   };
   comparableSets: YieldComparableSet[];
   comparisonLabel: string;
   stats: YieldViewModelStats;
   presets: YieldPresetState[];
   matchingPreset: YieldPresetKey | null;
+  riskBudget: YieldRiskBudgetState;
 }
 
 export interface BuildYieldViewModelOptions {
@@ -242,6 +279,55 @@ interface YieldPresetSpec {
 // via safety+depth+confidence instead of multi-value yieldType (which is single-select).
 // Best-dollar approximates ">5% APY" via PYS ranking + safety floor; the leaderboard
 // is already sorted by PYS which correlates with APY for safe rows.
+interface YieldRiskBudgetSpec {
+  key: YieldRiskBudgetKey;
+  label: string;
+  description: string;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+// Risk budget collapses safety/depth/source-confidence/warnings into a single
+// conservative→aggressive dimension. Stops are stackable on top of other
+// filters via merge semantics in `handleApplyRiskBudget`.
+export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
+  {
+    key: "conservative",
+    label: "Conservative",
+    description: "A- safety, hide thin venues, deterministic source, hide warnings",
+    overrides: {
+      minSafety: 80,
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+      warnings: "hide",
+    },
+  },
+  {
+    key: "balanced",
+    label: "Balanced",
+    description: "B- safety, hide thin venues, hide warnings",
+    overrides: {
+      minSafety: 70,
+      depth: "hide-thin",
+      warnings: "hide",
+    },
+  },
+  {
+    key: "opportunistic",
+    label: "Opportunistic",
+    description: "C+ safety, hide warnings",
+    overrides: {
+      minSafety: 50,
+      warnings: "hide",
+    },
+  },
+  {
+    key: "aggressive",
+    label: "Aggressive",
+    description: "No constraints — show all rows",
+    overrides: {},
+  },
+];
+
 export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
   {
     key: "treasury-grade",
@@ -662,7 +748,11 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   return "Current view";
 }
 
-function rankRows(facets: readonly YieldRowFacet[], filters: YieldViewModelFilters): YieldViewModelRow[] {
+function rankRows(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  cohortIndex: ReadonlyMap<string, CohortBucket>,
+): YieldViewModelRow[] {
   const comparisonLabel = getComparisonLabel(filters);
   return facets.map((facet, index) => {
     const row = facet.row;
@@ -676,8 +766,84 @@ function rankRows(facets: readonly YieldRowFacet[], filters: YieldViewModelFilte
       comparableSetLabel: comparisonLabel,
       opportunity: facet.opportunity,
       sourceDepthLens: facet.sourceDepthLens,
+      cohortPercentile: computeRowCohortPercentile(row, cohortIndex),
     };
   });
+}
+
+// Cohort = yieldType + safety band. Bands collapse adjacent letter grades
+// to keep cohort sizes meaningful; A- is grouped with A+/A. F and NR are
+// pooled because NR almost always behaves as a worst-case bucket.
+const COHORT_GRADE_BAND: Readonly<Record<ReportCardGrade, string>> = {
+  "A+": "A",
+  "A": "A",
+  "A-": "A",
+  "B+": "B",
+  "B": "B",
+  "B-": "B",
+  "C+": "C",
+  "C": "C",
+  "C-": "C",
+  "D": "D",
+  "F": "F",
+  "NR": "F",
+};
+const COHORT_MIN_SIZE = 8;
+
+interface CohortBucket {
+  size: number;
+  scoresDescending: number[];
+}
+
+function cohortKey(row: YieldRanking): string | null {
+  if (row.safetyGrade === null) return null;
+  if (row.pharosYieldScore === null) return null;
+  const band = COHORT_GRADE_BAND[row.safetyGrade];
+  if (band === undefined) return null;
+  return `${row.yieldType}::${band}`;
+}
+
+function buildCohortIndex(rows: readonly YieldRanking[]): Map<string, CohortBucket> {
+  const buckets = new Map<string, CohortBucket>();
+  for (const row of rows) {
+    const key = cohortKey(row);
+    if (key === null) continue;
+    const existing = buckets.get(key);
+    if (existing) {
+      existing.size += 1;
+      existing.scoresDescending.push(row.pharosYieldScore!);
+    } else {
+      buckets.set(key, { size: 1, scoresDescending: [row.pharosYieldScore!] });
+    }
+  }
+  for (const bucket of buckets.values()) {
+    bucket.scoresDescending.sort((a, b) => b - a);
+  }
+  return buckets;
+}
+
+function computeRowCohortPercentile(
+  row: YieldRanking,
+  cohortIndex: ReadonlyMap<string, CohortBucket>,
+): YieldCohortPercentile | null {
+  const key = cohortKey(row);
+  if (key === null) return null;
+  const bucket = cohortIndex.get(key);
+  if (!bucket) return null;
+  if (bucket.size < COHORT_MIN_SIZE) {
+    return { value: null, cohortSize: bucket.size, cohortKey: key };
+  }
+  const score = row.pharosYieldScore!;
+  // Rank: how many cohort members have a strictly higher PYS, plus 1 for self.
+  // Percentile reported as "top X%" by mapping rank 1 → 100, rank N → ~0.
+  const sorted = bucket.scoresDescending;
+  let higherCount = 0;
+  for (const candidate of sorted) {
+    if (candidate > score) higherCount += 1;
+    else break;
+  }
+  const percentile = Math.round(((bucket.size - higherCount) / bucket.size) * 100);
+  return { value: percentile, cohortSize: bucket.size, cohortKey: key };
 }
 
 const LEDE_HIGH_GRADE = new Set(["A+", "A"]);
@@ -804,14 +970,24 @@ function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableS
   });
 }
 
-function buildEmptyState(totalRows: number, visibleRows: readonly YieldViewModelRow[]): YieldViewModel["emptyState"] {
+function buildEmptyState(
+  totalRows: number,
+  visibleRows: readonly YieldViewModelRow[],
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  options: YieldViewModelOptions,
+): YieldViewModel["emptyState"] {
   if (visibleRows.length > 0) {
     return {
       isEmpty: false,
       title: "",
       description: "",
+      suggestions: [],
     };
   }
+
+  const suggestions =
+    totalRows > 0 ? buildEmptyStateSuggestions(facets, filters, options) : [];
 
   return {
     isEmpty: true,
@@ -819,7 +995,150 @@ function buildEmptyState(totalRows: number, visibleRows: readonly YieldViewModel
     description: totalRows === 0
       ? "The latest payload did not include any yield rankings."
       : "Reset one or more filters to broaden the comparable set.",
+    suggestions,
   };
+}
+
+const EMPTY_STATE_SUGGESTION_LIMIT = 3;
+
+interface FilterRelaxationDescriptor {
+  filterKey: keyof YieldViewModelFilters;
+  targetValue: string | null;
+  describe: () => string;
+}
+
+function describeOption<T extends string>(
+  options: ReadonlyArray<YieldFilterOption<T>>,
+  value: T | string,
+): string {
+  return options.find((option) => option.value === value)?.label ?? String(value);
+}
+
+function listFilterRelaxations(
+  filters: YieldViewModelFilters,
+  options: YieldViewModelOptions,
+): FilterRelaxationDescriptor[] {
+  const relaxations: FilterRelaxationDescriptor[] = [];
+
+  if (filters.peg !== DEFAULT_FILTERS.peg) {
+    relaxations.push({
+      filterKey: "peg",
+      targetValue: null,
+      describe: () => `Drop peg filter (${describeOption(options.peg, filters.peg)})`,
+    });
+  }
+  if (filters.yieldType !== DEFAULT_FILTERS.yieldType) {
+    relaxations.push({
+      filterKey: "yieldType",
+      targetValue: null,
+      describe: () => `Drop type filter (${describeOption(options.yieldType, filters.yieldType)})`,
+    });
+  }
+  if (filters.q !== DEFAULT_FILTERS.q) {
+    relaxations.push({
+      filterKey: "q",
+      targetValue: null,
+      describe: () => `Clear search "${filters.q}"`,
+    });
+  }
+  if (filters.warnings !== DEFAULT_FILTERS.warnings) {
+    relaxations.push({
+      filterKey: "warnings",
+      targetValue: null,
+      describe: () => `Drop warnings filter (${describeOption(options.warnings, filters.warnings)})`,
+    });
+  }
+  if (filters.minSafety !== null) {
+    relaxations.push({
+      filterKey: "minSafety",
+      targetValue: null,
+      describe: () => `Drop ${filters.minSafety}+ safety floor`,
+    });
+  }
+  if (filters.minTvl !== null) {
+    relaxations.push({
+      filterKey: "minTvl",
+      targetValue: null,
+      describe: () => `Drop ${formatTvlOption(filters.minTvl!)} TVL floor`,
+    });
+  }
+  if (filters.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence) {
+    relaxations.push({
+      filterKey: "sourceConfidence",
+      targetValue: null,
+      describe: () => `Drop confidence filter (${describeOption(options.sourceConfidence, filters.sourceConfidence)})`,
+    });
+  }
+  if (filters.benchmark !== DEFAULT_FILTERS.benchmark) {
+    relaxations.push({
+      filterKey: "benchmark",
+      targetValue: null,
+      describe: () => `Drop benchmark filter (${describeOption(options.benchmark, filters.benchmark)})`,
+    });
+  }
+  if (filters.opportunity !== DEFAULT_FILTERS.opportunity) {
+    relaxations.push({
+      filterKey: "opportunity",
+      targetValue: null,
+      describe: () => `Drop opportunity filter (${describeOption(options.opportunity, filters.opportunity)})`,
+    });
+  }
+  if (filters.depth !== DEFAULT_FILTERS.depth) {
+    relaxations.push({
+      filterKey: "depth",
+      targetValue: null,
+      describe: () => `Drop depth filter (${describeOption(options.depth, filters.depth)})`,
+    });
+  }
+  if (filters.sourceChanged !== DEFAULT_FILTERS.sourceChanged) {
+    relaxations.push({
+      filterKey: "sourceChanged",
+      targetValue: null,
+      describe: () => `Drop source-changed filter (${describeOption(options.sourceChanged, filters.sourceChanged)})`,
+    });
+  }
+  if (filters.trending !== DEFAULT_FILTERS.trending) {
+    relaxations.push({
+      filterKey: "trending",
+      targetValue: null,
+      describe: () => `Drop trending filter`,
+    });
+  }
+  if (filters.watchlist !== DEFAULT_FILTERS.watchlist) {
+    relaxations.push({
+      filterKey: "watchlist",
+      targetValue: null,
+      describe: () => `Drop watchlist-only filter`,
+    });
+  }
+
+  return relaxations;
+}
+
+function buildEmptyStateSuggestions(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  options: YieldViewModelOptions,
+): YieldEmptyStateSuggestion[] {
+  const candidates = listFilterRelaxations(filters, options);
+  const scored: YieldEmptyStateSuggestion[] = [];
+  for (const candidate of candidates) {
+    const relaxed: YieldViewModelFilters = {
+      ...filters,
+      [candidate.filterKey]: DEFAULT_FILTERS[candidate.filterKey],
+    } as YieldViewModelFilters;
+    const gain = countRowsMatchingFilters(facets, relaxed);
+    if (gain > 0) {
+      scored.push({
+        filterKey: candidate.filterKey,
+        targetValue: candidate.targetValue,
+        gain,
+        label: candidate.describe(),
+      });
+    }
+  }
+  scored.sort((a, b) => b.gain - a.gain);
+  return scored.slice(0, EMPTY_STATE_SUGGESTION_LIMIT);
 }
 
 function presetFilters(spec: YieldPresetSpec): YieldViewModelFilters {
@@ -853,6 +1172,50 @@ function buildPresets(
   return { presets, matchingPreset };
 }
 
+const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
+  "minSafety",
+  "depth",
+  "sourceConfidence",
+  "warnings",
+];
+
+function riskBudgetTargetFilters(spec: YieldRiskBudgetSpec): YieldViewModelFilters {
+  // A risk-budget stop only constrains the four risk-axis keys; other filters
+  // are normalized to defaults for the purpose of computing the stop's count.
+  return { ...DEFAULT_FILTERS, ...spec.overrides };
+}
+
+function filtersMatchRiskBudget(
+  filters: YieldViewModelFilters,
+  spec: YieldRiskBudgetSpec,
+): boolean {
+  for (const key of RISK_BUDGET_FILTER_KEYS) {
+    const target = (spec.overrides as Record<string, unknown>)[key] ?? DEFAULT_FILTERS[key];
+    if (filters[key] !== target) return false;
+  }
+  return true;
+}
+
+function buildRiskBudget(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+): YieldRiskBudgetState {
+  let matching: YieldRiskBudgetKey | null = null;
+  const stops = YIELD_RISK_BUDGET_SPECS.map((spec) => {
+    const active = filtersMatchRiskBudget(filters, spec);
+    if (active) matching = spec.key;
+    return {
+      key: spec.key,
+      label: spec.label,
+      description: spec.description,
+      count: countRowsMatchingFilters(facets, riskBudgetTargetFilters(spec)),
+      active,
+      overrides: spec.overrides,
+    } satisfies YieldRiskBudgetStop;
+  });
+  return { matching, stops };
+}
+
 export function buildYieldViewModel(
   rows: readonly YieldRanking[],
   params: YieldViewModelUrlParams,
@@ -862,9 +1225,11 @@ export function buildYieldViewModel(
   const filterOptions = buildOptions(rowFacets);
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
   const visibleFacets = rowFacets.filter((facet) => rowMatchesFilters(facet, filters));
-  const visibleRows = rankRows(visibleFacets, filters);
+  const cohortIndex = buildCohortIndex(rows);
+  const visibleRows = rankRows(visibleFacets, filters, cohortIndex);
   const comparisonLabel = getComparisonLabel(filters);
   const { presets, matchingPreset } = buildPresets(rowFacets, filters);
+  const riskBudget = buildRiskBudget(rowFacets, filters);
 
   return {
     filters,
@@ -873,12 +1238,13 @@ export function buildYieldViewModel(
     invalidParamKeys,
     totalRows: rowFacets.length,
     visibleRows,
-    emptyState: buildEmptyState(rowFacets.length, visibleRows),
+    emptyState: buildEmptyState(rowFacets.length, visibleRows, rowFacets, filters, filterOptions),
     comparableSets: buildComparableSets(visibleFacets),
     comparisonLabel,
     stats: buildStats(visibleRows, buildOptionsParams),
     presets,
     matchingPreset,
+    riskBudget,
   };
 }
 
