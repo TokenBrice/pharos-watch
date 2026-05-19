@@ -12,6 +12,7 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
@@ -174,6 +175,7 @@ function deriveSourceSwitchEvents(history: YieldHistoryPoint[]): SourceSwitchEve
 export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAnalysisClientProps) {
   const rankingsQuery = useYieldRankings();
   const historyQuery = useYieldHistory(id, { days: 90, mode: "best" });
+  const { getParam, replaceParams } = useUrlFilters();
 
   const coin = TRACKED_META_BY_ID.get(id);
   const isPreLaunch = coin?.status === "pre-launch";
@@ -202,6 +204,25 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     const keys = sourceExplorer.allSources.map((source) => source.sourceKey);
     return keys.length > 1 ? keys : undefined;
   }, [sourceExplorer]);
+
+  const sourcesParam = getParam("sources");
+  const overlaySourceKeys = useMemo(() => {
+    if (!sourcesParam || !sourceExplorer) return null;
+    const available = new Set(sourceExplorer.allSources.map((source) => source.sourceKey));
+    const requested = sourcesParam
+      .split(",")
+      .map((key) => key.trim())
+      .filter((key) => key && available.has(key));
+    return requested.length > 0 ? requested : null;
+  }, [sourcesParam, sourceExplorer]);
+
+  const chartSourceKeys = overlaySourceKeys ?? allSourceKeys;
+  const showResetSources = overlaySourceKeys !== null;
+  const resetSources = () => {
+    replaceParams((params) => {
+      params.delete("sources");
+    });
+  };
 
   const backLink = (
     <Button variant="ghost" asChild className="w-fit">
@@ -283,7 +304,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         sourceRiskDrivers={sourceExplorer?.sourceRiskDrivers ?? []}
       />
 
-      <Card id="source-comparison" className="rounded-xl border-l-[3px] border-l-emerald-500">
+      <Card id="source-comparison" className="scroll-mt-24 rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Source comparison</DetailSectionTitle>
         </CardHeader>
@@ -300,12 +321,21 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             medianApy={medianApy}
             availableSources={historySources}
             hideSourceSelector
-            externalSourceKeys={allSourceKeys}
+            externalSourceKeys={chartSourceKeys}
           />
+          {showResetSources ? (
+            <button
+              type="button"
+              onClick={resetSources}
+              className="pharos-focus-ring rounded-sm text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Reset to all sources
+            </button>
+          ) : null}
         </CardContent>
       </Card>
 
-      <Card id="warning-signals" className="rounded-xl">
+      <Card id="warning-signals" className="scroll-mt-24 rounded-xl">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
         </CardHeader>
@@ -368,7 +398,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardContent>
       </Card>
 
-      <Card id="source-switches" className="rounded-xl">
+      <Card id="source-switches" className="scroll-mt-24 rounded-xl">
         <CardHeader className="pb-2">
           <DetailSectionTitle>Source-switch history</DetailSectionTitle>
         </CardHeader>
