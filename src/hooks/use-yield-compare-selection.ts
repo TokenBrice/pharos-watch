@@ -1,0 +1,78 @@
+"use client";
+
+import { useCallback, useMemo } from "react";
+import { useUrlFilters } from "@/hooks/use-url-filters";
+
+export const MAX_YIELD_COMPARE_IDS = 4;
+
+const COMPARE_PARAM = "compare";
+
+function parseCompareIds(raw: string | null): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= MAX_YIELD_COMPARE_IDS) break;
+  }
+  return out;
+}
+
+export interface UseYieldCompareSelectionResult {
+  ids: string[];
+  has: (id: string) => boolean;
+  toggle: (id: string) => void;
+  clear: () => void;
+  canAdd: boolean;
+}
+
+/**
+ * Tracks the compare drawer selection in the `?compare=` URL param.
+ * Capped at MAX_YIELD_COMPARE_IDS entries; toggling a new id past the cap is a no-op.
+ */
+export function useYieldCompareSelection(): UseYieldCompareSelectionResult {
+  const { searchParams, replaceParams } = useUrlFilters();
+
+  const rawCompare = searchParams.get(COMPARE_PARAM);
+  const ids = useMemo(() => parseCompareIds(rawCompare), [rawCompare]);
+  const idSet = useMemo(() => new Set(ids), [ids]);
+
+  const has = useCallback((id: string) => idSet.has(id), [idSet]);
+
+  const writeIds = useCallback(
+    (nextIds: string[]) => {
+      replaceParams((params) => {
+        if (nextIds.length > 0) {
+          params.set(COMPARE_PARAM, nextIds.join(","));
+        } else {
+          params.delete(COMPARE_PARAM);
+        }
+      });
+    },
+    [replaceParams],
+  );
+
+  const toggle = useCallback(
+    (id: string) => {
+      if (idSet.has(id)) {
+        writeIds(ids.filter((existing) => existing !== id));
+        return;
+      }
+      if (ids.length >= MAX_YIELD_COMPARE_IDS) return;
+      writeIds([...ids, id]);
+    },
+    [ids, idSet, writeIds],
+  );
+
+  const clear = useCallback(() => {
+    if (ids.length === 0) return;
+    writeIds([]);
+  }, [ids.length, writeIds]);
+
+  const canAdd = ids.length < MAX_YIELD_COMPARE_IDS;
+
+  return { ids, has, toggle, clear, canAdd };
+}

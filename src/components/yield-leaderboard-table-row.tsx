@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, ChevronDown } from "lucide-react";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
@@ -186,6 +187,9 @@ function YieldLeaderboardTableRowBase({
   onToggleExpanded,
   onOpenSourceSheet,
 }: YieldLeaderboardTableRowProps) {
+  const compare = useYieldCompareSelection();
+  const isCompared = compare.has(row.id);
+  const compareDisabled = !isCompared && !compare.canAdd;
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
   const warningSignalCount = row.warningSignals.length;
@@ -454,6 +458,20 @@ function YieldLeaderboardTableRowBase({
           </div>
         </TableCell>
 
+        <TableCell className="hidden w-[36px] md:table-cell">
+          <input
+            type="checkbox"
+            checked={isCompared}
+            disabled={compareDisabled}
+            onChange={() => compare.toggle(row.id)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+            }}
+            aria-label={`Add ${row.symbol} to compare`}
+            className="pharos-focus-ring h-4 w-4 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </TableCell>
         <TableCell className="hidden md:table-cell">
           <span className="sr-only">{row.rankLabel}</span>
           <div className="min-w-[104px]">

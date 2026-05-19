@@ -3,7 +3,10 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight } from "lucide-react";
+import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
+import { YieldCompareTray } from "@/components/yield-compare-tray";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import {
   DataTableEmptyRow,
   DataTableShell,
@@ -177,6 +180,7 @@ function LeaderboardHeading({
 }
 
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
+  { id: "compare", label: <span className="sr-only">Compare</span>, className: "hidden md:table-cell w-[36px]" },
   { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
   { id: "apy30d", label: "APY (30d)", sortKey: "apy30d", className: "hidden md:table-cell text-right", title: "30-day average annual percentage yield" },
   { id: "safety", label: "Safety", sortKey: "safetyScore", className: "hidden md:table-cell text-center", title: "Pharos Safety Grade / Score" },
@@ -226,6 +230,7 @@ interface YieldLeaderboardProps {
 export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMessage, filterSummary }: YieldLeaderboardProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sheetRankingId, setSheetRankingId] = useState<string | null>(null);
+  const [compareDrawerOpen, setCompareDrawerOpen] = useState(false);
   const sheetRanking = useMemo(
     () => (sheetRankingId ? rows.find((r) => r.id === sheetRankingId) ?? null : null),
     [rows, sheetRankingId],
@@ -387,6 +392,13 @@ export function YieldLeaderboard({ rows, logos, riskFreeRate, medianApy, emptyMe
         open={sheetRankingId !== null}
         onOpenChange={(open) => { if (!open) setSheetRankingId(null); }}
       />
+      <YieldCompareTray rows={rows} logos={logos} onOpenDrawer={() => setCompareDrawerOpen(true)} />
+      <YieldCompareDrawer
+        open={compareDrawerOpen}
+        onOpenChange={setCompareDrawerOpen}
+        rows={rows}
+        logos={logos}
+      />
     </TooltipProvider>
   );
 }
@@ -473,6 +485,9 @@ export function YieldMobileCard({
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
 }) {
+  const compare = useYieldCompareSelection();
+  const isCompared = compare.has(row.id);
+  const compareDisabled = !isCompared && !compare.canAdd;
   const pysColor = getPysColor(row.pharosYieldScore);
   const grade = row.safetyGrade;
   const safetyScore = row.safetyScore;
@@ -565,6 +580,14 @@ export function YieldMobileCard({
             </span>
           </Link>
           <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} />
+          <input
+            type="checkbox"
+            checked={isCompared}
+            disabled={compareDisabled}
+            onChange={() => compare.toggle(row.id)}
+            aria-label={`Add ${row.symbol} to compare`}
+            className="pharos-focus-ring h-4 w-4 cursor-pointer rounded border border-border/70 bg-background/60 disabled:cursor-not-allowed disabled:opacity-50"
+          />
         </div>
         <div className="shrink-0 text-right">
           <p className="font-mono text-lg font-semibold leading-none tabular-nums text-foreground">

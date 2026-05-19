@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -48,6 +49,9 @@ function YieldSourceSheetBody({
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [showAllSheetSources, setShowAllSheetSources] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
+  const compare = useYieldCompareSelection();
+  const alreadyInCompare = compare.has(ranking.id);
+  const canAddToCompare = compare.canAdd;
 
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
   const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
@@ -281,6 +285,18 @@ function YieldSourceSheetBody({
       </div>
 
       <SheetFooter>
+        {!alreadyInCompare && canAddToCompare ? (
+          <button
+            type="button"
+            onClick={() => {
+              compare.toggle(ranking.id);
+              onOpenChange(false);
+            }}
+            className="pharos-focus-ring text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            + Compare with current view
+          </button>
+        ) : null}
         <Link
           href={deepDiveHref}
           className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
