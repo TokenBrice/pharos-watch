@@ -335,7 +335,9 @@ export function YieldLeaderboardControls({
   const { filters, options, presets, riskBudget } = viewModel;
   const panelId = useId();
   const currencyTabsId = useId();
+  const yieldTypeTabsId = useId();
   const [showFilters, setShowFilters] = useState(false);
+  const yieldTypeTabs = options.yieldType.filter((option) => option.count > 0);
   const { ids: watchlistIds } = useYieldWatchlist();
   const watchlistActive = filters.watchlist === "only";
 
@@ -407,6 +409,41 @@ export function YieldLeaderboardControls({
             ))}
           </div>
         </>
+      ) : null}
+
+      {yieldTypeTabs.length > 1 ? (
+        <div className="border-b border-border/70 pb-3">
+          <label className="sr-only" htmlFor={yieldTypeTabsId}>
+            Filter by yield type
+          </label>
+          <select
+            id={yieldTypeTabsId}
+            value={yieldTypeTabs.some((option) => option.value === filters.yieldType) ? filters.yieldType : "all"}
+            onChange={(event) => onFilterChange("yieldType", event.target.value)}
+            className="pharos-focus-ring min-h-11 w-full rounded-lg border border-border/70 bg-background/70 px-2 py-2 text-sm text-foreground sm:hidden"
+          >
+            {yieldTypeTabs.map((option) => (
+              <option key={option.value} value={option.value}>
+                {`${option.label} (${option.count})`}
+              </option>
+            ))}
+          </select>
+          <div
+            role="tablist"
+            aria-label="Filter by yield type"
+            className="-mx-1 hidden flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:flex md:flex-wrap md:overflow-visible md:pb-0"
+          >
+            {yieldTypeTabs.map((option) => (
+              <CurrencyTab
+                key={option.value}
+                label={option.label}
+                count={option.count}
+                active={filters.yieldType === option.value}
+                onClick={() => onFilterChange("yieldType", option.value)}
+              />
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <RiskBudgetSlider stops={riskBudget.stops} onSelect={onApplyRiskBudget} />

@@ -184,6 +184,117 @@ describe("YieldLeaderboardControls", () => {
     expect(activeStops[0]?.textContent).toContain("Balanced");
   });
 
+  describe("yield-type cohort tab strip", () => {
+    const cohortRows = [
+      makeYieldRanking({
+        id: "usdc-aave",
+        symbol: "USDC",
+        name: "USD Coin",
+        yieldType: "lending-opportunity",
+      }),
+      makeYieldRanking({
+        id: "usdt-aave",
+        symbol: "USDT",
+        name: "Tether USD",
+        yieldType: "lending-opportunity",
+      }),
+      makeYieldRanking({
+        id: "dai-aave",
+        symbol: "DAI",
+        name: "Dai Stablecoin",
+        yieldType: "lending-opportunity",
+      }),
+      makeYieldRanking({
+        id: "susde-ethena",
+        symbol: "sUSDe",
+        name: "Staked USDe",
+        yieldType: "rebase",
+      }),
+      makeYieldRanking({
+        id: "susds-sky",
+        symbol: "sUSDS",
+        name: "Sky Savings",
+        yieldType: "rebase",
+      }),
+      makeYieldRanking({
+        id: "scrvusd-curve",
+        symbol: "scrvUSD",
+        name: "Savings crvUSD",
+        yieldType: "fee-sharing",
+      }),
+    ];
+
+    function buildCohortModel(params: Parameters<typeof buildYieldViewModel>[1] = {}) {
+      return buildYieldViewModel(cohortRows, params, { watchlistIds: null });
+    }
+
+    it("renders non-zero yield types in descending count order with All first", () => {
+      render(
+        <YieldLeaderboardControls
+          viewModel={buildCohortModel()}
+          onFilterChange={vi.fn()}
+          onClearFilters={vi.fn()}
+          onApplyPreset={vi.fn()}
+          onApplyRiskBudget={vi.fn()}
+        />,
+      );
+
+      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const tabLabels = Array.from(
+        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+      ).map((button) => button.textContent ?? "");
+
+      expect(tabLabels).toEqual([
+        "All types6",
+        "Lending Opp.3",
+        "Rebase2",
+        "Fee Share1",
+      ]);
+    });
+
+    it("invokes onFilterChange with the yield type when a tab is clicked", () => {
+      const onFilterChange = vi.fn();
+      render(
+        <YieldLeaderboardControls
+          viewModel={buildCohortModel()}
+          onFilterChange={onFilterChange}
+          onClearFilters={vi.fn()}
+          onApplyPreset={vi.fn()}
+          onApplyRiskBudget={vi.fn()}
+        />,
+      );
+
+      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const rebaseTab = Array.from(
+        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+      ).find((button) => button.textContent?.startsWith("Rebase"));
+      expect(rebaseTab).toBeTruthy();
+
+      fireEvent.click(rebaseTab!);
+      expect(onFilterChange).toHaveBeenCalledWith("yieldType", "rebase");
+    });
+
+    it("marks the active tab when filters.yieldType matches", () => {
+      render(
+        <YieldLeaderboardControls
+          viewModel={buildCohortModel({ yieldType: "rebase" })}
+          onFilterChange={vi.fn()}
+          onClearFilters={vi.fn()}
+          onApplyPreset={vi.fn()}
+          onApplyRiskBudget={vi.fn()}
+        />,
+      );
+
+      const tablist = screen.getByRole("tablist", { name: "Filter by yield type" });
+      const tabs = Array.from(
+        tablist.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"),
+      );
+      const activeTabs = tabs.filter((button) => button.getAttribute("aria-pressed") === "true");
+      expect(activeTabs).toHaveLength(1);
+      expect(activeTabs[0]?.textContent).toContain("Rebase");
+    });
+  });
+
   it("clears the watchlist filter from the active-filter pill", () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
     const onFilterChange = vi.fn();
