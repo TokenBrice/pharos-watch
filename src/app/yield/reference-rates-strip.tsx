@@ -229,7 +229,7 @@ export function ReferenceRatesStrip({
                     <span
                       tabIndex={0}
                       className={cn(
-                        "pharos-focus-ring cursor-help",
+                        "pharos-focus-ring inline-flex min-h-6 items-center cursor-help rounded-sm",
                         poolIsStale ? "text-amber-700 dark:text-amber-300" : undefined,
                       )}
                     >
@@ -250,7 +250,7 @@ export function ReferenceRatesStrip({
                   <TooltipTrigger asChild>
                     <span
                       tabIndex={0}
-                      className="pharos-focus-ring cursor-help"
+                      className="pharos-focus-ring inline-flex min-h-6 items-center cursor-help rounded-sm"
                     >
                       <span className="font-mono tabular-nums text-foreground">{safetyPct}%</span> scored
                     </span>

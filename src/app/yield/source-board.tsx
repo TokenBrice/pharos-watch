@@ -104,7 +104,7 @@ function StackBar({
     <div
       role="img"
       aria-label={ariaLabel}
-      className="flex h-2 w-full overflow-hidden rounded-full bg-muted/30"
+      className="flex h-6 w-full overflow-hidden rounded-full bg-muted/30 sm:h-2"
     >
       {segments
         .filter((seg) => seg.count > 0)
@@ -224,8 +224,10 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
               <span
                 tabIndex={0}
                 aria-label={`${YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label} confidence`}
-                className={cn("pharos-focus-ring cursor-help", YIELD_SOURCE_CONFIDENCE_STYLES[tier].dot)}
-              />
+                className="pharos-focus-ring inline-flex min-h-6 min-w-6 cursor-help items-center justify-center rounded-full"
+              >
+                <span aria-hidden="true" className={YIELD_SOURCE_CONFIDENCE_STYLES[tier].dot} />
+              </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-[260px] text-xs">
               <span className="font-medium">{YIELD_SOURCE_CONFIDENCE_DEFINITIONS[tier].label}</span>
