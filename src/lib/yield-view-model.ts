@@ -1,4 +1,4 @@
-import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
+import { getYieldBenchmarkDisplayLabel, resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
@@ -127,8 +127,16 @@ interface YieldRowFacet {
   inWatchlist: boolean;
 }
 
+export interface YieldViewModelLedeFacts {
+  aGradeAboveBenchmark: { count: number; bps: number } | null;
+  doubleDigitInLowGrade: number;
+  benchmarkLabel: string | null;
+}
+
 export interface YieldViewModelStats {
   avgApy: number;
+  medianApy: number;
+  topYield: { symbol: string; apy: number; safetyGrade: string | null } | null;
   bestPys: { name: string; symbol: string; score: number } | null;
   referenceBenchmark: YieldBenchmarkMeta | null;
   hasMixedBenchmarks: boolean;
@@ -137,6 +145,7 @@ export interface YieldViewModelStats {
   warningRowCount: number;
   nullSafetyCount: number;
   nullTvlCount: number;
+  ledeFacts: YieldViewModelLedeFacts;
 }
 
 export interface YieldViewModel {
@@ -671,6 +680,11 @@ function rankRows(facets: readonly YieldRowFacet[], filters: YieldViewModelFilte
   });
 }
 
+const LEDE_HIGH_GRADE = new Set(["A+", "A"]);
+const LEDE_LOW_GRADE = new Set(["C+", "C", "C-", "D", "F", "NR"]);
+const LEDE_HIGH_GRADE_SPREAD_THRESHOLD = 1.5;
+const LEDE_DOUBLE_DIGIT_THRESHOLD = 10;
+
 function buildStats(
   rows: readonly YieldViewModelRow[],
   options: BuildYieldViewModelOptions,
@@ -685,9 +699,14 @@ function buildStats(
   let weightedApySum = 0;
   let unweightedApySum = 0;
   let bestPys: YieldViewModelStats["bestPys"] = null;
+  let topYield: YieldViewModelStats["topYield"] = null;
   let warningRowCount = 0;
   let nullSafetyCount = 0;
   let nullTvlCount = 0;
+  let aGradeAboveBenchmarkCount = 0;
+  let aGradeMinSpread = Infinity;
+  let doubleDigitInLowGrade = 0;
+  const apys: number[] = [];
 
   for (const row of rows) {
     const tvl = row.sourceTvlUsd ?? 0;
@@ -696,22 +715,63 @@ function buildStats(
       weightedApySum += row.apy30d * tvl;
     }
     unweightedApySum += row.apy30d;
+    apys.push(row.apy30d);
     if (row.pharosYieldScore !== null && (bestPys === null || row.pharosYieldScore > bestPys.score)) {
       bestPys = { name: row.name, symbol: row.symbol, score: row.pharosYieldScore };
+    }
+    if (topYield === null || row.apy30d > topYield.apy) {
+      topYield = { symbol: row.symbol, apy: row.apy30d, safetyGrade: row.safetyGrade };
     }
     if (row.warningSignals.length > 0) warningRowCount += 1;
     if (row.safetyScore === null) nullSafetyCount += 1;
     if (row.sourceTvlUsd === null) nullTvlCount += 1;
+
+    const grade = row.safetyGrade;
+    if (grade !== null && LEDE_HIGH_GRADE.has(grade)) {
+      const benchmarkRate = row.benchmarkRate ?? benchmarkFrame.referenceBenchmark?.rate ?? null;
+      if (benchmarkRate !== null) {
+        const spread = row.apy30d - benchmarkRate;
+        if (spread >= LEDE_HIGH_GRADE_SPREAD_THRESHOLD) {
+          aGradeAboveBenchmarkCount += 1;
+          if (spread < aGradeMinSpread) aGradeMinSpread = spread;
+        }
+      }
+    }
+    if (row.apy30d >= LEDE_DOUBLE_DIGIT_THRESHOLD && grade !== null && LEDE_LOW_GRADE.has(grade)) {
+      doubleDigitInLowGrade += 1;
+    }
   }
+
+  const median = computeMedian(apys);
+  const ledeBenchmarkLabel = benchmarkFrame.referenceBenchmark
+    ? getYieldBenchmarkDisplayLabel(benchmarkFrame.referenceBenchmark)
+    : null;
 
   return {
     avgApy: rows.length === 0 ? 0 : tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rows.length,
+    medianApy: median,
+    topYield,
     bestPys,
     warningRowCount,
     nullSafetyCount,
     nullTvlCount,
+    ledeFacts: {
+      aGradeAboveBenchmark:
+        aGradeAboveBenchmarkCount > 0
+          ? { count: aGradeAboveBenchmarkCount, bps: Math.round(aGradeMinSpread * 100) }
+          : null,
+      doubleDigitInLowGrade,
+      benchmarkLabel: ledeBenchmarkLabel,
+    },
     ...benchmarkFrame,
   };
+}
+
+function computeMedian(values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableSet[] {

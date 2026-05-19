@@ -221,6 +221,28 @@ export function YieldClient() {
 
   const stats = viewModel.stats;
 
+  const ledeText = useMemo(() => {
+    if (visibleRows.length === 0) return "No yield rows match this view.";
+    const { ledeFacts, topYield, medianApy } = stats;
+    const aGrade = ledeFacts.aGradeAboveBenchmark;
+    const benchmarkLabel = ledeFacts.benchmarkLabel ?? "benchmark";
+    const lowGradeCount = ledeFacts.doubleDigitInLowGrade;
+    if (aGrade !== null && lowGradeCount > 0) {
+      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps; ${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
+    }
+    if (aGrade !== null) {
+      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps.`;
+    }
+    if (lowGradeCount > 0) {
+      return `${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
+    }
+    if (topYield) {
+      const grade = topYield.safetyGrade ? ` (${topYield.safetyGrade})` : "";
+      return `Top yield ${topYield.symbol} ${formatPercent(topYield.apy)}${grade}; median APY ${formatPercent(medianApy)}.`;
+    }
+    return "No notable yield highlights in this view.";
+  }, [stats, visibleRows.length]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -246,6 +268,8 @@ export function YieldClient() {
       </SectionErrorBoundary>
     );
   }
+
+  const exhibitTiles = storyCallouts;
 
   return (
     <div className="space-y-6">
@@ -276,76 +300,80 @@ export function YieldClient() {
       ) : null}
 
       <div className="flex flex-col gap-6">
-        <section aria-label="Yield view highlights" className="order-1">
-          {storyCallouts === null ? (
+        <section aria-label="Yield view highlights" className="order-1 space-y-4">
+          <p className="text-base leading-relaxed text-foreground">{ledeText}</p>
+          {exhibitTiles === null ? (
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-5 text-center text-sm text-muted-foreground">
               No rows match your filters
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              {storyCallouts.topYield ? (
+              {exhibitTiles.topYield ? (
                 <button
                   type="button"
-                  onClick={() => handleScrollToRow(storyCallouts.topYield!.id)}
+                  onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-2">Top yield this week</p>
+                  <p className="pharos-kicker mb-1">Exhibit 01</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Top yield this week</p>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[storyCallouts.topYield.id]} name={storyCallouts.topYield.name} size={20} />
-                    <span className="font-semibold text-foreground">{storyCallouts.topYield.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{storyCallouts.topYield.name}</span>
+                    <StablecoinLogo src={logos?.[exhibitTiles.topYield.id]} name={exhibitTiles.topYield.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.topYield.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.topYield.name}</span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatPercent(storyCallouts.topYield.apy30d)}
+                    {formatPercent(exhibitTiles.topYield.apy30d)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {storyCallouts.topYield.warningSignals.length > 0
-                      ? `⚠ ${formatYieldWarningSignal(storyCallouts.topYield.warningSignals[0]!)}`
-                      : storyCallouts.topYield.yieldStability !== null && storyCallouts.topYield.yieldStability >= 80
+                    {exhibitTiles.topYield.warningSignals.length > 0
+                      ? formatYieldWarningSignal(exhibitTiles.topYield.warningSignals[0]!)
+                      : exhibitTiles.topYield.yieldStability !== null && exhibitTiles.topYield.yieldStability >= 80
                         ? "Stable 30d range"
                         : "30d avg APY"}
                   </p>
                 </button>
               ) : null}
-              {storyCallouts.mostStable ? (
+              {exhibitTiles.mostStable ? (
                 <button
                   type="button"
-                  onClick={() => handleScrollToRow(storyCallouts.mostStable!.id)}
+                  onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-2">Most stable A+ yield</p>
+                  <p className="pharos-kicker mb-1">Exhibit 02</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Most stable A+ yield</p>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[storyCallouts.mostStable.id]} name={storyCallouts.mostStable.name} size={20} />
-                    <span className="font-semibold text-foreground">{storyCallouts.mostStable.symbol}</span>
-                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{storyCallouts.mostStable.safetyGrade}</span>
+                    <StablecoinLogo src={logos?.[exhibitTiles.mostStable.id]} name={exhibitTiles.mostStable.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.mostStable.symbol}</span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{exhibitTiles.mostStable.safetyGrade}</span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatPercent(storyCallouts.mostStable.apy30d)}
+                    {formatPercent(exhibitTiles.mostStable.apy30d)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {storyCallouts.mostStable.yieldStability !== null
-                      ? `${Math.round(storyCallouts.mostStable.yieldStability * 100)}% consistency`
+                    {exhibitTiles.mostStable.yieldStability !== null
+                      ? `${Math.round(exhibitTiles.mostStable.yieldStability * 100)}% consistency`
                       : "Yield stability unscored"}
                   </p>
                 </button>
               ) : null}
-              {storyCallouts.largestMarket ? (
+              {exhibitTiles.largestMarket ? (
                 <button
                   type="button"
-                  onClick={() => handleScrollToRow(storyCallouts.largestMarket!.id)}
+                  onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-2">Largest market</p>
+                  <p className="pharos-kicker mb-1">Exhibit 03</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Largest market</p>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[storyCallouts.largestMarket.id]} name={storyCallouts.largestMarket.name} size={20} />
-                    <span className="font-semibold text-foreground">{storyCallouts.largestMarket.symbol}</span>
-                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{storyCallouts.largestMarket.name}</span>
+                    <StablecoinLogo src={logos?.[exhibitTiles.largestMarket.id]} name={exhibitTiles.largestMarket.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.largestMarket.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.largestMarket.name}</span>
                   </div>
                   <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
-                    {formatCurrency(storyCallouts.largestMarket.sourceTvlUsd!)} TVL
+                    {formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)} TVL
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatPercent(storyCallouts.largestMarket.apy30d)} APY
+                    {formatPercent(exhibitTiles.largestMarket.apy30d)} APY
                   </p>
                 </button>
               ) : null}
@@ -353,7 +381,49 @@ export function YieldClient() {
           )}
         </section>
 
-        <section className="order-2" aria-label="Yield filters">
+        {visibleRows.length > 0 ? (
+          <div className="order-2 space-y-3">
+            <YieldScatterPlot
+              rankings={visibleRows}
+              benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
+              benchmarkLabel={stats.referenceBenchmark?.label}
+              benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+              showBenchmarkReference
+              usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
+              logos={logos}
+              onDotClick={handleNavigate}
+              compact
+            />
+            <details className="group lg:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-sm font-medium text-foreground select-none [&::-webkit-details-marker]:hidden">
+                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
+                Open full chart
+              </summary>
+              <div className="mt-3">
+                <YieldScatterCard
+                  data={data}
+                  logos={logos}
+                  rows={visibleRows}
+                  stats={stats}
+                  headingId="scatter-heading-mobile"
+                  onDotClick={handleNavigate}
+                />
+              </div>
+            </details>
+            <section aria-labelledby="scatter-heading" className="hidden lg:block">
+              <YieldScatterCard
+                data={data}
+                logos={logos}
+                rows={visibleRows}
+                stats={stats}
+                headingId="scatter-heading"
+                onDotClick={handleNavigate}
+              />
+            </section>
+          </div>
+        ) : null}
+
+        <section className="order-3" aria-label="Yield filters">
           <YieldLeaderboardControls
             viewModel={viewModel}
             onFilterChange={handleFilterChange}
@@ -362,7 +432,7 @@ export function YieldClient() {
           />
         </section>
 
-        <section aria-labelledby="leaderboard-heading" className="order-3">
+        <section aria-labelledby="leaderboard-heading" className="order-4">
           <div className="space-y-3">
             <h2 id="leaderboard-heading" className="text-xl font-semibold">
               Yield Leaderboard
@@ -377,128 +447,23 @@ export function YieldClient() {
           </div>
         </section>
 
-        <section className="order-4 space-y-3" aria-label="Yield provenance">
+        <section className="order-5 space-y-3" aria-label="Yield sources">
           {viewModel.emptyState.isEmpty ? (
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-6 text-center">
               <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{viewModel.emptyState.description}</p>
             </div>
           ) : null}
-
-          {data?.provenance ? (
-            <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
-                Data Provenance
-                <span className="flex w-full flex-wrap items-center justify-end gap-x-3 gap-y-1 font-mono tabular-nums text-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
-                  {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
-                    .filter((b): b is NonNullable<typeof b> => b != null)
-                    .map((b) => (
-                      <span key={b.key ?? b.label ?? b.currency} className="inline-flex items-center gap-1.5">
-                        <span className="text-muted-foreground font-sans">{b.currency ?? "USD"}</span>
-                        {formatPercent(b.rate)}
-                      </span>
-                    ))}
-                  <span className="text-muted-foreground font-sans">
-                    {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% scored
-                  </span>
-                </span>
-              </summary>
-              <div className="grid grid-cols-1 gap-4 border-t border-border/50 px-4 py-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <p className="pharos-kicker">Benchmarks</p>
-                  {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
-                    .filter((benchmark): benchmark is NonNullable<typeof benchmark> => benchmark != null)
-                    .map((benchmark) => (
-                      <div key={benchmark.key ?? benchmark.label ?? benchmark.currency} className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">{getYieldBenchmarkDisplayLabel(benchmark)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {benchmark.recordDate
-                              ? `as of ${benchmark.recordDate}`
-                              : benchmark.ageSeconds != null
-                                ? `age ${Math.round(benchmark.ageSeconds / 3600)}h`
-                                : "record date unavailable"}
-                          </p>
-                        </div>
-                        <span className="font-mono tabular-nums text-foreground">{formatPercent(benchmark.rate)}</span>
-                      </div>
-                    ))}
-                </div>
-                <div className="space-y-1">
-                  <p className="pharos-kicker">Yield Input Freshness</p>
-                  <p className="font-medium text-foreground">
-                    {data.provenance.dlPools.mode === "dex-cache"
-                      ? "DEX-sync cached DeFiLlama pools"
-                      : data.provenance.dlPools.mode === "direct-fetch"
-                        ? "Direct DeFiLlama pool fetch"
-                        : "DeFiLlama pool input unavailable"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {data.provenance.dlPools.ageSeconds != null
-                      ? `Pool input age ${Math.round(data.provenance.dlPools.ageSeconds / 60)}m`
-                      : data.provenance.dlPools.fallbackMode
-                        ? `Reason: ${data.provenance.dlPools.fallbackMode}`
-                        : "Pool input age unavailable"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="pharos-kicker">Safety Coverage</p>
-                  <p className="font-medium text-foreground">
-                    {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% of tracked coins scored
-                  </p>
-                  <p className="text-muted-foreground">
-                    {data.provenance.safetySnapshot.kind === "ok"
-                      ? "Confidence-weighted source arbitration active"
-                      : data.provenance.safetySnapshot.reason ?? "Safety snapshot degraded"}
-                  </p>
-                </div>
-              </div>
-            </details>
+          {visibleRows.length > 0 ? (
+            <YieldSourceBoard
+              model={sourceBoardModel}
+              benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+              poolInputMeta={data.provenance?.dlPools ?? null}
+              safetySnapshot={data.provenance?.safetySnapshot ?? null}
+            />
           ) : null}
         </section>
-
-        {visibleRows.length > 0 ? (
-          <>
-            <details className="group order-5 lg:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-sm font-medium text-foreground select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                Yield vs Safety Scatter
-              </summary>
-              <div className="mt-3">
-                <YieldScatterCard
-                  data={data}
-                  logos={logos}
-                  rows={visibleRows}
-                  stats={stats}
-                  headingId="scatter-heading-mobile"
-                  onDotClick={handleNavigate}
-                />
-              </div>
-            </details>
-            <section aria-labelledby="scatter-heading" className="order-5 hidden lg:block">
-              <YieldScatterCard
-                data={data}
-                logos={logos}
-                rows={visibleRows}
-                stats={stats}
-                headingId="scatter-heading"
-                onDotClick={handleNavigate}
-              />
-            </section>
-            <section className="order-6" aria-label="Yield sources">
-              <YieldSourceBoard model={sourceBoardModel} />
-            </section>
-          </>
-        ) : null}
       </div>
-
-      {/* Disclaimer */}
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
-        figures blend deterministic on-chain, benchmark-derived, DeFiLlama, and price-derived sources with
-        confidence-aware arbitration. Past yields do not guarantee future returns.
-      </p>
     </div>
   );
 }

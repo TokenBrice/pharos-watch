@@ -344,4 +344,67 @@ describe("buildYieldViewModel", () => {
 
     expect(model.visibleRows).toEqual([]);
   });
+
+  it("derives ledeFacts counts for A-grade benchmark clearance and double-digit low-grade APYs", () => {
+    const ledeRows = [
+      makeYieldRanking({
+        id: "aplus-clears",
+        symbol: "USDC",
+        safetyGrade: "A+",
+        apy30d: 6.5,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "a-clears",
+        symbol: "USDP",
+        safetyGrade: "A",
+        apy30d: 7.5,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "a-too-tight",
+        symbol: "USDM",
+        safetyGrade: "A",
+        apy30d: 5.0,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "low-grade-big-yield",
+        symbol: "RISKY",
+        safetyGrade: "C-",
+        apy30d: 14,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "low-grade-modest",
+        symbol: "MID",
+        safetyGrade: "C",
+        apy30d: 8,
+        benchmarkRate: 4.25,
+      }),
+    ];
+
+    const model = buildYieldViewModel(ledeRows, {});
+
+    expect(model.stats.ledeFacts.aGradeAboveBenchmark).toEqual({
+      count: 2,
+      bps: 225,
+    });
+    expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(1);
+  });
+
+  it("returns null ledeFacts halves when no rows meet either threshold", () => {
+    const flatRows = [
+      makeYieldRanking({
+        id: "flat-1",
+        safetyGrade: "A",
+        apy30d: 5.0,
+        benchmarkRate: 4.25,
+      }),
+    ];
+
+    const model = buildYieldViewModel(flatRows, {});
+    expect(model.stats.ledeFacts.aGradeAboveBenchmark).toBeNull();
+    expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(0);
+  });
 });

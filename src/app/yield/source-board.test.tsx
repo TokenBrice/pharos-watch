@@ -5,6 +5,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "./test-helpers";
+import type {
+  YieldBenchmarkRegistry,
+  YieldSafetySnapshotMeta,
+  YieldSourceInputMeta,
+} from "@shared/types";
 
 function makeBoardRanking(overrides = {}) {
   return makeYieldRanking({
@@ -139,5 +144,54 @@ describe("YieldSourceBoard", () => {
     const { container } = render(<YieldSourceBoard model={buildYieldSourceBoardModel([])} />);
 
     expect(container.textContent).toBe("");
+  });
+
+  it("renders the trust band, disclaimer footer, and coin-index navigation when props are supplied", () => {
+    const model = buildYieldSourceBoardModel([makeBoardRanking()]);
+    const benchmarks: YieldBenchmarkRegistry = {
+      USD: {
+        key: "USD",
+        label: "USD 3M T-Bill",
+        currency: "USD",
+        rate: 4.25,
+        recordDate: "2026-04-23",
+        fetchedAt: 1_776_000_000,
+        ageSeconds: 60,
+        source: "fred-dgs3mo",
+        isFallback: false,
+        fallbackMode: null,
+      },
+    };
+    const poolInputMeta: YieldSourceInputMeta = {
+      mode: "dex-cache",
+      updatedAt: 1_776_000_000,
+      ageSeconds: 240,
+      poolCount: 142,
+      fallbackMode: null,
+    };
+    const safetySnapshot: YieldSafetySnapshotMeta = {
+      kind: "ok",
+      coverageRatio: 0.91,
+      coveredCount: 356,
+      trackedCount: 391,
+      reason: null,
+    };
+
+    render(
+      <YieldSourceBoard
+        model={model}
+        benchmarks={benchmarks}
+        poolInputMeta={poolInputMeta}
+        safetySnapshot={safetySnapshot}
+      />,
+    );
+
+    expect(screen.getByText("Provenance")).toBeTruthy();
+    expect(screen.getByText("USD 3M T-Bill")).toBeTruthy();
+    expect(screen.getByText(/as of 2026-04-23/i)).toBeTruthy();
+    expect(screen.getByText(/Pool input age 4m/i)).toBeTruthy();
+    expect(screen.getByText("91%")).toBeTruthy();
+    expect(screen.getByText(/Pharos Yield Score \(PYS\) is for informational/i)).toBeTruthy();
+    expect(screen.getByText("Per-coin yield analysis")).toBeTruthy();
   });
 });
