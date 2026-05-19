@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { YieldSourceSheet } from "@/components/yield-source-sheet";
 import {
   DataTableEmptyRow,
@@ -9,11 +10,13 @@ import {
   type DataTableColumn,
 } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldSourceLink } from "@/components/yield-source-link";
+import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
+import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
@@ -26,11 +29,31 @@ import {
   formatYieldWarningSignal,
   getPysColor,
 } from "@/lib/yield-constants";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import {
+  YIELD_RANK_CHANGE_DRIVER_LABELS,
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_CONFIDENCE_STYLES,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  classifyYieldSourceFreshness,
+} from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
+import type { YieldPysNullReason } from "@shared/types";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
+
+const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
+  "apy-non-positive": "30d APY ≤ 0",
+  "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark",
+  "scaling-invalid": "Scaling factor unavailable",
+  "missing-inputs": "Missing inputs",
+};
+
+function formatSignedPysDelta(delta: number): string {
+  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
+  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
+  return `${sign}${rounded} PYS`;
+}
 
 const YIELD_COLUMNS: readonly DataTableColumn<YieldTableSortKey>[] = [
   { id: "coin", label: "Coin", className: "hidden md:table-cell w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none" },
@@ -272,33 +295,114 @@ export function YieldMobileCard({
       yieldSource: source.yieldSource,
     })),
   ];
+  const confidenceTier = row.provenance?.confidenceTier ?? null;
+  const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
+  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
+  const freshness = classifyYieldSourceFreshness(row.sourceRisk?.sourceAgeSeconds ?? null);
+  const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
+  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
+  const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
+  const rankAttribution = row.rankChangeAttribution ?? null;
+  const pysNullReasonText =
+    row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
+
+  let rankChip: {
+    arrow: string;
+    colorClass: string;
+    signedRank: string;
+    short: string;
+    long: string;
+    pysDeltaLabel: string | null;
+  } | null = null;
+  if (rankAttribution) {
+    const { rankDelta, pysDelta, primaryDriver } = rankAttribution;
+    if (rankDelta != null && primaryDriver != null && Math.abs(pysDelta ?? 0) >= 1) {
+      const driver = YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver];
+      if (driver) {
+        const arrow = rankDelta < 0 ? "▲" : rankDelta > 0 ? "▼" : "■";
+        const colorClass =
+          rankDelta < 0
+            ? "text-emerald-700 dark:text-emerald-400"
+            : rankDelta > 0
+            ? "text-red-700 dark:text-red-400"
+            : "text-muted-foreground";
+        const signedRank = rankDelta < 0 ? `+${Math.abs(rankDelta)}` : rankDelta > 0 ? `-${rankDelta}` : "0";
+        rankChip = {
+          arrow,
+          colorClass,
+          signedRank,
+          short: driver.short,
+          long: driver.long,
+          pysDeltaLabel: pysDelta != null ? formatSignedPysDelta(pysDelta) : null,
+        };
+      }
+    }
+  }
 
   return (
     <article className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}>
       <div className="flex items-start justify-between gap-3">
-        <Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md">
-          <StablecoinLogo src={logo} name={row.name} size={30} />
-          <span className="min-w-0">
-            <span className="flex items-baseline gap-2">
-              <span className="font-semibold text-foreground">{row.symbol}</span>
-              <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md">
+            <StablecoinLogo src={logo} name={row.name} size={30} />
+            <span className="min-w-0">
+              <span className="flex items-baseline gap-2">
+                <span className="font-semibold text-foreground">{row.symbol}</span>
+                <span className="truncate text-xs text-muted-foreground">{row.name}</span>
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                {row.yieldSource}
+              </span>
             </span>
-            <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-              {row.provenance?.confidenceTier ?? "source"} · {row.yieldSource}
-            </span>
-          </span>
-        </Link>
+          </Link>
+          <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} />
+        </div>
         <div className="shrink-0 text-right">
           <p className="font-mono text-lg font-semibold leading-none tabular-nums text-foreground">
             {formatPercent(row.apy30d)}
           </p>
-          <p className={`mt-1 font-mono text-xs tabular-nums ${pysColor}`}>
-            PYS {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"}
+          <p className={`mt-1 inline-flex items-center justify-end gap-1 font-mono text-xs tabular-nums ${pysColor}`}>
+            {row.pharosYieldScore !== null ? (
+              <>
+                <span>PYS {formatScore(row.pharosYieldScore)}</span>
+                {rankChip ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={`inline-flex cursor-help items-center gap-0.5 rounded-full border border-border/40 bg-background/60 px-1.5 py-0 text-[10px] font-medium ${rankChip.colorClass}`}
+                        aria-label={`Rank change: ${rankChip.signedRank}, driver ${rankChip.short}`}
+                      >
+                        <span aria-hidden="true">{rankChip.arrow}</span>
+                        <span className="font-mono tabular-nums">{rankChip.signedRank}</span>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-[11px]">
+                      <span className="block">{rankChip.long}</span>
+                      {rankChip.pysDeltaLabel ? (
+                        <span className="block font-mono tabular-nums text-muted-foreground">{rankChip.pysDeltaLabel}</span>
+                      ) : null}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </>
+            ) : pysNullReasonText ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">PYS —</span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[220px] text-[11px]">{pysNullReasonText}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span>PYS —</span>
+            )}
           </p>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {confidenceStyle && confidenceLabel ? (
+          <span className={confidenceStyle.pill}>{confidenceLabel}</span>
+        ) : null}
         {grade && grade !== "NR" ? (
           <Badge variant="outline" className={`px-1.5 py-0.5 text-[10px] font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}>
             {grade}
@@ -315,13 +419,61 @@ export function YieldMobileCard({
             Stability <span className="font-mono tabular-nums text-foreground">{stabilityPct}%</span>
           </span>
         ) : null}
-        <span className={warningCount > 0 ? "text-amber-700 dark:text-amber-400" : ""}>
-          {warningCount > 0 ? `${warningCount} warning${warningCount === 1 ? "" : "s"}` : "No warnings"}
-        </span>
+        {freshness ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={`cursor-help rounded-full border border-border/60 bg-background/55 px-2 py-1 ${freshness.textClassName}`}>
+                Updated {freshness.relativeText}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="text-[11px]">
+              Source observed {freshness.relativeText} ({freshness.tier})
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        {warningCount > 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex cursor-help items-center gap-1 text-amber-700 dark:text-amber-400">
+                <AlertTriangle
+                  className={
+                    warningCount >= 2
+                      ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500"
+                      : "h-3.5 w-3.5 text-amber-500"
+                  }
+                  aria-hidden="true"
+                />
+                <span>{`${warningCount} warning${warningCount === 1 ? "" : "s"}`}</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-[11px]">
+              {sourceRiskMaterial
+                ? `${warningCount} warning signal${warningCount === 1 ? "" : "s"} + source-risk ${(rawSourceRiskPenalty ?? 0).toFixed(2)}×`
+                : `${warningCount} warning signal${warningCount === 1 ? "" : "s"}`}
+            </TooltipContent>
+          </Tooltip>
+        ) : sourceRiskMaterial ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500/70" aria-hidden="true" />
+                <span>Source-risk</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-[11px]">
+              Source-risk penalty {(rawSourceRiskPenalty ?? 0).toFixed(2)}× (no warning signals)
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <span>No warnings</span>
+        )}
       </div>
 
       <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2 text-xs text-muted-foreground">
-        <p>{benchmarkReferenceText}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p>{benchmarkReferenceText}</p>
+          <YieldSourceRiskBar score={sourceRiskScore} compact tooltip />
+        </div>
         <p className="mt-1" title={YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].description}>
           Depth: {YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label}
         </p>
@@ -358,6 +510,15 @@ export function YieldMobileCard({
         >
           Provider
         </YieldSourceLink>
+        <Link
+          href={`${buildStablecoinUrl(row.id)}yield/`}
+          prefetch={false}
+          aria-label={`Open full yield analysis for ${row.symbol}`}
+          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-accent"
+        >
+          <span>Deep dive</span>
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </div>
 
       {expanded ? (
