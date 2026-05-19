@@ -26,6 +26,7 @@ import {
   ChartShell,
   Controls,
   renderAxisTick,
+  SourceStrip,
   SourceSwitchDot,
   WarningDot,
   YAxisTick,
@@ -74,6 +75,11 @@ export function YieldHistoryChart({
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, MAX_SPIKE_MARKERS);
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
+  const sourceSegments = model.sourceSegments;
+  const distinctSourceCount = new Set(sourceSegments.map((segment) => segment.sourceKey)).size;
+  const showSourceStrip = distinctSourceCount > 1 && sourceSegments.length > 0;
+  const sourceStripStart = sourceSegments[0]?.startTs ?? 0;
+  const sourceStripEnd = sourceSegments[sourceSegments.length - 1]?.endTs ?? 0;
   const referenceLabelStyle = compact
     ? undefined
     : { fill: "var(--color-muted-foreground)", fontSize: 10, position: "right" as const };
@@ -157,6 +163,15 @@ export function YieldHistoryChart({
         hideSourceSelector={hideSourceSelector}
       />
       <ChartShell compact={compact}>
+        {showSourceStrip ? (
+          <div className="mb-3">
+            <SourceStrip
+              segments={sourceSegments}
+              timeStart={sourceStripStart}
+              timeEnd={sourceStripEnd}
+            />
+          </div>
+        ) : null}
         <div
           ref={chartContainerRef}
           className={cn("min-w-0 w-full", chartHeightClass)}

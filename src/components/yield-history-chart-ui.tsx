@@ -24,6 +24,7 @@ import {
   toTimestampMs,
   type YieldHistorySourceOption,
   type YieldHistoryChartPoint,
+  type YieldSourceSegment,
 } from "./yield-history-chart-model";
 
 interface AxisTickProps {
@@ -347,4 +348,85 @@ export function ChartShell({ compact, children }: { compact: boolean; children: 
 
 export function renderAxisTick(value: number | string | undefined, days: number) {
   return formatAxisDate(Number(value ?? 0), days);
+}
+
+function formatSourceStripDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function SourceStrip({
+  segments,
+  timeStart,
+  timeEnd,
+}: {
+  segments: ReadonlyArray<YieldSourceSegment>;
+  timeStart: number;
+  timeEnd: number;
+}) {
+  if (segments.length === 0) return null;
+  const span = timeEnd - timeStart;
+  if (!Number.isFinite(span) || span <= 0) return null;
+
+  /* Build legend entries deduped by sourceKey while preserving first-appearance
+     order. "other" — if present — counts how many original sources collapsed. */
+  const legendOrder: string[] = [];
+  const legendByKey = new Map<string, { label: string; color: string; isOther: boolean; count: number }>();
+  for (const segment of segments) {
+    const existing = legendByKey.get(segment.sourceKey);
+    if (existing) {
+      if (segment.isOther) existing.count += 1;
+      continue;
+    }
+    legendByKey.set(segment.sourceKey, {
+      label: segment.sourceLabel,
+      color: segment.color,
+      isOther: segment.isOther,
+      count: 1,
+    });
+    legendOrder.push(segment.sourceKey);
+  }
+  /* For "other", count distinct original-source contributions to display "other (N)". */
+
+  const ariaSummary = segments
+    .map((segment) => `${segment.sourceLabel} from ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`)
+    .join(", ");
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        role="img"
+        aria-label={`Source timeline: ${ariaSummary}`}
+        className="flex h-2.5 w-full overflow-hidden rounded-full border border-border/60 bg-background/40"
+      >
+        {segments.map((segment, index) => {
+          const widthPct = Math.max(((segment.endTs - segment.startTs) / span) * 100, 0);
+          if (widthPct <= 0) return null;
+          return (
+            <div
+              key={`${segment.sourceKey}-${segment.startTs}-${index}`}
+              className={cn(
+                segment.color,
+                index > 0 ? "border-l border-background/80" : null,
+              )}
+              style={{ width: `${widthPct}%` }}
+              title={`${segment.sourceLabel} — ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+        {legendOrder.map((key) => {
+          const entry = legendByKey.get(key);
+          if (!entry) return null;
+          const label = entry.isOther ? `other (${entry.count})` : entry.label;
+          return (
+            <span key={key} className="inline-flex items-center gap-1.5">
+              <span className={cn("h-2 w-2 rounded-sm", entry.color)} />
+              <span className="truncate">{label}</span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

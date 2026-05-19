@@ -104,6 +104,98 @@ export interface YieldHistorySourceDisplay {
   label: string;
 }
 
+/* Deterministic palette for source-strip lanes. The first up-to-5 sources by
+   first-appearance get assigned colors in order. Sources beyond the cap collapse
+   into a single muted "other" lane. */
+const SOURCE_STRIP_PALETTE = [
+  "bg-emerald-500/40",
+  "bg-sky-500/40",
+  "bg-amber-500/40",
+  "bg-violet-500/40",
+  "bg-rose-500/40",
+] as const;
+const SOURCE_STRIP_OTHER_COLOR = "bg-muted-foreground/30";
+const SOURCE_STRIP_DEFAULT_MAX_DISTINCT = 5;
+
+export interface YieldSourceSegment {
+  startTs: number;
+  endTs: number;
+  sourceKey: string;
+  sourceLabel: string;
+  color: string;
+  isOther: boolean;
+}
+
+interface YieldSourceSegmentInput {
+  ts: number;
+  sourceKey: string;
+  sourceLabel?: string;
+}
+
+/* Walk history points in time order; collapse adjacent points sharing a sourceKey
+   into one segment. Sources beyond `maxDistinctSources` (by first-appearance) are
+   recolored/relabeled as "other" — their original boundaries are preserved but
+   they share a single muted lane in the rendered strip. */
+export function deriveYieldSourceSegments(
+  history: ReadonlyArray<YieldSourceSegmentInput>,
+  options?: { maxDistinctSources?: number },
+): YieldSourceSegment[] {
+  if (history.length === 0) return [];
+
+  const maxDistinct = Math.max(1, options?.maxDistinctSources ?? SOURCE_STRIP_DEFAULT_MAX_DISTINCT);
+  const sorted = [...history]
+    .filter((point) => Number.isFinite(point.ts) && point.sourceKey)
+    .sort((a, b) => a.ts - b.ts);
+  if (sorted.length === 0) return [];
+
+  /* First pass — group consecutive points with the same sourceKey into raw segments. */
+  type RawSegment = { startTs: number; endTs: number; sourceKey: string; sourceLabel: string };
+  const raw: RawSegment[] = [];
+  for (const point of sorted) {
+    const label = point.sourceLabel ?? point.sourceKey;
+    const current = raw[raw.length - 1];
+    if (current && current.sourceKey === point.sourceKey) {
+      current.endTs = point.ts;
+    } else {
+      raw.push({ startTs: point.ts, endTs: point.ts, sourceKey: point.sourceKey, sourceLabel: label });
+    }
+  }
+
+  /* If a segment is a single point (start === end) and there are later segments,
+     extend it to the next segment's start so widths render visibly. */
+  for (let i = 0; i < raw.length - 1; i++) {
+    if (raw[i].endTs === raw[i].startTs) {
+      raw[i].endTs = raw[i + 1].startTs;
+    }
+  }
+
+  /* Determine top-N sources by first-appearance order. */
+  const firstAppearance = new Map<string, number>();
+  raw.forEach((segment, index) => {
+    if (!firstAppearance.has(segment.sourceKey)) {
+      firstAppearance.set(segment.sourceKey, index);
+    }
+  });
+  const orderedSources = Array.from(firstAppearance.keys());
+  const topSources = new Set(orderedSources.slice(0, maxDistinct));
+  const colorBySource = new Map<string, string>();
+  orderedSources.slice(0, maxDistinct).forEach((key, index) => {
+    colorBySource.set(key, SOURCE_STRIP_PALETTE[index] ?? SOURCE_STRIP_PALETTE[SOURCE_STRIP_PALETTE.length - 1]);
+  });
+
+  return raw.map((segment) => {
+    const isOther = !topSources.has(segment.sourceKey);
+    return {
+      startTs: segment.startTs,
+      endTs: segment.endTs,
+      sourceKey: isOther ? "other" : segment.sourceKey,
+      sourceLabel: isOther ? "other" : segment.sourceLabel,
+      color: isOther ? SOURCE_STRIP_OTHER_COLOR : colorBySource.get(segment.sourceKey) ?? SOURCE_STRIP_OTHER_COLOR,
+      isOther,
+    };
+  });
+}
+
 function normalizeDefaultDays(value?: number) {
   return PRESET_DAYS.includes(value as (typeof PRESET_DAYS)[number]) ? value! : DEFAULT_DAYS;
 }
@@ -370,6 +462,18 @@ export function useYieldHistoryChartModel({
   const spikeAnnotations = useMemo(() => computeSpikeAnnotations(chartData), [chartData]);
   const spikeDates = useMemo(() => new Set(spikeAnnotations.map((spike) => spike.date)), [spikeAnnotations]);
 
+  const sourceSegments = useMemo(() => {
+    return deriveYieldSourceSegments(
+      chartData
+        .filter((point): point is YieldHistoryChartPoint & { sourceKey: string } => Boolean(point.sourceKey))
+        .map((point) => ({
+          ts: point.date,
+          sourceKey: point.sourceKey,
+          sourceLabel: getSourceDisplay(point.sourceKey, availableSources, point.yieldSource ?? point.sourceKey).label,
+        })),
+    );
+  }, [availableSources, chartData]);
+
   const yDomain = useMemo(() => {
     if (chartData.length === 0) {
       const minRef = Math.min(0, benchmarkRate, medianApy > 0 ? medianApy : 0);
@@ -427,6 +531,7 @@ export function useYieldHistoryChartModel({
     tickValues,
     yDomain,
     spikeAnnotations,
+    sourceSegments,
     resolvedBenchmarkLabel: getYieldBenchmarkDisplayLabel({
       benchmarkLabel,
       benchmarkIsFallback,
