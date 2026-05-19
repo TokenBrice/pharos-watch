@@ -4,8 +4,13 @@ import { ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
 import { PYS_BENCHMARK_SPREAD_WEIGHT } from "@shared/lib/yield-scoring";
 import { formatScore, formatSignedPercent } from "@shared/lib/format";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/yield-methodology-version";
 import { cn } from "@/lib/utils";
-import type { YieldBenchmarkSelectionMode } from "@shared/types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 
 export type PysBreakdownMode = "popover" | "inline";
@@ -26,6 +31,54 @@ export interface PysBreakdownProps {
   grade: string | null;
   safetyScore: number | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
+  pysNullReason?: YieldPysNullReason | null;
+}
+
+const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
+  "apy-non-positive": "30-day APY is ≤ 0; PYS only scores positive yield.",
+  "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark adjustment.",
+  "scaling-invalid": "Scaling factor unavailable.",
+  "missing-inputs": "Required inputs missing for scoring.",
+};
+
+function NullPysScore({
+  mode,
+  toneClass,
+  pysNullReason,
+}: {
+  mode: PysBreakdownMode;
+  toneClass: string;
+  pysNullReason?: YieldPysNullReason | null;
+}) {
+  const reasonText = pysNullReason ? PYS_NULL_REASON_TEXT[pysNullReason] : null;
+  const dashClass = cn("font-mono tabular-nums", toneClass);
+
+  if (!reasonText) {
+    return <span className={dashClass}>{"—"}</span>;
+  }
+
+  const ariaLabel = `Pharos Yield Score unavailable: ${reasonText}`;
+
+  // WHY: popover mode already renders inside a Tooltip from the parent (e.g. leaderboard row);
+  // nesting another Tooltip would be invalid. Expose the reason through aria-label/title instead.
+  if (mode === "popover") {
+    return (
+      <span className={dashClass} aria-label={ariaLabel} title={reasonText}>
+        {"—"}
+      </span>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={cn(dashClass, "cursor-help")} aria-label={ariaLabel}>
+          {"—"}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[260px] text-[11px]">{reasonText}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function PysBreakdownBody({
@@ -42,7 +95,7 @@ function PysBreakdownBody({
   sourceRiskDrivers,
   score,
   toneClass,
-}: Omit<PysBreakdownProps, "mode" | "benchmarkSelectionMode">) {
+}: Omit<PysBreakdownProps, "mode" | "benchmarkSelectionMode" | "pysNullReason">) {
   const safetyLabel = grade && grade !== "NR"
     ? `${grade}${safetyScore !== null ? ` (${Math.round(safetyScore)}/100)` : ""}`
     : safetyScore !== null
@@ -161,12 +214,12 @@ function PysBreakdownBody({
       <div className="flex items-baseline justify-between gap-2 text-[11px] text-muted-foreground">
         <span className="truncate">vs {benchmarkRefLabel}</span>
         <Link
-          href="/methodology/yield-changelog/"
+          href={YIELD_METHODOLOGY_CHANGELOG_PATH}
           className="pharos-focus-ring shrink-0 underline decoration-dashed underline-offset-2 hover:text-foreground"
           onClick={(event) => event.stopPropagation()}
-          aria-label="Yield methodology changelog"
+          aria-label={`Yield methodology ${YIELD_METHODOLOGY_VERSION_LABEL} changelog`}
         >
-          <span aria-hidden="true">{"▸"} Methodology</span>
+          <span aria-hidden="true">{"▸"} Methodology {YIELD_METHODOLOGY_VERSION_LABEL}</span>
         </Link>
       </div>
     </div>
@@ -175,7 +228,13 @@ function PysBreakdownBody({
 
 export function PysBreakdown(props: PysBreakdownProps) {
   if (props.score === null) {
-    return <span className={cn("font-mono tabular-nums", props.toneClass)}>{"—"}</span>;
+    return (
+      <NullPysScore
+        mode={props.mode}
+        toneClass={props.toneClass}
+        pysNullReason={props.pysNullReason}
+      />
+    );
   }
 
   if (props.mode === "popover") {
