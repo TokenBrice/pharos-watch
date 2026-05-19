@@ -23,7 +23,7 @@ export function HomepageFlowOverview() {
   const hasData = !!summaryData;
 
   return (
-    <section className="space-y-3">
+    <section className="flex h-full flex-col space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold tracking-tight">Mint/Burn Flow Snapshot</h2>
         <Link
@@ -51,6 +51,7 @@ export function HomepageFlowOverview() {
           weeklyHourly={weeklyData?.hourly}
           isLoading={!summaryData && isSummaryLoading}
           variant="compact"
+          className="flex-1"
         />
       )}
     </section>

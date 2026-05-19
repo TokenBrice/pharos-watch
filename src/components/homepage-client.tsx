@@ -352,19 +352,11 @@ export function HomepageClient() {
           description="Depeg risk, flows, safety distribution, and the market-wide stability regime."
         />
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <SectionErrorBoundary name="dews-radar">
-            <section aria-label="DEWS depeg early warning" className="space-y-3">
+            <section aria-label="DEWS depeg early warning" className="flex h-full flex-col space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div role="status" aria-label={`DEWS risk level: ${dewsRiskLevel}`} className={`border-l-4 pl-3 transition-colors duration-300 ${
-                  dewsRiskLevel === "danger"
-                    ? "border-l-red-500"
-                    : dewsRiskLevel === "warning"
-                      ? "border-l-amber-500"
-                      : dewsRiskLevel === "alert"
-                        ? "border-l-orange-500"
-                        : "border-l-transparent"
-                }`}>
+                <div role="status" aria-label={`DEWS risk level: ${dewsRiskLevel}`}>
                   <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
                 </div>
                 <Link
@@ -376,9 +368,9 @@ export function HomepageClient() {
                 </Link>
               </div>
               {optionalQueriesEnabled || stressUpdatedAt > 0 || hasStressSignals ? (
-                <DEWSSummary logos={logos} showHeader={false} />
+                <DEWSSummary logos={logos} showHeader={false} className="flex-1" />
               ) : (
-                <ChartSkeleton className="h-[320px] w-full" type="radar" />
+                <ChartSkeleton className="h-[320px] w-full flex-1" type="radar" />
               )}
             </section>
           </SectionErrorBoundary>
