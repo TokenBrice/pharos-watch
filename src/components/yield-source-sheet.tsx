@@ -9,7 +9,13 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
-import { YIELD_SOURCE_DEPTH_DEFINITIONS } from "@/lib/yield-source-risk";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_CONFIDENCE_STYLES,
+  YIELD_SOURCE_DEPTH_DEFINITIONS,
+  classifyYieldSourceFreshness,
+} from "@/lib/yield-source-risk";
+import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking } from "@shared/types";
@@ -46,6 +52,14 @@ function YieldSourceSheetBody({
   const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
   const totalSources = sourceExplorer.allSources.length;
   const { selectedSource } = sourceExplorer;
+  const confidenceTier = ranking.provenance?.confidenceTier ?? null;
+  const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null : null;
+  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier]?.label ?? null : null;
+  const freshness = classifyYieldSourceFreshness(ranking.sourceRisk?.sourceAgeSeconds ?? null);
+  const hasAlternateSelected = selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
+  const deepDiveHref = hasAlternateSelected
+    ? `/stablecoin/${ranking.id}/yield/?sources=${encodeURIComponent(selectedSourceKey!)}`
+    : `/stablecoin/${ranking.id}/yield/`;
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -86,18 +100,19 @@ function YieldSourceSheetBody({
                 {YIELD_TYPE_LABELS[ranking.yieldType] ?? ranking.yieldType}
               </Badge>
             </div>
-            <span className="font-mono text-lg tabular-nums text-foreground">
-              {formatPercent(ranking.apy30d)}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="font-mono text-lg tabular-nums text-foreground">
+                {formatPercent(ranking.apy30d)}
+              </span>
+              <YieldSourceRiskBar score={ranking.sourceRisk?.sourceRiskScore ?? null} tooltip />
+            </div>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {selectedSource.sourceTvlUsd !== null && (
               <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>
             )}
-            {ranking.provenance?.confidenceTier && (
-              <span className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]">
-                {ranking.provenance.confidenceTier}
-              </span>
+            {confidenceStyle && confidenceLabel && (
+              <span className={confidenceStyle.pill}>{confidenceLabel}</span>
             )}
             <span
               className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]"
@@ -105,6 +120,14 @@ function YieldSourceSheetBody({
             >
               {YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].label} depth
             </span>
+            {freshness && (
+              <span
+                className={freshness.textClassName}
+                title={`Source observed ${freshness.relativeText} (${freshness.tier})`}
+              >
+                {freshness.relativeText}
+              </span>
+            )}
             {sourceExplorer.sourceSwitch.changed ? (
               <span
                 className="rounded-full border border-sky-500/25 bg-sky-500/10 px-1.5 py-0.5 text-[10px] text-sky-700 dark:text-sky-300"
@@ -244,6 +267,13 @@ function YieldSourceSheetBody({
       </div>
 
       <SheetFooter>
+        <Link
+          href={deepDiveHref}
+          className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => onOpenChange(false)}
+        >
+          Deep dive yield &rarr;
+        </Link>
         <Link
           href={`/stablecoin/${ranking.id}`}
           className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground transition-colors"
