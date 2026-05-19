@@ -419,7 +419,6 @@ describe("buildYieldViewModel", () => {
     const conservative = buildYieldViewModel(rows, {
       minSafety: "80",
       depth: "hide-thin",
-      sourceConfidence: "deterministic",
       warnings: "hide",
     });
     expect(conservative.riskBudget.matching).toBe("conservative");

@@ -1,6 +1,17 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.14` (2026-03-01 -> 2026-05-19).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.15` (2026-03-01 -> 2026-05-19).
+
+---
+
+## v8.15 - Etherfuse CETES APY Source + MXN Benchmark Fallback (May 19, 2026)
+
+- `cetes-etherfuse` now publishes a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance `interestRateBps`
+- The source reads Etherfuse's first-party Next data on `https://app.etherfuse.com/bonds/cetes`; this avoids treating USD/MXN NAV movement in CoinGecko prices as CETES yield
+- Price-derived CETES APY can still exist as a fallback/alternate, but the curated protocol-API source wins normal arbitration when available
+- MXN benchmark resolution still prefers Banxico SIE `SF43936` with `BANXICO_TOKEN`; when Banxico is missing or fails, the cron tries Etherfuse CETES current issuance as an explicit degraded proxy benchmark (`isFallback: true`, `isProxy: true`, fallback mode ending in `etherfuse-stablebond`)
+- If Banxico and Etherfuse both fail, the existing retained-last-source path remains; without a retained MXN source, MXN-pegged rows fall back to USD
+- CETES self-reference remains intentional: using CETES yield as both asset APY and MXN benchmark produces near-zero spread credit, but it no longer overstates APY from MXN/USD FX moves
 
 ---
 

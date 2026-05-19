@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.14`
+- **Current methodology version:** `v8.15`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.15 gives `cetes-etherfuse` a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance rate. This replaces the selected USD price-derived NAV fallback when Etherfuse is reachable, so MXN/USD FX movement is no longer interpreted as CETES yield. The MXN benchmark still prefers Banxico SIE `SF43936`, but when `BANXICO_TOKEN` is missing or Banxico fails, the daily benchmark cron can use the Etherfuse CETES current issuance rate as an explicit degraded proxy fallback (`isFallback: true`, `isProxy: true`).
 
 Yield v8.14 ships the public adapter manifest endpoint at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset. Each entry carries `stablecoinId`, `coinSymbol`, `family` (`onchain` / `protocol-api` / `defillama` / `defillama-auto` / `rate-derived` / `price-derived` / `intentional-gap`), `sourceKey`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), `quarantineReason` when lifecycle is `quarantined`, the current `methodologyVersion` label, and a build-time `updatedAt`. Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only.
 
@@ -232,12 +234,15 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 | ------- | ------ | -------- |
 | `scrvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
 | `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
+| `cetes-etherfuse` | `Etherfuse CETES current issuance` | Etherfuse first-party Next data at `https://app.etherfuse.com/bonds/cetes` |
 | `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
 | `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
 | `zys-zephyr-protocol` | `Zephyr Scanner ZYS returns` | `https://zephyrprotocol.com/api/v1/historicalreturns` |
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
+
+The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Etherfuse's first-party Next data and maps `interestRateBps / 100` to APY. It publishes `protocol-api:etherfuse-cetes-current-issuance` with the current token amount as the exchange-rate observation when available. This source prevents MXN NAV appreciation plus USD/MXN FX movement from being annualized by the generic price-derived fallback.
 
 The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
 
@@ -407,7 +412,7 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
 | `GBP` | GBP SONIA (overnight, proxy) | FRED `IUDSOIA` mirror | Used as a proxy for "3M compounded SONIA"; full compounding can be added later |
 | `JPY` | JPY overnight call (TONA proxy) | FRED `IRSTCB01JPM156N` (uncollateralized overnight call rate) | Used as a TONA-equivalent proxy |
-| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`) | Requires `BANXICO_TOKEN` worker env; weekly auction. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
+| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`), then Etherfuse CETES current issuance fallback | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, Etherfuse is marked `isFallback` and `isProxy`. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
 | `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
 | `AUD` | AUD 3M interbank (RBA proxy) | FRED `IR3TIB01AUM156N` | 3-month interbank as a proxy for the RBA cash rate target |
 | `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
@@ -426,15 +431,16 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N
 https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N
 https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
+https://app.etherfuse.com/bonds/cetes
 https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
 https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known market value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN additionally tries Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable.
 
-**Self-reference caveat (CETES):** Benchmarking the CETES (Etherfuse) yield against the MXN CETES rate produces a ~0% spread, which under-rewards the asset. The MXN benchmark is wired here; a future tokenized-treasury rule can override per-source by selecting the next-tier-up safe rate in the same currency. The same pattern applies to EUTBL (vs €STR) and to any future UKTBL (vs SONIA).
+**Self-reference caveat (CETES):** Benchmarking the CETES (Etherfuse) yield against the MXN CETES rate produces a ~0% spread, which under-rewards the asset. The MXN benchmark is wired here and may use Etherfuse as a fallback proxy when Banxico is unavailable; a future tokenized-treasury rule can override per-source by selecting the next-tier-up safe rate in the same currency. The same pattern applies to EUTBL (vs €STR) and to any future UKTBL (vs SONIA).
 
 **Currencies still falling back to USD:** AED, IDR, TRY, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
 
@@ -642,7 +648,7 @@ Fetches the benchmark registry used by Yield Intelligence:
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
 - GBP SONIA daily proxy from FRED `IUDSOIA` (v8.13)
 - JPY call-rate proxy from FRED `IRSTCB01JPM156N` (v8.13)
-- MXN CETES 28-day from Banxico SIE (`SF43936`) — requires `BANXICO_TOKEN` env; absent token routes MXN-pegged rows back to USD fallback (v8.13)
+- MXN CETES 28-day from Banxico SIE (`SF43936`), falling back to Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable (v8.15)
 - BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
 - AUD interbank proxy from FRED `IR3TIB01AUM156N` (v8.13)
 - CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
@@ -1012,7 +1018,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, plus v8.13 additions: GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d, BRL SELIC, AUD interbank proxy, CAD CORRA proxy) |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD interbank proxy, CAD CORRA proxy) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |

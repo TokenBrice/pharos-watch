@@ -262,8 +262,7 @@ export function YieldClient() {
                   onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-1">Exhibit 01</p>
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Top yield this week</p>
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Top yield this week</h3>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[exhibitTiles.topYield.id]} name={exhibitTiles.topYield.name} size={20} />
                     <span className="font-semibold text-foreground">{exhibitTiles.topYield.symbol}</span>
@@ -287,8 +286,7 @@ export function YieldClient() {
                   onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-1">Exhibit 02</p>
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Most stable A+ yield</p>
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Most stable A+ yield</h3>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[exhibitTiles.mostStable.id]} name={exhibitTiles.mostStable.name} size={20} />
                     <span className="font-semibold text-foreground">{exhibitTiles.mostStable.symbol}</span>
@@ -310,8 +308,7 @@ export function YieldClient() {
                   onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
                   className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
                 >
-                  <p className="pharos-kicker mb-1">Exhibit 03</p>
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Largest market</p>
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Largest market</h3>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[exhibitTiles.largestMarket.id]} name={exhibitTiles.largestMarket.name} size={20} />
                     <span className="font-semibold text-foreground">{exhibitTiles.largestMarket.symbol}</span>

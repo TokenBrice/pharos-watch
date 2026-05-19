@@ -27,6 +27,7 @@ import {
   parseSixSar3mcCsv,
   parseTreasuryYieldXml,
 } from "../fetch-tbill-rate";
+import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
 import {
   buildHardcodedUsdBenchmark,
   getBenchmarkKeyForPegCurrency,
@@ -64,6 +65,34 @@ const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;
 24.03.2026;25.03.2026;24.12.2025;SAR3MC;-0.0539;91;360
 23.03.2026;24.03.2026;24.12.2025;SAR3MC;-0.0540;90;360
 `;
+
+const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
+  props: {
+    pageProps: {
+      cachedStablebondsLookup: {
+        calculatedAt: "2026-05-19T14:24:43.661467807+00:00",
+      },
+      cachedBonds: [
+        {
+          issuanceNumber: 110,
+          currentIssuance: {
+            address: "2p3sFHSkC7f8WoxenAgcpGbKjDYHtAScMuJPft47o5cS",
+            startingTokenAmount: "1.162263",
+            endingTokenAmount: "1.163506",
+            startDate: 1778798112000,
+            endDate: 1779402912000,
+            interestRateBps: 558,
+            status: 1,
+          },
+          mint: {
+            symbol: "CETES",
+            currentTokenAmount: "1.163091",
+          },
+        },
+      ],
+    },
+  },
+})}</script></body></html>`;
 
 function cloneResponse(response: Response | null): Response | null {
   if (!response) return null;
@@ -559,6 +588,27 @@ describe("parseBanxicoSeries", () => {
   });
 });
 
+describe("parseEtherfuseCetesStablebondPage", () => {
+  it("extracts the current CETES issuance rate from Etherfuse Next data", () => {
+    expect(parseEtherfuseCetesStablebondPage(ETHERFUSE_CETES_HTML)).toEqual({
+      apyPercent: 5.58,
+      recordDate: "2026-05-14",
+      observedAtSec: 1779200683,
+      startSec: 1778798112,
+      endSec: 1779402912,
+      issuanceAddress: "2p3sFHSkC7f8WoxenAgcpGbKjDYHtAScMuJPft47o5cS",
+      issuanceNumber: 110,
+      startingTokenAmount: 1.162263,
+      endingTokenAmount: 1.163506,
+      currentTokenAmount: 1.163091,
+    });
+  });
+
+  it("returns null when the Etherfuse page does not expose a CETES issuance rate", () => {
+    expect(parseEtherfuseCetesStablebondPage("<html></html>")).toBeNull();
+  });
+});
+
 describe("parseBcbSelicSeries", () => {
   it("extracts the most recent SELIC observation", () => {
     const payload = JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]);
@@ -698,6 +748,9 @@ describe("fetchTbillRate — new currency fetchers", () => {
       if (url.includes("id=IR3TIB01AUM156N")) {
         return new Response("DATE,IR3TIB01AUM156N\n2026-03-02,4.30\n", { status: 200 });
       }
+      if (url.includes("app.etherfuse.com/bonds/cetes")) {
+        return new Response(ETHERFUSE_CETES_HTML, { status: 200, headers: { "Content-Type": "text/html" } });
+      }
       if (url.includes("api.bcb.gov.br")) {
         return new Response(JSON.stringify([{ data: "26/03/2026", valor: "12.75" }]), { status: 200 });
       }
@@ -713,9 +766,12 @@ describe("fetchTbillRate — new currency fetchers", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(calls.some((u) => u.includes("banxico.org.mx"))).toBe(false);
-    expect(metadata.mxnSource).toBeNull();
+    expect(calls.some((u) => u.includes("app.etherfuse.com/bonds/cetes"))).toBe(true);
+    expect(metadata.mxnSource).toBe("etherfuse-cetes-current-issuance");
+    expect(metadata.mxnRate).toBe(5.58);
+    expect(metadata.mxnRecordDate).toBe("2026-05-14");
     expect(result.status).toBe("degraded");
-    expect(String(metadata.fallbackMode)).toContain("mxn:banxico-token-missing");
+    expect(String(metadata.fallbackMode)).toContain("mxn:banxico-token-missing-etherfuse-stablebond");
   });
 
   it("retains the last MXN benchmark when the Banxico fetch fails", async () => {

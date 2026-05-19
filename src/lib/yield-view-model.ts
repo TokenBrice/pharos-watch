@@ -293,11 +293,10 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "conservative",
     label: "Conservative",
-    description: "A- safety, hide thin venues, deterministic source, hide warnings",
+    description: "A- safety, hide thin venues, hide warnings",
     overrides: {
       minSafety: 80,
       depth: "hide-thin",
-      sourceConfidence: "deterministic",
       warnings: "hide",
     },
   },

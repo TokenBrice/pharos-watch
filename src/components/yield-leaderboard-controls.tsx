@@ -163,6 +163,36 @@ function CurrencyTab({
   );
 }
 
+const RISK_BUDGET_STYLES: Record<
+  YieldRiskBudgetKey,
+  { dot: string; idle: string; active: string; activeCount: string }
+> = {
+  conservative: {
+    dot: "bg-emerald-500",
+    idle: "border-emerald-500/30 bg-emerald-500/5 text-foreground hover:bg-emerald-500/10",
+    active: "border-emerald-500 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+    activeCount: "text-emerald-700/80 dark:text-emerald-300/80",
+  },
+  balanced: {
+    dot: "bg-sky-500",
+    idle: "border-sky-500/30 bg-sky-500/5 text-foreground hover:bg-sky-500/10",
+    active: "border-sky-500 bg-sky-500/20 text-sky-700 dark:text-sky-300",
+    activeCount: "text-sky-700/80 dark:text-sky-300/80",
+  },
+  opportunistic: {
+    dot: "bg-amber-500",
+    idle: "border-amber-500/30 bg-amber-500/5 text-foreground hover:bg-amber-500/10",
+    active: "border-amber-500 bg-amber-500/20 text-amber-700 dark:text-amber-300",
+    activeCount: "text-amber-700/80 dark:text-amber-300/80",
+  },
+  aggressive: {
+    dot: "bg-orange-600",
+    idle: "border-orange-600/30 bg-orange-600/5 text-foreground hover:bg-orange-600/10",
+    active: "border-orange-600 bg-orange-600/20 text-orange-700 dark:text-orange-300",
+    activeCount: "text-orange-700/80 dark:text-orange-300/80",
+  },
+};
+
 function RiskBudgetSlider({
   stops,
   onSelect,
@@ -183,32 +213,36 @@ function RiskBudgetSlider({
         <p className="text-[10px] text-muted-foreground">Conservative → Aggressive</p>
       </div>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-        {stops.map((stop) => (
-          <button
-            key={stop.key}
-            type="button"
-            onClick={() => onSelect(stop.key)}
-            aria-pressed={stop.active}
-            data-active={stop.active}
-            title={stop.description}
-            className={cn(
-              "pharos-focus-ring flex min-h-11 flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-10",
-              stop.active
-                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                : "border-border/70 bg-background/60 text-foreground hover:bg-muted",
-            )}
-          >
-            <span>{stop.label}</span>
-            <span
+        {stops.map((stop) => {
+          const style = RISK_BUDGET_STYLES[stop.key];
+          return (
+            <button
+              key={stop.key}
+              type="button"
+              onClick={() => onSelect(stop.key)}
+              aria-pressed={stop.active}
+              data-active={stop.active}
+              title={stop.description}
               className={cn(
-                "font-mono text-[10px] tabular-nums",
-                stop.active ? "text-primary-foreground/80" : "text-muted-foreground",
+                "pharos-focus-ring flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-10",
+                stop.active ? style.active : style.idle,
               )}
             >
-              {stop.count}
-            </span>
-          </button>
-        ))}
+              <span className="inline-flex items-center gap-1.5">
+                <span aria-hidden="true" className={cn("inline-block h-2 w-2 rounded-full", style.dot)} />
+                <span>{stop.label}</span>
+              </span>
+              <span
+                className={cn(
+                  "font-mono text-[10px] tabular-nums",
+                  stop.active ? style.activeCount : "text-muted-foreground",
+                )}
+              >
+                {stop.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.15",
+    title: "Etherfuse CETES APY Source + MXN Benchmark Fallback",
+    date: "2026-05-19",
+    effectiveAt: 1779206400,
+    summary:
+      "Etherfuse CETES now publishes APY from Etherfuse's current Stablebond issuance rate instead of the fallback USD price-derived NAV path, and the MXN benchmark can use the same first-party issuance rate as a degraded proxy when Banxico is unavailable.",
+    impact: [
+      "`cetes-etherfuse` gains a curated `protocol-api:etherfuse-cetes-current-issuance` source that reads Etherfuse's first-party Next data for the active CETES issuance `interestRateBps`, avoiding USD/MXN FX movement being interpreted as yield",
+      "The price-derived CETES fallback can still run as an alternate source, but curated protocol-API confidence makes the Etherfuse issuance rate the selected source when available",
+      "MXN benchmark resolution still prefers Banxico SIE `SF43936`; when `BANXICO_TOKEN` is missing or Banxico fails, the cron tries Etherfuse CETES current issuance as an explicit `isFallback` / `isProxy` benchmark with `fallbackMode` ending in `etherfuse-stablebond`",
+      "If both Banxico and Etherfuse fail, the existing retained-last-source behavior remains in place; otherwise MXN stays unavailable and affected rows fall back to USD",
+      "The CETES self-reference caveat remains: when the asset yield and the MXN benchmark both represent CETES exposure, spread credit is intentionally near zero rather than inflated by USD FX effects",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.14",
     title: "Adapter Manifest Public Endpoint",
     date: "2026-05-19",
