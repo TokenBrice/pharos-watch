@@ -20,20 +20,11 @@ import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/components/yield-history-chart-model";
-import {
-  classifyApyChange,
-  type YieldChangeAttributionDecisionLedger,
-} from "@/lib/yield-change-attribution";
+import { classifyApyChange } from "@/lib/yield-change-attribution";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatChartDate, formatPercent } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import type { YieldHistoryPoint, YieldRanking } from "@shared/types";
-
-// WHY: BE will add `decisionLedger` on YieldRanking after this lands. Mirror locally so
-// the page compiles regardless of merge order.
-interface DecisionLedgerOnRanking {
-  decisionLedger?: YieldChangeAttributionDecisionLedger | null;
-}
 
 interface YieldAnalysisClientProps {
   id: string;
@@ -216,7 +207,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         ? classifyApyChange({
             history: historyQuery.data?.history ?? [],
             decisionLedger:
-              (ranking as YieldRanking & DecisionLedgerOnRanking).decisionLedger ?? null,
+              ranking.decisionLedger ?? null,
             yieldStability: ranking.yieldStability ?? null,
           })
         : null,

@@ -5,8 +5,8 @@ import { ChevronDown, Search, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
 import {
+  getActiveFilterSummaries,
   labelYieldFilterOption,
-  type YieldFilterOption,
   type YieldPresetKey,
   type YieldViewModel,
 } from "@/lib/yield-view-model";
@@ -19,82 +19,6 @@ interface YieldLeaderboardControlsProps {
   onApplyPreset: (presetKey: YieldPresetKey) => void;
 }
 
-interface ActiveFilterSummary {
-  key: string;
-  label: string;
-}
-
-function findOptionLabel<T extends string>(
-  options: ReadonlyArray<YieldFilterOption<T>>,
-  value: T | string,
-): string {
-  return options.find((option) => option.value === value)?.label ?? String(value);
-}
-
-function getActiveFilterSummaries(viewModel: YieldViewModel): ActiveFilterSummary[] {
-  const { filters, options } = viewModel;
-  const summaries: ActiveFilterSummary[] = [];
-
-  if (filters.yieldType !== "all") {
-    summaries.push({
-      key: "yieldType",
-      label: `Type: ${findOptionLabel(options.yieldType, filters.yieldType)}`,
-    });
-  }
-  if (filters.warnings !== "all") {
-    summaries.push({
-      key: "warnings",
-      label: findOptionLabel(options.warnings, filters.warnings),
-    });
-  }
-  if (filters.watchlist === "only") {
-    summaries.push({ key: "watchlist", label: "Watching only" });
-  }
-  if (filters.minSafety !== null) {
-    summaries.push({
-      key: "minSafety",
-      label: findOptionLabel(options.minSafety, String(filters.minSafety)),
-    });
-  }
-  if (filters.minTvl !== null) {
-    summaries.push({
-      key: "minTvl",
-      label: findOptionLabel(options.minTvl, String(filters.minTvl)),
-    });
-  }
-  if (filters.depth !== "all") {
-    summaries.push({
-      key: "depth",
-      label: `Depth: ${findOptionLabel(options.depth, filters.depth)}`,
-    });
-  }
-  if (filters.sourceChanged !== "all") {
-    summaries.push({
-      key: "sourceChanged",
-      label: findOptionLabel(options.sourceChanged, filters.sourceChanged),
-    });
-  }
-  if (filters.sourceConfidence !== "all") {
-    summaries.push({
-      key: "sourceConfidence",
-      label: `Confidence: ${findOptionLabel(options.sourceConfidence, filters.sourceConfidence)}`,
-    });
-  }
-  if (filters.benchmark !== "all") {
-    summaries.push({
-      key: "benchmark",
-      label: `Benchmark: ${findOptionLabel(options.benchmark, filters.benchmark)}`,
-    });
-  }
-  if (filters.opportunity !== "all") {
-    summaries.push({
-      key: "opportunity",
-      label: findOptionLabel(options.opportunity, filters.opportunity),
-    });
-  }
-
-  return summaries;
-}
 
 function FilterSelect({
   label,

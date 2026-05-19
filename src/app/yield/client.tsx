@@ -7,6 +7,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
+import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -18,6 +19,7 @@ import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
 import {
   buildYieldViewModel,
+  getActiveFilterSummaries,
   YIELD_PRESET_SPECS,
   YIELD_RISK_BUDGET_SPECS,
   type YieldPresetKey,
@@ -36,6 +38,7 @@ export function YieldClient() {
   const router = useRouter();
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
+  const watchlist = useYieldWatchlist();
   const urlParams = useMemo(
     () => ({
       peg: searchParams.get("peg"),
@@ -50,6 +53,7 @@ export function YieldClient() {
       depth: searchParams.get("depth"),
       sourceChanged: searchParams.get("sourceChanged"),
       trending: searchParams.get("trending"),
+      watchlist: searchParams.get("watchlist"),
     }),
     [searchParams],
   );
@@ -57,8 +61,9 @@ export function YieldClient() {
     () => buildYieldViewModel(rankings, urlParams, {
       benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
       fallbackBenchmark: data?.provenance?.benchmark ?? null,
+      watchlistIds: watchlist.ids,
     }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams],
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.ids],
   );
   const visibleRows = viewModel.visibleRows;
   const storyCallouts = useMemo(() => {
@@ -358,15 +363,18 @@ export function YieldClient() {
 
         <section aria-labelledby="leaderboard-heading" className="order-4">
           <div className="space-y-3">
-            <h2 id="leaderboard-heading" className="text-xl font-semibold">
-              Yield Leaderboard
-            </h2>
             <YieldLeaderboard
               rows={visibleRows}
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
               emptyMessage={viewModel.emptyState.description}
+              filterSummary={{
+                visibleCount: visibleRows.length,
+                totalCount: viewModel.totalRows,
+                comparisonLabel: viewModel.comparisonLabel,
+                activeFilters: getActiveFilterSummaries(viewModel),
+              }}
             />
           </div>
         </section>

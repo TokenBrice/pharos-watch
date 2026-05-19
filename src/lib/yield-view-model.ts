@@ -1250,3 +1250,46 @@ export function buildYieldViewModel(
 export function labelYieldFilterOption(option: YieldFilterOption): string {
   return formatCountLabel(option.label, option.count);
 }
+
+export interface YieldActiveFilterSummary {
+  key: string;
+  label: string;
+}
+
+export function getActiveFilterSummaries(viewModel: YieldViewModel): YieldActiveFilterSummary[] {
+  const { filters, options } = viewModel;
+  const summaries: YieldActiveFilterSummary[] = [];
+
+  if (filters.yieldType !== "all") {
+    summaries.push({ key: "yieldType", label: `Type: ${describeOption(options.yieldType, filters.yieldType)}` });
+  }
+  if (filters.warnings !== "all") {
+    summaries.push({ key: "warnings", label: describeOption(options.warnings, filters.warnings) });
+  }
+  if (filters.watchlist === "only") {
+    summaries.push({ key: "watchlist", label: "Watching only" });
+  }
+  if (filters.minSafety !== null) {
+    summaries.push({ key: "minSafety", label: describeOption(options.minSafety, String(filters.minSafety)) });
+  }
+  if (filters.minTvl !== null) {
+    summaries.push({ key: "minTvl", label: describeOption(options.minTvl, String(filters.minTvl)) });
+  }
+  if (filters.depth !== "all") {
+    summaries.push({ key: "depth", label: `Depth: ${describeOption(options.depth, filters.depth)}` });
+  }
+  if (filters.sourceChanged !== "all") {
+    summaries.push({ key: "sourceChanged", label: describeOption(options.sourceChanged, filters.sourceChanged) });
+  }
+  if (filters.sourceConfidence !== "all") {
+    summaries.push({ key: "sourceConfidence", label: `Confidence: ${describeOption(options.sourceConfidence, filters.sourceConfidence)}` });
+  }
+  if (filters.benchmark !== "all") {
+    summaries.push({ key: "benchmark", label: `Benchmark: ${describeOption(options.benchmark, filters.benchmark)}` });
+  }
+  if (filters.opportunity !== "all") {
+    summaries.push({ key: "opportunity", label: describeOption(options.opportunity, filters.opportunity) });
+  }
+
+  return summaries;
+}

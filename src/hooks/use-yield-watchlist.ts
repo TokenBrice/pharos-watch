@@ -35,26 +35,64 @@ function saveToStorage(ids: ReadonlySet<string>): void {
   writeJsonStorageValue(getWindowStorage("local"), STORAGE_KEY, Array.from(ids));
 }
 
-function getInitialWatchlistState(): { ids: ReadonlySet<string>; isHydrated: boolean } {
-  if (typeof window === "undefined") {
-    return { ids: new Set<string>(), isHydrated: false };
-  }
-  return { ids: new Set(loadFromStorage()), isHydrated: true };
+// WHY: every star, preset chip, and filter share one watchlist. A module-level store
+// lets sibling hook instances mirror the same Set without a Context provider, and the
+// storage event keeps a second tab in sync.
+const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
+let sharedIds: ReadonlySet<string> = EMPTY_IDS;
+const listeners = new Set<(ids: ReadonlySet<string>) => void>();
+
+function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+function broadcast(next: ReadonlySet<string>) {
+  sharedIds = next;
+  for (const listener of listeners) listener(next);
+}
+
+function syncFromStorage() {
+  if (typeof window === "undefined") return;
+  const next = new Set(loadFromStorage());
+  if (!setsEqual(sharedIds, next)) broadcast(next);
+}
+
+function mutateShared(updater: (prev: ReadonlySet<string>) => ReadonlySet<string>) {
+  const next = updater(sharedIds);
+  if (next === sharedIds) return;
+  saveToStorage(next);
+  broadcast(next);
 }
 
 export function useYieldWatchlist(): YieldWatchlistState {
-  const [bootState] = useState(getInitialWatchlistState);
-  const [ids, setIds] = useState<ReadonlySet<string>>(bootState.ids);
-  const isHydrated = bootState.isHydrated;
+  const [ids, setIds] = useState<ReadonlySet<string>>(() => {
+    if (typeof window === "undefined") return EMPTY_IDS;
+    syncFromStorage();
+    return sharedIds;
+  });
+  const isHydrated = typeof window !== "undefined";
 
   useEffect(() => {
-    if (isHydrated) saveToStorage(ids);
-  }, [ids, isHydrated]);
+    listeners.add(setIds);
+    syncFromStorage();
+    function onStorage(event: StorageEvent) {
+      if (event.key !== STORAGE_KEY) return;
+      syncFromStorage();
+    }
+    window.addEventListener("storage", onStorage);
+    return () => {
+      listeners.delete(setIds);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const has = useCallback((id: string) => ids.has(id), [ids]);
 
   const toggle = useCallback((id: string) => {
-    setIds((prev) => {
+    mutateShared((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -63,7 +101,7 @@ export function useYieldWatchlist(): YieldWatchlistState {
   }, []);
 
   const add = useCallback((id: string) => {
-    setIds((prev) => {
+    mutateShared((prev) => {
       if (prev.has(id)) return prev;
       const next = new Set(prev);
       next.add(id);
@@ -72,7 +110,7 @@ export function useYieldWatchlist(): YieldWatchlistState {
   }, []);
 
   const remove = useCallback((id: string) => {
-    setIds((prev) => {
+    mutateShared((prev) => {
       if (!prev.has(id)) return prev;
       const next = new Set(prev);
       next.delete(id);
@@ -81,7 +119,7 @@ export function useYieldWatchlist(): YieldWatchlistState {
   }, []);
 
   const clear = useCallback(() => {
-    setIds((prev) => (prev.size === 0 ? prev : new Set<string>()));
+    mutateShared((prev) => (prev.size === 0 ? prev : EMPTY_IDS));
   }, []);
 
   return { ids, has, toggle, add, remove, clear, isHydrated };

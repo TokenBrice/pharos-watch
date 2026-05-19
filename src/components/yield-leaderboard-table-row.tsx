@@ -13,11 +13,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
+import { YieldCohortChip } from "@/components/yield-cohort-chip";
+import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatCurrency, formatPercent, formatScore, formatSignedPercent } from "@shared/lib/format";
-import { PYS_SUSTAINABILITY_FLOOR } from "@shared/lib/yield-scoring";
+import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import {
@@ -27,58 +28,14 @@ import {
   getPysColor,
 } from "@/lib/yield-constants";
 import {
-  YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
   classifyYieldSourceFreshness,
   getYieldSourceRiskDrivers,
 } from "@/lib/yield-source-risk";
-import type { YieldPysNullReason } from "@shared/types";
+import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-
-const PYS_NULL_REASON_TEXT: Record<YieldPysNullReason, string> = {
-  "apy-non-positive": "30d APY ≤ 0",
-  "effective-yield-non-positive": "Effective yield ≤ 0 after benchmark",
-  "scaling-invalid": "Scaling factor unavailable",
-  "missing-inputs": "Missing inputs",
-};
-
-function formatSignedPysDelta(delta: number): string {
-  const rounded = Math.abs(delta) >= 10 ? delta.toFixed(1) : delta.toFixed(2);
-  const sign = delta > 0 ? "+" : delta < 0 ? "" : "+";
-  return `${sign}${rounded} PYS`;
-}
-
-// WHY: ω3 owns the canonical type on YieldViewModelRow; we mirror the shape here so this
-// component compiles independently of merge order.
-interface CohortPercentile {
-  value: number | null;
-  cohortSize: number;
-  cohortKey: string;
-}
-
-function renderCohortChip(cohort: CohortPercentile | null) {
-  if (cohort === null) return null;
-  if (cohort.value === null) {
-    return (
-      <span
-        title="Cohort smaller than 8 peers"
-        className="text-[10px] text-muted-foreground tabular-nums"
-      >
-        small peer set
-      </span>
-    );
-  }
-  return (
-    <span
-      title={`Percentile ${cohort.value} in ${cohort.cohortSize} peers`}
-      className="text-[10px] text-muted-foreground tabular-nums"
-    >
-      p{cohort.value} of {cohort.cohortSize}
-    </span>
-  );
-}
 
 interface YieldLeaderboardTableRowProps {
   row: YieldViewModelRow;
@@ -90,71 +47,6 @@ interface YieldLeaderboardTableRowProps {
   onPrefetch: (stablecoinId: string) => void;
   onToggleExpanded: (stablecoinId: string) => void;
   onOpenSourceSheet: (stablecoinId: string) => void;
-}
-
-interface WhyPysStripProps {
-  benchmarkSpread: number | null;
-  benchmarkLabel?: string | null;
-  stabilityPct: number | null;
-  sustainabilityMult: number;
-  grade: string | null;
-  safetyScore: number | null;
-  adjustedRiskPenalty: number;
-  sourceRiskPenalty: number;
-  sourceRiskDriverLabel: string | null;
-}
-
-function WhyPysStrip({
-  benchmarkSpread,
-  benchmarkLabel,
-  stabilityPct,
-  sustainabilityMult,
-  grade,
-  safetyScore,
-  adjustedRiskPenalty,
-  sourceRiskPenalty,
-  sourceRiskDriverLabel,
-}: WhyPysStripProps) {
-  const benchSpreadValue = benchmarkSpread !== null ? formatSignedPercent(benchmarkSpread, 1) : "—";
-  const benchSubLabel = benchmarkLabel ? `vs ${benchmarkLabel}` : "Benchmark unavailable";
-  const stabilityValue = stabilityPct !== null ? `${stabilityPct}%` : "—";
-  const stabilitySub = sustainabilityMult === PYS_SUSTAINABILITY_FLOOR ? "(floor)" : "30d APY variance";
-  const safetyValue =
-    grade && grade !== "NR"
-      ? grade
-      : safetyScore !== null
-      ? `${Math.round(safetyScore)}/100`
-      : "—";
-  const safetySub = `÷${adjustedRiskPenalty.toFixed(1)}× penalty`;
-  const sourceRiskValue = `${sourceRiskPenalty.toFixed(2)}×`;
-  const sourceRiskSub = sourceRiskPenalty === 1 ? "Neutral" : sourceRiskDriverLabel ?? "Neutral";
-
-  const cells: Array<{ title: string; value: string; sublabel: string }> = [
-    { title: "Bench spread", value: benchSpreadValue, sublabel: benchSubLabel },
-    { title: "Stability", value: stabilityValue, sublabel: stabilitySub },
-    { title: "Safety", value: safetyValue, sublabel: safetySub },
-    { title: "Source risk", value: sourceRiskValue, sublabel: sourceRiskSub },
-  ];
-
-  return (
-    <div
-      role="group"
-      aria-label="Why this PYS"
-      className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4"
-    >
-      {cells.map((cell) => (
-        <div
-          key={cell.title}
-          aria-label={`${cell.title}: ${cell.value}, ${cell.sublabel}`}
-          className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
-        >
-          <p className="text-xs text-muted-foreground">{cell.title}</p>
-          <p className="font-mono tabular-nums text-sm text-foreground">{cell.value}</p>
-          <p className="truncate text-[10px] text-muted-foreground">{cell.sublabel}</p>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number; max: number }) {
@@ -221,31 +113,7 @@ function YieldLeaderboardTableRowBase({
   const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
   const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
   const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
-  const rankAttribution = row.rankChangeAttribution ?? null;
-  const rankChip = useMemo(() => {
-    if (!rankAttribution) return null;
-    const { rankDelta, pysDelta, primaryDriver } = rankAttribution;
-    if (rankDelta == null || primaryDriver == null) return null;
-    if (Math.abs(pysDelta ?? 0) < 1) return null;
-    const driver = YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver];
-    if (!driver) return null;
-    const arrow = rankDelta < 0 ? "▲" : rankDelta > 0 ? "▼" : "■";
-    const colorClass =
-      rankDelta < 0
-        ? "text-emerald-700 dark:text-emerald-400"
-        : rankDelta > 0
-        ? "text-red-700 dark:text-red-400"
-        : "text-muted-foreground";
-    const signedRank = rankDelta < 0 ? `+${Math.abs(rankDelta)}` : rankDelta > 0 ? `-${rankDelta}` : "0";
-    return {
-      arrow,
-      colorClass,
-      signedRank,
-      short: driver.short,
-      long: driver.long,
-      pysDeltaLabel: pysDelta != null ? formatSignedPysDelta(pysDelta) : null,
-    };
-  }, [rankAttribution]);
+  const rankChip = useMemo(() => buildRankChangeChipDisplay(row.rankChangeAttribution), [row.rankChangeAttribution]);
   const pysNullReasonText =
     row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
   const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
@@ -320,10 +188,7 @@ function YieldLeaderboardTableRowBase({
     </Tooltip>
   ) : null;
 
-  // WHY: ω3 adds cohortPercentile to YieldViewModelRow concurrently; consume via local
-  // assertion so this commit compiles regardless of merge order.
-  const cohortPercentile = (row as { cohortPercentile?: CohortPercentile }).cohortPercentile ?? null;
-  const cohortChipNode = renderCohortChip(cohortPercentile);
+  const cohortChipNode = <YieldCohortChip cohort={row.cohortPercentile} />;
 
   const pysCell = row.pharosYieldScore !== null ? (
     <span className="inline-flex items-center gap-1">
@@ -707,7 +572,7 @@ function YieldLeaderboardTableRowBase({
         <TableRow id={`yield-row-${row.id}-details`}>
           <TableCell colSpan={columnCount} className="bg-muted/30 px-4 py-4">
             {row.pharosYieldScore !== null ? (
-              <WhyPysStrip
+              <YieldWhyPysStrip
                 benchmarkSpread={benchmarkSpread}
                 benchmarkLabel={row.benchmarkLabel}
                 stabilityPct={stabilityPct}

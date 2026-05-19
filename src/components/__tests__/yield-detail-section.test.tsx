@@ -336,40 +336,6 @@ describe("YieldDetailSection", () => {
     expect(sourcesParam).toBe("");
   });
 
-  it("renders the cohort percentile label in the PYS stat card", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          ...({ cohortPercentile: { value: 64, cohortSize: 18, cohortKey: "USD:lending-vault" } } as Partial<YieldRanking>),
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
-
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
-
-    expect(screen.getByText("Percentile 64 in 18 Native peers")).toBeTruthy();
-  });
-
-  it("renders the small-peer-set label when cohortPercentile.value is null", () => {
-    useYieldRankingsMock.mockReturnValue({
-      data: makeResponse([
-        makeRanking({
-          ...({ cohortPercentile: { value: null, cohortSize: 4, cohortKey: "EUR:lending-vault" } } as Partial<YieldRanking>),
-        }),
-      ]),
-      meta: null,
-      error: null,
-      isLoading: false,
-    });
-
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
-
-    expect(screen.getByText("Small peer set")).toBeTruthy();
-  });
-
   it("limits the chart source selection to four alternatives", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
