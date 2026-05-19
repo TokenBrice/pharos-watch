@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.16",
+    title: "NAV Metadata Fixes + cgUSD/USDN Rate Proxies",
+    date: "2026-05-19",
+    effectiveAt: 1779210000,
+    summary:
+      "Fixes FPI, SILK, and ISC NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for cgUSD and USDN.",
+    impact: [
+      "`fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` now carry the NAV-token metadata needed to route through price-derived NAV-appreciation coverage instead of appearing as yield coverage gaps",
+      "`cgusd-cygnus-finance` gains a rate-derived T-bill proxy source modeled net of its 0.35% protocol fee",
+      "`usdn-noble` gains a rate-derived M0 T-bill rebase proxy source with no configured spread",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records corrected coverage routing and source-roster expansion",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.15",
     title: "Etherfuse CETES APY Source + MXN Benchmark Fallback",
     date: "2026-05-19",

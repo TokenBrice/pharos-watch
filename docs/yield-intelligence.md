@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.15`
+- **Current methodology version:** `v8.16`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.16 fixes `fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for `cgusd-cygnus-finance` and `usdn-noble`.
 
 Yield v8.15 gives `cetes-etherfuse` a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance rate. This replaces the selected USD price-derived NAV fallback when Etherfuse is reachable, so MXN/USD FX movement is no longer interpreted as CETES yield. The MXN benchmark still prefers Banxico SIE `SF43936`, but when `BANXICO_TOKEN` is missing or Banxico fails, the daily benchmark cron can use the Etherfuse CETES current issuance rate as an explicit degraded proxy fallback (`isFallback: true`, `isProxy: true`).
 
@@ -33,6 +35,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - dTRINITY dUSD now publishes sdUSD yield from a curated TVL-weighted DeFiLlama pool group across the Ethereum and Fraxtal dStake vaults, with a new source key so Ethereum-only history is not treated as equivalent
 - `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, and `savUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, and `avUSD`
 - Solayer `sUSD` now has rate-derived Treasury fallback coverage through the yield manifest, while newly added reward-bearing account or restricted strategy assets stay out of runtime yield until a reliable APY source is wired
+- `cgusd-cygnus-finance` and `usdn-noble` now have rate-derived proxy coverage through the yield manifest
 - Parent-side wrapper history for those five base assets is filtered immediately from `/api/yield-history` and purged on the hourly sync path, so the post-handoff discontinuity is explicit rather than silently grandfathered
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
 - Risk-bearing wrappers with materially different holder exposure now own their yield rows directly when they are tracked as separate assets: `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` no longer publish through their base stablecoin rows
@@ -262,7 +265,7 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 ### Tier 4: Rate-Derived APY
 
-For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints) and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
+For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints), rebase proxies, and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
 
 ```
 apy = max(0, benchmarkRate - spreadBps / 100)
@@ -275,9 +278,11 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | Token | Spread (bps) | Rationale |
 | ----- | ------------ | --------- |
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
+| cgUSD | 35 | Cygnus Finance T-bill proxy, net of 0.35% protocol fee |
 | USYC | 50 | Hashnote fund, modeled as ~10% performance fee at a 5% T-bill baseline |
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
+| USDN | 0 | Noble M0 T-bill rebase proxy |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
 | BENJI | 20 | Franklin Templeton FOBXX gov MMF, 0.20% mgmt fee |
 | WTGXX | 25 | WisdomTree Government MMF Digital Fund, 0.25% mgmt fee |
@@ -757,8 +762,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.13",
-    "currentVersion": "8.13",
+    "version": "8.16",
+    "currentVersion": "8.16",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

@@ -1,6 +1,15 @@
 # Yield Intelligence Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.15` (2026-03-01 -> 2026-05-19).
+Internal changelog reconstructed from git history. Covers Yield Intelligence `v1.0` through `v8.16` (2026-03-01 -> 2026-05-19).
+
+---
+
+## v8.16 - NAV Metadata Fixes + cgUSD/USDN Rate Proxies (May 19, 2026)
+
+- FPI, SILK, and ISC NAV-token metadata now routes those assets through NAV-appreciation coverage instead of leaving them as yield coverage gaps
+- `cgusd-cygnus-finance` now has rate-derived proxy coverage modeled against the USD T-bill benchmark net of a 0.35% protocol fee
+- `usdn-noble` now has rate-derived proxy coverage through an M0 T-bill rebase proxy with no configured spread
+- PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; v8.16 is a coverage-routing and source-roster update
 
 ---
 
