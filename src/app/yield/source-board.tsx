@@ -1,10 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { formatPercent } from "@shared/lib/format";
 import { YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type {
+  YieldBenchmarkMeta,
+  YieldBenchmarkRegistry,
+  YieldSafetySnapshotMeta,
+  YieldSourceInputMeta,
+} from "@shared/types";
 import type {
   YieldSourceBoardGroup,
   YieldSourceBoardModel,
@@ -12,7 +23,14 @@ import type {
 
 interface YieldSourceBoardProps {
   model: YieldSourceBoardModel;
+  benchmarks?: YieldBenchmarkRegistry | null;
+  poolInputMeta?: YieldSourceInputMeta | null;
+  safetySnapshot?: YieldSafetySnapshotMeta | null;
 }
+
+const YIELD_BEARING_COIN_INDEX = TRACKED_STABLECOINS
+  .filter((coin) => coin.flags?.yieldBearing)
+  .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
 function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
@@ -73,7 +91,93 @@ function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
   );
 }
 
-export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
+function getBenchmarkChips(
+  benchmarks: YieldBenchmarkRegistry | null | undefined,
+): Array<{ key: string; label: string; rate: number; recordDate: string | null }> {
+  if (!benchmarks) return [];
+  return Object.values(benchmarks)
+    .filter((b): b is YieldBenchmarkMeta => b != null)
+    .map((b) => ({
+      key: b.key ?? b.label ?? b.currency ?? "USD",
+      label: getYieldBenchmarkDisplayLabel(b),
+      rate: b.rate,
+      recordDate: b.recordDate,
+    }));
+}
+
+function formatPoolInputAge(meta: YieldSourceInputMeta): string {
+  if (meta.ageSeconds != null) return `Pool input age ${Math.round(meta.ageSeconds / 60)}m`;
+  if (meta.fallbackMode) return `Pool input: ${meta.fallbackMode}`;
+  return "Pool input age unavailable";
+}
+
+function formatPoolInputMode(meta: YieldSourceInputMeta): string {
+  if (meta.mode === "dex-cache") return "DEX-sync cached DeFiLlama pools";
+  if (meta.mode === "direct-fetch") return "Direct DeFiLlama pool fetch";
+  return "DeFiLlama pool input unavailable";
+}
+
+function TrustBand({
+  benchmarks,
+  poolInputMeta,
+  safetySnapshot,
+}: {
+  benchmarks: YieldBenchmarkRegistry | null | undefined;
+  poolInputMeta: YieldSourceInputMeta | null | undefined;
+  safetySnapshot: YieldSafetySnapshotMeta | null | undefined;
+}) {
+  const benchmarkChips = getBenchmarkChips(benchmarks);
+  if (benchmarkChips.length === 0 && !poolInputMeta && !safetySnapshot) return null;
+  const safetyPct = safetySnapshot ? Math.round(safetySnapshot.coverageRatio * 100) : null;
+
+  return (
+    <div className="mb-3 space-y-2">
+      <p className="pharos-kicker">Provenance</p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+        {benchmarkChips.map((chip) => (
+          <span
+            key={chip.key}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
+          >
+            <span className="text-muted-foreground">{chip.label}</span>
+            <span className="font-mono tabular-nums text-foreground">{formatPercent(chip.rate)}</span>
+            {chip.recordDate ? (
+              <span className="text-muted-foreground/80">as of {chip.recordDate}</span>
+            ) : null}
+          </span>
+        ))}
+        {poolInputMeta ? (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
+            title={formatPoolInputMode(poolInputMeta)}
+          >
+            <span className="text-muted-foreground">{formatPoolInputAge(poolInputMeta)}</span>
+          </span>
+        ) : null}
+        {safetySnapshot && safetyPct !== null ? (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/60 px-2 py-0.5"
+            title={
+              safetySnapshot.kind === "ok"
+                ? "Confidence-weighted source arbitration active"
+                : safetySnapshot.reason ?? "Safety snapshot degraded"
+            }
+          >
+            <span className="font-mono tabular-nums text-foreground">{safetyPct}%</span>
+            <span className="text-muted-foreground">scored</span>
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function YieldSourceBoard({
+  model,
+  benchmarks,
+  poolInputMeta,
+  safetySnapshot,
+}: YieldSourceBoardProps) {
   if (model.representedSourceCount === 0) return null;
 
   return (
@@ -84,6 +188,11 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
       >
         <div className="pharos-panel-header flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
+            <TrustBand
+              benchmarks={benchmarks}
+              poolInputMeta={poolInputMeta}
+              safetySnapshot={safetySnapshot}
+            />
             <p className="pharos-kicker">Yield Sources</p>
             <h2 id="yield-source-board-heading" className="text-lg font-semibold tracking-tight text-foreground">
               Source mix in the current view
@@ -117,6 +226,28 @@ export function YieldSourceBoard({ model }: YieldSourceBoardProps) {
             <SourceLaneRow key={group.key} group={group} />
           ))}
         </ul>
+
+        <div className="border-t border-border/60 px-4 py-3 sm:px-5">
+          <p className="pharos-kicker mb-2">Per-coin yield analysis</p>
+          <ul className="flex flex-wrap gap-x-3 gap-y-1.5 text-sm">
+            {YIELD_BEARING_COIN_INDEX.map((coin) => (
+              <li key={coin.id}>
+                <Link
+                  href={`${buildStablecoinUrl(coin.id)}yield/`}
+                  className="pharos-focus-ring rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {coin.symbol}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="border-t border-border/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-5">
+          The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
+          figures blend deterministic on-chain, benchmark-derived, DeFiLlama, and price-derived sources with
+          confidence-aware arbitration. Past yields do not guarantee future returns.
+        </p>
       </section>
     </TooltipProvider>
   );
