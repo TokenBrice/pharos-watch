@@ -39,8 +39,8 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "6c5a9293a796776adfcef934382ba61898ea3d3d9d33dc72f126b0141d947c64",
-      "textLength": 29186
+      "textHash": "acd90c1c36c882189df84a13662c31143f90a3f2ff55045710d48414cd556753",
+      "textLength": 29807
     },
     {
       "filename": "liquidity-score-v5.6.pdf",
@@ -63,14 +63,14 @@
       "textLength": 16478
     },
     {
-      "filename": "pricing-pipeline-v6.03.pdf",
+      "filename": "pricing-pipeline-v6.04.pdf",
       "key": "pricing-pipeline",
       "path": "/methodology/pricing-pipeline-changelog/",
       "title": "Pricing Pipeline Changelog",
-      "version": "6.03",
-      "urn": "urn:pharos:methodology:pricing-pipeline@v6.03",
-      "textHash": "18ecddaa1f9697d237f5283ac67a9aeb558931403574e4b014e26861b697d589",
-      "textLength": 57154
+      "version": "6.04",
+      "urn": "urn:pharos:methodology:pricing-pipeline@v6.04",
+      "textHash": "a51ad3b6c02c7cc1710caf329dfd6d4504f80d21759d84b668d81cf82863b14d",
+      "textLength": 57762
     },
     {
       "filename": "scoring-v7.25.pdf",
@@ -93,14 +93,14 @@
       "textLength": 6643
     },
     {
-      "filename": "yield-v8.13.pdf",
+      "filename": "yield-v8.15.pdf",
       "key": "yield",
       "path": "/methodology/yield-changelog/",
       "title": "Yield Intelligence Changelog",
-      "version": "8.13",
-      "urn": "urn:pharos:methodology:yield@v8.13",
-      "textHash": "39f441ab38ea279f77f295032bd7dd9120d56c47f921aaf6aeb71b1a77854f53",
-      "textLength": 48029
+      "version": "8.15",
+      "urn": "urn:pharos:methodology:yield@v8.15",
+      "textHash": "3019236a3d11df7bf30e89b2524a0720710bdb13ee7790ddb07059abe0e5e634",
+      "textLength": 49396
     }
   ]
 }
