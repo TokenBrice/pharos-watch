@@ -11,6 +11,7 @@ import {
   ReferenceDot,
 } from "recharts";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { PysHistorySparkline, type PysHistorySparklinePoint } from "@/components/pys-history-sparkline";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import {
   BRAND_ACCENT,
   DEFAULT_DAYS,
   formatChartNumber,
+  toTimestampMs,
   type YieldHistoryChartProps,
   useYieldHistoryChartModel,
 } from "./yield-history-chart-model";
@@ -75,6 +77,15 @@ export function YieldHistoryChart({
     .sort((a, b) => b.ratio - a.ratio)
     .slice(0, MAX_SPIKE_MARKERS);
   const chartHeightClass = compact ? "h-[200px]" : "h-[300px]";
+  /* Map raw history points to the sparkline shape. We read directly from the
+     query payload (not model.chartData) because the model's mapper omits the
+     optional pysAtPublish field. */
+  const pysSparklinePoints: PysHistorySparklinePoint[] = (model.historyQuery.data?.history ?? [])
+    .map((point) => ({
+      ts: toTimestampMs(point.date),
+      pysAtPublish: point.pysAtPublish ?? null,
+    }))
+    .filter((point) => Number.isFinite(point.ts));
   const sourceSegments = model.sourceSegments;
   const distinctSourceCount = new Set(sourceSegments.map((segment) => segment.sourceKey)).size;
   const showSourceStrip = distinctSourceCount > 1 && sourceSegments.length > 0;
@@ -338,6 +349,11 @@ export function YieldHistoryChart({
             <ChartSkeleton className={cn("w-full rounded-xl", chartHeightClass)} />
           )}
         </div>
+        {compact ? (
+          <div className="mt-2 border-t border-border/40 pt-2">
+            <PysHistorySparkline history={pysSparklinePoints} />
+          </div>
+        ) : null}
       </ChartShell>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
         <div className="flex flex-wrap items-center gap-2">

@@ -225,6 +225,11 @@ export interface YieldHistoryPoint {
   sourceSwitch?: boolean;
   publicationGenerationId?: string | null;
   sourceRisk?: YieldSourceRisk | null;
+  /* Optional historical PYS snapshots captured at the row's publish time.
+     Nullable + optional so older rows (before BE persistence shipped) parse cleanly. */
+  pysAtPublish?: number | null;
+  safetyAtPublish?: number | null;
+  varianceAtPublish?: number | null;
 }
 
 const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
@@ -244,6 +249,9 @@ const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
   sourceSwitch: z.boolean().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   sourceRisk: z.lazy(() => YieldSourceRiskSchema).nullable().optional(),
+  pysAtPublish: z.number().nullable().optional(),
+  safetyAtPublish: z.number().nullable().optional(),
+  varianceAtPublish: z.number().nullable().optional(),
 });
 
 const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.object({
