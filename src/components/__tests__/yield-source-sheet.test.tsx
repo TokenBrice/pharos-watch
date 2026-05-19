@@ -342,4 +342,78 @@ describe("YieldSourceSheet", () => {
       expect(screen.getByText(label)).toBeTruthy();
     }
   });
+
+  it("renders a rejection-hint chip on retained alternates when populated", () => {
+    const onOpenChange = vi.fn();
+    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...base,
+          dataSource: "defillama",
+          sourceTvlUsd: 10_000_000,
+          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+          altSources: [
+            {
+              sourceKey: "alt-usdc",
+              yieldSource: "usdc-alt",
+              yieldSourceUrl: null,
+              yieldType: "lending-vault",
+              currentApy: 0.04,
+              apy30d: 0.04,
+              sourceTvlUsd: 10_000_000,
+              dataSource: "defillama",
+              sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
+            },
+          ],
+        } as unknown as YieldRanking}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByText("thinner")).toBeTruthy();
+  });
+
+  it("does not render a rejection-hint chip when rejectionHint is null", () => {
+    const onOpenChange = vi.fn();
+    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...base,
+          dataSource: "defillama",
+          sourceTvlUsd: 10_000_000,
+          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+          altSources: [
+            {
+              sourceKey: "alt-usdc",
+              yieldSource: "usdc-alt",
+              yieldSourceUrl: null,
+              yieldType: "lending-vault",
+              currentApy: 0.04,
+              apy30d: 0.04,
+              sourceTvlUsd: 10_000_000,
+              dataSource: "defillama",
+              sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+            },
+          ],
+        } as unknown as YieldRanking}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.queryByText("thinner")).toBeNull();
+    expect(screen.queryByText("stale")).toBeNull();
+    expect(screen.queryByText("rewards-only")).toBeNull();
+    expect(screen.queryByText("lower-conf")).toBeNull();
+    expect(screen.queryByText("smaller")).toBeNull();
+  });
 });

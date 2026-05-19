@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldSourceLink } from "@/components/yield-source-link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -71,6 +72,7 @@ function YieldSourceSheetBody({
       side="right"
       className="sm:max-w-md overflow-y-auto"
     >
+      <TooltipProvider>
       <SheetHeader>
         <div className="flex items-center gap-3">
           <StablecoinLogo src={logo} name={ranking.name} size={32} />
@@ -226,6 +228,18 @@ function YieldSourceSheetBody({
                             {formatCurrency(source.sourceTvlUsd)}
                           </span>
                         )}
+                        {source.rejectionHint && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="rounded-full border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-[10px] text-slate-700 dark:text-slate-300">
+                                {source.rejectionHint.label}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="text-[11px]">
+                              Likely reason {source.rejectionHint.code}: {source.rejectionHint.description}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                     </button>
                   );
@@ -282,6 +296,7 @@ function YieldSourceSheetBody({
           View full dossier &rarr;
         </Link>
       </SheetFooter>
+      </TooltipProvider>
     </SheetContent>
   );
 }
