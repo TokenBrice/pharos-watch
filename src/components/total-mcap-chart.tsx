@@ -15,7 +15,7 @@ import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
-import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
+import { buildTotalMcapChartRows, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
 export function TotalMcapChart() {
@@ -24,10 +24,10 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
-  const { data: usdtHistory } = useSupplyHistory("usdt-tether");
-  const { data: usdcHistory } = useSupplyHistory("usdc-circle");
-  const { data: usdsHistory } = useSupplyHistory("usds-sky");
-  const { data: daiHistory } = useSupplyHistory("dai-makerdao");
+  const { data: usdtHistory } = useSupplyHistory("usdt-tether", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: usdcHistory } = useSupplyHistory("usdc-circle", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: usdsHistory } = useSupplyHistory("usds-sky", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: daiHistory } = useSupplyHistory("dai-makerdao", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const chartData = useMemo(() => {

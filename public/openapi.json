@@ -1598,7 +1598,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1825
+              "maximum": 5000
             }
           }
         ],

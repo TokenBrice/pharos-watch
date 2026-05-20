@@ -1361,7 +1361,7 @@ Freshness headers are emitted from the latest completed `snapshot-supply` run wh
 
 | Param  | Type      | Default | Bounds | Description             |
 | ------ | --------- | ------- | ------ | ----------------------- |
-| `days` | `integer` | `365`   | 1–1825 | Lookback window in days |
+| `days` | `integer` | `365`   | 1–5000 | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 

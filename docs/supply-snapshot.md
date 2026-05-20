@@ -174,7 +174,7 @@ Do not assume `18` decimals, or even one fixed decimal count per token across al
 | Param | Required | Default | Constraints |
 |-------|----------|---------|-------------|
 | `stablecoin` | Yes | --- | Canonical Pharos stablecoin ID |
-| `days` | No | 365 | Min 1, max 1825 (5 years requested). Older dates depend on how much archival history has been ingested into `supply_history` through the cron plus admin backfills. |
+| `days` | No | 365 | Min 1, max 5000. Older dates depend on how much archival history has been ingested into `supply_history` through the cron plus admin backfills. |
 
 ```sql
 SELECT snapshot_date, circulating_usd, price

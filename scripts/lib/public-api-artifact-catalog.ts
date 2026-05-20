@@ -140,7 +140,7 @@ export const DEX_LIQUIDITY_HISTORY_DAYS_PARAM = {
 export const SUPPLY_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 1825 },
+  schema: { type: "integer", minimum: 1, maximum: 5000 },
   description: "Historical lookback window in days. Defaults to 365.",
 } as const satisfies PublicApiArtifactParameter;
 
