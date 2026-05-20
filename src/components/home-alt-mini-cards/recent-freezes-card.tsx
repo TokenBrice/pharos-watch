@@ -144,7 +144,7 @@ export function RecentFreezesCard(): React.JSX.Element {
     offset: 0,
   });
   const { data: logos } = useLogos();
-  const logoMap = logos ?? {};
+  const logoMap = useMemo(() => logos ?? {}, [logos]);
 
   const agg = useMemo(() => {
     const events = eventsQuery.data?.events ?? [];
