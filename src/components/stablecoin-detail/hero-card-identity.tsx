@@ -45,7 +45,7 @@ function MechanismChip({ coin }: { coin: StablecoinMeta }) {
     <Link
       href={getMechanismExplainerPath(archetype)}
       aria-label={`Learn how ${getMechanismArchetypeCtaNoun(archetype)} stablecoins work`}
-      className="pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+      className="pharos-focus-ring inline-flex min-h-6 items-center rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
     >
       {getMechanismArchetypeLabel(archetype)}
     </Link>
