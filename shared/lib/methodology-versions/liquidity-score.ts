@@ -6,7 +6,7 @@ import { LIQUIDITY_SCORE_V5 } from "../../data/methodology-changelogs/liquidity-
 import { createMethodologyVersion } from "./base";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "5.6",
+  currentVersion: "5.7",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
     ...LIQUIDITY_SCORE_V5,

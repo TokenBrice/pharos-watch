@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.7",
+    title: "Peg-aware staged discovery price gate",
+    date: "2026-05-20",
+    effectiveAt: 1779235200,
+    summary:
+      "Secondary discovery pools now need a plausible tracked-token price before their TVL can be staged or merged into Liquidity Score aggregates.",
+    impact: [
+      "CoinGecko Onchain and GeckoTerminal pool rows whose tracked-token price fails the existing peg-aware DEX observation sanity gate are rejected before staging",
+      "Already-staged rows with implausible tracked-token prices are skipped during scoring merge, so malformed discovery rows cannot inflate coin or global TVL until their staging TTL expires",
+      "Carbon DeFi chain-suffixed secondary-source ids now normalize to the DefiLlama `carbon-defi` protocol cap, adding a cap-level backstop for Carbon rows",
+      "Rows without a measured token price still flow through the existing TVL, volume, dedupe, protocol-cap, and retained-pool quality gates",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.6",
     title: "Staged discovery TVL sanity ceiling",
     date: "2026-05-07",

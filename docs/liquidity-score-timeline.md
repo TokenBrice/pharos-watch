@@ -1,6 +1,15 @@
 # Liquidity Score Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.6` (2026-02-19 -> 2026-05-07).
+Internal changelog reconstructed from git history. Covers Liquidity Score `v1.0` through `v5.7` (2026-02-19 -> 2026-05-20).
+
+---
+
+## v5.7 - Peg-aware staged discovery price gate (May 20, 2026)
+
+- Secondary discovery pools with a measured tracked-token price now need that price to pass the existing peg-aware DEX observation sanity gate before their TVL can be staged or merged
+- The scoring merge applies the same price gate to already-staged rows, so malformed CoinGecko Onchain / GeckoTerminal rows cannot inflate coin-level or global TVL while waiting for staging TTL cleanup
+- Carbon DeFi chain-suffixed secondary-source ids now normalize to the DefiLlama `carbon-defi` protocol cap, adding a cap-level backstop for Carbon rows
+- Rows without a measured token price still flow through the existing TVL sanity ceiling, volume/TVL ratio, dedupe, protocol-cap, and retained-pool quality gates
 
 ---
 

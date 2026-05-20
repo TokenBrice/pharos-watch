@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.6`
+- **Current methodology version:** `v5.7`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Version timeline:** [liquidity-score-timeline.md](./liquidity-score-timeline.md)
@@ -66,7 +66,7 @@ After pool filtering and protocol-level TVL caps are applied, the scorer rebuild
 
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
-Staged rows with non-finite, negative, or impossible pool TVL above the discovery sanity ceiling are rejected before persistence and skipped again at scoring merge time. This prevents one malformed secondary-source reserve field from poisoning global TVL or CPU-heavy downstream diagnostics.
+Staged rows with non-finite, negative, or impossible pool TVL above the discovery sanity ceiling are rejected before persistence and skipped again at scoring merge time. Secondary-source rows with a measured tracked-token price must also pass the same peg-aware DEX observation sanity gate used for price publication before their TVL can be staged or merged. Carbon DeFi chain-suffixed provider ids also normalize to the DefiLlama `carbon-defi` protocol cap. These gates prevent one malformed secondary-source reserve or token-price field from poisoning coin-level TVL, global TVL, or CPU-heavy downstream diagnostics.
 
 Shared source-specific helpers now own the duplicate discovery/liquidity normalization rules:
 
