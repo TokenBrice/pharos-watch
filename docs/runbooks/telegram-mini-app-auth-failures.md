@@ -26,11 +26,12 @@ Read the per-outcome event split:
 SELECT
   day,
   outcome,
-  COUNT(*) AS events
+  failure_class,
+  SUM(count) AS events
 FROM telegram_usage_daily
 WHERE event_type = 'mini_app_session_invalid'
   AND day >= date('now', '-7 days')
-GROUP BY day, outcome
+GROUP BY day, outcome, failure_class
 ORDER BY day DESC, events DESC;
 ```
 

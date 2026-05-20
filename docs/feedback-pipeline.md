@@ -228,6 +228,7 @@ User-supplied strings are normalized before the GitHub write:
 | `500` | `{"error": "Failed to submit feedback. Please try again."}` | GitHub API error |
 | `503` | `{"error": "Service misconfigured"}` | `FEEDBACK_IP_SALT` missing |
 | `503` | `{"error": "Feedback service temporarily unavailable"}` | `GITHUB_PAT` not configured |
+| `503` | `{"error": "Feedback service temporarily unavailable. Please try again.", "retryAfterSec": 60}` | Rate-limit dependency / D1 unavailable |
 
 ---
 

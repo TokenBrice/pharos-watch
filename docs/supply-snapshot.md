@@ -37,12 +37,12 @@ The snapshot does **not** call upstream APIs or on-chain RPCs. DefiLlama remains
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
    - Build `INSERT OR REPLACE` statement
-7. Check the cooldown guard:
+7. Check the cooldown guard before building write statements:
    - read cache key `snapshot-supply:last-write`
    - if the previous successful write is < 20 hours old, skip with `reason: "cooldown_active"` (one snapshot per UTC day; 20h tolerates clock drift without skipping a day)
-8. Data quality check: warn if fewer than 80% of expected coins have valid data
+8. Data quality check: block writes if fewer than 80% of expected coins have valid data (`reason: "partial_snapshot_blocked"`)
 9. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
-10. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
+10. If zero rows were prepared after passing the 80% guard, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`; with the current non-empty PSI-eligible set this is not normally reachable because zero rows hit `partial_snapshot_blocked` first
 11. Update cache key `snapshot-supply:last-write`
 12. Log item count and date
 
@@ -245,7 +245,8 @@ The compare data model fetches per-coin `/api/supply-history` series directly th
 | `loadStablecoinsCache()` returns `kind !== "ok"` | Return degraded with the loader reason (`missing-cache`, `json-parse-failed`, `invalid-payload-shape`, `missing-pegged-assets`, or `legacy-array-not-allowed`) |
 | Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
 | Successful write < 20 hours ago | Skip write (`reason: "cooldown_active"`) |
-| 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
+| 0 prepared rows with a non-empty expected PSI set | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) via the 80% guard |
+| 0 prepared rows after passing the 80% guard | Return degraded (`reason: "all_coins_zero_supply"`); not normally reachable while the expected PSI set is non-empty |
 | < 80% of tracked coins have valid data | Return degraded without writing rows (`reason: "partial_snapshot_blocked"`) |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
 

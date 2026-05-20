@@ -32,7 +32,7 @@ Primary audience:
 
 The page renders through `FeaturePageShell` with `breadcrumbName="Timeline"`, `path="/timeline/"`, title `Timeline`, and the lead paragraph authored in `src/app/timeline/page.tsx`.
 
-Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, and the default shared page-metadata helper path. The OG image falls back to the static `/og-card.png`; a dynamic `/api/og/timeline` generator is reserved but not yet shipped.
+Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, static OG image `${SITE_URL}/og-timeline.png`, and the default shared page-metadata helper path. No dynamic `/api/og/timeline` generator exists.
 
 ---
 

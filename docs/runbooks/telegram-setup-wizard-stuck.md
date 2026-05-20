@@ -7,15 +7,15 @@ Users report that the `/start` setup wizard does not progress: tapping a branch 
 Detection signals:
 
 - Users open `/start`, tap a branch button, and see no state change in the chat.
-- The chat is on a fresh slash command but the dispatcher emits "pending action found" because a stale `telegram_pending_disambiguation` row with `action_type = "setup-step"` exists past its TTL.
+- The chat is on a fresh slash command but the dispatcher behaves as if a non-expired `telegram_pending_disambiguation` row with `action_type = "setup-step"` still owns the flow.
 - The chat has no other pending state (no bulk confirm, no ticker disambiguation), but `/cancel` is the only way to clear the wizard.
 
-The wizard persists state in `telegram_pending_disambiguation` with `action_type = "setup-step"` and a 5-minute TTL. Expired rows should be swept by the `telegram-disambiguation-cleanup` job on the 5-minute Telegram cron slot, but if the cleanup pass fails or a row sticks past its `expires_at`, the user remains visibly stuck.
+The wizard persists state in `telegram_pending_disambiguation` with `action_type = "setup-step"` and a 5-minute TTL. Ingress ignores expired rows; the scheduled `telegram-disambiguation-cleanup` job removes them only after an additional grace window so cleanup does not race slow users.
 
 ## Quick Diagnostic Checklist
 
 1. **Is the cleanup pass running?** `crons["telegram-disambiguation-cleanup"].lastRun` should be recent (within the 5-minute slot). The pass emits `disambiguationRowsCleaned` in its metadata.
-2. **Is the row genuinely stale?** A row with `expires_at < unixepoch()` should be ignored by the wizard, but if Ingress is gated on the row's presence rather than freshness, the wizard appears stuck.
+2. **Is the row genuinely still active?** A row with `expires_at < unixepoch()` should be ignored by the wizard. Active rows (`expires_at > unixepoch()`) can still own the setup flow until they expire or `/start` clears them.
 3. **Is the user spamming `/start`?** Each `/start` clears wizard state and re-issues the intro, so a single stuck user is usually a stale row, not a race.
 
 ## Operator Commands
@@ -26,7 +26,7 @@ Find stuck setup-step rows:
 SELECT chat_id, action_type, expires_at, action_payload
 FROM telegram_pending_disambiguation
 WHERE action_type = 'setup-step'
-  AND expires_at < unixepoch()
+  AND expires_at < unixepoch() - 600
 ORDER BY expires_at ASC;
 ```
 
@@ -54,7 +54,7 @@ worker/src/api/telegram-webhook-setup.ts
    DELETE FROM telegram_pending_disambiguation
    WHERE chat_id = '<chat_id>'
      AND action_type = 'setup-step'
-     AND expires_at < unixepoch();
+     AND expires_at < unixepoch() - 600;
    ```
 
    Use `wrangler d1 execute` with the Worker D1 binding. This is the same cleanup the scheduled pass performs; running it manually is safe and idempotent.

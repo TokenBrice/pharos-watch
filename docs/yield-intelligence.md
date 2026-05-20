@@ -1035,7 +1035,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/app/yield/source-board-model.ts`                | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks |
 | `src/app/yield/source-board.tsx`                     | Compact `/yield` source-provenance board rendered before the scatter                                                                         |
-| `src/app/stablecoin/[id]/yield/page.tsx`             | SSG per-coin yield-analysis wrapper for yield-bearing stablecoins only                                                                       |
+| `src/app/stablecoin/[id]/yield/page.tsx`             | SSG per-coin yield-analysis wrapper for every non-pre-launch tracked stablecoin; the client renders an empty state when no live yield row exists |
 | `src/app/stablecoin/[id]/yield/client.tsx`           | Interactive per-coin yield-analysis surface with APY history, warning timeline, and source-switch history                                    |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |

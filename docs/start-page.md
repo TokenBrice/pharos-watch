@@ -54,9 +54,10 @@ Unlike the homepage, `/start/` is a guided long-form route with standard breadcr
 
 The goal/glossary/atlas/shortcut content lives in `src/lib/start-here-content.ts`. The route-local PharosVille companion block is authored directly in `src/components/start-here-page.tsx` because it is presentation-specific and not part of the reusable route registry.
 
-The page consumes four exported datasets:
+The page consumes five exported datasets:
 
 - `START_HERE_GOALS`
+- `START_HERE_SCORES`
 - `START_HERE_GLOSSARY`
 - `START_HERE_ATLAS`
 - `START_HERE_SHORTCUTS`
@@ -70,11 +71,12 @@ These are the canonical source of truth for the route destinations, copy, and gr
 `StartHerePage` renders sections in this order:
 
 1. Hero route deck
-2. `How to read Pharos` glossary section
-3. `Feature atlas` section
-4. `Power moves` shortcuts section
-5. `Sister tool: PharosVille`
-6. Closing CTA with `Open the dashboard` and `Browse the directory` links
+2. `How Pharos scores risk` scores section
+3. `How to read Pharos` glossary section
+4. `Feature atlas` section
+5. `Power moves` shortcuts section
+6. `Sister tool: PharosVille`
+7. Closing CTA with `Open the dashboard` and `Browse the directory` links
 
 ### Hero route deck
 

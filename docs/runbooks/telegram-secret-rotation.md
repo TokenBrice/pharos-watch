@@ -21,7 +21,7 @@ Rotate Telegram secrets one at a time. The webhook secret supports a short overl
 
 1. Create the replacement token in BotFather. Do not revoke the old token until the new Worker is ready.
 2. Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the current token as an operator marker, then set `TELEGRAM_BOT_TOKEN` to the new token.
-3. Deploy the Worker. This invalidates existing Mini App `initData`; users with an open Mini App may need to relaunch it before mutations work.
+3. Deploy the Worker. During the `TELEGRAM_BOT_TOKEN_PREVIOUS` overlap, Mini App `initData` signed with the old token remains valid subject to the normal 24-hour read and 5-minute mutation freshness windows. Old-token `initData` is invalidated once the previous token is not configured or is removed.
 4. Verify:
 
    ```bash

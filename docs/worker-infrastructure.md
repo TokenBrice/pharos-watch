@@ -164,7 +164,7 @@ Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions)
 ### Public API Auth and Rate Limiting
 
 - `worker/src/handlers/http/gates.ts` checks the request lane in this order: `ops-api` Access auth, `site-api` shared-secret auth, then public `/api/*` key auth or explicit public exemptions.
-- Admin and admin-like `/api/*` path families are denied on the public lane before public API-key auth or exemption handling. This includes malformed children of operator roots such as `/api/api-keys/*`, `/api/api-key-requests-admin/*`, and `/api/status/*`; valid Access-authenticated `ops-api.pharos.watch` admin requests keep their normal route behavior.
+- Registered admin `/api/*` paths and configured admin-like root families are denied on the public lane before public API-key auth or exemption handling. This includes malformed children of configured roots such as `/api/api-keys/*`, `/api/api-key-requests-admin/*`, and `/api/discovery-candidates/*`; valid Access-authenticated `ops-api.pharos.watch` admin requests keep their normal route behavior.
 - Public `/api/*` routes accept `X-API-Key` tokens in the format `ph_live_<16 hex prefix>_<32 char base64url secret>`.
 - Valid keys are verified from the D1-backed `api_keys` table using `key_prefix` lookup plus an HMAC-SHA256 secret hash with `API_KEY_HASH_PEPPER`.
 - Valid keyed requests use the D1-backed `api_key_rate_limit` table with the per-key threshold stored in `api_keys.rate_limit_per_minute` (default `120/min`, self-serve `30/min`).
@@ -249,7 +249,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 | Archive  | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                   |
 | Immutable snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | dated public snapshot payloads and per-stablecoin projections (`/api/snapshots/:date.json`, `/api/snapshot/:date/stablecoin/:id`) |
 
-Admin `GET` routes are also forced to `Cache-Control: no-store` by `addAdminGetNoStoreHeader()` in `worker/src/router.ts`.
+Admin `GET` routes are forced to `Cache-Control: no-store` either by `addAdminGetNoStoreHeader()` in `worker/src/router.ts` for registry-dispatched routes or by the admin route wrapper for dynamic admin handlers.
 
 ### D1 Read Snapshots And Pagination
 

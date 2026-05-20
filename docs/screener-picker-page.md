@@ -18,7 +18,7 @@ The Picker flips the Screener relationship: instead of filtering the full univer
 - **Editorial templates:** `shared/lib/selector/what-to-watch-templates.ts`, `shared/lib/selector/why-keys.ts` (engine agent; banned-phrase lint applies)
 - **Entry callout:** `src/components/selector/selector-callout.tsx`, rendered from `src/app/screener/client.tsx`
 
-The route shell is intentionally `noindex,follow` and uses canonical `/screener/picker/`. It is omitted from the sitemap.
+The route shell is intentionally `noindex,follow` via route metadata and uses canonical `/screener/picker/`. It is omitted from the sitemap; no `_headers` noindex rule owns this route.
 
 ---
 
@@ -73,7 +73,7 @@ Browser-local state is intentionally split by lifetime. There is no long-lived l
 | Key / surface | Type | Lifecycle |
 | --- | --- | --- |
 | `pharos.selector.callout.v1` | `localStorage` JSON | Callout dismissal state. Survives reloads; clears on site-data clear. |
-| `pharos.selector.lastResult.v1` or equivalent | `sessionStorage` JSON | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear. |
+| `pharos.selector.sessionResult.v1` | `sessionStorage` JSON | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear. |
 | `s:{sid}` | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. 5-year TTL. |
 
 Storage layer is best-effort; quota errors are silently dropped. Session recovery, when present, must be visibly labeled as a restored session result and must not create localStorage output history.

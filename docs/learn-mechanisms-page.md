@@ -47,8 +47,9 @@ Current treatment:
 | cdp                       | `text-cyan-700 dark:text-cyan-400`     |
 | synthetic-delta-neutral   | `text-teal-700 dark:text-teal-400`     |
 | algorithmic               | `text-rose-700 dark:text-rose-400`     |
+| rwa-credit-fund           | `text-amber-700 dark:text-amber-400`   |
 
-Excludes amber (Safety Score), red/green (peg severity), emerald (PoR big4) to avoid semantic collisions.
+Excludes red/green (peg severity) and emerald (PoR big4) to avoid semantic collisions.
 
 ---
 
@@ -65,7 +66,7 @@ Each `/learn/mechanisms/[archetype]/` page renders, top-to-bottom:
 7. **"Variations"** — kicker + `<h2>` + `<dl>` (two-column on `sm+`).
 8. **"Continue reading"** — section above a top border. 2-column grid of underline-on-hover row links, with `ArrowUpRight` glyph.
 
-The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Five ways a stablecoin holds its peg`) and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`05`) + active tracked-coin count from `ACTIVE_STABLECOINS` (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
+The hub at `/learn/mechanisms/` renders the same shell with a different headline (`Six ways a stablecoin holds its peg`), a `MechanismComparisonMatrix`, and an editorial vertical `<ol>` table of contents. Each row: numbered index (`01`–`06`) + active/upcoming/frozen/dead count context from mechanism lifecycle helpers (mono kicker) + archetype label (clamp display) + one-liner + "Read the explainer →" + the mechanism diagram on the right at `lg+`. Hairline dividers between rows.
 
 ---
 

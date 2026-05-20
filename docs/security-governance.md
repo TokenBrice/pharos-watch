@@ -14,7 +14,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 
 ### Inline-script discipline in root layouts
 
-**Rule:** The root `src/app/layout.tsx` (and any nested layout that ships to multiple routes) MUST NOT contain inline `<script>` JSX, including `next/script` blocks with `strategy="beforeInteractive"`. Exception: GA / analytics inline snippets and theme bootstrapping that genuinely need to run before hydration.
+**Rule:** The root `src/app/layout.tsx` (and any nested layout that ships to multiple routes) MUST NOT contain inline executable `<script>` JSX, including `next/script` blocks with `strategy="beforeInteractive"`. Exceptions: GA / analytics inline snippets and theme bootstrapping that genuinely need to run before hydration, plus non-executable JSON-LD data scripts (`type="application/ld+json"`) whose content is deterministic structured metadata.
 
 **Why:** Inline scripts in the root layout ship verbatim to every static HTML page including the apex `pharos.watch/`. Token-handling or URL-rewriting patterns in those scripts pattern-match phishing kits regardless of intent. Safe Browsing's social-engineering classifier flagged pharos.watch on 2026-05-12 for exactly this — an `api-key-verify-url-sanitizer` script that read `location.hash`, parsed a `verify=` token, stored it in `window.__PHAROS_API_KEY_VERIFY_TOKEN__`, and called `history.replaceState`. Each pattern alone is benign; together they are the textbook phishing-kit shape.
 

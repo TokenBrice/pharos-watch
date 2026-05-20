@@ -4,7 +4,7 @@
 
 The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, or `/unsnooze`, or mutating `/settings` callbacks are being refused after a fresh `getChatMember` admin lookup fails closed across many groups.
 
-The gate's enforcement mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` env toggle in `worker/src/api/telegram-webhook.ts`. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
+The gate's enforcement mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
 
 - **Hard (default, env unset):** non-admin invocations are refused; the dispatch does not run.
 - **Soft (emergency rollback):** non-admin invocations get the same warning copy but the command still runs.
@@ -23,19 +23,10 @@ The soft mode is an escape hatch, not a feature. The expected return path is to 
 
 ## Operator Commands
 
-Confirm the current mode is what production is running:
-
-```bash
-cd worker
-npx wrangler secret list
-# TELEGRAM_GROUP_ADMIN_GATING set to "soft" → soft mode.
-# Unset or any other value → hard mode (default).
-```
-
 Confirm the audit-log split before and after the flip:
 
 ```sql
-SELECT day, outcome, COUNT(*) AS events
+SELECT day, outcome, SUM(count) AS events
 FROM telegram_usage_daily
 WHERE event_type = 'group_admin_denial'
   AND day >= date('now', '-7 days')
@@ -54,22 +45,11 @@ npx wrangler tail stablecoin-api --format pretty
 
 ## Remediation
 
-1. **Flip to soft.** Set the env secret, then follow the standard Worker Versions release flow documented in [deployment-process.md](../deployment-process.md) so the candidate is uploaded, preview-smoked, promoted, and triggers are deployed through the normal path.
-
-   ```bash
-   cd worker
-   npx wrangler secret put TELEGRAM_GROUP_ADMIN_GATING
-   # paste: soft
-   ```
+1. **Flip to soft.** Patch the group-admin gating mode in `worker/src/api/telegram-webhook.ts`, then follow the standard Worker Versions release flow documented in [deployment-process.md](../deployment-process.md) so the candidate is uploaded, preview-smoked, promoted, and triggers are deployed through the normal path. A Wrangler secret change alone will not affect production because no `TELEGRAM_GROUP_ADMIN_GATING` env binding is read today.
 
    Verify the next gated command in a non-admin group produces a `warned` row in `telegram_usage_daily` and that the command actually ran (subscribe row written, settings panel rendered, etc.).
 
-2. **Flip back to hard.** Once the upstream cause is fixed, remove the env secret and use the same Worker Versions release flow.
-
-   ```bash
-   cd worker
-   npx wrangler secret delete TELEGRAM_GROUP_ADMIN_GATING
-   ```
+2. **Flip back to hard.** Once the upstream cause is fixed, restore the code-level mode to hard/default and use the same Worker Versions release flow.
 
    Confirm that the next gated command from a non-admin produces a `denied` row in `telegram_usage_daily` and that the command did not run.
 

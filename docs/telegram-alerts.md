@@ -68,8 +68,8 @@ BotFather-owned release checklist:
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`
 - `worker/migrations/MANIFEST.md`
-- `scripts/maintenance/register-telegram.ts --action webhook`
-- `scripts/maintenance/register-telegram.ts --action commands`
+- `npx tsx scripts/maintenance/register-telegram.ts --action webhook`
+- `npx tsx scripts/maintenance/register-telegram.ts --action commands`
 
 ## Frontend Main Page
 
@@ -87,7 +87,7 @@ primary navigation immediately after `/alt-pegs/`.
 
 ## Public Pulse Privacy And Freshness
 
-The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, quiet-hours chats, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied and replay-claim counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`.
+The public pulse keeps the exact `activeWatchers` total visible by product decision, because it is the primary adoption signal on the public page. Low-cardinality supporting metrics are more sensitive while the bot is small: nonzero values below 5 are suppressed for daily new/churn/reactivation deltas, pending deliveries when available, quiet-hours chats, Mini App session/mutation totals, and lifecycle-history delta fields. Suppressed fields are listed in `privacy.suppressedFields`; consumers should omit those tiles instead of rendering zero. Mini App denied counters are an explicit exception: they are abuse/health counters, so they remain visible even below the threshold and are not listed in `privacy.suppressedFields`. Replay-class auth counters are reserved for future telemetry unless a producer is wired.
 
 `quality.status` is `partial` when a non-critical public telemetry loader failed. Public copy stays generic and never includes raw D1 or provider errors; Access-gated `/api/status` keeps field-level Telegram telemetry diagnostics for operators. Unavailable telemetry takes precedence over privacy suppression: if `pendingDeliveries` cannot be loaded, the response returns `pendingDeliveries: null` and lists `pendingDeliveries` in `quality.unavailableFields`, not in `privacy.suppressedFields`.
 
@@ -101,11 +101,11 @@ The public chart labels snapshot-backed history as daily lifecycle snapshots. Du
 
 ## D1 Schema
 
-The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, chat-level `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`, pending-selection ownership is added by `worker/migrations/0107_telegram_pending_initiator.sql`, persistent dynamic preset follows are added by `worker/migrations/0114_telegram_dynamic_presets.sql`, per-coin `alert_snooze_until_ts` is added by `worker/migrations/0119_telegram_subscription_snooze.sql`, pending priority/dead-letter/job manifests are added by `worker/migrations/0121_telegram_alert_jobs.sql`, processed-update idempotency is added by `worker/migrations/0122_telegram_processed_updates.sql`, usage/lifecycle diagnostics are added by `worker/migrations/0123_telegram_usage_analytics.sql`, and pending-delivery claim metadata plus retention/reconciliation indexes are added by `worker/migrations/0124_telegram_delivery_claims_and_retention.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
+The Telegram subscriber, disambiguation, and overflow-queue tables are part of `worker/migrations/0000_baseline.sql`. The baseline includes the core tables and legacy alert/global fields through `global_alert_safety`; launch-alert columns are added by `worker/migrations/0072_telegram_launch_alerts.sql`, chat-level `alert_snooze_until_ts` is added by `worker/migrations/0098_telegram_alert_snooze.sql`, pending-selection ownership is added by `worker/migrations/0107_telegram_pending_initiator.sql`, global depeg step defaults are added by `worker/migrations/0109_telegram_global_depeg_step.sql`, pending retry metadata is added by `worker/migrations/0111_telegram_pending_alert_retry_metadata.sql`, persistent dynamic preset follows are added by `worker/migrations/0114_telegram_dynamic_presets.sql`, subscriber block-count fields are added by `worker/migrations/0116_telegram_subscriber_block_count.sql`, subscriber timezone is added by `worker/migrations/0118_telegram_subscriber_timezone.sql`, per-coin `alert_snooze_until_ts` is added by `worker/migrations/0119_telegram_subscription_snooze.sql`, pending priority/dead-letter/job manifests are added by `worker/migrations/0121_telegram_alert_jobs.sql`, processed-update idempotency is added by `worker/migrations/0122_telegram_processed_updates.sql`, usage/lifecycle diagnostics are added by `worker/migrations/0123_telegram_usage_analytics.sql`, and pending-delivery claim metadata plus retention/reconciliation indexes are added by `worker/migrations/0124_telegram_delivery_claims_and_retention.sql`. [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md) records the pre-squash lineage.
 
 | Table | Purpose | Key fields |
 |-------|---------|------------|
-| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `alert_snooze_until_ts`, `created_at`, `last_active_at` |
+| `telegram_subscribers` | Per-chat state and defaults | `chat_id`, `username`, legacy default flags, `global_alert_dews`, `global_alert_depeg`, `global_alert_safety`, `global_alert_launch`, `global_depeg_worsening_bps_step`, `quiet_hours_enabled`, `quiet_hours_start_utc`, `quiet_hours_end_utc`, `timezone`, `alert_snooze_until_ts`, `consecutive_block_count`, `consecutive_block_first_at`, `created_at`, `last_active_at` |
 | `telegram_subscriptions` | Per-chat per-coin alert preferences | composite PK `chat_id, stablecoin_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `alert_launch`, `dews_min_band`, `safety_mode`, `depeg_worsening_bps_step`, `alert_snooze_until_ts` |
 | `telegram_preset_subscriptions` | Persistent dynamic preset follows resolved at dispatch/list time | composite PK `chat_id, preset_id`, `alert_dews`, `alert_depeg`, `alert_safety`, `depeg_worsening_bps_step`, `created_at`, `updated_at` |
 | `telegram_pending_disambiguation` | Short-lived state for ambiguous ticker replies | `chat_id`, `action_type`, `action_payload`, `resolved_ids`, `ambiguous_ticker`, `candidates`, `remaining_tickers`, `expires_at`, `initiator_user_id` |
@@ -139,7 +139,7 @@ When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
-Webhook registration is handled by `scripts/maintenance/register-telegram.ts --action webhook`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
+Webhook registration is handled by `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
 
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
@@ -210,7 +210,7 @@ Settings callbacks edit the message in place via `editMessageText`. If the edit 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
 
-Registration script `scripts/maintenance/register-telegram.ts --action webhook` declares
+Registration script `npx tsx scripts/maintenance/register-telegram.ts --action webhook` declares
 `allowed_updates = ["message", "callback_query", "my_chat_member"]` so Telegram forwards only
 update types the bot handles.
 
@@ -224,10 +224,10 @@ In group and supergroup chats, commands must be addressed to the bot, for exampl
 
 ### Group Admin Gating
 
-`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` toggle in `worker/src/api/telegram-webhook.ts`. The `tz:<zone>` callback handler enforces the same admin check before persisting.
+`/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, and `/unsnooze` are gated to group administrators so a single member cannot rewrite the chat's subscription or quiet-hours state. `/timezone <IANA-zone>` is also admin-gated when it mutates the chat's timezone; `/timezone` with no argument remains a read-only group status view and omits the common-zone keyboard. The gating mode is currently a code-level toggle in `worker/src/api/telegram-webhook.ts`, not a production env binding. The `tz:<zone>` callback handler enforces the same admin check before persisting.
 
 - **Hard gate (current default):** non-admin invocations receive a short command-specific refusal reply ("Only group admins can /subscribe. Ask @Alice or Bob.") and the command is short-circuited; the dispatch does not run. Admin display names come from `getChatAdministrators`, capped to three names plus an overflow phrase, and are already visible to every member through the Telegram group member list.
-- **Soft (emergency rollback):** flipping the toggle to `"soft"` warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
+- **Soft (emergency rollback):** changing the code-level toggle to `"soft"` and redeploying warns the non-admin with the same copy but still runs the command. Kept as an operator escape hatch if the hard gate is ever too aggressive in production.
 
 Mutating group authorization uses a fresh `getChatMember` check on every command or callback, so a demoted admin loses mutation access on the next webhook delivery and a newly promoted admin can act immediately. The five-minute `telegram:chat-member:<chat_id>:<user_id>` cache remains available for non-authorization diagnostics, and `telegram:chat-admins:<chat_id>` still caches the administrator list for denial copy. If Telegram's fresh member lookup fails, hard-gated mutations fail closed. Private chats remain open to every chat member.
 
@@ -718,7 +718,7 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 - The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a slim list (`subscribe`, `unsubscribe`, `list`, `status`, `mute`, `help`) under `scope: { type: "all_group_chats" }`. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
 - The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Profile-photo updates are not exposed via the Bot API — set the avatar manually through @BotFather using `public/pharos-icon.png`.
 - The cron connection-budget check includes the command/profile/webhook reconciliation as a budget-only entry on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job, but its serial Bot API calls are still visible to `npm run check:cron-connections`.
-- `scripts/maintenance/register-telegram.ts --action webhook`, `scripts/maintenance/register-telegram.ts --action commands`, and `scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
+- `npx tsx scripts/maintenance/register-telegram.ts --action webhook`, `npx tsx scripts/maintenance/register-telegram.ts --action commands`, and `npx tsx scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger runs registration reconciliation first, then subscriber alert fan-out through `dispatch-telegram-alerts`.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.

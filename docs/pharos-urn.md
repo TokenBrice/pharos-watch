@@ -89,4 +89,3 @@ The "accessed" date in any generated citation artifact must come from determinis
 
 - `shared/lib/citation/urn.ts` — formatter + parser.
 - `shared/lib/citation/formats.ts` — BibTeX, APA 7, Chicago, plain renderers.
-- `agents/council13/research/05-citation-seo.md` — original research with rationale.

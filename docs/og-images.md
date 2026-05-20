@@ -10,14 +10,21 @@ Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium agai
 | --- | --- |
 | `og-card.png` | `/` (also the default fallback in `src/lib/page-metadata.ts`) |
 | `og-about.png` | `/about` |
+| `og-alt-pegs.png` | `/alt-pegs` |
 | `og-cemetery.png` | `/cemetery` |
 | `og-chains.png` | `/chains` |
+| `og-changelog.png` | `/changelog` |
 | `og-compare.png` | `/compare` |
 | `og-coverage.png` | `/coverage` |
 | `og-depeg.png` | `/depeg` |
 | `og-flows.png` | `/flows` |
+| `og-funding.png` | `/funding` |
+| `og-learn-mechanisms.png` | `/learn/mechanisms` |
 | `og-liquidity.png` | `/liquidity` |
 | `og-safety-scores.png` | `/safety-scores` |
+| `og-stablecoins.png` | `/stablecoins` |
+| `og-timeline.png` | `/timeline` |
+| `og-upcoming.png` | `/upcoming` |
 | `og-yield.png` | `/yield` |
 | `og-blacklist.png` | `/freezewatch` |
 | `og-stability-index.png` | `/stability-index` |

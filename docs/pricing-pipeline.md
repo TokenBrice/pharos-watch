@@ -65,7 +65,6 @@ When an asset still has no usable current price after validation and fallback re
 | Alchemy Prices exact-address augmentation   | 1      | `worker/src/lib/address-price-providers/index.ts`                               | Optional keyed batch lookup by provider network + address                                                                                       |
 | Moralis exact-address augmentation          | 1      | `worker/src/lib/address-price-providers/index.ts`                               | Optional keyed EVM batch lookup by chain + token address                                                                                        |
 | Birdeye exact-address augmentation          | 1      | `worker/src/lib/address-price-providers/index.ts`                               | Optional keyed Solana-only token-price lookup for targeted gaps                                                                                 |
-| GeckoTerminal exact-address augmentation    | 1      | `worker/src/lib/address-price-providers/index.ts`                               | Public simple token-price lookup by network + address, separate from the slower pool-probe cross-check                                           |
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 

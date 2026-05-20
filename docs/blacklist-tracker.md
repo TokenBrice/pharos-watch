@@ -861,6 +861,19 @@ Supported inputs:
 - `onlyMissingProvenance` (default `false`; set `true` to restrict remediation to legacy rows missing contract/config provenance)
 - `maxAttempts`
 
+### POST /api/backfill-blacklist-current-balances
+
+Requires Access service-token headers on `ops-api.pharos.watch`. Runs the current-balance-cache writer against historical blacklist rows so older tracked freeze events can populate `blacklist_current_balances` through the same `syncCurrentBalanceCacheForRows` path used by the scheduled sync.
+
+Supported inputs:
+
+- `stablecoin` (symbol, optional)
+- `chainId` (optional)
+- `limit` (default `500`, max `2000`)
+- `dryRun` (`true` to inspect candidates without writing)
+
+Frozen stablecoins are excluded. Use narrow `stablecoin` + `chainId` filters and `dryRun=true` before a write-enabled backfill.
+
 All blacklist admin endpoints are routed in `worker/src/routes/registry.ts` and executed via `worker/src/handlers/http.ts`.
 
 ---

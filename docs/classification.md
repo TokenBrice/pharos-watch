@@ -111,7 +111,7 @@ The `infrastructures` field is an array because a coin could in principle belong
 
 ## Non-USD Peg Handling
 
-Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `shared/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
+Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `shared/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` from the stablecoins cache / DefiLlama-compatible `peggedAssets` rows with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
 
 For thin peg groups (often <3 qualifying coins), live `fxFallbackRates` from `sync-fx-rates.ts` are used when available. In `derivePegRates()`, if a peg group has fewer than 3 qualifying coins and a fallback rate exists, the fallback is used directly instead of the peer median. If a peg group has no qualifying live contributors at all, the same fallback rate is still published when available instead of silently reverting the peg reference to `1`. This prevents one or two coins from becoming their own unstable peg reference and keeps thin non-USD groups stable when a provider temporarily zeroes the only live asset in that peg.
 

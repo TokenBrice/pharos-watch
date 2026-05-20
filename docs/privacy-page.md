@@ -57,7 +57,7 @@ Portfolio holdings are explicitly described as browser-local only, which matches
 The Stablecoin Picker at `/screener/picker/` uses browser-local storage only for functional UI recovery and dismissal state:
 
 - `pharos.selector.callout.v1` (`localStorage`) — Screener-page callout dismissal state. It survives reloads and clears when the user clears site data.
-- `pharos.selector.lastResult.v1` or equivalent (`sessionStorage`) — optional last-successful live result recovery after accidental navigation. It clears when the tab/session closes and is not written after explicit reset/clear.
+- `pharos.selector.sessionResult.v1` (`sessionStorage`) — optional last-successful live result recovery after accidental navigation. It clears when the tab/session closes and is not written after explicit reset/clear.
 
 This is functional storage. It does not contain an IP address, a user identifier, or a cross-site beacon. The Picker must not create long-lived localStorage output history.
 

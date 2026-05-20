@@ -54,6 +54,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/freezewatch/error.tsx`
 - `src/app/freezewatch/page.tsx` - route /freezewatch; default:FreezeWatchPage, metadata
 - `src/app/funding/page.tsx` - route /funding; default:FundingPage, metadata
+- `src/app/home-alt/page.tsx` - route /home-alt; default:HomeAltPage, metadata
 - `src/app/layout.tsx` - default:RootLayout, metadata, viewport
 - `src/app/learn/mechanisms/[archetype]/page.tsx` - route /learn/mechanisms/[archetype]; default:ArchetypeExplainerPage, generateMetadata, generateStaticParams
 - `src/app/learn/mechanisms/page.tsx` - route /learn/mechanisms; default:MechanismExplainersHub, metadata
@@ -207,6 +208,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/chart-time-range.ts` - formatRangeTickDate
 - `src/lib/chart-utils.ts` - buildAdaptiveMonthlyTicks, computeChartYDomain, mergeSeriesByTimestamp
 - `src/lib/client-feature-page.tsx` - createClientFeaturePage
+- `src/lib/coin-id-by-symbol.ts` - coinIdBySymbol
 - `src/lib/column-visibility.ts` - ALL_COLUMNS, ColumnId, DEFAULT_VISIBLE_COLUMNS, LOCKED_COLUMNS, MOBILE_DEFAULT_COLUMNS, isColumnId
 - `src/lib/command-palette-search-data.ts` - COMMAND_PALETTE_STABLECOINS, CommandPaletteStablecoinSearchItem
 - `src/lib/command-palette.ts` - OPEN_COMMAND_PALETTE_EVENT, openCommandPalette
@@ -225,8 +227,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/lib/coverage.ts` - COVERAGE_BADGE_TONE_CLASS, COVERAGE_FEATURES, buildCoverageFeatureSummary, buildCoverageRow, countAvailableFeatures, resolveBlacklistCoverage
 - `src/lib/cron-intervals.ts` - CRON_15MIN, CRON_1H, CRON_1MIN, CRON_24H, CRON_30MIN, CRON_BLACKLIST
 - `src/lib/csv-export.ts` - downloadCsv
-- `src/lib/data-health-config.ts` - DATA_HEALTH_PRESETS
-- ... 88 more files omitted; use `rg --files src/lib` for the full list.
+- ... 89 more files omitted; use `rg --files src/lib` for the full list.
 
 ## Key components
 
@@ -270,7 +271,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/components/contagion-graph-tooltips.tsx` - buildEdgeTooltipElement, buildNodeTooltipElement, buildTooltipAnnouncement
 - `src/components/contagion-graph.tsx` - ContagionGraph
 - `src/components/contagion-graph/contagion-graph-body.tsx` - ContagionGraphBody
-- ... 313 more files omitted; use `rg --files src/components` for the full list.
+- ... 312 more files omitted; use `rg --files src/components` for the full list.
 
 ## Pages Functions
 
@@ -335,7 +336,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel, getMechanismArchetypeOneLiner
 - `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, PegCurrencyFilterTag
 - `shared/lib/classification/resolve-mechanism-archetype.ts` - resolveMechanismArchetype
-- `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel
+- `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, NOTICE_TONE_COLORS, RATIO_QUALITY_COLORS
 - `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES
@@ -354,7 +355,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/env-utils.ts` - getConfiguredValue, hasConfiguredValue
 - `shared/lib/explorer.ts` - ExplorerEntityType, buildExplorerUrl
 - `shared/lib/filter-tags.ts` - COMMODITY_PEG_TAGS, FIAT_NON_USD_PEG_TAGS, FILTER_TAG_LABELS, GRADE_FILTER_TAGS, OTHER_PEG_TAGS, getFilterTags
-- ... 207 more files omitted; use `rg --files shared/lib` for the full list.
+- ... 205 more files omitted; use `rg --files shared/lib` for the full list.
 
 ## Stablecoin data
 
