@@ -96,12 +96,12 @@ export function HomeAltClient() {
       {/* Editorial band — single hairline divides it from the dashboard above */}
       <section
         aria-label="Daily digest"
-        className="mt-6 border-t border-border/60 pt-5 sm:mt-7 sm:pt-6"
+        className="mt-3 pt-2.5 sm:mt-3.5 sm:pt-3"
       >
         <DailyDigest variant="preview" />
       </section>
 
-      <div className="mt-6 sm:mt-7">
+      <div className="mt-3 sm:mt-3.5">
         <HomeAltCalloutStrip />
       </div>
 
