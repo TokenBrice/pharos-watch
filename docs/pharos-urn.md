@@ -52,9 +52,8 @@ Pages with permanently immutable URLs (digests, depeg events, cemetery entries) 
 
 ## Display rules
 
-1. **Do not** render a sitewide "Cite this page" block on public pages.
-2. When a specialized artifact must expose a URN, render it as a `<code>` element with a copy affordance.
-3. **Do not** render the URN as a clickable link in v1. There is no resolver yet (`https://pharos.watch/r/<urn>` is deferred).
+1. When a specialized artifact must expose a URN, render it as a `<code>` element with a copy affordance.
+2. **Do not** render the URN as a clickable link in v1. There is no resolver yet (`https://pharos.watch/r/<urn>` is deferred).
 
 ---
 
