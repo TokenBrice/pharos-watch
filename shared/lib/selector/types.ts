@@ -17,6 +17,41 @@ import type { BluechipGrade, PegCurrency, ReportCardGrade } from "../../types";
 export const SELECTOR_PROFILES = ["treasury", "yield", "trading"] as const;
 export type SelectorProfile = (typeof SELECTOR_PROFILES)[number];
 
+// Initial non-USD rollout: pegs with enough active rows and live signal
+// coverage to avoid empty selector routes. BRL remains gated until the
+// peggedREAL alias path is audited.
+export const SELECTOR_ELIGIBLE_PEG_CURRENCIES = [
+  "USD",
+  "EUR",
+  "CHF",
+  "GOLD",
+] as const satisfies readonly PegCurrency[];
+export type SelectorEligiblePegCurrency =
+  (typeof SELECTOR_ELIGIBLE_PEG_CURRENCIES)[number];
+
+export const SELECTOR_YIELD_PEG_CURRENCIES = [
+  "USD",
+  "EUR",
+  "CHF",
+  "GOLD",
+] as const satisfies readonly SelectorEligiblePegCurrency[];
+export type SelectorYieldPegCurrency = (typeof SELECTOR_YIELD_PEG_CURRENCIES)[number];
+
+const SELECTOR_ELIGIBLE_PEG_SET = new Set<string>(SELECTOR_ELIGIBLE_PEG_CURRENCIES);
+const SELECTOR_YIELD_PEG_SET = new Set<string>(SELECTOR_YIELD_PEG_CURRENCIES);
+
+export function isSelectorEligiblePegCurrency(
+  value: string | null | undefined,
+): value is SelectorEligiblePegCurrency {
+  return value != null && SELECTOR_ELIGIBLE_PEG_SET.has(value);
+}
+
+export function isSelectorYieldPegCurrency(
+  value: string | null | undefined,
+): value is SelectorYieldPegCurrency {
+  return value != null && SELECTOR_YIELD_PEG_SET.has(value);
+}
+
 export const HORIZON_VALUES = ["lt24h", "1to7d", "1to4w", "1to6m", "6mplus"] as const;
 export type SelectorHorizon = (typeof HORIZON_VALUES)[number];
 
@@ -37,8 +72,7 @@ export type SelectorCustodyOk = (typeof CUSTODY_OK_VALUES)[number];
 
 export interface SelectorInput {
   profile: SelectorProfile;
-  /** MVP locked to USD. Wired through for Phase 2 non-USD pegs. */
-  pegCurrency: "USD";
+  pegCurrency: SelectorEligiblePegCurrency;
   horizon: SelectorHorizon;
   depegTolerance: SelectorDepegTolerance;
   composability: SelectorComposability;

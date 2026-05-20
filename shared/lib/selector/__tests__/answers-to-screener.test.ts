@@ -13,8 +13,8 @@ describe("selectorAnswersToScreenerFilters", () => {
   });
 
   it("base filter carries the selected peg into the Screener handoff", () => {
-    const { filters } = selectorAnswersToScreenerFilters(makeInput({ pegCurrency: "USD" }));
-    expect(filters.pegs).toEqual(["USD"]);
+    const { filters } = selectorAnswersToScreenerFilters(makeInput({ pegCurrency: "EUR" }));
+    expect(filters.pegs).toEqual(["EUR"]);
   });
 
   it("Yield base filter allows down to C-", () => {

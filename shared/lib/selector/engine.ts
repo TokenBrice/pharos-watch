@@ -28,6 +28,7 @@ import type {
   ContextKey,
   DatasetMetadata,
   ExclusionRecord,
+  ExclusionReason,
   MergedRow,
   RecommendedSource,
   SelectorChainHints,
@@ -47,6 +48,18 @@ import { WEIGHT_VECTORS } from "./weights";
 import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
 
 export const ENGINE_VERSION = SELECTOR_VERSION;
+
+const RELAXED_FALLBACK_BLOCKED_REASONS: ReadonlySet<ExclusionReason> = new Set([
+  "active-depeg",
+  "below-supply-floor",
+  "coverage-too-thin",
+  "howey-uncertain",
+  "lifecycle-non-active",
+  "peg-currency-mismatch",
+  "pys-null",
+  "safety-grade-floor",
+  "template-coverage-gap",
+]);
 
 // ---------------------------------------------------------------------------
 // Component computation
@@ -531,6 +544,66 @@ function compareScored(a: ScoredEntry, b: ScoredEntry): number {
   return a.row.id.localeCompare(b.row.id);
 }
 
+function toScoredEntry(
+  row: MergedRow,
+  input: SelectorInput,
+): ScoredEntry | null {
+  const result = scoreRow(row, input.profile, input);
+  if (result == null || result.degenerate) return null;
+  const recommendedSource = input.profile === "yield" ? selectYieldSource(row) : null;
+  if (input.profile === "yield" && recommendedSource == null) return null;
+  return {
+    row,
+    score: result.score,
+    components: result.components,
+    confidence: result.confidence,
+    redistributedSlots: result.redistributedSlots,
+    recommendedSource,
+    perInputStaleness:
+      input.profile === "trading"
+        ? {
+            pegSummary: row.pegSummaryAgeSec ?? 0,
+            dexTvl: row.dexTvlAgeSec ?? 0,
+            dews: row.dewsAgeSec ?? 0,
+          }
+        : null,
+  };
+}
+
+function isRelaxedFallbackEligible(
+  row: MergedRow,
+  input: SelectorInput,
+): boolean {
+  const coverage = hasRequiredSignals(row, input.profile);
+  if (!coverage.ok) return false;
+  const exclusion = evaluateExclusions(row, input);
+  if (exclusion == null) return true;
+  return !RELAXED_FALLBACK_BLOCKED_REASONS.has(exclusion.reason);
+}
+
+function buildRelaxedFallbackRecommendations(
+  universe: readonly MergedRow[],
+  input: SelectorInput,
+): SelectorRecommendation[] {
+  const scored: ScoredEntry[] = [];
+  for (const row of universe) {
+    if (!isRelaxedFallbackEligible(row, input)) continue;
+    const entry = toScoredEntry(row, input);
+    if (entry != null) scored.push(entry);
+  }
+  const deduped = dedupVariants(scored, input.profile);
+  deduped.sort(compareScored);
+
+  const recommended: SelectorRecommendation[] = [];
+  for (const entry of deduped) {
+    if (recommended.length >= 3) break;
+    const rank = (recommended.length + 1) as 1 | 2 | 3;
+    const rec = buildRecommendation(entry, rank, input.profile, input, () => []);
+    if (rec != null) recommended.push(rec);
+  }
+  return recommended;
+}
+
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
@@ -629,14 +702,7 @@ export function runSelector(
   data: SelectorData,
   dataset: DatasetMetadata,
 ): SelectorOutput {
-  // 0. Contract guard
-  if (input.pegCurrency !== "USD") {
-    throw new Error(
-      `[selector/engine] MVP locked to USD pegCurrency; received ${input.pegCurrency}`,
-    );
-  }
-
-  // 1+2. Universe (USD-only + Howey pre-exclusion)
+  // 1+2. Universe (selected peg + Howey pre-exclusion)
   const universe: MergedRow[] = [];
   for (const row of data.rows.values()) {
     if (row.pegCurrency !== input.pegCurrency) continue;
@@ -756,13 +822,17 @@ export function runSelector(
     recommended.push(rec);
     finalSurvivors.push(entry);
   }
+  const usedRelaxedFallback = recommended.length === 0;
+  if (usedRelaxedFallback) {
+    recommended.push(...buildRelaxedFallbackRecommendations(universe, input));
+  }
 
   // 13. Lower-ranked-list
   const lowerRanked = selectLowerRanked(
     deduped,
     excluded,
     input,
-    Array.from(data.rows.values()),
+    universe,
     new Set(recommended.map((r) => r.id)),
     scoreIgnoringExclusion,
   );
@@ -775,6 +845,7 @@ export function runSelector(
   );
 
   const lowConfidence =
+    usedRelaxedFallback ||
     sparse ||
     recommended.length === 0 ||
     (recommended[0]?.confidence ?? 100) < 70;

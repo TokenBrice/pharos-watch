@@ -1,6 +1,79 @@
 import { describe, expect, it } from "vitest";
 import { ENGINE_VERSION, runSelector } from "../engine";
+import {
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  SELECTOR_YIELD_PEG_CURRENCIES,
+  type MergedRow,
+  type SelectorInput,
+  type SelectorProfile,
+} from "../types";
 import { buildFixtureData, FIXTURE_DATASET, makeInput } from "./fixture";
+
+type RouteVenue = readonly ["custody" | "some" | "active"] | readonly ["lend" | "dex" | "wrap" | "all"] | readonly ["cex" | "perps" | "spot" | "all"];
+
+const ROUTE_HORIZONS = ["lt24h", "1to7d", "1to4w", "1to6m", "6mplus"] as const;
+const ROUTE_DEPEGS = ["zero", "tight", "moderate"] as const;
+const ROUTE_EXITS = ["1h", "24h", "any"] as const;
+const ROUTE_VENUES: Record<SelectorProfile, readonly RouteVenue[]> = {
+  treasury: [["custody"], ["some"], ["active"]],
+  yield: [["lend"], ["dex"], ["wrap"], ["all"]],
+  trading: [["cex"], ["perps"], ["spot"], ["all"]],
+};
+
+function routeComposability(
+  profile: SelectorProfile,
+  venue: RouteVenue,
+): SelectorInput["composability"] {
+  if (venue.includes("all" as never)) return "high";
+  if (profile === "treasury") {
+    if (venue.includes("custody" as never)) return "none";
+    if (venue.includes("active" as never)) return "high";
+    return "moderate";
+  }
+  return venue.length >= 2 ? "high" : "moderate";
+}
+
+function routeSkipsExit(
+  profile: SelectorProfile,
+  horizon: SelectorInput["horizon"],
+  depegTolerance: SelectorInput["depegTolerance"],
+): boolean {
+  return profile === "treasury" && horizon === "6mplus" && depegTolerance === "zero";
+}
+
+function routeInputs(): SelectorInput[] {
+  const out: SelectorInput[] = [];
+  for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
+    for (const profile of SELECTOR_PROFILES_FOR_ROUTES) {
+      if (
+        profile === "yield" &&
+        !(SELECTOR_YIELD_PEG_CURRENCIES as readonly string[]).includes(pegCurrency)
+      ) {
+        continue;
+      }
+      for (const horizon of ROUTE_HORIZONS) {
+        for (const depegTolerance of ROUTE_DEPEGS) {
+          for (const venue of ROUTE_VENUES[profile]) {
+            const exits = routeSkipsExit(profile, horizon, depegTolerance) ? ["any"] as const : ROUTE_EXITS;
+            for (const exitSpeed of exits) {
+              out.push(makeInput({
+                profile,
+                pegCurrency,
+                horizon,
+                depegTolerance,
+                composability: routeComposability(profile, venue),
+                exitSpeed,
+              }));
+            }
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+
+const SELECTOR_PROFILES_FOR_ROUTES = ["treasury", "yield", "trading"] as const;
 
 describe("runSelector — Treasury happy path", () => {
   const input = makeInput({ profile: "treasury" });
@@ -129,15 +202,126 @@ describe("runSelector — Trading happy path", () => {
 });
 
 describe("runSelector — universal properties", () => {
-  it("non-USD pegCurrency throws", () => {
-    expect(() =>
-      runSelector(
-        // @ts-expect-error MVP locked
-        { ...makeInput(), pegCurrency: "EUR" },
-        buildFixtureData(),
+  it("runs against a selected non-USD peg universe", () => {
+    const rows = new Map(buildFixtureData().rows);
+    const base = rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    rows.set("eurc-circle", {
+      ...base!,
+      id: "eurc-circle",
+      symbol: "EURC",
+      name: "EURC",
+      protocolSlug: "eurc-circle",
+      variantOf: null,
+      pegCurrency: "EUR" as const,
+      supplyUsd: 45_000_000,
+    });
+
+    const out = runSelector(
+      makeInput({ pegCurrency: "EUR" }),
+      { rows },
+      FIXTURE_DATASET,
+    );
+    expect(out.universe.active).toBe(1);
+    expect(out.recommended.map((rec) => rec.id)).toEqual(["eurc-circle"]);
+  });
+
+  it("marks selected-peg coverage sparse when too many rows lack required signals", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const rows = new Map([
+      [
+        "eur-complete",
+        {
+          ...base!,
+          id: "eur-complete",
+          symbol: "EUR1",
+          name: "EUR Complete",
+          protocolSlug: "eur-complete",
+          variantOf: null,
+          pegCurrency: "EUR" as const,
+        },
+      ],
+      [
+        "eur-thin",
+        {
+          ...base!,
+          id: "eur-thin",
+          symbol: "EUR2",
+          name: "EUR Thin",
+          protocolSlug: "eur-thin",
+          variantOf: null,
+          pegCurrency: "EUR" as const,
+          pegScore: null,
+        },
+      ],
+    ]);
+
+    const out = runSelector(makeInput({ pegCurrency: "EUR" }), { rows }, FIXTURE_DATASET);
+    expect(out.coverageWarnings.skippedForCoverageCount).toBe(1);
+    expect(out.coverageWarnings.sparse).toBe(true);
+    expect(out.lowConfidence).toBe(true);
+  });
+
+  it("uses a low-confidence fallback instead of empty results for strict CHF and Gold Yield routes", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+
+    for (const pegCurrency of ["CHF", "GOLD"] as const) {
+      const row: MergedRow = {
+        ...base!,
+        id: `${pegCurrency.toLowerCase()}-yield-fallback`,
+        symbol: pegCurrency === "GOLD" ? "PAXG" : "ZCHF",
+        name: `${pegCurrency} fallback candidate`,
+        protocolSlug: `${pegCurrency.toLowerCase()}-fallback`,
+        variantOf: null,
+        pegCurrency,
+        depegEventCount: 9,
+      };
+      const out = runSelector(
+        makeInput({
+          profile: "yield",
+          pegCurrency,
+          depegTolerance: "zero",
+        }),
+        { rows: new Map([[row.id, row]]) },
         FIXTURE_DATASET,
-      ),
-    ).toThrow();
+      );
+
+      expect(out.recommended.map((rec) => rec.id)).toEqual([row.id]);
+      expect(out.recommended[0]?.profile).toBe("yield");
+      expect(out.lowConfidence).toBe(true);
+    }
+  });
+
+  it("every selectable peg/profile route has at least one recommendation in a covered universe", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const rows = new Map<string, MergedRow>();
+    for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
+      const row: MergedRow = {
+        ...base!,
+        id: `${pegCurrency.toLowerCase()}-route-candidate`,
+        symbol: pegCurrency === "GOLD" ? "PAXG" : pegCurrency,
+        name: `${pegCurrency} route candidate`,
+        protocolSlug: `${pegCurrency.toLowerCase()}-route-candidate`,
+        variantOf: null,
+        pegCurrency,
+        activeDepeg: false,
+        currentDeviationBps: 0,
+        depegEventCount: 0,
+        supplyUsd: 100_000_000,
+      };
+      rows.set(row.id, row);
+    }
+
+    for (const input of routeInputs()) {
+      const out = runSelector(input, { rows }, FIXTURE_DATASET);
+      expect(
+        out.recommended.length,
+        `${input.pegCurrency}/${input.profile}/${input.horizon}/${input.depegTolerance}/${input.composability}/${input.exitSpeed}`,
+      ).toBeGreaterThan(0);
+    }
   });
 
   it("howey-uncertain coins are pre-excluded", () => {
