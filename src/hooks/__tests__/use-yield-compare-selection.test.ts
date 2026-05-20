@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MAX_YIELD_COMPARE_IDS,
   useYieldCompareSelection,
@@ -9,7 +9,15 @@ import {
 
 describe("useYieldCompareSelection", () => {
   beforeEach(() => {
+    vi.spyOn(window, "queueMicrotask").mockImplementation((callback) => {
+      callback();
+    });
     window.history.replaceState(null, "", "/yield/");
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
   });
 
   it("hydrates ids from the ?compare= URL param", () => {
