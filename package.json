@@ -105,6 +105,7 @@
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",
     "seo:live-smoke": "node scripts/ci/check-seo-live-smoke.mjs",
     "seo:check": "node scripts/ci/check-seo-static.mjs",
+    "og:capture": "node scripts/maintenance/screenshot-og.mjs",
     "format": "prettier --write .",
     "prepare": "git config core.hooksPath .githooks"
   },

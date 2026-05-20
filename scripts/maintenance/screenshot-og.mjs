@@ -40,6 +40,7 @@ const PAGES = [
   { path: "/methodology", file: "og-methodology.png" },
   { path: "/start", file: "og-start.png" },
   { path: "/pharoswatchbot/", file: "og-pharoswatchbot.png" },
+  { path: "/screener", file: "og-default.png" },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -108,7 +109,13 @@ for (const { path: pagePath, file } of PAGES) {
 
   const page = await context.newPage();
   try {
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+    try {
+      await page.goto(url, { waitUntil: "networkidle", timeout: 20_000 });
+    } catch {
+      // Pages with periodic polling (e.g. /digest) may never reach networkidle.
+      // Fall back to `load` and let the post-goto settle handle hydration.
+      await page.goto(url, { waitUntil: "load", timeout: 20_000 });
+    }
     // Extra settle time for React hydration + data fetch
     await page.waitForTimeout(3000);
     await page.addStyleTag({ content: SOCIAL_CAPTURE_CSS });

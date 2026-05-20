@@ -646,6 +646,22 @@ function sitemapRouteFromPharosUrl(loc) {
   return { route };
 }
 
+// Returns the same-origin path that must exist in `out/` for an og:image / twitter:image
+// reference, or `null` for external URLs (e.g. the dynamic /api/og/* worker route) that
+// are not served by the static export.
+function localOgImagePath(value) {
+  if (!value) return null;
+  if (value.startsWith("/")) return value;
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return null;
+  }
+  if (parsed.hostname !== PHAROS_HOSTNAME) return null;
+  return parsed.pathname;
+}
+
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
   enforceStructuredDataMatrix = true,
@@ -676,7 +692,9 @@ export function collectSeoStaticCheckResult({
       ogTitle: getMetaContents(html, "property", "og:title")[0] ?? "",
       ogDescription: getMetaContents(html, "property", "og:description")[0] ?? "",
       ogType: getMetaContents(html, "property", "og:type")[0] ?? "",
+      ogImage: getMetaContents(html, "property", "og:image")[0] ?? "",
       twitterCard: getMetaContents(html, "name", "twitter:card")[0] ?? "",
+      twitterImage: getMetaContents(html, "name", "twitter:image")[0] ?? "",
       robotsTags,
       h1Count: (html.match(/<h1\b/gi) ?? []).length,
       structuredData: [],
@@ -734,6 +752,26 @@ export function collectSeoStaticCheckResult({
 
     if (indexable && record.h1Count !== 1) {
       errors.push(`${record.route}: expected exactly one <h1> on indexable page, got ${record.h1Count}`);
+    }
+  }
+
+  const missingOgImagePaths = new Set();
+  for (const record of pageRecords) {
+    for (const [field, value] of [
+      ["og:image", record.ogImage],
+      ["twitter:image", record.twitterImage],
+    ]) {
+      const localPath = localOgImagePath(value);
+      if (!localPath) continue;
+      if (missingOgImagePaths.has(localPath)) {
+        errors.push(`${record.route}: ${field} references missing file ${localPath}`);
+        continue;
+      }
+      const filePath = path.join(outDir, localPath.replace(/^\/+/, ""));
+      if (!fs.existsSync(filePath)) {
+        missingOgImagePaths.add(localPath);
+        errors.push(`${record.route}: ${field} references missing file ${localPath}`);
+      }
     }
   }
 

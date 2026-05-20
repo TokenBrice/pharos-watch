@@ -31,6 +31,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
+- [og-images.md](./og-images.md) - the three OG-image classes (static screenshots, mechanism explainer cards, dynamic Worker cards), how/when to renew, and CI guardrails
 - [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
 - [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
 - [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
