@@ -7,6 +7,7 @@ import {
   hasRequiredSignals,
   treasuryPegScoreFloor,
   tradingDewsCeiling,
+  tradingPegScoreFloor,
   yieldPegScoreFloor,
 } from "../exclusions";
 import type { MergedRow, SelectorInput } from "../types";
@@ -107,6 +108,12 @@ describe("threshold helpers", () => {
     expect(yieldPegScoreFloor("zero")).toBe(65);
     expect(yieldPegScoreFloor("tight")).toBe(55);
     expect(yieldPegScoreFloor("moderate")).toBe(45);
+  });
+
+  it("tradingPegScoreFloor scales with depeg tolerance", () => {
+    expect(tradingPegScoreFloor("zero")).toBe(85);
+    expect(tradingPegScoreFloor("tight")).toBe(80);
+    expect(tradingPegScoreFloor("moderate")).toBe(70);
   });
 });
 
@@ -368,11 +375,11 @@ describe("trading exclusions", () => {
     expect(evaluateExclusions(makeRow({ liquidityScore: 55 }), input)).toBeNull();
   });
 
-  it("peg-stability-floor (trading): 70 excluded, 80 passes", () => {
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 70 }), input)).toEqual(
-      expect.objectContaining({ reason: "peg-stability-floor" }),
+  it("Trading depeg tolerance uses PegScore, not peg-stability history", () => {
+    expect(evaluateExclusions(makeRow({ pegScore: 79, pegStabilityScore: 100 }), input)).toEqual(
+      expect.objectContaining({ reason: "peg-score-floor" }),
     );
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 80 }), input)).toBeNull();
+    expect(evaluateExclusions(makeRow({ pegScore: 80, pegStabilityScore: 40 }), input)).toBeNull();
   });
 
   it("dews-ceiling × 1h: 36 excluded, 30 passes", () => {
@@ -504,6 +511,13 @@ describe("hasRequiredSignals", () => {
       ok: true,
       missing: [],
     });
+  });
+
+  it("PegScore coverage does not require peg-stability history", () => {
+    const row = makeRow({ pegStabilityScore: null, pegScore: 95 });
+    expect(hasRequiredSignals(row, "treasury")).toEqual({ ok: true, missing: [] });
+    expect(hasRequiredSignals(row, "yield")).toEqual({ ok: true, missing: [] });
+    expect(hasRequiredSignals(row, "trading")).toEqual({ ok: true, missing: [] });
   });
 
   it("Treasury surfaces missing signals", () => {

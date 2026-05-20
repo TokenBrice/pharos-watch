@@ -797,9 +797,7 @@ function relaxedFallbackReason(
   if (RELAXED_FALLBACK_BLOCKED_REASONS.has(exclusion.reason)) return null;
   if (
     input.profile === "treasury" &&
-    (exclusion.reason === "depeg-event-count" ||
-      exclusion.reason === "peg-score-floor" ||
-      exclusion.reason === "peg-stability-floor")
+    exclusion.reason === "peg-score-floor"
   ) {
     return null;
   }
@@ -1103,9 +1101,7 @@ function buildRelaxableConstraints(
   const out: SelectorRelaxableConstraint[] = [];
   const depegReason = hasExcludedReason(excluded, [
     "active-depeg",
-    "depeg-event-count",
     "peg-score-floor",
-    "peg-stability-floor",
   ]);
   if (input.depegTolerance === "zero" || input.depegTolerance === "tight" || depegReason) {
     out.push({

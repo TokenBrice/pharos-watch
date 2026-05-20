@@ -87,6 +87,17 @@ export function yieldPegScoreFloor(tol: SelectorDepegTolerance): number {
   }
 }
 
+export function tradingPegScoreFloor(tol: SelectorDepegTolerance): number {
+  switch (tol) {
+    case "zero":
+      return 85;
+    case "tight":
+      return 80;
+    case "moderate":
+      return 70;
+  }
+}
+
 const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D", "C-", "C"]);
 const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D"]);
 
@@ -236,8 +247,14 @@ function tradingExclusions(row: MergedRow, input: SelectorInput): ExclusionRecor
   if (row.liquidityScore != null && row.liquidityScore < 50) {
     return fail(row.id, "liquidity-floor");
   }
-  if (row.pegStabilityScore != null && row.pegStabilityScore < 75) {
-    return fail(row.id, "peg-stability-floor");
+  const pegScoreFloor = tradingPegScoreFloor(input.depegTolerance);
+  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
+    return fail(
+      row.id,
+      "peg-score-floor",
+      "hard",
+      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
+    );
   }
   const dewsCeiling = tradingDewsCeiling(input.exitSpeed);
   if (row.dewsScore != null && row.dewsScore > dewsCeiling) {
@@ -325,20 +342,17 @@ const REQUIRED_SIGNALS: Record<SelectorProfile, readonly (keyof MergedRow)[]> = 
     "safetyDependencyRiskScore",
     "dewsScore",
     "pegScore",
-    "pegStabilityScore",
   ],
   yield: [
     "safetyGrade",
     "pharosYieldScore",
     "pegScore",
-    "pegStabilityScore",
     "apy30d",
   ],
   trading: [
     "safetyGrade",
     "liquidityScore",
     "pegScore",
-    "pegStabilityScore",
     "dewsScore",
   ],
 };
@@ -376,7 +390,6 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
     "safety-resilience-floor",
     "safety-dependency-risk-floor",
     "dews-ceiling",
-    "depeg-event-count",
     "peg-score-floor",
     "bluechip-d-or-f",
   ],
@@ -390,7 +403,7 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
   ],
   trading: [
     "liquidity-floor",
-    "peg-stability-floor",
+    "peg-score-floor",
     "dews-ceiling",
     "effective-exit-floor",
     "supply-tvl-floor-1h",
