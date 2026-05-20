@@ -659,8 +659,8 @@ function ResultPane({
   return (
     <div ref={resultFocusRef} tabIndex={-1} className="flex flex-col gap-6 outline-none">
       {/* Snapshot banner sits as a top-line strip above the summary: it's a
-          load-bearing trust signal (frozen vs fallback view) and was easy to
-          miss when nested inside the summary card. */}
+          load-bearing trust signal (frozen vs fallback view) and can be
+          missed if nested inside the summary card. */}
       {snapshotBanner}
 
       <SelectorResultSummary

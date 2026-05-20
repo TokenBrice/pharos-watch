@@ -10,7 +10,6 @@ import type {
   SelectorProfile,
   SelectorRecommendation,
 } from "@shared/lib/selector";
-import { PEG_METADATA } from "@shared/lib/classification";
 
 interface SelectorShortlistCardProps {
   rank: 1 | 2 | 3;
@@ -161,7 +160,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     rank,
     recommendation: rec,
     profile,
-    pegCurrency,
+    pegCurrency: _pegCurrency,
     isMobile,
     logoUrl,
     whyText,
@@ -169,7 +168,6 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     prominentOpenDetail = false,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
-  const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
   const recWithProse = rec as SelectorRecommendation & {
     whyText?: string;
     watchText?: string;
