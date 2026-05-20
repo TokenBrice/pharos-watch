@@ -1522,6 +1522,39 @@ describe("syncFxRates", () => {
     expect(Math.abs(callStartedAt.jsdelivr - callStartedAt.pagesDev)).toBeLessThan(20);
   });
 
+  it("uses the date-pinned jsdelivr package when @latest is behind", async () => {
+    vi.setSystemTime(new Date("2026-05-20T07:30:00Z"));
+    const fetchSpy = vi.fn(async (url: string) => {
+      if (url.includes("@2026.5.20/")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-20", usd: { cnh: 7.18 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-19", usd: { cnh: 7.28 } }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("latest.currency-api.pages.dev")) {
+        return new Response(
+          JSON.stringify({ date: "2026-05-19", usd: { cnh: 7.28 } }),
+          { status: 200 },
+        );
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const candidate = await loadSecondaryCurrencyCandidate();
+
+    expect(candidate?.endpoint).toBe("jsdelivr-versioned");
+    expect(candidate?.payload.date).toBe("2026-05-20");
+    expect(candidate?.payload.usd.cnh).toBe(7.18);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("@2026.5.20/"))).toBe(true);
+  });
+
   it("returns cooldown_active and skips all outbound fetches when last-write marker is <30 min old", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const fetchMock = vi.fn();

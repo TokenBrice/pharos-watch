@@ -35,7 +35,7 @@ export interface SecondaryCurrencyPayload {
   usd: Record<string, number>;
 }
 
-export type SecondaryCurrencyEndpoint = "jsdelivr" | "pages.dev";
+export type SecondaryCurrencyEndpoint = "jsdelivr" | "jsdelivr-versioned" | "pages.dev";
 
 export interface SecondaryCurrencyCandidate {
   endpoint: SecondaryCurrencyEndpoint;
