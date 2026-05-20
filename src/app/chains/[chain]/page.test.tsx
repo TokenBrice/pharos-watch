@@ -16,23 +16,19 @@ vi.mock("./client", () => ({
 }));
 
 describe("ChainProfilePage", () => {
-  it("renders static chain detail content before the live client profile", async () => {
+  it("renders the live client profile before related route hubs", async () => {
     const html = renderToStaticMarkup(
       await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
     );
 
-    expect(html).toContain("Tracked deployments on Ethereum");
-    expect(html).toContain("USD Coin (USDC)");
-    expect(html).toContain('href="/stablecoin/usdc-circle"');
-    expect(html).toContain("Open Ethereum explorer");
-    expect(html).toContain("/api/chains");
-    expect(html).toContain('href="/chains"');
+    expect(html).toContain("chain client ethereum");
     expect(html).toContain('href="/stablecoins"');
     expect(html).toContain('href="/safety-scores"');
-    expect(html.indexOf("Tracked deployments on Ethereum")).toBeLessThan(html.indexOf("chain client ethereum"));
+    expect(html).toContain("Stablecoin Research Surfaces");
+    expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
   });
 
-  it("emits structured data for the visible static deployment list", async () => {
+  it("emits structured data for tracked deployments", async () => {
     const html = renderToStaticMarkup(
       await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
     );

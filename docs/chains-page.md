@@ -71,8 +71,8 @@ Default sort is `totalUsd desc`.
 - rejects unknown chain IDs with `notFound()`
 - statically generates params from `getActiveChainIds()` / the current `CHAIN_META` key set
 - sets canonical metadata at `/chains/[chain]/`
-- emits `CollectionPage` + `ItemList` JSON-LD for the visible static deployment list, with chain/deployment entities typed as `Thing` and no `Product` markup
-- renders `ChainStaticProfile` before the live client so crawlers and no-JS users see the static summary, deployment links, and related taxonomy/research surfaces
+- emits `CollectionPage` + `ItemList` JSON-LD for tracked deployments, with chain/deployment entities typed as `Thing` and no `Product` markup
+- renders the live client first, followed by related taxonomy and research route hubs; the page does not duplicate the client table with a visible static deployment list
 
 `src/app/chains/[chain]/client.tsx` uses `useChainProfileData(chainId)` and renders, in order:
 

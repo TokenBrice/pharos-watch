@@ -205,6 +205,7 @@ describe("ChainProfileClient", () => {
 
   it("shows a route loading state before both data sources complete initial load", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
+      chain: null,
       isInitialLoading: true,
       hasAnyData: false,
     }));
