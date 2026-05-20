@@ -52,10 +52,10 @@ On `lg+`, the detail hero's right column surfaces a four-pill `HeroSignalsRail` 
 Public pages use this shell:
 
 ```tsx
-<header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }} />
+<header className="lg:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }} />
 <div className="flex min-h-screen">
-  <aside className="hidden md:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-40 transition-all duration-200" />
-  <div className="hidden md:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
+  <aside className="hidden lg:flex flex-col fixed top-[3px] left-0 h-[calc(100vh-3px)] border-r border-border/70 bg-card shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] z-40 transition-all duration-200" />
+  <div className="hidden lg:block shrink-0 transition-all duration-200 w-[var(--sidebar-width-expanded)]" />
 
   <div className="flex-1 flex flex-col min-w-0">
     <main id="main-content" className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
@@ -564,9 +564,11 @@ The current pattern is a titled trust banner with dataset-specific copy, for exa
   - Compacts/expands table columns
   - Converts details/nav patterns
 - `md`:
-  - Sidebar becomes active (`md:flex`)
-  - Mobile header hides (`md:hidden`)
+  - Masthead tagline becomes visible (`md:block` with `line-clamp-2`)
+  - Snapshot KPI grid expands; other dense-data grids transition between mobile and desktop layouts
 - `lg`:
+  - Sidebar becomes active (`lg:flex`); mobile header / drawer hides (`lg:hidden`)
+  - Tablet portrait (sub-`lg`) intentionally falls back to the mobile drawer because the desktop nav has too many groups to remain legible at that width
   - Main horizontal padding increases (`lg:px-6`)
   - Larger grid splits and extra table columns
 - `xl`:

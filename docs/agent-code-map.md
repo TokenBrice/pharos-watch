@@ -54,7 +54,6 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/freezewatch/error.tsx`
 - `src/app/freezewatch/page.tsx` - route /freezewatch; default:FreezeWatchPage, metadata
 - `src/app/funding/page.tsx` - route /funding; default:FundingPage, metadata
-- `src/app/home-alt/page.tsx` - route /home-alt; default:HomeAltPage, metadata
 - `src/app/layout.tsx` - default:RootLayout, metadata, viewport
 - `src/app/learn/mechanisms/[archetype]/page.tsx` - route /learn/mechanisms/[archetype]; default:ArchetypeExplainerPage, generateMetadata, generateStaticParams
 - `src/app/learn/mechanisms/page.tsx` - route /learn/mechanisms; default:MechanismExplainersHub, metadata
