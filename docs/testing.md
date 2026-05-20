@@ -363,7 +363,7 @@ PSI now also has dedicated replay/regression coverage beyond the pure formula te
 Lightweight D1 mock. By default it matches on SQL substrings, but critical-path tests should use stricter behavior when the test is meant to lock a query contract rather than only response shape.
 
 ```ts
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const db = mockD1([
   { match: "COUNT", rows: [{ total: 5 }] },
@@ -385,7 +385,7 @@ const db = mockD1([
 Stubs global `fetch` for testing cron jobs that make HTTP requests.
 
 ```ts
-import { mockFetch } from "./helpers/mock-fetch";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 const spy = mockFetch([
   { match: "frankfurter.dev", body: { rates: { EUR: 0.925 } } },
@@ -423,7 +423,7 @@ Factory functions that return complete DB rows with sensible defaults. Pass `ove
 Example:
 
 ```ts
-import { makeBlacklistRow } from "./helpers/fixtures";
+import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 
 const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
 ```
@@ -445,7 +445,7 @@ The script fetches each source live, prepends a `<!-- captured-at: ISO -->` prov
 Use these helpers in worker API contract tests that exercise admin auth and URL/request plumbing.
 
 ```ts
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 stubCryptoForAuth();
 
@@ -597,7 +597,7 @@ These are the narrow suites used to lock behavior parity before and after the Ti
 
 **Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
 
-**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Use shared fixtures from `helpers/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
+**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `../../test-helpers/__shared/mock-d1.ts`. Use shared fixtures from `../../test-helpers/__shared/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
 
 **Cron test:** Create in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Test both normal path and at least one degraded-mode scenario.
 
@@ -605,8 +605,8 @@ Example API contract test:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeBlacklistRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklist } from "../blacklist";
 
 describe("handleBlacklist", () => {
@@ -630,8 +630,8 @@ Example cron test with degraded mode:
 
 ```ts
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: async (url: string, opts?: RequestInit) => fetch(url, opts),

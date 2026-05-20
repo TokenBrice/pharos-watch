@@ -109,7 +109,7 @@ Use `npm install` instead of `npm ci` only when intentionally changing dependenc
 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
+`NEXT_PUBLIC_API_BASE` is mainly a local-dev override for `next dev` against `wrangler dev`. When it is unset, browser reads on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and `*.stablecoin-dashboard.pages.dev` go through same-origin `/_site-data/*`. All Pages hosts require `SITE_API_ORIGIN` and proxy that lane with `SITE_API_SHARED_SECRET` to the dedicated `site-api` origin; when the binding is missing the proxy returns `500`. The `/_site-data/*` lane gates on the caller's `Origin` (or `Referer` fallback) and only accepts `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, or a subdomain of `stablecoin-dashboard.pages.dev`. Direct browser calls still use `https://api.pharos.watch` only for exempt public routes such as feedback submission, self-serve API key request/verification, Telegram webhook, Telegram Mini App session/mutation, and OG image fetches; every other `/api/*` route requires a valid `X-API-Key`. `NEXT_PUBLIC_GA_ID` is optional and only injects GA4 when set at build time.
 
 ### Worker API
 
@@ -165,6 +165,7 @@ src/                              Frontend (Next.js static export)
 │   ├── dependency-map/           Collateral dependency graph visualization
 │   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
 │   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
+│   ├── feed/                     Static JSON/XML route handlers for digest, depeg, cemetery, and methodology feeds
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
 │   ├── learn/mechanisms/         Stablecoin mechanism explainer hub + archetype pages
@@ -205,6 +206,7 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── admin-api/[[path]].ts         Host gate for the private API management route
+├── selector-snapshot/[[path]].ts Pages-only Selector snapshot store/replay endpoint backed by `SELECTOR_SNAPSHOTS` KV
 ├── stablecoin/[[path]].ts        Legacy numeric stablecoin URL redirector
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper
@@ -275,7 +277,7 @@ Cloudflare Worker (API layer)
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
   ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + bot registration reconciliation + degradation watchdog + disambiguation cleanup + pulse snapshot
   ├── Cron: */5 * * * *                         → manual digest trigger poll
-  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + weekly-gated Telegram inactive cleanup
+  ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + weekly-gated Telegram inactive cleanup + Telegram retention cleanup
   ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + public dataset snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
   ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
@@ -380,12 +382,12 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
-1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run check:feature-flag-inlining` + `npm run seo:check` plus built-artifact guardrails when Pages-impacting files changed → three `npm run test:noncritical -- --shard=N/3` shards → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
+1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run check:feature-flag-inlining` + `npm run seo:check` plus built-artifact guardrails when Pages-impacting files changed → four `npm run test:noncritical -- --shard=N/4` shards → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
 2. **Worker candidate upload:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` to expose the candidate preview URL before validation finishes
 3. **Worker migration + preview smoke:** after the aggregate validate gate passes, rerun the migration checker, apply D1 migrations with `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, then run `npm run test:smoke-api` against the uploaded preview URL
 4. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 5. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
-6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive`, confirmed depeg events, and public dataset mirrors once from the selected API environment → `npm run build` → `npm run check:feature-flag-inlining` → `npm run seo:check` plus built-artifact guardrails → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
+6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive`, confirmed depeg events, and public dataset mirrors once from the selected API environment (`SMOKE_API_BASE_URL` fallback `API_BASE_URL`) → `npm run build` → `npm run check:feature-flag-inlining` → `npm run seo:check` plus built-artifact guardrails → serve `out/` locally through `npm run serve:static-export` with the same selected API environment for `/api/*` and `/_site-data/*` proxy smoke
 7. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then run public live UI, ops, and transport smokes in parallel
 8. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
 9. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `deploy-pages` inside the Pages publish workflow, or after `smoke-api` on worker-only deploys
@@ -393,19 +395,20 @@ For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-i
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
 Optional dedicated GitHub secrets for Pages data sync: `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` (both fall back to `DIGEST_API_KEY`)
+Scheduled monitor secret: `GOOGLE_SAFE_BROWSING_API_KEY`
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
-Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
+Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `MORALIS_API_KEY`, `BIRDEYE_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `JUPITER_API_KEY`, `COINGECKO_API_KEY`, `OPENEXCHANGERATES_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN_PREVIOUS`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_WEBHOOK_SECRET_PREVIOUS`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `SITE_API_SHARED_SECRET`, `SITE_API_SHARED_SECRET_PREVIOUS`, `API_KEY_HASH_PEPPER`, `API_KEY_HASH_PEPPER_PREVIOUS`, `API_KEY_SELF_SERVE_IP_SALT`, `API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER`, `API_KEY_SELF_SERVE_REQUEST_PEPPER`, `API_KEY_SELF_SERVE_EMAIL_FROM`, `API_KEY_SELF_SERVE_EMAIL_REPLY_TO`, `API_KEY_SELF_SERVE_PUBLIC_BASE_URL`, `RESEND_API_KEY`, `CLOUDFLARE_D1_STATUS_API_TOKEN`
 
-`API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, and the Telegram webhook; Telegram still authenticates with its own secret. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
+`API_KEY_HASH_PEPPER` is required: non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`, and the worker can't verify keys without the pepper. No-key public exceptions are health checks, OG images, feedback submission, self-serve API-key request/verification, Telegram webhook, and Telegram Mini App session/mutation; Telegram webhook traffic still authenticates with its own secret, and Mini App traffic authenticates with signed Telegram `initData`. Self-serve default keys are email-verified, limited to 30 requests per minute, expire after 60 days, and are managed privately through `ops.pharos.watch/admin-api/`.
 
 Worker vars (see `.env.example` for the current surface): active worker bindings include `CORS_ORIGIN`, `SELF_URL`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_OPS_API_AUD`, `ADDRESS_PRICE_PROVIDERS_ENABLED`, `MAINTENANCE_MODE`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_D1_DATABASE_ID`. `OPS_UI_ORIGIN`, `OPS_API_ORIGIN`, and `CF_ACCESS_OPS_UI_AUD` remain reserved on the worker side for cross-runtime contract alignment; `CF_ACCESS_OPS_UI_AUD` is active and required on Pages Functions for `/api/admin/*` UI JWT verification.
 
-Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`. Optional Pages origin overrides are `SITE_ORIGIN`, `OPS_UI_ORIGIN`, and `OPS_API_ORIGIN`.
+Pages Functions bindings: `SITE_API_SHARED_SECRET` and production `SITE_API_ORIGIN` for `/_site-data/*`; `DB` for site-data attribution; `SELECTOR_SNAPSHOTS` KV for `/selector-snapshot/*`; `OPS_API_SERVICE_TOKEN_ID`, `OPS_API_SERVICE_TOKEN_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, and `CF_ACCESS_OPS_UI_AUD` for `/api/admin/*`. Optional Pages origin overrides are `SITE_ORIGIN`, `OPS_UI_ORIGIN`, and `OPS_API_ORIGIN`.
 
-Frontend build/runtime vars: `NEXT_PUBLIC_API_BASE` (optional local-dev override) and `NEXT_PUBLIC_GA_ID` (optional GA4 injection)
+Frontend build/runtime vars: `NEXT_PUBLIC_API_BASE` (optional local-dev override), `NEXT_PUBLIC_FORCE_SITE_DATA_PROXY` (CI/local-smoke override that forces same-origin `/_site-data/*` routing), and `NEXT_PUBLIC_GA_ID` (optional GA4 injection)
 
 Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
 

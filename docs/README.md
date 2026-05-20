@@ -124,6 +124,14 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/digest/[date]/`                               | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
 | `/docs/`                                        | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
 | `/docs/[slug]/`                                 | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
+| `/feed/cemetery/`                               | [architecture.md](./architecture.md), [cemetery-and-compare.md](./cemetery-and-compare.md)                                                            |
+| `/feed/cemetery.xml/`                           | [architecture.md](./architecture.md), [cemetery-and-compare.md](./cemetery-and-compare.md)                                                            |
+| `/feed/depeg/`                                  | [architecture.md](./architecture.md), [depeg-detection.md](./depeg-detection.md)                                                                      |
+| `/feed/depeg.xml/`                              | [architecture.md](./architecture.md), [depeg-detection.md](./depeg-detection.md)                                                                      |
+| `/feed/digest/`                                 | [architecture.md](./architecture.md), [digest-pipeline.md](./digest-pipeline.md)                                                                      |
+| `/feed/digest.xml/`                             | [architecture.md](./architecture.md), [digest-pipeline.md](./digest-pipeline.md)                                                                      |
+| `/feed/methodology/`                            | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
+| `/feed/methodology.xml/`                        | [architecture.md](./architecture.md), [methodology-page.md](./methodology-page.md)                                                                    |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
 | `/learn/mechanisms/`                            | [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                                                                |

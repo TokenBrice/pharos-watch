@@ -47,6 +47,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/safety-score-history`                      | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`)                                                                                                                                                                                                                                  |
 | `GET /api/telegram-pulse`                            | Public PharosWatchBot page adoption metrics (watcher counts, subscription counts, top subscribed coins, all-time current-active watcher growth)                                                                                                                                                           |
 | `GET /api/yield-rankings`                            | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics                                                                                                                                                                                                                    |
+| `GET /api/yield-adapter-manifest`                    | Public yield adapter manifest for configured source/adaptor coverage and diagnostics                                                                                                                                                                                                                       |
 | `GET /api/yield-history`                             | Per-coin historical yield data (`?stablecoin=ID&days=90`)                                                                                                                                                                                                                                                 |
 | `GET /api/yield-source-decisions`                    | Admin: source-decision audit trail for yield publication decisions (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                                              |
 | `GET /api/mint-burn-flows`                           | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`)                                                                                                                                                                        |
@@ -226,6 +227,10 @@ These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). Th
 | --- | --- |
 | `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a semantically validated `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, debug-stripped, 5-year TTL. See [Screener Selector Page](./screener-selector-page.md). |
 | `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored frozen `SelectorOutput` or `404`. It recomputes the canonical sid before replay, returns `502` for corrupt/mismatched stored values, and uses `private, no-store` so public shared caches cannot bypass the origin gate. |
+
+### Static feed route handlers
+
+The App Router feed handlers under `src/app/feed/**/route.ts` emit static JSON and XML feeds from checked-in or generated build inputs. Current routes are `/feed/digest/`, `/feed/digest.xml/`, `/feed/depeg/`, `/feed/depeg.xml/`, `/feed/cemetery/`, `/feed/cemetery.xml/`, `/feed/methodology/`, and `/feed/methodology.xml/`.
 
 ---
 

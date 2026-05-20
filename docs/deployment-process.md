@@ -205,7 +205,11 @@ Optional dedicated Pages data-sync secrets:
 Repository variables:
 
 - Required: `API_BASE_URL`
-- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`
+- Optional: `SMOKE_API_BASE_URL`, `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`, `CI_VALIDATE_RUNNER`, `CI_WORKER_DEPLOY_RUNNER`
+
+Scheduled monitor secrets:
+
+- `GOOGLE_SAFE_BROWSING_API_KEY` for `.github/workflows/safe-browsing-monitor.yml`
 
 `SMOKE_API_KEY` is required because the smoke suite exercises protected public API routes on `api.pharos.watch`, and those non-exempt `/api/*` routes require a valid `X-API-Key`.
 

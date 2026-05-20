@@ -47,6 +47,14 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/docs/[slug]/page.tsx` - route /docs/[slug]; default:DocPage, generateMetadata, generateStaticParams
 - `src/app/docs/page.tsx` - route /docs; default:DocsIndexPage, metadata
 - `src/app/error.tsx`
+- `src/app/feed/cemetery/route.ts`
+- `src/app/feed/cemetery.xml/route.ts`
+- `src/app/feed/depeg/route.ts`
+- `src/app/feed/depeg.xml/route.ts`
+- `src/app/feed/digest/route.ts`
+- `src/app/feed/digest.xml/route.ts`
+- `src/app/feed/methodology/route.ts`
+- `src/app/feed/methodology.xml/route.ts`
 - `src/app/flows/client.tsx` - default:FlowsClient
 - `src/app/flows/error.tsx`
 - `src/app/flows/page.tsx` - route /flows; default:FlowsPage, metadata
@@ -87,6 +95,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/screener/client.tsx` - ScreenerClient
 - `src/app/screener/error.tsx`
 - `src/app/screener/page.tsx` - route /screener; metadata
+- `src/app/screener/selector/client.tsx` - SelectorClient, UseSelectorResult, decodeSelectorState, highestValidStep, useSelector
+- `src/app/screener/selector/page.tsx` - route /screener/selector; metadata
 - `src/app/sitemap.ts` - default:sitemap, dynamic
 - `src/app/stability-index/client.tsx` - StabilityIndexClient
 - `src/app/stability-index/error.tsx`
@@ -277,6 +287,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `functions/admin-api/[[path]].ts` - onRequest
 - `functions/admin/[[path]].ts` - onRequest
 - `functions/api/admin/[[path]].ts` - onRequest
+- `functions/selector-snapshot/[[path]].ts` - onRequest
 - `functions/lib/noindex.ts` - noindexTextNotFoundResponse, withNoindex
 - `functions/lib/ops-env.ts` - DEFAULT_OPS_API_ORIGIN, OpsAdminProxyEnv, OpsProxyEnvIssue, PAGES_FUNCTIONS_ACTIVE_ENV_KEYS, PAGES_FUNCTIONS_OPTIONAL_ENV_KEYS, PAGES_FUNCTIONS_REQUIRED_ENV_KEYS
 - `functions/lib/ops-origin.ts` - DEFAULT_OPS_UI_ORIGIN, hasMatchingOpsUiOriginHeader, normalizeOrigin, rejectIfNotOpsUiOrigin, resolveOpsUiOrigin
