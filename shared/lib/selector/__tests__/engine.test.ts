@@ -428,6 +428,7 @@ describe("runSelector — universal properties", () => {
         variantOf: null,
         pegCurrency,
         depegEventCount: 9,
+        pegScore: 40,
       };
       const out = runSelector(
         makeInput({
@@ -443,7 +444,7 @@ describe("runSelector — universal properties", () => {
       expect(out.recommended[0]?.profile).toBe("yield");
       expect(out.lowConfidence).toBe(true);
       expect(out.usedRelaxedFallback).toBe(true);
-      expect(out.relaxedReasons).toContain("depeg-event-count");
+      expect(out.relaxedReasons).toContain("peg-score-floor");
     }
   });
 

@@ -158,14 +158,14 @@ describe("selectLowerRanked — Slot A", () => {
     expect(result[0]!.id).toBe("hi");
   });
 
-  it("Yield priority: venue-on-c-tier beats peg-stability-floor", () => {
+  it("Yield priority: venue-on-c-tier beats peg-score-floor", () => {
     const allMerged = [
       makeRow("hotVenue", { safetyScore: 60 }),
       makeRow("pegMiss", { safetyScore: 90 }),
     ];
     const excluded: ExclusionRecord[] = [
       { id: "hotVenue", reason: "high-venue-on-c-tier", severity: "hard" },
-      { id: "pegMiss", reason: "peg-stability-floor", severity: "hard" },
+      { id: "pegMiss", reason: "peg-score-floor", severity: "hard" },
     ];
     const result = selectLowerRanked(
       [],

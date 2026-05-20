@@ -7,6 +7,7 @@ import {
   hasRequiredSignals,
   treasuryPegScoreFloor,
   tradingDewsCeiling,
+  yieldPegScoreFloor,
 } from "../exclusions";
 import type { MergedRow, SelectorInput } from "../types";
 
@@ -100,6 +101,12 @@ describe("threshold helpers", () => {
     expect(treasuryPegScoreFloor("zero")).toBe(80);
     expect(treasuryPegScoreFloor("tight")).toBe(70);
     expect(treasuryPegScoreFloor("moderate")).toBe(60);
+  });
+
+  it("yieldPegScoreFloor scales with depeg tolerance", () => {
+    expect(yieldPegScoreFloor("zero")).toBe(65);
+    expect(yieldPegScoreFloor("tight")).toBe(55);
+    expect(yieldPegScoreFloor("moderate")).toBe(45);
   });
 });
 
@@ -313,28 +320,41 @@ describe("yield exclusions", () => {
     ).toBeNull();
   });
 
-  it("peg-stability-floor scales with depegTolerance (zero=65)", () => {
-    const zero = makeInput({ profile: "yield", depegTolerance: "zero" });
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 60 }), zero)).toEqual(
-      expect.objectContaining({ reason: "peg-stability-floor" }),
-    );
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 70 }), zero)).toBeNull();
-  });
-
-  it("peg-stability-floor scales with depegTolerance (tight=55)", () => {
+  it("Yield depeg tolerance uses PegScore, not peg-stability history or event count", () => {
     const tight = makeInput({ profile: "yield", depegTolerance: "tight" });
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 50 }), tight)).toEqual(
-      expect.objectContaining({ reason: "peg-stability-floor" }),
+    expect(
+      evaluateExclusions(
+        makeRow({ depegEventCount: 6, pegScore: 100, pegStabilityScore: 40 }),
+        tight,
+      ),
+    ).toBeNull();
+    expect(evaluateExclusions(makeRow({ pegScore: 54, pegStabilityScore: 90 }), tight)).toEqual(
+      expect.objectContaining({ reason: "peg-score-floor" }),
     );
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 60 }), tight)).toBeNull();
   });
 
-  it("peg-stability-floor scales with depegTolerance (moderate=45)", () => {
-    const moderate = makeInput({ profile: "yield", depegTolerance: "moderate" });
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 40 }), moderate)).toEqual(
-      expect.objectContaining({ reason: "peg-stability-floor" }),
+  it("peg-score-floor scales with depegTolerance (zero=65)", () => {
+    const zero = makeInput({ profile: "yield", depegTolerance: "zero" });
+    expect(evaluateExclusions(makeRow({ pegScore: 60 }), zero)).toEqual(
+      expect.objectContaining({ reason: "peg-score-floor" }),
     );
-    expect(evaluateExclusions(makeRow({ pegStabilityScore: 50 }), moderate)).toBeNull();
+    expect(evaluateExclusions(makeRow({ pegScore: 70 }), zero)).toBeNull();
+  });
+
+  it("peg-score-floor scales with depegTolerance (tight=55)", () => {
+    const tight = makeInput({ profile: "yield", depegTolerance: "tight" });
+    expect(evaluateExclusions(makeRow({ pegScore: 50 }), tight)).toEqual(
+      expect.objectContaining({ reason: "peg-score-floor" }),
+    );
+    expect(evaluateExclusions(makeRow({ pegScore: 60 }), tight)).toBeNull();
+  });
+
+  it("peg-score-floor scales with depegTolerance (moderate=45)", () => {
+    const moderate = makeInput({ profile: "yield", depegTolerance: "moderate" });
+    expect(evaluateExclusions(makeRow({ pegScore: 40 }), moderate)).toEqual(
+      expect.objectContaining({ reason: "peg-score-floor" }),
+    );
+    expect(evaluateExclusions(makeRow({ pegScore: 50 }), moderate)).toBeNull();
   });
 });
 
