@@ -3,10 +3,6 @@
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
-  "worker/src/api/backfill-supply-history.ts": {
-    "disposition": "queued-p4",
-    "notes": "Historical supply backfill still combines DefiLlama snapshots, FX normalization, market-cap fallback, and historical on-chain exclusion repair. Keep it explicitly owned as a later admin-path cleanup; split source planning, per-day reconstruction, and persistence before adding new backfill modes."
-  },
   "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
     "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only."

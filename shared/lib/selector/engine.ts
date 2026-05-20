@@ -51,6 +51,7 @@ export const ENGINE_VERSION = SELECTOR_VERSION;
 
 const RELAXED_FALLBACK_BLOCKED_REASONS: ReadonlySet<ExclusionReason> = new Set([
   "active-depeg",
+  "apy-below-floor",
   "below-supply-floor",
   "coverage-too-thin",
   "howey-uncertain",
@@ -59,6 +60,7 @@ const RELAXED_FALLBACK_BLOCKED_REASONS: ReadonlySet<ExclusionReason> = new Set([
   "pys-null",
   "safety-grade-floor",
   "template-coverage-gap",
+  "yield-native-only-violation",
 ]);
 
 // ---------------------------------------------------------------------------
