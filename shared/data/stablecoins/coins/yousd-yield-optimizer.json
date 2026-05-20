@@ -124,6 +124,13 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Resolv-linked strategy loss",
+      "message": "yoUSD reported a roughly 2.95% drawdown after the March 22 2026 Resolv exploit impaired Resolv-linked exposure. Treat the NAV as strategy-risk-bearing, not a monotonic dollar claim. https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident"
+    }
+  ],
   "yieldConfig": {
     "yieldSource": "Yield Optimizer strategies",
     "yieldType": "nav-appreciation"

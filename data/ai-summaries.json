@@ -1451,13 +1451,13 @@
   },
   "yousd-yield-optimizer": {
     "title": "Fifty Strategies, One Token",
-    "text": "A USDC-only yield aggregator on Base whose NAV climbs above $1 — a sophisticated optimizer wearing stablecoin clothing, built and tested during a bull market.\n\nYO Protocol's yoUSD automates what DeFi power users do manually — rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. The track record of positive returns with zero negative months looks miraculous until you remember it was built during a bull market. Backed by Paradigm, Haun Ventures, and Coinbase Ventures, the deposits are modest but growing as the NAV appreciation model means your 'dollar' climbs steadily above $1 — stable in the sense that it never goes down, not that it stays at one. The real tension is philosophical: yoUSD is a sophisticated {{term:yield-bearing}}yield-bearing{{/term}} aggregator wearing a stablecoin's clothing, and the distinction matters when the bull market ends.",
-    "updatedAt": "2026-05-15",
+    "text": "A USDC-only yield aggregator on Base whose NAV can move with strategy outcomes — a sophisticated optimizer wearing stablecoin clothing, not a risk-free dollar claim.\n\nYO Protocol's yoUSD automates what DeFi power users do manually: rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. That diversification still leaves holders exposed to venue and allocator risk. The March 22 2026 Resolv exploit produced a reported ~2.95% yoUSD drawdown through Resolv-linked exposure, a useful reminder that NAV-appreciating tokens can also absorb strategy losses. Backed by Paradigm, Haun Ventures, and Coinbase Ventures, yoUSD remains a sophisticated {{term:yield-bearing}}yield-bearing{{/term}} product, but the relevant question is no longer whether the NAV only climbs; it is whether the extra yield compensates for the portfolio's tail risk.",
+    "updatedAt": "2026-05-20",
     "authoredBy": "ai",
     "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "reviewedBy": "Codex data review",
+    "reviewedAt": "2026-05-20",
+    "factsAsOf": "2026-05-20"
   },
   "ustb-superstate": {
     "title": "Wall Street's On-Chain Fund",

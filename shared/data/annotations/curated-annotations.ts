@@ -1684,6 +1684,17 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       severity: "high",
     },
   ],
+  "yousd-yield-optimizer": [
+    {
+      // 2026-03-22 — Resolv exploit impaired yoUSD's Resolv-linked strategy
+      // exposure; the issuer performance view reported a ~2.95% drawdown.
+      ts: Date.UTC(2026, 2, 22),
+      kind: "depeg",
+      label: "Resolv exploit exposure — yoUSD NAV drawdown ~2.95%",
+      severity: "high",
+      href: "https://resolv.xyz/blog/resolv-postmortem-march-22-2026-incident",
+    },
+  ],
 };
 
 const EMPTY: readonly ChartAnnotation[] = [];
