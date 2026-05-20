@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "node ../scripts/guard-worker-deploy.mjs",
+    "deploy": "node ../scripts/ci/guard-worker-deploy.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
