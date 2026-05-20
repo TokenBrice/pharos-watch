@@ -11,7 +11,7 @@
  *
  * Binding: `agents/selector-implementation-plan.md` §2.5 + §10 (Milestone 10).
  */
-import type { LowestSubDimensionKey, SelectorProfile } from "./types";
+import type { LowestSubDimensionKey, SelectorLowerRanked, SelectorProfile } from "./types";
 
 export interface WhatToWatchTemplate {
   /** Free-form prose ≤80 chars after substitution. */
@@ -152,4 +152,61 @@ export function getTemplate(
   profile: SelectorProfile,
 ): WhatToWatchTemplate | null {
   return TEMPLATES[profile][key] ?? null;
+}
+
+const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
+  "active-depeg": "the current peg-deviation gate",
+  "depeg-event-count": "the depeg-history gate",
+  "peg-stability-floor": "the peg-stability floor",
+  "safety-resilience-floor": "the resilience floor",
+  "safety-dependency-risk-floor": "the dependency-risk floor",
+  "dews-ceiling": "the stress-signal ceiling",
+  "bluechip-d-or-f": "the third-party bluechip floor",
+  "high-venue-on-c-tier": "the venue-risk gate",
+  "yield-warning-unstable": "the APY-stability warning gate",
+  "yield-warning-thin-tvl": "the source-depth warning gate",
+  "liquidity-floor": "the liquidity floor",
+  "liquidity-diversification-floor": "the venue-diversification floor",
+  "effective-exit-floor": "the effective-exit floor",
+  "supply-tvl-floor-1h": "the fast-exit depth floor",
+};
+
+const COMPONENT_LABELS: Readonly<Record<string, string>> = {
+  safetyOverall: "safety",
+  resilience: "resilience",
+  dependencyRisk: "dependency risk",
+  pegStabilityHistory: "peg history",
+  pegStabilityLive: "live peg stability",
+  pegScoreNow: "current PegScore",
+  decentralization: "decentralization",
+  dewsInverted: "stress",
+  bluechip: "bluechip alignment",
+  supplyLog: "supply depth",
+  pharosYieldScore: "Pharos Yield Score",
+  excessApy: "excess APY",
+  yieldVariance: "APY variance",
+  liquidity: "liquidity",
+  sourceRiskInverted: "source risk",
+  effectiveExit: "effective exit",
+  liquidityDiversification: "liquidity diversification",
+};
+
+export function labelForSelectorReason(reasonKey: string): string {
+  if (reasonKey.startsWith("weak-")) {
+    const component = reasonKey.slice("weak-".length);
+    return COMPONENT_LABELS[component] ?? "a profile-emphasized metric";
+  }
+  return LOWER_REASON_LABELS[reasonKey] ?? "a profile-specific gate";
+}
+
+export function getLowerRankedText(
+  entry: Pick<SelectorLowerRanked, "symbol" | "reasonKey" | "failedComponent">,
+): Pick<SelectorLowerRanked, "verdictText" | "teachingText"> {
+  const label = entry.failedComponent
+    ? COMPONENT_LABELS[entry.failedComponent] ?? "the emphasized metric"
+    : labelForSelectorReason(entry.reasonKey);
+  return {
+    verdictText: `${entry.symbol}: profile mismatch`,
+    teachingText: `This row missed ${label}; compare the live reading before relaxing that constraint.`,
+  };
 }

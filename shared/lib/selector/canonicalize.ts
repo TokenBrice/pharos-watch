@@ -11,10 +11,11 @@
  */
 
 /**
- * Top-level field names that are unconditionally stripped during canonical
- * serialization.
+ * Field names that are unconditionally stripped during canonical
+ * serialization wherever they appear in the payload.
  */
 const STRIP_TOP_LEVEL: ReadonlySet<string> = new Set([
+  "debug",
   "timestamp",
   "perInputStaleness",
 ]);

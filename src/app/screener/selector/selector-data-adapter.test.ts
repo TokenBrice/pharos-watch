@@ -244,6 +244,35 @@ describe("buildSelectorRows", () => {
     expect(result.datasetHash).not.toBe(usdHash);
   });
 
+  it("uses a SHA-256 dataset hash over decision-affecting fields only", () => {
+    const base = buildSelectorRows(baseArgs());
+    expect(base.datasetHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const changedDecisionField = buildSelectorRows(baseArgs({
+      reportData: reportData({
+        rawInputs: createReportCardRawInputs({ effectiveExitScore: 12 }),
+      }),
+    }));
+    expect(changedDecisionField.datasetHash).not.toBe(base.datasetHash);
+
+    const timestampOnlyReport = reportData();
+    const timestampOnly = buildSelectorRows(baseArgs({
+      reportData: { ...timestampOnlyReport, updatedAt: NOW_SEC + 1_000 },
+    }));
+    expect(timestampOnly.datasetHash).toBe(base.datasetHash);
+  });
+
+  it("includes methodology versions in the dataset hash", () => {
+    const base = buildSelectorRows(baseArgs());
+    const nextReportData = reportData();
+    nextReportData.methodology.version = "safety-next";
+    const changedMethodology = buildSelectorRows(baseArgs({
+      reportData: nextReportData,
+    }));
+    expect(changedMethodology.methodologyVersions.safetyScore).toBe("safety-next");
+    expect(changedMethodology.datasetHash).not.toBe(base.datasetHash);
+  });
+
   it("maps yield ranking risk, benchmark, provenance, and freshness fields", () => {
     const result = buildSelectorRows(baseArgs({
       yieldData: {
@@ -258,7 +287,7 @@ describe("buildSelectorRows", () => {
             apyBase: 5.8,
             apyReward: 0.2,
             yieldSource: "Aave",
-            yieldType: "lending",
+            yieldType: "lending-vault",
             dataSource: "defillama",
             sourceTvlUsd: 50_000_000,
             pharosYieldScore: 78,
@@ -326,7 +355,122 @@ describe("buildSelectorRows", () => {
     expect(row?.yieldVenueChain).toBe("Ethereum");
     expect(row?.yieldHistoryDays).toBe(28);
     expect(row?.yieldFreshness).toEqual({ capturedAt: NOW_SEC - 90, ageSeconds: 90 });
+    expect(row?.yieldSources?.[0]).toEqual(
+      expect.objectContaining({
+        sourceKey: "aave-v3-usdc",
+        protocol: "Aave",
+        chain: "Ethereum",
+        yieldType: "lending-vault",
+        isPrimary: true,
+      }),
+    );
     expect(result.methodologyVersions.yieldIntelligence).toBe("8.1");
+  });
+
+  it("preserves Yield altSources for engine venue/risk/freshness selection", () => {
+    const result = buildSelectorRows(baseArgs({
+      yieldData: {
+        rankings: [
+          {
+            id: "usdc-usd-coin",
+            symbol: "USDC",
+            name: "USD Coin",
+            currentApy: 6.2,
+            apy7d: 6.1,
+            apy30d: 6,
+            apyBase: 5.8,
+            apyReward: 0.2,
+            yieldSource: "Aave",
+            yieldType: "lending-vault",
+            dataSource: "defillama",
+            sourceTvlUsd: 50_000_000,
+            pharosYieldScore: 78,
+            safetyScore: 91,
+            safetyGrade: "A",
+            yieldToRisk: 1.4,
+            excessYield: 1.25,
+            benchmarkRate: 4.75,
+            yieldStability: 92,
+            apyVariance30d: 0.8,
+            apyMin30d: 5.7,
+            apyMax30d: 6.4,
+            warningSignals: [],
+            altSources: [
+              {
+                sourceKey: "curve-usdc",
+                yieldSource: "Curve",
+                yieldType: "lp-receipt",
+                currentApy: 5.1,
+                apy30d: 5,
+                sourceTvlUsd: 30_000_000,
+                dataSource: "defillama",
+                sourceRisk: {
+                  sourceRiskScore: 18,
+                  sourceAgeSeconds: 45,
+                  observationCount30d: 30,
+                  sourceSwitchCount30d: 0,
+                  sourceDepthRatio: 0.7,
+                  deploymentPlace: "lp-or-dex",
+                  venueProtocol: "Curve",
+                  venueChain: "Ethereum",
+                  venueRiskTier: "low",
+                  investabilityFlags: [],
+                },
+              },
+            ],
+            provenance: {
+              sourceKey: "aave-v3-usdc",
+              sourceObservedAt: NOW_SEC - 90,
+              sourceAgeSeconds: 90,
+              confidenceTier: "deterministic",
+              selectionMethod: "confidence-weighted",
+              selectionReason: "best-by-confidence-and-apy",
+              sourceSwitch: false,
+              previousBestSourceKey: null,
+              usedLegacyHistory: false,
+              usedDefaultSafety: false,
+              benchmarkRate: 4.75,
+              benchmarkRecordDate: "2026-05-19",
+              benchmarkIsFallback: false,
+              benchmarkFallbackMode: null,
+              anomalies: [],
+            },
+            sourceRisk: {
+              sourceRiskScore: 22,
+              sourceAgeSeconds: 90,
+              observationCount30d: 28,
+              sourceSwitchCount30d: 0,
+              sourceDepthRatio: 0.8,
+              deploymentPlace: "lending-market",
+              venueProtocol: "Aave",
+              venueChain: "Ethereum",
+              venueRiskTier: "medium",
+              investabilityFlags: [],
+            },
+          },
+        ],
+        riskFreeRate: 4.5,
+        scalingFactor: 1,
+        medianApy: 5,
+        updatedAt: NOW_SEC,
+        methodology: { version: "8.1" },
+      } as YieldRankingsResponse,
+    }));
+
+    const sources = result.rows.get("usdc-usd-coin")?.yieldSources ?? [];
+    expect(sources.map((source) => source.sourceKey)).toEqual([
+      "aave-v3-usdc",
+      "curve-usdc",
+    ]);
+    expect(sources[1]).toEqual(
+      expect.objectContaining({
+        protocol: "Curve",
+        chain: "Ethereum",
+        deploymentPlace: "lp",
+        venueRiskTier: "low",
+        freshness: { capturedAt: NOW_SEC - 45, ageSeconds: 45 },
+      }),
+    );
   });
 
   it("prefers redemption effective exit and maps report-card raw inputs", () => {

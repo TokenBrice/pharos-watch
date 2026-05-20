@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Clock } from "lucide-react";
+import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,8 @@ interface SelectorShortlistCardProps {
   isMobile: boolean;
   /** Logo URL keyed by coin id. Optional. */
   logoUrl?: string;
+  whyText?: string;
+  watchText?: string;
 }
 
 const PROFILE_LABEL: Record<SelectorProfile, string> = {
@@ -142,16 +144,31 @@ function buildEvidenceChips(
 }
 
 export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
-  const { rank, recommendation: rec, profile, pegCurrency, isMobile, logoUrl } = props;
+  const {
+    rank,
+    recommendation: rec,
+    profile,
+    pegCurrency,
+    isMobile,
+    logoUrl,
+    whyText,
+    watchText,
+  } = props;
   const chips = buildEvidenceChips(rec, isMobile);
   const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
+  const recWithProse = rec as SelectorRecommendation & {
+    whyText?: string;
+    watchText?: string;
+  };
+  const resolvedWhyText = whyText ?? recWithProse.whyText;
+  const resolvedWatchText = watchText ?? recWithProse.watchText;
 
   const detailHref = `/stablecoin/${rec.id}/`;
   const profileLabel = PROFILE_LABEL[profile];
   const headlineId = `selector-shortlist-${rec.id}`;
 
   return (
-    <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 sm:p-5">
+    <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/70 bg-background/65 font-mono font-semibold text-foreground">
@@ -188,7 +205,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         <div className="min-w-0 flex-1 space-y-1">
           <h3 id={headlineId} className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
             <span className="font-bold">{rec.symbol}</span>
-            <span className="text-muted-foreground"> — {rec.name}</span>
+            <span className="break-words text-muted-foreground"> — {rec.name}</span>
           </h3>
           <div className="flex flex-wrap items-center gap-1.5">
             <SafetyGradeBadge grade={rec.safetyGrade} size="xs" />
@@ -209,9 +226,9 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
                   "text-[11px] font-medium",
                   chip.tone === "watch" && "border-amber-500/45 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200",
                 )}
-                aria-label={chip.ariaLabel}
               >
-                {chip.text}
+                <span aria-hidden={chip.ariaLabel ? "true" : undefined}>{chip.text}</span>
+                {chip.ariaLabel ? <span className="sr-only">{chip.ariaLabel}</span> : null}
               </Badge>
             </li>
           ))}
@@ -219,29 +236,26 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       </div>
 
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-foreground">
-        {/* TODO(integration): engine should attach pre-rendered prose to each
-          * recommendation: `whyText` (from `whyKeys[]` + templates) and `watchText`
-          * (from `lowestSubDimension` + templates). The fallback below renders the
-          * raw keys + dimension so the card never ships an empty block. */}
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Why it ranked here
           </p>
-          {"whyText" in rec && typeof rec.whyText === "string" && rec.whyText.length > 0 ? (
-            <p>{rec.whyText}</p>
-          ) : rec.whyKeys.length > 0 ? (
-            <p>Profile-conditioned signals: {rec.whyKeys.slice(0, 2).join(", ")}.</p>
+          {resolvedWhyText && resolvedWhyText.length > 0 ? (
+            <p className="break-words">{resolvedWhyText}</p>
           ) : (
-            <p>This entry survived the profile filters and ranked under the current weight set.</p>
+            <p className="break-words">
+              This entry passed the selected profile filters and ranked highest under the current
+              evidence weights. Review the score details before acting.
+            </p>
           )}
         </div>
-        {"watchText" in rec && typeof rec.watchText === "string" && rec.watchText.length > 0 ? (
+        {resolvedWatchText && resolvedWatchText.length > 0 ? (
           <div className="space-y-1 text-muted-foreground">
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
               What to watch
             </p>
-            <p>
-              {rec.watchText}{" "}
+            <p className="break-words">
+              {resolvedWatchText}{" "}
               <em className="text-xs">Historical readings; future behaviour may differ.</em>
             </p>
           </div>
@@ -251,7 +265,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
               What to watch
             </p>
             <p>
-              {rec.lowestSubDimension.key} scores {Math.round(rec.lowestSubDimension.score)} under this profile.{" "}
+              {readableLowestSubDimension(rec.lowestSubDimension.key)} scores {Math.round(rec.lowestSubDimension.score)} under this profile.{" "}
               <em className="text-xs">Historical readings; future behaviour may differ.</em>
             </p>
           </div>
@@ -259,16 +273,25 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       </div>
 
       {rec.profile === "yield" && rec.recommendedSource ? (
-        <p className="mt-3 flex flex-wrap items-baseline gap-1.5 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">Yield rail:</span>
-          <span>
-            {rec.recommendedSource.protocol} on {rec.recommendedSource.chain} at{" "}
-            {rec.recommendedSource.apy30d.toFixed(1)}%
-            {rec.recommendedSource.pharosYieldScore != null
-              ? ` (PYS ${rec.recommendedSource.pharosYieldScore})`
-              : ""}
-          </span>
-        </p>
+        <div className="mt-3 rounded-lg border border-border/50 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+          <p className="flex flex-wrap items-baseline gap-1.5">
+            <span className="font-semibold text-foreground">Yield rail:</span>
+            <span className="break-words">
+              {rec.recommendedSource.protocol} on {rec.recommendedSource.chain} at{" "}
+              {rec.recommendedSource.apy30d.toFixed(1)}%
+              {rec.recommendedSource.pharosYieldScore != null
+                ? ` (PYS ${rec.recommendedSource.pharosYieldScore})`
+                : ""}
+            </span>
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5">
+            <ShieldAlert className="h-3 w-3" aria-hidden="true" />
+            <span>
+              Source risk: {rec.recommendedSource.sourceRiskTier}. Data freshness:{" "}
+              {precisStaleness(rec.recommendedSource.freshness.ageSeconds)} old.
+            </span>
+          </p>
+        </div>
       ) : null}
 
       <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-sm">
@@ -294,4 +317,27 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       </div>
     </li>
   );
+}
+
+function readableLowestSubDimension(key: string): string {
+  const labels: Record<string, string> = {
+    safetyOverall: "Safety",
+    resilience: "resilience",
+    dependencyRisk: "dependency risk",
+    pegStabilityHistory: "peg history",
+    pegStabilityLive: "live peg stability",
+    pegScoreNow: "current peg score",
+    decentralization: "decentralization",
+    dewsInverted: "DEWS stress",
+    bluechip: "blue-chip alignment",
+    supplyLog: "market depth",
+    pharosYieldScore: "Pharos Yield Score",
+    excessApy: "net yield",
+    yieldVariance: "yield variance",
+    sourceRiskInverted: "source risk",
+    effectiveExit: "effective exit",
+    liquidity: "liquidity",
+    liquidityDiversification: "liquidity diversification",
+  };
+  return labels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }

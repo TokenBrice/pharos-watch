@@ -3,6 +3,7 @@ import {
   canonicalizeForDatasetHash,
   canonicalizeForSid,
 } from "../canonicalize";
+import { sha256Hex } from "../hash";
 
 describe("canonicalizeForSid — top-level strip-list", () => {
   it("strips top-level `timestamp`", () => {
@@ -92,6 +93,12 @@ describe("canonicalizeForDatasetHash", () => {
       coins: [{ id: "x", dataUpdatedAt: 999, score: 80 }],
     });
     expect(a).toBe(b);
+  });
+
+  it("pairs with the synchronous SHA-256 helper", () => {
+    expect(sha256Hex("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
   });
 });
 

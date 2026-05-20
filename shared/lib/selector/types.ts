@@ -8,7 +8,7 @@
  *
  * Binding: `agents/selector-implementation-plan.md` §3 + `agents/selector-design.md` §3.6.
  */
-import type { BluechipGrade, PegCurrency, ReportCardGrade } from "../../types";
+import type { BluechipGrade, PegCurrency, ReportCardGrade, YieldType } from "../../types";
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -70,6 +70,20 @@ export type SelectorDecentralization = (typeof DECENTRALIZATION_VALUES)[number];
 export const CUSTODY_OK_VALUES = ["any", "regulated-only", "onchain-only"] as const;
 export type SelectorCustodyOk = (typeof CUSTODY_OK_VALUES)[number];
 
+export const TREASURY_VENUE_VALUES = ["custody", "some", "active"] as const;
+export type SelectorTreasuryVenue = (typeof TREASURY_VENUE_VALUES)[number];
+
+export const YIELD_VENUE_VALUES = ["lend", "dex", "wrap", "all"] as const;
+export type SelectorYieldVenue = (typeof YIELD_VENUE_VALUES)[number];
+
+export const TRADING_VENUE_VALUES = ["cex", "perps", "spot", "all"] as const;
+export type SelectorTradingVenue = (typeof TRADING_VENUE_VALUES)[number];
+
+export type SelectorVenuePreference =
+  | SelectorTreasuryVenue
+  | SelectorYieldVenue
+  | SelectorTradingVenue;
+
 export interface SelectorInput {
   profile: SelectorProfile;
   pegCurrency: SelectorEligiblePegCurrency;
@@ -77,6 +91,12 @@ export interface SelectorInput {
   depegTolerance: SelectorDepegTolerance;
   composability: SelectorComposability;
   exitSpeed: SelectorExitSpeed;
+  /**
+   * Raw venue answers from the wizard. `composability` remains the broad
+   * scoring bucket; this preserves the user's specific rail preference for
+   * yield-source selection and audit output. Optional for legacy snapshots.
+   */
+  venuePreferences?: readonly SelectorVenuePreference[];
   /** MVP-internal: not collected from the wizard in Phase 1. */
   minApy: number | null;
   /** MVP-internal default `false`. */
@@ -216,12 +236,16 @@ export type WhyKey = (typeof WHY_KEYS)[number];
 // ---------------------------------------------------------------------------
 
 export interface RecommendedSource {
+  sourceKey?: string | null;
   protocol: string;
   chain: string;
+  yieldType?: YieldType | null;
   apy30d: number;
   pharosYieldScore: number | null;
+  sourceTvlUsd?: number | null;
   sourceRiskTier: "low" | "mid" | "high";
   freshness: { capturedAt: number; ageSeconds: number };
+  selectionReason?: string | null;
 }
 
 export interface SelectorChainHints {
@@ -230,6 +254,32 @@ export interface SelectorChainHints {
   primary: string | null;
 }
 
+export type SelectorRankRobustnessLabel =
+  | "clear-margin"
+  | "crowded-field"
+  | "narrow-margin"
+  | "concentration-adjusted";
+
+export interface SelectorRankRobustness {
+  label: SelectorRankRobustnessLabel;
+  scoreMargin: number | null;
+}
+
+export const BASE_CONFIDENCE_REASON_KEYS = [
+  "recent-listing",
+  "yield-source-switched",
+  "short-yield-history",
+  "redistributed-missing-data",
+  "source-risk-missing",
+  "relaxed-fallback",
+  "narrow-margin",
+] as const;
+export type BaseConfidenceReasonKey = (typeof BASE_CONFIDENCE_REASON_KEYS)[number];
+export type MissingCriticalConfidenceReason = `missing-critical-${WeightKey}`;
+export type SelectorConfidenceReason =
+  | BaseConfidenceReasonKey
+  | MissingCriticalConfidenceReason;
+
 interface SelectorRecommendationBase {
   id: string;
   symbol: string;
@@ -237,10 +287,17 @@ interface SelectorRecommendationBase {
   rank: 1 | 2 | 3;
   score: number;
   confidence: number;
+  confidenceReasons?: SelectorConfidenceReason[];
   components: SelectorComponent[];
   whyKeys: WhyKey[];
+  /** Authored, data-anchored prose for visible result cards. */
+  whyText?: string;
+  /** Authored "what to watch" prose derived from the lowest sub-dimension. */
+  watchText?: string;
   lowestSubDimension: LowestSubDimension;
   chainHints: SelectorChainHints;
+  rankRobustness?: SelectorRankRobustness;
+  relaxedReason?: ExclusionReason | null;
   isRecentListing: boolean;
   bluechipGrade: BluechipGrade | null;
   safetyGrade: ReportCardGrade;
@@ -330,6 +387,10 @@ export interface SelectorLowerRanked {
   slot: "A" | "B";
   /** Canonical key the editorial layer maps to prose. */
   reasonKey: string;
+  /** Authored visible headline that avoids exposing `reasonKey`. */
+  verdictText?: string;
+  /** Authored teaching line keyed by `reasonKey` / `failedComponent`. */
+  teachingText?: string;
   failedComponent: string | null;
   hypotheticalScore: number | null;
 }
@@ -391,6 +452,33 @@ export interface SelectorScreenerHandoff {
 }
 
 // ---------------------------------------------------------------------------
+// Engine-owned empty-state diagnostics
+// ---------------------------------------------------------------------------
+
+export interface SelectorExclusionSummaryItem {
+  reason: ExclusionReason;
+  count: number;
+  severity: ExclusionRecord["severity"];
+  sampleIds: string[];
+}
+
+export interface SelectorClosestSurvivor {
+  id: string;
+  symbol: string;
+  failingDimension: string;
+  liveReading: string;
+  reason: ExclusionReason;
+  hypotheticalScore: number | null;
+}
+
+export interface SelectorRelaxableConstraint {
+  key: "depegTolerance" | "venue" | "exitSpeed";
+  label: string;
+  description: string;
+  reason: ExclusionReason | "input-strictness";
+}
+
+// ---------------------------------------------------------------------------
 // Output
 // ---------------------------------------------------------------------------
 
@@ -404,6 +492,11 @@ export interface SelectorOutput {
   lowerRanked: SelectorLowerRanked[];
   coverageWarnings: SelectorCoverageWarnings;
   lowConfidence: boolean;
+  usedRelaxedFallback: boolean;
+  relaxedReasons: ExclusionReason[];
+  exclusionSummary: SelectorExclusionSummaryItem[];
+  closestSurvivors: SelectorClosestSurvivor[];
+  relaxableConstraints: SelectorRelaxableConstraint[];
   /** Caller-provided `Date.now()` snapshot; threaded so the engine stays pure. */
   timestamp: number;
   engineVersion: string;
@@ -480,12 +573,32 @@ export interface MergedRow {
   yieldVenueChain: string | null;
   yieldHistoryDays: number;
   yieldFreshness: { capturedAt: number; ageSeconds: number } | null;
+  yieldSources?: readonly YieldSourceCandidate[];
 
   trackingSpanDays: number;
   isRecentListing: boolean;
   pegSummaryAgeSec: number | null;
   dexTvlAgeSec: number | null;
   dewsAgeSec: number | null;
+}
+
+export interface YieldSourceCandidate {
+  sourceKey: string;
+  protocol: string;
+  chain: string | null;
+  yieldType: YieldType | null;
+  apy30d: number;
+  pharosYieldScore: number | null;
+  sourceTvlUsd: number | null;
+  dataSource: string | null;
+  sourceRiskScore: number | null;
+  venueRiskTier: "low" | "mid" | "high" | null;
+  deploymentPlace: MergedRow["deploymentPlace"];
+  sourceDepthRatio: number | null;
+  sourceSwitchCount30d: number | null;
+  observationCount30d: number | null;
+  freshness: { capturedAt: number; ageSeconds: number } | null;
+  isPrimary: boolean;
 }
 
 /**

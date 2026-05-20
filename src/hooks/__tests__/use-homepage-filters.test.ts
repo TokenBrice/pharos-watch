@@ -19,13 +19,14 @@ afterEach(() => {
 });
 
 describe("useHomepageFilters", () => {
-  it("updates the peg selection after same-page URL navigation", () => {
+  it("updates the peg selection after same-page URL navigation", async () => {
     render(createElement(HomepageFiltersProbe));
 
     expect(screen.getByTestId("homepage-peg-filter").textContent).toBe("");
 
-    act(() => {
+    await act(async () => {
       window.history.pushState(null, "", "/?peg=fiat-non-usd-peg#filter-bar");
+      await Promise.resolve();
     });
 
     expect(screen.getByTestId("homepage-peg-filter").textContent).toBe("fiat-non-usd-peg");

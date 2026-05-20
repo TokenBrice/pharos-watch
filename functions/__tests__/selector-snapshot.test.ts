@@ -65,6 +65,8 @@ function buildRecommendation(overrides: Record<string, unknown> = {}): Record<st
     confidence: 92,
     components: [],
     whyKeys: ["top-safety"],
+    whyText: "USDC ranked here because Safety and resilience are strong.",
+    watchText: "Dependency risk is the lowest sub-dimension to monitor.",
     lowestSubDimension: {
       key: "dependencyRisk",
       score: 84,
@@ -84,6 +86,51 @@ function buildRecommendation(overrides: Record<string, unknown> = {}): Record<st
     perInputStaleness: null,
     ...overrides,
   };
+}
+
+function buildComponent(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    key: "safetyOverall",
+    weight: 30,
+    rawValue: 88,
+    normalizedValue: 88,
+    contribution: 26.4,
+    redistributed: false,
+    ...overrides,
+  };
+}
+
+function buildYieldRecommendation(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return buildRecommendation({
+    profile: "yield",
+    components: [buildComponent({ key: "pharosYieldScore", weight: 28 })],
+    whyKeys: ["top-pys"],
+    recommendedSource: {
+      protocol: "aave",
+      chain: "ethereum",
+      apy30d: 4.2,
+      pharosYieldScore: 81,
+      sourceRiskTier: "low",
+      freshness: { capturedAt: 1715000123, ageSeconds: 42 },
+    },
+    perInputStaleness: null,
+    ...overrides,
+  });
+}
+
+function buildTradingRecommendation(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return buildRecommendation({
+    profile: "trading",
+    components: [buildComponent({ key: "liquidity", weight: 30 })],
+    whyKeys: ["deepest-liquidity"],
+    recommendedSource: null,
+    perInputStaleness: {
+      pegSummary: 10,
+      dexTvl: 20,
+      dews: 30,
+    },
+    ...overrides,
+  });
 }
 
 function buildSelectorOutput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -116,6 +163,11 @@ function buildSelectorOutput(overrides: Record<string, unknown> = {}): Record<st
       redistributionCount: 0,
     },
     lowConfidence: false,
+    usedRelaxedFallback: false,
+    relaxedReasons: [],
+    exclusionSummary: [],
+    closestSurvivors: [],
+    relaxableConstraints: [],
     methodologyVersions: {
       safetyScore: "v7.25",
       pegScoreAndDews: "v5.9",
@@ -234,6 +286,107 @@ describe("selector-snapshot Pages Function", () => {
       expect(response.status).toBe(200);
     });
 
+    it("accepts engine prose and relaxed-fallback output fields", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              recommended: [
+                buildRecommendation({
+                  whyText: "USDC ranked here because the Safety signal is strong.",
+                  watchText: "Dependency risk is the lowest sub-dimension to monitor.",
+                  relaxedReason: "coverage-too-thin",
+                }),
+              ],
+              lowerRanked: [
+                {
+                  id: "usdt-tether",
+                  symbol: "USDT",
+                  name: "Tether USD",
+                  slot: "B",
+                  reasonKey: "weak-liquidity",
+                  failedComponent: "liquidity",
+                  hypotheticalScore: 71.2,
+                  verdictText: "USDT has a weaker liquidity fit for this profile.",
+                  teachingText: "The selector highlights this as a profile mismatch.",
+                },
+              ],
+              usedRelaxedFallback: false,
+              relaxedReasons: ["coverage-too-thin"],
+              exclusionSummary: [
+                {
+                  reason: "coverage-too-thin",
+                  count: 2,
+                  severity: "info",
+                  sampleIds: ["coverage-thin-test"],
+                },
+              ],
+              closestSurvivors: [
+                {
+                  id: "near-fit",
+                  symbol: "NEAR",
+                  failingDimension: "liquidity",
+                  liveReading: "Liquidity 62",
+                  reason: "liquidity-floor",
+                  hypotheticalScore: 68.4,
+                },
+              ],
+              relaxableConstraints: [
+                {
+                  key: "exitSpeed",
+                  label: "Exit speed",
+                  description: "Relax the exit-speed requirement.",
+                  reason: "input-strictness",
+                },
+              ],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(200);
+    });
+
+    it("strips debug before hashing and storing snapshots", async () => {
+      const env = makeEnv();
+      const headers = { "Content-Type": "application/json", Origin: "https://pharos.watch" } as const;
+      const output = buildSelectorOutput();
+      const withDebug = {
+        ...output,
+        debug: { allSurvivors: [buildRecommendation({ id: "debug-only", symbol: "DBG" })] },
+      };
+
+      const debug = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(withDebug),
+          headers,
+        }),
+        env,
+        params: {},
+      });
+      const debugBody = (await debug.json()) as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      const stored = JSON.parse(kv.__getStore().get(`s:${debugBody.sid}`) ?? "{}") as Record<string, unknown>;
+      expect(stored.debug).toBeUndefined();
+
+      const plain = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(output),
+          headers,
+        }),
+        env,
+        params: {},
+      });
+      const plainBody = (await plain.json()) as { sid: string };
+
+      expect(debugBody.sid).toBe(plainBody.sid);
+    });
+
     it("is idempotent — re-POSTing the same payload returns the same sid", async () => {
       const env = makeEnv();
       const headers = { "Content-Type": "application/json", Origin: "https://pharos.watch" } as const;
@@ -296,11 +449,30 @@ describe("selector-snapshot Pages Function", () => {
     it("strips freshness-suffix fields from the sid computation", async () => {
       const env = makeEnv();
       const headers = { "Content-Type": "application/json", Origin: "https://pharos.watch" } as const;
+      const base = buildSelectorOutput();
+      const yieldInput = { ...(base.input as Record<string, unknown>), profile: "yield" };
 
       const withoutFreshness = await onRequest({
         request: new Request("https://pharos.watch/selector-snapshot", {
           method: "POST",
-          body: JSON.stringify(buildSelectorOutput()),
+          body: JSON.stringify(
+            buildSelectorOutput({
+              profile: "yield",
+              input: yieldInput,
+              recommended: [
+                buildYieldRecommendation({
+                  recommendedSource: {
+                    protocol: "aave",
+                    chain: "ethereum",
+                    apy30d: 4.2,
+                    pharosYieldScore: 81,
+                    sourceRiskTier: "low",
+                    freshness: { capturedAt: 1715000123, ageSeconds: 42 },
+                  },
+                }),
+              ],
+            }),
+          ),
           headers,
         }),
         env,
@@ -313,12 +485,19 @@ describe("selector-snapshot Pages Function", () => {
           method: "POST",
           body: JSON.stringify(
             buildSelectorOutput({
+              profile: "yield",
+              input: yieldInput,
               recommended: [
-                buildRecommendation({
+                buildYieldRecommendation({
                   recommendedSource: {
-                    venue: "aave",
+                    protocol: "aave",
+                    chain: "ethereum",
+                    apy30d: 4.2,
+                    pharosYieldScore: 81,
+                    sourceRiskTier: "low",
                     freshness: { capturedAt: 1715000123, ageSeconds: 42 },
                   },
+                  updatedAt: 1715000123,
                 }),
               ],
             }),
@@ -330,7 +509,7 @@ describe("selector-snapshot Pages Function", () => {
       });
       const withBody = (await withFreshness.json()) as { sid: string };
 
-      expect(withBody.sid).not.toBe(withoutBody.sid);
+      expect(withBody.sid).toBe(withoutBody.sid);
 
       // Two payloads that differ only in capturedAt/ageSeconds should produce identical sids.
       const variantA = await onRequest({
@@ -338,10 +517,16 @@ describe("selector-snapshot Pages Function", () => {
           method: "POST",
           body: JSON.stringify(
             buildSelectorOutput({
+              profile: "yield",
+              input: yieldInput,
               recommended: [
-                buildRecommendation({
+                buildYieldRecommendation({
                   recommendedSource: {
-                    venue: "aave",
+                    protocol: "aave",
+                    chain: "ethereum",
+                    apy30d: 4.2,
+                    pharosYieldScore: 81,
+                    sourceRiskTier: "low",
                     freshness: { capturedAt: 1715000123, ageSeconds: 42 },
                   },
                 }),
@@ -358,10 +543,16 @@ describe("selector-snapshot Pages Function", () => {
           method: "POST",
           body: JSON.stringify(
             buildSelectorOutput({
+              profile: "yield",
+              input: yieldInput,
               recommended: [
-                buildRecommendation({
+                buildYieldRecommendation({
                   recommendedSource: {
-                    venue: "aave",
+                    protocol: "aave",
+                    chain: "ethereum",
+                    apy30d: 4.2,
+                    pharosYieldScore: 81,
+                    sourceRiskTier: "low",
                     freshness: { capturedAt: 1799999999, ageSeconds: 9999 },
                   },
                 }),
@@ -458,6 +649,194 @@ describe("selector-snapshot Pages Function", () => {
         request: new Request("https://pharos.watch/selector-snapshot", {
           method: "POST",
           body: JSON.stringify(buildSelectorOutput({ recommended: [{ id: "usdc-circle" }] })),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when required diagnostic replay fields are missing", async () => {
+      const output = buildSelectorOutput();
+      delete output.usedRelaxedFallback;
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(output),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when recommendation whyKeys are not canonical", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              recommended: [buildRecommendation({ whyKeys: ["top-safety", "unknown-reason"] })],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when lower-ranked reason keys are not canonical patterns", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              lowerRanked: [
+                {
+                  id: "usdt-tether",
+                  symbol: "USDT",
+                  name: "Tether USD",
+                  slot: "A",
+                  reasonKey: "raw-internal-key",
+                  failedComponent: null,
+                  hypotheticalScore: 70,
+                },
+              ],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when numeric score or component ranges are invalid", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              recommended: [
+                buildRecommendation({
+                  score: 101,
+                  components: [buildComponent({ normalizedValue: 120 })],
+                }),
+              ],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when recommendedSource has the wrong shape", async () => {
+      const output = buildSelectorOutput();
+      const input = { ...(output.input as Record<string, unknown>), profile: "yield" };
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              profile: "yield",
+              input,
+              recommended: [
+                buildYieldRecommendation({
+                  recommendedSource: {
+                    protocol: "aave",
+                    chain: "ethereum",
+                    apy30d: 4.2,
+                    pharosYieldScore: 81,
+                    sourceRiskTier: "extreme",
+                    freshness: { capturedAt: 1715000123, ageSeconds: 42 },
+                  },
+                }),
+              ],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when venuePreferences contain rails for the wrong profile", async () => {
+      const output = buildSelectorOutput();
+      const input = {
+        ...(output.input as Record<string, unknown>),
+        profile: "yield",
+        venuePreferences: ["spot"],
+      };
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              profile: "yield",
+              input,
+              recommended: [buildYieldRecommendation()],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when optional recommendation diagnostics are malformed", async () => {
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              recommended: [
+                buildRecommendation({
+                  confidenceReasons: ["missing-critical-notAWeight"],
+                  rankRobustness: { label: "raw-internal-label", scoreMargin: 1 },
+                }),
+              ],
+            }),
+          ),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when perInputStaleness uses unknown inputs", async () => {
+      const output = buildSelectorOutput();
+      const input = { ...(output.input as Record<string, unknown>), profile: "trading" };
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(
+            buildSelectorOutput({
+              profile: "trading",
+              input,
+              recommended: [
+                buildTradingRecommendation({
+                  perInputStaleness: {
+                    pegSummary: 10,
+                    randomEndpoint: 20,
+                  },
+                }),
+              ],
+            }),
+          ),
           headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
         }),
         env: makeEnv(),
@@ -627,6 +1006,31 @@ describe("selector-snapshot Pages Function", () => {
         }),
         env: makeEnv({ SELECTOR_SNAPSHOTS: kv }),
         params: { path: "00112233445566778899aabbccddeeff" },
+      });
+      expect(response.status).toBe(502);
+    });
+
+    it("returns 502 when the stored KV payload does not match the requested sid", async () => {
+      const env = makeEnv();
+      const post = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput()),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: {},
+      });
+      const { sid } = (await post.json()) as { sid: string };
+      const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
+      kv.__getStore().set(`s:${sid}`, JSON.stringify(buildSelectorOutput({ datasetHash: "different-hash" })));
+
+      const response = await onRequest({
+        request: new Request(`https://pharos.watch/selector-snapshot/${sid}`, {
+          headers: { Origin: "https://pharos.watch" },
+        }),
+        env,
+        params: { path: sid },
       });
       expect(response.status).toBe(502);
     });

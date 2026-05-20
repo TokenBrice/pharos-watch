@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
 import {
   decodeSelectorState,
   highestValidStep,
+  isValidSelectorSnapshotId,
   preHighlightForDepeg,
+  SELECTOR_STATE_DEFAULTS,
   shouldSkipExitStep,
   softConfirmationForHorizon,
   toSelectorInput,
@@ -15,6 +16,7 @@ import {
   type SelectorHorizon,
   type SelectorPeg,
   type SelectorProfile,
+  type SelectorStep,
   type SelectorVenue,
   type SelectorWizardState,
 } from "./selector-state";
@@ -36,6 +38,7 @@ import {
   buildScreenerUrl,
   getTemplate,
   runSelector,
+  selectorAnswersToScreenerFilters,
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   SELECTOR_YIELD_PEG_CURRENCIES,
   type SelectorInput,
@@ -62,7 +65,7 @@ import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-
 const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
   {
     value: "treasury",
-    label: "Hold safely (Treasury)",
+    label: "Hold under Treasury constraints",
     sublabel: "Park value with peg discipline; minimal DeFi interaction.",
   },
   {
@@ -145,6 +148,21 @@ const LEGEND_BY_PROFILE_Q4: Record<SelectorProfile, string> = {
   treasury: "How will you use the position?",
 };
 
+const TRADING_SHARE_STALENESS_LIMIT_SECONDS: Record<string, number> = {
+  pegSummary: 10 * 60,
+  dexTvl: 15 * 60,
+  dews: 35 * 60,
+};
+const SESSION_RESULT_STORAGE_KEY = "pharos.selector.sessionResult.v1";
+
+const QUESTION_HELPER_COPY: Record<2 | 3 | 4 | 5 | 6, string> = {
+  2: "Narrows the universe to stablecoins that target this reference asset.",
+  3: "Longer horizons put more weight on resilience, dependency risk, and history.",
+  4: "Tighter tolerance applies stricter peg and stress-signal thresholds before ranking.",
+  5: "Venue scope changes how much composability and source exposure the Selector permits.",
+  6: "Faster exits increase the importance of liquidity, DEWS, and redemption pathways.",
+};
+
 // ---------------------------------------------------------------------------
 // SelectorClient
 // ---------------------------------------------------------------------------
@@ -152,10 +170,13 @@ const LEGEND_BY_PROFILE_Q4: Record<SelectorProfile, string> = {
 export function SelectorClient() {
   const hydrated = useHydrated();
   const isMobile = useIsMobile(640);
-  const { state, dispatch, setStep } = useSelectorState();
+  const { state, dispatch } = useSelectorState();
   const input = useMemo(() => toSelectorInput(state), [state]);
   const announceRef = useRef<HTMLDivElement>(null);
   const legendRef = useRef<HTMLLegendElement>(null);
+  const [restoreDismissed, setRestoreDismissed] = useState(false);
+  const [sessionRecovered, setSessionRecovered] = useState(false);
+  const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
 
   const selector = useSelector(input, state.sid);
   const output = "output" in selector ? selector.output : null;
@@ -165,6 +186,13 @@ export function SelectorClient() {
       ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value))
       : PEG_OPTIONS,
     [state.profile],
+  );
+  const mobileCompletion = useMemo(() => computeMobileCompletion(state), [state]);
+  const restorableRun = useMemo(
+    () => hydrated && !restoreDismissed && isInitialSelectorState(state)
+      ? readStoredSelectorRun()
+      : null,
+    [hydrated, restoreDismissed, state],
   );
 
   // Programmatic focus to the active legend on step change.
@@ -189,16 +217,46 @@ export function SelectorClient() {
     announceRef.current.textContent = msg;
   }, [state, output]);
 
+  useEffect(() => {
+    if (!hydrated || selector.status !== "ready" || state.step !== "result" || !output) return;
+    writeStoredSelectorRun(state, output);
+  }, [hydrated, selector.status, state, output]);
+
   const handleAdjust = useCallback(() => {
+    setSessionRecovered(false);
     dispatch({ type: "adjust" });
+  }, [dispatch]);
+
+  const handleStartOver = useCallback(() => {
+    clearStoredSelectorRun();
+    setRestoreDismissed(false);
+    setSessionRecovered(false);
+    setShareFallbackUrl(null);
+    dispatch({ type: "start-over" });
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
     dispatch({ type: "go-back" });
   }, [dispatch]);
 
+  const handleRestorePreviousResult = useCallback(() => {
+    if (!restorableRun) return;
+    setSessionRecovered(true);
+    setRestoreDismissed(true);
+    dispatch({ type: "restore-session", state: restorableRun.state });
+  }, [dispatch, restorableRun]);
+
+  const handleEditAnswer = useCallback((step: SelectorStep, resultOutput: SelectorOutput) => {
+    setSessionRecovered(false);
+    dispatch({
+      type: "restore-session",
+      state: wizardStateFromOutput(resultOutput, state, step),
+    });
+  }, [dispatch, state]);
+
   const handleCopyShareLink = useCallback(async () => {
     if (!output) throw new Error("No engine output to share");
+    setShareFallbackUrl(null);
     // POST-then-copy per plan §0.
     const response = await fetch("/selector-snapshot/", {
       method: "POST",
@@ -209,22 +267,28 @@ export function SelectorClient() {
       throw new Error("Share link service unavailable");
     }
     const payload = (await response.json()) as { sid: string; ev?: string };
+    if (!isValidSelectorSnapshotId(payload.sid)) {
+      throw new Error("Share link service returned an invalid snapshot id");
+    }
     const params = new URLSearchParams();
     params.set("sid", payload.sid);
     if (payload.ev) params.set("ev", payload.ev);
     const shareUrl = `${window.location.origin}/screener/selector/?${params.toString()}`;
-    await copyToClipboard(shareUrl);
+    try {
+      await copyToClipboard(shareUrl);
+    } catch (error) {
+      setShareFallbackUrl(shareUrl);
+      const message = error instanceof Error
+        ? error.message
+        : "Clipboard blocked. Select and copy the share URL below.";
+      throw new Error(message);
+    }
   }, [output]);
 
   // Determine if we should render the mobile single-form vs desktop per-step.
   const showMobileForm = hydrated && isMobile && typeof state.step === "number" && state.step >= 2 && state.profile != null;
 
-  // Determine if Trading-staleness CTA should be disabled. The freshness
-  // ceiling is enforced by the engine output's `perInputStaleness` map; the
-  // hook layer mirrors the boolean here once the result lands.
-  // TODO(integration): wire through per-input dataUpdatedAt from the hooks if
-  // the engine output's staleness is not yet populated.
-  const tradingStaleExceeded = false;
+  const tradingStaleExceeded = tradingShareStaleExceeded(output);
 
   if (!hydrated) {
     return (
@@ -255,24 +319,37 @@ export function SelectorClient() {
           stateProfile={state.profile}
           isMobile={hydrated && isMobile}
           onAdjust={handleAdjust}
+          onStartOver={handleStartOver}
+          onEditAnswer={handleEditAnswer}
           onRelax={(key) => dispatch({ type: "relax", constraint: key })}
           onCopyShareLink={handleCopyShareLink}
           tradingStaleExceeded={tradingStaleExceeded}
+          shareFallbackUrl={shareFallbackUrl}
+          sessionRecovered={sessionRecovered}
         />
       ) : state.step === 1 ? (
-        <SelectorQuestionCard<SelectorProfile>
-          ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q1"
-          step={1}
-          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
-          legend="What are you using this stablecoin for?"
-          options={PROFILE_OPTIONS}
-          value={state.profile}
-          onChange={(v) => dispatch({ type: "answer-profile", value: v as SelectorProfile })}
-          onNext={() => {
-            if (state.profile) setStep(2);
-          }}
-        />
+        <>
+          {restorableRun ? (
+            <SessionRestorePanel
+              savedAt={restorableRun.savedAt}
+              onRestore={handleRestorePreviousResult}
+              onDismiss={() => setRestoreDismissed(true)}
+            />
+          ) : null}
+          <SelectorQuestionCard<SelectorProfile>
+            ref={legendRef as React.Ref<HTMLLegendElement>}
+            questionId="q1"
+            step={1}
+            totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
+            legend="What are you using this stablecoin for?"
+            options={PROFILE_OPTIONS}
+            value={state.profile}
+            onChange={(v) => dispatch({ type: "set-profile", value: v as SelectorProfile })}
+            onNext={() => {
+              if (state.profile) dispatch({ type: "answer-profile", value: state.profile });
+            }}
+          />
+        </>
       ) : showMobileForm && state.profile ? (
         <SelectorMobileForm
           state={state}
@@ -289,20 +366,24 @@ export function SelectorClient() {
           legendQ4="How tight does the peg need to hold?"
           legendQ5={LEGEND_BY_PROFILE_Q4[state.profile]}
           legendQ6="If something goes wrong, how fast do you need to be out?"
+          helperQ3={QUESTION_HELPER_COPY[4]}
+          helperQ4={QUESTION_HELPER_COPY[5]}
           onSetPeg={(v) => dispatch({ type: "set-peg", value: v })}
-          onSetHorizon={(v) => dispatch({ type: "answer-horizon", value: v })}
-          onSetDepeg={(v) => dispatch({ type: "answer-depeg", value: v })}
+          onSetHorizon={(v) => dispatch({ type: "set-horizon", value: v })}
+          onSetDepeg={(v) => dispatch({ type: "set-depeg", value: v })}
           onSetVenue={(v) =>
             dispatch({
-              // Mobile single-form: same multi-vs-single distinction. Treasury
-              // venue is single-select; Yield/Trading are multi-select.
-              type: state.profile === "treasury" ? "answer-venue" : "set-venue",
+              type: "set-venue",
               value: v,
             })
           }
-          onSetExit={(v) => dispatch({ type: "answer-exit", value: v })}
-          onAdjustProfile={() => setStep(1)}
+          onSetExit={(v) => dispatch({ type: "set-exit", value: v })}
+          onAdjustProfile={() => dispatch({
+            type: "restore-session",
+            state: { ...state, step: 1, sid: null, ev: null },
+          })}
           onSeeResults={() => dispatch({ type: "advance-to-result" })}
+          {...mobileCompletion}
         />
       ) : state.step === 2 && state.profile ? (
         <SelectorQuestionCard<SelectorPeg>
@@ -317,6 +398,7 @@ export function SelectorClient() {
               ? "Yield is limited to pegs with benchmark and source coverage."
               : undefined
           }
+          helper={QUESTION_HELPER_COPY[2]}
           options={pegOptions}
           value={state.pegCurrency}
           onChange={(v) => dispatch({ type: "set-peg", value: v as SelectorPeg })}
@@ -331,6 +413,7 @@ export function SelectorClient() {
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="How long do you plan to hold this position?"
+          helper={QUESTION_HELPER_COPY[3]}
           options={HORIZON_OPTIONS}
           value={state.horizon}
           onChange={(v) => dispatch({ type: "set-horizon", value: v as SelectorHorizon })}
@@ -361,9 +444,10 @@ export function SelectorClient() {
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="How tight does the peg need to hold?"
+          helper={QUESTION_HELPER_COPY[4]}
           options={DEPEG_OPTIONS}
           value={state.depegTolerance}
-          onChange={(v) => dispatch({ type: "answer-depeg", value: v as SelectorDepeg })}
+          onChange={(v) => dispatch({ type: "set-depeg", value: v as SelectorDepeg })}
           preHighlight={preHighlightForDepeg(state.profile, state.horizon)}
           onBack={handleBack}
           onNext={() => {
@@ -378,19 +462,13 @@ export function SelectorClient() {
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend={LEGEND_BY_PROFILE_Q4[state.profile]}
+          helper={QUESTION_HELPER_COPY[5]}
           options={VENUE_OPTIONS_BY_PROFILE[state.profile]}
           multi={state.profile !== "treasury"}
           value={state.profile === "treasury" ? (state.venue[0] ?? null) : state.venue}
           onChange={(v) => {
             const next = Array.isArray(v) ? v : [v as SelectorVenue];
-            // Treasury venue is single-select → advance immediately.
-            // Yield / Trading venue is multi-select → only update selection;
-            // user advances by clicking Next.
-            if (state.profile === "treasury") {
-              dispatch({ type: "answer-venue", value: next });
-            } else {
-              dispatch({ type: "set-venue", value: next });
-            }
+            dispatch({ type: "set-venue", value: next });
           }}
           onBack={handleBack}
           onNext={() => {
@@ -407,9 +485,10 @@ export function SelectorClient() {
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="If something goes wrong, how fast do you need to be out?"
+          helper={QUESTION_HELPER_COPY[6]}
           options={EXIT_OPTIONS}
           value={state.exitSpeed}
-          onChange={(v) => dispatch({ type: "answer-exit", value: v as SelectorExit })}
+          onChange={(v) => dispatch({ type: "set-exit", value: v as SelectorExit })}
           onBack={handleBack}
           onNext={() => {
             if (state.exitSpeed) dispatch({ type: "answer-exit", value: state.exitSpeed });
@@ -431,9 +510,13 @@ interface ResultPaneProps {
   stateProfile: SelectorProfile | null;
   isMobile: boolean;
   onAdjust: () => void;
+  onStartOver: () => void;
+  onEditAnswer: (step: SelectorStep, output: SelectorOutput) => void;
   onRelax: (key: SelectorRelaxableConstraint["key"]) => void;
   onCopyShareLink: () => Promise<void>;
   tradingStaleExceeded: boolean;
+  shareFallbackUrl: string | null;
+  sessionRecovered: boolean;
 }
 
 function ResultPane({
@@ -443,15 +526,36 @@ function ResultPane({
   stateProfile,
   isMobile,
   onAdjust,
+  onStartOver,
+  onEditAnswer,
   onRelax,
   onCopyShareLink,
   tradingStaleExceeded,
+  shareFallbackUrl,
+  sessionRecovered,
 }: ResultPaneProps) {
   const { data: logos } = useLogos();
+  const resultFocusRef = useRef<HTMLDivElement>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  const shortlistHeadingRef = useRef<HTMLHeadingElement>(null);
+  const [showSnapshotComparison, setShowSnapshotComparison] = useState(false);
+
+  const outputForFocus = "output" in selectorResult ? selectorResult.output : null;
+  useEffect(() => {
+    if (!outputForFocus) return;
+    const frame = requestAnimationFrame(() => {
+      const target = outputForFocus.recommended.length > 0
+        ? resultHeadingRef.current
+        : resultFocusRef.current;
+      target?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectorResult.status, outputForFocus]);
 
   if (selectorResult.status === "loading" || selectorResult.status === "snapshot-loading") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" aria-busy="true" aria-live="polite">
+        <p className="sr-only">Selector result is loading.</p>
         <Skeleton className="h-32 w-full rounded-2xl" />
         <Skeleton className="h-40 w-full rounded-2xl" />
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -461,8 +565,29 @@ function ResultPane({
 
   if (selectorResult.status === "error") {
     return (
-      <div className="rounded-lg border border-destructive/40 bg-destructive/[0.08] px-4 py-3 text-sm text-destructive">
-        Selector engine could not produce a result ({selectorResult.reason}). Try adjusting your answers.
+      <div
+        role="alert"
+        className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/[0.08] px-4 py-3 text-sm text-destructive"
+      >
+        <p>
+          Selector could not produce a result ({humanizeSelectorError(selectorResult.reason)}).
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onAdjust}
+            className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-destructive/35 px-3 text-sm font-medium"
+          >
+            Adjust answers
+          </button>
+          <button
+            type="button"
+            onClick={onStartOver}
+            className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-destructive/25 px-3 text-sm font-medium"
+          >
+            Start over
+          </button>
+        </div>
       </div>
     );
   }
@@ -470,11 +595,18 @@ function ResultPane({
   const output = selectorResult.output;
   const profile = (output?.profile ?? stateProfile) as SelectorProfile;
   const effectiveInput = input ?? output.input;
-  const screenerHandoffHref = buildScreenerHref(output);
-  const compareShortlistHref = buildCompareShortlistHref(output, state);
+  const screenerHandoff = buildScreenerHandoff(output);
+  const screenerHandoffHref = screenerHandoff.url;
+  const compareWatchoutsHref = buildCompareWithWatchoutsHref(output, state);
+  const liveComparisonOutput =
+    selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
   const snapshotBanner =
     selectorResult.status === "snapshot-found" ? (
-      <SelectorSnapshotBanner mode="frozen" capturedAt={output.timestamp} />
+      <SelectorSnapshotBanner
+        mode="frozen"
+        capturedAt={output.timestamp}
+        onCompareToToday={() => setShowSnapshotComparison(true)}
+      />
     ) : selectorResult.status === "snapshot-miss" ? (
       <SelectorSnapshotBanner mode="fallback" />
     ) : null;
@@ -482,8 +614,9 @@ function ResultPane({
   // Empty state
   if (output.recommended.length === 0) {
     return (
-      <div className="space-y-4">
+      <div ref={resultFocusRef} tabIndex={-1} className="space-y-4 outline-none">
         {snapshotBanner}
+        {sessionRecovered ? <SessionRecoveredBanner /> : null}
         <SelectorEmptyState
           profile={profile}
           pegCurrency={effectiveInput.pegCurrency}
@@ -493,7 +626,7 @@ function ResultPane({
             output.coverageWarnings.skippedForCoverageCount > 0
           }
           closestSurvivors={buildClosestSurvivorsFromOutput(output)}
-          relaxableConstraints={defaultRelaxableConstraintsFor(profile, effectiveInput)}
+          relaxableConstraints={buildRelaxableConstraintsFromOutput(output)}
           onRelax={onRelax}
           screenerHandoffHref={screenerHandoffHref}
         />
@@ -502,7 +635,7 @@ function ResultPane({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div ref={resultFocusRef} tabIndex={-1} className="flex flex-col gap-6 outline-none">
       {/* Mobile reorders: profile chip + headline (in summary) first; rest below. */}
       <SelectorResultSummary
         profile={profile}
@@ -510,22 +643,53 @@ function ResultPane({
         universe={output.universe}
         shortlistCount={output.recommended.length}
         screenerHandoffHref={screenerHandoffHref}
+        summaryHeadingRef={resultHeadingRef}
         onAdjust={onAdjust}
+        onEditAnswer={(key) => onEditAnswer(stepForAnswerKey(key), output)}
         onCopyShareLink={onCopyShareLink}
         copyShareDisabled={tradingStaleExceeded}
         copyShareDisabledReason={
           tradingStaleExceeded
-            ? "Data freshness for one or more Trading inputs exceeds the share-link ceiling. Refresh and retry."
+            ? "Data freshness for one or more Active Trading inputs exceeds its share-link freshness limit. Refresh and retry."
             : undefined
         }
+        shareFallbackUrl={shareFallbackUrl ?? undefined}
         skipped={output.coverageWarnings.skippedForCoverage}
+        lowConfidence={output.lowConfidence}
+        coverageWarnings={output.coverageWarnings}
         snapshotBanner={snapshotBanner}
+        {...buildResultSummaryCoordinationProps({
+          output,
+          state,
+          screenerHandoff,
+        })}
       />
+
+      {sessionRecovered ? <SessionRecoveredBanner /> : null}
+
+      {showSnapshotComparison ? (
+        <SnapshotComparisonPanel
+          frozen={output}
+          live={liveComparisonOutput}
+          liveStatus={
+            selectorResult.status === "snapshot-found"
+              ? selectorResult.liveStatus
+              : "unavailable"
+          }
+        />
+      ) : null}
+
+      {output.lowerRanked.length > 0 ? (
+        <CompareWatchoutsAction href={compareWatchoutsHref} />
+      ) : null}
 
       {/* Mobile quick-scroll jump button */}
       {isMobile ? (
         <a
           href="#selector-shortlist"
+          onClick={() => {
+            requestAnimationFrame(() => shortlistHeadingRef.current?.focus());
+          }}
           className="pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-border/65 bg-card/50 px-3.5 text-sm font-medium text-foreground sm:hidden"
         >
           Full shortlist &amp; detail
@@ -535,24 +699,23 @@ function ResultPane({
       <section aria-labelledby="selector-shortlist-heading" className="space-y-3">
         <h2
           id="selector-shortlist-heading"
+          ref={shortlistHeadingRef}
+          tabIndex={-1}
           className="pharos-section-title text-base font-semibold tracking-tight text-foreground sm:text-lg"
         >
           Shortlist
         </h2>
-        <a
-          href={compareShortlistHref}
-          className="pharos-focus-ring flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border/65 bg-muted/35 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-border hover:bg-muted/55"
-        >
-          <span>Compare the shortlisted stablecoins</span>
-          <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-        </a>
         <ol id="selector-shortlist" className="space-y-3">
           {output.recommended.map((rec, idx) => {
             const template = getTemplate(rec.lowestSubDimension.key, rec.profile);
             const enriched = (
               template
-                ? { ...rec, watchText: template.oneLineExplanation }
-                : rec
+                ? {
+                    ...rec,
+                    whyText: rec.whyText ?? buildWhyText(rec),
+                    watchText: rec.watchText ?? template.oneLineExplanation,
+                  }
+                : { ...rec, whyText: rec.whyText ?? buildWhyText(rec) }
             ) as SelectorRecommendation;
             return (
               <SelectorShortlistCard
@@ -575,7 +738,7 @@ function ResultPane({
             id="selector-lower-ranked-heading"
             className="pharos-section-title text-base font-semibold tracking-tight text-foreground sm:text-lg"
           >
-            Lower-ranked for this profile
+            Watch-outs for this profile
           </h2>
           <ol className="space-y-2">
             {output.lowerRanked.map((entry) => (
@@ -633,19 +796,46 @@ function stepLegend(state: { step: number | "result" }): string {
   }
 }
 
-function buildScreenerHref(output: SelectorOutput | null): string {
-  if (!output) return "/screener/";
+interface ScreenerHandoffView {
+  url: string;
+  filterChips: Array<{ label: string; value: string }>;
+}
+
+interface StoredSelectorRun {
+  state: SelectorWizardState;
+  output: SelectorOutput;
+  savedAt: number;
+}
+
+function buildScreenerHandoff(output: SelectorOutput | null): ScreenerHandoffView {
+  if (!output) return { url: "/screener/", filterChips: [] };
   try {
     const { url } = buildScreenerUrl(output.input, "/screener/");
-    return url;
+    const { filters } = selectorAnswersToScreenerFilters(output.input);
+    return {
+      url,
+      filterChips: readableScreenerFilterChips(filters),
+    };
   } catch {
-    return "/screener/";
+    return { url: "/screener/", filterChips: [] };
   }
 }
 
-function buildCompareShortlistHref(
+function buildCompareWithWatchoutsHref(
   output: SelectorOutput,
   state: SelectorWizardState,
+): string {
+  const ids = [
+    ...output.recommended.map((rec) => rec.id),
+    ...output.lowerRanked.map((entry) => entry.id),
+  ];
+  return buildCompareHref(output, state, ids);
+}
+
+function buildCompareHref(
+  output: SelectorOutput,
+  state: SelectorWizardState,
+  coinIds: readonly string[],
 ): string {
   const input = output.input;
   const params = new URLSearchParams();
@@ -656,11 +846,14 @@ function buildCompareShortlistHref(
   params.set("v", compareVenueParam(input, state));
   params.set("u", input.exitSpeed);
   params.set("step", "result");
-  params.set("coins", output.recommended.map((rec) => rec.id).join(","));
+  params.set("coins", Array.from(new Set(coinIds)).join(","));
   return `/compare/?${params.toString()}`;
 }
 
 function compareVenueParam(input: SelectorInput, state: SelectorWizardState): string {
+  const inputVenue = venuePreferencesFromInput(input);
+  if (inputVenue.length > 0) return inputVenue.join(",");
+
   if (
     state.profile === input.profile &&
     state.pegCurrency === input.pegCurrency &&
@@ -681,55 +874,177 @@ function compareVenueParam(input: SelectorInput, state: SelectorWizardState): st
 }
 
 function buildClosestSurvivorsFromOutput(output: SelectorOutput): SelectorClosestSurvivor[] {
-  // TODO(integration): engine should emit a `closestSurvivors` slot. Until then,
-  // derive a placeholder from the coverage-skipped list so the empty-state panel
-  // never renders empty.
+  const fromEngine = (output as SelectorOutput & {
+    closestSurvivors?: readonly SelectorClosestSurvivor[];
+  }).closestSurvivors;
+  if (fromEngine !== undefined) return fromEngine.slice(0, 3);
   return output.coverageWarnings.skippedForCoverage.slice(0, 3).map((coin) => ({
     id: coin.id,
     symbol: coin.symbol,
     failingDimension: coin.missingSignals[0] ?? "coverage gap",
-    liveReading: "data not yet captured",
+    liveReading: "coverage signal unavailable",
   }));
 }
 
-function defaultRelaxableConstraintsFor(
-  profile: SelectorProfile,
-  input: SelectorInput | null,
-): SelectorRelaxableConstraint[] {
-  if (!input) return [];
-  const out: SelectorRelaxableConstraint[] = [];
-  if (input.depegTolerance === "zero") {
-    out.push({
-      key: "depegTolerance",
-      label: "Relax depeg tolerance",
-      description: "Zero → Tight",
-    });
-  } else if (input.depegTolerance === "tight") {
-    out.push({
-      key: "depegTolerance",
-      label: "Relax depeg tolerance",
-      description: "Tight → Moderate",
-    });
-  }
-  if (profile !== "treasury" && input.composability !== "high") {
-    out.push({
-      key: "venue",
-      label: "Open venue scope",
-      description: "Single rail → All",
-    });
-  }
-  if (input.exitSpeed !== "any") {
-    out.push({
-      key: "exitSpeed",
-      label: "Loosen exit speed",
-      description: "Tighter → Any",
-    });
-  }
-  return out;
+function buildRelaxableConstraintsFromOutput(output: SelectorOutput): SelectorRelaxableConstraint[] {
+  const fromEngine = (output as SelectorOutput & {
+    relaxableConstraints?: readonly SelectorRelaxableConstraint[];
+  }).relaxableConstraints;
+  return fromEngine ? fromEngine.slice(0, 3) : [];
 }
 
 function summarizeMethodologyVersions(versions: SelectorOutput["methodologyVersions"]): string {
   return `safety ${versions.safetyScore}, peg/DEWS ${versions.pegScoreAndDews}, yield ${versions.yieldIntelligence}, bluechip ${versions.bluechipAlignment}, exclusions ${versions.exclusionFilters}`;
+}
+
+function readableScreenerFilterChips(filters: Record<string, unknown>): Array<{ label: string; value: string }> {
+  const labels: Record<string, string> = {
+    safetyGrades: "Safety grades",
+    lifecycle: "Lifecycle",
+    pegs: "Peg",
+    safetyPegStabilityMin: "Peg stability min",
+    safetyResilienceMin: "Resilience min",
+    safetyDependencyRiskMin: "Dependency risk min",
+    safetyLiquidityMin: "Liquidity min",
+    dewsMax: "DEWS max",
+    types: "Type",
+    blacklistable: "Blacklistable",
+    mechanisms: "Mechanism",
+  };
+  return Object.entries(filters).map(([key, value]) => {
+    const label = labels[key] ?? key;
+    const formatted = Array.isArray(value) ? value.join(", ") : String(value);
+    return { label, value: formatted };
+  });
+}
+
+function buildWhyText(rec: SelectorRecommendation): string {
+  const strongest = rec.components
+    .filter((component) => component.rawValue != null)
+    .sort((a, b) => b.contribution - a.contribution)[0];
+  if (strongest) {
+    return `${rec.symbol} ranked here because ${readableComponentKey(strongest.key)} contributed ${strongest.contribution.toFixed(1)} points from a ${Math.round(strongest.rawValue ?? strongest.normalizedValue ?? 0)} reading.`;
+  }
+  return `${rec.symbol} passed the selected profile filters and ranked under the current ${PROFILE_LABEL[rec.profile]} weight set.`;
+}
+
+function readableComponentKey(key: string): string {
+  const labels: Record<string, string> = {
+    resilience: "resilience",
+    dependencyRisk: "dependency risk",
+    pharosYieldScore: "Pharos Yield Score",
+    pegScoreNow: "current peg score",
+    liquidity: "liquidity",
+    dewsInverted: "DEWS stress",
+    safetyOverall: "Safety Score",
+    pegStabilityHistory: "peg history",
+  };
+  return labels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+}
+
+function SessionRestorePanel({
+  savedAt,
+  onRestore,
+  onDismiss,
+}: {
+  savedAt: number;
+  onRestore: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border/55 bg-card/45 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-muted-foreground">
+        Previous Selector result from {formatTimestamp(savedAt)} is available for this tab.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onRestore}
+          className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/65 bg-background/60 px-3 font-medium text-foreground"
+        >
+          Restore previous result
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/45 px-3 font-medium text-muted-foreground"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SessionRecoveredBanner() {
+  return (
+    <div role="status" className="rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground">
+      Restored from this tab&apos;s previous live Selector result.
+    </div>
+  );
+}
+
+function CompareWatchoutsAction({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      className="pharos-focus-ring inline-flex min-h-10 items-center justify-center rounded-full border border-border/65 bg-card/45 px-3 text-sm font-medium text-foreground hover:bg-card/70"
+    >
+      Compare shortlist vs watch-outs
+    </a>
+  );
+}
+
+function SnapshotComparisonPanel({
+  frozen,
+  live,
+  liveStatus,
+}: {
+  frozen: SelectorOutput;
+  live: SelectorOutput | null;
+  liveStatus: "loading" | "ready" | "error" | "unavailable";
+}) {
+  if (liveStatus === "loading") {
+    return (
+      <div aria-busy="true" className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground">
+        Loading current data comparison.
+      </div>
+    );
+  }
+  if (!live || liveStatus !== "ready") {
+    return (
+      <div role="status" className="rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm text-muted-foreground">
+        Current comparison is unavailable for this snapshot.
+      </div>
+    );
+  }
+  const delta = compareSelectorOutputs(frozen, live);
+  return (
+    <section className="space-y-2 rounded-lg border border-border/55 bg-card/35 px-4 py-3 text-sm" aria-label="Current shortlist comparison">
+      <p className="font-semibold text-foreground">Current shortlist comparison</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <p className="text-muted-foreground">Added today: <span className="text-foreground">{delta.added || "none"}</span></p>
+        <p className="text-muted-foreground">Removed today: <span className="text-foreground">{delta.removed || "none"}</span></p>
+        <p className="text-muted-foreground">Rank/score movement: <span className="text-foreground">{delta.movements || "none"}</span></p>
+        <p className="text-muted-foreground">Dataset hash drift: <span className="text-foreground">{delta.datasetChanged ? "yes" : "no"}</span></p>
+        <p className="text-muted-foreground">Engine version drift: <span className="text-foreground">{delta.engineVersionChanged ? "yes" : "no"}</span></p>
+        <p className="text-muted-foreground">Methodology drift: <span className="text-foreground">{delta.methodologyChanged ? "yes" : "no"}</span></p>
+      </div>
+    </section>
+  );
+}
+
+function formatTimestamp(timestamp: number): string {
+  try {
+    return new Date(timestamp).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "earlier";
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -751,10 +1066,286 @@ async function copyToClipboard(text: string): Promise<void> {
   textarea.focus();
   textarea.select();
   try {
-    document.execCommand("copy");
+    const copied = document.execCommand("copy");
+    if (!copied) throw new Error("Clipboard blocked. Select and copy the share URL below.");
   } finally {
     document.body.removeChild(textarea);
   }
+}
+
+function tradingShareStaleExceeded(output: SelectorOutput | null): boolean {
+  if (!output || output.profile !== "trading") return false;
+  return output.recommended.some((rec) => {
+    if (rec.profile !== "trading") return false;
+    const staleness = rec.perInputStaleness ?? {};
+    if (!Object.keys(TRADING_SHARE_STALENESS_LIMIT_SECONDS).every((key) => key in staleness)) {
+      return true;
+    }
+    return Object.entries(staleness).some(([key, ageSeconds]) => {
+      const limit = TRADING_SHARE_STALENESS_LIMIT_SECONDS[key];
+      return limit == null || ageSeconds > limit;
+    });
+  });
+}
+
+function computeMobileCompletion(state: SelectorWizardState): {
+  answeredCount: number;
+  requiredCount: number;
+  completionLabel: string;
+} {
+  const skipExit = shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance);
+  const requiredCount = skipExit ? 4 : 5;
+  const answeredCount = [
+    state.pegCurrency != null,
+    state.horizon != null,
+    state.depegTolerance != null,
+    state.venue.length > 0,
+    skipExit || state.exitSpeed != null,
+  ].slice(0, requiredCount).filter(Boolean).length;
+  return {
+    answeredCount,
+    requiredCount,
+    completionLabel: `${answeredCount} of ${requiredCount} answers complete`,
+  };
+}
+
+function isInitialSelectorState(state: SelectorWizardState): boolean {
+  return (
+    state.profile == null &&
+    state.pegCurrency === SELECTOR_STATE_DEFAULTS.pegCurrency &&
+    state.horizon == null &&
+    state.depegTolerance == null &&
+    state.venue.length === 0 &&
+    state.exitSpeed == null &&
+    state.step === 1 &&
+    state.sid == null
+  );
+}
+
+function writeStoredSelectorRun(state: SelectorWizardState, output: SelectorOutput): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    const storedState = { ...state, step: "result" as const, sid: null, ev: null };
+    const payload: StoredSelectorRun = {
+      state: storedState,
+      output,
+      savedAt: Date.now(),
+    };
+    sessionStorage.setItem(SESSION_RESULT_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Best-effort tab-scoped recovery.
+  }
+}
+
+function readStoredSelectorRun(): StoredSelectorRun | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_RESULT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredSelectorRun>;
+    if (!parsed.state || !parsed.output || typeof parsed.savedAt !== "number") return null;
+    const state = parsed.state;
+    if (state.step !== "result" || highestValidStep(state) !== "result") return null;
+    return {
+      state: { ...state, sid: null, ev: null },
+      output: parsed.output,
+      savedAt: parsed.savedAt,
+    };
+  } catch {
+    clearStoredSelectorRun();
+    return null;
+  }
+}
+
+function clearStoredSelectorRun(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(SESSION_RESULT_STORAGE_KEY);
+  } catch {
+    // Ignore storage access failures.
+  }
+}
+
+function wizardStateFromOutput(
+  output: SelectorOutput,
+  fallbackState: SelectorWizardState,
+  step: SelectorStep,
+): SelectorWizardState {
+  const input = output.input;
+  const fallbackMatchesInput =
+    fallbackState.profile === input.profile &&
+    fallbackState.pegCurrency === input.pegCurrency &&
+    fallbackState.horizon === input.horizon &&
+    fallbackState.depegTolerance === input.depegTolerance &&
+    fallbackState.venue.length > 0;
+  return {
+    profile: input.profile,
+    pegCurrency: input.pegCurrency,
+    horizon: input.horizon,
+    depegTolerance: input.depegTolerance,
+    venue: fallbackMatchesInput ? fallbackState.venue : venueFromInput(input),
+    exitSpeed: input.exitSpeed,
+    step,
+    sid: null,
+    ev: null,
+  };
+}
+
+function venueFromInput(input: SelectorInput): readonly SelectorVenue[] {
+  const venue = venuePreferencesFromInput(input);
+  if (venue.length > 0) return venue;
+
+  if (input.profile === "treasury") {
+    if (input.composability === "none") return ["custody"];
+    if (input.composability === "high") return ["active"];
+    return ["some"];
+  }
+  if (input.composability === "high") return ["all"];
+  return input.profile === "yield" ? ["lend"] : ["cex"];
+}
+
+function venuePreferencesFromInput(input: SelectorInput): readonly SelectorVenue[] {
+  const allowed = new Set(VENUE_OPTIONS_BY_PROFILE[input.profile].map((option) => option.value));
+  return (input.venuePreferences ?? []).filter((value): value is SelectorVenue =>
+    allowed.has(value as SelectorVenue),
+  );
+}
+
+function buildResultSummaryCoordinationProps({
+  output,
+  state,
+  screenerHandoff,
+}: {
+  output: SelectorOutput;
+  state: SelectorWizardState;
+  screenerHandoff: ScreenerHandoffView;
+}): Record<string, unknown> {
+  const relaxed = output as SelectorOutput & {
+    usedRelaxedFallback?: boolean;
+    relaxedReasons?: readonly string[];
+  };
+  return {
+    answerChips: answerChipsFor(output.input, state),
+    priorityLabels: priorityLabelsFor(output.input),
+    screenerFilterChips: screenerHandoff.filterChips,
+    filterChips: screenerHandoff.filterChips,
+    usedRelaxedFallback: relaxed.usedRelaxedFallback ?? false,
+    relaxedReasons: relaxed.relaxedReasons ?? [],
+  };
+}
+
+function answerChipsFor(
+  input: SelectorInput,
+  state: SelectorWizardState,
+): Array<{ key: string; label: string; value: string }> {
+  const chips = [
+    { key: "profile", label: "Profile", value: PROFILE_LABEL[input.profile] },
+    { key: "peg", label: "Peg", value: PEG_METADATA[input.pegCurrency]?.filterLabel ?? input.pegCurrency },
+    { key: "horizon", label: "Horizon", value: labelForOption(HORIZON_OPTIONS, input.horizon) },
+    { key: "depeg", label: "Peg tolerance", value: labelForOption(DEPEG_OPTIONS, input.depegTolerance) },
+    { key: "venue", label: "Venue", value: venueLabelFor(input, state) },
+  ];
+  if (!shouldSkipExitStep(input.profile, input.horizon, input.depegTolerance)) {
+    chips.push({ key: "exit", label: "Exit", value: labelForOption(EXIT_OPTIONS, input.exitSpeed) });
+  }
+  return chips;
+}
+
+function labelForOption<T extends string>(
+  options: readonly SelectorOption<T>[],
+  value: T,
+): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function venueLabelFor(input: SelectorInput, state: SelectorWizardState): string {
+  const venue = venuePreferencesFromInput(input);
+  const values = venue.length > 0 ? venue : compareVenueParam(input, state).split(",");
+  const options = VENUE_OPTIONS_BY_PROFILE[input.profile];
+  return values
+    .map((value) => options.find((option) => option.value === value)?.label ?? value)
+    .join(", ");
+}
+
+function priorityLabelsFor(input: SelectorInput): string[] {
+  if (input.profile === "treasury") {
+    return ["Safety", "Resilience", "Dependency risk", "Peg discipline"];
+  }
+  if (input.profile === "yield") {
+    return ["Yield score", "Source risk", "Variance", "Safety", "Peg discipline"];
+  }
+  return ["Liquidity", "Current peg quality", "DEWS", "Exit speed", "Market depth"];
+}
+
+function stepForAnswerKey(key: string): SelectorStep {
+  switch (key) {
+    case "profile":
+      return 1;
+    case "peg":
+      return 2;
+    case "horizon":
+      return 3;
+    case "depeg":
+      return 4;
+    case "venue":
+      return 5;
+    case "exit":
+      return 6;
+    default:
+      return 1;
+  }
+}
+
+function humanizeSelectorError(reason: string): string {
+  const labels: Record<string, string> = {
+    offline: "you appear to be offline",
+    "snapshot-not-found": "snapshot not found",
+    "snapshot-store-unavailable": "snapshot store unavailable",
+    "snapshot-corrupt": "snapshot data is corrupt",
+    "invalid-snapshot-id": "snapshot id is invalid",
+    "engine-failed": "engine failed",
+  };
+  return labels[reason] ?? reason;
+}
+
+function compareSelectorOutputs(frozen: SelectorOutput, live: SelectorOutput): {
+  added: string;
+  removed: string;
+  movements: string;
+  datasetChanged: boolean;
+  engineVersionChanged: boolean;
+  methodologyChanged: boolean;
+} {
+  const frozenById = new Map(frozen.recommended.map((rec) => [rec.id, rec]));
+  const liveById = new Map(live.recommended.map((rec) => [rec.id, rec]));
+  const added = live.recommended
+    .filter((rec) => !frozenById.has(rec.id))
+    .map((rec) => rec.symbol)
+    .join(", ");
+  const removed = frozen.recommended
+    .filter((rec) => !liveById.has(rec.id))
+    .map((rec) => rec.symbol)
+    .join(", ");
+  const movements = live.recommended
+    .filter((rec) => frozenById.has(rec.id))
+    .map((rec) => {
+      const prior = frozenById.get(rec.id)!;
+      const scoreDelta = rec.score - prior.score;
+      if (prior.rank === rec.rank && Math.abs(scoreDelta) < 0.05) return null;
+      const sign = scoreDelta >= 0 ? "+" : "";
+      return `${rec.symbol} #${prior.rank}->#${rec.rank}, ${sign}${scoreDelta.toFixed(1)}`;
+    })
+    .filter((item): item is string => item != null)
+    .join("; ");
+  return {
+    added,
+    removed,
+    movements,
+    datasetChanged: frozen.datasetHash !== live.datasetHash,
+    engineVersionChanged: frozen.engineVersion !== live.engineVersion,
+    methodologyChanged:
+      JSON.stringify(frozen.methodologyVersions) !== JSON.stringify(live.methodologyVersions),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -766,7 +1357,13 @@ export type UseSelectorResult =
   | { status: "loading" }
   | { status: "ready"; output: SelectorOutput }
   | { status: "snapshot-loading" }
-  | { status: "snapshot-found"; output: SelectorOutput; isFrozen: true }
+  | {
+      status: "snapshot-found";
+      output: SelectorOutput;
+      isFrozen: true;
+      liveOutput: SelectorOutput | null;
+      liveStatus: "loading" | "ready" | "error";
+    }
   | { status: "snapshot-miss"; output: SelectorOutput; bannerKey: "snapshot-miss" }
   | { status: "error"; reason: string };
 
@@ -776,18 +1373,30 @@ type SnapshotFetchResult =
   | { kind: "error"; reason: string };
 
 async function defaultFetchSnapshot(sid: string): Promise<SnapshotFetchResult> {
+  if (!isValidSelectorSnapshotId(sid)) {
+    return { kind: "error", reason: "invalid-snapshot-id" };
+  }
   try {
     const response = await fetch(`/selector-snapshot/${encodeURIComponent(sid)}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
     if (response.status === 404) return { kind: "missing" };
+    if (response.status === 502) return { kind: "error", reason: "snapshot-corrupt" };
+    if (response.status === 500 || response.status === 503) {
+      return { kind: "error", reason: "snapshot-store-unavailable" };
+    }
     if (!response.ok) throw new Error(`Snapshot fetch failed: ${response.status}`);
     return { kind: "found", output: (await response.json()) as SelectorOutput };
   } catch (error) {
     return {
       kind: "error",
-      reason: error instanceof Error ? error.message : "snapshot-fetch-failed",
+      reason:
+        typeof navigator !== "undefined" && navigator.onLine === false
+          ? "offline"
+          : error instanceof Error
+            ? error.message
+            : "snapshot-fetch-failed",
     };
   }
 }
@@ -835,6 +1444,9 @@ export function useSelector(
     };
   }, [sid]);
 
+  const liveInput =
+    input ?? (snapshotState.kind === "found" ? snapshotState.output.input : null);
+
   const datasetReady =
     stablecoins.data?.peggedAssets != null &&
     reportCards.data?.cards != null &&
@@ -843,13 +1455,13 @@ export function useSelector(
     queryDataOrErrorSettled(dexLiquidity) &&
     queryDataOrErrorSettled(bluechipRatings) &&
     queryDataOrErrorSettled(redemptionBackstops) &&
-    (input?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
+    (liveInput?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
   const rowsByKey = useMemo(() => {
-    if (!datasetReady || !input) return null;
+    if (!datasetReady || !liveInput) return null;
     return buildSelectorRows({
       stablecoinsData: stablecoins.data ?? null,
-      pegCurrency: input.pegCurrency,
+      pegCurrency: liveInput.pegCurrency,
       pegData: pegSummary.data ?? null,
       reportData: reportCards.data ?? null,
       stressData: stressSignals.data ?? null,
@@ -862,8 +1474,8 @@ export function useSelector(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     datasetReady,
-    input?.profile,
-    input?.pegCurrency,
+    liveInput?.profile,
+    liveInput?.pegCurrency,
     stablecoins.dataUpdatedAt,
     pegSummary.dataUpdatedAt,
     reportCards.dataUpdatedAt,
@@ -875,10 +1487,10 @@ export function useSelector(
   ]);
 
   const engineOutput = useMemo<SelectorOutput | null>(() => {
-    if (!input || !rowsByKey) return null;
+    if (!liveInput || !rowsByKey) return null;
     try {
       return runSelector(
-        input,
+        liveInput,
         { rows: rowsByKey.rows },
         {
           timestamp: rowsByKey.timestamp,
@@ -889,12 +1501,18 @@ export function useSelector(
     } catch {
       return null;
     }
-  }, [input, rowsByKey]);
+  }, [liveInput, rowsByKey]);
 
   if (sid) {
     if (snapshotState.kind === "loading") return { status: "snapshot-loading" };
     if (snapshotState.kind === "found") {
-      return { status: "snapshot-found", output: snapshotState.output, isFrozen: true };
+      return {
+        status: "snapshot-found",
+        output: snapshotState.output,
+        isFrozen: true,
+        liveOutput: engineOutput,
+        liveStatus: !datasetReady ? "loading" : engineOutput ? "ready" : "error",
+      };
     }
     if (snapshotState.kind === "error") {
       return { status: "error", reason: snapshotState.reason };

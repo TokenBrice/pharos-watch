@@ -3298,11 +3298,11 @@ Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dyn
 
 These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
 
-Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that scrapes share URLs.
+Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are snapshot storage for the website UI, not a public integration API.
 
 ### `GET /selector-snapshot/:sid`
 
-Returns a previously stored Stablecoin Selector output JSON identified by content-addressed `sid` (32 hex chars).
+Returns a previously stored Stablecoin Selector output JSON identified by content-addressed `sid` (32 hex chars). The returned artifact is frozen; clients that offer "Compare to today's data" must compute a separate live Selector run and keep the stored artifact unchanged.
 
 **Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
 
@@ -3313,13 +3313,27 @@ Returns a previously stored Stablecoin Selector output JSON identified by conten
 ```json
 {
   "profile": "treasury",
-  "engineVersion": "selector-v1.2",
+  "engineVersion": "selector-v1.3",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
-  "input": { "profile": "treasury", "pegCurrency": "EUR", "horizon": "6mplus", "depegTolerance": "zero" },
+  "input": {
+    "profile": "treasury",
+    "pegCurrency": "EUR",
+    "horizon": "6mplus",
+    "depegTolerance": "zero",
+    "composability": "none",
+    "venuePreferences": ["custody"],
+    "exitSpeed": "any",
+    "minApy": null,
+    "yieldNativeOnly": false,
+    "decentralization": "any",
+    "custodyOk": "any"
+  },
   "universe": { "active": 392, "surviving": 12 },
   "recommended": [ /* ranked shortlist entries */ ],
   "lowerRanked": [ /* lower-ranked entries */ ],
+  "usedRelaxedFallback": false,
+  "relaxedReasons": [],
   "coverageWarnings": {
     "skippedForCoverageCount": 0,
     "sparse": false,
@@ -3328,12 +3342,17 @@ Returns a previously stored Stablecoin Selector output JSON identified by conten
     "newListingCount": 0,
     "redistributionCount": 0
   },
+  "exclusionSummary": [],
+  "closestSurvivors": [],
+  "relaxableConstraints": [],
   "lowConfidence": false,
   "methodologyVersions": { "safetyScore": "v7.25" }
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, coverage warning counts, and basic recommendation/lower-ranked row fields). Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected peg universe and `engineVersion` carries the bump on deterministic behavior, weight, or exclusion-rule changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts, and authored recommendation/lower-ranked prose). Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
+
+On GET, the Pages Function parses the stored payload, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 
@@ -3343,7 +3362,7 @@ The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The 
 | --- | --- |
 | 404 | Origin disallowed, sid not 32 hex chars, or KV miss. |
 | 500 | `SELECTOR_SNAPSHOTS` KV binding missing on the Pages project. |
-| 502 | Stored KV value is corrupt or fails the shape check. |
+| 502 | Stored KV value is corrupt, fails semantic validation, or recomputes to a different sid. |
 | 503 | KV read throws transiently (Cloudflare KV outage). |
 
 ### `POST /selector-snapshot`
@@ -3352,15 +3371,28 @@ Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempo
 
 **Authentication:** exempt — same-origin gated.
 
-**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap.
+**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces are stripped before canonical sid computation and storage.
 
-**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with freshness-derived fields stripped (top-level `timestamp` / `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+
+Share-link privacy property: the stored payload contains the Selector answers and output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
+
+**Validation matrix:**
+
+| Case | Status / client contract |
+| --- | --- |
+| Invalid `sid` path syntax | `404`; clients should surface invalid-link/not-found state without replaying unrelated live output. |
+| Missing required replay fields | `400` on POST, `502` on GET. |
+| Unknown enum, reason key, source shape, or impossible score/rank | `400` on POST, `502` on GET. |
+| Stored payload canonical sid differs from requested `sid` | `502`. |
+| Clipboard denied after a successful POST | Endpoint still returns `200`; UI shows a selectable URL fallback. |
+| Trading profile has stale share-blocking inputs | UI should not POST until refreshed; endpoint remains shape-focused and does not recompute live staleness. |
 
 **Failure modes:**
 
 | Status | When |
 | --- | --- |
-| 400 | Body parse error, unsupported JSON, missing required replay fields, or malformed recommendation / coverage-warning basics. |
+| 400 | Body parse error, unsupported JSON, missing required replay fields, malformed recommendation / coverage-warning basics, or semantic validation failure. |
 | 404 | Origin disallowed. |
 | 405 | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment. |
 | 413 | Payload exceeds 100 KB defensive cap. |

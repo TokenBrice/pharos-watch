@@ -1,12 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Link as LinkIcon, Pencil } from "lucide-react";
+import { useId, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Link as LinkIcon,
+  Pencil,
+  RotateCcw,
+} from "lucide-react";
 import Link from "next/link";
-import type { SelectorProfile, SelectorInput, SkippedCoin } from "@shared/lib/selector";
+import type { SelectorInput, SelectorProfile, SkippedCoin } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { cn } from "@/lib/utils";
+
+export interface SelectorSummaryCoverageWarnings {
+  sparse?: boolean;
+  uneven?: boolean;
+  skippedForCoverageCount?: number;
+}
+
+export interface SelectorSummaryFilterChip {
+  label: string;
+  value: string;
+}
+
+export interface SelectorSummaryAnswerChip {
+  key: string;
+  label: string;
+  value: string;
+}
+
+export interface SelectorSummarySessionRecovery {
+  message: string;
+  onRestore: () => void;
+  onDismiss?: () => void;
+}
 
 interface SelectorResultSummaryProps {
   profile: SelectorProfile;
@@ -14,11 +43,22 @@ interface SelectorResultSummaryProps {
   universe: { active: number; surviving: number };
   shortlistCount: number;
   screenerHandoffHref: string;
+  summaryHeadingRef?: React.Ref<HTMLHeadingElement>;
   onAdjust: () => void;
+  onEditAnswer?: (key: string) => void;
   onCopyShareLink: () => Promise<void>;
   copyShareDisabled: boolean;
   copyShareDisabledReason?: string;
+  shareFallbackUrl?: string;
   skipped: readonly SkippedCoin[];
+  lowConfidence?: boolean;
+  coverageWarnings?: SelectorSummaryCoverageWarnings;
+  usedRelaxedFallback?: boolean;
+  relaxedReasons?: readonly string[];
+  filterChips?: readonly SelectorSummaryFilterChip[];
+  answerChips?: readonly SelectorSummaryAnswerChip[];
+  priorityLabels?: readonly string[];
+  sessionRecovery?: SelectorSummarySessionRecovery;
   // Layout slot for the snapshot banner.
   snapshotBanner?: React.ReactNode;
   // Mobile-only: order-aware reorder happens via Tailwind on the parent.
@@ -32,9 +72,9 @@ const PROFILE_LABEL: Record<SelectorProfile, string> = {
 
 const HORIZON_LABEL: Record<SelectorInput["horizon"], string> = {
   lt24h: "under 24h",
-  "1to7d": "1–7 days",
-  "1to4w": "1–4 weeks",
-  "1to6m": "1–6 months",
+  "1to7d": "1-7 days",
+  "1to4w": "1-4 weeks",
+  "1to6m": "1-6 months",
   "6mplus": "6 months+",
 };
 
@@ -45,17 +85,44 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
     universe,
     shortlistCount,
     screenerHandoffHref,
+    summaryHeadingRef,
     onAdjust,
+    onEditAnswer,
     onCopyShareLink,
     copyShareDisabled,
     copyShareDisabledReason,
+    shareFallbackUrl,
     skipped,
+    lowConfidence = false,
+    coverageWarnings,
+    usedRelaxedFallback = false,
+    relaxedReasons = [],
+    filterChips = [],
+    answerChips = [],
+    priorityLabels = [],
+    sessionRecovery,
     snapshotBanner,
   } = props;
 
   const [shareState, setShareState] = useState<"idle" | "pending" | "copied" | "error">("idle");
   const [shareError, setShareError] = useState<string | null>(null);
+  const shareDescriptionId = useId();
+  const shareStatusId = useId();
+  const shareErrorId = useId();
+  const disabledReasonId = useId();
   const pegLabel = PEG_METADATA[input.pegCurrency]?.filterLabel ?? input.pegCurrency;
+  const resultBanners = buildResultBanners({
+    lowConfidence,
+    coverageWarnings,
+    usedRelaxedFallback,
+    relaxedReasons,
+  });
+  const describedBy = [
+    shareDescriptionId,
+    shareStatusId,
+    copyShareDisabled && copyShareDisabledReason ? disabledReasonId : null,
+    shareError ? shareErrorId : null,
+  ].filter(Boolean).join(" ");
 
   const handleCopy = async () => {
     if (copyShareDisabled || shareState === "pending") return;
@@ -73,6 +140,34 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
 
   return (
     <section aria-labelledby="selector-summary" className="space-y-4">
+      {sessionRecovery ? (
+        <div
+          role="status"
+          className="flex flex-col gap-2 rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-foreground">{sessionRecovery.message}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={sessionRecovery.onRestore}
+              className="pharos-focus-ring inline-flex min-h-10 items-center gap-1.5 rounded-full border border-frost-blue/45 px-3 text-xs font-medium text-foreground hover:bg-frost-blue/[0.1]"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              Restore result
+            </button>
+            {sessionRecovery.onDismiss ? (
+              <button
+                type="button"
+                onClick={sessionRecovery.onDismiss}
+                className="pharos-focus-ring inline-flex min-h-10 items-center rounded-full border border-border/55 px-3 text-xs font-medium text-foreground hover:bg-muted/35"
+              >
+                Dismiss
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="pharos-subtle-band space-y-3 rounded-2xl border border-border/55 p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
@@ -87,7 +182,12 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           </span>
         </div>
 
-        <h2 id="selector-summary" className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+        <h2
+          id="selector-summary"
+          ref={summaryHeadingRef}
+          tabIndex={-1}
+          className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
+        >
           {universe.active.toLocaleString()} tracked {pegLabel} stablecoins → {universe.surviving.toLocaleString()} filtered → {shortlistCount} shortlist entries
         </h2>
 
@@ -96,6 +196,85 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </p>
         <p className="text-sm leading-relaxed text-muted-foreground">
           A &ldquo;fit&rdquo; means the coin passed Pharos&rsquo;s exclusion filters for the selected peg and profile, then ranked highest on the scoring weights. Pharos surfaces analytical readings; allocation decisions are yours alone, made against your own counsel.
+        </p>
+
+        {resultBanners.length > 0 ? (
+          <div className="space-y-2" aria-label="Result quality notices">
+            {resultBanners.map((banner) => (
+              <div
+                key={banner.title}
+                role="status"
+                className={cn(
+                  "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm",
+                  banner.tone === "amber"
+                    ? "border-amber-500/35 bg-amber-500/[0.07] text-amber-950 dark:text-amber-100"
+                    : "border-frost-blue/35 bg-frost-blue/[0.06] text-foreground",
+                )}
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <p>
+                  <span className="font-semibold">{banner.title}</span>{" "}
+                  <span>{banner.message}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {answerChips.length > 0 || priorityLabels.length > 0 ? (
+          <div className="grid gap-3 rounded-lg border border-border/50 bg-background/35 p-3 md:grid-cols-[1fr_auto]">
+            {answerChips.length > 0 ? (
+              <div className="min-w-0 space-y-2">
+                <p className="pharos-kicker">Answers</p>
+                <div className="flex flex-wrap gap-2">
+                  {answerChips.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      aria-label={`Edit ${chip.label.toLowerCase()}: ${chip.value}`}
+                      onClick={() => (onEditAnswer ? onEditAnswer(chip.key) : onAdjust())}
+                      className="pharos-focus-ring inline-flex max-w-full items-center gap-1.5 rounded-full border border-border/65 bg-card/55 px-2.5 py-1 text-xs font-medium text-foreground hover:bg-card"
+                    >
+                      <span className="shrink-0 text-muted-foreground">{chip.label}:</span>
+                      <span className="min-w-0 break-words">{chip.value}</span>
+                      <Pencil className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {priorityLabels.length > 0 ? (
+              <div className="min-w-0 space-y-2 md:max-w-xs">
+                <p className="pharos-kicker">Prioritized</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {priorityLabels.join(", ")}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {filterChips.length > 0 ? (
+          <div className="space-y-2 rounded-lg border border-border/50 bg-background/35 p-3">
+            <div className="space-y-2">
+              <p className="pharos-kicker">Screener handoff filters</p>
+              <div className="flex flex-wrap gap-2">
+                {filterChips.map((chip) => (
+                  <span
+                    key={`${chip.label}:${chip.value}`}
+                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-card/55 px-2.5 py-1 text-xs font-medium text-foreground"
+                  >
+                    <span className="shrink-0 text-muted-foreground">{chip.label}:</span>
+                    <span className="min-w-0 break-words">{chip.value}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <p id={shareDescriptionId} className="text-xs leading-relaxed text-muted-foreground">
+          Share links store these answers and this output for up to 5 years. Anyone with the link can view them.
         </p>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
@@ -119,6 +298,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
             onClick={handleCopy}
             disabled={copyShareDisabled || shareState === "pending"}
             aria-disabled={copyShareDisabled || shareState === "pending"}
+            aria-describedby={describedBy}
             className={cn(
               "pharos-focus-ring inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-border/65 px-3.5 text-sm font-medium hover:bg-background/85 sm:min-h-9",
               copyShareDisabled || shareState === "pending"
@@ -128,7 +308,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           >
             <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
             {shareState === "pending"
-              ? "Creating link…"
+              ? "Creating link..."
               : shareState === "copied"
                 ? "Link copied"
                 : "Copy share link"}
@@ -136,9 +316,33 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
 
         {copyShareDisabled && copyShareDisabledReason ? (
-          <p className="text-xs text-amber-700 dark:text-amber-200">{copyShareDisabledReason}</p>
+          <p id={disabledReasonId} role="alert" className="text-xs text-amber-700 dark:text-amber-200">
+            {copyShareDisabledReason}
+          </p>
         ) : null}
-        {shareError ? <p className="text-xs text-destructive">{shareError}</p> : null}
+        <p id={shareStatusId} role="status" aria-live="polite" className="sr-only">
+          {shareState === "pending"
+            ? "Creating share link."
+            : shareState === "copied"
+              ? "Share link copied."
+              : ""}
+        </p>
+        {shareError ? (
+          <div id={shareErrorId} role="alert" className="space-y-1 text-xs text-destructive">
+            <p>{shareError}</p>
+            {shareFallbackUrl ? (
+              <label className="block space-y-1 text-muted-foreground">
+                <span>Copy this link manually if clipboard access is blocked.</span>
+                <input
+                  readOnly
+                  value={shareFallbackUrl}
+                  className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-[11px] text-foreground"
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+              </label>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {snapshotBanner}
@@ -146,4 +350,81 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
       {skipped.length > 0 ? <SelectorSkippedDisclosure coins={skipped} /> : null}
     </section>
   );
+}
+
+function buildResultBanners({
+  lowConfidence,
+  coverageWarnings,
+  usedRelaxedFallback,
+  relaxedReasons,
+}: {
+  lowConfidence: boolean;
+  coverageWarnings?: SelectorSummaryCoverageWarnings;
+  usedRelaxedFallback: boolean;
+  relaxedReasons: readonly string[];
+}): Array<{ title: string; message: string; tone: "amber" | "blue" }> {
+  const banners: Array<{ title: string; message: string; tone: "amber" | "blue" }> = [];
+  if (lowConfidence) {
+    banners.push({
+      title: "Low-confidence shortlist.",
+      message: "Fit quality is below the normal threshold; treat the ordering as a starting point for review.",
+      tone: "amber",
+    });
+  }
+  if (coverageWarnings?.sparse) {
+    banners.push({
+      title: "Sparse coverage.",
+      message: "A large share of this peg universe lacks enough live data for the selected profile.",
+      tone: "amber",
+    });
+  } else if (coverageWarnings?.uneven) {
+    banners.push({
+      title: "Uneven coverage.",
+      message: "Some coins were skipped because one or more required live signals are missing.",
+      tone: "amber",
+    });
+  }
+  if (usedRelaxedFallback) {
+    banners.push({
+      title: "Relaxed fallback used.",
+      message:
+        relaxedReasons.length > 0
+          ? `No clean fit survived, so Pharos relaxed: ${relaxedReasons.map(readableRelaxedReason).join(", ")}.`
+          : "No clean fit survived, so Pharos widened one or more soft constraints.",
+      tone: "amber",
+    });
+  }
+  return banners;
+}
+
+function readableRelaxedReason(reason: string): string {
+  const labels: Record<string, string> = {
+    "below-supply-floor": "supply floor",
+    "active-depeg": "active depeg",
+    "safety-grade-floor": "safety grade",
+    "safety-resilience-floor": "resilience",
+    "safety-dependency-risk-floor": "dependency risk",
+    "dews-ceiling": "DEWS stress",
+    "depeg-event-count": "depeg history",
+    "bluechip-d-or-f": "blue-chip alignment",
+    "peg-stability-floor": "peg stability",
+    "pys-null": "yield coverage",
+    "apy-below-floor": "yield floor",
+    "yield-warning-unstable": "yield stability",
+    "yield-warning-thin-tvl": "yield depth",
+    "high-venue-on-c-tier": "venue risk",
+    "liquidity-floor": "liquidity",
+    "liquidity-diversification-floor": "liquidity diversification",
+    "effective-exit-floor": "effective exit",
+    "supply-tvl-floor-1h": "one-hour exit depth",
+    "lifecycle-non-active": "lifecycle",
+    "peg-currency-mismatch": "peg currency",
+    "yield-native-only-violation": "native yield",
+    "decentralization-required-violation": "decentralization",
+    "custody-onchain-only-violation": "custody model",
+    "howey-uncertain": "regulatory uncertainty",
+    "template-coverage-gap": "template coverage",
+    "coverage-too-thin": "coverage",
+  };
+  return labels[reason] ?? reason.replace(/-/g, " ");
 }

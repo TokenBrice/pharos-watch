@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SELECTOR_PROFILES } from "../types";
 import { SELECTOR_VERSION } from "../version";
-import { WEIGHTS_VERSION, WEIGHT_VECTORS, assertWeightsSumTo100 } from "../weights";
+import {
+  WEIGHTS_VERSION,
+  WEIGHT_VECTORS,
+  assertWeightsSumTo100,
+  getWeightVectorForInput,
+} from "../weights";
+import { makeInput } from "./fixture";
 
 describe("weights", () => {
   it.each(SELECTOR_PROFILES)("%s weights sum to 100", (profile) => {
@@ -59,5 +65,23 @@ describe("weights", () => {
       safetyOverall: 4,
       liquidityDiversification: 3,
     });
+  });
+
+  it("answer-conditioned overlays keep sums at 100 and move zero tolerance toward peg stability", () => {
+    const base = getWeightVectorForInput(makeInput({ profile: "yield", depegTolerance: "tight" }));
+    const strict = getWeightVectorForInput(makeInput({ profile: "yield", depegTolerance: "zero" }));
+    assertWeightsSumTo100("yield", strict);
+    expect(strict.pegStabilityLive).toBeGreaterThan(base.pegStabilityLive ?? 0);
+  });
+
+  it("venue and exit overlays preserve deterministic sums", () => {
+    const vector = getWeightVectorForInput(makeInput({
+      profile: "yield",
+      exitSpeed: "1h",
+      composability: "high",
+      venuePreferences: ["dex"],
+    }));
+    assertWeightsSumTo100("yield", vector);
+    expect(vector.liquidity).toBeGreaterThan(WEIGHT_VECTORS.yield.liquidity ?? 0);
   });
 });

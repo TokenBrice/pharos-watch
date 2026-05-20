@@ -2,7 +2,7 @@
 
 Route contract for `/screener/selector/`, the noindex profile-driven stablecoin shortlist.
 
-The Selector flips the Screener relationship: instead of filtering the full universe, the user describes a profile (Treasury, Yield, Active Trading) and Pharos returns a 2–3 coin shortlist plus 1–2 coins to avoid for that profile, with live-data justifications. The Screener remains the durable surface; the Selector seeds it.
+The Selector flips the Screener relationship: instead of filtering the full universe, the user describes a profile (Treasury, Yield, Active Trading) and Pharos returns up to 3 profile-fit candidates plus up to 2 profile mismatches/watch-outs, with live-data justifications. The Screener remains the durable surface; the Selector seeds it.
 
 ---
 
@@ -47,24 +47,42 @@ The engine consumes the same React Query hooks the Screener already uses; no new
 7. `useBluechipRatings()` — third-party bluechip grades.
 8. `useRedemptionBackstops()` — effective-exit score and redemption-rail data.
 
-The route passes the selected `pegCurrency` into the data adapter. The adapter keeps active rows for that selected peg and computes `datasetHash` over that selected-peg universe, including each row's `pegCurrency`; refetches change `datasetHash` and trigger a fresh selector run. The pure engine still filters by `input.pegCurrency`, so tests can pass an all-peg map safely. The engine reads `methodologyVersion` from each upstream `_meta` / `methodology.version` envelope when present and falls back to `"unversioned"` per endpoint otherwise; gaps surface in the output payload.
+The route passes the selected `pegCurrency` into the data adapter. The adapter keeps active rows for that selected peg and computes `datasetHash` over the selected-peg universe with every decision-affecting field: exclusions, normalized scoring inputs, tie-break fields, explanation inputs, venue/source fields, lifecycle/status flags, `pegCurrency`, and source/methodology metadata that changes output semantics. Freshness-only fields such as `updatedAt`, `capturedAt`, and hook fetch timestamps stay out of `datasetHash` unless they affect ranking, exclusion, or staleness policy. Refetches that change decision content change `datasetHash` and trigger a fresh selector run. The hash must be stable and collision-resistant enough for audit references, currently expected to be SHA-256-based rather than the earlier short `djb2Hex` helper.
+
+The pure engine still filters by `input.pegCurrency`, so tests can pass an all-peg map safely. The engine reads `methodologyVersion` from each upstream `_meta` / `methodology.version` envelope when present and falls back to `"unversioned"` per endpoint otherwise; gaps surface in the output payload. `engineVersion` / `selectorVersion` must bump whenever ranking, exclusion, missing-data, tie-break, explanation, or deterministic output semantics change.
+
+`SelectorOutput` is the replay contract, not just a UI view-model. In addition to `input`, `universe`, `recommended`, `lowerRanked`, `coverageWarnings`, `methodologyVersions`, `datasetHash`, and `engineVersion`, the current enhancement plan expects these fields or equivalent persisted semantics:
+
+| Field | Purpose |
+| --- | --- |
+| `recommended[].whyText` | Authored "why it ranked here" prose. Cards must not render raw `whyKey` values such as `top-*` / `strong-*`. |
+| `lowerRanked[].verdictText` / `teachingText` | Authored watch-out/profile-mismatch prose. Rows must not render raw `reasonKey` or `weak-*` strings. |
+| `lowConfidence` | Result-level quality flag shown prominently when normal confidence is not met. |
+| `usedRelaxedFallback` / `relaxedReasons` | Marks entries produced by relaxing constraints so users can distinguish clean fits from fallback fills. |
+| `exclusionSummary` | Aggregated counts/reasons for hard exclusions and coverage-thin rows. |
+| `closestSurvivors` | Engine-owned near-miss rows used by empty/thin states; frontend placeholders are not authoritative. |
+| `relaxableConstraints` | Engine-owned relax actions that correspond to actual blockers. |
+| `rankRobustness` / tie metadata | Near-tie or concentration labels when score deltas are narrow or issuer/protocol concentration rules affect the shortlist. |
 
 ---
 
 ## Persistence And Sharing
 
-One browser-local key plus one content-addressed server snapshot:
+Browser-local state is intentionally split by lifetime. There is no long-lived local output history.
 
 | Key / surface | Type | Lifecycle |
 | --- | --- | --- |
 | `pharos.selector.callout.v1` | `localStorage` JSON | Callout dismissal state. Survives reloads; clears on site-data clear. |
+| `pharos.selector.lastResult.v1` or equivalent | `sessionStorage` JSON | Optional last-successful live result recovery. Clears when the tab/session closes; not written after explicit reset/clear. |
 | `s:{sid}` | KV value (`SELECTOR_SNAPSHOTS`) | Content-addressed snapshot of a `SelectorOutput`. 5-year TTL. |
 
-The current Selector build does not write a last-run recovery key. Storage layer is best-effort; quota errors are silently dropped.
+Storage layer is best-effort; quota errors are silently dropped. Session recovery, when present, must be visibly labeled as a restored session result and must not create localStorage output history.
 
-**Snapshot share URL:** `/screener/selector/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp and freshness suffixes) share the same sid. The frozen artifact contains the inputs; the sid is the lookup key.
+**Snapshot share URL:** `/screener/selector/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp, debug, and freshness suffixes) share the same sid. The frozen artifact contains the form answers and output; the sid is the lookup key. The share UI must disclose before or during link creation that answers and shortlist output are stored for 5 years and that anyone with the link can view the snapshot.
 
 **Snapshot-miss behavior:** when a sid-only share URL hits a KV miss, the client shows a not-found error instead of silently generating a different live result. If a legacy or hand-authored URL also carries complete wizard state, the client can fall back to live engine output for those inputs with a one-line "Original snapshot no longer cached" banner.
+
+**Frozen-vs-today behavior:** a loaded `sid` renders the frozen artifact by default. When current data is ready, "Compare to today's data" runs the live engine for the frozen `output.input` and shows deltas for shortlist membership, rank, score, `datasetHash`, `engineVersion`, and methodology-version drift without overwriting the shared artifact.
 
 Cross-link: `docs/privacy-page.md` describes the storage policy and the content-addressed snapshot model.
 
@@ -81,15 +99,28 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 **Auth:** same-origin only (mirrors `rejectIfNotSiteDataUiOrigin` from `functions/lib/site-data-origin.ts`). Browser CORS blocks cross-origin POST before it reaches the function; no write secret is required. Foreign origins receive `404`.
 
-**Tamper evidence:** the server recomputes the sid via SHA-256 over a canonicalized JSON payload (lexicographically sorted keys, freshness-derived fields stripped, NFC-normalized strings). Clients cannot persist a snapshot under a sid that does not match its content.
+**Tamper evidence:** the server recomputes the sid via SHA-256 over a canonicalized JSON payload (lexicographically sorted keys, debug/freshness-derived fields stripped, NFC-normalized strings). Clients cannot persist a snapshot under a sid that does not match its content. GET also recomputes the sid from the stored payload and returns a clean `502` if the stored value no longer matches the requested sid.
 
-**Validation:** the Pages Function does not import frontend code, but it rejects snapshots that are missing the frontend replay fields: `input.pegCurrency`, `universe`, `lowConfidence`, coverage warning counts (`skippedForCoverageCount`, `newListingCount`, `redistributionCount`), and the basic shortlist/lower-ranked row fields (`id`, `symbol`, `name`, rank/slot, score/confidence or reason keys).
+**Validation:** the Pages Function does not import frontend code, but it rejects snapshots that are missing the frontend replay fields: `input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts (`skippedForCoverageCount`, `newListingCount`, `redistributionCount`), and authored shortlist/lower-ranked prose. Semantic validation covers known enum values, finite score/component ranges, profile-valid `venuePreferences`, known `whyKeys`, malformed confidence/rank diagnostics, known lower-ranked reason keys, `recommendedSource` shape, per-input staleness shape, and impossible rank/slot values.
 
-**Canonicalization:** the strip rule covers top-level `timestamp` and `perInputStaleness`, plus any field whose name matches the suffixes `ageSeconds`, `capturedAt`, `stalenessMs`, `updatedAt`, `fetchedAt`. `coverageWarnings.newListingCount` is **not** stripped; the implemented engine derives it from content-level recent-listing flags, so it contributes to the sid. Cross-client sid consistency depends on this denylist; engine and integration agreed on the same strip-list in plan §0.
+**Canonicalization:** the strip rule covers `timestamp`, `debug`, `perInputStaleness`, plus any field whose name matches the suffixes `ageSeconds`, `capturedAt`, `stalenessMs`, `updatedAt`, `fetchedAt`. `coverageWarnings.newListingCount` is **not** stripped; the implemented engine derives it from content-level recent-listing flags, so it contributes to the sid. Cross-client sid consistency depends on this denylist; engine and integration agreed on the same strip-list in plan §0. POST strips `debug` before storage even if a debug build sends it.
 
 **Size guard:** 100 KB defensive ceiling. Realistic snapshots are ~10–30 KB; bloat past 100 KB is a bug, not a feature.
 
 **Failure modes** (full table in `agents/impl-plan-drafts/03-integration.md` §1.5): malformed JSON / wrong shape → `400`; oversized → `413`; origin mismatch → `404`; KV outage → `503` on POST or `503` on GET-read; corrupt KV value → `502`; missing KV binding → `500`.
+
+**Validation matrix:**
+
+| Case | Expected result |
+| --- | --- |
+| Invalid `sid` syntax in URL or GET path | Do not fetch from KV, show typed invalid-link/not-found state, return `404` at the function. |
+| POST includes `debug` | Strip before canonical sid and storage. |
+| POST has unknown enum, impossible score, malformed source, or unknown reason key | `400`. |
+| GET stored payload fails semantic validation | `502`. |
+| GET stored payload canonical sid differs from requested `sid` | `502`. |
+| KV binding absent | `500`. |
+| KV read/write transient failure | `503`, typed client store-unavailable state. |
+| Clipboard write denied after successful POST | Show selectable share URL fallback and announce error through an alert/status region. |
 
 ---
 
@@ -97,13 +128,21 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 The frontend agent owns `src/app/screener/selector/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
 
-- Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, venue, and exit speed.
+- Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, venue, and exit speed. Desktop single-select questions use a consistent select-then-Next rhythm; radio selection alone does not advance to result.
 - Mobile branching is CSS-only except for the callout slim/full variant and the mobile single-form, both gated behind `useHydrated() && useIsMobile(640)`.
-- Result page renders the ranked shortlist, lower-ranked rows, peg-aware summary/chips, evidence chips, the mandatory "What to watch" line per shortlist entry, and the divergence banner when the selector inputs cannot be expressed in Screener filters. Empty states distinguish "no fit" from "coverage too thin" when selected-peg live signals are sparse.
-- `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/selector/?sid={sid}` on `200`, leave the button disabled with a notice on failure.
+- Mobile answer controls update answers only; the sticky "See my shortlist" CTA is the only mobile result commit and stays disabled until required answers are complete. The CTA area shows an answered-count/progress cue.
+- Result page renders the ranked shortlist, lower-ranked/watch-out rows, peg-aware answer chips, priority chips, evidence chips, the mandatory "What to watch" line per shortlist entry, and readable Screener handoff filter chips.
+- Empty states use engine-owned `exclusionSummary`, `closestSurvivors`, and `relaxableConstraints` to distinguish strict constraints, sparse coverage, missing Yield rails, and no-clean-fit relaxed fallback.
+- Result summary renders distinct banners for `lowConfidence`, sparse coverage, uneven coverage, `usedRelaxedFallback`, stale Trading share blockers, and methodology/version drift.
+- `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/selector/?sid={sid}` on `200`, leave the button disabled with a notice on failure. Active Trading share copy is blocked when relevant `perInputStaleness` exceeds the configured freshness ceiling; Treasury and Yield are not blocked by Trading-only staleness. Disabled/error reasons are associated with the button and announced through status/alert regions.
+- Result actions include Adjust answers, Verify in Screener, Copy share link, and optional Compare shortlist vs watch-outs. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
+- Loading states set `aria-busy` and include screen-reader loading text. Result generation/snapshot load moves focus to the result summary heading, full-card option labels expose `focus-within` styling, skipped-coin disclosures are explicit controls, and mobile shortlist jumps move focus like skip links.
+- Mobile/narrow-width QA must cover long coin names, long hashes/version strings, multi-line relax buttons, and chip wrapping so text does not overlap at common mobile widths or 200 percent zoom.
 - `aria-live="polite"` announcements on step transitions; programmatic focus to the new `<legend>`.
 
-The shortlist section places a "Compare the shortlisted stablecoins" callout directly under the heading. It links to `/compare/` with the selector answers and shortlisted coin IDs pre-filled. Each shortlist card carries three evidence chips plus header chips for the selected peg and "Filter output". Trading-profile staleness renders as a discrete label ("Fresh" / "1m" / "5m" / "Stale") on mobile, precise seconds on desktop.
+The shortlist section starts directly with the ranked cards. When lower-ranked rows exist, the result view can include one Compare shortlist vs watch-outs action outside the shortlist section. Each shortlist card carries three evidence chips plus header chips for the selected peg and "Filter output". Trading-profile staleness renders as a discrete label ("Fresh" / "1m" / "5m" / "Stale") on mobile, precise seconds on desktop.
+
+Visible copy guardrails: do not use fixed output counts ("3 candidates plus 2 coins") when counts are variable, do not use "Hold safely", do not call entries recommendations, and do not expose raw internal keys (`whyKey`, `reasonKey`, `top-*`, `strong-*`, `weak-*`, or `WeightKey` values) as user-facing prose.
 
 ---
 

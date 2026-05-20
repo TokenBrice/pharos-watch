@@ -13,6 +13,7 @@
  * Binding: `agents/impl-plan-drafts/02-engine.md` §7.
  */
 import { PROFILE_DEFINING_EXCLUSIONS } from "./exclusions";
+import { getLowerRankedText } from "./what-to-watch-templates";
 import type {
   ExclusionRecord,
   MergedRow,
@@ -132,7 +133,7 @@ export function selectLowerRanked(
 
   const slotA = slotACandidates[0];
   if (slotA != null) {
-    out.push({
+    const entry: SelectorLowerRanked = {
       id: slotA.row.id,
       symbol: slotA.row.symbol,
       name: slotA.row.name,
@@ -140,7 +141,8 @@ export function selectLowerRanked(
       reasonKey: slotA.record.reason,
       failedComponent: null,
       hypotheticalScore: Math.round(slotA.hypotheticalScore * 10) / 10,
-    });
+    };
+    out.push({ ...entry, ...getLowerRankedText(entry) });
   }
 
   // --- Slot B -------------------------------------------------------------
@@ -160,42 +162,42 @@ export function selectLowerRanked(
   });
   if (bottomQuartile.length === 0) return out;
 
-  // Pick highest-scoring within the bottom quartile.
-  const slotBPick = bottomQuartile.reduce((best, current) =>
-    current.score > best.score ? current : best,
-  );
-
-  // Anti-rules
-  if (shortlistedIds.has(slotBPick.row.id)) return out;
   const shortlistedProtocolSlugs = new Set<string>();
   for (const row of allMerged) {
     if (shortlistedIds.has(row.id) && row.protocolSlug != null) {
       shortlistedProtocolSlugs.add(row.protocolSlug);
     }
   }
-  if (
-    slotBPick.row.protocolSlug != null &&
-    shortlistedProtocolSlugs.has(slotBPick.row.protocolSlug)
-  ) {
-    return out;
-  }
-  const reasonKey = `weak-${dim}`;
-  if (slotA != null && slotA.record.reason === reasonKey) {
-    // Duplicate reason anti-rule (rare, but possible if Slot A reason happens
-    // to map identically — guard defensively).
-    return out;
-  }
 
-  out.push({
-    id: slotBPick.row.id,
-    symbol: slotBPick.row.symbol,
-    name: slotBPick.row.name,
-    slot: "B",
-    reasonKey,
-    failedComponent: dim,
-    hypotheticalScore: Math.round(slotBPick.score * 10) / 10,
-  });
+  // Pick highest-scoring eligible within the bottom quartile. If the first
+  // candidate trips an anti-rule, continue to the next candidate instead of
+  // dropping Slot B entirely.
+  const reasonKey = `weak-${dim}`;
+  const sortedBottomQuartile = [...bottomQuartile].sort((a, b) => b.score - a.score);
+  for (const candidate of sortedBottomQuartile) {
+    if (shortlistedIds.has(candidate.row.id)) continue;
+    if (
+      candidate.row.protocolSlug != null &&
+      shortlistedProtocolSlugs.has(candidate.row.protocolSlug)
+    ) {
+      continue;
+    }
+    if (slotA != null && slotA.record.reason === reasonKey) {
+      continue;
+    }
+
+    const entry: SelectorLowerRanked = {
+      id: candidate.row.id,
+      symbol: candidate.row.symbol,
+      name: candidate.row.name,
+      slot: "B",
+      reasonKey,
+      failedComponent: dim,
+      hypotheticalScore: Math.round(candidate.score * 10) / 10,
+    };
+    out.push({ ...entry, ...getLowerRankedText(entry) });
+    break;
+  }
 
   return out;
 }
-

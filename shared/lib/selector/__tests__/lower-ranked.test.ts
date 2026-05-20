@@ -262,14 +262,16 @@ describe("selectLowerRanked — Slot B", () => {
     expect(result.filter((r) => r.slot === "B")).toHaveLength(0);
   });
 
-  it("anti-rule: shared protocolSlug with shortlist → null", () => {
+  it("anti-rule: shared protocolSlug with shortlist → tries the next eligible Slot B candidate", () => {
     const rows = [
       makeRow("r1", { safetyScore: 90, protocolSlug: "circle" }),
       makeRow("r2", { safetyScore: 88, protocolSlug: "tether" }),
       makeRow("r3", { safetyScore: 86, protocolSlug: "sky" }),
-      makeRow("r4", { safetyScore: 50, protocolSlug: "circle" }), // shares with r1
-      makeRow("r5", { safetyScore: 60, protocolSlug: "novel" }),
-      makeRow("r6", { safetyScore: 55, protocolSlug: "novel2" }),
+      makeRow("r4", { safetyScore: 51, protocolSlug: "circle" }), // shares with r1
+      makeRow("r5", { safetyScore: 50, protocolSlug: "novel" }),
+      makeRow("r6", { safetyScore: 52, protocolSlug: "novel2" }),
+      makeRow("r7", { safetyScore: 80, protocolSlug: "novel3" }),
+      makeRow("r8", { safetyScore: 78, protocolSlug: "novel4" }),
     ];
     const scored = buildScored(rows);
     const result = selectLowerRanked(
@@ -282,6 +284,7 @@ describe("selectLowerRanked — Slot B", () => {
     );
     const slotB = result.find((r) => r.slot === "B");
     // r4 would be the bottom-quartile pick by score, but shares protocolSlug with r1.
-    expect(slotB?.id).not.toBe("r4");
+    expect(slotB?.id).toBe("r5");
+    expect(slotB?.teachingText).not.toContain("weak-");
   });
 });

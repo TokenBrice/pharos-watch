@@ -131,6 +131,17 @@ function decodeString(raw: string | null): string | null {
   return raw;
 }
 
+const SELECTOR_SNAPSHOT_ID_PATTERN = /^[a-f0-9]{32}$/i;
+
+export function isValidSelectorSnapshotId(raw: string | null): raw is string {
+  return raw != null && SELECTOR_SNAPSHOT_ID_PATTERN.test(raw.trim());
+}
+
+function decodeSnapshotId(raw: string | null): string | null {
+  if (raw == null || raw.trim() === "") return null;
+  return raw.trim().toLowerCase();
+}
+
 export function decodeSelectorState(search: string | URLSearchParams): SelectorWizardState {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;
   const profile = decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES);
@@ -147,7 +158,7 @@ export function decodeSelectorState(search: string | URLSearchParams): SelectorW
     venue,
     exitSpeed: decodeEnum(params.get("u"), SELECTOR_EXIT_VALUES),
     step: decodeStep(params.get("step")),
-    sid: decodeString(params.get("sid")),
+    sid: decodeSnapshotId(params.get("sid")),
     ev: decodeString(params.get("ev")),
   };
 }
@@ -209,6 +220,15 @@ function hasValidVenue(state: SelectorWizardState): boolean {
   return state.profile != null && pruneVenueForProfile(state.profile, state.venue).length > 0;
 }
 
+const PREVIOUS_STEP_BY_STEP: Record<Exclude<SelectorStep, "result">, SelectorStep> = {
+  1: 1,
+  2: 1,
+  3: 2,
+  4: 3,
+  5: 4,
+  6: 5,
+};
+
 export function highestValidStep(state: SelectorWizardState): SelectorStep {
   if (!state.profile) return 1;
   if (!state.horizon) return 3;
@@ -226,19 +246,24 @@ export function highestValidStep(state: SelectorWizardState): SelectorStep {
 // ---------------------------------------------------------------------------
 
 export type SelectorAction =
+  | { type: "set-profile"; value: SelectorProfile }
   | { type: "answer-profile"; value: SelectorProfile }
   | { type: "set-peg"; value: SelectorPeg }
   | { type: "answer-peg"; value: SelectorPeg }
   | { type: "set-horizon"; value: SelectorHorizon }
   | { type: "answer-horizon"; value: SelectorHorizon }
+  | { type: "set-depeg"; value: SelectorDepeg }
   | { type: "answer-depeg"; value: SelectorDepeg }
   // `set-venue` updates the venue selection without advancing the step;
   // used by multi-select venue (Yield, Active Trading) so each checkbox toggle
   // does not jump to exit. `answer-venue` is the explicit "Next" commit.
   | { type: "set-venue"; value: readonly SelectorVenue[] }
   | { type: "answer-venue"; value: readonly SelectorVenue[] }
+  | { type: "set-exit"; value: SelectorExit }
   | { type: "answer-exit"; value: SelectorExit }
   | { type: "advance-to-result" } // mobile single-form submit
+  | { type: "restore-session"; state: SelectorWizardState }
+  | { type: "start-over" }
   | { type: "go-back" }
   | { type: "adjust" }
   | { type: "relax"; constraint: "depegTolerance" | "venue" | "exitSpeed" };
@@ -249,6 +274,17 @@ export function transition(
 ): SelectorWizardState {
   const withoutSnapshot = { ...state, sid: null, ev: null };
   switch (action.type) {
+    case "set-profile":
+      return {
+        ...withoutSnapshot,
+        profile: action.value,
+        pegCurrency: normalizePegForProfile(action.value, state.pegCurrency),
+        horizon: null,
+        depegTolerance: null,
+        venue: [],
+        exitSpeed: null,
+        step: 1,
+      };
     case "answer-profile":
       return {
         ...withoutSnapshot,
@@ -275,6 +311,8 @@ export function transition(
       return { ...withoutSnapshot, horizon: action.value };
     case "answer-horizon":
       return { ...withoutSnapshot, horizon: action.value, step: 4 };
+    case "set-depeg":
+      return { ...withoutSnapshot, depegTolerance: action.value };
     case "answer-depeg":
       return { ...withoutSnapshot, depegTolerance: action.value, step: 5 };
     case "set-venue":
@@ -289,10 +327,16 @@ export function transition(
       }
       return { ...withoutSnapshot, venue, step: 6 };
     }
+    case "set-exit":
+      return { ...withoutSnapshot, exitSpeed: action.value };
     case "answer-exit":
       return { ...withoutSnapshot, exitSpeed: action.value, step: "result" };
     case "advance-to-result":
       return { ...withoutSnapshot, step: "result" };
+    case "restore-session":
+      return { ...action.state, sid: null, ev: null };
+    case "start-over":
+      return SELECTOR_STATE_DEFAULTS;
     case "go-back":
       return { ...state, step: previousStep(state) };
     case "adjust":
@@ -314,25 +358,10 @@ export function transition(
 }
 
 function previousStep(state: SelectorWizardState): SelectorStep {
-  switch (state.step) {
-    case 1:
-      return 1;
-    case 2:
-      return 1;
-    case 3:
-      return 2;
-    case 4:
-      return 3;
-    case 5:
-      return 4;
-    case 6:
-      return 5;
-    case "result":
-      if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
-        return 5;
-      }
-      return 6;
+  if (state.step === "result") {
+    return shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance) ? 5 : 6;
   }
+  return PREVIOUS_STEP_BY_STEP[state.step];
 }
 
 // ---------------------------------------------------------------------------
@@ -360,6 +389,7 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
     depegTolerance: state.depegTolerance,
     composability: composabilityFromVenue(state.profile, state.venue),
     exitSpeed,
+    venuePreferences: state.venue,
     minApy: null,
     yieldNativeOnly: false,
     decentralization: "any",
@@ -407,7 +437,7 @@ export function softConfirmationForHorizon(
   if (profile === "trading" && horizon === "6mplus") {
     return {
       message:
-        "That's longer than most active traders hold — want to switch to Hold safely?",
+        "That's longer than most active traders hold — want to switch to Treasury constraints?",
     };
   }
   if (profile === "treasury" && horizon === "lt24h") {

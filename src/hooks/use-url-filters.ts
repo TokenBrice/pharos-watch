@@ -18,7 +18,12 @@ let originalPushState: History["pushState"] | null = null;
 let originalReplaceState: History["replaceState"] | null = null;
 
 function dispatchHistoryChangeEvent(): void {
-  window.dispatchEvent(new Event(URL_FILTER_HISTORY_CHANGE_EVENT));
+  const dispatch = () => window.dispatchEvent(new Event(URL_FILTER_HISTORY_CHANGE_EVENT));
+  if (typeof queueMicrotask === "function") {
+    queueMicrotask(dispatch);
+  } else {
+    window.setTimeout(dispatch, 0);
+  }
 }
 
 function subscribeToHistoryChanges(listener: () => void): () => void {

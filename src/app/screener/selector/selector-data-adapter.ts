@@ -7,8 +7,10 @@ import {
   type SelectorInput,
   type SelectorOutput,
 } from "@shared/lib/selector";
+import { sha256Hex } from "@shared/lib/selector/hash";
 import { COLLATERAL_QUALITY_SCORE } from "@shared/lib/report-card-policy";
 import type {
+  AltYieldSource,
   BluechipRatingsMap,
   DexLiquidityMap,
   PegSummaryResponse,
@@ -19,6 +21,8 @@ import type {
   YieldDeploymentPlace,
   YieldRanking,
   YieldRankingsResponse,
+  YieldSourceRisk,
+  YieldType,
   YieldVenueRiskTier,
 } from "@shared/types";
 
@@ -143,6 +147,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       yieldVenueChain: yieldRisk?.venueChain ?? null,
       yieldHistoryDays: yieldRisk?.observationCount30d ?? 0,
       yieldFreshness: yieldFreshnessFrom(yieldEntry, args.now),
+      yieldSources: buildYieldSourceCandidates(yieldEntry, args.now),
 
       trackingSpanDays: peg?.trackingSpanDays ?? 0,
       isRecentListing: (peg?.trackingSpanDays ?? 0) > 0 && (peg?.trackingSpanDays ?? 0) < 90,
@@ -156,41 +161,98 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     rows.set(id, row);
   }
 
-  const datasetContent = Array.from(rows.entries())
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([id, row]) => ({
-      id,
-      pegCurrency: row.pegCurrency,
-      safetyGrade: row.safetyGrade,
-      overallScore: row.safetyScore,
-      pegScore: row.pegScore,
-      dewsScore: row.dewsScore,
-      liquidityScore: row.liquidityScore,
-      safetyPegStabilityScore: row.pegStabilityScore,
-      safetyResilienceScore: row.safetyResilienceScore,
-      safetyDependencyRiskScore: row.safetyDependencyRiskScore,
-      safetyDecentralizationScore: row.safetyDecentralizationScore,
-      safetyLiquidityScore: row.safetyLiquidityScore,
-      pharosYieldScore: row.pharosYieldScore,
-      apy30d: row.apy30d,
-      bluechipGrade: row.bluechipGrade,
-      supplyUsd: row.supplyUsd,
-    }));
+  const methodologyVersions = {
+    safetyScore: args.reportData?.methodology?.version ?? "unversioned",
+    pegScoreAndDews: joinVersions(
+      args.pegData?.methodology?.version,
+      args.stressData?.methodology?.version,
+    ),
+    yieldIntelligence: args.yieldData?.methodology?.version ?? "unversioned",
+    bluechipAlignment: "unversioned",
+    exclusionFilters: SELECTOR_VERSION,
+  };
+
+  const datasetContent = {
+    methodologyVersions,
+    rows: Array.from(rows.entries())
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([id, row]) => ({
+        id,
+        symbol: row.symbol,
+        name: row.name,
+        pegCurrency: row.pegCurrency,
+        safetyGrade: row.safetyGrade,
+        overallScore: row.safetyScore,
+        pegScore: row.pegScore,
+        dewsScore: row.dewsScore,
+        safetyScore: row.safetyScore,
+        liquidityScore: row.liquidityScore,
+        protocolSlug: row.protocolSlug,
+        variantOf: row.variantOf,
+        isYieldBearing: row.isYieldBearing,
+        lifecycle: row.lifecycle,
+        governance: row.governance,
+        canBeBlacklisted: row.canBeBlacklisted,
+        mechanismArchetype: row.mechanismArchetype,
+        activeDepeg: row.activeDepeg,
+        currentDeviationBps: row.currentDeviationBps,
+        depegEventCount: row.depegEventCount,
+        safetyPegStabilityScore: row.pegStabilityScore,
+        safetyResilienceScore: row.safetyResilienceScore,
+        safetyDependencyRiskScore: row.safetyDependencyRiskScore,
+        safetyDecentralizationScore: row.safetyDecentralizationScore,
+        safetyLiquidityScore: row.safetyLiquidityScore,
+        collateralQuality: row.collateralQuality,
+        custodyModel: row.custodyModel,
+        pharosYieldScore: row.pharosYieldScore,
+        apy30d: row.apy30d,
+        apyVariance30d: row.apyVariance30d,
+        benchmarkRate: row.benchmarkRate,
+        sourceRiskScore: row.sourceRiskScore,
+        venueRiskTier: row.venueRiskTier,
+        warningSignals: [...row.warningSignals].sort(),
+        deploymentPlace: row.deploymentPlace,
+        sourceSwitch: row.sourceSwitch,
+        yieldProtocolSlug: row.yieldProtocolSlug,
+        yieldVenueChain: row.yieldVenueChain,
+        yieldHistoryDays: row.yieldHistoryDays,
+        yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
+        effectiveTvlUsd: row.effectiveTvlUsd,
+        concentrationHhi: row.concentrationHhi,
+        chainTvl: sortRecord(row.chainTvl),
+        effectiveExitScore: row.effectiveExitScore,
+        bluechipGrade: row.bluechipGrade,
+        supplyUsd: row.supplyUsd,
+        isRecentListing: row.isRecentListing,
+        trackingSpanDays: row.trackingSpanDays,
+        yieldSources: (row.yieldSources ?? [])
+          .map((source) => ({
+            sourceKey: source.sourceKey,
+            protocol: source.protocol,
+            chain: source.chain,
+            yieldType: source.yieldType,
+            apy30d: source.apy30d,
+            pharosYieldScore: source.pharosYieldScore,
+            sourceTvlUsd: source.sourceTvlUsd,
+            dataSource: source.dataSource,
+            sourceRiskScore: source.sourceRiskScore,
+            venueRiskTier: source.venueRiskTier,
+            deploymentPlace: source.deploymentPlace,
+            sourceDepthRatio: source.sourceDepthRatio,
+            sourceSwitchCount30d: source.sourceSwitchCount30d,
+            observationCount30d: source.observationCount30d,
+            freshnessAgeSec: source.freshness?.ageSeconds ?? null,
+            isPrimary: source.isPrimary,
+          }))
+          .sort((a, b) => a.sourceKey.localeCompare(b.sourceKey)),
+      })),
+  };
 
   return {
     rows,
     timestamp: args.now,
-    datasetHash: djb2Hex(canonicalizeForDatasetHash(datasetContent)),
-    methodologyVersions: {
-      safetyScore: args.reportData?.methodology?.version ?? "unversioned",
-      pegScoreAndDews: joinVersions(
-        args.pegData?.methodology?.version,
-        args.stressData?.methodology?.version,
-      ),
-      yieldIntelligence: args.yieldData?.methodology?.version ?? "unversioned",
-      bluechipAlignment: "unversioned",
-      exclusionFilters: SELECTOR_VERSION,
-    },
+    datasetHash: sha256Hex(canonicalizeForDatasetHash(datasetContent)),
+    methodologyVersions,
   };
 }
 
@@ -214,6 +276,76 @@ function normalizeDeploymentPlace(place: YieldDeploymentPlace | null | undefined
   }
 }
 
+function buildYieldSourceCandidates(
+  ranking: YieldRanking | undefined,
+  now: number,
+): NonNullable<MergedRow["yieldSources"]> {
+  if (!ranking) return [];
+  const selectedRisk = ranking.sourceRisk ?? null;
+  const selected: NonNullable<MergedRow["yieldSources"]>[number] = {
+    sourceKey: ranking.provenance?.sourceKey ?? sourceKeyFor(ranking.yieldSource, ranking.yieldType, selectedRisk),
+    protocol: selectedRisk?.venueProtocol ?? ranking.yieldSource,
+    chain: selectedRisk?.venueChain ?? null,
+    yieldType: ranking.yieldType,
+    apy30d: ranking.apy30d,
+    pharosYieldScore: ranking.pharosYieldScore,
+    sourceTvlUsd: ranking.sourceTvlUsd,
+    dataSource: ranking.dataSource,
+    sourceRiskScore: selectedRisk?.sourceRiskScore ?? null,
+    venueRiskTier: normalizeVenueRiskTier(selectedRisk?.venueRiskTier),
+    deploymentPlace: normalizeDeploymentPlace(selectedRisk?.deploymentPlace),
+    sourceDepthRatio: selectedRisk?.sourceDepthRatio ?? null,
+    sourceSwitchCount30d: selectedRisk?.sourceSwitchCount30d ?? null,
+    observationCount30d: selectedRisk?.observationCount30d ?? null,
+    freshness: yieldFreshnessFrom(ranking, now),
+    isPrimary: true,
+  };
+
+  const alternates = (ranking.altSources ?? []).map((source) =>
+    altYieldSourceCandidate(source, ranking.pharosYieldScore, now),
+  );
+
+  return [selected, ...alternates];
+}
+
+function altYieldSourceCandidate(
+  source: AltYieldSource,
+  pharosYieldScore: number | null,
+  now: number,
+): NonNullable<MergedRow["yieldSources"]>[number] {
+  const risk = source.sourceRisk ?? null;
+  return {
+    sourceKey: source.sourceKey,
+    protocol: risk?.venueProtocol ?? source.yieldSource,
+    chain: risk?.venueChain ?? null,
+    yieldType: source.yieldType,
+    apy30d: source.apy30d,
+    pharosYieldScore,
+    sourceTvlUsd: source.sourceTvlUsd,
+    dataSource: source.dataSource,
+    sourceRiskScore: risk?.sourceRiskScore ?? null,
+    venueRiskTier: normalizeVenueRiskTier(risk?.venueRiskTier),
+    deploymentPlace: normalizeDeploymentPlace(risk?.deploymentPlace),
+    sourceDepthRatio: risk?.sourceDepthRatio ?? null,
+    sourceSwitchCount30d: risk?.sourceSwitchCount30d ?? null,
+    observationCount30d: risk?.observationCount30d ?? null,
+    freshness: freshnessFromRisk(risk, now),
+    isPrimary: false,
+  };
+}
+
+function sourceKeyFor(
+  protocol: string,
+  yieldType: YieldType,
+  risk: YieldSourceRisk | null,
+): string {
+  return [
+    risk?.venueProtocol ?? protocol,
+    risk?.venueChain ?? "unknown-chain",
+    yieldType,
+  ].join(":");
+}
+
 function yieldFreshnessFrom(
   ranking: YieldRanking | undefined,
   now: number,
@@ -225,6 +357,18 @@ function yieldFreshnessFrom(
     };
   }
   const sourceAgeSeconds = ranking?.sourceRisk?.sourceAgeSeconds;
+  if (sourceAgeSeconds == null) return null;
+  return {
+    capturedAt: Math.max(0, Math.round(toUnixSeconds(now) - sourceAgeSeconds)),
+    ageSeconds: sourceAgeSeconds,
+  };
+}
+
+function freshnessFromRisk(
+  risk: YieldSourceRisk | null,
+  now: number,
+): MergedRow["yieldFreshness"] {
+  const sourceAgeSeconds = risk?.sourceAgeSeconds;
   if (sourceAgeSeconds == null) return null;
   return {
     capturedAt: Math.max(0, Math.round(toUnixSeconds(now) - sourceAgeSeconds)),
@@ -247,10 +391,8 @@ function joinVersions(...versions: Array<string | null | undefined>): string {
   return Array.from(new Set(present)).join("+");
 }
 
-function djb2Hex(input: string): string {
-  let hash = 5381;
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash * 33) ^ input.charCodeAt(i);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+function sortRecord(record: Record<string, number>): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(record).sort(([a], [b]) => a.localeCompare(b)),
+  );
 }

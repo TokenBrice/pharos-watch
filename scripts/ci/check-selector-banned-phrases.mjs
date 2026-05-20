@@ -23,8 +23,8 @@
  */
 
 import { readFile, readdir, stat } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, join, relative } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join, relative, resolve } from "node:path";
 
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = join(dirname(__filename), "..", "..");
@@ -67,6 +67,11 @@ const BANNED_PATTERNS = [
   // Imperative "use X for venue-access/custody/yield/trading" — narrow on Selector profile vocab.
   { name: "Use [X] for [venue/custody/yield/trading]", re: /\buse\s+\w+\s+for\s+(?:venue\s+access|custody|yield|trading)\b/gi },
   { name: "Surfaced opportunities", re: /\bsurfaced\s+opportunities\b/gi },
+  { name: "Hold safely", re: /\bhold\s+safely\b/gi },
+  // Raw key fallbacks: these stay narrow so type declarations, fixtures, and editorial
+  // documentation can still name keys while visible fallback code cannot print them.
+  { name: "Raw whyKey join fallback", re: /\bwhyKeys\b[^\n]*\.join\s*\(/gi },
+  { name: "Raw reasonKey interpolation fallback", re: /\$\{\s*(?:entry\.)?reasonKey\s*\}/g },
 ];
 
 const ALLOW_MARKER = "banned-phrase-allow:";
@@ -118,6 +123,7 @@ async function walkDir(absDir, extensions, excludeBasenames, acc) {
     }
     if (!entry.isFile()) continue;
     if (excludeBasenames.has(entry.name)) continue;
+    if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(entry.name)) continue;
     if (extensions.length === 0 || extensions.some((ext) => entry.name.endsWith(ext))) {
       acc.push(entryPath);
     }
@@ -168,13 +174,18 @@ async function scanFile(file) {
     if (err && err.code === "ENOENT") return findings;
     throw err;
   }
+  return scanSource(file.path, source, file.sectionBounds);
+}
+
+function scanSource(filePath, source, sectionBounds = null) {
+  const findings = [];
   let bounds;
   try {
-    bounds = resolveSectionBounds(source, file.sectionBounds);
+    bounds = resolveSectionBounds(source, sectionBounds);
   } catch (err) {
-    console.error(`check:selector-banned-phrases: ${relative(REPO_ROOT, file.path)}: ${err.message}`);
+    console.error(`check:selector-banned-phrases: ${relative(REPO_ROOT, filePath)}: ${err.message}`);
     findings.push({
-      file: file.path,
+      file: filePath,
       line: 1,
       rule: "section-bound-error",
       match: "",
@@ -191,7 +202,7 @@ async function scanFile(file) {
       const lineText = findLine(source, matchStart);
       if (lineText.includes(ALLOW_MARKER)) continue;
       findings.push({
-        file: file.path,
+        file: filePath,
         line: findLineNumber(source, matchStart),
         rule: rule.name,
         match: match[0],
@@ -237,5 +248,15 @@ async function main() {
   return 1;
 }
 
-const exitCode = await main();
-process.exit(exitCode);
+const isCliRun = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isCliRun) {
+  const exitCode = await main();
+  process.exit(exitCode);
+}
+
+export {
+  BANNED_PATTERNS,
+  scanSource,
+  scanFile,
+};

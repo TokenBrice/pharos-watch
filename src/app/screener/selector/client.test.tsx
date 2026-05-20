@@ -89,6 +89,11 @@ function mockSelectorOutput(overrides: {
       redistributionCount: 0,
     },
     lowConfidence: false,
+    usedRelaxedFallback: false,
+    relaxedReasons: [],
+    exclusionSummary: [],
+    closestSurvivors: [],
+    relaxableConstraints: [],
     timestamp: 1_700_000_000_000,
     engineVersion: "selector-v1.2",
     methodologyVersions: {
@@ -192,6 +197,7 @@ vi.mock("next/link", async () => {
 
 // Import AFTER mocks
 import { SelectorClient } from "./client";
+import { SELECTOR_STATE_DEFAULTS, toSelectorInput } from "./selector-state";
 
 // ----------------------------------------------------------------------------
 // Helpers
@@ -203,6 +209,7 @@ function setUrlSearch(search: string) {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
   setUrlSearch("");
   Object.defineProperty(window, "matchMedia", {
     writable: true,
@@ -235,7 +242,7 @@ describe("SelectorClient — state machine", () => {
       screen.getAllByText(/What are you using this stablecoin for/i).length,
     ).toBeGreaterThan(0);
     // Q1's three option labels render.
-    expect(screen.getByText(/Hold safely/i)).toBeTruthy();
+    expect(screen.getByText(/Hold under Treasury constraints/i)).toBeTruthy();
     expect(screen.getByText(/Earn yield/i)).toBeTruthy();
     expect(screen.getByText(/Trade actively/i)).toBeTruthy();
   });
@@ -252,7 +259,8 @@ describe("SelectorClient — state machine", () => {
   it("records a selected peg in the URL before moving to horizon", async () => {
     render(<SelectorClient />);
 
-    fireEvent.click(screen.getByLabelText(/Hold safely/i));
+    fireEvent.click(screen.getByLabelText(/Hold under Treasury constraints/i));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
     expect(
       (await screen.findAllByText(/Which peg currency should it target/i)).length,
     ).toBeGreaterThan(0);
@@ -270,6 +278,7 @@ describe("SelectorClient — state machine", () => {
     render(<SelectorClient />);
 
     fireEvent.click(screen.getByLabelText(/Earn yield/i));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
     expect(
       (await screen.findAllByText(/Which peg currency should it target/i)).length,
     ).toBeGreaterThan(0);
@@ -295,7 +304,7 @@ describe("SelectorClient — state machine", () => {
     expect(screen.getByText(/Treasury profile result/i)).toBeTruthy();
   });
 
-  it("links the shortlist to Compare with selected answers and shortlisted ids", async () => {
+  it("does not render a duplicate compare link inside the shortlist section", async () => {
     const mod = await import("@shared/lib/selector");
     (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
       mockSelectorOutput({
@@ -343,12 +352,152 @@ describe("SelectorClient — state machine", () => {
     setUrlSearch("p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result");
     render(<SelectorClient />);
 
-    const link = await screen.findByRole("link", {
+    expect(await screen.findByRole("heading", { name: "Shortlist" })).toBeTruthy();
+    expect(screen.queryByRole("link", {
       name: /Compare the shortlisted stablecoins/i,
+    })).toBeNull();
+  });
+
+  it("does not advance desktop depeg, venue, or exit choices until Next", async () => {
+    setUrlSearch("p=treasury&h=1to6m&d=tight&v=custody&u=24h&step=4");
+    render(<SelectorClient />);
+
+    fireEvent.click(await screen.findByLabelText(/Moderate/i));
+    expect(window.location.search).toContain("step=4");
+    expect(screen.getAllByText(/How tight does the peg need to hold/i).length)
+      .toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    expect(await screen.findByText(/How will you use the position/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText(/Pure custody/i));
+    expect(window.location.search).toContain("step=5");
+    expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+    expect((await screen.findAllByText(/how fast do you need to be out/i)).length)
+      .toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByLabelText(/Same day/i));
+    expect(window.location.search).toContain("step=6");
+    expect(screen.queryByText(/Treasury profile result/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
+    expect(await screen.findByText(/Treasury profile result/i)).toBeTruthy();
+  });
+
+  it("keeps mobile answer handlers local until the sticky CTA commits results", async () => {
+    (window.matchMedia as ReturnType<typeof vi.fn>).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    setUrlSearch("p=trading&step=2");
+    render(<SelectorClient />);
+
+    fireEvent.click(await screen.findByLabelText(/1 – 7 days/i));
+    fireEvent.click(screen.getByLabelText(/Within 0.5%/i));
+    fireEvent.click(screen.getByLabelText(/Centralized venues/i));
+    fireEvent.click(screen.getByLabelText(/Same day/i));
+
+    expect(window.location.search).toContain("step=2");
+    expect(screen.queryByText(/Active Trading profile result/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
+    expect(await screen.findByText(/Active Trading profile result/i)).toBeTruthy();
+  });
+
+  it("blocks Trading share links when per-input staleness exceeds its cadence-aware limit", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        profile: "trading",
+        input,
+        recommended: [
+          {
+            ...baseRecommendation,
+            profile: "trading",
+            recommendedSource: null,
+            perInputStaleness: { pegSummary: 500, dexTvl: 901, dews: 1_800 },
+          },
+        ],
+      }));
+
+    setUrlSearch("p=trading&h=1to7d&d=tight&v=cex&u=24h&step=result");
+    render(<SelectorClient />);
+
+    const copy = await screen.findByRole("button", { name: /Copy share link/i });
+    expect(copy.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/share-link freshness limit/i)).toBeTruthy();
+  });
+
+  it("blocks Trading share links when required freshness timestamps are missing", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        profile: "trading",
+        input,
+        recommended: [
+          {
+            ...baseRecommendation,
+            profile: "trading",
+            recommendedSource: null,
+            perInputStaleness: {},
+          },
+        ],
+      }));
+
+    setUrlSearch("p=trading&h=1to7d&d=tight&v=cex&u=24h&step=result");
+    render(<SelectorClient />);
+
+    const copy = await screen.findByRole("button", { name: /Copy share link/i });
+    expect(copy.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("jumps directly to an answer step from result edit chips and clears snapshot state", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockSelectorOutput(),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    const pegEdit = await screen.findByRole("button", { name: /Edit peg:/i });
+    fireEvent.click(pegEdit);
+
+    expect(window.location.search).not.toContain("sid=");
+    expect(screen.getAllByText(/Which peg currency should it target/i).length)
+      .toBeGreaterThan(0);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("offers a session-scoped restore for the last live result", async () => {
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+    render(<SelectorClient />);
+    expect(await screen.findByText("USDC")).toBeTruthy();
+
+    await act(async () => {
+      await Promise.resolve();
     });
-    expect(link.getAttribute("href")).toBe(
-      "/compare/?p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result&coins=xaut-tether%2Cpaxg-paxos",
-    );
+    cleanup();
+    setUrlSearch("");
+    render(<SelectorClient />);
+
+    const restore = await screen.findByRole("button", { name: /Restore previous result/i });
+    fireEvent.click(restore);
+
+    expect(await screen.findByText(/Restored from this tab/i)).toBeTruthy();
+    expect(await screen.findByText("USDC")).toBeTruthy();
   });
 });
 
@@ -364,6 +513,20 @@ describe("SelectorClient — empty state", () => {
     expect(
       await screen.findByText(/No tracked USD stablecoin currently passes/i),
     ).toBeTruthy();
+  });
+});
+
+describe("selector-state input adapter", () => {
+  it("persists exact venue preferences into SelectorInput", () => {
+    expect(toSelectorInput({
+      ...SELECTOR_STATE_DEFAULTS,
+      profile: "yield",
+      pegCurrency: "USD",
+      horizon: "1to4w",
+      depegTolerance: "tight",
+      venue: ["dex"],
+      exitSpeed: "24h",
+    })?.venuePreferences).toEqual(["dex"]);
   });
 });
 
@@ -398,7 +561,7 @@ describe("SelectorClient — snapshot recall", () => {
     } as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=missing-sid");
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=ffffffffffffffffffffffffffffffff");
     render(<SelectorClient />);
 
     await act(async () => {
@@ -410,6 +573,42 @@ describe("SelectorClient — snapshot recall", () => {
     expect(
       await screen.findByText(/Original snapshot no longer cached/i),
     ).toBeTruthy();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("does not fetch malformed snapshot ids and shows the invalid-link error", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=not-a-valid-sid");
+    render(<SelectorClient />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await screen.findByText(/snapshot id is invalid/i)).toBeTruthy();
+
+    vi.unstubAllGlobals();
+  });
+
+  it("orchestrates compare-to-today for frozen snapshots", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockSelectorOutput(),
+    } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    setUrlSearch("sid=00112233445566778899aabbccddeeff");
+    render(<SelectorClient />);
+
+    const compare = await screen.findByRole("button", { name: /Compare to today/i });
+    fireEvent.click(compare);
+
+    expect(await screen.findByText(/Current shortlist comparison/i)).toBeTruthy();
 
     vi.unstubAllGlobals();
   });

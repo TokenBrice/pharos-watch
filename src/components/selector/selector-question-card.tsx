@@ -165,7 +165,7 @@ function SelectorQuestionCardInner<TValue extends string>(
               <label
                 key={option.value}
                 className={cn(
-                  "pharos-focus-ring flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-border/55 bg-background/50 px-3.5 py-3 text-left transition-colors hover:border-border/85 hover:bg-background/70 sm:min-h-12 sm:gap-3.5",
+                  "pharos-focus-ring flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border border-border/55 bg-background/50 px-3.5 py-3 text-left transition-colors hover:border-border/85 hover:bg-background/70 focus-within:border-foreground/65 focus-within:bg-background/80 focus-within:ring-2 focus-within:ring-ring/35 sm:min-h-12 sm:gap-3.5",
                   checked && "border-foreground/65 bg-background/85 ring-1 ring-foreground/15",
                   preHighlighted && "border-frost-blue/55 bg-frost-blue/[0.06]",
                 )}

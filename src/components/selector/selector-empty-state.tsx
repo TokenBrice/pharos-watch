@@ -5,10 +5,6 @@ import { ArrowRight } from "lucide-react";
 import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
 
-// TODO(integration): engine should optionally emit a `closestSurvivors` list
-// (top-3 near-misses) and `relaxableConstraints` (which input to suggest
-// loosening). The frontend renders whatever is provided; the fallback panel
-// still works without these fields.
 export interface SelectorClosestSurvivor {
   id: string;
   symbol: string;
@@ -76,7 +72,7 @@ export function SelectorEmptyState({
               <li key={survivor.id} className="text-foreground">
                 <span className="font-semibold">{survivor.symbol}</span>
                 <span className="text-muted-foreground">
-                  {" "}— {survivor.failingDimension}: {survivor.liveReading}
+                  {" "}— {readableFailingDimension(survivor.failingDimension)}: {survivor.liveReading}
                 </span>
               </li>
             ))}
@@ -119,4 +115,36 @@ export function SelectorEmptyState({
       </p>
     </section>
   );
+}
+
+function readableFailingDimension(value: string): string {
+  const labels: Record<string, string> = {
+    "below-supply-floor": "supply floor",
+    "active-depeg": "active depeg",
+    "safety-grade-floor": "safety grade",
+    "safety-resilience-floor": "resilience",
+    "safety-dependency-risk-floor": "dependency risk",
+    "dews-ceiling": "DEWS stress",
+    "depeg-event-count": "depeg history",
+    "bluechip-d-or-f": "blue-chip alignment",
+    "peg-stability-floor": "peg stability",
+    "pys-null": "yield coverage",
+    "apy-below-floor": "yield floor",
+    "yield-warning-unstable": "yield stability",
+    "yield-warning-thin-tvl": "yield depth",
+    "high-venue-on-c-tier": "venue risk",
+    "liquidity-floor": "liquidity",
+    "liquidity-diversification-floor": "liquidity diversification",
+    "effective-exit-floor": "effective exit",
+    "supply-tvl-floor-1h": "one-hour exit depth",
+    "lifecycle-non-active": "lifecycle",
+    "peg-currency-mismatch": "peg currency",
+    "yield-native-only-violation": "native yield",
+    "decentralization-required-violation": "decentralization",
+    "custody-onchain-only-violation": "custody model",
+    "howey-uncertain": "regulatory uncertainty",
+    "template-coverage-gap": "template coverage",
+    "coverage-too-thin": "coverage",
+  };
+  return labels[value] ?? value.replace(/-/g, " ");
 }

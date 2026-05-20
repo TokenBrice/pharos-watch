@@ -13,6 +13,7 @@ export {
   WEIGHTS_VERSION,
   WEIGHT_VECTORS,
   assertWeightsSumTo100,
+  getWeightVectorForInput,
   redistributeWeights,
 } from "./weights";
 export { whyKeysByProfile, WHY_KEYS, WHY_KEYS_SET } from "./why-keys";
@@ -53,9 +54,12 @@ export {
 export {
   TEMPLATES as WHAT_TO_WATCH_TEMPLATES,
   getTemplate,
+  getLowerRankedText,
+  labelForSelectorReason,
   type WhatToWatchTemplate,
 } from "./what-to-watch-templates";
 export {
   canonicalizeForDatasetHash,
   canonicalizeForSid,
 } from "./canonicalize";
+export { sha256Hex } from "./hash";

@@ -93,6 +93,10 @@ describe("runSelector — Treasury happy path", () => {
     expect(out.methodologyVersions).toEqual(FIXTURE_DATASET.methodologyVersions);
     expect(out.datasetHash).toBe(FIXTURE_DATASET.datasetHash);
     expect(out.timestamp).toBe(FIXTURE_DATASET.timestamp);
+    expect(out.usedRelaxedFallback).toBe(false);
+    expect(out.relaxedReasons).toEqual([]);
+    expect(out.exclusionSummary.length).toBeGreaterThan(0);
+    expect(out.relaxableConstraints.length).toBeGreaterThan(0);
   });
 
   it("threads dataset.timestamp; no Date.now read inside the engine", () => {
@@ -143,6 +147,69 @@ describe("runSelector — Yield happy path", () => {
     }
   });
 
+  it("selects a Yield altSource that matches venue preferences when available", () => {
+    const rows = new Map(buildFixtureData().rows);
+    const base = rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    rows.set("usdc-circle", {
+      ...base!,
+      yieldSources: [
+        {
+          sourceKey: "primary-wrapper",
+          protocol: "Issuer wrapper",
+          chain: "Ethereum",
+          yieldType: "rebase",
+          apy30d: 4.8,
+          pharosYieldScore: 78,
+          sourceTvlUsd: 100_000_000,
+          dataSource: "test",
+          sourceRiskScore: 15,
+          venueRiskTier: "low",
+          deploymentPlace: "issuer-savings",
+          sourceDepthRatio: 0.8,
+          sourceSwitchCount30d: 0,
+          observationCount30d: 30,
+          freshness: { capturedAt: 1_700_000_000, ageSeconds: 120 },
+          isPrimary: true,
+        },
+        {
+          sourceKey: "dex-lp",
+          protocol: "Curve",
+          chain: "Ethereum",
+          yieldType: "lp-receipt",
+          apy30d: 4.5,
+          pharosYieldScore: 78,
+          sourceTvlUsd: 80_000_000,
+          dataSource: "test",
+          sourceRiskScore: 18,
+          venueRiskTier: "low",
+          deploymentPlace: "lp",
+          sourceDepthRatio: 0.7,
+          sourceSwitchCount30d: 0,
+          observationCount30d: 30,
+          freshness: { capturedAt: 1_700_000_000, ageSeconds: 90 },
+          isPrimary: false,
+        },
+      ],
+    });
+
+    const out = runSelector(
+      makeInput({
+        profile: "yield",
+        depegTolerance: "tight",
+        venuePreferences: ["dex"],
+      }),
+      { rows },
+      FIXTURE_DATASET,
+    );
+    const usdc = out.recommended.find((rec) => rec.id === "usdc-circle");
+    expect(usdc?.profile).toBe("yield");
+    if (usdc?.profile === "yield") {
+      expect(usdc.recommendedSource.sourceKey).toBe("dex-lp");
+      expect(usdc.recommendedSource.selectionReason).toBe("venue-preference");
+    }
+  });
+
   it("sourceRiskInverted null contributes neutral 50 while lowering confidence", () => {
     const rows = new Map(buildFixtureData().rows);
     const base = rows.get("usds-sky");
@@ -186,6 +253,25 @@ describe("runSelector — Trading happy path", () => {
             dews: expect.any(Number),
           }),
         );
+      }
+    }
+  });
+
+  it("omits Trading per-input staleness keys when freshness timestamps are unavailable", () => {
+    const data = buildFixtureData();
+    data.rows = new Map(Array.from(data.rows, ([id, row]) => [
+      id,
+      {
+        ...row,
+        pegSummaryAgeSec: null,
+        dexTvlAgeSec: null,
+        dewsAgeSec: null,
+      },
+    ]));
+    const out = runSelector(input, data, FIXTURE_DATASET);
+    for (const rec of out.recommended) {
+      if (rec.profile === "trading") {
+        expect(rec.perInputStaleness).toEqual({});
       }
     }
   });
@@ -291,7 +377,66 @@ describe("runSelector — universal properties", () => {
       expect(out.recommended.map((rec) => rec.id)).toEqual([row.id]);
       expect(out.recommended[0]?.profile).toBe("yield");
       expect(out.lowConfidence).toBe(true);
+      expect(out.usedRelaxedFallback).toBe(true);
+      expect(out.relaxedReasons).toContain("depeg-event-count");
     }
+  });
+
+  it("emits authored explanation text and confidence reasons instead of raw keys", () => {
+    const rows = new Map(buildFixtureData().rows);
+    const base = rows.get("usds-sky");
+    expect(base).toBeDefined();
+    rows.set("usds-sky", {
+      ...base!,
+      sourceRiskScore: null,
+    });
+
+    const out = runSelector(makeInput({ profile: "yield" }), { rows }, FIXTURE_DATASET);
+    const rec = out.recommended.find((entry) => entry.id === "usds-sky");
+    expect(rec?.whyText).toMatch(/Score \d/);
+    expect(rec?.whyText).not.toMatch(/top-|strong-|weak-/);
+    expect(rec?.watchText).toBeTypeOf("string");
+    expect(rec?.confidenceReasons).toEqual(
+      expect.arrayContaining(["source-risk-missing", "missing-critical-sourceRiskInverted"]),
+    );
+  });
+
+  it("uses a close substitute to reduce top-3 protocol concentration", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const makeCandidate = (
+      id: string,
+      protocolSlug: string,
+      safetyScore: number,
+      supplyUsd: number,
+    ): MergedRow => ({
+      ...base!,
+      id,
+      symbol: id.toUpperCase(),
+      name: id,
+      protocolSlug,
+      variantOf: null,
+      safetyScore,
+      safetyResilienceScore: safetyScore,
+      safetyDependencyRiskScore: safetyScore,
+      pegStabilityScore: safetyScore,
+      liquidityScore: safetyScore,
+      supplyUsd,
+    });
+
+    const rows = new Map<string, MergedRow>([
+      ["issuer-a-1", makeCandidate("issuer-a-1", "issuer-a", 96, 100_000_000_000)],
+      ["issuer-a-2", makeCandidate("issuer-a-2", "issuer-a", 95, 90_000_000_000)],
+      ["issuer-b-1", makeCandidate("issuer-b-1", "issuer-b", 94, 80_000_000_000)],
+      ["issuer-c-1", makeCandidate("issuer-c-1", "issuer-c", 80, 70_000_000_000)],
+    ]);
+
+    const out = runSelector(makeInput({ profile: "treasury" }), { rows }, FIXTURE_DATASET);
+    expect(out.recommended.slice(0, 2).map((rec) => rec.id)).toEqual([
+      "issuer-a-1",
+      "issuer-b-1",
+    ]);
+    expect(out.recommended[1]?.rankRobustness?.label).toBe("concentration-adjusted");
   });
 
   it("every selectable peg/profile route has at least one recommendation in a covered universe", () => {

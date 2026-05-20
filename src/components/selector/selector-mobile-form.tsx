@@ -85,8 +85,8 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border/55 bg-card/45 px-3 py-2.5 text-sm">
-        <span className="text-muted-foreground">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-border/55 bg-card/45 px-3 py-2.5 text-sm">
+        <span className="min-w-0 break-words text-muted-foreground">
           Profile: <span className="font-semibold text-foreground">{profileLabel}</span>
         </span>
         <button
@@ -165,6 +165,9 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
       ) : null}
 
       <div className="sticky bottom-0 z-10 -mx-4 pharos-mobile-utility-safe border-t border-border/55 bg-background/95 px-4 py-3 backdrop-blur sm:hidden">
+        <p className="mb-2 text-center text-xs text-muted-foreground" aria-live="polite">
+          {answeredCount(state, skipExit)} of {skipExit ? 4 : 5} answers complete
+        </p>
         <button
           type="button"
           onClick={onSeeResults}
@@ -180,4 +183,14 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function answeredCount(state: SelectorWizardState, skipExit: boolean): number {
+  return [
+    state.pegCurrency,
+    state.horizon,
+    state.depegTolerance,
+    state.venue.length > 0 ? "venue" : null,
+    skipExit ? null : state.exitSpeed,
+  ].filter(Boolean).length;
 }
