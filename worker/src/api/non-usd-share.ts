@@ -10,9 +10,9 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
 const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
-const DEFAULT_DAYS = 1825;
+const DEFAULT_DAYS = 5000;
 const MIN_DAYS = 30;
-const MAX_DAYS = 1825;
+const MAX_DAYS = 5000;
 
 /** IDs of commodity-pegged stablecoins (gold, silver). */
 const COMMODITY_IDS = ACTIVE_STABLECOINS

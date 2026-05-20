@@ -147,8 +147,8 @@ export const SUPPLY_HISTORY_DAYS_PARAM = {
 export const NON_USD_SHARE_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 30, maximum: 1825 },
-  description: "Historical lookback window in days. Defaults to 1825; `0` maps to the default.",
+  schema: { type: "integer", minimum: 30, maximum: 5000 },
+  description: "Historical lookback window in days. Defaults to 5000; `0` maps to the default.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {

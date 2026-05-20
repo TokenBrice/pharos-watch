@@ -41,7 +41,7 @@ Focused chart inspection stays on the same route through query-param state:
 - `?range=7d|30d|90d|1y|all`
 
 The canonical route remains `/alt-pegs/`; focused query states are shareable inspection views, not separate canonical pages.
-On the share chart, `range=all` means all currently loaded points from the 5-year `non-usd-share` endpoint window rather than unbounded history.
+On the share chart, `range=all` means all currently loaded points from the `non-usd-share` endpoint window rather than unbounded history.
 
 ---
 

@@ -529,9 +529,9 @@ Freshness headers are emitted from the latest completed `snapshot-supply` run wh
 
 | Param  | Type     | Default | Constraints      | Description             |
 | ------ | -------- | ------- | ---------------- | ----------------------- |
-| `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days |
+| `days` | `number` | `5000`  | min 30, max 5000 | Lookback window in days |
 
-Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `1825` and clamps most out-of-range values into `30..1825` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `1825` rather than the minimum `30`.
+Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `5000` and clamps most out-of-range values into `30..5000` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `5000` rather than the minimum `30`.
 
 **Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
 

@@ -1538,11 +1538,11 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "Historical lookback window in days. Defaults to 1825; `0` maps to the default.",
+            "description": "Historical lookback window in days. Defaults to 5000; `0` maps to the default.",
             "schema": {
               "type": "integer",
               "minimum": 30,
-              "maximum": 1825
+              "maximum": 5000
             }
           }
         ],

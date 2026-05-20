@@ -140,7 +140,7 @@ export function NonUsdShareChart({
           {coverageStartLabel ? (
             <p className="text-xs text-muted-foreground">
               Coverage starts {coverageStartLabel}. Built from supply-history snapshots: daily over the last 90d, then
-              weekly to 2y, then monthly across the loaded 5y history window. The non-commodity bucket includes
+              weekly to 2y, then monthly across the loaded history window. The non-commodity bucket includes
               currency-linked plus other non-commodity pegs.
             </p>
           ) : null}
