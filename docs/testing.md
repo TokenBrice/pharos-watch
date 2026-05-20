@@ -64,6 +64,10 @@ npm run test:invariants # Critical numerical/schema invariant suite
 npm run test:noncritical # Deploy/merge-gate Vitest lane excluding tests owned by coverage:critical
 npm run coverage:critical # Critical-suite coverage run + critical-path line-coverage gate
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
+npm run validate:pages-smoke # Serve the built static export and run local Pages smoke checks
+npm run validate:worker-smoke # Run local worker canary smoke checks after worker typecheck
+npm run check:hook-polling-window # Verify local agent hook polling windows stay within the configured budget
+npm run check:reserve-fixture-freshness # Verify retained reserve HTML fixtures stay within freshness policy
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints (set SMOKE_API_KEY when protected routes are enforced)
 npm run test:smoke-ops # Private ops-host and ops-api smoke checks through Cloudflare Access
 npm run test:smoke-transport # HTTP->HTTPS edge redirect smoke for api.pharos.watch and site-api.pharos.watch

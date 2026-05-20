@@ -1,8 +1,10 @@
 /**
  * Feature flags for the May 2026 stablecoin detail-page improvements.
  *
- * All flags default to `false` when the env var is unset. To enable, set the
- * matching `NEXT_PUBLIC_PHAROS_*` env var to the literal string `"true"`.
+ * Most flags default to `false` when the env var is unset. To enable those,
+ * set the matching `NEXT_PUBLIC_PHAROS_*` env var to the literal string
+ * `"true"`. `heroVerdict` is default-on and disables only when explicitly set
+ * to `"false"`.
  *
  * See `docs/process/feature-flags.md` for the flag table, defaults, flip
  * readiness gates, and how to toggle them in local dev and on Cloudflare Pages.

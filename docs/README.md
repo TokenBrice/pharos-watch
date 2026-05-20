@@ -108,7 +108,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/about/editorial/`                             | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
 | `/about/principles/`                            | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
-| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex redirect wrapper for `/freezewatch/`                                                  |
+| `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex wrapper / Pages redirect alias for `/freezewatch/`                                    |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
 | `/cemetery/`                                    | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/changelog/`                                   | [architecture.md](./architecture.md)                                                                                                                  |

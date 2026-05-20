@@ -156,7 +156,7 @@ src/                              Frontend (Next.js static export)
 │   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
 │   ├── alt-pegs/                 Non-USD market structure route
 │   ├── freezewatch/              FreezeWatch issuer-control tracker
-│   ├── blacklist/                Legacy redirect/noindex wrapper for `/freezewatch/`
+│   ├── blacklist/                Legacy noindex wrapper / Pages redirect alias for `/freezewatch/`
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── chains/                   Chain analytics leaderboard + per-chain profiles
 │   ├── compare/                  Side-by-side comparison tool + static comparison landing pages
@@ -174,7 +174,7 @@ src/                              Frontend (Next.js static export)
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
-│   ├── screener/                 Beta multi-signal stablecoin screener
+│   ├── screener/                 Beta multi-signal stablecoin screener (+ screener/selector/)
 │   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── upcoming/                 Pre-launch stablecoin tracker
@@ -194,7 +194,7 @@ src/                              Frontend (Next.js static export)
 │   ├── pharoswatchbot/           Telegram alerts + digest landing page (+ pharoswatchbot/app/)
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
-│   └── about/                    About / product overview (+ about/api/ reference)
+│   └── about/                    About / product overview (+ about/api/, about/editorial/, about/principles/)
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
 └── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
