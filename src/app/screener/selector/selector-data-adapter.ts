@@ -1,6 +1,12 @@
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { canonicalizeForDatasetHash, type MergedRow, type SelectorOutput } from "@shared/lib/selector";
+import {
+  SELECTOR_VERSION,
+  canonicalizeForDatasetHash,
+  type MergedRow,
+  type SelectorInput,
+  type SelectorOutput,
+} from "@shared/lib/selector";
 import { COLLATERAL_QUALITY_SCORE } from "@shared/lib/report-card-policy";
 import type {
   BluechipRatingsMap,
@@ -18,6 +24,7 @@ import type {
 
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
+  pegCurrency?: SelectorInput["pegCurrency"] | null;
   pegData: PegSummaryResponse | null;
   reportData: ReportCardsResponse | null;
   stressData: StressSignalsAllResponse | null;
@@ -52,7 +59,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     const id = meta.id;
     const lifecycle = (meta.status ?? "active") as MergedRow["lifecycle"];
     if (lifecycle !== "active") continue;
-    if (meta.flags.pegCurrency !== "USD") continue;
+    if (args.pegCurrency != null && meta.flags.pegCurrency !== args.pegCurrency) continue;
 
     const peg = pegById.get(id);
     const safety = reportById.get(id);
@@ -153,6 +160,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([id, row]) => ({
       id,
+      pegCurrency: row.pegCurrency,
       safetyGrade: row.safetyGrade,
       overallScore: row.safetyScore,
       pegScore: row.pegScore,
@@ -181,7 +189,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       ),
       yieldIntelligence: args.yieldData?.methodology?.version ?? "unversioned",
       bluechipAlignment: "unversioned",
-      exclusionFilters: "selector-v1.0",
+      exclusionFilters: SELECTOR_VERSION,
     },
   };
 }

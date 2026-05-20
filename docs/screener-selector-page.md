@@ -22,6 +22,18 @@ The route shell is intentionally `noindex,follow`, marks the route as beta, and 
 
 ---
 
+## Peg Scope
+
+Initial selectable pegs are `USD`, `EUR`, `CHF`, and `GOLD`. This pass is limited to pegs that have enough active rows and live Safety/Peg/DEWS/liquidity/yield coverage to avoid empty Selector routes.
+
+Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but rows still need required profile signals and a usable Yield source before they can be recommended.
+
+`SILVER`, `VAR`, and `OTHER` are intentionally excluded because their current live signal coverage still produces empty selector routes or needs separate reference-asset treatment. `BRL` is also held back until the `peggedREAL` alias path is audited across sync, price validation, and supplemental-asset creation.
+
+The URL key is `peg`; missing or invalid values default to `USD` for backward compatibility. For `p=yield`, unsupported peg values also normalize to `USD`.
+
+---
+
 ## Data Contract
 
 The engine consumes the same React Query hooks the Screener already uses; no new data endpoints land for the Selector. The full list:
@@ -35,7 +47,7 @@ The engine consumes the same React Query hooks the Screener already uses; no new
 7. `useBluechipRatings()` — third-party bluechip grades.
 8. `useRedemptionBackstops()` — effective-exit score and redemption-rail data.
 
-The engine runs synchronously inside a `useMemo` keyed on `(input, datasetHash)`; refetches change `datasetHash` and trigger a fresh selector run. The engine reads `methodologyVersion` from each upstream `_meta` / `methodology.version` envelope when present and falls back to `"unversioned"` per endpoint otherwise; gaps surface in the output payload.
+The route passes the selected `pegCurrency` into the data adapter. The adapter keeps active rows for that selected peg and computes `datasetHash` over that selected-peg universe, including each row's `pegCurrency`; refetches change `datasetHash` and trigger a fresh selector run. The pure engine still filters by `input.pegCurrency`, so tests can pass an all-peg map safely. The engine reads `methodologyVersion` from each upstream `_meta` / `methodology.version` envelope when present and falls back to `"unversioned"` per endpoint otherwise; gaps surface in the output payload.
 
 ---
 
@@ -85,13 +97,13 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 The frontend agent owns `src/app/screener/selector/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
 
-- Q1–Q5 wizard with per-step `history.pushState`; browser back walks the wizard backwards.
+- Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, venue, and exit speed.
 - Mobile branching is CSS-only except for the callout slim/full variant and the mobile single-form, both gated behind `useHydrated() && useIsMobile(640)`.
-- Result page renders the ranked shortlist, lower-ranked rows, evidence chips, the mandatory "What to watch" line per shortlist entry, and the divergence banner when the selector inputs cannot be expressed in Screener filters.
+- Result page renders the ranked shortlist, lower-ranked rows, peg-aware summary/chips, evidence chips, the mandatory "What to watch" line per shortlist entry, and the divergence banner when the selector inputs cannot be expressed in Screener filters. Empty states distinguish "no fit" from "coverage too thin" when selected-peg live signals are sparse.
 - `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/selector/?sid={sid}` on `200`, leave the button disabled with a notice on failure.
 - `aria-live="polite"` announcements on step transitions; programmatic focus to the new `<legend>`.
 
-The shortlist card carries three evidence chips plus header chips for BETA and "Filter output". Trading-profile staleness renders as a discrete label ("Fresh" / "1m" / "5m" / "Stale") on mobile, precise seconds on desktop.
+The shortlist section places a "Compare the shortlisted stablecoins" callout directly under the heading. It links to `/compare/` with the selector answers and shortlisted coin IDs pre-filled. Each shortlist card carries three evidence chips plus header chips for the selected peg and "Filter output". Trading-profile staleness renders as a discrete label ("Fresh" / "1m" / "5m" / "Stale") on mobile, precise seconds on desktop.
 
 ---
 
@@ -117,7 +129,7 @@ When changing Selector behavior, update this doc alongside:
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
 3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document the replacement in `agents/screener-selector/03-editorial.md` §8.
-4. **Weight or exclusion changes** → bump `engineVersion` in `shared/lib/selector/engine.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint.
+4. **Weight, exclusion, or deterministic behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint.
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
 

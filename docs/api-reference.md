@@ -3313,10 +3313,10 @@ Returns a previously stored Stablecoin Selector output JSON identified by conten
 ```json
 {
   "profile": "treasury",
-  "engineVersion": "selector-v1.0",
+  "engineVersion": "selector-v1.2",
   "datasetHash": "<content hash>",
   "timestamp": 1715000000,
-  "input": { "profile": "treasury", "pegCurrency": "USD", "horizon": "6mplus", "depegTolerance": "zero" },
+  "input": { "profile": "treasury", "pegCurrency": "EUR", "horizon": "6mplus", "depegTolerance": "zero" },
   "universe": { "active": 392, "surviving": 12 },
   "recommended": [ /* ranked shortlist entries */ ],
   "lowerRanked": [ /* lower-ranked entries */ ],
@@ -3333,7 +3333,7 @@ Returns a previously stored Stablecoin Selector output JSON identified by conten
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, coverage warning counts, and basic recommendation/lower-ranked row fields). Readers should treat unknown fields permissively; `engineVersion` carries the bump on weight or exclusion-rule changes.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, coverage warning counts, and basic recommendation/lower-ranked row fields). Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected peg universe and `engineVersion` carries the bump on deterministic behavior, weight, or exclusion-rule changes.
 
 **Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
 

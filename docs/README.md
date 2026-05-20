@@ -134,6 +134,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
 | `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [report-cards.md](./report-cards.md) |
+| `/screener/selector/`                           | [screener-selector-page.md](./screener-selector-page.md)                                                                                              |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
 | `/stablecoin/[id]/yield/`                       | [yield-intelligence.md](./yield-intelligence.md), [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                            |
 | `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |

@@ -6,6 +6,7 @@ import type {
   SelectorDepeg,
   SelectorExit,
   SelectorHorizon,
+  SelectorPeg,
   SelectorProfile,
   SelectorVenue,
   SelectorWizardState,
@@ -15,6 +16,7 @@ import { shouldSkipExitStep } from "@/app/screener/selector/selector-state";
 interface SelectorMobileFormProps {
   state: SelectorWizardState;
   profile: SelectorProfile;
+  pegOptions: readonly SelectorOption<SelectorPeg>[];
   horizonOptions: readonly SelectorOption<SelectorHorizon>[];
   depegOptions: readonly SelectorOption<SelectorDepeg>[];
   venueOptions: readonly SelectorOption<SelectorVenue>[];
@@ -25,8 +27,10 @@ interface SelectorMobileFormProps {
   legendQ3: string;
   legendQ4: string;
   legendQ5: string;
+  legendQ6: string;
   helperQ3?: ReactNode;
   helperQ4?: ReactNode;
+  onSetPeg: (value: SelectorPeg) => void;
   onSetHorizon: (value: SelectorHorizon) => void;
   onSetDepeg: (value: SelectorDepeg) => void;
   onSetVenue: (value: readonly SelectorVenue[]) => void;
@@ -36,7 +40,7 @@ interface SelectorMobileFormProps {
 }
 
 /**
- * Mobile-only: stacks Q2-Q5 below the Q1 answer with a single bottom CTA.
+ * Mobile-only: stacks Q2-Q6 below the Q1 answer with a single bottom CTA.
  * Uses the same `SelectorQuestionCard` primitive — the only structural
  * difference is the single submit at the bottom rather than per-step Next.
  */
@@ -44,6 +48,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
   const {
     state,
     profile,
+    pegOptions,
     horizonOptions,
     depegOptions,
     venueOptions,
@@ -54,8 +59,10 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
     legendQ3,
     legendQ4,
     legendQ5,
+    legendQ6,
     helperQ3,
     helperQ4,
+    onSetPeg,
     onSetHorizon,
     onSetDepeg,
     onSetVenue,
@@ -67,9 +74,10 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
   const skipExit = shouldSkipExitStep(profile, state.horizon, state.depegTolerance);
   const venueValue = isVenueMulti ? state.venue : (state.venue[0] ?? null);
   const profileLabel = capitalize(profile);
-  const totalSteps = skipExit ? 4 : 5;
+  const totalSteps = skipExit ? 5 : 6;
 
   const isReady =
+    state.pegCurrency != null &&
     state.horizon != null &&
     state.depegTolerance != null &&
     state.venue.length > 0 &&
@@ -90,12 +98,24 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         </button>
       </div>
 
-      <SelectorQuestionCard<SelectorHorizon>
+      <SelectorQuestionCard<SelectorPeg>
         questionId="q2"
         step={2}
         totalSteps={totalSteps}
         profileLabel={profileLabel}
         legend={legendQ2}
+        options={pegOptions}
+        value={state.pegCurrency}
+        onChange={(v) => onSetPeg(v as SelectorPeg)}
+        showActions={false}
+      />
+
+      <SelectorQuestionCard<SelectorHorizon>
+        questionId="q3"
+        step={3}
+        totalSteps={totalSteps}
+        profileLabel={profileLabel}
+        legend={legendQ3}
         options={horizonOptions}
         value={state.horizon}
         onChange={(v) => onSetHorizon(v as SelectorHorizon)}
@@ -103,11 +123,11 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
       />
 
       <SelectorQuestionCard<SelectorDepeg>
-        questionId="q3"
-        step={3}
+        questionId="q4"
+        step={4}
         totalSteps={totalSteps}
         profileLabel={profileLabel}
-        legend={legendQ3}
+        legend={legendQ4}
         helper={helperQ3}
         options={depegOptions}
         value={state.depegTolerance}
@@ -117,11 +137,11 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
       />
 
       <SelectorQuestionCard<SelectorVenue>
-        questionId="q4"
-        step={4}
+        questionId="q5"
+        step={5}
         totalSteps={totalSteps}
         profileLabel={profileLabel}
-        legend={legendQ4}
+        legend={legendQ5}
         helper={helperQ4}
         multi={isVenueMulti}
         options={venueOptions}
@@ -132,11 +152,11 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
 
       {!skipExit ? (
         <SelectorQuestionCard<SelectorExit>
-          questionId="q5"
-          step={5}
+          questionId="q6"
+          step={6}
           totalSteps={totalSteps}
           profileLabel={profileLabel}
-          legend={legendQ5}
+          legend={legendQ6}
           options={exitOptions}
           value={state.exitSpeed}
           onChange={(v) => onSetExit(v as SelectorExit)}

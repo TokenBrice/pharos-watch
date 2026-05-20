@@ -51,25 +51,7 @@ const NOW_SEC = NOW_MS / 1000;
 
 function baseArgs(overrides: Partial<BuildSelectorRowsArgs> = {}): BuildSelectorRowsArgs {
   return {
-    stablecoinsData: {
-      peggedAssets: [
-        {
-          id: "usdc-usd-coin",
-          name: "USD Coin",
-          symbol: "USDC",
-          pegType: "peggedUSD",
-          pegMechanism: "fiat-backed",
-          price: 1,
-          priceSource: "test",
-          circulating: { peggedUSD: 123_000_000 },
-          circulatingPrevDay: {},
-          circulatingPrevWeek: {},
-          circulatingPrevMonth: {},
-          chainCirculating: {},
-          chains: ["Ethereum"],
-        },
-      ],
-    } as StablecoinListResponse,
+    stablecoinsData: stablecoinsData(),
     pegData: null,
     reportData: reportData(),
     stressData: null,
@@ -82,8 +64,31 @@ function baseArgs(overrides: Partial<BuildSelectorRowsArgs> = {}): BuildSelector
   };
 }
 
-function reportData(cardOverrides: Partial<ReportCard> = {}): ReportCardsResponse {
-  const card = {
+function stablecoinsData(extraAssets: StablecoinListResponse["peggedAssets"] = []): StablecoinListResponse {
+  return {
+    peggedAssets: [
+      {
+        id: "usdc-usd-coin",
+        name: "USD Coin",
+        symbol: "USDC",
+        pegType: "peggedUSD",
+        pegMechanism: "fiat-backed",
+        price: 1,
+        priceSource: "test",
+        circulating: { peggedUSD: 123_000_000 },
+        circulatingPrevDay: {},
+        circulatingPrevWeek: {},
+        circulatingPrevMonth: {},
+        chainCirculating: {},
+        chains: ["Ethereum"],
+      },
+      ...extraAssets,
+    ],
+  } as StablecoinListResponse;
+}
+
+function makeReportCard(cardOverrides: Partial<ReportCard> = {}): ReportCard {
+  return {
     id: "usdc-usd-coin",
     name: "USD Coin",
     symbol: "USDC",
@@ -102,9 +107,15 @@ function reportData(cardOverrides: Partial<ReportCard> = {}): ReportCardsRespons
     isDefunct: false,
     ...cardOverrides,
   } as ReportCard;
+}
 
+function reportData(cardOverrides: Partial<ReportCard> = {}): ReportCardsResponse {
+  return reportDataWithCards([makeReportCard(cardOverrides)]);
+}
+
+function reportDataWithCards(cards: ReportCard[]): ReportCardsResponse {
   return {
-    cards: [card],
+    cards,
     methodology: {
       version: "7.4",
       weights: {
@@ -123,8 +134,9 @@ function reportData(cardOverrides: Partial<ReportCard> = {}): ReportCardsRespons
 }
 
 describe("buildSelectorRows", () => {
-  it("maps PegSummary depeg fields and keeps active USD supply handling", () => {
+  it("maps PegSummary depeg fields and keeps selected USD supply handling", () => {
     const result = buildSelectorRows(baseArgs({
+      pegCurrency: "USD",
       pegData: {
         coins: [
           {
@@ -165,6 +177,71 @@ describe("buildSelectorRows", () => {
     expect(row?.trackingSpanDays).toBe(725);
     expect(row?.pegSummaryAgeSec).toBe(42);
     expect(result.methodologyVersions.pegScoreAndDews).toBe("3.2");
+  });
+
+  it("includes the selected non-USD universe and hashes that selected peg", () => {
+    const eurAsset = {
+      id: "eurc-circle",
+      name: "EURC",
+      symbol: "EURC",
+      pegType: "peggedEUR",
+      pegMechanism: "fiat-backed",
+      price: 1,
+      priceSource: "test",
+      circulating: { peggedEUR: 45_000_000 },
+      circulatingPrevDay: {},
+      circulatingPrevWeek: {},
+      circulatingPrevMonth: {},
+      chainCirculating: {},
+      chains: ["Ethereum"],
+    };
+    const usdHash = buildSelectorRows(baseArgs({ pegCurrency: "USD" })).datasetHash;
+    const result = buildSelectorRows(baseArgs({
+      pegCurrency: "EUR",
+      stablecoinsData: stablecoinsData([eurAsset] as StablecoinListResponse["peggedAssets"]),
+      reportData: reportDataWithCards([
+        makeReportCard(),
+        makeReportCard({
+          id: "eurc-circle",
+          name: "EURC",
+          symbol: "EURC",
+          overallScore: 83,
+          rawInputs: createReportCardRawInputs({ pegScore: 87 }),
+        }),
+      ]),
+      pegData: {
+        coins: [
+          {
+            id: "eurc-circle",
+            symbol: "EURC",
+            name: "EURC",
+            pegType: "peggedEUR",
+            pegCurrency: "EUR",
+            governance: "centralized",
+            currentDeviationBps: 18,
+            pegScore: 87,
+            priceObservedAt: NOW_SEC - 24,
+            pegPct: 99.82,
+            severityScore: 4,
+            spreadPenalty: 2,
+            eventCount: 1,
+            worstDeviationBps: 120,
+            activeDepeg: false,
+            lastEventAt: NOW_SEC - 7_200,
+            trackingSpanDays: 180,
+            methodologyVersion: "3.2",
+          },
+        ],
+        summary: null,
+        methodology: { version: "3.2" },
+      } as PegSummaryResponse,
+    }));
+
+    expect(result.rows.has("usdc-usd-coin")).toBe(false);
+    expect(result.rows.has("eurc-circle")).toBe(true);
+    expect(result.rows.get("eurc-circle")?.pegCurrency).toBe("EUR");
+    expect(result.rows.get("eurc-circle")?.supplyUsd).toBe(45_000_000);
+    expect(result.datasetHash).not.toBe(usdHash);
   });
 
   it("maps yield ranking risk, benchmark, provenance, and freshness fields", () => {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Link as LinkIcon, Pencil } from "lucide-react";
 import Link from "next/link";
 import type { SelectorProfile, SelectorInput, SkippedCoin } from "@shared/lib/selector";
+import { PEG_METADATA } from "@shared/lib/classification";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
 
   const [shareState, setShareState] = useState<"idle" | "pending" | "copied" | "error">("idle");
   const [shareError, setShareError] = useState<string | null>(null);
+  const pegLabel = PEG_METADATA[input.pegCurrency]?.filterLabel ?? input.pegCurrency;
 
   const handleCopy = async () => {
     if (copyShareDisabled || shareState === "pending") return;
@@ -76,6 +78,9 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
             {PROFILE_LABEL[profile]}
           </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
+            {pegLabel} peg
+          </span>
           <span className="text-muted-foreground">·</span>
           <span className="text-xs text-muted-foreground">
             Horizon: {HORIZON_LABEL[input.horizon]}
@@ -83,14 +88,14 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         </div>
 
         <h2 id="selector-summary" className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-          {universe.active.toLocaleString()} tracked → {universe.surviving.toLocaleString()} filtered → {shortlistCount} shortlist entries
+          {universe.active.toLocaleString()} tracked {pegLabel} stablecoins → {universe.surviving.toLocaleString()} filtered → {shortlistCount} shortlist entries
         </h2>
 
         <p className="pharos-page-title text-base font-extrabold leading-snug tracking-tight text-foreground sm:text-lg">
           This is filter output, not advice.
         </p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          A &ldquo;fit&rdquo; means the coin passed Pharos&rsquo;s exclusion filters for the profile and ranked highest on the scoring weights. Pharos surfaces analytical readings; allocation decisions are yours alone, made against your own counsel.
+          A &ldquo;fit&rdquo; means the coin passed Pharos&rsquo;s exclusion filters for the selected peg and profile, then ranked highest on the scoring weights. Pharos surfaces analytical readings; allocation decisions are yours alone, made against your own counsel.
         </p>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">

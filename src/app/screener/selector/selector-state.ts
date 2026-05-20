@@ -1,7 +1,7 @@
 /**
  * URL state codec + pure wizard state machine for `/screener/selector/`.
  *
- * Flat URL keys per plan §2.1: `p` `h` `d` `v` `u` `step` + share-link `sid` `ev`.
+ * Flat URL keys per plan §2.1: `p` `peg` `h` `d` `v` `u` `step` + share-link `sid` `ev`.
  * The codec encodes only non-default fields; null is expressed as a missing key.
  *
  * The transition() function is pure. `useSelectorState()` wraps it with
@@ -12,7 +12,12 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import type { SelectorInput } from "@shared/lib/selector";
+import {
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  isSelectorYieldPegCurrency,
+  type SelectorEligiblePegCurrency,
+  type SelectorInput,
+} from "@shared/lib/selector";
 
 // ---------------------------------------------------------------------------
 // Vocabularies
@@ -20,6 +25,8 @@ import type { SelectorInput } from "@shared/lib/selector";
 
 export const SELECTOR_PROFILE_VALUES = ["treasury", "yield", "trading"] as const;
 export type SelectorProfile = (typeof SELECTOR_PROFILE_VALUES)[number];
+
+export type SelectorPeg = SelectorEligiblePegCurrency;
 
 export const SELECTOR_HORIZON_VALUES = [
   "lt24h", "1to7d", "1to4w", "1to6m", "6mplus",
@@ -51,9 +58,9 @@ export const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly Select
   trading: ["cex", "perps", "spot", "all"],
 };
 
-export const SELECTOR_STEP_VALUES = ["1", "2", "3", "4", "5", "result"] as const;
+export const SELECTOR_STEP_VALUES = ["1", "2", "3", "4", "5", "6", "result"] as const;
 export type SelectorStepRaw = (typeof SELECTOR_STEP_VALUES)[number];
-export type SelectorStep = 1 | 2 | 3 | 4 | 5 | "result";
+export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
 
 // ---------------------------------------------------------------------------
 // Wizard state shape
@@ -61,6 +68,7 @@ export type SelectorStep = 1 | 2 | 3 | 4 | 5 | "result";
 
 export interface SelectorWizardState {
   profile: SelectorProfile | null;
+  pegCurrency: SelectorPeg;
   horizon: SelectorHorizon | null;
   depegTolerance: SelectorDepeg | null;
   venue: readonly SelectorVenue[];
@@ -72,6 +80,7 @@ export interface SelectorWizardState {
 
 export const SELECTOR_STATE_DEFAULTS: SelectorWizardState = {
   profile: null,
+  pegCurrency: "USD",
   horizon: null,
   depegTolerance: null,
   venue: [],
@@ -113,7 +122,7 @@ function decodeStep(raw: string | null): SelectorStep {
   if (!raw) return 1;
   if (raw === "result") return "result";
   const n = Number.parseInt(raw, 10);
-  if (n >= 1 && n <= 5) return n as 1 | 2 | 3 | 4 | 5;
+  if (n >= 1 && n <= 6) return n as 1 | 2 | 3 | 4 | 5 | 6;
   return 1;
 }
 
@@ -125,10 +134,14 @@ function decodeString(raw: string | null): string | null {
 export function decodeSelectorState(search: string | URLSearchParams): SelectorWizardState {
   const params = typeof search === "string" ? new URLSearchParams(search) : search;
   const profile = decodeEnum(params.get("p"), SELECTOR_PROFILE_VALUES);
+  const requestedPeg =
+    decodeEnum(params.get("peg"), SELECTOR_ELIGIBLE_PEG_CURRENCIES) ?? "USD";
+  const pegCurrency = normalizePegForProfile(profile, requestedPeg);
   const decodedVenue = decodeEnumList(params.get("v"), SELECTOR_VENUE_VALUES);
   const venue = profile ? pruneVenueForProfile(profile, decodedVenue) : [];
   return {
     profile,
+    pegCurrency,
     horizon: decodeEnum(params.get("h"), SELECTOR_HORIZON_VALUES),
     depegTolerance: decodeEnum(params.get("d"), SELECTOR_DEPEG_VALUES),
     venue,
@@ -142,6 +155,7 @@ export function decodeSelectorState(search: string | URLSearchParams): SelectorW
 export function encodeSelectorState(state: SelectorWizardState): URLSearchParams {
   const params = new URLSearchParams();
   if (state.profile) params.set("p", state.profile);
+  if (state.pegCurrency !== "USD") params.set("peg", state.pegCurrency);
   if (state.horizon) params.set("h", state.horizon);
   if (state.depegTolerance) params.set("d", state.depegTolerance);
   if (state.venue.length > 0) params.set("v", state.venue.join(","));
@@ -156,7 +170,7 @@ export function encodeSelectorState(state: SelectorWizardState): URLSearchParams
 
 // All Selector-owned URL keys; useful for clearing prior state without
 // touching unrelated query params.
-export const SELECTOR_URL_KEYS = ["p", "h", "d", "v", "u", "step", "sid", "ev"] as const;
+export const SELECTOR_URL_KEYS = ["p", "peg", "h", "d", "v", "u", "step", "sid", "ev"] as const;
 
 // ---------------------------------------------------------------------------
 // Step pre-conditions and `highestValidStep` (plan §2.4)
@@ -181,19 +195,29 @@ function pruneVenueForProfile(
   return filtered;
 }
 
+function normalizePegForProfile(
+  profile: SelectorProfile | null,
+  pegCurrency: SelectorPeg,
+): SelectorPeg {
+  if (profile === "yield" && !isSelectorYieldPegCurrency(pegCurrency)) {
+    return "USD";
+  }
+  return pegCurrency;
+}
+
 function hasValidVenue(state: SelectorWizardState): boolean {
   return state.profile != null && pruneVenueForProfile(state.profile, state.venue).length > 0;
 }
 
 export function highestValidStep(state: SelectorWizardState): SelectorStep {
   if (!state.profile) return 1;
-  if (!state.horizon) return 2;
-  if (!state.depegTolerance) return 3;
-  if (!hasValidVenue(state)) return 4;
+  if (!state.horizon) return 3;
+  if (!state.depegTolerance) return 4;
+  if (!hasValidVenue(state)) return 5;
   if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
     return "result";
   }
-  if (!state.exitSpeed) return 5;
+  if (!state.exitSpeed) return 6;
   return "result";
 }
 
@@ -203,12 +227,14 @@ export function highestValidStep(state: SelectorWizardState): SelectorStep {
 
 export type SelectorAction =
   | { type: "answer-profile"; value: SelectorProfile }
+  | { type: "set-peg"; value: SelectorPeg }
+  | { type: "answer-peg"; value: SelectorPeg }
   | { type: "set-horizon"; value: SelectorHorizon }
   | { type: "answer-horizon"; value: SelectorHorizon }
   | { type: "answer-depeg"; value: SelectorDepeg }
   // `set-venue` updates the venue selection without advancing the step;
-  // used by multi-select Q4 (Yield, Active Trading) so each checkbox toggle
-  // does not jump to Q5. `answer-venue` is the explicit "Next" commit.
+  // used by multi-select venue (Yield, Active Trading) so each checkbox toggle
+  // does not jump to exit. `answer-venue` is the explicit "Next" commit.
   | { type: "set-venue"; value: readonly SelectorVenue[] }
   | { type: "answer-venue"; value: readonly SelectorVenue[] }
   | { type: "answer-exit"; value: SelectorExit }
@@ -227,18 +253,30 @@ export function transition(
       return {
         ...withoutSnapshot,
         profile: action.value,
+        pegCurrency: normalizePegForProfile(action.value, state.pegCurrency),
         horizon: null,
         depegTolerance: null,
         venue: [],
         exitSpeed: null,
         step: 2,
       };
+    case "set-peg":
+      return {
+        ...withoutSnapshot,
+        pegCurrency: normalizePegForProfile(state.profile, action.value),
+      };
+    case "answer-peg":
+      return {
+        ...withoutSnapshot,
+        pegCurrency: normalizePegForProfile(state.profile, action.value),
+        step: 3,
+      };
     case "set-horizon":
       return { ...withoutSnapshot, horizon: action.value };
     case "answer-horizon":
-      return { ...withoutSnapshot, horizon: action.value, step: 3 };
+      return { ...withoutSnapshot, horizon: action.value, step: 4 };
     case "answer-depeg":
-      return { ...withoutSnapshot, depegTolerance: action.value, step: 4 };
+      return { ...withoutSnapshot, depegTolerance: action.value, step: 5 };
     case "set-venue":
       return {
         ...withoutSnapshot,
@@ -249,7 +287,7 @@ export function transition(
       if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
         return { ...withoutSnapshot, venue, exitSpeed: "any", step: "result" };
       }
-      return { ...withoutSnapshot, venue, step: 5 };
+      return { ...withoutSnapshot, venue, step: 6 };
     }
     case "answer-exit":
       return { ...withoutSnapshot, exitSpeed: action.value, step: "result" };
@@ -287,11 +325,13 @@ function previousStep(state: SelectorWizardState): SelectorStep {
       return 3;
     case 5:
       return 4;
+    case 6:
+      return 5;
     case "result":
       if (shouldSkipExitStep(state.profile, state.horizon, state.depegTolerance)) {
-        return 4;
+        return 5;
       }
-      return 5;
+      return 6;
   }
 }
 
@@ -302,6 +342,7 @@ function previousStep(state: SelectorWizardState): SelectorStep {
 export function toSelectorInput(state: SelectorWizardState): SelectorInput | null {
   if (
     !state.profile ||
+    (state.profile === "yield" && !isSelectorYieldPegCurrency(state.pegCurrency)) ||
     !state.horizon ||
     !state.depegTolerance ||
     !hasValidVenue(state)
@@ -314,7 +355,7 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
 
   return {
     profile: state.profile,
-    pegCurrency: "USD",
+    pegCurrency: state.pegCurrency,
     horizon: state.horizon,
     depegTolerance: state.depegTolerance,
     composability: composabilityFromVenue(state.profile, state.venue),

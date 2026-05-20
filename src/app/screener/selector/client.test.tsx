@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { SelectorInput } from "@shared/lib/selector";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
@@ -49,25 +50,29 @@ const baseRecommendation = {
 
 function mockSelectorOutput(overrides: {
   profile?: "treasury" | "yield" | "trading";
+  pegCurrency?: "USD" | "EUR" | "CHF" | "GOLD";
+  input?: SelectorInput;
   recommended?: unknown[];
   lowerRanked?: unknown[];
   closestSurvivors?: unknown[];
 } = {}) {
   const profile = overrides.profile ?? "treasury";
+  const pegCurrency = overrides.pegCurrency ?? "USD";
+  const input = overrides.input ?? {
+    profile,
+    pegCurrency,
+    horizon: "6mplus" as const,
+    depegTolerance: "zero" as const,
+    composability: "none" as const,
+    exitSpeed: "any" as const,
+    minApy: null,
+    yieldNativeOnly: false,
+    decentralization: "any" as const,
+    custodyOk: "any" as const,
+  };
   return {
     profile,
-    input: {
-      profile,
-      pegCurrency: "USD" as const,
-      horizon: "6mplus" as const,
-      depegTolerance: "zero" as const,
-      composability: "none" as const,
-      exitSpeed: "any" as const,
-      minApy: null,
-      yieldNativeOnly: false,
-      decentralization: "any" as const,
-      custodyOk: "any" as const,
-    },
+    input,
     universe: { active: 380, surviving: 12 },
     recommended:
       overrides.recommended
@@ -85,13 +90,13 @@ function mockSelectorOutput(overrides: {
     },
     lowConfidence: false,
     timestamp: 1_700_000_000_000,
-    engineVersion: "selector-v1.0",
+    engineVersion: "selector-v1.2",
     methodologyVersions: {
       safetyScore: "v7.25",
       pegScoreAndDews: "v3",
       yieldIntelligence: "v8",
       bluechipAlignment: "v1",
-      exclusionFilters: "selector-v1.0",
+      exclusionFilters: "selector-v1.2",
     },
     datasetHash: "abc123",
   };
@@ -101,8 +106,11 @@ vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
   return {
     ...actual,
-    runSelector: vi.fn((input: { profile: "treasury" | "yield" | "trading" }) =>
-      mockSelectorOutput({ profile: input.profile })),
+    runSelector: vi.fn((input: SelectorInput) => mockSelectorOutput({
+      profile: input.profile,
+      pegCurrency: input.pegCurrency ?? "USD",
+      input,
+    })),
     buildScreenerUrl: vi.fn((_input: unknown, baseUrl: string) => ({
       url: `${baseUrl}?dewsMax=60`,
       divergenceWarnings: [],
@@ -111,7 +119,8 @@ vi.mock("@shared/lib/selector", async () => {
     computeSnapshotId: vi.fn(async () => "stub-sid"),
     getTemplate: vi.fn(() => ({ oneLineExplanation: "Dimension watch line for test." })),
     canonicalizeForDatasetHash: vi.fn((v: unknown) => JSON.stringify(v)),
-    ENGINE_VERSION: "selector-v1.0",
+    SELECTOR_VERSION: "selector-v1.2",
+    ENGINE_VERSION: "selector-v1.2",
   };
 });
 
@@ -234,17 +243,47 @@ describe("SelectorClient — state machine", () => {
   it("rehydrates down when URL claims a step beyond what's answerable", () => {
     setUrlSearch("p=treasury&step=5");
     render(<SelectorClient />);
-    // p=treasury only; should land on Q2 (horizon) post-rehydrate.
+    // p=treasury only; USD peg is the default, so it lands on horizon post-rehydrate.
     expect(
       screen.getAllByText(/How long do you plan to hold this position/i).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("records a selected peg in the URL before moving to horizon", async () => {
+    render(<SelectorClient />);
+
+    fireEvent.click(screen.getByLabelText(/Hold safely/i));
+    expect(
+      (await screen.findAllByText(/Which peg currency should it target/i)).length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByLabelText(/EUR/i));
+    fireEvent.click(screen.getByRole("button", { name: /Next/i }));
+
+    expect(window.location.search).toContain("peg=EUR");
+    expect(
+      screen.getAllByText(/How long do you plan to hold this position/i).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("includes CHF and Gold in Yield peg choices while hiding unsupported pegs", async () => {
+    render(<SelectorClient />);
+
+    fireEvent.click(screen.getByLabelText(/Earn yield/i));
+    expect(
+      (await screen.findAllByText(/Which peg currency should it target/i)).length,
+    ).toBeGreaterThan(0);
+
+    expect(screen.getByLabelText(/CHF/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Gold/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/AUD/i)).toBeNull();
   });
 
   it("walks Treasury × 6mplus × zero × custody directly to result (Q5 skip)", async () => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
     // Result page renders the summary universe funnel.
-    expect(await screen.findByText(/tracked → /)).toBeTruthy();
+    expect(await screen.findByText(/tracked USD stablecoins → /)).toBeTruthy();
   });
 
   it("renders the result page with mocked engine output", async () => {
@@ -254,6 +293,62 @@ describe("SelectorClient — state machine", () => {
     expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText(/Treasury profile result/i)).toBeTruthy();
+  });
+
+  it("links the shortlist to Compare with selected answers and shortlisted ids", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        profile: "yield",
+        pegCurrency: "GOLD",
+        input,
+        recommended: [
+          {
+            ...baseRecommendation,
+            id: "xaut-tether",
+            symbol: "XAUT",
+            name: "Tether Gold",
+            rank: 1,
+            profile: "yield",
+            recommendedSource: {
+              protocol: "yo-protocol",
+              chain: "Ethereum",
+              apy30d: 6.5,
+              pharosYieldScore: 17,
+              sourceRiskTier: "mid",
+              freshness: { capturedAt: 1_700_000_000_000, ageSeconds: 60 },
+            },
+            perInputStaleness: null,
+          },
+          {
+            ...baseRecommendation,
+            id: "paxg-paxos",
+            symbol: "PAXG",
+            name: "PAX Gold",
+            rank: 2,
+            profile: "yield",
+            recommendedSource: {
+              protocol: "hydration-dex",
+              chain: "Polkadot",
+              apy30d: 6.5,
+              pharosYieldScore: 18,
+              sourceRiskTier: "mid",
+              freshness: { capturedAt: 1_700_000_000_000, ageSeconds: 60 },
+            },
+            perInputStaleness: null,
+          },
+        ],
+      }));
+
+    setUrlSearch("p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result");
+    render(<SelectorClient />);
+
+    const link = await screen.findByRole("link", {
+      name: /Compare the shortlisted stablecoins/i,
+    });
+    expect(link.getAttribute("href")).toBe(
+      "/compare/?p=yield&peg=GOLD&h=1to6m&d=moderate&v=all&u=any&step=result&coins=xaut-tether%2Cpaxg-paxos",
+    );
   });
 });
 
@@ -267,7 +362,7 @@ describe("SelectorClient — empty state", () => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
     expect(
-      await screen.findByText(/No tracked stablecoin currently passes/i),
+      await screen.findByText(/No tracked USD stablecoin currently passes/i),
     ).toBeTruthy();
   });
 });
@@ -358,23 +453,23 @@ describe("SelectorClient — adjust flow", () => {
 });
 
 describe("SelectorClient — Q4 multi-select", () => {
-  // Regression: ticking a Yield Q4 checkbox previously auto-advanced to Q5,
+  // Regression: ticking a Yield venue checkbox previously auto-advanced,
   // making multi-select impossible. The reducer split (`set-venue` vs
-  // `answer-venue`) keeps the user on step 4 until they press Next.
-  it("does not advance to Q5 when ticking a Yield Q4 checkbox", async () => {
-    setUrlSearch("p=yield&h=1to4w&d=tight&step=4");
+  // `answer-venue`) keeps the user on venue step until they press Next.
+  it("does not advance to exit when ticking a Yield venue checkbox", async () => {
+    setUrlSearch("p=yield&h=1to4w&d=tight&step=5");
     render(<SelectorClient />);
 
-    // Q4 prompt visible (text appears both in the legend and the aria-live
+    // Venue prompt visible (text appears both in the legend and the aria-live
     // announcement region; either presence proves the step rendered).
     expect((await screen.findAllByText(/Where will you put it to work/i)).length)
       .toBeGreaterThan(0);
 
-    // Tick a checkbox; the URL stays on step 4 and the Q5 prompt does NOT appear.
+    // Tick a checkbox; the URL stays on step 5 and the exit prompt does NOT appear.
     const checkbox = screen.getByLabelText(/Major lending protocols/i);
     fireEvent.click(checkbox);
 
     expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();
-    expect(window.location.search).toContain("step=4");
+    expect(window.location.search).toContain("step=5");
   });
 });

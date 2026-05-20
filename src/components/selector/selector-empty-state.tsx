@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import type { SelectorProfile } from "@shared/lib/selector";
+import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
+import { PEG_METADATA } from "@shared/lib/classification";
 
 // TODO(integration): engine should optionally emit a `closestSurvivors` list
 // (top-3 near-misses) and `relaxableConstraints` (which input to suggest
@@ -23,6 +24,8 @@ export interface SelectorRelaxableConstraint {
 
 interface SelectorEmptyStateProps {
   profile: SelectorProfile;
+  pegCurrency: SelectorInput["pegCurrency"];
+  coverageSparse: boolean;
   closestSurvivors: readonly SelectorClosestSurvivor[];
   relaxableConstraints: readonly SelectorRelaxableConstraint[];
   onRelax: (key: SelectorRelaxableConstraint["key"]) => void;
@@ -37,11 +40,18 @@ const PROFILE_LABEL: Record<SelectorProfile, string> = {
 
 export function SelectorEmptyState({
   profile,
+  pegCurrency,
+  coverageSparse,
   closestSurvivors,
   relaxableConstraints,
   onRelax,
   screenerHandoffHref,
 }: SelectorEmptyStateProps) {
+  const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
+  const heading = coverageSparse
+    ? `Not enough eligible ${pegLabel} coverage currently passes live-data checks for ${PROFILE_LABEL[profile]}.`
+    : `No tracked ${pegLabel} stablecoin currently passes all exclusion filters for ${PROFILE_LABEL[profile]}.`;
+
   return (
     <section
       aria-labelledby="selector-empty-state"
@@ -49,10 +59,12 @@ export function SelectorEmptyState({
     >
       <div className="space-y-2">
         <h2 id="selector-empty-state" className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
-          No tracked stablecoin currently passes all exclusion filters for {PROFILE_LABEL[profile]}.
+          {heading}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          This is a real outcome, not a failure of the form. Three ways forward:
+          {coverageSparse
+            ? `Pharos tracks this peg, but Safety, Peg/DEWS, liquidity, or yield signals are too thin for a shortlist under these answers.`
+            : "This is a real outcome, not a failure of the form. Three ways forward:"}
         </p>
       </div>
 

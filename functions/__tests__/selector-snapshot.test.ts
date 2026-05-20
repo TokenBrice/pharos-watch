@@ -89,7 +89,7 @@ function buildRecommendation(overrides: Record<string, unknown> = {}): Record<st
 function buildSelectorOutput(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     profile: "treasury",
-    engineVersion: "selector-v1.0",
+    engineVersion: "selector-v1.2",
     datasetHash: "abc123",
     timestamp: 1715000000,
     input: {
@@ -121,7 +121,7 @@ function buildSelectorOutput(overrides: Record<string, unknown> = {}): Record<st
       pegScoreAndDews: "v5.9",
       yieldIntelligence: "v8.0",
       bluechipAlignment: "v1.0",
-      exclusionFilters: "selector-v1.0",
+      exclusionFilters: "selector-v1.2",
     },
     ...overrides,
   };
@@ -217,6 +217,21 @@ describe("selector-snapshot Pages Function", () => {
       expect(body.sid).toMatch(/^[0-9a-f]{32}$/);
       const kv = env.SELECTOR_SNAPSHOTS as TestKVNamespace;
       expect(kv.__getStore().has(`s:${body.sid}`)).toBe(true);
+    });
+
+    it("accepts non-USD selector input snapshots", async () => {
+      const output = buildSelectorOutput();
+      const input = { ...(output.input as Record<string, unknown>), pegCurrency: "EUR" };
+      const response = await onRequest({
+        request: new Request("https://pharos.watch/selector-snapshot", {
+          method: "POST",
+          body: JSON.stringify(buildSelectorOutput({ input })),
+          headers: { "Content-Type": "application/json", Origin: "https://pharos.watch" },
+        }),
+        env: makeEnv(),
+        params: {},
+      });
+      expect(response.status).toBe(200);
     });
 
     it("is idempotent — re-POSTing the same payload returns the same sid", async () => {

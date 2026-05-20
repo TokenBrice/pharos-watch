@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 import {
   decodeSelectorState,
   highestValidStep,
@@ -12,8 +13,10 @@ import {
   type SelectorDepeg,
   type SelectorExit,
   type SelectorHorizon,
+  type SelectorPeg,
   type SelectorProfile,
   type SelectorVenue,
+  type SelectorWizardState,
 } from "./selector-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -33,10 +36,13 @@ import {
   buildScreenerUrl,
   getTemplate,
   runSelector,
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES,
+  SELECTOR_YIELD_PEG_CURRENCIES,
   type SelectorInput,
   type SelectorOutput,
   type SelectorRecommendation,
 } from "@shared/lib/selector";
+import { PEG_METADATA } from "@shared/lib/classification";
 import { buildSelectorRows } from "./selector-data-adapter";
 import {
   SelectorQuestionCard,
@@ -57,12 +63,12 @@ const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
   {
     value: "treasury",
     label: "Hold safely (Treasury)",
-    sublabel: "Park USD with peg discipline; minimal DeFi interaction.",
+    sublabel: "Park value with peg discipline; minimal DeFi interaction.",
   },
   {
     value: "yield",
     label: "Earn yield",
-    sublabel: "Compose across protocols for return on idle USD.",
+    sublabel: "Compose across protocols for return on idle stablecoin exposure.",
   },
   {
     value: "trading",
@@ -70,6 +76,22 @@ const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
     sublabel: "Fast settlement, tight peg, liquid exits.",
   },
 ];
+
+const PEG_SUBLABEL: Record<SelectorPeg, string> = {
+  USD: "Default dollar-denominated universe.",
+  EUR: "Euro-denominated stablecoin universe.",
+  CHF: "Swiss franc universe with yield and trading coverage.",
+  GOLD: "Tokenized gold universe with live signal coverage.",
+};
+
+const PEG_OPTIONS: readonly SelectorOption<SelectorPeg>[] =
+  SELECTOR_ELIGIBLE_PEG_CURRENCIES.map((value) => ({
+    value,
+    label: PEG_METADATA[value]?.filterLabel ?? value,
+    sublabel: PEG_SUBLABEL[value],
+  }));
+
+const YIELD_PEG_SET = new Set<string>(SELECTOR_YIELD_PEG_CURRENCIES);
 
 const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "lt24h", label: "Under 24 hours" },
@@ -138,6 +160,12 @@ export function SelectorClient() {
   const selector = useSelector(input, state.sid);
   const output = "output" in selector ? selector.output : null;
   const renderResult = state.step === "result" || state.sid != null;
+  const pegOptions = useMemo(
+    () => state.profile === "yield"
+      ? PEG_OPTIONS.filter((option) => YIELD_PEG_SET.has(option.value))
+      : PEG_OPTIONS,
+    [state.profile],
+  );
 
   // Programmatic focus to the active legend on step change.
   useEffect(() => {
@@ -223,6 +251,7 @@ export function SelectorClient() {
         <ResultPane
           selectorResult={selector}
           input={input}
+          state={state}
           stateProfile={state.profile}
           isMobile={hydrated && isMobile}
           onAdjust={handleAdjust}
@@ -248,16 +277,19 @@ export function SelectorClient() {
         <SelectorMobileForm
           state={state}
           profile={state.profile}
+          pegOptions={pegOptions}
           horizonOptions={HORIZON_OPTIONS}
           depegOptions={DEPEG_OPTIONS}
           venueOptions={VENUE_OPTIONS_BY_PROFILE[state.profile]}
           exitOptions={EXIT_OPTIONS}
           isVenueMulti={state.profile !== "treasury"}
           preHighlightDepeg={preHighlightForDepeg(state.profile, state.horizon)}
-          legendQ2="How long do you plan to hold this position?"
-          legendQ3="How tight does the peg need to hold?"
-          legendQ4={LEGEND_BY_PROFILE_Q4[state.profile]}
-          legendQ5="If something goes wrong, how fast do you need to be out?"
+          legendQ2="Which peg currency should it target?"
+          legendQ3="How long do you plan to hold this position?"
+          legendQ4="How tight does the peg need to hold?"
+          legendQ5={LEGEND_BY_PROFILE_Q4[state.profile]}
+          legendQ6="If something goes wrong, how fast do you need to be out?"
+          onSetPeg={(v) => dispatch({ type: "set-peg", value: v })}
           onSetHorizon={(v) => dispatch({ type: "answer-horizon", value: v })}
           onSetDepeg={(v) => dispatch({ type: "answer-depeg", value: v })}
           onSetVenue={(v) =>
@@ -273,10 +305,29 @@ export function SelectorClient() {
           onSeeResults={() => dispatch({ type: "advance-to-result" })}
         />
       ) : state.step === 2 && state.profile ? (
-        <SelectorQuestionCard<SelectorHorizon>
+        <SelectorQuestionCard<SelectorPeg>
           ref={legendRef as React.Ref<HTMLLegendElement>}
           questionId="q2"
           step={2}
+          totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
+          profileLabel={PROFILE_LABEL[state.profile]}
+          legend="Which peg currency should it target?"
+          legendSubtext={
+            state.profile === "yield"
+              ? "Yield is limited to pegs with benchmark and source coverage."
+              : undefined
+          }
+          options={pegOptions}
+          value={state.pegCurrency}
+          onChange={(v) => dispatch({ type: "set-peg", value: v as SelectorPeg })}
+          onBack={handleBack}
+          onNext={() => dispatch({ type: "answer-peg", value: state.pegCurrency })}
+        />
+      ) : state.step === 3 && state.profile ? (
+        <SelectorQuestionCard<SelectorHorizon>
+          ref={legendRef as React.Ref<HTMLLegendElement>}
+          questionId="q3"
+          step={3}
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="How long do you plan to hold this position?"
@@ -302,11 +353,11 @@ export function SelectorClient() {
             if (state.horizon) dispatch({ type: "answer-horizon", value: state.horizon });
           }}
         />
-      ) : state.step === 3 && state.profile ? (
+      ) : state.step === 4 && state.profile ? (
         <SelectorQuestionCard<SelectorDepeg>
           ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q3"
-          step={3}
+          questionId="q4"
+          step={4}
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="How tight does the peg need to hold?"
@@ -319,11 +370,11 @@ export function SelectorClient() {
             if (state.depegTolerance) dispatch({ type: "answer-depeg", value: state.depegTolerance });
           }}
         />
-      ) : state.step === 4 && state.profile ? (
+      ) : state.step === 5 && state.profile ? (
         <SelectorQuestionCard<SelectorVenue>
           ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q4"
-          step={4}
+          questionId="q5"
+          step={5}
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend={LEGEND_BY_PROFILE_Q4[state.profile]}
@@ -332,8 +383,8 @@ export function SelectorClient() {
           value={state.profile === "treasury" ? (state.venue[0] ?? null) : state.venue}
           onChange={(v) => {
             const next = Array.isArray(v) ? v : [v as SelectorVenue];
-            // Treasury Q4 is single-select → advance immediately.
-            // Yield / Trading Q4 is multi-select → only update selection;
+            // Treasury venue is single-select → advance immediately.
+            // Yield / Trading venue is multi-select → only update selection;
             // user advances by clicking Next.
             if (state.profile === "treasury") {
               dispatch({ type: "answer-venue", value: next });
@@ -348,11 +399,11 @@ export function SelectorClient() {
             }
           }}
         />
-      ) : state.step === 5 && state.profile ? (
+      ) : state.step === 6 && state.profile ? (
         <SelectorQuestionCard<SelectorExit>
           ref={legendRef as React.Ref<HTMLLegendElement>}
-          questionId="q5"
-          step={5}
+          questionId="q6"
+          step={6}
           totalSteps={computeTotalSteps(state.profile, state.horizon, state.depegTolerance)}
           profileLabel={PROFILE_LABEL[state.profile]}
           legend="If something goes wrong, how fast do you need to be out?"
@@ -376,6 +427,7 @@ export function SelectorClient() {
 interface ResultPaneProps {
   selectorResult: UseSelectorResult;
   input: SelectorInput | null;
+  state: SelectorWizardState;
   stateProfile: SelectorProfile | null;
   isMobile: boolean;
   onAdjust: () => void;
@@ -387,6 +439,7 @@ interface ResultPaneProps {
 function ResultPane({
   selectorResult,
   input,
+  state,
   stateProfile,
   isMobile,
   onAdjust,
@@ -418,6 +471,7 @@ function ResultPane({
   const profile = (output?.profile ?? stateProfile) as SelectorProfile;
   const effectiveInput = input ?? output.input;
   const screenerHandoffHref = buildScreenerHref(output);
+  const compareShortlistHref = buildCompareShortlistHref(output, state);
   const snapshotBanner =
     selectorResult.status === "snapshot-found" ? (
       <SelectorSnapshotBanner mode="frozen" capturedAt={output.timestamp} />
@@ -432,6 +486,12 @@ function ResultPane({
         {snapshotBanner}
         <SelectorEmptyState
           profile={profile}
+          pegCurrency={effectiveInput.pegCurrency}
+          coverageSparse={
+            output.coverageWarnings.sparse ||
+            output.coverageWarnings.uneven ||
+            output.coverageWarnings.skippedForCoverageCount > 0
+          }
           closestSurvivors={buildClosestSurvivorsFromOutput(output)}
           relaxableConstraints={defaultRelaxableConstraintsFor(profile, effectiveInput)}
           onRelax={onRelax}
@@ -479,6 +539,13 @@ function ResultPane({
         >
           Shortlist
         </h2>
+        <a
+          href={compareShortlistHref}
+          className="pharos-focus-ring flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border/65 bg-muted/35 px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-border hover:bg-muted/55"
+        >
+          <span>Compare the shortlisted stablecoins</span>
+          <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </a>
         <ol id="selector-shortlist" className="space-y-3">
           {output.recommended.map((rec, idx) => {
             const template = getTemplate(rec.lowestSubDimension.key, rec.profile);
@@ -493,6 +560,7 @@ function ResultPane({
                 rank={(idx + 1) as 1 | 2 | 3}
                 recommendation={enriched}
                 profile={profile}
+                pegCurrency={effectiveInput.pegCurrency}
                 isMobile={isMobile}
                 logoUrl={logos[rec.id] ?? undefined}
               />
@@ -511,7 +579,11 @@ function ResultPane({
           </h2>
           <ol className="space-y-2">
             {output.lowerRanked.map((entry) => (
-              <SelectorLowerRankedRow key={entry.id} entry={entry} />
+              <SelectorLowerRankedRow
+                key={entry.id}
+                entry={entry}
+                pegCurrency={effectiveInput.pegCurrency}
+              />
             ))}
           </ol>
         </section>
@@ -538,8 +610,8 @@ function computeTotalSteps(
   horizon: SelectorHorizon | null,
   depeg: SelectorDepeg | null,
 ): number {
-  if (shouldSkipExitStep(profile, horizon, depeg)) return 4;
-  return 5;
+  if (shouldSkipExitStep(profile, horizon, depeg)) return 5;
+  return 6;
 }
 
 function stepLegend(state: { step: number | "result" }): string {
@@ -547,12 +619,14 @@ function stepLegend(state: { step: number | "result" }): string {
     case 1:
       return "What are you using this stablecoin for?";
     case 2:
-      return "How long do you plan to hold this position?";
+      return "Which peg currency should it target?";
     case 3:
-      return "How tight does the peg need to hold?";
+      return "How long do you plan to hold this position?";
     case 4:
-      return "Where will you put it to work?";
+      return "How tight does the peg need to hold?";
     case 5:
+      return "Where will you put it to work?";
+    case 6:
       return "If something goes wrong, how fast do you need to be out?";
     default:
       return "";
@@ -567,6 +641,43 @@ function buildScreenerHref(output: SelectorOutput | null): string {
   } catch {
     return "/screener/";
   }
+}
+
+function buildCompareShortlistHref(
+  output: SelectorOutput,
+  state: SelectorWizardState,
+): string {
+  const input = output.input;
+  const params = new URLSearchParams();
+  params.set("p", input.profile);
+  params.set("peg", input.pegCurrency);
+  params.set("h", input.horizon);
+  params.set("d", input.depegTolerance);
+  params.set("v", compareVenueParam(input, state));
+  params.set("u", input.exitSpeed);
+  params.set("step", "result");
+  params.set("coins", output.recommended.map((rec) => rec.id).join(","));
+  return `/compare/?${params.toString()}`;
+}
+
+function compareVenueParam(input: SelectorInput, state: SelectorWizardState): string {
+  if (
+    state.profile === input.profile &&
+    state.pegCurrency === input.pegCurrency &&
+    state.horizon === input.horizon &&
+    state.depegTolerance === input.depegTolerance &&
+    state.venue.length > 0
+  ) {
+    return state.venue.join(",");
+  }
+
+  if (input.profile === "treasury") {
+    if (input.composability === "none") return "custody";
+    if (input.composability === "high") return "active";
+    return "some";
+  }
+  if (input.composability === "high") return "all";
+  return input.profile === "yield" ? "lend" : "cex";
 }
 
 function buildClosestSurvivorsFromOutput(output: SelectorOutput): SelectorClosestSurvivor[] {
@@ -735,9 +846,10 @@ export function useSelector(
     (input?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
   const rowsByKey = useMemo(() => {
-    if (!datasetReady) return null;
+    if (!datasetReady || !input) return null;
     return buildSelectorRows({
       stablecoinsData: stablecoins.data ?? null,
+      pegCurrency: input.pegCurrency,
       pegData: pegSummary.data ?? null,
       reportData: reportCards.data ?? null,
       stressData: stressSignals.data ?? null,
@@ -750,6 +862,8 @@ export function useSelector(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     datasetReady,
+    input?.profile,
+    input?.pegCurrency,
     stablecoins.dataUpdatedAt,
     pegSummary.dataUpdatedAt,
     reportCards.dataUpdatedAt,

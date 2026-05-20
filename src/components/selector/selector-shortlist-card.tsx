@@ -6,14 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { cn } from "@/lib/utils";
 import type {
+  SelectorInput,
   SelectorProfile,
   SelectorRecommendation,
 } from "@shared/lib/selector";
+import { PEG_METADATA } from "@shared/lib/classification";
 
 interface SelectorShortlistCardProps {
   rank: 1 | 2 | 3;
   recommendation: SelectorRecommendation;
   profile: SelectorProfile;
+  pegCurrency: SelectorInput["pegCurrency"];
   isMobile: boolean;
   /** Logo URL keyed by coin id. Optional. */
   logoUrl?: string;
@@ -139,8 +142,9 @@ function buildEvidenceChips(
 }
 
 export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
-  const { rank, recommendation: rec, profile, isMobile, logoUrl } = props;
+  const { rank, recommendation: rec, profile, pegCurrency, isMobile, logoUrl } = props;
   const chips = buildEvidenceChips(rec, isMobile);
+  const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
 
   const detailHref = `/stablecoin/${rec.id}/`;
   const profileLabel = PROFILE_LABEL[profile];
@@ -158,8 +162,8 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="border-frost-blue/45 bg-frost-blue/[0.08] text-[10px] font-semibold uppercase tracking-[0.12em] text-frost-blue">
-            Beta
+          <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            {pegLabel} peg
           </Badge>
           <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground" aria-label="Filter output, not advice">
             Filter output

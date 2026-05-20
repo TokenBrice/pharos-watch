@@ -18,8 +18,8 @@ export interface SelectorQuestionCardSoftConfirmation<TValue extends string> {
 }
 
 export interface SelectorQuestionCardProps<TValue extends string> {
-  questionId: "q1" | "q2" | "q3" | "q4" | "q5";
-  step: 1 | 2 | 3 | 4 | 5;
+  questionId: "q1" | "q2" | "q3" | "q4" | "q5" | "q6";
+  step: 1 | 2 | 3 | 4 | 5 | 6;
   totalSteps: number;
   legend: string;
   legendSubtext?: string;
