@@ -37,6 +37,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
 
   const rows = useMemo<ActiveRow[]>(() => {
     const events = data?.events ?? [];
+    // eslint-disable-next-line react-hooks/purity -- Date.now() used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result bounded by refetchInterval.
     const nowSec = Math.floor(Date.now() / 1000);
     return events
       .map((ev) => ({
