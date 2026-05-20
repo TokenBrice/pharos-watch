@@ -446,6 +446,44 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("applies DefiLlama protocol caps to Carbon DeFi chain-suffixed secondary rows", async () => {
+    const db = makeQueryDb([
+      { match: "FROM dex_liquidity_history", all: [] },
+    ]);
+
+    const metrics = initMetrics("xaut-tether", "XAUT");
+    metrics.totalVolume24hUsd = 1_000_000;
+    metrics.totalVolume7dUsd = 7_000_000;
+    metrics.topPools = [
+      {
+        poolId: "ethereum:0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
+        project: "carbon-defi-ethereum",
+        chain: "ethereum",
+        tvlUsd: 2_000_000_000,
+        symbol: "XAUt / sUSDS",
+        volumeUsd1d: 1_000_000,
+        poolType: "cg-amm",
+        source: "cg_onchain",
+        extra: { effectiveTvl: 480_000_000 },
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["xaut-tether", metrics]]),
+      new Map([["carbon-defi", 3_500_000]]),
+    );
+
+    expect(metrics.totalTvlUsd).toBe(3_500_000);
+    expect(metrics.topPools[0]?.tvlUsd).toBe(3_500_000);
+    expect(result.globalAgg.protocolTvl["carbon-defi"]).toBe(3_500_000);
+    expect(result.diagnostics.protocolCapReductions).toMatchObject({
+      cappedPoolCount: 1,
+      cappedProtocols: 1,
+      reducedTvlUsd: 1_996_500_000,
+    });
+  });
+
   it("persists only eligible depth-stability rows and logs DB failures", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);

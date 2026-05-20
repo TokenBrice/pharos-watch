@@ -92,4 +92,42 @@ describe("crawlTokenPools", () => {
     expect(newPools.get("usdc-circle")?.[0]?.tvlUsd).toBe(50_000);
     expect(priceObs.get("usdc-circle")).toHaveLength(1);
   });
+
+  it("skips secondary-source pools with implausible tracked token prices", async () => {
+    const stats = makeStats();
+    const newPools = new Map<string, GtNewPool[]>();
+    const priceObs = new Map();
+    const result = await crawlTokenPools<RawPool, GtNewPool>({
+      sourceLabel: "test",
+      tokens: [{ sourceChain: "eth", ourChain: "ethereum", address: "0xstable", stablecoinId: "usdc-circle" }],
+      chainAddressToId: new Map([["ethereum:0xstable", "usdc-circle"]]),
+      knownPoolAddrs: new Set(),
+      protocolTvlCaps: new Map(),
+      newPools,
+      priceObs,
+      stats,
+      fetchPools: async () => [{ id: "pool-a", tvlUsd: 2_000_000_000, price: 500 }],
+      parsePool: (pool) => ({
+        dexId: "testdex",
+        poolAddress: pool.id,
+        tvlUsd: pool.tvlUsd,
+        volume24hUsd: 10_000,
+        baseTokenAddress: "0xstable",
+        quoteTokenAddress: "0xref",
+        baseTokenPriceUsd: pool.price,
+        quoteTokenPriceUsd: 1,
+        createdAt: "2026-01-01T00:00:00Z",
+        poolName: "USDC / USD",
+      }),
+      buildNewPool: () => {
+        throw new Error("should not build");
+      },
+    });
+
+    expect(result.stoppedEarly).toBe(false);
+    expect(stats.poolsSeen).toBe(1);
+    expect(stats.poolsNew).toBe(0);
+    expect(newPools.size).toBe(0);
+    expect(priceObs.size).toBe(0);
+  });
 });

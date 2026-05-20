@@ -129,6 +129,13 @@ export async function crawlCoinGeckoPoolsStage({
         const priceRaw = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
         const tvlUsd = parsed.tvlUsd;
         if (!Number.isFinite(tvlUsd) || tvlUsd < 1_000) continue;
+        const hasUsablePrice = Number.isFinite(priceRaw) && priceRaw > 0;
+        if (
+          hasUsablePrice &&
+          !isPlausibleDexObservationPrice(context.stablecoinId, priceRaw, context.references)
+        ) {
+          continue;
+        }
 
         const volume24h = parsed.volume24hUsd;
         if (tvlUsd > 0 && volume24h / tvlUsd > 50) continue;
@@ -168,7 +175,6 @@ export async function crawlCoinGeckoPoolsStage({
 
         if (
           stagedPool.priceUsd != null &&
-          isPlausibleDexObservationPrice(context.stablecoinId, stagedPool.priceUsd, context.references) &&
           tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
         ) {
           context.addPriceObs({

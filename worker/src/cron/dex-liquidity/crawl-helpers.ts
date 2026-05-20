@@ -147,8 +147,12 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         if (!side) continue;
 
         const price = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
+        const hasUsablePrice = Number.isFinite(price) && price > 0;
+        if (hasUsablePrice && !isPlausibleDexObservationPrice(token.stablecoinId, price, config.references)) {
+          continue;
+        }
 
-        if (isPlausibleDexObservationPrice(token.stablecoinId, price, config.references) && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
+        if (hasUsablePrice && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           const obs = config.priceObs.get(token.stablecoinId) ?? [];
           obs.push({ price, tvl: parsed.tvlUsd, chain: token.ourChain, protocol: parsed.dexId });
           config.priceObs.set(token.stablecoinId, obs);

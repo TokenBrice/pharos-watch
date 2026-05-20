@@ -237,6 +237,48 @@ describe("mergeStagedPools", () => {
     ]);
   });
 
+  it("skips staged pools with implausible tracked token prices", async () => {
+    const mockDb = createMockDb([
+      {
+        pool_id: `ethereum:${newPoolAddress}`,
+        stablecoin_id: "xaut-tether",
+        source: "cg_onchain",
+        chain: "ethereum",
+        protocol: "carbon-defi-ethereum",
+        dex_id: "carbon-defi-ethereum",
+        symbol: "XAUt / sUSDS",
+        tvl_usd: 2_020_820_673,
+        volume_24h: 1_035_914_339,
+        quality_multiplier: 0.8,
+        pool_type: "cg-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: "0x68749665ff8d2d112fa859aa293f07a622782f38",
+        quote_token: "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        quote_symbol: null,
+        price_usd: 76259889535.2567,
+        locked_liq_pct: null,
+        discovered_at: 1709900000,
+        refreshed_at: 1710000000,
+      },
+    ]);
+    const metrics = new Map();
+    const result = await mergeStagedPools(mockDb, metrics, makeKnownPoolIndex(), 1710000000);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+    expect(result.priceObservations.size).toBe(0);
+    expect(result.skipDimensions).toEqual([
+      {
+        reason: "invalid_price",
+        protocol: "carbon-defi-ethereum",
+        chain: "ethereum",
+        count: 1,
+      },
+    ]);
+  });
+
   it("skips staged pools whose token-pair fingerprint is already known", async () => {
     const mockDb = createMockDb([
       {

@@ -11,6 +11,10 @@ describe("normalizeProtocol", () => {
     expect(normalizeProtocol("uni-v3")).toBe("uniswap-v3");
     expect(normalizeProtocol("uniswap-v3")).toBe("uniswap-v3");
   });
+  it("collapses Carbon DeFi chain-suffixed variants", () => {
+    expect(normalizeProtocol("carbon-defi-ethereum")).toBe("carbon-defi");
+    expect(normalizeProtocol("carbon_defi_celo")).toBe("carbon-defi");
+  });
 });
 
 describe("classifyPoolType ordering", () => {

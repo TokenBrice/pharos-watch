@@ -182,6 +182,7 @@ describe("dex-liquidity pool helpers", () => {
     expect(normalizeProtocol("Velodrome")).toBe("velodrome");
     expect(normalizeProtocol("PancakeSwap v3")).toBe("pancakeswap");
     expect(normalizeProtocol("Sushi")).toBe("sushiswap");
+    expect(normalizeProtocol("carbon-defi-ethereum")).toBe("carbon-defi");
     expect(normalizeProtocol("TraderJoe")).toBe("trader-joe");
     expect(normalizeProtocol("Raydium CLMM")).toBe("raydium");
     expect(normalizeProtocol("Orca Whirlpool")).toBe("orca");

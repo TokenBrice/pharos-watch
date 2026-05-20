@@ -47,6 +47,7 @@ interface StagedPoolRow {
 export type StagedPoolSkipReason =
   | "malformed_identity"
   | "invalid_tvl"
+  | "invalid_price"
   | "stale_confidence_zero"
   | "authoritative_confirmation_missing"
   | "duplicate_exact_identity"
@@ -346,6 +347,15 @@ export async function mergeStagedPools(
     }
 
     const adjustedTvl = (stagedPool.tvlUsd ?? 0) * confidence;
+    if (
+      stagedPool.priceUsd != null &&
+      stagedPool.priceUsd > 0 &&
+      !isPlausibleDexObservationPrice(stagedPool.stablecoinId, stagedPool.priceUsd, references)
+    ) {
+      skippedCount++;
+      incrementSkipDimension(skipDimensions, "invalid_price", stagedPool);
+      continue;
+    }
 
     if (requiresAuthoritativeProtocolConfirmation(authoritativeConfirmation, normalizedProtocol, stagedPool.chain)) {
       const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);

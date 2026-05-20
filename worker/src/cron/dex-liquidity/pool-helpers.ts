@@ -197,6 +197,7 @@ export function normalizeProtocol(project: string): string {
   if (p.includes("velodrome")) return "velodrome";
   if (p.includes("pancakeswap") || p.includes("pcsv")) return "pancakeswap";
   if (p.includes("sushiswap") || p === "sushi") return "sushiswap";
+  if (p.includes("carbondefi")) return "carbon-defi";
   if (p.includes("traderjoe")) return "trader-joe";
   if (p.includes("raydium")) return "raydium";
   if (p.includes("orca")) return "orca";

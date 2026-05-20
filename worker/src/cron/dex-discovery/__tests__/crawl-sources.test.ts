@@ -256,6 +256,40 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
+  it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pools: [{
+      id: "eth_0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
+      type: "pool",
+      attributes: {
+        address: "0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
+        name: "XAUt / sUSDS",
+        pool_created_at: "2026-01-27T20:19:51Z",
+        base_token_price_usd: "76259889535.2567",
+        quote_token_price_usd: "18550521.8243312",
+        reserve_in_usd: "2020820673.4245",
+        h24_volume_usd: "1035914339.44693",
+        pool_fee_percentage: null,
+        locked_liquidity_percentage: null,
+      },
+      relationships: {
+        base_token: { data: { id: "eth_0x68749665ff8d2d112fa859aa293f07a622782f38", type: "token" } },
+        quote_token: { data: { id: "eth_0xa3931d71877c0e7a3148cb7eb4463524fec27fbd", type: "token" } },
+        dex: { data: { id: "carbon-defi-ethereum", type: "dex" } },
+      },
+    } as never] });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "xaut-tether",
+      [{ chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools).toEqual([]);
+    expect(result.priceObs).toEqual([]);
+  });
+
   it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: false, pools: [] });
 
