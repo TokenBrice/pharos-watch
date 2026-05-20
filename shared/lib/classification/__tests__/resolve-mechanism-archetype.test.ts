@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { StablecoinMeta } from "../../types";
+import type { StablecoinMeta } from "../../../types";
 import { resolveMechanismArchetype } from "../resolve-mechanism-archetype";
 
 function makeCoin(overrides: Partial<StablecoinMeta>): StablecoinMeta {

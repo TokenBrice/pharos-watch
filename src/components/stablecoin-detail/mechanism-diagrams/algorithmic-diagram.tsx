@@ -8,7 +8,7 @@ import {
 
 const ACCENT = "var(--mechanism-algorithmic)";
 
-export const ALGORITHMIC_STRESS_FOOTNOTE =
+const ALGORITHMIC_STRESS_FOOTNOTE =
   "stress: reflexive collapse (UST, May 2022)";
 
 interface AlgorithmicDiagramProps {

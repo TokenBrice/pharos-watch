@@ -8,7 +8,7 @@ import {
 
 const ACCENT = "var(--mechanism-rwa-credit-fund)";
 
-export const RWA_CREDIT_FUND_STRESS_FOOTNOTE =
+const RWA_CREDIT_FUND_STRESS_FOOTNOTE =
   "stress: NAV markdown / quarterly gate";
 
 interface RwaCreditFundDiagramProps {

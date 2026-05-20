@@ -35,7 +35,7 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   algorithmic:
     "Algorithmic stablecoins use supply controls or reflexive incentives instead of full reserves. Read why the design keeps failing and what's still being attempted.",
   "rwa-credit-fund":
-    "Tokenized credit fund stablecoins wrap regulated private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
+    "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
 };
 
 export function generateStaticParams() {

@@ -8,7 +8,7 @@ import {
 
 const ACCENT = "var(--mechanism-fiat-cash)";
 
-export const FIAT_CASH_STRESS_FOOTNOTE =
+const FIAT_CASH_STRESS_FOOTNOTE =
   "stress: banking-rail freeze (USDC, Mar 2023)";
 
 interface FiatCashDiagramProps {

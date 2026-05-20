@@ -8,7 +8,7 @@ import {
 
 const ACCENT = "var(--mechanism-synthetic-delta-neutral)";
 
-export const SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE =
+const SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE =
   "stress: funding-rate inversion";
 
 interface SyntheticDeltaNeutralDiagramProps {

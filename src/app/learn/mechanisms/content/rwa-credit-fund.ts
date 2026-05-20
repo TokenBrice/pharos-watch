@@ -103,7 +103,7 @@ export const content: ArchetypeContent = {
       label: "Sibling explainer: tokenized Treasury bill funds",
     },
     {
-      href: "/stablecoins/backing/rwa-backed/",
+      href: "/stablecoins/backing/rwa/",
       label: "RWA-backed stablecoin directory",
     },
     {

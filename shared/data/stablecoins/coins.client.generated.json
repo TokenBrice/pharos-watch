@@ -2966,7 +2966,6 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mapollo",
     "canBeBlacklisted": true
   },
@@ -3040,7 +3039,6 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mhyper",
     "canBeBlacklisted": true
   },
@@ -3075,7 +3073,6 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mmev",
     "canBeBlacklisted": true
   },
@@ -3162,7 +3159,6 @@
       "navToken": true
     },
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mre7yield",
     "canBeBlacklisted": true
   },

@@ -55,6 +55,7 @@ Generated for `/learn/mechanisms/[archetype]` pages. The pipeline reuses the mec
 | `og-learn-cdp.png` | `cdp` |
 | `og-learn-synthetic-delta-neutral.png` | `synthetic-delta-neutral` |
 | `og-learn-algorithmic.png` | `algorithmic` |
+| `og-learn-rwa-credit-fund.png` | `rwa-credit-fund` |
 
 ### How to renew
 

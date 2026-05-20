@@ -8,7 +8,7 @@ import {
 
 const ACCENT = "var(--mechanism-cdp)";
 
-export const CDP_STRESS_FOOTNOTE =
+const CDP_STRESS_FOOTNOTE =
   "stress: collateral cascade (DAI, Mar 2020)";
 
 interface CdpDiagramProps {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MechanismArchetype, StablecoinMeta, VariantKind } from "../../types";
+import type { MechanismArchetype, StablecoinMeta, VariantKind } from "../../../types";
 import { validateVariantRelationships } from "../validate-variants";
 
 interface CoinOverrides extends Partial<StablecoinMeta> {
@@ -29,7 +29,7 @@ function makeParent(
   return makeCoin({
     id,
     flags: {
-      backing: "fiat-backed",
+      backing: "rwa-backed",
       pegCurrency: "USD",
       governance: "centralized",
       yieldBearing: false,
@@ -51,7 +51,7 @@ function makeChild(
     variantKind: "savings-passthrough" as VariantKind,
     pegReferenceId: variantOf,
     flags: {
-      backing: "fiat-backed",
+      backing: "rwa-backed",
       pegCurrency: "USD",
       governance: "centralized",
       yieldBearing: true,

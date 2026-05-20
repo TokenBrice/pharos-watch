@@ -17312,7 +17312,6 @@
     },
     "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mapollo",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17721,7 +17720,6 @@
     },
     "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mhyper",
     "proofOfReserves": {
       "type": "self-reported",
@@ -18008,7 +18006,6 @@
     },
     "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mmev",
     "proofOfReserves": {
       "type": "self-reported",
@@ -18477,7 +18474,6 @@
     },
     "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
-    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mre7yield",
     "links": [
       {

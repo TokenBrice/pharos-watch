@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MechanismArchetype, StablecoinMeta } from "../../types";
+import type { MechanismArchetype, StablecoinMeta } from "../../../types";
 import {
   countActiveByArchetype,
   getActiveByArchetype,
@@ -54,7 +54,7 @@ describe("countActiveByArchetype", () => {
       name: "USD Fixture",
       symbol: "USD-FX",
       flags: {
-        backing: "fiat-backed",
+        backing: "rwa-backed",
         pegCurrency: "USD",
         governance: "centralized",
         yieldBearing: false,

@@ -2,10 +2,10 @@
 
 Contract for the educational explainer surfaces:
 
-- `/learn/mechanisms/` — hub listing all five archetypes
+- `/learn/mechanisms/` — hub listing all six archetypes
 - `/learn/mechanisms/[archetype]/` — per-archetype deep explainer
 
-Each tracked stablecoin carries a `mechanismArchetype` field. The five values (`fiat-cash`, `tbill`, `cdp`, `synthetic-delta-neutral`, `algorithmic`) each get a dedicated educational page that walks through the design, its failure modes, and which Pharos signals are most informative for that archetype.
+Each tracked stablecoin carries a `mechanismArchetype` field. The six values (`fiat-cash`, `tbill`, `cdp`, `synthetic-delta-neutral`, `algorithmic`, `rwa-credit-fund`) each get a dedicated educational page that walks through the design, its failure modes, and which Pharos signals are most informative for that archetype.
 
 ---
 
@@ -16,7 +16,7 @@ Each tracked stablecoin carries a `mechanismArchetype` field. The five values (`
 - **Page-level shell (editorial display + breadcrumb):** `src/app/learn/mechanisms/explainer-page-shell.tsx` (`ExplainerPageShell`)
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/app/learn/mechanisms/content/index.ts` (`ARCHETYPE_CONTENT`)
-- **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic}.ts`
+- **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund}.ts`
 - **Content schema:** `src/app/learn/mechanisms/content/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
 - **Slug helpers (single source of truth):** `shared/lib/classification/mechanism-archetypes.ts`
   - `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_ONE_LINERS`
@@ -75,7 +75,7 @@ The hub at `/learn/mechanisms/` renders the same shell with a different headline
 - Description: hand-tuned per archetype, ≤160 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
 - OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `node scripts/maintenance/build-og-learn-images.mjs` followed by the `svg-to-png` skill against the staged SVGs.
-- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`. Article-level structured data is owned by future work; not in v1.
+- JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, plus Article JSON-LD from `buildMechanismArticleJsonLd(...)` on each archetype page.
 
 ---
 
