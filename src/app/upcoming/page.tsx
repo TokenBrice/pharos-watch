@@ -16,6 +16,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Browse upcoming stablecoin launches tracked by Pharos. Filter by launch phase, peg type, and backing. From announced to launching soon.",
   canonical: "/upcoming/",
+  ogImage: `${SITE_URL}/og-upcoming.png`,
 });
 
 const GLOBAL_LAUNCH_ALERT_COMMAND = "/subscribe launch all";

@@ -14,6 +14,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Weekly release notes for Pharos — new stablecoin coverage, pipeline improvements, risk tooling updates, and more.",
   canonical: "/changelog/",
+  ogImage: `${SITE_URL}/og-changelog.png`,
 });
 
 export default function ChangelogPage() {

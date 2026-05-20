@@ -8,6 +8,7 @@ import {
   FundingFaq,
 } from "@/components/funding/funding-page-sections";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { computeCostsTotal, computeMonthlyHistory, summarizeDonations } from "@shared/lib/funding/helpers";
 import costsData from "@shared/data/funding/costs.json";
 import donationsData from "@shared/data/funding/donations.json";
@@ -17,6 +18,7 @@ export const metadata = buildPageMetadata({
   title: "Funding",
   description: "On-chain donations, running costs, and Pharos's path to staying freely accessible.",
   canonical: "/funding/",
+  ogImage: `${SITE_URL}/og-funding.png`,
 });
 
 // Build-time timestamp anchors "this month" for the KPI split. Static export

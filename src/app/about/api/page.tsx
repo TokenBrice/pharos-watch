@@ -25,6 +25,7 @@ export const metadata = buildPageMetadata({
   description:
     "Auth model, API-key requirements, host split, and the full Pharos endpoint reference for external integrations.",
   canonical: "/about/api/",
+  ogImage: `${SITE_URL}/og-about.png`,
 });
 
 const HERO_LANES = [

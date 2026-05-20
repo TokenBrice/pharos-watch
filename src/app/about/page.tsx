@@ -156,6 +156,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Ike, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   canonical: "/about/",
+  ogImage: `${SITE_ORIGIN}/og-about.png`,
 });
 
 export default function AboutPage() {

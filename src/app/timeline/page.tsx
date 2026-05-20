@@ -14,6 +14,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Timeline — Stablecoin Market Events",
   description: TIMELINE_DESCRIPTION,
   canonical: "/timeline/",
+  ogImage: `${SITE_URL}/og-timeline.png`,
 });
 
 const TIMELINE_URL = `${SITE_URL}/timeline/`;

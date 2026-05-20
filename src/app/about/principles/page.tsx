@@ -16,6 +16,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "The ten axioms that drive what Pharos computes and what it refuses to compute, plus the AI-authoring policy and the corrections process.",
   canonical: "/about/principles/",
+  ogImage: `${SITE_ORIGIN}/og-about.png`,
 });
 
 const INLINE_LINK_CLASS =

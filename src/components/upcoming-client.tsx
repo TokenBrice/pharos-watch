@@ -186,21 +186,41 @@ export function UpcomingClient() {
           ) : null}
         </div>
 
-        <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.45fr)] xl:items-start">
-          <div className="min-w-0 space-y-2">
-            <p className="pharos-kicker">Phase</p>
-            <div className="flex flex-wrap gap-2">
-              {ALL_PHASES.map((phase) => (
-                <button
-                  key={phase}
-                  aria-pressed={phaseFilter.has(phase)}
-                  onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
-                  className={phaseToggleClass(phase, phaseFilter.has(phase))}
-                >
-                  {LAUNCH_PHASE_LABELS[phase]}
-                </button>
-              ))}
+        <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,2.5fr)_minmax(0,0.725fr)] xl:items-start">
+          <div className="min-w-0 space-y-4">
+            <div className="space-y-2">
+              <p className="pharos-kicker">Phase</p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_PHASES.map((phase) => (
+                  <button
+                    key={phase}
+                    aria-pressed={phaseFilter.has(phase)}
+                    onClick={() => setPhaseFilter(toggleSet(phaseFilter, phase))}
+                    className={phaseToggleClass(phase, phaseFilter.has(phase))}
+                  >
+                    {LAUNCH_PHASE_LABELS[phase]}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {ALL_BACKINGS.length > 1 && (
+              <div className="space-y-2">
+                <p className="pharos-kicker">Backing</p>
+                <div className="flex flex-wrap gap-2">
+                  {ALL_BACKINGS.map((backing) => (
+                    <button
+                      key={backing}
+                      aria-pressed={backingFilter.has(backing)}
+                      onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
+                      className={neutralToggleClass(backingFilter.has(backing))}
+                    >
+                      {BACKING_LABELS_SHORT[backing] ?? backing}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {ALL_PEGS.length > 1 && (
@@ -215,24 +235,6 @@ export function UpcomingClient() {
                     className={neutralToggleClass(pegFilter.has(peg))}
                   >
                     {PEG_LABELS_SHORT[peg] ?? peg}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {ALL_BACKINGS.length > 1 && (
-            <div className="min-w-0 space-y-2">
-              <p className="pharos-kicker">Backing</p>
-              <div className="flex flex-wrap gap-2">
-                {ALL_BACKINGS.map((backing) => (
-                  <button
-                    key={backing}
-                    aria-pressed={backingFilter.has(backing)}
-                    onClick={() => setBackingFilter(toggleSet(backingFilter, backing))}
-                    className={neutralToggleClass(backingFilter.has(backing))}
-                  >
-                    {BACKING_LABELS_SHORT[backing] ?? backing}
                   </button>
                 ))}
               </div>

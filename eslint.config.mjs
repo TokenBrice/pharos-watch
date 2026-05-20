@@ -20,6 +20,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Wrangler auto-generated build artifacts
     "worker/.wrangler/**",
+    // Local-only agent scratch + planning artifacts (gitignored per repo convention)
+    "agents/**",
   ]),
   {
     plugins: { security },

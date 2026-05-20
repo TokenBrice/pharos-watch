@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useCallback, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +13,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PegCurrency } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -156,7 +158,22 @@ export function LiquidityClient() {
               assign a Liquidity Score.
             </p>
           </div>
-          <LiquidityTable rows={unratedRows} logos={logos} searchQuery={deferredSearch} onRowClick={handleRowClick} />
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {unratedRows.map((row) => (
+              <li key={row.meta.id}>
+                <Link
+                  href={buildStablecoinUrl(row.meta.id)}
+                  className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 transition hover:border-border hover:bg-card/80"
+                >
+                  <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={28} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{row.meta.symbol}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{row.meta.name}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
