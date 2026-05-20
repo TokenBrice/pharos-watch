@@ -48,6 +48,11 @@
   },
   "contracts": [
     {
+      "chain": "ethereum",
+      "address": "0x52c66B5E7f8Fde20843De900C5C8B4b0F23708A0",
+      "decimals": 18
+    },
+    {
       "chain": "monad",
       "address": "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8",
       "decimals": 18
