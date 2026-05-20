@@ -753,7 +753,7 @@ Most high-risk external integrations are protected by per-source circuit breaker
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
 - **Alerts**: Webhook alert fires on open and close transitions
-- **Health impact**: 3 or more open circuits degrade `/api/health`; smaller circuit failures still surface in the circuit list without degrading public health on their own
+- **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*` breakers and `dexscreener-search` are excluded from that public-health count, while smaller or excluded circuit failures still surface in the circuit list
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 

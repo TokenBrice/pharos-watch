@@ -215,12 +215,15 @@ Computed from the shared public-health floor plus availability-impacting cron av
   - any shared cache impact is `degraded`
   - the public mint/burn lane is `degraded` (once the lane has emitted real sync telemetry)
   - `openCircuitGroups >= 3`
+  - any availability-critical cron has a single failed run
   - `availabilityImpactingUnhealthyCrons > 0`
 - else `healthy`
 
 `degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but they do not by themselves mark availability degraded.
 
 `openCircuitGroups` here means public-impact circuit groups only. Dynamic per-coin `live-reserves:*` breakers still render in the reliability tables, but they do not degrade availability on their own because reserve sync already has its own data-quality lane and thresholds.
+
+Runbook links are intentionally sparse. `worker/src/lib/status/evaluation-causes.ts` attaches `runbookUrl` only for cause codes with maintained operator runbooks; public-impact causes such as `cache_ratio_*`, `cache_freshness_query_failed`, `mint_burn_public_*`, `open_circuit_groups`, `circuit_query_failed`, and `cron_error_runs` can appear without a Runbook link until a dedicated runbook is written.
 
 Each cron definition now carries `statusImpact: "critical" | "watch"` in `shared/lib/cron-jobs.ts`. Only critical lanes can degrade `availabilityStatus`; watch-tier cron failures stay operator-visible through cron cards, info causes, `summary.watchUnhealthyCrons`, and `summary.cronErrors`.
 

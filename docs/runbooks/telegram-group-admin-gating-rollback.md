@@ -2,7 +2,7 @@
 
 ## Symptom
 
-The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/settings`, `/mute`, `/unmutehours`, `/unsnooze`, or `/timezone`, or the fresh `getChatMember` admin lookup is failing closed across many groups.
+The group admin gate is too aggressive in production: legitimate group admins are being refused on `/subscribe`, `/unsubscribe`, `/set`, `/mute`, `/unmutehours`, or `/unsnooze`, or mutating `/settings` callbacks are being refused after a fresh `getChatMember` admin lookup fails closed across many groups.
 
 The gate's enforcement mode lives behind the `TELEGRAM_GROUP_ADMIN_GATING` env toggle in `worker/src/api/telegram-webhook.ts`. The two modes are documented in [`docs/telegram-alerts.md`](../telegram-alerts.md#group-admin-gating); summary:
 

@@ -24,6 +24,15 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "NEXT_PUBLIC_FORCE_SITE_DATA_PROXY",
+    valueType: "string",
+    description: "Optional CI/local-smoke frontend override; when `true`, browser reads use same-origin `/_site-data/*` even on local hosts.",
+    example: { section: "frontend", value: "" },
+    runtimes: {
+      frontend: { order: 3, status: "optional" },
+    },
+  },
+  {
     key: "DB",
     valueType: "D1Database",
     description: "Primary D1 binding for worker reads/writes; the Pages site-data lane also uses it for attribution telemetry.",
@@ -594,6 +603,7 @@ export const ENV_BINDINGS = [
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
     description: "KV namespace binding for the Pages-only Stablecoin Selector snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries.",
+    example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },
     },

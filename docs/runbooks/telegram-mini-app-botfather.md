@@ -1,6 +1,6 @@
 # Runbook: PharosWatchBot BotFather Configuration
 
-BotFather owns the bot-profile metadata, Main Mini App URL, profile launch toggle, preview screenshots, and loading-screen customization. None of these are reconciled by Worker code (bot name, short/long description, default menu button, allowed updates, and command list **are** reconciled — see [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Webhook and Command Registration"). This runbook captures the operator-owned state and the smoke-test checklist that must pass after each deploy and after each BotFather UI change.
+BotFather owns the bot-profile metadata, Main Mini App URL, profile launch toggle, preview screenshots, and loading-screen customization. None of these are reconciled by Worker code (bot name, short/long description, default menu button, allowed updates, and command list **are** reconciled — see [`docs/telegram-alerts.md`](../telegram-alerts.md) section "Webhook and Command Registration"). This runbook captures the operator-owned fields that must be checked, including placeholders for BotFather-only assets that are not observable from the repo, plus the smoke-test checklist that must pass after each deploy and after each BotFather UI change.
 
 Verify quarterly or after a BotFather UI change.
 
@@ -12,12 +12,12 @@ Verify quarterly or after a BotFather UI change.
 | Main Mini App URL | `https://pharos.watch/pharoswatchbot/app/` | Mirrors `TELEGRAM_MINI_APP_URL` in `worker/src/lib/telegram-webhook-registration.ts`. |
 | Profile launch ("Launch app") | enabled | Operator toggles this in BotFather; no code path. |
 | Default menu button | `Manage Alerts` → `https://pharos.watch/pharoswatchbot/app/` | Reconciled by the Worker (`setChatMenuButton`); listed here for completeness. |
-| Mini App preview screenshots | _to be filled by the operator on next BotFather sync — record current filenames and SHAs._ | Update when the Mini App UI ships a material change. |
-| Mini App preview video | _to be filled by the operator on next BotFather sync._ | Optional; omit if no current video. |
-| Loading-screen icon | _to be filled by the operator on next BotFather sync — record current filename and SHA._ | Square; should match the Pharos avatar (`public/pharos-icon.png`). |
-| Loading background color | `#XXXXXX` | Operator fills with the configured hex on next BotFather sync. |
+| Mini App preview screenshots | _operator-captured outside repo_ | Record current filenames and SHAs during quarterly BotFather review; update when the Mini App UI ships a material change. |
+| Mini App preview video | _operator-captured outside repo_ | Optional; omit if no current video. |
+| Loading-screen icon | _operator-captured outside repo_ | Record current filename and SHA during quarterly BotFather review. Square; should match the Pharos avatar (`public/pharos-icon.png`). |
+| Loading background color | _operator-captured outside repo_ | Record the configured hex during quarterly BotFather review. |
 
-If a row above shows `_to be filled_` or `#XXXXXX`, the operator should capture the live BotFather value into this file as part of the next quarterly review.
+Rows marked `operator-captured outside repo` are not source-controlled assets today. Capture their live BotFather values in the quarterly review note or update this runbook when the assets become repo-owned.
 
 ## Smoke Tests
 
