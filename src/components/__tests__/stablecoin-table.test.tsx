@@ -253,6 +253,27 @@ describe("StablecoinTable", () => {
     expect(scrollContainer?.className).toContain("sm:overflow-x-hidden");
   });
 
+  it("can let the page own vertical scrolling while preserving table horizontal overflow", () => {
+    render(
+      <StablecoinTable
+        data={[coin, usdc]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        usePageVerticalScroll
+      />,
+    );
+
+    const table = screen.getAllByRole("table")[0];
+    const scrollContainer = table?.parentElement;
+
+    expect(scrollContainer?.className).toContain("overflow-x-auto");
+    expect(scrollContainer?.className).toContain("overflow-y-visible");
+    expect(scrollContainer?.className).not.toContain("max-h-[50vh]");
+    expect(screen.getByText("USDT")).toBeTruthy();
+    expect(screen.getByText("USDC")).toBeTruthy();
+  });
+
   it("renders the blacklistable column when enabled", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "blacklistable"]));
 

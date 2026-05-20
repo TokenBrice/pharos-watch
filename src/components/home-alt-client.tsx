@@ -126,6 +126,7 @@ export function HomeAltClient() {
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
           columnPreferenceNamespace="pharos-home-alt-table"
           suppressDesktopHorizontalScroll
+          usePageVerticalScroll
           pinnedStablecoinIds={pinned.pinnedIds}
           onTogglePinnedStablecoin={pinned.togglePinned}
           toolbarEyebrow="Stablecoin Overview"

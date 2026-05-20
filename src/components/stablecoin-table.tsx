@@ -149,6 +149,7 @@ interface StablecoinTableProps {
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
   suppressDesktopHorizontalScroll?: boolean;
+  usePageVerticalScroll?: boolean;
   initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
@@ -175,6 +176,7 @@ export function StablecoinTable({
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
   suppressDesktopHorizontalScroll = false,
+  usePageVerticalScroll = false,
   initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
@@ -312,12 +314,17 @@ export function StablecoinTable({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
-  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
+  const renderedRows = usePageVerticalScroll
+    ? displayed.map((_, index) => ({ index }))
+    : virtualItems.map((item) => ({ index: item.index }));
+  const paddingTop = !usePageVerticalScroll && virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom = !usePageVerticalScroll && virtualItems.length > 0
+    ? totalHeight - virtualItems[virtualItems.length - 1].end
+    : 0;
 
   // Visible range for footer
-  const rangeStart = virtualItems.length > 0 ? virtualItems[0].index + 1 : 0;
-  const rangeEnd = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index + 1 : 0;
+  const rangeStart = renderedRows.length > 0 ? renderedRows[0].index + 1 : 0;
+  const rangeEnd = renderedRows.length > 0 ? renderedRows[renderedRows.length - 1].index + 1 : 0;
 
   const handleCsvExport = useCallback(() => {
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
@@ -370,7 +377,7 @@ export function StablecoinTable({
 
       <div
         ref={scrollRef}
-        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "sm:overflow-x-hidden" : ""}`}
+        className={`scroll-shadow overflow-x-auto px-0 ${usePageVerticalScroll ? "overflow-y-visible pb-0 pr-0" : "max-h-[50vh] overscroll-contain overflow-y-auto pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"} ${suppressDesktopHorizontalScroll ? "sm:overflow-x-hidden" : ""}`}
       >
         <table
           className={`min-w-[420px] sm:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
@@ -412,14 +419,14 @@ export function StablecoinTable({
                 <td style={{ height: paddingTop, padding: 0 }} />
               </tr>
             )}
-            {virtualItems.map((virtualRow) => {
-              const coin = displayed[virtualRow.index];
+            {renderedRows.map((row) => {
+              const coin = displayed[row.index];
               return (
                 <StablecoinVirtualRow
                   key={coin.id}
                   coin={coin}
-                  rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
-                  isStriped={virtualRow.index % 2 === 1}
+                  rank={sortedRankById.get(coin.id) ?? row.index + 1}
+                  isStriped={row.index % 2 === 1}
                   densityConfig={virtualDensityConfig}
                   density={density}
                   isVisible={isVisible}
