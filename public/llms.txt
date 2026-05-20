@@ -422,7 +422,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Glo Dollar (USDGLO)](https://pharos.watch/stablecoin/usdglo-glo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Djed Stablecoin (DJED)](https://pharos.watch/stablecoin/djed-coti/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [PathUSD (pathUSD)](https://pharos.watch/stablecoin/pathusd-bridge/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [XAI Silo Finance (XAI)](https://pharos.watch/stablecoin/xai-silo-finance/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
+- [XAI Silo Finance (XAI)](https://pharos.watch/stablecoin/xai-silo-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Pareto USP (USP)](https://pharos.watch/stablecoin/usp-pareto-credit/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Fathom Dollar (FXD)](https://pharos.watch/stablecoin/fxd-fathom/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solomon USDv (USDV)](https://pharos.watch/stablecoin/usdv-solomon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
