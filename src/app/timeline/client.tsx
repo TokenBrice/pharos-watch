@@ -182,9 +182,11 @@ interface SummaryBandProps {
   dataUpdatedAt: number;
   nowMs: number;
   lastEventTs: number | null;
+  phosphor: boolean;
+  onTogglePhosphor: () => void;
 }
 
-function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs }: SummaryBandProps) {
+function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -238,6 +240,16 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
             {part}
           </span>
         ))}
+        <span aria-hidden="true">·</span>
+        <button
+          type="button"
+          onClick={onTogglePhosphor}
+          aria-pressed={phosphor}
+          aria-label={phosphor ? "Turn off phosphor reading mode" : "Turn on phosphor reading mode"}
+          className="phosphor-toggle"
+        >
+          {phosphor ? "[■] CRT" : "[ ] CRT"}
+        </button>
       </p>
       {lastEventNode}
     </div>
@@ -609,8 +621,25 @@ export function TimelineClient() {
   const openCountByDay = useMemo(() => bucketByDay(openIncidents), [openIncidents]);
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
+  // Phosphor mode is opt-in; persisted in localStorage. Applied after mount
+  // to avoid SSR/hydration mismatch — server always renders the standard theme.
+  const [phosphor, setPhosphor] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setPhosphor(window.localStorage.getItem("pharos:timeline-phosphor") === "1");
+  }, []);
+  const togglePhosphor = useCallback(() => {
+    setPhosphor((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("pharos:timeline-phosphor", next ? "1" : "0");
+      }
+      return next;
+    });
+  }, []);
+
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6${phosphor ? " phosphor-green" : ""}`}>
       <a
         href="#tape-feed"
         className="pharos-focus-ring sr-only rounded-md bg-background px-3 py-1.5 text-xs font-medium focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
@@ -627,6 +656,8 @@ export function TimelineClient() {
         dataUpdatedAt={dataUpdatedAt}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
+        phosphor={phosphor}
+        onTogglePhosphor={togglePhosphor}
       />
 
       <TapeFilters

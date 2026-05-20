@@ -1075,3 +1075,117 @@
     print-color-adjust: exact;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * /timeline/ phosphor mode — P1 green CRT
+ *
+ * Opt-in monochrome reading mode for the wire-service /timeline/ route.
+ * Toggled by the user; persisted in localStorage. Off by default.
+ *
+ * Implementation: a `.phosphor-green` wrapper class overrides the page
+ * tokens (background / foreground / muted-foreground / border) AND replaces
+ * the hardcoded Tailwind severity/tint utility classes with brightness-only
+ * gradations of phosphor green. The wire-service identity (mono, hairlines,
+ * severity-as-text-color) is preserved — just collapsed to one hue.
+ * ------------------------------------------------------------------------- */
+.phosphor-green {
+  /* Color tokens — every Tailwind utility that reads these resolves green. */
+  --background: #040b04;
+  --foreground: #33ff33;
+  --muted-foreground: rgba(51, 255, 51, 0.6);
+  --border: rgba(51, 255, 51, 0.22);
+  --input: rgba(51, 255, 51, 0.3);
+  --card: #061106;
+  --card-foreground: #33ff33;
+  --popover: #061106;
+  --popover-foreground: #33ff33;
+  --muted: rgba(51, 255, 51, 0.08);
+  --accent: rgba(51, 255, 51, 0.12);
+  --accent-foreground: #33ff33;
+  --primary: #33ff33;
+  --primary-foreground: #040b04;
+  --secondary: rgba(51, 255, 51, 0.1);
+  --secondary-foreground: #33ff33;
+  --ring: #5dff5d;
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Severity text colors — Tailwind hardcoded hex values do not read tokens, so
+ * map each severity slot to a brightness gradation of phosphor green. */
+.phosphor-green .text-zinc-600,
+.phosphor-green .text-zinc-400,
+.phosphor-green .dark\:text-zinc-400 { color: rgba(51, 255, 51, 0.5) !important; }
+.phosphor-green .text-sky-700,
+.phosphor-green .text-sky-400,
+.phosphor-green .dark\:text-sky-400 { color: rgba(51, 255, 51, 0.72) !important; }
+.phosphor-green .text-amber-700,
+.phosphor-green .text-amber-400,
+.phosphor-green .dark\:text-amber-400 { color: #33ff33 !important; }
+.phosphor-green .text-orange-700,
+.phosphor-green .text-orange-400,
+.phosphor-green .dark\:text-orange-400 { color: #33ff33 !important; font-weight: 600; }
+.phosphor-green .text-red-700,
+.phosphor-green .text-red-400,
+.phosphor-green .dark\:text-red-400 {
+  color: #66ff66 !important;
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(102, 255, 102, 0.45);
+}
+.phosphor-green .text-emerald-500,
+.phosphor-green .text-emerald-600,
+.phosphor-green .text-emerald-400,
+.phosphor-green .dark\:text-emerald-400 { color: #33ff33 !important; }
+
+/* Per-class row + chip tints — collapse all hues to a faint uniform wash so
+ * class identity comes from the slug text, not from color. */
+.phosphor-green [class*="bg-rose-500"],
+.phosphor-green [class*="bg-cyan-500"],
+.phosphor-green [class*="bg-indigo-500"],
+.phosphor-green [class*="bg-fuchsia-500"],
+.phosphor-green [class*="bg-sky-500"],
+.phosphor-green [class*="bg-orange-500"],
+.phosphor-green [class*="bg-emerald-500"],
+.phosphor-green [class*="bg-teal-500"],
+.phosphor-green [class*="bg-lime-500"],
+.phosphor-green [class*="bg-blue-500"],
+.phosphor-green [class*="bg-violet-500"],
+.phosphor-green [class*="bg-amber-500"],
+.phosphor-green [class*="bg-zinc-500"] {
+  background-color: rgba(51, 255, 51, 0.04) !important;
+}
+
+/* Borders that use hardcoded amber (open-incidents band, pinned-row tint). */
+.phosphor-green [class*="border-amber-500"] {
+  border-color: rgba(51, 255, 51, 0.4) !important;
+}
+
+/* Subtle CRT scanline texture — only over the feed surface, gentle so it
+ * never competes with text legibility. Respects reduced-motion (no flicker).*/
+.phosphor-green {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.25) 2px,
+    rgba(0, 0, 0, 0.25) 3px
+  );
+}
+
+/* Phosphor toggle affordance: minimal mono link, almost invisible until
+ * hovered. Active state shows the bracketed glyph filled. */
+.phosphor-toggle {
+  font-family: var(--font-geist-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.phosphor-toggle:hover,
+.phosphor-toggle:focus-visible { color: var(--foreground); }
+.phosphor-green .phosphor-toggle { color: #33ff33; }
