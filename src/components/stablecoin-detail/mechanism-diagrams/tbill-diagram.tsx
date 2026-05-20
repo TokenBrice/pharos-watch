@@ -7,8 +7,8 @@ import {
 
 const ACCENT = "var(--mechanism-tbill)";
 
-export const TBILL_STRESS_FOOTNOTE =
-  "stress: redemption gate (Reserve Primary Fund, Sep 2008)";
+const TBILL_STRESS_FOOTNOTE =
+  "stress: instant-redemption cap / USDC rail constraint (OUSG)";
 
 interface TbillDiagramProps {
   symbol: string;

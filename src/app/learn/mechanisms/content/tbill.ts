@@ -30,7 +30,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Redemption gating and transfer restrictions",
-      body: "These are securities, not cash. Transfers are restricted to whitelisted addresses; primary-market redemption can be paused, queued, or settled T+N. In a stressed market this matters more than the underlying asset risk. On 16 September 2008, the Reserve Primary Fund — the original U.S. money market fund — broke the buck after its $785M of Lehman Brothers commercial paper became unsalable; institutional redemptions surged, the SEC suspended further withdrawals, and the fund was liquidated over the following year. Today's tokenized money-market funds carry the same redemption-gate surface; a daily-NAV ticker does not change that.",
+      body: "These are securities, not cash. Transfers are restricted to whitelisted addresses; primary-market redemption can be paused, queued, rate-limited, or settled T+N. In a stressed crypto market this matters more than the underlying asset risk: OUSG advertises instant redemptions, but its own docs set 24-hour global and per-investor caps, say instant redemptions can be limited by available USDC liquidity, and expose paused-redemption states for integrators. A daily-NAV ticker does not turn a permissioned fund share into cash.",
     },
     {
       headline: "Custodian and fund-administrator failure",
