@@ -150,116 +150,112 @@ function HeroEscapeHatch({ className, desktop = false }: { className?: string; d
   );
 }
 
-export function StartHerePage() {
+function StartHeroSection() {
   return (
-    <FeaturePageShell
-      breadcrumbName="Start Here"
-      path="/start/"
-      title="Start Here"
-      containerClassName="mx-auto max-w-6xl"
+    <section
+      aria-label="Route planner"
+      className="pharos-card-shell relative overflow-hidden rounded-[2rem] border border-black/8 bg-[linear-gradient(128deg,oklch(0.975_0.01_248_/_0.98),oklch(0.93_0.018_248_/_0.99)_56%,oklch(0.95_0.024_52_/_0.98))] px-4 py-5 text-foreground shadow-[0_28px_72px_oklch(0_0_0_/0.12)] dark:border-white/8 dark:bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] dark:shadow-[0_34px_90px_oklch(0_0_0_/0.32)] sm:px-6 sm:py-7 lg:px-7 lg:py-8"
     >
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section
-        aria-label="Route planner"
-        className="pharos-card-shell relative overflow-hidden rounded-[2rem] border border-black/8 bg-[linear-gradient(128deg,oklch(0.975_0.01_248_/_0.98),oklch(0.93_0.018_248_/_0.99)_56%,oklch(0.95_0.024_52_/_0.98))] px-4 py-5 text-foreground shadow-[0_28px_72px_oklch(0_0_0_/0.12)] dark:border-white/8 dark:bg-[linear-gradient(128deg,oklch(0.19_0.03_248_/_0.98),oklch(0.11_0.016_248_/_0.99)_56%,oklch(0.15_0.02_40_/_0.98))] dark:shadow-[0_34px_90px_oklch(0_0_0_/0.32)] sm:px-6 sm:py-7 lg:px-7 lg:py-8"
-      >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(oklch(0_0_0_/_0.05)_1px,transparent_1px),linear-gradient(90deg,oklch(0_0_0_/_0.04)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.18] dark:bg-[linear-gradient(oklch(1_0_0_/_0.06)_1px,transparent_1px),linear-gradient(90deg,oklch(1_0_0_/_0.05)_1px,transparent_1px)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(oklch(0_0_0_/_0.05)_1px,transparent_1px),linear-gradient(90deg,oklch(0_0_0_/_0.04)_1px,transparent_1px)] [background-size:32px_32px] opacity-[0.18] dark:bg-[linear-gradient(oklch(1_0_0_/_0.06)_1px,transparent_1px),linear-gradient(90deg,oklch(1_0_0_/_0.05)_1px,transparent_1px)]" />
 
-        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(25rem,1.05fr)] lg:gap-8 xl:grid-cols-[minmax(0,0.6fr)_minmax(32rem,1.4fr)]">
-          <div className="space-y-6 lg:self-center lg:space-y-7">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">New to Pharos?</p>
-                <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
-              </div>
+      <div className="relative grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(25rem,1.05fr)] lg:gap-8 xl:grid-cols-[minmax(0,0.6fr)_minmax(32rem,1.4fr)]">
+        <div className="space-y-6 lg:self-center lg:space-y-7">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">New to Pharos?</p>
+              <div className="h-px flex-1 bg-gradient-to-r from-frost-blue/35 to-transparent" />
+            </div>
 
-              <h2 className="max-w-full text-[clamp(1.85rem,5.4vw,4.7rem)] font-extrabold leading-[0.95] tracking-[-0.05em] lg:max-w-none">
-                <span className="block text-muted-foreground/80">Most trackers show price.</span>
-                <span className="block text-foreground">Pharos shows risk.</span>
-              </h2>
-              <p className="max-w-xl text-base leading-8 text-muted-foreground lg:max-w-[44ch]">
-                <span className="sm:hidden">
-                  Live risk surveillance across{" "}
-                  <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
-                  stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
-                  <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
-                  on-chain reads.
-                </span>
-                <span className="hidden sm:inline">
-                  Live risk surveillance across{" "}
-                  <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
-                  stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
-                  <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
-                  on-chain reads. Built by{" "}
-                  <Link
-                    href="/about/"
-                    className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-foreground"
-                  >
-                    TokenBrice and a small team
-                  </Link>
-                  .
-                </span>
-              </p>
-
-              {/* Trust strip — single mono line, no pill chrome */}
-              <div className="space-y-1.5">
-                <p
-                  aria-label="Pharos posture"
-                  className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.18em] text-muted-foreground"
-                >
-                  Free · Independent · Donation-funded · No fees · No ads
-                </p>
+            <h2 className="flex max-w-full flex-col gap-1 text-[clamp(1.85rem,5.4vw,4.7rem)] font-extrabold leading-[1.02] tracking-[-0.05em] lg:max-w-none">
+              <span className="block text-muted-foreground/80">Most trackers show price.</span>
+              <span className="block text-foreground">Pharos shows risk.</span>
+            </h2>
+            <p className="max-w-xl text-base leading-8 text-muted-foreground lg:max-w-[44ch]">
+              <span className="sm:hidden">
+                Live risk surveillance across{" "}
+                <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
+                stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
+                <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
+                on-chain reads.
+              </span>
+              <span className="hidden sm:inline">
+                Live risk surveillance across{" "}
+                <span className="font-mono text-foreground">{ACTIVE_STABLECOIN_COUNT}</span> stablecoins — peg
+                stability, on-chain liquidity, dependency exposure, and issuer behavior, scored every{" "}
+                <span className="font-mono text-foreground">30 min</span> from DefiLlama, CoinGecko, and direct
+                on-chain reads. Built by{" "}
                 <Link
-                  href="/funding/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-sm text-foreground underline underline-offset-4 hover:text-foreground"
+                  href="/about/"
+                  className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-4 hover:text-foreground"
                 >
-                  See the ledger
-                  <ArrowRight className="h-3 w-3" />
+                  TokenBrice and a small team
                 </Link>
-              </div>
-            </div>
+                .
+              </span>
+            </p>
 
-            <div className="hidden lg:block">
-              <HeroEscapeHatch desktop />
+            {/* Trust strip — single mono line, no pill chrome */}
+            <div className="space-y-1.5">
+              <p
+                aria-label="Pharos posture"
+                className="font-mono text-[11px] uppercase leading-relaxed tracking-[0.18em] text-muted-foreground"
+              >
+                Free · Independent · Donation-funded · No fees · No ads
+              </p>
+              <Link
+                href="/funding/"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-sm text-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                See the ledger
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
 
-          {/* Goal cards */}
-          <div className="relative p-1 sm:p-2">
-            <div className="relative space-y-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Choose your goal</p>
-                  <span className="rounded-full border border-black/8 bg-white/55 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
-                    {START_HERE_GOALS.length} routes
-                  </span>
+          <div className="hidden lg:block">
+            <HeroEscapeHatch desktop />
+          </div>
+        </div>
+
+        {/* Goal cards */}
+        <div className="relative p-1 sm:p-2">
+          <div className="relative space-y-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <p className="pharos-kicker text-sky-700 dark:text-frost-blue/82">Choose your goal</p>
+                <span className="rounded-full border border-black/8 bg-white/55 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
+                  {START_HERE_GOALS.length} routes
+                </span>
+              </div>
+              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Pick one route. The rest can stay peripheral until you need them.
+              </p>
+            </div>
+
+            <div className="pharos-stagger-entrance grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+              {START_HERE_GOALS.map((goal, index) => (
+                <div
+                  key={goal.title}
+                  style={{ "--stagger-index": index } as CSSProperties}
+                >
+                  <GoalCard {...goal} order={index} />
                 </div>
-                <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Pick one route. The rest can stay peripheral until you need them.
-                </p>
-              </div>
-
-              <div className="pharos-stagger-entrance grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                {START_HERE_GOALS.map((goal, index) => (
-                  <div
-                    key={goal.title}
-                    style={{ "--stagger-index": index } as CSSProperties}
-                  >
-                    <GoalCard {...goal} order={index} />
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-6 space-y-5 border-t border-white/10 pt-5 lg:hidden">
-          <HeroEscapeHatch />
-        </div>
-      </section>
+      <div className="mt-6 space-y-5 border-t border-white/10 pt-5 lg:hidden">
+        <HeroEscapeHatch />
+      </div>
+    </section>
+  );
+}
 
-      {/* ── How Pharos scores risk ───────────────────────────────────── */}
-      <section aria-labelledby="start-scores-title" className="mt-6 space-y-4 md:mt-8">
+function ScoresSection() {
+  return (
+    <section aria-labelledby="start-scores-title" className="mt-6 space-y-4 md:mt-8">
         <div className="max-w-3xl space-y-2">
           <p className="pharos-kicker">How Pharos scores risk</p>
           <h2 id="start-scores-title" className="text-2xl font-semibold tracking-tight text-foreground">
@@ -337,9 +333,12 @@ export function StartHerePage() {
           .
         </p>
       </section>
+  );
+}
 
-      {/* ── Glossary ─────────────────────────────────────────────────── */}
-      <section className="mt-12 space-y-3 md:mt-16">
+function GlossarySection() {
+  return (
+    <section className="mt-12 space-y-3 md:mt-16">
         <div className="space-y-2">
           <p className="pharos-kicker">How to read Pharos</p>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -384,9 +383,12 @@ export function StartHerePage() {
           ))}
         </dl>
       </section>
+  );
+}
 
-      {/* ── Feature Atlas ────────────────────────────────────────────── */}
-      <section className="mt-10 space-y-4 md:mt-14">
+function FeatureAtlasSection() {
+  return (
+    <section className="mt-10 space-y-4 md:mt-14">
         <div className="max-w-3xl space-y-2">
           <p className="pharos-kicker">Feature atlas</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Explore the rest of Pharos by job.</h2>
@@ -430,9 +432,12 @@ export function StartHerePage() {
           ))}
         </div>
       </section>
+  );
+}
 
-      {/* ── Power moves ──────────────────────────────────────────────── */}
-      <section className="mt-12 space-y-4 md:mt-16">
+function PowerMovesSection() {
+  return (
+    <section className="mt-12 space-y-4 md:mt-16">
         <div className="max-w-3xl space-y-2">
           <p className="pharos-kicker">Power moves</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -472,9 +477,12 @@ export function StartHerePage() {
           ))}
         </div>
       </section>
+  );
+}
 
-      {/* ── Sister tool: PharosVille ─────────────────────────────────── */}
-      <section aria-labelledby="start-pharosville-title" className="mt-12 space-y-4 md:mt-16">
+function PharosVilleSection() {
+  return (
+    <section aria-labelledby="start-pharosville-title" className="mt-12 space-y-4 md:mt-16">
         <div className="max-w-3xl space-y-2">
           <p className="pharos-kicker text-[oklch(0.42_0.10_60)] dark:text-[oklch(0.82_0.13_84)]">Immersive data visualization</p>
           <h2 id="start-pharosville-title" className="text-2xl font-semibold tracking-tight text-foreground">
@@ -521,9 +529,12 @@ export function StartHerePage() {
           </div>
         </a>
       </section>
+  );
+}
 
-      {/* ── Closing CTA ──────────────────────────────────────────────── */}
-      <div className="mt-10 flex flex-col items-center gap-3 pt-2 pb-4 sm:flex-row sm:flex-wrap sm:justify-center md:mt-14">
+function ClosingCta() {
+  return (
+    <div className="mt-10 flex flex-col items-center gap-3 pt-2 pb-4 sm:flex-row sm:flex-wrap sm:justify-center md:mt-14">
         <Button
           asChild
           className="h-11 rounded-full bg-foreground px-6 text-background shadow-[0_14px_30px_oklch(0_0_0_/0.14)] hover:bg-foreground/90 sm:h-10"
@@ -547,6 +558,24 @@ export function StartHerePage() {
           </Link>
         </p>
       </div>
+  );
+}
+
+export function StartHerePage() {
+  return (
+    <FeaturePageShell
+      breadcrumbName="Start Here"
+      path="/start/"
+      title="Start Here"
+      containerClassName="mx-auto max-w-6xl"
+    >
+      <StartHeroSection />
+      <ScoresSection />
+      <GlossarySection />
+      <FeatureAtlasSection />
+      <PowerMovesSection />
+      <PharosVilleSection />
+      <ClosingCta />
     </FeaturePageShell>
   );
 }
