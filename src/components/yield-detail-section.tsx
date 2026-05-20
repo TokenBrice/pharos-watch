@@ -455,7 +455,7 @@ export function YieldChangeAttributionCard({
       <p className="mt-1.5 text-sm text-foreground">{attribution.headline}</p>
       {hasEvidence ? (
         <details className="mt-2 text-xs text-muted-foreground">
-          <summary className="cursor-pointer select-none rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
+          <summary className="flex min-h-6 cursor-pointer select-none items-center rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
             Show evidence
           </summary>
           <ul className="mt-2 space-y-1">
@@ -617,7 +617,7 @@ export function YieldRankMovementCard({
       ) : null}
       {topDrivers.length > 0 ? (
         <details className="mt-2 text-xs text-muted-foreground">
-          <summary className="cursor-pointer select-none rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
+          <summary className="flex min-h-6 cursor-pointer select-none items-center rounded-sm pharos-focus-ring underline-offset-4 hover:text-foreground hover:underline">
             Driver breakdown
           </summary>
           <ul className="mt-1.5 space-y-0.5">
