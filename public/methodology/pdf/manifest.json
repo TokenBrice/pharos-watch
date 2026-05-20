@@ -39,18 +39,18 @@
       "title": "Pharos Methodology Index",
       "version": null,
       "urn": "urn:pharos:methodology:index",
-      "textHash": "b7542f46ce3849edce98f205d5f0f89bb6b9fae2bc653c25370af9a99c516311",
+      "textHash": "7302c150b4f61e40bd24e4084840f83f06328bb765b3092db2a87e362575901b",
       "textLength": 29451
     },
     {
-      "filename": "liquidity-score-v5.6.pdf",
+      "filename": "liquidity-score-v5.7.pdf",
       "key": "liquidity-score",
       "path": "/methodology/liquidity-score-changelog/",
       "title": "Liquidity Score Changelog",
-      "version": "5.6",
-      "urn": "urn:pharos:methodology:liquidity-score@v5.6",
-      "textHash": "224b742761b434e49e283822729dd6b1a83d4ea5fbb67043ec4666ac21c31aa9",
-      "textLength": 20393
+      "version": "5.7",
+      "urn": "urn:pharos:methodology:liquidity-score@v5.7",
+      "textHash": "b4db0696c31d7382d5a5e85a751795e50c26cce665afb4ed510fd2f6557a221b",
+      "textLength": 21654
     },
     {
       "filename": "mint-burn-flow-v6.11.pdf",
