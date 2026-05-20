@@ -405,7 +405,7 @@ export function TimelineClient() {
       since,
       q: filters.q || undefined,
     },
-    { autoLoadAll: false },
+    { maxAutoPages: 10 },
   );
 
   const {
