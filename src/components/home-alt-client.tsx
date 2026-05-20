@@ -125,6 +125,7 @@ export function HomeAltClient() {
           reportCards={reportCardMap}
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
           columnPreferenceNamespace="pharos-home-alt-table"
+          suppressDesktopHorizontalScroll
           pinnedStablecoinIds={pinned.pinnedIds}
           onTogglePinnedStablecoin={pinned.togglePinned}
           toolbarEyebrow="Stablecoin Overview"

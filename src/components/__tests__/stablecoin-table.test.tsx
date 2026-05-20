@@ -235,6 +235,24 @@ describe("StablecoinTable", () => {
     expect(scrollContainer?.className).not.toContain("xl:overflow-x-hidden");
   });
 
+  it("can suppress desktop horizontal scrolling while keeping mobile overflow enabled", () => {
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        suppressDesktopHorizontalScroll
+      />,
+    );
+
+    const table = screen.getAllByRole("table")[0];
+    const scrollContainer = table?.parentElement;
+
+    expect(scrollContainer?.className).toContain("overflow-x-auto");
+    expect(scrollContainer?.className).toContain("sm:overflow-x-hidden");
+  });
+
   it("renders the blacklistable column when enabled", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["mcap", "blacklistable"]));
 

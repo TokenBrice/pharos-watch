@@ -319,6 +319,7 @@ export function HomepageClient() {
             pegScores={pegScores}
             dexLiquidity={dexLiquidity ?? undefined}
             reportCards={reportCardMap}
+            suppressDesktopHorizontalScroll
             pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
             onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}
             onClearSearch={() => filters.setSearchQuery("")}

@@ -148,6 +148,7 @@ interface StablecoinTableProps {
   reportCards?: Record<string, ReportCard>;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
+  suppressDesktopHorizontalScroll?: boolean;
   initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
@@ -173,6 +174,7 @@ export function StablecoinTable({
   reportCards,
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
+  suppressDesktopHorizontalScroll = false,
   initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
@@ -366,7 +368,10 @@ export function StablecoinTable({
         Swipe sideways for more columns. Risk cues stay visible in each row.
       </div>
 
-      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0">
+      <div
+        ref={scrollRef}
+        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "sm:overflow-x-hidden" : ""}`}
+      >
         <table
           className={`min-w-[420px] sm:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
           style={isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined}
