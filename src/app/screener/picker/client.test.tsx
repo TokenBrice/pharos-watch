@@ -204,7 +204,7 @@ import { SELECTOR_STATE_DEFAULTS, toSelectorInput } from "./selector-state";
 // ----------------------------------------------------------------------------
 
 function setUrlSearch(search: string) {
-  window.history.replaceState(null, "", `/screener/selector/${search ? `?${search}` : ""}`);
+  window.history.replaceState(null, "", `/screener/picker/${search ? `?${search}` : ""}`);
 }
 
 beforeEach(() => {

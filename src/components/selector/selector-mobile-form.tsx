@@ -10,8 +10,8 @@ import type {
   SelectorProfile,
   SelectorVenue,
   SelectorWizardState,
-} from "@/app/screener/selector/selector-state";
-import { shouldSkipExitStep } from "@/app/screener/selector/selector-state";
+} from "@/app/screener/picker/selector-state";
+import { shouldSkipExitStep } from "@/app/screener/picker/selector-state";
 
 interface SelectorMobileFormProps {
   state: SelectorWizardState;

@@ -3304,7 +3304,7 @@ Same-origin only. Browser CORS blocks cross-origin POST before the function exec
 
 ### `GET /selector-snapshot/:sid`
 
-Returns a previously stored Stablecoin Selector output JSON identified by content-addressed `sid` (32 hex chars). The returned artifact is frozen; clients that offer "Compare to today's data" must compute a separate live Selector run and keep the stored artifact unchanged.
+Returns a previously stored Stablecoin Picker output JSON identified by content-addressed `sid` (32 hex chars). The returned artifact is frozen; clients that offer "Compare to today's data" must compute a separate live Picker run and keep the stored artifact unchanged.
 
 **Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
 
@@ -3369,7 +3369,7 @@ On GET, the Pages Function parses the stored payload, recomputes the canonical s
 
 ### `POST /selector-snapshot`
 
-Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Selector wizard at `https://pharos.watch/screener/selector/`).
+Stores a Stablecoin Picker output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Picker wizard at `https://pharos.watch/screener/picker/`).
 
 **Authentication:** exempt — same-origin gated.
 
@@ -3377,7 +3377,7 @@ Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempo
 
 **Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
 
-Share-link privacy property: the stored payload contains the Selector answers and output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
+Share-link privacy property: the stored payload contains the Picker answers and output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
 
 **Validation matrix:**
 

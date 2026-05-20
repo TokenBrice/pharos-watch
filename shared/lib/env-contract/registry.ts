@@ -602,7 +602,7 @@ export const ENV_BINDINGS = [
   {
     key: "SELECTOR_SNAPSHOTS",
     valueType: "KVNamespace",
-    description: "KV namespace binding for the Pages-only Stablecoin Selector snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries.",
+    description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
       pagesSiteData: { order: 5, status: "required" },

@@ -92,7 +92,7 @@ describe("SelectorResultSummary", () => {
         onAdjust={vi.fn()}
         onCopyShareLink={vi.fn().mockRejectedValue(new Error("Clipboard denied"))}
         copyShareDisabled={false}
-        shareFallbackUrl="https://pharos.watch/screener/selector/?sid=abc"
+        shareFallbackUrl="https://pharos.watch/screener/picker/?sid=abc"
         skipped={[]}
       />,
     );
@@ -100,7 +100,7 @@ describe("SelectorResultSummary", () => {
     fireEvent.click(screen.getByRole("button", { name: /Copy share link/i }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("Clipboard denied");
-    expect(screen.getByDisplayValue("https://pharos.watch/screener/selector/?sid=abc")).toBeTruthy();
+    expect(screen.getByDisplayValue("https://pharos.watch/screener/picker/?sid=abc")).toBeTruthy();
   });
 });
 

@@ -54,7 +54,7 @@ export function SelectorCallout() {
   // Server renders the default desktop variant; mobile branch flips after hydration.
   const showMobile = hydrated && isMobile;
 
-  const selectorHref = "/screener/selector/";
+  const selectorHref = "/screener/picker/";
 
   if (state === "dismissed") {
     return (
@@ -62,13 +62,13 @@ export function SelectorCallout() {
         role="note"
         className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground"
       >
-        <span>Selector hidden.</span>
+        <span>Picker hidden.</span>
         <button
           type="button"
           onClick={handleRestore}
           className="pharos-focus-ring rounded-sm font-medium text-foreground underline underline-offset-4 hover:text-foreground"
         >
-          Bring back the Selector
+          Bring back the Picker
           <ArrowRight className="ml-1 inline h-3 w-3" aria-hidden="true" />
         </button>
       </div>
@@ -87,7 +87,7 @@ export function SelectorCallout() {
         >
           <Compass className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="min-w-0 truncate">
-            <span className="font-semibold">Try the Selector</span>
+            <span className="font-semibold">Try the Picker</span>
             <span className="text-muted-foreground"> — match a profile to a shortlist</span>
           </span>
           <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -95,7 +95,7 @@ export function SelectorCallout() {
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Dismiss Selector callout"
+          aria-label="Dismiss Picker callout"
           className="pharos-focus-ring inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -117,10 +117,10 @@ export function SelectorCallout() {
         </span>
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-semibold tracking-tight text-foreground">
-            Pharos Stablecoin Selector
+            Pharos Stablecoin Picker
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            The Screener gives you the full universe to filter. The Selector flips that: describe your operation and needs and Pharos returns a profile-fit shortlist.
+            The Screener gives you the full universe to filter. The Picker flips that: describe your operation and needs and Pharos returns a profile-fit shortlist.
           </p>
         </div>
       </div>
@@ -129,13 +129,13 @@ export function SelectorCallout() {
           href={selectorHref}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border/65 bg-foreground px-4 text-sm font-medium text-background hover:bg-foreground/90 sm:min-h-9"
         >
-          Try the Selector
+          Try the Picker
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Dismiss Selector callout"
+          aria-label="Dismiss Picker callout"
           className="pharos-focus-ring inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         >
           <X className="h-4 w-4" aria-hidden="true" />

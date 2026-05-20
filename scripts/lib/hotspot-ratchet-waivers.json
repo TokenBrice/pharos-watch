@@ -19,7 +19,7 @@
     "disposition": "queued-p4",
     "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests."
   },
-  "src/app/screener/selector/client.tsx": {
+  "src/app/screener/picker/client.tsx": {
     "disposition": "queued-p4",
     "notes": "Selector client still coordinates wizard history, query hydration, data loading, snapshot fetch/post, and result rendering. This remediation extracted dataset adaptation, but the route shell remains a hotspot; split snapshot lifecycle and wizard orchestration hooks before adding more selector UI modes."
   },

@@ -1,5 +1,5 @@
 /**
- * Public surface of the Stablecoin Selector engine.
+ * Public surface of the Stablecoin Picker engine.
  *
  * Frontend imports `runSelector`, `selectorAnswersToScreenerFilters`,
  * `computeSnapshotId`, and the types from this barrel. Engine-internal

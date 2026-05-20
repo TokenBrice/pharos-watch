@@ -1,16 +1,16 @@
-# Screener Selector Page
+# Screener Picker Page
 
-Route contract for `/screener/selector/`, the noindex profile-driven stablecoin shortlist.
+Route contract for `/screener/picker/`, the noindex profile-driven stablecoin shortlist.
 
-The Selector flips the Screener relationship: instead of filtering the full universe, the user describes a profile (Treasury, Yield, Active Trading) and Pharos returns up to 3 profile-fit candidates plus up to 2 profile mismatches/watch-outs, with live-data justifications. The Screener remains the durable surface; the Selector seeds it.
+The Picker flips the Screener relationship: instead of filtering the full universe, the user describes a profile (Treasury, Yield, Active Trading) and Pharos returns up to 3 profile-fit candidates plus up to 2 profile mismatches/watch-outs, with live-data justifications. The Screener remains the durable surface; the Picker seeds it.
 
 ---
 
 ## Route Shape
 
-- **Server shell:** `src/app/screener/selector/page.tsx` (frontend agent)
-- **Client implementation:** `src/app/screener/selector/client.tsx` (frontend agent)
-- **URL state codec:** `src/app/screener/selector/selector-state.ts` (frontend agent)
+- **Server shell:** `src/app/screener/picker/page.tsx` (frontend agent)
+- **Client implementation:** `src/app/screener/picker/client.tsx` (frontend agent)
+- **URL state codec:** `src/app/screener/picker/selector-state.ts` (frontend agent)
 - **Scoring engine:** `shared/lib/selector/engine.ts` + `shared/lib/selector/version.ts` (engine agent)
 - **Snapshot canonicalization:** `shared/lib/selector/canonicalize.ts` (engine + integration co-owned)
 - **Snapshot Pages Function:** `functions/selector-snapshot/[[path]].ts` (integration)
@@ -18,17 +18,17 @@ The Selector flips the Screener relationship: instead of filtering the full univ
 - **Editorial templates:** `shared/lib/selector/what-to-watch-templates.ts`, `shared/lib/selector/why-keys.ts` (engine agent; banned-phrase lint applies)
 - **Entry callout:** `src/components/selector/selector-callout.tsx`, rendered from `src/app/screener/client.tsx`
 
-The route shell is intentionally `noindex,follow`, marks the route as beta, and uses canonical `/screener/selector/`. It is omitted from the sitemap.
+The route shell is intentionally `noindex,follow`, marks the route as beta, and uses canonical `/screener/picker/`. It is omitted from the sitemap.
 
 ---
 
 ## Peg Scope
 
-Initial selectable pegs are `USD`, `EUR`, `CHF`, and `GOLD`. This pass is limited to pegs that have enough active rows and live Safety/Peg/DEWS/liquidity/yield coverage to avoid empty Selector routes.
+Initial selectable pegs are `USD`, `EUR`, `CHF`, and `GOLD`. This pass is limited to pegs that have enough active rows and live Safety/Peg/DEWS/liquidity/yield coverage to avoid empty Picker routes.
 
 Yield exposes the same peg set (`USD`, `EUR`, `CHF`, `GOLD`). Thin or strict combinations can use the engine's low-confidence fallback rather than returning an empty result, but rows still need required profile signals and a usable Yield source before they can be recommended.
 
-`SILVER`, `VAR`, and `OTHER` are intentionally excluded because their current live signal coverage still produces empty selector routes or needs separate reference-asset treatment. `BRL` is also held back until the `peggedREAL` alias path is audited across sync, price validation, and supplemental-asset creation.
+`SILVER`, `VAR`, and `OTHER` are intentionally excluded because their current live signal coverage still produces empty picker routes or needs separate reference-asset treatment. `BRL` is also held back until the `peggedREAL` alias path is audited across sync, price validation, and supplemental-asset creation.
 
 The URL key is `peg`; missing or invalid values default to `USD` for backward compatibility. For `p=yield`, unsupported peg values also normalize to `USD`.
 
@@ -36,7 +36,7 @@ The URL key is `peg`; missing or invalid values default to `USD` for backward co
 
 ## Data Contract
 
-The engine consumes the same React Query hooks the Screener already uses; no new data endpoints land for the Selector. The full list:
+The engine consumes the same React Query hooks the Screener already uses; no new data endpoints land for the Picker. The full list:
 
 1. `useStablecoins()` — tracked universe, prices, supply.
 2. `useReportCards()` — Safety Score, per-dimension scores, dependency-graph data.
@@ -47,7 +47,7 @@ The engine consumes the same React Query hooks the Screener already uses; no new
 7. `useBluechipRatings()` — third-party bluechip grades.
 8. `useRedemptionBackstops()` — effective-exit score and redemption-rail data.
 
-The route passes the selected `pegCurrency` into the data adapter. The adapter keeps active rows for that selected peg and computes `datasetHash` over the selected-peg universe with every decision-affecting field: exclusions, normalized scoring inputs, tie-break fields, explanation inputs, venue/source fields, lifecycle/status flags, `pegCurrency`, and source/methodology metadata that changes output semantics. Freshness-only fields such as `updatedAt`, `capturedAt`, and hook fetch timestamps stay out of `datasetHash` unless they affect ranking, exclusion, or staleness policy. Refetches that change decision content change `datasetHash` and trigger a fresh selector run. The hash must be stable and collision-resistant enough for audit references, currently expected to be SHA-256-based rather than the earlier short `djb2Hex` helper.
+The route passes the selected `pegCurrency` into the data adapter. The adapter keeps active rows for that selected peg and computes `datasetHash` over the selected-peg universe with every decision-affecting field: exclusions, normalized scoring inputs, tie-break fields, explanation inputs, venue/source fields, lifecycle/status flags, `pegCurrency`, and source/methodology metadata that changes output semantics. Freshness-only fields such as `updatedAt`, `capturedAt`, and hook fetch timestamps stay out of `datasetHash` unless they affect ranking, exclusion, or staleness policy. Refetches that change decision content change `datasetHash` and trigger a fresh picker run. The hash must be stable and collision-resistant enough for audit references, currently expected to be SHA-256-based rather than the earlier short `djb2Hex` helper.
 
 The pure engine still filters by `input.pegCurrency`, so tests can pass an all-peg map safely. The engine reads `methodologyVersion` from each upstream `_meta` / `methodology.version` envelope when present and falls back to `"unversioned"` per endpoint otherwise; gaps surface in the output payload. `engineVersion` / `selectorVersion` must bump whenever ranking, exclusion, missing-data, tie-break, explanation, or deterministic output semantics change.
 
@@ -78,7 +78,7 @@ Browser-local state is intentionally split by lifetime. There is no long-lived l
 
 Storage layer is best-effort; quota errors are silently dropped. Session recovery, when present, must be visibly labeled as a restored session result and must not create localStorage output history.
 
-**Snapshot share URL:** `/screener/selector/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp, debug, and freshness suffixes) share the same sid. The frozen artifact contains the form answers and output; the sid is the lookup key. The share UI must disclose before or during link creation that answers and shortlist output are stored for 5 years and that anyone with the link can view the snapshot.
+**Snapshot share URL:** `/screener/picker/?sid={32-hex}`. The sid is content-addressed — two runs that produce identical canonical output (modulo timestamp, debug, and freshness suffixes) share the same sid. The frozen artifact contains the form answers and output; the sid is the lookup key. The share UI must disclose before or during link creation that answers and shortlist output are stored for 5 years and that anyone with the link can view the snapshot.
 
 **Snapshot-miss behavior:** when a sid-only share URL hits a KV miss, the client shows a not-found error instead of silently generating a different live result. If a legacy or hand-authored URL also carries complete wizard state, the client can fall back to live engine output for those inputs with a one-line "Original snapshot no longer cached" banner.
 
@@ -90,7 +90,7 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 ## Snapshot Pages Function
 
-`functions/selector-snapshot/[[path]].ts` is the only HTTP surface that the Selector adds. It runs on Cloudflare Pages Functions; no Worker, no D1, no cron.
+`functions/selector-snapshot/[[path]].ts` is the only HTTP surface that the Picker adds. It runs on Cloudflare Pages Functions; no Worker, no D1, no cron.
 
 | Surface | Method | Behavior |
 | --- | --- | --- |
@@ -126,7 +126,7 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 ## UI Responsibilities
 
-The frontend agent owns `src/app/screener/selector/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
+The frontend agent owns `src/app/screener/picker/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
 
 - Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, venue, and exit speed. Desktop single-select questions use a consistent select-then-Next rhythm; radio selection alone does not advance to result.
 - Mobile branching is CSS-only except for the callout slim/full variant and the mobile single-form, both gated behind `useHydrated() && useIsMobile(640)`.
@@ -134,7 +134,7 @@ The frontend agent owns `src/app/screener/selector/` and `src/components/selecto
 - Result page renders the ranked shortlist, lower-ranked/watch-out rows, peg-aware answer chips, priority chips, evidence chips, the mandatory "What to watch" line per shortlist entry, and readable Screener handoff filter chips.
 - Empty states use engine-owned `exclusionSummary`, `closestSurvivors`, and `relaxableConstraints` to distinguish strict constraints, sparse coverage, missing Yield rails, and no-clean-fit relaxed fallback.
 - Result summary renders distinct banners for `lowConfidence`, sparse coverage, uneven coverage, `usedRelaxedFallback`, stale Trading share blockers, and methodology/version drift.
-- `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/selector/?sid={sid}` on `200`, leave the button disabled with a notice on failure. Active Trading share copy is blocked when relevant `perInputStaleness` exceeds the configured freshness ceiling; Treasury and Yield are not blocked by Trading-only staleness. Disabled/error reasons are associated with the button and announced through status/alert regions.
+- `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/picker/?sid={sid}` on `200`, leave the button disabled with a notice on failure. Active Trading share copy is blocked when relevant `perInputStaleness` exceeds the configured freshness ceiling; Treasury and Yield are not blocked by Trading-only staleness. Disabled/error reasons are associated with the button and announced through status/alert regions.
 - Result actions include Adjust answers, Verify in Screener, Copy share link, and optional Compare shortlist vs watch-outs. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
 - Loading states set `aria-busy` and include screen-reader loading text. Result generation/snapshot load moves focus to the result summary heading, full-card option labels expose `focus-within` styling, skipped-coin disclosures are explicit controls, and mobile shortlist jumps move focus like skip links.
 - Mobile/narrow-width QA must cover long coin names, long hashes/version strings, multi-line relax buttons, and chip wrapping so text does not overlap at common mobile widths or 200 percent zoom.
@@ -157,13 +157,13 @@ Static checked-in 1200×630 PNG cards at:
 
 **Current status:** checked-in profile cards are real 1200×630 marketing surfaces. They avoid coin names and keep the profile-level privacy property.
 
-OG metadata wiring lives in `src/app/screener/selector/page.tsx` (frontend agent). Per-snapshot OG cards are intentionally NOT served; recipients of `?sid=...` URLs always see the profile-level OG. That is the privacy property.
+OG metadata wiring lives in `src/app/screener/picker/page.tsx` (frontend agent). Per-snapshot OG cards are intentionally NOT served; recipients of `?sid=...` URLs always see the profile-level OG. That is the privacy property.
 
 ---
 
 ## Update Rules
 
-When changing Selector behavior, update this doc alongside:
+When changing Picker behavior, update this doc alongside:
 
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
@@ -172,7 +172,7 @@ When changing Selector behavior, update this doc alongside:
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
 
-The Selector engine is deterministic and client-only. It does not call the Worker. The only HTTP surface it adds is the snapshot store, which is Pages-only. Because the current Selector remediation also touches shared runtime selector code, the deploy classifier result for this change set is `pages=yes`, `worker=yes`.
+The Picker engine is deterministic and client-only. It does not call the Worker. The only HTTP surface it adds is the snapshot store, which is Pages-only. Because the current Picker remediation also touches shared runtime selector code, the deploy classifier result for this change set is `pages=yes`, `worker=yes`.
 
 ---
 
@@ -180,8 +180,8 @@ The Selector engine is deterministic and client-only. It does not call the Worke
 
 | File | Role |
 |------|------|
-| `src/app/screener/selector/page.tsx` | Static route shell (frontend agent) |
-| `src/app/screener/selector/client.tsx` | Interactive wizard + result render (frontend agent) |
+| `src/app/screener/picker/page.tsx` | Static route shell (frontend agent) |
+| `src/app/screener/picker/client.tsx` | Interactive wizard + result render (frontend agent) |
 | `src/components/selector/*` | Wizard/result components (frontend agent) |
 | `shared/lib/selector/engine.ts` | `runSelector(input, data) → SelectorOutput` (engine agent) |
 | `shared/lib/selector/canonicalize.ts` | Snapshot canonicalization (engine + integration co-owned) |

@@ -38,9 +38,9 @@ const CALLOUTS: readonly CalloutItem[] = [
     Emblem: LiquidityEmblem,
   },
   {
-    name: "Selector",
+    name: "Picker",
     description: "Find your stablecoin",
-    href: "/screener/selector/",
+    href: "/screener/picker/",
     Emblem: SelectorEmblem,
   },
   {

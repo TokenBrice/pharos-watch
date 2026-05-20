@@ -35,38 +35,38 @@ afterEach(() => {
 describe("SelectorCallout", () => {
   it("renders default desktop variant with primary CTA", () => {
     render(<SelectorCallout />);
-    expect(screen.getByText(/Pharos Stablecoin Selector/i)).toBeTruthy();
-    const cta = screen.getByRole("link", { name: /Try the Selector/i });
-    expect(cta.getAttribute("href")).toMatch(/^\/screener\/selector\/?$/);
+    expect(screen.getByText(/Pharos Stablecoin Picker/i)).toBeTruthy();
+    const cta = screen.getByRole("link", { name: /Try the Picker/i });
+    expect(cta.getAttribute("href")).toMatch(/^\/screener\/picker\/?$/);
   });
 
   it("renders dismissed variant when storage marks dismissed", () => {
     window.localStorage.setItem(CALLOUT_KEY, "dismissed");
     render(<SelectorCallout />);
-    expect(screen.getByText(/Selector hidden/i)).toBeTruthy();
-    const restore = screen.getByText(/Bring back the Selector/i);
+    expect(screen.getByText(/Picker hidden/i)).toBeTruthy();
+    const restore = screen.getByText(/Bring back the Picker/i);
     fireEvent.click(restore);
-    expect(screen.queryByText(/Selector hidden/i)).toBeNull();
+    expect(screen.queryByText(/Picker hidden/i)).toBeNull();
     expect(window.localStorage.getItem(CALLOUT_KEY)).toBe("default");
   });
 
   it("respects the legacy hyphenated dismissal key", () => {
     window.localStorage.setItem(LEGACY_CALLOUT_KEY, "dismissed");
     render(<SelectorCallout />);
-    expect(screen.getByText(/Selector hidden/i)).toBeTruthy();
+    expect(screen.getByText(/Picker hidden/i)).toBeTruthy();
   });
 
   it("dismissing the default desktop card persists dismissed state", () => {
     render(<SelectorCallout />);
-    const dismiss = screen.getByRole("button", { name: /Dismiss Selector callout/i });
+    const dismiss = screen.getByRole("button", { name: /Dismiss Picker callout/i });
     fireEvent.click(dismiss);
     expect(window.localStorage.getItem(CALLOUT_KEY)).toBe("dismissed");
-    expect(screen.getByText(/Selector hidden/i)).toBeTruthy();
+    expect(screen.getByText(/Picker hidden/i)).toBeTruthy();
   });
 
   it("ignores legacy `has-run` value (feature removed); renders default", () => {
     window.localStorage.setItem(CALLOUT_KEY, "has-run");
     render(<SelectorCallout />);
-    expect(screen.getByText(/Pharos Stablecoin Selector/i)).toBeTruthy();
+    expect(screen.getByText(/Pharos Stablecoin Picker/i)).toBeTruthy();
   });
 });

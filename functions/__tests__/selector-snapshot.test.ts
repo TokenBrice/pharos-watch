@@ -242,7 +242,7 @@ describe("selector-snapshot Pages Function", () => {
         request: new Request("https://pharos.watch/selector-snapshot", {
           method: "POST",
           body: JSON.stringify(buildSelectorOutput()),
-          headers: { "Content-Type": "application/json", Referer: "https://pharos.watch/screener/selector/" },
+          headers: { "Content-Type": "application/json", Referer: "https://pharos.watch/screener/picker/" },
         }),
         env: makeEnv(),
         params: {},

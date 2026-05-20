@@ -1,5 +1,5 @@
 /**
- * URL state codec + pure wizard state machine for `/screener/selector/`.
+ * URL state codec + pure wizard state machine for `/screener/picker/`.
  *
  * Flat URL keys per plan §2.1: `p` `peg` `h` `d` `v` `u` `step` + share-link `sid` `ev`.
  * The codec encodes only non-default fields; null is expressed as a missing key.

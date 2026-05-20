@@ -175,7 +175,7 @@ src/                              Frontend (Next.js static export)
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
-│   ├── screener/                 Beta multi-signal stablecoin screener (+ screener/selector/)
+│   ├── screener/                 Beta multi-signal stablecoin screener (+ screener/picker/)
 │   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── upcoming/                 Pre-launch stablecoin tracker
@@ -206,7 +206,7 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── admin-api/[[path]].ts         Host gate for the private API management route
-├── selector-snapshot/[[path]].ts Pages-only Selector snapshot store/replay endpoint backed by `SELECTOR_SNAPSHOTS` KV
+├── selector-snapshot/[[path]].ts Pages-only Picker snapshot store/replay endpoint backed by `SELECTOR_SNAPSHOTS` KV
 ├── stablecoin/[[path]].ts        Legacy numeric stablecoin URL redirector
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper

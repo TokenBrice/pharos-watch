@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Banned-phrase lint for the Stablecoin Selector surface.
+ * Banned-phrase lint for the Stablecoin Picker surface.
  *
  * Scans the engine editorial templates, the Selector route hard-coded copy, the Selector
  * components, and the editorial worked examples in `agents/screener-selector/03-editorial.md`
@@ -33,7 +33,7 @@ const SCAN_TARGETS = [
   { kind: "file", path: "shared/lib/selector/what-to-watch-templates.ts" },
   { kind: "file", path: "shared/lib/selector/why-keys.ts" },
   { kind: "dir", path: "shared/lib/selector", extensions: [".ts"], excludeBasenames: ["why-keys.ts", "what-to-watch-templates.ts"] },
-  { kind: "dir", path: "src/app/screener/selector", extensions: [".ts", ".tsx"] },
+  { kind: "dir", path: "src/app/screener/picker", extensions: [".ts", ".tsx"] },
   { kind: "dir", path: "src/components/selector", extensions: [".ts", ".tsx"] },
   // The editorial doc itself teaches the banned phrases (§1/§2/§8/§10 contain quoted "do not
   // write" examples and the ban-list table). Only the §4 worked examples ship as ground-truth

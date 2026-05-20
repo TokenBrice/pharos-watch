@@ -52,16 +52,16 @@ The current policy copy covers:
 
 Portfolio holdings are explicitly described as browser-local only, which matches the `/portfolio/` implementation. The page now also notes that any delegated feedback contact handle will be visible in the GitHub issues that Pharos creates.
 
-### Stablecoin Selector storage
+### Stablecoin Picker storage
 
-The Stablecoin Selector at `/screener/selector/` uses browser-local storage only for functional UI recovery and dismissal state:
+The Stablecoin Picker at `/screener/picker/` uses browser-local storage only for functional UI recovery and dismissal state:
 
 - `pharos.selector.callout.v1` (`localStorage`) — Screener-page callout dismissal state. It survives reloads and clears when the user clears site data.
 - `pharos.selector.lastResult.v1` or equivalent (`sessionStorage`) — optional last-successful live result recovery after accidental navigation. It clears when the tab/session closes and is not written after explicit reset/clear.
 
-This is functional storage. It does not contain an IP address, a user identifier, or a cross-site beacon. The Selector must not create long-lived localStorage output history.
+This is functional storage. It does not contain an IP address, a user identifier, or a cross-site beacon. The Picker must not create long-lived localStorage output history.
 
-Snapshot share links (`/screener/selector/?sid={sid}`) reference a server-side KV-backed JSON payload that captures the selector output that was generated. The payload contains the form answers, the resulting shortlist, watch-out/profile-mismatch rows, methodology/version fields, and dataset hash; it does not contain an IP, a browser fingerprint, wallet address, account identifier, or other user identifier. Snapshot identifiers are **content-addressed** — two users who run the Selector with identical answers against an identical dataset produce the same identifier. Anyone with the link can view the frozen artifact. The store is a per-Pages KV namespace (`SELECTOR_SNAPSHOTS`) with a 5-year retention TTL, sized to meet record-keeping minima for adjacent legal frameworks (FINRA 4511, MiCA Art. 66, NYDFS Part 200). Because no personal data is stored, there is no right-to-erasure action a user can take on a specific snapshot.
+Snapshot share links (`/screener/picker/?sid={sid}`) reference a server-side KV-backed JSON payload that captures the selector output that was generated. The payload contains the form answers, the resulting shortlist, watch-out/profile-mismatch rows, methodology/version fields, and dataset hash; it does not contain an IP, a browser fingerprint, wallet address, account identifier, or other user identifier. Snapshot identifiers are **content-addressed** — two users who run the Picker with identical answers against an identical dataset produce the same identifier. Anyone with the link can view the frozen artifact. The store is a per-Pages KV namespace (`SELECTOR_SNAPSHOTS`) with a 5-year retention TTL, sized to meet record-keeping minima for adjacent legal frameworks (FINRA 4511, MiCA Art. 66, NYDFS Part 200). Because no personal data is stored, there is no right-to-erasure action a user can take on a specific snapshot.
 
 ### Telegram D1 Tables
 

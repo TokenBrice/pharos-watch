@@ -1,5 +1,5 @@
 /**
- * Stablecoin Selector — type vocabulary.
+ * Stablecoin Picker — type vocabulary.
  *
  * Single source of truth for selector enums and shapes. Every enumerable
  * string vocabulary is declared once as an `as const` tuple; types are

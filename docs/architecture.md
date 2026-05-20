@@ -176,7 +176,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
-  - `/screener/selector/` (profile-driven shortlist; Pages-only; KV-backed snapshot pinning at same-origin `/selector-snapshot/`; see [Screener Selector Page](./screener-selector-page.md))
+  - `/screener/picker/` (profile-driven shortlist; Pages-only; KV-backed snapshot pinning at same-origin `/selector-snapshot/`; see [Screener Picker Page](./screener-picker-page.md))
 - Public noindex utility route:
   - `/pharoswatchbot/app/` is the Telegram Mini App control panel and is marked `noindex,nofollow`.
 - Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
@@ -225,7 +225,7 @@ These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). Th
 
 | Endpoint | Description |
 | --- | --- |
-| `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a semantically validated `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, debug-stripped, 5-year TTL. See [Screener Selector Page](./screener-selector-page.md). |
+| `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a semantically validated `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, debug-stripped, 5-year TTL. See [Screener Picker Page](./screener-picker-page.md). |
 | `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored frozen `SelectorOutput` or `404`. It recomputes the canonical sid before replay, returns `502` for corrupt/mismatched stored values, and uses `private, no-store` so public shared caches cannot bypass the origin gate. |
 
 ### Static feed route handlers

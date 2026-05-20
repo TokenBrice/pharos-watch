@@ -88,8 +88,8 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `src/app/screener/client.tsx` - ScreenerClient
 - `src/app/screener/error.tsx`
 - `src/app/screener/page.tsx` - route /screener; metadata
-- `src/app/screener/selector/client.tsx` - SelectorClient, UseSelectorResult, decodeSelectorState, highestValidStep, useSelector
-- `src/app/screener/selector/page.tsx` - route /screener/selector; metadata
+- `src/app/screener/picker/client.tsx` - SelectorClient, UseSelectorResult, decodeSelectorState, highestValidStep, useSelector
+- `src/app/screener/picker/page.tsx` - route /screener/picker; metadata
 - `src/app/sitemap.ts` - default:sitemap, dynamic
 - `src/app/stability-index/client.tsx` - StabilityIndexClient
 - `src/app/stability-index/error.tsx`

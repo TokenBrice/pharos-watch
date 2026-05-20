@@ -159,7 +159,7 @@ const QUESTION_HELPER_COPY: Record<2 | 3 | 4 | 5 | 6, string> = {
   2: "Narrows the universe to stablecoins that target this reference asset.",
   3: "Longer horizons put more weight on resilience, dependency risk, and history.",
   4: "Tighter tolerance applies stricter peg and stress-signal thresholds before ranking.",
-  5: "Venue scope changes how much composability and source exposure the Selector permits.",
+  5: "Venue scope changes how much composability and source exposure the Picker permits.",
   6: "Faster exits increase the importance of liquidity, DEWS, and redemption pathways.",
 };
 
@@ -273,7 +273,7 @@ export function SelectorClient() {
     const params = new URLSearchParams();
     params.set("sid", payload.sid);
     if (payload.ev) params.set("ev", payload.ev);
-    const shareUrl = `${window.location.origin}/screener/selector/?${params.toString()}`;
+    const shareUrl = `${window.location.origin}/screener/picker/?${params.toString()}`;
     try {
       await copyToClipboard(shareUrl);
     } catch (error) {
@@ -954,7 +954,7 @@ function SessionRestorePanel({
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border/55 bg-card/45 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
       <p className="text-muted-foreground">
-        Previous Selector result from {formatTimestamp(savedAt)} is available for this tab.
+        Previous Picker result from {formatTimestamp(savedAt)} is available for this tab.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
