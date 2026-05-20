@@ -1,13 +1,19 @@
+import type { Metadata } from "next";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomeAltClient } from "@/components/home-alt-client";
 import { SiteHeader } from "@/components/site-header";
-import { buildPageMetadata, HOME_ALT_PAGE_METADATA } from "@/lib/page-metadata";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   ACTIVE_PEG_CURRENCY_COUNT,
   ACTIVE_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
-export const metadata = buildPageMetadata(HOME_ALT_PAGE_METADATA);
+export const metadata: Metadata = buildPageMetadata({
+  title: "Experimental Dashboard View",
+  description: "Experimental duplicate dashboard route for internal homepage iteration.",
+  canonical: "/",
+  robots: { index: false, follow: true },
+});
 
 export default function HomeAltPage() {
   return (
