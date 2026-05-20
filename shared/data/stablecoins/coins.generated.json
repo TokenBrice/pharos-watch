@@ -19400,21 +19400,15 @@
     "governanceQuality": "single-entity",
     "reserves": [
       {
-        "name": "Superstate USCC crypto carry fund",
-        "pct": 63.91,
-        "risk": "medium"
+        "name": "Superstate USCC cash-and-carry fund",
+        "pct": 64,
+        "risk": "low"
       },
       {
-        "name": "Superstate USTB tokenized Treasury fund",
-        "pct": 36.08,
-        "risk": "low",
+        "name": "Superstate USTB Treasury Fund",
+        "pct": 36,
+        "risk": "very-low",
         "coinId": "ustb-superstate"
-      },
-      {
-        "name": "Stablecoin liquidity buffer",
-        "pct": 0.01,
-        "risk": "low",
-        "coinId": "usdc-circle"
       }
     ],
     "liveReservesConfig": {
@@ -39244,7 +39238,7 @@
     "flags": {
       "backing": "crypto-backed",
       "pegCurrency": "USD",
-      "governance": "decentralized",
+      "governance": "centralized-dependent",
       "yieldBearing": false,
       "rwa": false,
       "navToken": false
