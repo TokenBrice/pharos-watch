@@ -27,11 +27,22 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
     }
 
     if (meta.variantOf === meta.id) {
-      errors.push(`${meta.id}: variantOf must not reference the asset itself`);
+      errors.push(
+        `${meta.id}: variantOf must not reference the asset itself (self-cycle). ` +
+          `Fix: remove variantOf or point it at the correct parent asset.`,
+      );
+      continue;
     }
 
     const parent = metaById.get(meta.variantOf);
-    if (!parent || !activeIds.has(meta.variantOf)) {
+    if (!parent) {
+      errors.push(
+        `${meta.id}: variantOf "${meta.variantOf}" does not match any tracked stablecoin id. ` +
+          `Fix: correct the variantOf id or add the parent to the registry.`,
+      );
+      continue;
+    }
+    if (!activeIds.has(meta.variantOf)) {
       errors.push(`${meta.id}: variantOf must point to an active tracked stablecoin`);
       continue;
     }
@@ -50,6 +61,32 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
 
     if (meta.flags.navToken !== true) {
       errors.push(`${meta.id}: tracked variants must keep flags.navToken === true`);
+    }
+
+    if (
+      meta.mechanismArchetype != null &&
+      parent.mechanismArchetype != null &&
+      meta.mechanismArchetype !== parent.mechanismArchetype &&
+      meta.archetypeOverride !== true
+    ) {
+      errors.push(
+        `${meta.id}: mechanismArchetype "${meta.mechanismArchetype}" differs from parent ${parent.id} archetype "${parent.mechanismArchetype}" without archetypeOverride: true. ` +
+          `Fix: either set archetypeOverride: true on ${meta.id} or remove its mechanismArchetype and let the resolver inherit from the parent.`,
+      );
+    }
+
+    // Null-parent + declared child archetype: the resolver would silently use
+    // the child's own archetype, which can mask a missing parent classification.
+    // Require archetypeOverride: true so the divergence is explicit.
+    if (
+      meta.mechanismArchetype != null &&
+      parent.mechanismArchetype == null &&
+      meta.archetypeOverride !== true
+    ) {
+      errors.push(
+        `${meta.id}: declares mechanismArchetype "${meta.mechanismArchetype}" but parent ${parent.id} has no archetype. ` +
+          `Fix: either classify parent ${parent.id} with a mechanismArchetype, or set archetypeOverride: true on ${meta.id} to declare an intentional departure.`,
+      );
     }
   }
 

@@ -13,6 +13,7 @@
   },
   "collateral": "Fasanara F-ONE strategy exposure through Midas tokenized certificate rails, including fintech receivables, SME lending, real-estate-backed credit, and digital-asset strategies.",
   "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "midas-mf-one",
   "proofOfReserves": {

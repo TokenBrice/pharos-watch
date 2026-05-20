@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+export type DiagramTone = "default" | "warning" | "danger";
+
 interface DiagramStepProps {
   x: number;
   y?: number;
@@ -11,7 +13,27 @@ interface DiagramStepProps {
   stepNumber?: number;
   accentColor?: string;
   dashedBorder?: boolean;
+  /**
+   * Visual risk weight applied to the step background. `"danger"` adds a faint
+   * warm-tinted fill and a stronger dash pattern, used by the algorithmic
+   * archetype so its fragility reads at a glance.
+   */
+  tone?: DiagramTone;
   children?: ReactNode;
+}
+
+function fillForTone(tone: DiagramTone): string {
+  if (tone === "danger") {
+    return "color-mix(in oklch, var(--severity-severe) 8%, var(--card))";
+  }
+  if (tone === "warning") {
+    return "color-mix(in oklch, var(--severity-mild) 8%, var(--card))";
+  }
+  return "var(--card)";
+}
+
+function dashPatternForTone(tone: DiagramTone): string {
+  return tone === "danger" ? "5 3" : "3 3";
 }
 
 export function DiagramStep({
@@ -25,6 +47,7 @@ export function DiagramStep({
   stepNumber,
   accentColor,
   dashedBorder = false,
+  tone = "default",
   children,
 }: DiagramStepProps) {
   return (
@@ -35,10 +58,10 @@ export function DiagramStep({
         width={width}
         height={height}
         rx={6}
-        fill="var(--card)"
+        fill={fillForTone(tone)}
         stroke="var(--border-default)"
         strokeWidth={1}
-        strokeDasharray={dashedBorder ? "3 3" : undefined}
+        strokeDasharray={dashedBorder ? dashPatternForTone(tone) : undefined}
       />
       {stepNumber !== undefined ? (
         <text
@@ -198,6 +221,8 @@ interface DiagramReturnArrowProps {
   label?: string;
   tone?: "default" | "danger";
   dashed?: boolean;
+  /** When set, strokeWidth used for the curve (default 1.75). Use ~1.2 for light variants. */
+  strokeWidth?: number;
 }
 
 export function DiagramReturnArrow({
@@ -208,6 +233,7 @@ export function DiagramReturnArrow({
   label,
   tone = "default",
   dashed = false,
+  strokeWidth = 1.75,
 }: DiagramReturnArrowProps) {
   const stroke =
     tone === "danger" ? "var(--severity-severe)" : "var(--text-tertiary)";
@@ -220,7 +246,7 @@ export function DiagramReturnArrow({
         d={`M ${fromX} ${topY} C ${fromX} ${peakY} ${toX} ${peakY} ${toX} ${arrowBaseY}`}
         fill="none"
         stroke={stroke}
-        strokeWidth={1.75}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeDasharray={strokeDasharray}
       />
@@ -293,11 +319,28 @@ export function DiagramLoopArrow({
   );
 }
 
+export interface MechanismDiagramStep {
+  label: string;
+  subtitle?: string;
+  /** Accent color for the mobile ribbon and step number. Optional. */
+  accentColor?: string;
+  /** Pass through the algorithmic dashed-border treatment to mobile. */
+  dashedBorder?: boolean;
+  /** Step number to render in the mobile fallback. */
+  stepNumber?: number;
+}
+
 interface MechanismDiagramShellProps {
   ariaLabel: string;
   description: string;
   desktopHeight?: number;
-  steps: ReadonlyArray<{ label: string; subtitle?: string }>;
+  steps: ReadonlyArray<MechanismDiagramStep>;
+  /**
+   * Optional italic footnote rendered beneath the desktop SVG. Used by each
+   * archetype to anchor a dated historical stress event. Hidden in the
+   * mobile-stacked fallback where it doesn't fit cleanly.
+   */
+  stressFootnote?: string;
   children: ReactNode;
 }
 
@@ -306,6 +349,7 @@ export function MechanismDiagramShell({
   description,
   desktopHeight = 120,
   steps,
+  stressFootnote,
   children,
 }: MechanismDiagramShellProps) {
   return (
@@ -319,6 +363,14 @@ export function MechanismDiagramShell({
         <desc>{description}</desc>
         {children}
       </svg>
+      {stressFootnote ? (
+        <p
+          className="hidden sm:block mx-auto mt-2 max-w-2xl text-center text-xs italic"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          {stressFootnote}
+        </p>
+      ) : null}
       <MobileStackedDiagram
         steps={steps}
         ariaLabel={ariaLabel}
@@ -329,7 +381,7 @@ export function MechanismDiagramShell({
 }
 
 interface MobileStackedDiagramProps {
-  steps: ReadonlyArray<{ label: string; subtitle?: string }>;
+  steps: ReadonlyArray<MechanismDiagramStep>;
   ariaLabel: string;
   description: string;
 }
@@ -341,6 +393,7 @@ function MobileStackedDiagram({
 }: MobileStackedDiagramProps) {
   const stepWidth = 200;
   const stepHeight = 60;
+  const ribbonWidth = 3;
   const arrowLength = 28;
   const gap = 8;
   const padX = 10;
@@ -361,16 +414,72 @@ function MobileStackedDiagram({
       aria-label={ariaLabel}
     >
       <desc>{description}</desc>
-      {steps.map((step, i) => (
-        <DiagramStep
-          key={`step-${i}`}
-          x={padX}
-          y={positions[i]}
-          width={stepWidth}
-          label={step.label}
-          subtitle={step.subtitle}
-        />
-      ))}
+      {steps.map((step, i) => {
+        const y = positions[i];
+        const accent = step.accentColor;
+        return (
+          <g key={`step-${i}`} transform={`translate(${padX}, ${y})`}>
+            <rect
+              x={0}
+              y={0}
+              width={stepWidth}
+              height={stepHeight}
+              rx={6}
+              fill="var(--card)"
+              stroke="var(--border-default)"
+              strokeWidth={1}
+              strokeDasharray={step.dashedBorder ? "3 3" : undefined}
+            />
+            {accent ? (
+              <rect
+                x={0}
+                y={0}
+                width={ribbonWidth}
+                height={stepHeight}
+                rx={1.5}
+                fill={accent}
+              />
+            ) : null}
+            {step.stepNumber !== undefined ? (
+              <text
+                x={accent ? ribbonWidth + 7 : 9}
+                y={13}
+                fontSize={8}
+                fontWeight={700}
+                letterSpacing="0.12em"
+                fill={accent ?? "var(--text-tertiary)"}
+                style={{
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                }}
+              >
+                {String(step.stepNumber).padStart(2, "0")}
+              </text>
+            ) : null}
+            <text
+              x={stepWidth / 2}
+              y={28}
+              textAnchor="middle"
+              fontSize={13}
+              fontWeight={600}
+              fill="currentColor"
+            >
+              {step.label}
+            </text>
+            {step.subtitle ? (
+              <text
+                x={stepWidth / 2}
+                y={46}
+                textAnchor="middle"
+                fontSize={10}
+                fill="var(--text-secondary)"
+              >
+                {step.subtitle}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
       {steps.slice(0, -1).map((_, i) => (
         <DiagramArrow
           key={`arrow-${i}`}

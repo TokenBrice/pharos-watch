@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
@@ -20,6 +20,7 @@ import {
   countActiveScreenerFilters,
   hasLoadingScoreFilterData,
   hasActiveFilters,
+  normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
   sortScreenerRows,
   type ScreenerFilters,
@@ -27,9 +28,11 @@ import {
   type ScreenerSortKey,
 } from "@/app/screener/screener-filters";
 import {
+  CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
 import type { CsvColumn } from "@/lib/exports/csv";
@@ -121,6 +124,20 @@ export function ScreenerClient() {
 
   const { searchParams, replaceParams } = useUrlFilters();
 
+  // Normalize singular deep-link aliases (e.g. `/screener/?mechanism=cdp` from
+  // the mechanism-explainer hub) into the canonical plural URL schema, once
+  // after hydration. Pins `lifecycle=active` when arriving via a mechanism
+  // deep-link without an explicit lifecycle so deep-linked views don't
+  // accidentally include pre-launch or frozen coins.
+  const aliasNormalizedRef = useRef(false);
+  useEffect(() => {
+    if (!hasHydrated || aliasNormalizedRef.current) return;
+    aliasNormalizedRef.current = true;
+    replaceParams((params) => {
+      normalizeScreenerDeepLinkAliases(params);
+    });
+  }, [hasHydrated, replaceParams]);
+
   // Decode filters from URL via W1-F codec on every searchParams change.
   // The URL is only available in the browser, so deep-linked filters are applied after hydration.
   const filters = useMemo<ScreenerFilters>(
@@ -199,7 +216,7 @@ export function ScreenerClient() {
         symbol: meta.symbol,
         lifecycle,
         type: meta.flags.governance,
-        mechanism: meta.mechanismArchetype ?? null,
+        mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? 0,
         pegScore: pegById.get(meta.id) ?? null,

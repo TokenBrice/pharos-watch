@@ -6,6 +6,7 @@ import {
   countActiveScreenerFilters,
   hasLoadingScoreFilterData,
   hasActiveFilters,
+  normalizeScreenerDeepLinkAliases,
   projectBlacklistable,
   sortScreenerRows,
   type ScreenerFilters,
@@ -390,5 +391,63 @@ describe("SCREENER_URL_SCHEMA — blacklistable round-trip", () => {
       SCREENER_URL_SCHEMA,
     );
     expect(decoded.blacklistable).toEqual(["yes", "dilutable"]);
+  });
+});
+
+describe("normalizeScreenerDeepLinkAliases", () => {
+  it("rewrites `?mechanism=<slug>` to `mechanisms=<slug>` and pins lifecycle=active", () => {
+    const params = new URLSearchParams("mechanism=cdp");
+    const changed = normalizeScreenerDeepLinkAliases(params);
+    expect(changed).toBe(true);
+    expect(params.get("mechanism")).toBeNull();
+    expect(params.get("mechanisms")).toBe("cdp");
+    expect(params.get("lifecycle")).toBe("active");
+  });
+
+  it("supports the rwa-credit-fund archetype alias", () => {
+    const params = new URLSearchParams("mechanism=rwa-credit-fund");
+    normalizeScreenerDeepLinkAliases(params);
+    expect(params.get("mechanisms")).toBe("rwa-credit-fund");
+    expect(params.get("lifecycle")).toBe("active");
+  });
+
+  it("respects an explicit lifecycle override", () => {
+    const params = new URLSearchParams("mechanism=cdp&lifecycle=pre-launch");
+    normalizeScreenerDeepLinkAliases(params);
+    expect(params.get("mechanisms")).toBe("cdp");
+    expect(params.get("lifecycle")).toBe("pre-launch");
+  });
+
+  it("supports lifecycle=frozen deep-links", () => {
+    const params = new URLSearchParams("mechanism=algorithmic&lifecycle=frozen");
+    normalizeScreenerDeepLinkAliases(params);
+    expect(params.get("mechanisms")).toBe("algorithmic");
+    expect(params.get("lifecycle")).toBe("frozen");
+  });
+
+  it("strips an unknown mechanism alias without rewriting the plural key", () => {
+    const params = new URLSearchParams("mechanism=bogus");
+    const changed = normalizeScreenerDeepLinkAliases(params);
+    expect(changed).toBe(true);
+    expect(params.get("mechanism")).toBeNull();
+    expect(params.get("mechanisms")).toBeNull();
+    // No mechanism was matched, so lifecycle should still be pinned because
+    // the deep-link alias was present (even if unknown).
+    expect(params.get("lifecycle")).toBe("active");
+  });
+
+  it("leaves the canonical plural key alone when no alias is present", () => {
+    const params = new URLSearchParams("mechanisms=cdp,fiat-cash");
+    const changed = normalizeScreenerDeepLinkAliases(params);
+    expect(changed).toBe(false);
+    expect(params.get("mechanisms")).toBe("cdp,fiat-cash");
+    expect(params.get("lifecycle")).toBeNull();
+  });
+
+  it("does not override an existing plural mechanisms param", () => {
+    const params = new URLSearchParams("mechanism=cdp&mechanisms=tbill");
+    normalizeScreenerDeepLinkAliases(params);
+    expect(params.get("mechanisms")).toBe("tbill");
+    expect(params.get("mechanism")).toBeNull();
   });
 });

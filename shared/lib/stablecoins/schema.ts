@@ -166,6 +166,7 @@ const StablecoinMetaAssetRawSchema = z.object({
   infrastructures: StablecoinMetaEnumSchemas.infrastructures.optional(),
   variantOf: z.string().optional(),
   variantKind: StablecoinMetaEnumSchemas.variantKind.optional(),
+  archetypeOverride: z.boolean().describe("When true, mechanismArchetype is an intentional departure from the parent's archetype.").optional(),
   reserves: z.array(ReserveSliceSchema).optional(),
   liveReservesConfig: LiveReservesConfigSchema.optional(),
   notices: z.array(CoinNoticeSchema).optional(),

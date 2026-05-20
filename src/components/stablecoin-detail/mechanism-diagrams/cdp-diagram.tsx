@@ -1,3 +1,4 @@
+import type { MechanismDiagramStep } from "./primitives";
 import {
   DiagramArrow,
   DiagramReturnArrow,
@@ -5,14 +6,39 @@ import {
   MechanismDiagramShell,
 } from "./primitives";
 
-const ACCENT = "oklch(0.75 0.13 212)";
+const ACCENT = "var(--mechanism-cdp)";
 
-export function CdpDiagram({ symbol }: { symbol: string }) {
-  const steps = [
+export const CDP_STRESS_FOOTNOTE =
+  "stress: collateral cascade (DAI, Mar 2020)";
+
+interface CdpDiagramProps {
+  symbol: string;
+  steps?: ReadonlyArray<{ label?: string; subtitle?: string }>;
+  stressFootnote?: string;
+}
+
+export function CdpDiagram({
+  symbol,
+  steps: overrideSteps,
+  stressFootnote = CDP_STRESS_FOOTNOTE,
+}: CdpDiagramProps) {
+  const defaults = [
     { label: "Crypto collateral", subtitle: "overcollateralized" },
     { label: "Vault / PSM", subtitle: "mint debt vs collateral" },
     { label: `${symbol} minted`, subtitle: "liquidates below ratio" },
-  ];
+  ] as const;
+
+  const merged = defaults.map((d, i) => ({
+    label: overrideSteps?.[i]?.label ?? d.label,
+    subtitle: overrideSteps?.[i]?.subtitle ?? d.subtitle,
+  }));
+
+  const steps: MechanismDiagramStep[] = merged.map((s, i) => ({
+    label: s.label,
+    subtitle: s.subtitle,
+    accentColor: ACCENT,
+    stepNumber: i + 1,
+  }));
 
   return (
     <MechanismDiagramShell
@@ -20,6 +46,7 @@ export function CdpDiagram({ symbol }: { symbol: string }) {
       description={`Users deposit crypto collateral worth more than the debt they want to issue; a vault or peg-stability module mints ${symbol} as debt against the collateral; the position is liquidated if the collateral value falls below the configured safety ratio.`}
       desktopHeight={155}
       steps={steps}
+      stressFootnote={stressFootnote}
     >
       <DiagramStep
         x={0}

@@ -366,7 +366,14 @@ export default function StablecoinDetailClient({
       {/* ── Key Info ── */}
       <div className="mt-6">
         <section id="info">
-          <KeyInfoCard meta={viewModel.coin} />
+          <KeyInfoCard
+            meta={viewModel.coin}
+            resolvedMechanismArchetype={viewModel.resolvedMechanismArchetype}
+            isWrapper={viewModel.isVariant && !viewModel.archetypeOverride}
+            parentSymbol={viewModel.parentSymbol}
+            parentArchetype={viewModel.parentArchetype}
+            variantKind={viewModel.variantKindResolved}
+          />
         </section>
       </div>
 

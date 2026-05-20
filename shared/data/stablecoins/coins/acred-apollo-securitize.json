@@ -13,6 +13,7 @@
   },
   "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
   "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "apollo-diversified-credit-securitize-fund",
   "proofOfReserves": {

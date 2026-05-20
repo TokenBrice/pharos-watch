@@ -10,3 +10,4 @@ export * from "./pegs";
 export * from "./badges";
 export * from "./risk";
 export * from "./mechanism-archetypes";
+export * from "./resolve-mechanism-archetype";

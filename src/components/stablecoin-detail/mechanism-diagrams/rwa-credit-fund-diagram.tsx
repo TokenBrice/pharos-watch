@@ -1,30 +1,31 @@
 import type { MechanismDiagramStep } from "./primitives";
 import {
   DiagramArrow,
+  DiagramReturnArrow,
   DiagramStep,
   MechanismDiagramShell,
 } from "./primitives";
 
-const ACCENT = "var(--mechanism-tbill)";
+const ACCENT = "var(--mechanism-rwa-credit-fund)";
 
-export const TBILL_STRESS_FOOTNOTE =
-  "stress: redemption gate (Reserve Primary Fund, Sep 2008)";
+export const RWA_CREDIT_FUND_STRESS_FOOTNOTE =
+  "stress: NAV markdown / quarterly gate";
 
-interface TbillDiagramProps {
+interface RwaCreditFundDiagramProps {
   symbol: string;
   steps?: ReadonlyArray<{ label?: string; subtitle?: string }>;
   stressFootnote?: string;
 }
 
-export function TbillDiagram({
+export function RwaCreditFundDiagram({
   symbol,
   steps: overrideSteps,
-  stressFootnote = TBILL_STRESS_FOOTNOTE,
-}: TbillDiagramProps) {
+  stressFootnote = RWA_CREDIT_FUND_STRESS_FOOTNOTE,
+}: RwaCreditFundDiagramProps) {
   const defaults = [
-    { label: "Investor cash", subtitle: "subscribed via fund" },
-    { label: "T-Bills + Repos", subtitle: "short-duration RWA" },
-    { label: `${symbol} units`, subtitle: "NAV accrues daily" },
+    { label: "Investor cash", subtitle: "subscribed via fund (KYC)" },
+    { label: "Private credit / CLO", subtitle: "credit risk, illiquid" },
+    { label: `${symbol} fund-share`, subtitle: "NAV reflects credit losses" },
   ] as const;
 
   const merged = defaults.map((d, i) => ({
@@ -41,8 +42,9 @@ export function TbillDiagram({
 
   return (
     <MechanismDiagramShell
-      ariaLabel={`Investor cash funds a short-duration Treasury portfolio; ${symbol} units accrue NAV daily.`}
-      description={`Investors subscribe cash into a regulated fund; the fund deploys into short-duration T-Bills and repurchase agreements; ${symbol} units represent fund shares whose NAV accrues daily from the underlying yield.`}
+      ariaLabel={`Accredited investor cash funds a private-credit or CLO portfolio; ${symbol} fund-share NAV reflects credit losses with quarterly redemption gates.`}
+      description={`Accredited investors subscribe cash into a regulated credit fund; the fund deploys into private credit, CLOs, or structured debt with real default risk and limited liquidity; ${symbol} represents a fund share whose NAV reflects credit performance, with redemptions typically allowed only at quarterly windows.`}
+      desktopHeight={155}
       steps={steps}
       stressFootnote={stressFootnote}
     >
@@ -69,6 +71,15 @@ export function TbillDiagram({
         width={200}
         stepNumber={3}
         accentColor={ACCENT}
+      />
+      <DiagramReturnArrow
+        fromX={500}
+        toX={75}
+        topY={90}
+        peakY={140}
+        label="quarterly redemption"
+        strokeWidth={1.2}
+        dashed
       />
     </MechanismDiagramShell>
   );

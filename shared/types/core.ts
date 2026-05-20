@@ -160,6 +160,7 @@ export const MECHANISM_ARCHETYPE_VALUES = [
   "cdp",
   "synthetic-delta-neutral",
   "algorithmic",
+  "rwa-credit-fund",
 ] as const;
 export type MechanismArchetype = (typeof MECHANISM_ARCHETYPE_VALUES)[number];
 export const GOVERNANCE_QUALITY_VALUES = [
@@ -309,6 +310,8 @@ export interface StablecoinMeta {
   infrastructures?: Infrastructure[];
   variantOf?: string;
   variantKind?: VariantKind;
+  /** When true, this coin's mechanismArchetype is an intentional departure from its parent's archetype. */
+  archetypeOverride?: boolean;
   reserves?: ReserveSlice[];
   liveReservesConfig?: LiveReservesConfig;
   notices?: CoinNotice[];

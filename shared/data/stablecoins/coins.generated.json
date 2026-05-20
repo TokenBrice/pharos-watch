@@ -175,6 +175,7 @@
     },
     "collateral": "Tokenized feeder exposure to Apollo Diversified Credit Fund through the Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio, investing across corporate direct lending, asset-backed lending, performing credit, and dislocated credit.",
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
     "protocolSlug": "centrifuge",
     "proofOfReserves": {
@@ -286,6 +287,7 @@
     },
     "collateral": "Feeder share into Apollo Diversified Credit Fund, a multi-strategy private credit portfolio including direct lending, structured credit, performing credit, and dislocated credit; administered by Securitize",
     "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apollo-diversified-credit-securitize-fund",
     "proofOfReserves": {
       "type": "self-reported",
@@ -2075,6 +2077,7 @@
     },
     "collateral": "Accountable currently shows the Asset Pool concentrated in short-term cash and liquid bonds; Mu Digital's published mandate still targets an Asia credit portfolio with illiquid private credit capped at 20%, and the muBOND junior tranche overcollateralizes AZND at ~118%",
     "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "mu-digital-aznd",
     "proofOfReserves": {
       "type": "real-time",
@@ -13306,6 +13309,7 @@
     },
     "collateral": "Tokenized feeder exposure to Hamilton Lane Senior Credit Opportunities Fund (SCOPE), targeting floating-rate senior secured loans to private borrowers in sectors such as healthcare, information technology, and business services.",
     "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
     "links": [
       {
@@ -14645,6 +14649,7 @@
     },
     "collateral": "Actively managed AAA-rated CLO tranche portfolio selected by Janus Henderson and tokenized through Anemoy / Centrifuge fund rails.",
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
     "protocolSlug": "centrifuge",
     "proofOfReserves": {
@@ -17307,6 +17312,7 @@
     },
     "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mapollo",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17514,6 +17520,7 @@
     },
     "collateral": "Fasanara F-ONE strategy exposure through Midas tokenized certificate rails, including fintech receivables, SME lending, real-estate-backed credit, and digital-asset strategies.",
     "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mf-one",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17622,6 +17629,7 @@
     },
     "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
     "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-fasanara-global",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17713,6 +17721,7 @@
     },
     "collateral": "Hyperithm-managed market-neutral stablecoin strategies across on-chain markets and institutional execution venues.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mhyper",
     "proofOfReserves": {
       "type": "self-reported",
@@ -17999,6 +18008,7 @@
     },
     "collateral": "MEV Capital-managed DeFi lending, liquidity, arbitrage, carry, and liquidation strategies allocated through Midas liquid-yield token rails.",
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mmev",
     "proofOfReserves": {
       "type": "self-reported",
@@ -18467,6 +18477,7 @@
     },
     "collateral": "Liquid Yield Token managed by Midas and Re7 Capital, allocating across institutional-grade DeFi yield strategies including lending, liquidity provisioning, restaking, funding-rate arbitrage, and options arbitrage",
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mre7yield",
     "links": [
       {
@@ -19711,6 +19722,7 @@
     },
     "collateral": "BlackOpal LiquidStone II tokenised credit positions plus stablecoin and Treasury liquidity buffers held inside the Nest vault",
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-blackopal-liquidstone-ii-vault",
     "protocolSlug": "nest-credit",
     "links": [
@@ -20141,6 +20153,7 @@
     },
     "collateral": "WisdomTree tokenised fund shares (xCRDYX and similar WisdomTree Connect products) plus Nest Treasury Vault (nTBILL) and stablecoin liquidity buffers",
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-wisdomtree-vault",
     "protocolSlug": "nest-credit",
     "links": [
@@ -20924,6 +20937,7 @@
     },
     "collateral": "Senior secured term notes tied to a North American rent-financing platform and tokenized through Tradable private-credit issuance rails.",
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "tradable-na-rent-financing-platform-sstn",
     "links": [
       {
@@ -20998,6 +21012,7 @@
     },
     "collateral": "Senior secured term notes linked to an APAC diversified finance provider and tokenized through Tradable private-credit issuance rails.",
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "tradable-apac-diversified-finance-provider-sstn",
     "links": [
       {
@@ -21072,6 +21087,7 @@
     },
     "collateral": "Latin American residential-lending private-credit exposure tokenized as a Tradable private-credit instrument.",
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "latam-residential-sstl",
     "links": [
       {
@@ -21142,6 +21158,7 @@
     },
     "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "na-post-settlement-legal-financing-receivables",
     "links": [
       {
@@ -23627,6 +23644,7 @@
     "governanceQuality": "wrapper",
     "variantOf": "avusd-avant",
     "variantKind": "strategy-vault",
+    "archetypeOverride": true,
     "reserves": [
       {
         "name": "avUSD savings vault shares",
@@ -25053,6 +25071,7 @@
     },
     "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
     "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "securitize-tokenized-aaa-clo-fund",
     "proofOfReserves": {
       "type": "real-time",
@@ -26953,6 +26972,7 @@
     "governanceQuality": "wrapper",
     "variantOf": "usn-noon",
     "variantKind": "savings-passthrough",
+    "archetypeOverride": true,
     "reserves": [
       {
         "name": "USN staking wrapper shares",

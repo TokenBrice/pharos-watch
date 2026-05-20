@@ -24,6 +24,7 @@
   "collateral": "avUSD staked into Avant's savings vault, with yield sourced from Avant's actively managed market-neutral and DeFi strategy framework",
   "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "archetypeOverride": true,
   "detailProvider": "coingecko",
   "geckoId": "avant-staked-usd",
   "links": [

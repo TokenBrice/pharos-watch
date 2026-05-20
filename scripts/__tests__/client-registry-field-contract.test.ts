@@ -24,6 +24,7 @@ describe("client registry field contract", () => {
       },
       pegMechanism: "fiat-backed",
       mechanismArchetype: "fiat-backed",
+      archetypeOverride: false,
       geckoId: "usd-coin",
       protocolSlug: "circle",
       variantOf: null,

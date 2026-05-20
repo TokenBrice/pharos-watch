@@ -6,6 +6,8 @@ import Link from "next/link";
 import { ArrowUpRight, Check, Copy, ExternalLink, Globe } from "lucide-react";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
+import type { MechanismDiagramOptions } from "@/components/stablecoin-detail/mechanism-diagrams/types";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -13,7 +15,7 @@ import { getInfrastructureLabel, getInfrastructureSummary } from "@shared/lib/in
 import { formatAddress } from "@shared/lib/format";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { trackEvent } from "@/lib/analytics";
-import type { StablecoinMeta } from "@shared/types";
+import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import {
   BACKING_BADGE_STYLES,
   BACKING_LABELS,
@@ -23,7 +25,7 @@ import {
   PEG_LABELS,
   POR_BADGE_STYLES,
   POR_TIER_STYLES,
-  getMechanismArchetypeLabel,
+  getMechanismArchetypeCtaNoun,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -33,7 +35,21 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy";
 
-export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
+export function KeyInfoCard({
+  meta,
+  resolvedMechanismArchetype,
+  isWrapper = false,
+  parentSymbol,
+  parentArchetype,
+  variantKind,
+}: {
+  meta: StablecoinMeta;
+  resolvedMechanismArchetype?: MechanismArchetype | null;
+  isWrapper?: boolean;
+  parentSymbol?: string | null;
+  parentArchetype?: MechanismArchetype | null;
+  variantKind?: import("@shared/types").VariantKind | null;
+}) {
   const [openChain, setOpenChain] = useState<string | null>(null);
   const [showAllContractsMobile, setShowAllContractsMobile] = useState(false);
   const [copiedChain, setCopiedChain] = useState<string | null>(null);
@@ -55,6 +71,18 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
     summary: getInfrastructureSummary(value),
     href: buildInfrastructureTaxonomyUrl(value),
   }));
+  const effectiveArchetype = resolvedMechanismArchetype !== undefined
+    ? resolvedMechanismArchetype
+    : meta.mechanismArchetype ?? null;
+  const diagramOptions: MechanismDiagramOptions = {
+    override: getCoinOverride(meta.id),
+    ...(isWrapper && parentArchetype ? {
+      isWrapper: true,
+      parentSymbol: parentSymbol ?? undefined,
+      parentArchetype,
+      variantKind: variantKind ?? undefined,
+    } : {}),
+  };
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
   const hasLinks = meta.links && meta.links.length > 0;
@@ -237,18 +265,29 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   Peg Stability
                 </p>
-                {meta.mechanismArchetype ? (
+                {effectiveArchetype ? (
                   <div className="mb-3 space-y-2">
                     <div className="flex justify-start">
-                      {mechanismDiagramFor(meta.mechanismArchetype, meta.symbol)}
+                      {mechanismDiagramFor(effectiveArchetype, meta.symbol, diagramOptions)}
                     </div>
                     <Link
-                      href={getMechanismExplainerPath(meta.mechanismArchetype)}
+                      href={getMechanismExplainerPath(effectiveArchetype)}
                       className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-xs font-medium text-frost-blue hover:underline sm:min-h-0 sm:py-0"
                     >
-                      Learn how {getMechanismArchetypeLabel(meta.mechanismArchetype)} stablecoins work
+                      Learn how {getMechanismArchetypeCtaNoun(effectiveArchetype)} stablecoins work
                       <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
                     </Link>
+                  </div>
+                ) : meta.pegMechanism ? (
+                  <div className="mb-3 rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1.5">
+                    <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      This coin doesn&apos;t fit the six tracked archetypes. See the description below and the{" "}
+                      <Link href="/methodology/" className="pharos-focus-ring text-frost-blue hover:underline">
+                        methodology page
+                      </Link>{" "}
+                      for how Pharos scores it.
+                    </p>
                   </div>
                 ) : null}
                 <p className="text-base leading-relaxed">{meta.pegMechanism}</p>

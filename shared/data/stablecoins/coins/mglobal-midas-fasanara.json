@@ -13,6 +13,7 @@
   },
   "collateral": "Fasanara Global strategy exposure through Midas tokenized certificate rails.",
   "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "midas-fasanara-global",
   "proofOfReserves": {

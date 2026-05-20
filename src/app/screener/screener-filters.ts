@@ -337,6 +337,49 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   });
 }
 
+/**
+ * Singular deep-link aliases supported on `/screener/`.
+ *
+ * The screener's canonical URL contract uses plural enum-list keys (`mechanisms`,
+ * `lifecycle`). For deep-links from the mechanism explainer hub
+ * (`/learn/mechanisms/<slug>/`) we accept the shorter singular `mechanism=<slug>`
+ * and singular `lifecycle=<single-status>` forms and normalize them in place.
+ *
+ * When `mechanism` is present and `lifecycle` is unset, this also pins
+ * `lifecycle=active` so deep-linked views don't surface pre-launch or frozen
+ * coins by accident.
+ *
+ * Returns `true` when at least one alias was consumed (i.e. the URL needs to be
+ * rewritten to the canonical form).
+ */
+export function normalizeScreenerDeepLinkAliases(params: URLSearchParams): boolean {
+  let changed = false;
+
+  const mechanismAlias = params.get("mechanism");
+  if (mechanismAlias && !params.has("mechanisms")) {
+    const trimmed = mechanismAlias.trim();
+    if ((MECHANISM_ARCHETYPE_VALUES as readonly string[]).includes(trimmed)) {
+      params.set("mechanisms", trimmed);
+      changed = true;
+    }
+  }
+  if (params.has("mechanism")) {
+    params.delete("mechanism");
+    changed = true;
+  }
+
+  // Singular `lifecycle=<single-status>` is itself the canonical key
+  // (the existing schema reads it as an enumList delimited by ","), so the
+  // only normalization needed is the "pin lifecycle=active" default when
+  // arriving via a `mechanism` deep-link without an explicit lifecycle.
+  if (mechanismAlias && !params.has("lifecycle")) {
+    params.set("lifecycle", "active");
+    changed = true;
+  }
+
+  return changed;
+}
+
 /** Project the meta `canBeBlacklisted` tri-state to the screener bucket. */
 export function projectBlacklistable(value: boolean | "possible" | "dilutable" | undefined): BlacklistableValue | null {
   if (value === true) return "yes";

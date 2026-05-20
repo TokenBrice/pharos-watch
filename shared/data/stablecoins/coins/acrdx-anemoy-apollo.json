@@ -13,6 +13,7 @@
   },
   "collateral": "Tokenized feeder exposure to Apollo Diversified Credit Fund through the Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio, investing across corporate direct lending, asset-backed lending, performing credit, and dislocated credit.",
   "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
   "protocolSlug": "centrifuge",

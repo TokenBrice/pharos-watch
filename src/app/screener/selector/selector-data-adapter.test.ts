@@ -11,8 +11,8 @@ import type {
 } from "@shared/types";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "./selector-data-adapter";
 
-vi.mock("@shared/lib/stablecoins/client-registry", () => ({
-  CLIENT_TRACKED_STABLECOINS: [
+vi.mock("@shared/lib/stablecoins/client-registry", () => {
+  const coins = [
     {
       id: "usdc-usd-coin",
       symbol: "USDC",
@@ -43,8 +43,12 @@ vi.mock("@shared/lib/stablecoins/client-registry", () => ({
         governance: "centralized",
       },
     },
-  ],
-}));
+  ];
+  return {
+    CLIENT_TRACKED_STABLECOINS: coins,
+    CLIENT_ACTIVE_META_BY_ID: new Map(coins.map((c) => [c.id, c])),
+  };
+});
 
 const NOW_MS = 1_700_000_000_000;
 const NOW_SEC = NOW_MS / 1000;

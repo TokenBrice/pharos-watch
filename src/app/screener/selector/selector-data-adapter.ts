@@ -1,4 +1,5 @@
-import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_ACTIVE_META_BY_ID, CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
+import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   SELECTOR_VERSION,
@@ -91,7 +92,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       lifecycle,
       governance: meta.flags.governance,
       canBeBlacklisted: rawInputs?.canBeBlacklisted ?? meta.canBeBlacklisted ?? null,
-      mechanismArchetype: meta.mechanismArchetype ?? null,
+      mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
 
       supplyUsd: supplyById.get(id) ?? 0,
 

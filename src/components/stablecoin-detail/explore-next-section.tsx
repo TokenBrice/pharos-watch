@@ -6,9 +6,10 @@ import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
   PEG_LABELS_SHORT,
-  getMechanismArchetypeLabel,
-  getMechanismExplainerPath,
+  getMechanismArchetypeCtaNoun,
+  resolveMechanismArchetype,
 } from "@shared/lib/classification";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import type { StablecoinMeta } from "@shared/types";
 import { buildLiveCompareUrl } from "@/lib/compare-pages";
@@ -86,10 +87,13 @@ export function ExploreNextSection({
     { href: "/liquidity/", label: "DEX liquidity rankings" },
     { href: "/depeg/", label: "Depeg tracker" },
   ];
-  if (coin.mechanismArchetype) {
+  const resolvedArchetype = resolveMechanismArchetype(coin, TRACKED_META_BY_ID);
+  if (resolvedArchetype) {
+    // key-info-card already has a "Learn how X stablecoins work" CTA adjacent to the diagram.
+    // Use this slot for a screener deep-link instead to avoid a duplicate CTA.
     trackerLinks.push({
-      href: getMechanismExplainerPath(coin.mechanismArchetype),
-      label: `How ${getMechanismArchetypeLabel(coin.mechanismArchetype)} stablecoins work`,
+      href: `/screener/?mechanism=${resolvedArchetype}`,
+      label: `See all ${getMechanismArchetypeCtaNoun(resolvedArchetype)} stablecoins`,
     });
   }
 

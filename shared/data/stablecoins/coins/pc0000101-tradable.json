@@ -13,6 +13,7 @@
   },
   "collateral": "Post-settlement legal-financing receivables tokenized as a Tradable private-credit instrument.",
   "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "na-post-settlement-legal-financing-receivables",
   "canBeBlacklisted": true,

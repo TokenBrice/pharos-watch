@@ -25,6 +25,7 @@ export type StablecoinClientMeta = Pick<
   | "flags"
   | "pegMechanism"
   | "mechanismArchetype"
+  | "archetypeOverride"
   | "geckoId"
   | "protocolSlug"
   | "variantOf"
@@ -49,6 +50,7 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "flags",
   "pegMechanism",
   "mechanismArchetype",
+  "archetypeOverride",
   "geckoId",
   "protocolSlug",
   "variantOf",

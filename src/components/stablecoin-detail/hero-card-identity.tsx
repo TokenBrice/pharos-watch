@@ -11,7 +11,12 @@ import {
   GOVERNANCE_LABELS,
   PEG_LABELS,
   PEG_LABELS_SHORT,
+  getMechanismArchetypeCtaNoun,
+  getMechanismArchetypeLabel,
+  getMechanismExplainerPath,
+  resolveMechanismArchetype,
 } from "@shared/lib/classification";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -32,6 +37,20 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";
+
+function MechanismChip({ coin }: { coin: StablecoinMeta }) {
+  const archetype = resolveMechanismArchetype(coin, TRACKED_META_BY_ID);
+  if (!archetype) return null;
+  return (
+    <Link
+      href={getMechanismExplainerPath(archetype)}
+      aria-label={`Learn how ${getMechanismArchetypeCtaNoun(archetype)} stablecoins work`}
+      className="pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+    >
+      {getMechanismArchetypeLabel(archetype)}
+    </Link>
+  );
+}
 
 function HeroTagList({ tags }: { tags: readonly string[] | undefined }) {
   if (!tags || tags.length === 0) return null;
@@ -467,6 +486,7 @@ export function HeroMobileIdentityDetails({
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center gap-1.5">
+        <MechanismChip coin={coin} />
         <HeroTagList tags={coin.tags} />
       </div>
     </>
@@ -513,6 +533,7 @@ export function HeroDesktopIdentity({
           </div>
         ) : null}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <MechanismChip coin={coin} />
           <HeroTagList tags={coin.tags} />
         </div>
       </div>

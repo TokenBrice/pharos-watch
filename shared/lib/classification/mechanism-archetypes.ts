@@ -1,11 +1,21 @@
 import type { MechanismArchetype } from "../../types";
 
 export const MECHANISM_ARCHETYPE_LABELS: Record<MechanismArchetype, string> = {
-  "fiat-cash": "Fiat-Backed",
+  "fiat-cash": "Custodial Cash and Cash-Equivalents",
   tbill: "Tokenized Treasury",
+  cdp: "Crypto-Collateralized (CDP)",
+  "synthetic-delta-neutral": "Hedged Synthetic Dollar",
+  algorithmic: "Reflexive / Unbacked",
+  "rwa-credit-fund": "Tokenized Credit Fund",
+};
+
+export const MECHANISM_ARCHETYPE_CTA_NOUNS: Record<MechanismArchetype, string> = {
+  "fiat-cash": "fiat-backed",
+  tbill: "tokenized Treasury",
   cdp: "CDP",
-  "synthetic-delta-neutral": "Delta-Neutral",
-  algorithmic: "Algorithmic",
+  "synthetic-delta-neutral": "delta-neutral",
+  algorithmic: "algorithmic",
+  "rwa-credit-fund": "credit-fund",
 };
 
 export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> = {
@@ -18,10 +28,16 @@ export const MECHANISM_ARCHETYPE_ONE_LINERS: Record<MechanismArchetype, string> 
     "Spot crypto plus an equal short perpetual position adds up to a roughly dollar-stable claim; yield comes from funding rates.",
   algorithmic:
     "The peg is held by protocol-level mint/burn rules and arbitrage incentives rather than by 1:1 reserves.",
+  "rwa-credit-fund":
+    "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
 };
 
 export function getMechanismArchetypeLabel(value: MechanismArchetype): string {
   return MECHANISM_ARCHETYPE_LABELS[value];
+}
+
+export function getMechanismArchetypeCtaNoun(value: MechanismArchetype): string {
+  return MECHANISM_ARCHETYPE_CTA_NOUNS[value];
 }
 
 export function getMechanismArchetypeOneLiner(value: MechanismArchetype): string {

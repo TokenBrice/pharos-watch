@@ -1,19 +1,54 @@
-import { DiagramArrow, DiagramStep, MechanismDiagramShell } from "./primitives";
+import type { MechanismDiagramStep } from "./primitives";
+import {
+  DiagramArrow,
+  DiagramLoopArrow,
+  DiagramStep,
+  MechanismDiagramShell,
+} from "./primitives";
 
-const ACCENT = "oklch(0.68 0.13 182)";
+const ACCENT = "var(--mechanism-synthetic-delta-neutral)";
 
-export function SyntheticDeltaNeutralDiagram({ symbol }: { symbol: string }) {
-  const steps = [
+export const SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE =
+  "stress: funding-rate inversion";
+
+interface SyntheticDeltaNeutralDiagramProps {
+  symbol: string;
+  steps?: ReadonlyArray<{ label?: string; subtitle?: string }>;
+  stressFootnote?: string;
+}
+
+export function SyntheticDeltaNeutralDiagram({
+  symbol,
+  steps: overrideSteps,
+  stressFootnote = SYNTHETIC_DELTA_NEUTRAL_STRESS_FOOTNOTE,
+}: SyntheticDeltaNeutralDiagramProps) {
+  const defaults = [
     { label: "Crypto deposit", subtitle: "spot collateral" },
     { label: "Long spot + short perp", subtitle: "delta-neutral hedge" },
     { label: `${symbol} minted`, subtitle: "funding-rate yield" },
-  ];
+  ] as const;
+
+  const merged = defaults.map((d, i) => ({
+    label: overrideSteps?.[i]?.label ?? d.label,
+    subtitle: overrideSteps?.[i]?.subtitle ?? d.subtitle,
+  }));
+
+  const steps: MechanismDiagramStep[] = merged.map((s, i) => ({
+    label: s.label,
+    subtitle: s.subtitle,
+    accentColor: ACCENT,
+    stepNumber: i + 1,
+  }));
+
+  const step2Callout = overrideSteps?.[1]?.subtitle;
 
   return (
     <MechanismDiagramShell
       ariaLabel={`Crypto deposited as spot collateral is hedged with equal short perp positions; the funding rate paid by perp longs becomes the yield on ${symbol}.`}
       description={`Users deposit crypto as spot collateral; the protocol opens an equal-size short perpetual futures position to neutralize price exposure; the funding rate paid by perp longs flows to ${symbol} holders as yield.`}
+      desktopHeight={step2Callout ? 140 : 120}
       steps={steps}
+      stressFootnote={stressFootnote}
     >
       <DiagramStep
         x={0}
@@ -28,6 +63,7 @@ export function SyntheticDeltaNeutralDiagram({ symbol }: { symbol: string }) {
         width={150}
         stepNumber={2}
         accentColor={ACCENT}
+        callout={step2Callout}
       >
         <polygon
           points="34,20 42,20 38,13"
@@ -64,6 +100,14 @@ export function SyntheticDeltaNeutralDiagram({ symbol }: { symbol: string }) {
         width={200}
         stepNumber={3}
         accentColor={ACCENT}
+      />
+      <DiagramLoopArrow
+        fromX={275}
+        toX={500}
+        baseY={30}
+        peakY={6}
+        label="funding"
+        labelY={9}
       />
     </MechanismDiagramShell>
   );

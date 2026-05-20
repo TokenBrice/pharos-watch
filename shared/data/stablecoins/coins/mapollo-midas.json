@@ -13,6 +13,7 @@
   },
   "collateral": "Apollo Crypto managed yield strategy tracked through a Midas liquid-yield token.",
   "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+  "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "midas-mapollo",
   "proofOfReserves": {

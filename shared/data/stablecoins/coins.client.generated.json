@@ -48,6 +48,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
     "protocolSlug": "centrifuge",
     "canBeBlacklisted": true
@@ -66,6 +67,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting ERC-4626 fund share token; subscription and redemption are institutional-only at monthly fund NAV through Securitize Markets, with an on-demand liquidity pool sized up to roughly 5% of NAV; RedStone publishes the NAV oracle used by integrations",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "apollo-diversified-credit-securitize-fund",
     "canBeBlacklisted": true
   },
@@ -361,6 +363,7 @@
       "navToken": true
     },
     "pegMechanism": "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "mu-digital-aznd"
   },
   {
@@ -2256,6 +2259,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting tokenized feeder-fund share rather than a fixed $1 peg; qualified purchasers access monthly subscriptions and on-demand redemptions at the previous quarter's NAV per share through Securitize's digital process.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "hamilton-lane-senior-credit-opportunities-securitize-fund",
     "canBeBlacklisted": true
   },
@@ -2497,6 +2501,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; subscriptions and redemptions are processed through permissioned Anemoy / Centrifuge primary-market rails at fund NAV.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "janus-henderson-anemoy-aaa-clo-fund",
     "protocolSlug": "centrifuge",
     "canBeBlacklisted": true
@@ -2961,6 +2966,7 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mapollo",
     "canBeBlacklisted": true
   },
@@ -2998,6 +3004,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting Midas liquid-yield token; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mf-one",
     "canBeBlacklisted": true
   },
@@ -3015,6 +3022,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-fasanara-global",
     "canBeBlacklisted": true
   },
@@ -3032,6 +3040,7 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mhyper",
     "canBeBlacklisted": true
   },
@@ -3066,6 +3075,7 @@
       "navToken": true
     },
     "pegMechanism": "Midas NAV-accreting liquid-yield token with primary mint/redeem through Midas rails; it does not maintain a fixed $1 redemption floor.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mmev",
     "canBeBlacklisted": true
   },
@@ -3152,6 +3162,7 @@
       "navToken": true
     },
     "pegMechanism": "mRe7YIELD is a NAV-accreting liquid yield token rather than a fixed $1 stablecoin; primary-market mint/redeem occurs through Midas rails while secondary-market holders rely on token liquidity and strategy NAV",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "midas-mre7yield",
     "canBeBlacklisted": true
   },
@@ -3350,6 +3361,7 @@
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the BlackOpal LiquidStone II credit strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-blackopal-liquidstone-ii-vault",
     "protocolSlug": "nest-credit",
     "canBeBlacklisted": true
@@ -3420,6 +3432,7 @@
       "navToken": true
     },
     "pegMechanism": "Vault LP token whose value targets a dollar base and accretes through underlying WisdomTree fund NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "nest-wisdomtree-vault",
     "protocolSlug": "nest-credit",
     "canBeBlacklisted": true
@@ -3559,6 +3572,7 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "tradable-na-rent-financing-platform-sstn",
     "canBeBlacklisted": true
   },
@@ -3576,6 +3590,7 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "tradable-apac-diversified-finance-provider-sstn",
     "canBeBlacklisted": true
   },
@@ -3593,6 +3608,7 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "latam-residential-sstl",
     "canBeBlacklisted": true
   },
@@ -3610,6 +3626,7 @@
       "navToken": false
     },
     "pegMechanism": "Contract-priced at $1.00 note par rather than a liquid secondary-market peg; investors rely on issuer servicing and note repayment.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "na-post-settlement-legal-financing-receivables",
     "canBeBlacklisted": true
   },
@@ -4026,6 +4043,7 @@
     },
     "pegMechanism": "Stake avUSD to receive savUSD; savUSD appreciates against avUSD as strategy yield accrues, while final USDC exit inherits Avant's 1:1 avUSD redemption process and settlement window",
     "mechanismArchetype": "synthetic-delta-neutral",
+    "archetypeOverride": true,
     "geckoId": "avant-staked-usd",
     "variantOf": "avusd-avant",
     "variantKind": "strategy-vault"
@@ -4290,6 +4308,7 @@
       "navToken": true
     },
     "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
+    "mechanismArchetype": "rwa-credit-fund",
     "geckoId": "securitize-tokenized-aaa-clo-fund",
     "canBeBlacklisted": true
   },
@@ -4618,6 +4637,7 @@
     },
     "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
     "mechanismArchetype": "synthetic-delta-neutral",
+    "archetypeOverride": true,
     "geckoId": "staked-usn",
     "variantOf": "usn-noon",
     "variantKind": "savings-passthrough"
