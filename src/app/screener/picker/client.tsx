@@ -61,6 +61,7 @@ import {
   type SelectorClosestSurvivor,
   type SelectorRelaxableConstraint,
 } from "@/components/selector/selector-empty-state";
+import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
 
 // ---------------------------------------------------------------------------
@@ -110,7 +111,7 @@ const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
 ];
 
 const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepeg>[] = [
-  { value: "zero", label: "Zero tolerance", sublabel: "Peg holds inside 50 bps at all times." },
+  { value: "zero", label: "Zero tolerance", sublabel: "Peg must hold without exception." },
   { value: "tight", label: "Within 0.5%", sublabel: "Brief slippage acceptable if liquidity holds." },
   { value: "moderate", label: "Moderate", sublabel: "Short depegs OK if recovery is clean." },
 ];
@@ -173,11 +174,11 @@ const TRADING_SHARE_STALENESS_LIMIT_SECONDS: Record<string, number> = {
 const SESSION_RESULT_STORAGE_KEY = "pharos.selector.sessionResult.v1";
 
 const QUESTION_HELPER_COPY: Record<2 | 3 | 4 | 5 | 6, string> = {
-  2: "Narrows the universe to stablecoins that target this reference asset.",
-  3: "Longer horizons put more weight on resilience, dependency risk, and history.",
-  4: "Tighter tolerance applies stricter peg and stress-signal thresholds before ranking.",
-  5: "Rail preference changes how much custody, composability, and source exposure the Picker permits.",
-  6: "Faster exits increase the importance of liquidity, DEWS, and redemption pathways.",
+  2: "Narrows the universe to this reference asset.",
+  3: "Longer horizons weight resilience and history more heavily.",
+  4: "Tighter tolerance raises the peg and stress thresholds.",
+  5: "Shifts allowed custody, composability, and source exposure.",
+  6: "Faster exits weight liquidity, DEWS, and redemption pathways.",
 };
 
 // ---------------------------------------------------------------------------
@@ -652,9 +653,16 @@ function ResultPane({
     );
   }
 
+  const singleResult = output.recommended.length === 1;
+  const showCompareShortlist = output.recommended.length > 1;
+
   return (
     <div ref={resultFocusRef} tabIndex={-1} className="flex flex-col gap-6 outline-none">
-      {/* Mobile reorders: profile chip + headline (in summary) first; rest below. */}
+      {/* Snapshot banner sits as a top-line strip above the summary: it's a
+          load-bearing trust signal (frozen vs fallback view) and was easy to
+          miss when nested inside the summary card. */}
+      {snapshotBanner}
+
       <SelectorResultSummary
         profile={profile}
         input={effectiveInput}
@@ -672,10 +680,18 @@ function ResultPane({
             : undefined
         }
         shareFallbackUrl={shareFallbackUrl ?? undefined}
-        skipped={output.coverageWarnings.skippedForCoverage}
         lowConfidence={output.lowConfidence}
         coverageWarnings={output.coverageWarnings}
-        snapshotBanner={snapshotBanner}
+        compareActionsSlot={
+          showCompareShortlist || output.lowerRanked.length > 0 ? (
+            <>
+              {showCompareShortlist ? <CompareShortlistAction href={compareShortlistHref} /> : null}
+              {output.lowerRanked.length > 0 ? (
+                <CompareWatchoutsAction href={compareWatchoutsHref} />
+              ) : null}
+            </>
+          ) : undefined
+        }
         {...buildResultSummaryCoordinationProps({
           output,
           state,
@@ -696,15 +712,6 @@ function ResultPane({
           }
         />
       ) : null}
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <CompareShortlistAction href={compareShortlistHref} />
-        {output.lowerRanked.length > 0 ? (
-          <CompareWatchoutsAction href={compareWatchoutsHref} />
-        ) : null}
-      </div>
-
-      <NearMissesDisclosure survivors={buildClosestSurvivorsFromOutput(output)} />
 
       {/* Mobile quick-scroll jump button */}
       {isMobile ? (
@@ -749,6 +756,7 @@ function ResultPane({
                 pegCurrency={effectiveInput.pegCurrency}
                 isMobile={isMobile}
                 logoUrl={logos[rec.id] ?? undefined}
+                prominentOpenDetail={singleResult}
               />
             );
           })}
@@ -774,6 +782,16 @@ function ResultPane({
           </ol>
         </section>
       ) : null}
+
+      {/* Transparency cluster — both expandable disclosures are post-result
+          context, not primary content. They live together below the shortlist
+          and watch-outs so the result lands first. */}
+      <div className="space-y-2">
+        <NearMissesDisclosure survivors={buildClosestSurvivorsFromOutput(output)} />
+        {output.coverageWarnings.skippedForCoverage.length > 0 ? (
+          <SelectorSkippedDisclosure coins={output.coverageWarnings.skippedForCoverage} />
+        ) : null}
+      </div>
 
       <footer className="space-y-2 border-t border-border/55 pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
@@ -1150,15 +1168,25 @@ async function copyToClipboard(text: string): Promise<void> {
 
 function tradingShareStaleExceeded(output: SelectorOutput | null): boolean {
   if (!output || output.profile !== "trading") return false;
+  // The cadence limits are calibrated to USD-trading signals (pegSummary, dexTvl,
+  // dews). Non-USD pegs (Gold, EUR, CHF) legitimately have partial coverage —
+  // the engine omits any *AgeSec it has no reading for. Only enforce the
+  // "all keys must be present" rule for USD; for other pegs, enforce limits
+  // only on the keys the engine actually populated.
+  const enforceAllKeys = output.input.pegCurrency === "USD";
   return output.recommended.some((rec) => {
     if (rec.profile !== "trading") return false;
     const staleness = rec.perInputStaleness ?? {};
-    if (!Object.keys(TRADING_SHARE_STALENESS_LIMIT_SECONDS).every((key) => key in staleness)) {
+    if (
+      enforceAllKeys &&
+      !Object.keys(TRADING_SHARE_STALENESS_LIMIT_SECONDS).every((key) => key in staleness)
+    ) {
       return true;
     }
     return Object.entries(staleness).some(([key, ageSeconds]) => {
       const limit = TRADING_SHARE_STALENESS_LIMIT_SECONDS[key];
-      return limit == null || ageSeconds > limit;
+      if (limit == null) return false;
+      return ageSeconds > limit;
     });
   });
 }

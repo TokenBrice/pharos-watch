@@ -301,9 +301,13 @@ describe("SelectorClient — state machine", () => {
     // Shortlist heading + first card.
     expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
     expect(screen.getByText("USDC")).toBeTruthy();
-    expect(screen.getByText(/Treasury profile result/i)).toBeTruthy();
-    const compare = screen.getByRole("link", { name: /Compare these/i });
-    expect(compare.getAttribute("href")).toBe("/compare/?coins=usdc-usd-coin");
+    // Funnel headline ("… tracked USD stablecoins → … filtered → … shortlist
+    // entries") is the canonical "result page rendered" marker.
+    expect(screen.getByText(/tracked USD stablecoins/)).toBeTruthy();
+    // Single-result shortlist: Compare these is hidden in favor of the
+    // per-card prominent Open detail link.
+    expect(screen.queryByRole("link", { name: /Compare these/i })).toBeNull();
+    expect(screen.getByText("Open detail")).toBeTruthy();
   });
 
   it("shows near misses even when a shortlist is present", async () => {
@@ -409,10 +413,10 @@ describe("SelectorClient — state machine", () => {
 
     fireEvent.click(screen.getByLabelText(/Same day/i));
     expect(window.location.search).toContain("step=6");
-    expect(screen.queryByText(/Treasury profile result/i)).toBeNull();
+    expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(await screen.findByText(/Treasury profile result/i)).toBeTruthy();
+    expect(await screen.findByText(/tracked USD stablecoins/)).toBeTruthy();
   });
 
   it("keeps mobile answer handlers local until the sticky CTA commits results", async () => {
@@ -436,10 +440,10 @@ describe("SelectorClient — state machine", () => {
     fireEvent.click(screen.getByLabelText(/Same day/i));
 
     expect(window.location.search).toContain("step=2");
-    expect(screen.queryByText(/Active Trading profile result/i)).toBeNull();
+    expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(await screen.findByText(/Active Trading profile result/i)).toBeTruthy();
+    expect(await screen.findByText(/tracked USD stablecoins/)).toBeTruthy();
   });
 
   it("blocks Trading share links when per-input staleness exceeds its cadence-aware limit", async () => {

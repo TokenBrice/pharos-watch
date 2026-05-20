@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowUpRight, Clock, ShieldAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { cn } from "@/lib/utils";
 import type {
@@ -23,6 +22,12 @@ interface SelectorShortlistCardProps {
   logoUrl?: string;
   whyText?: string;
   watchText?: string;
+  /**
+   * When true (single-result shortlist), promote the per-card Open detail link
+   * to a filled primary button. With multiple results, Compare these is the
+   * strongest forward action; with a single result, Open detail is.
+   */
+  prominentOpenDetail?: boolean;
 }
 
 const PROFILE_LABEL: Record<SelectorProfile, string> = {
@@ -48,7 +53,8 @@ function precisStaleness(seconds: number): string {
 }
 
 interface TextChip {
-  text: string;
+  label: string;
+  value: string;
   ariaLabel?: string;
   tone?: "default" | "watch";
 }
@@ -63,19 +69,21 @@ function buildEvidenceChips(
     case "treasury": {
       const safety = rec.safetyGrade;
       if (safety) {
-        chips.push({ text: `Safety ${safety}`, ariaLabel: `Safety grade ${safety}` });
+        chips.push({ label: "Safety", value: safety, ariaLabel: `Safety grade ${safety}` });
       }
       const resilience = rec.components.find((c) => c.key === "resilience");
       if (resilience?.rawValue != null) {
         chips.push({
-          text: `Resilience ${Math.round(resilience.rawValue)}`,
+          label: "Resilience",
+          value: String(Math.round(resilience.rawValue)),
           ariaLabel: `Resilience score ${Math.round(resilience.rawValue)} of 100`,
         });
       }
       const dependency = rec.components.find((c) => c.key === "dependencyRisk");
       if (dependency?.rawValue != null) {
         chips.push({
-          text: `Dependency Risk ${Math.round(dependency.rawValue)}`,
+          label: "Dependency Risk",
+          value: String(Math.round(dependency.rawValue)),
           ariaLabel: `Dependency risk score ${Math.round(dependency.rawValue)} of 100`,
         });
       }
@@ -85,19 +93,21 @@ function buildEvidenceChips(
       const pys = rec.components.find((c) => c.key === "pharosYieldScore");
       if (pys?.rawValue != null) {
         chips.push({
-          text: `PYS ${Math.round(pys.rawValue)}`,
+          label: "PYS",
+          value: String(Math.round(pys.rawValue)),
           ariaLabel: `Pharos Yield Score ${Math.round(pys.rawValue)} of 100`,
         });
       }
       if (rec.recommendedSource) {
         chips.push({
-          text: `APY ${rec.recommendedSource.apy30d.toFixed(1)}%`,
+          label: "APY",
+          value: `${rec.recommendedSource.apy30d.toFixed(1)}%`,
           ariaLabel: `Trailing 30-day APY ${rec.recommendedSource.apy30d.toFixed(1)} percent`,
         });
       }
       const safety = rec.safetyGrade;
       if (safety) {
-        chips.push({ text: `Safety ${safety}`, ariaLabel: `Safety grade ${safety}` });
+        chips.push({ label: "Safety", value: safety, ariaLabel: `Safety grade ${safety}` });
       }
       break;
     }
@@ -110,13 +120,15 @@ function buildEvidenceChips(
       // We surface PegScore + Liquidity + Staleness as the 3-chip set.
       if (peg?.rawValue != null) {
         chips.push({
-          text: `Peg ${Math.round(peg.rawValue)}`,
+          label: "Peg",
+          value: String(Math.round(peg.rawValue)),
           ariaLabel: `Peg score ${Math.round(peg.rawValue)} of 100`,
         });
       }
       if (liquidity?.rawValue != null) {
         chips.push({
-          text: `Liquidity ${Math.round(liquidity.rawValue)}`,
+          label: "Liquidity",
+          value: String(Math.round(liquidity.rawValue)),
           ariaLabel: `Liquidity score ${Math.round(liquidity.rawValue)} of 100`,
         });
       }
@@ -125,15 +137,15 @@ function buildEvidenceChips(
       if (ages.length > 0) {
         const worst = Math.max(...ages);
         chips.push({
-          text: isMobile
-            ? `Watch: ${discreteStalenessLabel(worst)}`
-            : `Watch: ${precisStaleness(worst)} stale`,
+          label: "Freshness",
+          value: isMobile ? discreteStalenessLabel(worst) : `${precisStaleness(worst)} old`,
           ariaLabel: `Data freshness watch: ${discreteStalenessLabel(worst).toLowerCase()}`,
           tone: "watch",
         });
       } else if (dews?.rawValue != null) {
         chips.push({
-          text: `DEWS ${Math.round(dews.rawValue)}`,
+          label: "DEWS",
+          value: String(Math.round(dews.rawValue)),
           ariaLabel: `DEWS stress score ${Math.round(dews.rawValue)} of 100. Lower is better.`,
         });
       }
@@ -154,6 +166,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
     logoUrl,
     whyText,
     watchText,
+    prominentOpenDetail = false,
   } = props;
   const chips = buildEvidenceChips(rec, isMobile);
   const pegLabel = PEG_METADATA[pegCurrency]?.filterLabel ?? pegCurrency;
@@ -170,26 +183,11 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
 
   return (
     <li className="pharos-card-shell pharos-interactive-card relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-4 focus-within:border-foreground/55 focus-within:ring-2 focus-within:ring-ring/35 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/70 bg-background/65 font-mono font-semibold text-foreground">
-            {rank}
-          </span>
-          <span className="pharos-kicker">
-            {profileLabel} profile result
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            {pegLabel} peg
-          </Badge>
-          <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground" aria-label="Filter output, not advice">
-            Filter output
-          </Badge>
-        </div>
-      </div>
-
       <div className="flex items-start gap-3">
+        <span aria-hidden="true" className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/65 font-mono text-xs font-semibold tabular-nums text-foreground">
+          {rank}
+        </span>
+        <span className="sr-only">{`Rank ${rank}, ${profileLabel} profile.`}</span>
         {logoUrl ? (
           <img
             src={logoUrl}
@@ -220,17 +218,23 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         </p>
         <ul className="flex flex-wrap gap-1.5" aria-label="Profile-conditioned evidence">
           {chips.map((chip) => (
-            <li key={chip.text}>
-              <Badge
-                variant="outline"
+            <li key={`${chip.label}:${chip.value}`}>
+              <span
                 className={cn(
-                  "text-[11px] font-medium",
-                  chip.tone === "watch" && "border-amber-500/45 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200",
+                  "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-[11px]",
+                  chip.tone === "watch"
+                    ? "border-frost-blue/40 bg-frost-blue/[0.06] text-foreground"
+                    : "border-border/60 bg-background/55 text-foreground",
                 )}
               >
-                <span aria-hidden={chip.ariaLabel ? "true" : undefined}>{chip.text}</span>
+                <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="text-muted-foreground">
+                  {chip.label}
+                </span>
+                <span aria-hidden={chip.ariaLabel ? "true" : undefined} className="font-mono font-semibold tabular-nums">
+                  {chip.value}
+                </span>
                 {chip.ariaLabel ? <span className="sr-only">{chip.ariaLabel}</span> : null}
-              </Badge>
+              </span>
             </li>
           ))}
         </ul>
@@ -257,10 +261,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
               What to watch
             </p>
-            <p className="break-words">
-              {resolvedWatchText}{" "}
-              <em className="text-xs">Historical readings; future behaviour may differ.</em>
-            </p>
+            <p className="break-words">{resolvedWatchText}</p>
           </div>
         ) : (
           <div className="space-y-1 text-muted-foreground">
@@ -268,8 +269,9 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
               What to watch
             </p>
             <p>
-              {readableLowestSubDimension(rec.lowestSubDimension.key)} scores {Math.round(rec.lowestSubDimension.score)} under this profile.{" "}
-              <em className="text-xs">Historical readings; future behaviour may differ.</em>
+              {readableLowestSubDimension(rec.lowestSubDimension.key)} scores{" "}
+              <span className="font-mono tabular-nums">{Math.round(rec.lowestSubDimension.score)}</span>{" "}
+              under this profile.
             </p>
           </div>
         )}
@@ -300,7 +302,12 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-sm">
         <Link
           href={detailHref}
-          className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium text-foreground underline underline-offset-4 hover:text-foreground"
+          className={cn(
+            "pharos-focus-ring inline-flex items-center gap-1.5",
+            prominentOpenDetail
+              ? "min-h-10 rounded-full border border-foreground/60 bg-foreground px-3.5 font-medium text-background hover:bg-foreground/90"
+              : "rounded-sm font-medium text-foreground underline underline-offset-4 hover:text-foreground",
+          )}
           aria-label={`Open ${rec.name} detail page`}
           aria-labelledby={`${headlineId} open-detail-label-${rec.id}`}
         >
@@ -343,13 +350,13 @@ function ScoreBreakdown({ components }: { components: readonly SelectorComponent
               {readableComponentKey(component.key)}
             </dt>
             <dd className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground sm:justify-end">
-              <span>Weight {formatComponentNumber(component.weight)}%</span>
-              <span>Normalized {formatNullableComponentNumber(component.normalizedValue)}</span>
+              <span>Weight <span className="font-mono tabular-nums">{formatComponentNumber(component.weight)}</span>%</span>
+              <span>Normalized <span className="font-mono tabular-nums">{formatNullableComponentNumber(component.normalizedValue)}</span></span>
               <span className="font-medium text-foreground">
-                {formatContribution(component.contribution)} pts
+                <span className="font-mono tabular-nums">{formatContribution(component.contribution)}</span> pts
               </span>
               {component.rawValue == null || component.redistributed ? (
-                <span className="rounded-full border border-amber-500/35 bg-amber-500/[0.07] px-1.5 text-amber-800 dark:text-amber-200">
+                <span className="rounded-full border border-border/50 bg-muted/15 px-1.5 text-muted-foreground">
                   {component.rawValue == null ? "Missing signal" : "Redistributed"}
                   {component.redistributed && component.rawValue == null ? "; redistributed" : ""}
                 </span>

@@ -96,9 +96,9 @@ export function SelectorSnapshotBanner({
   return (
     <div
       role="status"
-      className="flex items-start gap-2 rounded-lg border border-amber-500/35 bg-amber-500/[0.07] px-4 py-3 text-sm"
+      className="flex items-start gap-2 rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm"
     >
-      <Camera className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-200" aria-hidden="true" />
+      <Camera className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <p className="text-foreground">
         Original snapshot no longer cached; showing current output for the same inputs.
       </p>

@@ -123,10 +123,13 @@ describe("SelectorShortlistCard", () => {
 
     expect(screen.getByText(/Score breakdown/i)).toBeTruthy();
     expect(screen.getByText(/effective per-coin weights/i)).toBeTruthy();
-    expect(screen.getByText(/Weight 20%/i)).toBeTruthy();
-    expect(screen.getByText(/Normalized 91/i)).toBeTruthy();
-    expect(screen.getByText(/\+18.2 pts/i)).toBeTruthy();
-    expect(screen.getByText(/Missing signal; redistributed/i)).toBeTruthy();
+    // After the mono/tabular pass, numbers live in nested <span>s, so use
+    // normalizer-aware matchers that flatten descendant text content.
+    const breakdown = screen.getByText(/Score breakdown/i).closest("details") as HTMLElement;
+    expect(breakdown.textContent).toMatch(/Weight\s*20\s*%/);
+    expect(breakdown.textContent).toMatch(/Normalized\s*91/);
+    expect(breakdown.textContent).toMatch(/\+18\.2\s*pts/);
+    expect(breakdown.textContent).toMatch(/Missing signal; redistributed/);
   });
 
   it("discloses yield rail risk and freshness", () => {

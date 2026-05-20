@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, type ReactNode } from "react";
+import { SelectorEmblem } from "@/components/home-alt-callouts/selector-emblem";
 import { cn } from "@/lib/utils";
 
 export interface SelectorOption<TValue extends string> {
@@ -24,6 +25,11 @@ export interface SelectorQuestionCardProps<TValue extends string> {
   legend: string;
   legendSubtext?: string;
   profileLabel?: string;
+  /**
+   * Overrides the default "Step X of Y · Profile" kicker. Used by the mobile
+   * single-form, where all questions are visible at once and "of Y" adds noise.
+   */
+  kickerLabel?: string;
   options: readonly SelectorOption<TValue>[];
   multi?: boolean;
   value: TValue | readonly TValue[] | null;
@@ -90,6 +96,7 @@ function SelectorQuestionCardInner<TValue extends string>(
     legend,
     legendSubtext,
     profileLabel,
+    kickerLabel,
     options,
     multi = false,
     value,
@@ -142,9 +149,18 @@ function SelectorQuestionCardInner<TValue extends string>(
           tabIndex={-1}
           className="block space-y-1.5 outline-none"
         >
-          <span className="pharos-kicker">
-            Step {step} of {totalSteps}
-            {profileLabel ? ` · ${profileLabel}` : ""}
+          <span className="pharos-kicker inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="inline-flex h-3.5 w-3.5 items-center justify-center text-[color:oklch(0.62_0.24_330)]">
+              <SelectorEmblem />
+            </span>
+            <span>
+              {kickerLabel ?? (
+                <>
+                  Step <span className="font-mono tabular-nums">{step}</span> of <span className="font-mono tabular-nums">{totalSteps}</span>
+                  {profileLabel ? ` · ${profileLabel}` : ""}
+                </>
+              )}
+            </span>
           </span>
           <span className="block text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             {legend}

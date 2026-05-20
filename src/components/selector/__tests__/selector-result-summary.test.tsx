@@ -51,7 +51,6 @@ describe("SelectorResultSummary", () => {
         onCopyShareLink={vi.fn().mockResolvedValue(undefined)}
         copyShareDisabled
         copyShareDisabledReason="Trading data is stale."
-        skipped={[]}
         lowConfidence
         coverageWarnings={{ sparse: true }}
         usedRelaxedFallback
@@ -67,7 +66,8 @@ describe("SelectorResultSummary", () => {
     expect(screen.getByText(/Sparse coverage/i)).toBeTruthy();
     expect(screen.getByText(/Relaxed fallback used/i)).toBeTruthy();
     expect(screen.getByText(/Share links store these answers/i)).toBeTruthy();
-    expect(screen.getByText(/DEWS:/i)).toBeTruthy();
+    expect(screen.getByText(/^DEWS$/i)).toBeTruthy();
+    expect(screen.getByText(/^60 max$/i)).toBeTruthy();
     expect(screen.queryByText(/Selector constraints cannot be expressed/i)).toBeNull();
     expect(screen.getByText(/Safety, Resilience, Dependency Risk/i)).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: /Next actions/i })).toBeNull();
@@ -93,7 +93,6 @@ describe("SelectorResultSummary", () => {
         onCopyShareLink={vi.fn().mockRejectedValue(new Error("Clipboard denied"))}
         copyShareDisabled={false}
         shareFallbackUrl="https://pharos.watch/screener/picker/?sid=abc"
-        skipped={[]}
       />,
     );
 

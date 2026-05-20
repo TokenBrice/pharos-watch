@@ -75,6 +75,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
   const venueValue = isVenueMulti ? state.venue : (state.venue[0] ?? null);
   const profileLabel = capitalize(profile);
   const totalSteps = skipExit ? 5 : 6;
+  const q5Topic = profile === "treasury" ? "Rails" : "Venues";
 
   const isReady =
     state.pegCurrency != null &&
@@ -102,7 +103,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         questionId="q2"
         step={2}
         totalSteps={totalSteps}
-        profileLabel={profileLabel}
+        kickerLabel="Question 2 — Peg currency"
         legend={legendQ2}
         options={pegOptions}
         value={state.pegCurrency}
@@ -114,7 +115,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         questionId="q3"
         step={3}
         totalSteps={totalSteps}
-        profileLabel={profileLabel}
+        kickerLabel="Question 3 — Horizon"
         legend={legendQ3}
         options={horizonOptions}
         value={state.horizon}
@@ -126,7 +127,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         questionId="q4"
         step={4}
         totalSteps={totalSteps}
-        profileLabel={profileLabel}
+        kickerLabel="Question 4 — Peg tolerance"
         legend={legendQ4}
         helper={helperQ3}
         options={depegOptions}
@@ -140,7 +141,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
         questionId="q5"
         step={5}
         totalSteps={totalSteps}
-        profileLabel={profileLabel}
+        kickerLabel={`Question 5 — ${q5Topic}`}
         legend={legendQ5}
         helper={helperQ4}
         multi={isVenueMulti}
@@ -155,7 +156,7 @@ export function SelectorMobileForm(props: SelectorMobileFormProps) {
           questionId="q6"
           step={6}
           totalSteps={totalSteps}
-          profileLabel={profileLabel}
+          kickerLabel="Question 6 — Exit speed"
           legend={legendQ6}
           options={exitOptions}
           value={state.exitSpeed}

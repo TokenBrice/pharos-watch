@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -9,9 +9,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
-import type { SelectorInput, SelectorProfile, SkippedCoin } from "@shared/lib/selector";
+import type { SelectorInput, SelectorProfile } from "@shared/lib/selector";
 import { PEG_METADATA } from "@shared/lib/classification";
-import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
+import { SelectorEmblem } from "@/components/home-alt-callouts/selector-emblem";
 import { cn } from "@/lib/utils";
 
 export interface SelectorSummaryCoverageWarnings {
@@ -50,7 +50,6 @@ interface SelectorResultSummaryProps {
   copyShareDisabled: boolean;
   copyShareDisabledReason?: string;
   shareFallbackUrl?: string;
-  skipped: readonly SkippedCoin[];
   lowConfidence?: boolean;
   coverageWarnings?: SelectorSummaryCoverageWarnings;
   usedRelaxedFallback?: boolean;
@@ -59,8 +58,10 @@ interface SelectorResultSummaryProps {
   answerChips?: readonly SelectorSummaryAnswerChip[];
   priorityLabels?: readonly string[];
   sessionRecovery?: SelectorSummarySessionRecovery;
-  // Layout slot for the snapshot banner.
-  snapshotBanner?: React.ReactNode;
+  // Forward-action slot rendered directly under the funnel headline so the next
+  // step (Compare these / Compare vs watch-outs) sits above secondary prose
+  // rather than below the answer-chip and share-link blocks.
+  compareActionsSlot?: ReactNode;
   // Mobile-only: order-aware reorder happens via Tailwind on the parent.
 }
 
@@ -92,7 +93,6 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
     copyShareDisabled,
     copyShareDisabledReason,
     shareFallbackUrl,
-    skipped,
     lowConfidence = false,
     coverageWarnings,
     usedRelaxedFallback = false,
@@ -101,7 +101,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
     answerChips = [],
     priorityLabels = [],
     sessionRecovery,
-    snapshotBanner,
+    compareActionsSlot,
   } = props;
 
   const [shareState, setShareState] = useState<"idle" | "pending" | "copied" | "error">("idle");
@@ -169,33 +169,44 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
       ) : null}
 
       <div className="pharos-subtle-band space-y-3 rounded-2xl border border-border/55 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
-            {PROFILE_LABEL[profile]}
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center text-[color:oklch(0.62_0.24_330)]"
+          >
+            <SelectorEmblem />
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
-            {pegLabel} peg
-          </span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-xs text-muted-foreground">
-            Horizon: {HORIZON_LABEL[input.horizon]}
-          </span>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
+                {PROFILE_LABEL[profile]}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-2.5 py-1 text-xs font-medium text-foreground">
+                {pegLabel} peg
+              </span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">
+                Horizon: {HORIZON_LABEL[input.horizon]}
+              </span>
+            </div>
+
+            <h2
+              id="selector-summary"
+              ref={summaryHeadingRef}
+              tabIndex={-1}
+              className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
+            >
+              <span className="font-mono tabular-nums">{universe.active.toLocaleString()}</span> tracked {pegLabel} stablecoins → <span className="font-mono tabular-nums">{universe.surviving.toLocaleString()}</span> filtered → <span className="font-mono tabular-nums">{shortlistCount}</span> shortlist entries
+            </h2>
+          </div>
         </div>
 
-        <h2
-          id="selector-summary"
-          ref={summaryHeadingRef}
-          tabIndex={-1}
-          className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
-        >
-          {universe.active.toLocaleString()} tracked {pegLabel} stablecoins → {universe.surviving.toLocaleString()} filtered → {shortlistCount} shortlist entries
-        </h2>
+        {compareActionsSlot ? (
+          <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:flex-wrap">{compareActionsSlot}</div>
+        ) : null}
 
-        <p className="pharos-page-title text-base font-extrabold leading-snug tracking-tight text-foreground sm:text-lg">
-          This is filter output, not advice.
-        </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          A &ldquo;fit&rdquo; means the coin passed Pharos&rsquo;s exclusion filters for the selected peg and profile, then ranked highest on the scoring weights. Pharos surfaces analytical readings; allocation decisions are yours alone, made against your own counsel.
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Filter output, not advice. A &ldquo;fit&rdquo; passed Pharos&rsquo;s exclusion filters for the selected peg and profile, then ranked highest on the scoring weights.
         </p>
 
         {resultBanners.length > 0 ? (
@@ -255,17 +266,17 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         ) : null}
 
         {filterChips.length > 0 ? (
-          <div className="space-y-2 rounded-lg border border-border/50 bg-background/35 p-3">
+          <div className="space-y-2 rounded-lg border border-dashed border-border/45 bg-background/25 p-3">
             <div className="space-y-2">
               <p className="pharos-kicker">Screener handoff filters</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {filterChips.map((chip) => (
                   <span
                     key={`${chip.label}:${chip.value}`}
-                    className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-card/55 px-2.5 py-1 text-xs font-medium text-foreground"
+                    className="inline-flex max-w-full items-baseline gap-0 rounded-md border border-border/45 bg-card/35 font-mono text-[11px]"
                   >
-                    <span className="shrink-0 text-muted-foreground">{chip.label}:</span>
-                    <span className="min-w-0 break-words">{chip.value}</span>
+                    <span className="shrink-0 px-1.5 py-0.5 text-muted-foreground">{chip.label}</span>
+                    <span className="border-l border-border/45 px-1.5 py-0.5 text-foreground">{chip.value}</span>
                   </span>
                 ))}
               </div>
@@ -344,10 +355,6 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           </div>
         ) : null}
       </div>
-
-      {snapshotBanner}
-
-      {skipped.length > 0 ? <SelectorSkippedDisclosure coins={skipped} /> : null}
     </section>
   );
 }
