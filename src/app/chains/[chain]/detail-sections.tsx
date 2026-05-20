@@ -5,8 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export { BackingBreakdown } from "./backing-breakdown";
 export { CompositionSection } from "./composition-section";
-export { HealthBreakdownCard } from "./health-breakdown-card";
-export { HeroCard } from "./hero-card";
 export { StablecoinTable } from "./stablecoin-table";
 
 export function DetailedSectionsNotice({
