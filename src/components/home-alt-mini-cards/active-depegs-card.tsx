@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { CLIENT_ACTIVE_IDS } from "@shared/lib/stablecoins/client-registry";
+import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 function formatDuration(ageSec: number): string {
   if (ageSec < 60) return `${Math.max(1, Math.round(ageSec))}s`;
@@ -30,26 +33,50 @@ interface ActiveRow {
   direction: "above" | "below";
 }
 
+function hasCurrentActiveDeviation(
+  event: DepegEvent,
+  pegSummaryById: Map<string, PegSummaryCoin>,
+): boolean {
+  const pegSummary = pegSummaryById.get(event.stablecoinId);
+  return pegSummary?.activeDepeg === true && pegSummary.currentDeviationBps != null;
+}
+
 export function ActiveDepegsCard(): React.JSX.Element {
   const { data, isLoading } = useActiveDepegEvents();
+  const { data: pegSummaryData, isLoading: isPegSummaryLoading } = usePegSummary();
   const { data: logos } = useLogos();
   const logoMap = logos ?? {};
 
+  const pegSummaryById = useMemo(
+    () => new Map((pegSummaryData?.coins ?? []).map((coin) => [coin.id, coin])),
+    [pegSummaryData?.coins],
+  );
+
+  const activeEvents = useMemo(
+    () => (data?.events ?? [])
+      .filter((ev) => CLIENT_ACTIVE_IDS.has(ev.stablecoinId))
+      .flatMap((ev) => {
+        if (!hasCurrentActiveDeviation(ev, pegSummaryById)) return [];
+        const currentDeviationBps = pegSummaryById.get(ev.stablecoinId)?.currentDeviationBps;
+        return currentDeviationBps == null ? [] : [{ ...ev, currentDeviationBps }];
+      }),
+    [data, pegSummaryById],
+  );
+
   const rows = useMemo<ActiveRow[]>(() => {
-    const events = data?.events ?? [];
     // eslint-disable-next-line react-hooks/purity -- Date.now() used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result bounded by refetchInterval.
     const nowSec = Math.floor(Date.now() / 1000);
-    return events
+    return activeEvents
       .map((ev) => ({
         id: ev.stablecoinId,
         symbol: ev.symbol,
-        bps: ev.peakDeviationBps,
+        bps: ev.currentDeviationBps,
         ageSec: Math.max(0, nowSec - ev.startedAt),
-        direction: ev.direction,
+        direction: ev.currentDeviationBps >= 0 ? "above" as const : "below" as const,
       }))
       .sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps))
       .slice(0, 8);
-  }, [data]);
+  }, [activeEvents]);
 
   return (
     <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
@@ -60,7 +87,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
         </span>
       </div>
 
-      {isLoading ? (
+      {isLoading || isPegSummaryLoading ? (
         <>
           <Skeleton className="h-12 w-28" />
           <Skeleton className="h-32 w-full" />
@@ -82,7 +109,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
               {rows.length}
             </span>
             <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              of {data?.events.length} live
+              of {activeEvents.length} live
             </span>
           </div>
           <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-[13px]">
