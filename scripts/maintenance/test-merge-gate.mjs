@@ -19,7 +19,8 @@ import {
 } from "../lib/validate-contract.mjs";
 
 const ZERO_SHA = /^0+$/;
-const LOCAL_MOBILE_CANARY_ROUTES = "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
+const LOCAL_PAGES_CANARY_ROUTES = "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/";
+const LOCAL_MOBILE_CANARY_ROUTES = LOCAL_PAGES_CANARY_ROUTES;
 const LOCAL_MOBILE_CANARY_VIEWPORTS = "360x740,390x844";
 
 export function normalizePath(path) {
@@ -66,7 +67,7 @@ export function buildCommandPlan(changedFiles, { pagesSmoke = false, workerSmoke
 
   if (pagesSmoke && pagesChanged) {
     for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
-      addCommand(plan, cmd, "Opt-in Pages smoke requested via MERGE_GATE_PAGES_SMOKE=1");
+      addCommand(plan, cmd, "Pages smoke enabled by the local merge-gate default");
     }
   }
 
@@ -103,7 +104,7 @@ export function buildFullCommandPlan(
 
   if (pagesSmoke) {
     for (const cmd of PAGES_SMOKE_VALIDATE_COMMANDS) {
-      addCommand(plan, cmd, "Opt-in Pages smoke requested via MERGE_GATE_PAGES_SMOKE=1");
+      addCommand(plan, cmd, "Pages smoke enabled by the local merge-gate default");
     }
   }
 
@@ -156,17 +157,35 @@ export function getCommandEnv(cmd, changedFiles, env = process.env) {
     ? {}
     : { TZ: "UTC", LANG: "C.UTF-8", CI: "true" };
 
+  if (cmd === "npm run build") {
+    return {
+      ...baseEnv,
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
+      PUBLIC_DATASETS_API_URL: "",
+      PUBLIC_DATASETS_API_KEY: "",
+      PUBLIC_DATASETS_REQUIRE_API: "",
+      SMOKE_API_BASE: "",
+      API_BASE_URL: "",
+    };
+  }
+
   if (cmd === "npm run validate:pages-smoke") {
     const pagesUiChanged = hasPagesUiImpact(changedFiles);
+    const pagesSmokeEnv = {
+      ...baseEnv,
+      ...(env.SMOKE_UI_OVERFLOW_ROUTES ? {} : { SMOKE_UI_OVERFLOW_ROUTES: LOCAL_PAGES_CANARY_ROUTES }),
+      ...(env.SMOKE_UI_OVERFLOW_WORKERS ? {} : { SMOKE_UI_OVERFLOW_WORKERS: "6" }),
+    };
+
     if (!pagesUiChanged) {
       return {
-        ...baseEnv,
+        ...pagesSmokeEnv,
         PAGES_SMOKE_INCLUDE_MOBILE: "0",
       };
     }
 
     return {
-      ...baseEnv,
+      ...pagesSmokeEnv,
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
       ...(env.SMOKE_MOBILE_UI_ROUTES ? {} : { SMOKE_MOBILE_UI_ROUTES: LOCAL_MOBILE_CANARY_ROUTES }),
       ...(env.SMOKE_MOBILE_UI_VIEWPORTS ? {} : { SMOKE_MOBILE_UI_VIEWPORTS: LOCAL_MOBILE_CANARY_VIEWPORTS }),
@@ -282,7 +301,7 @@ export async function runMergeGate({
   const headRef = env.MERGE_GATE_HEAD_REF ?? "HEAD";
   const dryRun = env.MERGE_GATE_DRY_RUN === "1";
   const forceFullDeploy = env.MERGE_GATE_FULL_DEPLOY === "1";
-  const pagesSmoke = env.MERGE_GATE_PAGES_SMOKE === "1";
+  const pagesSmoke = env.MERGE_GATE_PAGES_SMOKE !== "0";
   const workerSmoke = env.MERGE_GATE_WORKER_SMOKE === "1";
   const skipFetch = env.MERGE_GATE_NO_FETCH === "1";
 

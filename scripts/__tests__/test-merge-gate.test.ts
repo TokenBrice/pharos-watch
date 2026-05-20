@@ -97,6 +97,20 @@ describe("buildCommandPlan", () => {
     });
   });
 
+  it("applies the production Pages build env for local static export validation", () => {
+    expect(getCommandEnv("npm run build", ["src/app/page.tsx"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true",
+      PUBLIC_DATASETS_API_URL: "",
+      PUBLIC_DATASETS_API_KEY: "",
+      PUBLIC_DATASETS_REQUIRE_API: "",
+      SMOKE_API_BASE: "",
+      API_BASE_URL: "",
+    });
+  });
+
   it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {
     expect(
       getCommandEnv(
@@ -120,6 +134,8 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
+      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "0",
     });
   });
@@ -131,6 +147,8 @@ describe("buildCommandPlan", () => {
       TZ: "UTC",
       LANG: "C.UTF-8",
       CI: "true",
+      SMOKE_UI_OVERFLOW_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_UI_OVERFLOW_WORKERS: "6",
       PAGES_SMOKE_INCLUDE_MOBILE: "1",
       SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
       SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
@@ -146,6 +164,8 @@ describe("buildCommandPlan", () => {
         "npm run validate:pages-smoke",
         ["src/app/page.tsx"],
         {
+          SMOKE_UI_OVERFLOW_ROUTES: "/desktop/",
+          SMOKE_UI_OVERFLOW_WORKERS: "2",
           SMOKE_MOBILE_UI_ROUTES: "/custom/",
           SMOKE_MOBILE_UI_VIEWPORTS: "412x915",
           SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
@@ -525,5 +545,46 @@ describe("runMergeGate fetch and node_modules wiring", () => {
     const { execFile, runCommandImpl, runCommandCalls } = makeStubs();
     await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
     expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs");
+  });
+
+  it("defaults Pages smoke on for the normal local merge gate", async () => {
+    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "src/app/page.tsx\n";
+      }
+      return "";
+    };
+    const runCommandCalls: string[] = [];
+    const runCommandImpl = (cmd: string) => {
+      runCommandCalls.push(cmd);
+      return Promise.resolve({ status: 0, aborted: false });
+    };
+
+    await runMergeGate({ argv: [], env: { MERGE_GATE_NO_FETCH: "1" }, runCommandImpl, execFile });
+
+    expect(runCommandCalls).toContain("npm run validate:pages-smoke");
+  });
+
+  it("allows Pages smoke to be disabled explicitly", async () => {
+    const execFile = (_cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "diff" && options?.encoding === "utf8") {
+        return "src/app/page.tsx\n";
+      }
+      return "";
+    };
+    const runCommandCalls: string[] = [];
+    const runCommandImpl = (cmd: string) => {
+      runCommandCalls.push(cmd);
+      return Promise.resolve({ status: 0, aborted: false });
+    };
+
+    await runMergeGate({
+      argv: [],
+      env: { MERGE_GATE_NO_FETCH: "1", MERGE_GATE_PAGES_SMOKE: "0" },
+      runCommandImpl,
+      execFile,
+    });
+
+    expect(runCommandCalls).not.toContain("npm run validate:pages-smoke");
   });
 });
