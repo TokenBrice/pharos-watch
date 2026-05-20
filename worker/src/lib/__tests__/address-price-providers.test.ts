@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAddressPriceTargetsByProvider,
+  collectAddressPriceProviderQuotes,
   resolveEnabledAddressPriceProviders,
 } from "../address-price-providers";
 import { runDexScreenerAddressProvider } from "../address-price-providers/dexscreener";
@@ -26,13 +27,12 @@ function makeDexScreenerTarget(index: number, overrides: Partial<AddressPriceTar
 }
 
 describe("address price providers", () => {
-  it("auto-enables no-key providers plus configured key-backed providers", () => {
+  it("auto-enables the stable no-key provider plus configured key-backed providers", () => {
     expect(resolveEnabledAddressPriceProviders({
       cgApiKey: "cg",
       moralisApiKey: "moralis",
       birdeyeApiKey: "birdeye",
     })).toEqual([
-      "dexscreener-address",
       "dexpaprika-address",
       "coingecko-onchain-address",
       "moralis-address",
@@ -40,11 +40,11 @@ describe("address price providers", () => {
     ]);
   });
 
-  it("honors explicit allowlists and skips providers with missing credentials", () => {
+  it("honors explicit allowlists, including DexScreener opt-in, and skips providers with missing credentials", () => {
     expect(resolveEnabledAddressPriceProviders({
-      enabledProviders: "moralis-address,dexpaprika-address,birdeye-address",
+      enabledProviders: "dexscreener-address,moralis-address,dexpaprika-address,birdeye-address",
       moralisApiKey: "moralis",
-    })).toEqual(["moralis-address", "dexpaprika-address"]);
+    })).toEqual(["dexscreener-address", "moralis-address", "dexpaprika-address"]);
     expect(resolveEnabledAddressPriceProviders({ enabledProviders: "none", moralisApiKey: "moralis" })).toEqual([]);
   });
 
@@ -161,6 +161,39 @@ describe("address price providers", () => {
         status: 429,
         success: false,
         rejectionReasonCounts: { "non-ok": 1 },
+      },
+    ]);
+  });
+
+  it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await collectAddressPriceProviderQuotes({
+      targetsByProvider: new Map([[
+        "dexscreener-address",
+        [makeDexScreenerTarget(1)],
+      ]]),
+      providers: ["dexscreener-address"],
+      sourceAllowed: {
+        "alchemy-address": true,
+        "moralis-address": true,
+        "dexscreener-address": false,
+        "dexpaprika-address": true,
+        "coingecko-onchain-address": true,
+        "birdeye-address": true,
+      },
+      config: {},
+      nowSec: 1_700_000_000,
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.providerOutcomes.get("dexscreener-address")).toBe("neutral");
+    expect(result.diagnostics).toMatchObject([
+      {
+        source: "dexscreener-address",
+        errorClass: "blocked",
+        success: false,
       },
     ]);
   });

@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
     {
+      version: "6.05",
+      title: "DexScreener address breaker hardening",
+      date: "2026-05-20",
+      effectiveAt: 1779262200,
+      summary:
+        "DexScreener exact-address primary augmentation is now explicit opt-in, and address-provider circuit accounting ignores blocked or locally skipped runs.",
+      impact: [
+        "`dexscreener-address` remains available as a weight-1 soft primary-consensus source when operators explicitly include it in `ADDRESS_PRICE_PROVIDERS_ENABLED`",
+        "Unset address-provider configuration now defaults to DexPaprika plus configured key-backed providers, avoiding quarter-hourly calls to DexScreener's Cloudflare/WAF-protected public token endpoint",
+        "Open address-provider circuits no longer accumulate additional failures from skipped blocked runs; only actual upstream attempts can fail the provider breaker",
+      ],
+      commits: [],
+      reconstructed: false,
+    },
+    {
       version: "6.04",
       title: "DexScreener address augmentation throttle",
       date: "2026-05-18",

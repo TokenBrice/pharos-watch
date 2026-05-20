@@ -167,8 +167,8 @@ export const ENV_BINDINGS = [
   {
     key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
     valueType: "string",
-    description: "Optional comma-separated allowlist for exact-address price providers; unset auto-enables no-key providers plus configured key-backed providers. Use `none` to disable.",
-    example: { section: "workerOptional", value: "dexscreener-address,dexpaprika-address,moralis-address,birdeye-address" },
+    description: "Optional comma-separated allowlist for exact-address price providers; unset auto-enables DexPaprika plus configured key-backed providers. Use `none` to disable, or include `dexscreener-address` only for explicit opt-in to that Cloudflare/WAF-protected public lane.",
+    example: { section: "workerOptional", value: "dexpaprika-address,moralis-address,birdeye-address" },
     runtimes: {
       worker: { order: 15, status: "optional" },
     },

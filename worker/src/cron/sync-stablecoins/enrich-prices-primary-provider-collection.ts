@@ -3,7 +3,7 @@ import type { PriceObservedAtMode } from "@shared/types/core";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
 import { CG_TICKER_COINS, fetchCgTickerPricesDetailed } from "../../lib/cg-ticker";
 import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
-import { shouldAttemptFetch, recordOutcome, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcome, recordOutcomeDecision, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { throwIfAborted } from "../../lib/abort";
 import { fetchPythPrices } from "../../lib/pyth";
@@ -704,9 +704,12 @@ export async function collectPrimaryProviderQuotes(params: {
       addressProviderQuotes.set(coinId, quotes);
     }
     providerDiagnostics.push(...addressProviderResult.diagnostics);
-    for (const [provider, ok] of addressProviderResult.providerOutcomes) {
-      await recordOutcome(db, ADDRESS_PROVIDER_CIRCUIT_SOURCE[provider], ok);
+    for (const [provider, outcome] of addressProviderResult.providerOutcomes) {
+      await recordOutcomeDecision(db, ADDRESS_PROVIDER_CIRCUIT_SOURCE[provider], outcome);
     }
+  }
+  if (!plan.addressProviders.includes("dexscreener-address")) {
+    await recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.DEXSCREENER_ADDRESS_PRICES);
   }
 
   return {
