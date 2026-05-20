@@ -250,7 +250,7 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
               onClick={onTogglePhosphor}
               aria-pressed={phosphor}
               aria-label={phosphor ? "Turn off phosphor reading mode" : "Turn on phosphor reading mode"}
-              className="phosphor-toggle"
+              className="phosphor-toggle inline-flex min-h-11 items-center rounded px-2 py-2"
             >
               {phosphor ? "[■] CRT" : "[ ] CRT"}
             </button>
