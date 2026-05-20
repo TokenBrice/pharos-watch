@@ -8,6 +8,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
+import { useThemeToggle } from "@/hooks/use-theme-toggle";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { EventCard, SEVERITY_GLYPH, SEVERITY_LABEL } from "@/components/tape/event-card";
 import { ClassDigestRow } from "@/components/tape/class-digest-row";
@@ -183,10 +184,11 @@ interface SummaryBandProps {
   nowMs: number;
   lastEventTs: number | null;
   phosphor: boolean;
+  showPhosphorToggle: boolean;
   onTogglePhosphor: () => void;
 }
 
-function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, onTogglePhosphor }: SummaryBandProps) {
+function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -240,16 +242,20 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
             {part}
           </span>
         ))}
-        <span aria-hidden="true">·</span>
-        <button
-          type="button"
-          onClick={onTogglePhosphor}
-          aria-pressed={phosphor}
-          aria-label={phosphor ? "Turn off phosphor reading mode" : "Turn on phosphor reading mode"}
-          className="phosphor-toggle"
-        >
-          {phosphor ? "[■] CRT" : "[ ] CRT"}
-        </button>
+        {showPhosphorToggle ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={onTogglePhosphor}
+              aria-pressed={phosphor}
+              aria-label={phosphor ? "Turn off phosphor reading mode" : "Turn on phosphor reading mode"}
+              className="phosphor-toggle"
+            >
+              {phosphor ? "[■] CRT" : "[ ] CRT"}
+            </button>
+          </>
+        ) : null}
       </p>
       {lastEventNode}
     </div>
@@ -621,13 +627,25 @@ export function TimelineClient() {
   const openCountByDay = useMemo(() => bucketByDay(openIncidents), [openIncidents]);
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
-  // Phosphor mode is opt-in; persisted in localStorage. Applied after mount
-  // to avoid SSR/hydration mismatch — server always renders the standard theme.
+  // Phosphor mode is opt-in, dark-mode-only. Persisted in localStorage but
+  // applied only after mount and only while the site is in dark theme — the
+  // green-on-black palette is illegible against a light background.
+  const { mounted: themeMounted, isDark } = useThemeToggle();
   const [phosphor, setPhosphor] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
     setPhosphor(window.localStorage.getItem("pharos:timeline-phosphor") === "1");
   }, []);
+  // Auto-disable phosphor when the user switches to light mode so the stored
+  // preference doesn't surprise them on their next dark-mode visit.
+  useEffect(() => {
+    if (themeMounted && !isDark && phosphor) {
+      setPhosphor(false);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("pharos:timeline-phosphor");
+      }
+    }
+  }, [themeMounted, isDark, phosphor]);
   const togglePhosphor = useCallback(() => {
     setPhosphor((prev) => {
       const next = !prev;
@@ -637,9 +655,11 @@ export function TimelineClient() {
       return next;
     });
   }, []);
+  const phosphorActive = phosphor && isDark;
+  const phosphorToggleVisible = themeMounted && isDark;
 
   return (
-    <div className={`space-y-6${phosphor ? " phosphor-green" : ""}`}>
+    <div className={`space-y-6${phosphorActive ? " phosphor-green" : ""}`}>
       <a
         href="#tape-feed"
         className="pharos-focus-ring sr-only rounded-md bg-background px-3 py-1.5 text-xs font-medium focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
@@ -656,7 +676,8 @@ export function TimelineClient() {
         dataUpdatedAt={dataUpdatedAt}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
-        phosphor={phosphor}
+        phosphor={phosphorActive}
+        showPhosphorToggle={phosphorToggleVisible}
         onTogglePhosphor={togglePhosphor}
       />
 
