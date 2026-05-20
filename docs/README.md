@@ -53,7 +53,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/stablecoins-cache.md](./runbooks/stablecoins-cache.md) - stablecoins cache availability, provider breaker, and lease recovery
 - [runbooks/telegram-admin-broadcast-safety.md](./runbooks/telegram-admin-broadcast-safety.md) - admin broadcast safety controls and dry-run pre-flight
 - [runbooks/telegram-backlog-expiration.md](./runbooks/telegram-backlog-expiration.md) - Telegram pending backlog expiration triage and replay window recovery
-- [runbooks/telegram-group-admin-gating-rollback.md](./runbooks/telegram-group-admin-gating-rollback.md) - rollback the group-admin hard gate via the `TELEGRAM_GROUP_ADMIN_GATING="soft"` switch
+- [runbooks/telegram-group-admin-gating-rollback.md](./runbooks/telegram-group-admin-gating-rollback.md) - rollback the group-admin hard gate through a code-level mode change and Worker redeploy
 - [runbooks/telegram-mini-app-auth-failures.md](./runbooks/telegram-mini-app-auth-failures.md) - diagnose `mini_app_session_invalid` spikes (token rotation, replay, stale clients)
 - [runbooks/telegram-mini-app-botfather.md](./runbooks/telegram-mini-app-botfather.md) - capture BotFather Mini App configuration and post-deploy smoke tests
 - [runbooks/telegram-no-delivery.md](./runbooks/telegram-no-delivery.md) - Telegram dispatcher reports events but no messages; triage and recovery
@@ -175,6 +175,7 @@ These routes are not public product surfaces, but they are part of the maintaine
 
 For route/page behavior changes, start from the route's primary doc above and then verify the adjacent code/checks:
 
+- Route inventory: every retained `src/app/**/page.tsx` route should be represented in the public/operator route maps above, or explicitly documented as excluded/noindex utility behavior.
 - Page shell and metadata: `src/app/**/page.tsx`, `src/app/layout.tsx`, `src/app/sitemap.ts`, `src/app/robots.ts`
 - Client behavior: route `client.tsx`, route view-model helpers, and `src/components/**`
 - API/data hooks: `src/hooks/**`, `src/lib/api.ts`, and `shared/lib/api-endpoints/**`

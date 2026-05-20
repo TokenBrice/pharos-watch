@@ -498,7 +498,7 @@ When adding tests, prefer colocating them near the module under test unless an e
 - **Pure `shared/lib/` + `src/lib/` functions** — formatters, supply helpers, classification maps, peg-rate derivation, and frontend derivations. These are the highest-value tests: deterministic, fast, and catch regressions in shared logic.
 - **Edge cases** — `NaN`, `Infinity`, `null`, `undefined`, zero, negative values, empty inputs. The existing tests set this standard.
 - **Boundary values** — tier boundaries in formatters (e.g., 999 vs 1000 for K suffix).
-- **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the D1 mock from `helpers/mock-d1.ts`.
+- **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the shared D1 mock from `worker/src/test-helpers/__shared/mock-d1.ts`.
 - **Degraded-mode scenarios** — for cron jobs, test the normal path plus at least one failure/fallback scenario (e.g., upstream API 503, stale cache, missing data). Use `mockFetch()` to simulate API failures and `vi.useFakeTimers()` for deterministic time.
 
 ### What NOT to test (for now)
@@ -529,7 +529,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - Use `describe` per function, `it` per behavior.
 - Test names describe the behavior, not the implementation: `"returns 0 for undefined input"` not `"calls sumPegBuckets with undefined"`.
 - Use the `mockCoin()` helper (see `supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
-- Use shared fixtures from `helpers/fixtures.ts` for DB row mocks.
+- Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep tests focused: one assertion per `it` block when possible.
 
 ## Coverage
@@ -567,7 +567,7 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 
 ### Critical Test Suites
 
-- `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites (`cache-passthrough`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`, `depeg-events`, and `recent-events`) plus shared strict-path registry tests and router mapping tests.
+- `npm run test:critical-contracts` covers the explicitly enumerated critical handler suites in `package.json`; keep that script and `scripts/lib/critical-test-files.mjs` as the source of truth instead of duplicating suite membership in prose.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It skips cleanly when no deploy surfaces changed, runs the shared validate core for deploy-impacting diffs, always adds the common postbuild `test:noncritical` (four shards locally to match CI) and `coverage:critical` phase for deploy-impacting diffs, adds `build` + `check:feature-flag-inlining` + `seo:check` + `check:phishing-signatures` + `check:classifier-sensitive-copy` plus Pages built-artifact guardrails for Pages-impacting changes, and adds Worker runtime typecheck for worker-impacting changes. It also runs an advisory `scripts/ci/check-node-modules-fresh.mjs` first; that check is fatal only when `node_modules/` is missing entirely. Useful controls: `npm run test:merge-gate -- --staged`, `MERGE_GATE_BASE_REF=<ref>`, `MERGE_GATE_HEAD_REF=<ref>`, `MERGE_GATE_FULL_DEPLOY=1`, `MERGE_GATE_DRY_RUN=1`, `MERGE_GATE_PARALLEL=1` (opt into the parallel post-validate matrix; default is serial to avoid local CPU contention; CI always runs the matrix via separate runners), `MERGE_GATE_PAGES_SMOKE=0` (skip the default Pages serve smoke after build; desktop/local `smoke-ui` otherwise runs with deploy-aligned canary routes/worker count and strict mobile smoke only runs for UI-surface diffs with deploy-aligned canary defaults), `MERGE_GATE_WORKER_SMOKE=1` (opt-in wrangler dev + smoke-api, ~1-2 min; defaults to canary API scope unless `SMOKE_API_SCOPE` is explicitly set), `MERGE_GATE_NO_FETCH=1` (skip the best-effort `git fetch origin main` that keeps the diff base honest), and `MERGE_GATE_NATIVE_ENV=1` (skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus either every strict contract path (`SMOKE_API_SCOPE=full`, default) mirrored from `shared/lib/api-endpoints/` or a deploy canary subset (`SMOKE_API_SCOPE=canary`). Strict contract drift is guarded by `src/lib/__tests__/api-endpoints.test.ts`, with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
@@ -668,7 +668,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity`                      | warn  | `Date.now()` in render is intentional for timestamp-based UIs                                |
 | `react-hooks/incompatible-library`        | warn  | TanStack Virtual `useVirtualizer()` — known library limitation                               |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.claude/`, `.codex-autorunner/`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.claude/`, `.codex-autorunner/`, `agents/**`, `worker/.wrangler/`, `.worktrees/`, `worktrees/`, and `next-env.d.ts` (auto-generated build artifacts, agent scratch areas, and worktree directories). The conditional worktree behavior described earlier applies to Vitest coverage globs, not ESLint.
 
 ### Zod Runtime Validation
 

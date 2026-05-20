@@ -169,7 +169,7 @@ When changing Picker behavior, update this doc alongside:
 
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
-3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document the replacement in `agents/screener-selector/03-editorial.md` §8.
+3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document durable replacement guidance in this file or a focused `/docs/` page.
 4. **Weight, exclusion, or deterministic behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.7`.
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
@@ -191,9 +191,6 @@ The Picker engine is deterministic and client-only. It does not call the Worker.
 | `functions/__tests__/selector-snapshot.test.ts` | Snapshot endpoint tests (integration) |
 | `scripts/ci/check-selector-banned-phrases.mjs` | Banned-phrase lint (integration) |
 | `public/og-selector-*.png` | Static 1200×630 OG cards per profile (integration) |
-| `agents/selector-design.md` | Source design — R2-converged |
-| `agents/selector-implementation-plan.md` | Implementation plan — Step-4 revised; binding |
-| `agents/screener-selector/03-editorial.md` | Editorial policy + worked examples (banned-phrase lint scans §4) |
 
 ---
 

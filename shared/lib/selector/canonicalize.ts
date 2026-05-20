@@ -6,8 +6,8 @@
  * The strip-list removes every freshness-derived field so two readers with
  * the same content-level snapshot produce the same `sid`.
  *
- * Binding: `agents/selector-implementation-plan.md` §0 (canonicalization row),
- * Adversarial P0 row in §11.
+ * Binding: see `docs/screener-picker-page.md` for the maintained snapshot
+ * canonicalization contract.
  */
 
 /**

@@ -1,9 +1,9 @@
 /**
  * Profile weight vectors and the load-time `sum = 100` invariant.
  *
- * The vectors below are the R2-final numbers from
- * `agents/selector-implementation-plan.md` §3.2. A buggy edit must break at
- * module import time, not at test time — `assertWeightsSumTo100` runs for
+ * The vectors below are the maintained profile weights for the Picker. A buggy
+ * edit must break at module import time, not at test time —
+ * `assertWeightsSumTo100` runs for
  * each profile when this module loads.
  */
 import {

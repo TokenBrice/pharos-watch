@@ -3308,7 +3308,7 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 
 **Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
 
-**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation per `agents/selector-implementation-plan.md` §0.
+**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation. The server recomputes the identifier from the canonicalized selector output before storing or reading a snapshot.
 
 **Response (200):**
 

@@ -9,7 +9,8 @@
  * meant to clear the banned-phrase lint (design §4.5). Substitute `{dimensionLabel}`
  * with the rendered dimension name and `{scoreOrGrade}` with the score.
  *
- * Binding: `agents/selector-implementation-plan.md` §2.5 + §10 (Milestone 10).
+ * Binding: see `docs/screener-picker-page.md` for the maintained editorial
+ * template contract.
  */
 import type {
   LowestSubDimension,

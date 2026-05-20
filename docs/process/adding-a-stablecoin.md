@@ -138,9 +138,9 @@ Do the research manually, or use the maintained skills when they match the task:
 - `stablecoin-info-fetch`: audit/populate a single coin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts).
 - `contract-populate` / `contract-enrich`: resolve `contracts[]` across chains from CoinGecko + DefiLlama + explorer verification.
 - `reserve-research`: populate `reserves[]` composition for a single coin.
-- `write-ai-summaries`: draft or refresh the `data/ai-summaries.json` entry.
+- `write-ai-summaries` (Claude-only): draft or refresh the `data/ai-summaries.json` entry.
 - `resilience-classify`: pick `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` overrides.
-- `pre-launch-update`: refresh milestones, launch phase, and featured content for pre-launch entries.
+- `pre-launch-update` (Claude-only): refresh milestones, launch phase, and featured content for pre-launch entries.
 - `coingecko-id-verif`: confirm a `geckoId` resolves to the correct asset before saving.
 
 These skills do not replace review — they are research scaffolding. Always verify the output against official sources before editing the registry.
@@ -236,7 +236,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `variantKind` | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity` |
 | `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
 | `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
-| `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` |
+| `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` \| `rwa-credit-fund` |
 | `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none` |
 | `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `monthly` \| `quarterly` \| `ad-hoc` \| `none` |
 | `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |

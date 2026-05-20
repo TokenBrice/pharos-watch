@@ -6,7 +6,7 @@
  * derived via `(typeof X_VALUES)[number]` so adding a value is a one-file
  * change and cross-profile typos surface at compile time.
  *
- * Binding: `agents/selector-implementation-plan.md` §3 + `agents/selector-design.md` §3.6.
+ * Binding: see `docs/screener-picker-page.md` for the maintained type contract.
  */
 import type { BluechipGrade, PegCurrency, ReportCardGrade, YieldType } from "../../types";
 

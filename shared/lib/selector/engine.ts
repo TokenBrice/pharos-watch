@@ -1,7 +1,7 @@
 /**
  * `runSelector(input, data, dataset)` — pure synchronous pipeline.
  *
- * Binding: `agents/selector-implementation-plan.md` §3, `agents/impl-plan-drafts/02-engine.md` §3.
+ * Binding: see `docs/screener-picker-page.md` for the maintained engine contract.
  * The engine reads no clocks and no randomness; `dataset.timestamp` is the
  * single time input, threaded by the caller.
  */

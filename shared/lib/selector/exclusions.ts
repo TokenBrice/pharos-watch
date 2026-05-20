@@ -5,7 +5,7 @@
  * First hit wins; coverage-too-thin is tracked separately so the engine can
  * distinguish "rule failed" from "we don't know".
  *
- * Binding: `agents/selector-design.md` §3.3, `agents/screener-selector/02-data-engine.md` §2.
+ * Binding: see `docs/screener-picker-page.md` for the maintained exclusion contract.
  */
 import type {
   ExclusionRecord,
