@@ -9,7 +9,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useEvents, useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { EventCard, SEVERITY_LABEL } from "@/components/tape/event-card";
+import { EventCard, SEVERITY_GLYPH, SEVERITY_LABEL } from "@/components/tape/event-card";
 import { ClassDigestRow } from "@/components/tape/class-digest-row";
 import {
   TapeFilters,
@@ -33,16 +33,6 @@ const WINDOW_LABEL: Record<TapeWindowKey, string> = {
   "30d": "last 30 days",
   "90d": "last 90 days",
   all: "all time",
-};
-
-// Bracketed severity glyphs — mirror the vocabulary Agent A is wiring into
-// `EventCard`. Used by the day-separator MAX [W] enrichment.
-const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
-  info: "I",
-  notice: "N",
-  warning: "W",
-  severe: "!",
-  critical: "X",
 };
 
 function EventSkeleton() {
@@ -332,7 +322,7 @@ function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }: DayDi
           </h3>
           <span className="max-w-full break-words leading-snug tabular-nums text-muted-foreground sm:shrink-0">
             <span aria-hidden="true" className="hidden sm:inline">· </span>
-            {day.totalCount} EVT · {classCount} CLS · MAX [{glyph}]
+            {day.totalCount} EVT · {classCount} CLS · MAX {glyph}
             {openCount > 0 ? ` · ${openCount} OPEN` : ""}
           </span>
           <span aria-hidden="true" className="w-full border-t border-border/60 sm:flex-1" />

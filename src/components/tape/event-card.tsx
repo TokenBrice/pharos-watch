@@ -21,6 +21,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
+import { logosById } from "@/lib/logos";
 import {
   deviationBgClass,
   deviationColorClass,
@@ -42,7 +44,7 @@ export const SEVERITY_LABEL = SEVERITY_LABEL_INCLUSIVE;
 
 // Non-color severity glyphs (WCAG 1.4.1) — wire-service / syslog idiom.
 // Rendered in mono with tabular-width so the column aligns across rows.
-const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
+export const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
   info: "[I]",
   notice: "[N]",
   warning: "[W]",
@@ -95,7 +97,22 @@ function deriveTicker(event: TapeEvent): string | null {
   }
   const payloadSymbol = event.payload?.symbol;
   if (typeof payloadSymbol === "string" && payloadSymbol.length > 0) return payloadSymbol;
+  // freeze.* projector writes the issuer symbol to `payload.stablecoin` and leaves coinId null.
+  const payloadStablecoin = (event.payload as { stablecoin?: unknown } | undefined)?.stablecoin;
+  if (typeof payloadStablecoin === "string" && payloadStablecoin.length > 0) return payloadStablecoin;
   return null;
+}
+
+// Resolve a canonical coin id for rendering the stablecoin logo. Falls back
+// to `payload.stablecoin` (freeze.* projector) and `payload.symbol` via the
+// unambiguous symbol → id map.
+function deriveCoinId(event: TapeEvent): string | null {
+  if (event.coinId) return event.coinId;
+  const payload = event.payload as { stablecoin?: unknown; symbol?: unknown } | undefined;
+  const candidate =
+    (typeof payload?.stablecoin === "string" ? payload.stablecoin : null) ??
+    (typeof payload?.symbol === "string" ? payload.symbol : null);
+  return coinIdBySymbol(candidate);
 }
 
 // ---------------------------------------------------------------------------
@@ -435,12 +452,14 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
   const titleId = `tape-event-${event.id}`;
   const ticker = deriveTicker(event);
+  const coinId = deriveCoinId(event);
+  const effectiveLogoSrc = logoSrc ?? (coinId ? logosById[coinId] : undefined);
   const rowTint = tapeClassRowBg(event.type);
   const chipTint = tapeClassChipBg(event.type);
   // For coin events the title is redundant with [ticker + type + enrichment];
   // for non-coin events (methodology, lifecycle without coin) the title is the
   // primary descriptive content and we surface it as the body line.
-  const summaryLine = event.summary && event.summary.length > 0 ? event.summary : (!event.coinId ? event.title : "");
+  const summaryLine = event.summary && event.summary.length > 0 ? event.summary : (!coinId ? event.title : "");
   const [copied, setCopied] = useState(false);
   const handleCopyPermalink = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -477,8 +496,8 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
           {severityGlyph}
         </span>
         <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground">
-          {event.coinId ? (
-            <StablecoinLogo src={logoSrc} name={event.coinId} size={22} />
+          {coinId ? (
+            <StablecoinLogo src={effectiveLogoSrc} name={coinId} size={22} />
           ) : (
             <span className={`inline-flex h-5 w-5 items-center justify-center rounded-sm ${chipTint}`}>
               <ClassIcon type={event.type} className="h-3.5 w-3.5" />
