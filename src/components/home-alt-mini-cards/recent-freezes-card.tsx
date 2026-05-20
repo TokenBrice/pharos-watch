@@ -71,7 +71,7 @@ function aggregate(
     // reconstructed) look broken in a discovery list. They still count toward
     // the 24h / 7d totals above; they just don't appear in the row list.
     if (
-      recent.length < 4 &&
+      recent.length < 3 &&
       ev.amountUsdAtEvent !== null &&
       Number.isFinite(ev.amountUsdAtEvent) &&
       ev.amountUsdAtEvent > 0
@@ -93,17 +93,17 @@ function FreezeBars({ values }: { values: number[] }): React.JSX.Element | null 
   if (values.every((v) => v === 0)) return null;
   const max = Math.max(...values, 1);
   return (
-    <div className="flex h-full w-full items-end gap-1.5" aria-hidden="true">
+    <div className="flex h-full w-full items-end gap-1" aria-hidden="true">
       {values.map((v, i) => {
-        const heightPct = v === 0 ? 4 : Math.max(8, (v / max) * 100);
+        const heightPct = v === 0 ? 4 : Math.max(10, (v / max) * 100);
         const isToday = i === values.length - 1;
         return (
           <div
             key={i}
-            className={`flex-1 rounded-sm ${
+            className={`flex-1 rounded-[3px] ${
               isToday
-                ? "bg-red-600/85 dark:bg-red-500/85"
-                : "bg-red-600/45 dark:bg-red-500/40"
+                ? "bg-red-600 dark:bg-red-500"
+                : "bg-red-600/40 dark:bg-red-500/35"
             }`}
             style={{ height: `${heightPct}%` }}
           />
@@ -169,36 +169,45 @@ export function RecentFreezesCard(): React.JSX.Element {
 
       {isLoading || !agg ? (
         <>
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-12 w-28" />
+          <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
         </>
       ) : (
         <>
-          <div className="flex items-baseline gap-2">
-            <span
-              className={`font-mono text-3xl font-semibold tabular-nums ${
-                agg.count24h > 0
-                  ? "text-red-700 dark:text-red-400"
-                  : "text-foreground"
-              }`}
-            >
-              {agg.count24h.toLocaleString("en-US")}
-            </span>
-            <span className="text-xs text-muted-foreground">24h</span>
-            {agg.amount24hUsd > 0 && (
-              <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
-                {formatCurrency(agg.amount24hUsd, 0)}
+          <div className="grid grid-cols-2 items-start gap-3">
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
+                  agg.count24h > 0
+                    ? "text-red-700 dark:text-red-400"
+                    : "text-foreground"
+                }`}
+              >
+                {agg.count24h.toLocaleString("en-US")}
               </span>
-            )}
+              <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                24h
+              </span>
+              {agg.amount24hUsd > 0 && (
+                <span className="font-mono text-[11px] tabular-nums text-foreground/85">
+                  {formatCurrency(agg.amount24hUsd, 0)}
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <span className="font-semibold text-foreground/85">
+                  {agg.count7d.toLocaleString("en-US")}
+                </span>{" "}
+                events · 7d
+              </div>
+              <div className="mt-1 font-mono text-[11px] tabular-nums text-foreground/80">
+                {agg.amount7dUsd > 0 ? formatCurrency(agg.amount7dUsd, 0) : "—"}
+              </div>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            <span>{agg.count7d.toLocaleString("en-US")} events · 7d</span>
-            <span className="ml-auto tabular-nums text-foreground/80">
-              {agg.amount7dUsd > 0 ? formatCurrency(agg.amount7dUsd, 0) : "—"}
-            </span>
-          </div>
-          <div className="h-14">
+          <div className="min-h-20 flex-1">
             {agg.count7d > 0 ? (
               <FreezeBars values={agg.daily} />
             ) : (
@@ -210,13 +219,13 @@ export function RecentFreezesCard(): React.JSX.Element {
             )}
           </div>
           {agg.recent.length > 0 && (
-            <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-xs">
+            <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-[13px]">
               {agg.recent.map((ev) => {
                 const logoSrc = logoMap[ev.stablecoinId];
                 return (
                   <li
                     key={ev.id}
-                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-2 py-1 tabular-nums"
+                    className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-2 py-1.5 tabular-nums"
                   >
                     {logoSrc ? (
                       <Image
@@ -233,7 +242,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                     <span className="truncate uppercase tracking-tight text-foreground">
                       {ev.symbol}
                     </span>
-                    <span className="tabular-nums text-red-700 dark:text-red-400">
+                    <span className="font-semibold tabular-nums text-red-700 dark:text-red-400">
                       {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0
                         ? formatCurrency(ev.amountUsdAtEvent, 0)
                         : "—"}

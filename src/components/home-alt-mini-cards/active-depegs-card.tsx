@@ -62,7 +62,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
 
       {isLoading ? (
         <>
-          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-12 w-28" />
           <Skeleton className="h-32 w-full" />
         </>
       ) : rows.length === 0 ? (
@@ -73,15 +73,19 @@ export function ActiveDepegsCard(): React.JSX.Element {
         </div>
       ) : (
         <>
-          <div className="flex items-baseline gap-2">
-            <span className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+          <div className="flex items-baseline gap-2.5">
+            <span
+              aria-hidden="true"
+              className="animate-pharos-pulse inline-block h-2 w-2 shrink-0 self-center rounded-full bg-red-600 dark:bg-red-500"
+            />
+            <span className="font-mono text-5xl font-bold tabular-nums tracking-tight text-foreground">
               {rows.length}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               of {data?.events.length} live
             </span>
           </div>
-          <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-xs">
+          <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-[13px]">
             {rows.map((row) => (
               <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} />
             ))}
@@ -102,7 +106,7 @@ function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefine
     <li>
       <Link
         href={buildStablecoinUrl(row.id)}
-        className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50"
+        className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
       >
         {logoSrc ? (
           <Image
@@ -120,7 +124,7 @@ function DepegRow({ row, logoSrc }: { row: ActiveRow; logoSrc: string | undefine
           <span className="truncate uppercase tracking-tight text-foreground">
             {row.symbol}
           </span>
-          <span className={`shrink-0 tabular-nums ${colorClass}`}>
+          <span className={`shrink-0 font-semibold tabular-nums ${colorClass}`}>
             <span aria-hidden="true" className="mr-0.5">{arrow}</span>
             {Math.abs(row.bps).toFixed(0)} bps
           </span>

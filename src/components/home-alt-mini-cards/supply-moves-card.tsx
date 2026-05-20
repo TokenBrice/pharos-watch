@@ -54,6 +54,17 @@ export function SupplyMovesCard(): React.JSX.Element {
   const logoMap = logos ?? {};
 
   const { ups, downs } = useMemo(() => compute(data?.peggedAssets ?? []), [data]);
+  const peak = useMemo<Mover | null>(() => {
+    const top = ups[0];
+    const bottom = downs[0];
+    if (!top && !bottom) return null;
+    if (!top) return bottom!;
+    if (!bottom) return top;
+    return Math.abs(top.pctChange) >= Math.abs(bottom.pctChange) ? top : bottom;
+  }, [ups, downs]);
+  const peakInUps = peak !== null && peak.id === ups[0]?.id;
+  const upsDisplay = peakInUps ? ups.slice(1, 4) : ups.slice(0, 3);
+  const downsDisplay = !peakInUps && peak !== null ? downs.slice(1, 4) : downs.slice(0, 3);
 
   return (
     <div className="pharos-card-shell flex h-full flex-col gap-3 p-4">
@@ -67,20 +78,51 @@ export function SupplyMovesCard(): React.JSX.Element {
       {isLoading || ups.length === 0 ? (
         <Skeleton className="h-32 w-full" />
       ) : (
-        <div className="mt-auto flex flex-col gap-3">
-          <MoverList
-            label="Supply up"
-            direction="up"
-            rows={ups}
-            logoMap={logoMap}
-          />
-          <MoverList
-            label="Supply down"
-            direction="down"
-            rows={downs}
-            logoMap={logoMap}
-          />
-        </div>
+        <>
+          {peak && (
+            <div className="flex items-baseline gap-2.5">
+              <span
+                className={`font-mono text-5xl font-bold tabular-nums tracking-tight ${
+                  peak.pctChange >= 0
+                    ? "text-green-700 dark:text-green-400"
+                    : "text-red-700 dark:text-red-400"
+                }`}
+              >
+                {formatPct(peak.pctChange)}
+              </span>
+              {logoMap[peak.id] && (
+                <Image
+                  src={logoMap[peak.id]}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 self-center rounded-full"
+                  aria-hidden
+                />
+              )}
+              <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <span className="font-semibold text-foreground/90">
+                  {peak.symbol}
+                </span>{" "}
+                · peak 7d
+              </span>
+            </div>
+          )}
+          <div className="mt-auto flex flex-col gap-3">
+            <MoverList
+              label="Supply up"
+              direction="up"
+              rows={upsDisplay}
+              logoMap={logoMap}
+            />
+            <MoverList
+              label="Supply down"
+              direction="down"
+              rows={downsDisplay}
+              logoMap={logoMap}
+            />
+          </div>
+        </>
       )}
     </div>
   );
@@ -105,19 +147,19 @@ function MoverList({
   return (
     <div className="space-y-1">
       <p
-        className={`font-mono text-[10px] font-semibold uppercase tracking-wider ${headerClass}`}
+        className={`font-mono text-[11px] font-bold uppercase tracking-wider ${headerClass}`}
       >
         <span aria-hidden="true" className="mr-1">{arrow}</span>
         {label}
       </p>
-      <ul className="flex flex-col divide-y divide-border/40 font-mono text-xs">
+      <ul className="flex flex-col divide-y divide-border/40 font-mono text-[13px]">
         {rows.map((row) => {
           const logoSrc = logoMap[row.id];
           return (
             <li key={row.id}>
               <Link
                 href={buildStablecoinUrl(row.id)}
-                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 tabular-nums transition-colors hover:bg-muted/50"
+                className="pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1.5 tabular-nums transition-colors hover:bg-muted/50"
               >
                 {logoSrc ? (
                   <Image
@@ -135,7 +177,7 @@ function MoverList({
                   {row.symbol}
                 </span>
                 <span
-                  className={`tabular-nums ${
+                  className={`font-semibold tabular-nums ${
                     row.pctChange >= 0
                       ? "text-green-700 dark:text-green-400"
                       : "text-red-700 dark:text-red-400"
