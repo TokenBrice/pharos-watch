@@ -3,7 +3,7 @@ import {
   ACTIVE_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
-} from "./stablecoins";
+} from "./stablecoins/registry";
 
 export const YIELD_BEARING_STABLECOINS = TRACKED_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.yieldBearing && stablecoin.status !== "frozen",

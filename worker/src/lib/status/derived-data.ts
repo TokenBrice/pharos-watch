@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type {
@@ -9,7 +9,7 @@ import type {
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../stablecoins-cache";
-import { emptyReserveCompositionOverview } from "../live-reserves-store-shared";
+import { emptyReserveCompositionOverview } from "../live-reserves-store";
 export { getTelegramBotStats } from "./telegram-bot-stats";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {

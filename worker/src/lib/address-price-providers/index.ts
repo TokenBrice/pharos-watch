@@ -5,9 +5,9 @@ import {
   DEXPAPRIKA_CHAIN_MAP,
   DS_CHAIN_MAP,
   MORALIS_CHAIN_MAP,
-} from "@shared/lib/chain-provider-registry";
-import { resolveChainId } from "@shared/lib/chains";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+  resolveChainId,
+} from "@shared/lib/chains";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../constants";
 import type { PricingProviderDiagnosticSource } from "../pricing-provider-diagnostics";
 import {
@@ -55,7 +55,6 @@ const ALL_ADDRESS_PROVIDERS: readonly AddressPriceProviderKey[] = [
 ];
 
 const NO_KEY_ADDRESS_PROVIDERS = new Set<AddressPriceProviderKey>([
-  "dexscreener-address",
   "dexpaprika-address",
 ]);
 
@@ -288,13 +287,13 @@ export async function collectAddressPriceProviderQuotes(params: {
 }): Promise<AddressPriceProviderCollectionResult> {
   const quotesByStablecoinId = new Map<string, AddressPriceQuote[]>();
   const diagnostics: AddressPriceProviderCollectionResult["diagnostics"] = [];
-  const providerOutcomes = new Map<AddressPriceProviderKey, boolean>();
+  const providerOutcomes: AddressPriceProviderCollectionResult["providerOutcomes"] = new Map();
   const deadlineMs = Date.now() + ADDRESS_PROVIDER_RUN_BUDGET_MS;
 
   for (const provider of params.providers) {
     const targets = params.targetsByProvider.get(provider) ?? [];
     if (targets.length === 0) {
-      providerOutcomes.set(provider, true);
+      providerOutcomes.set(provider, "success");
       diagnostics.push(buildNoCandidatesDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "no-candidates",
@@ -304,7 +303,7 @@ export async function collectAddressPriceProviderQuotes(params: {
     }
 
     if (!params.sourceAllowed[provider]) {
-      providerOutcomes.set(provider, false);
+      providerOutcomes.set(provider, "neutral");
       diagnostics.push(buildBlockedProviderDiagnostic({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
@@ -315,7 +314,7 @@ export async function collectAddressPriceProviderQuotes(params: {
     }
 
     if (Date.now() >= deadlineMs) {
-      providerOutcomes.set(provider, false);
+      providerOutcomes.set(provider, "neutral");
       diagnostics.push({
         source: provider as PricingProviderDiagnosticSource,
         stage: "primary",
@@ -340,7 +339,14 @@ export async function collectAddressPriceProviderQuotes(params: {
       deadlineMs,
     });
     diagnostics.push(...result.diagnostics);
-    providerOutcomes.set(provider, result.successfulRequests > 0 || result.attemptedRequests === 0);
+    providerOutcomes.set(
+      provider,
+      result.attemptedRequests === 0
+        ? "neutral"
+        : result.successfulRequests > 0
+          ? "success"
+          : "failure",
+    );
     for (const quote of result.quotes) {
       const list = quotesByStablecoinId.get(quote.stablecoinId) ?? [];
       list.push(quote);

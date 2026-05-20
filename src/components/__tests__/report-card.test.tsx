@@ -7,7 +7,7 @@ import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard } from "@shared/types";
 
 vi.mock("@/components/radar-chart", () => ({
-  ReportCardRadar: () => <div data-testid="report-card-radar" />,
+  ReportCardRadar: ({ size }: { size?: number }) => <div data-testid="report-card-radar" data-size={size} />,
 }));
 
 function makeReportCard(): ReportCard {
@@ -103,5 +103,17 @@ describe("ReportCardDetail", () => {
     expect(screen.getByText("Overall capped at parent stablecoin")).toBeTruthy();
     expect(screen.getByText(/Parent cap:/)).toBeTruthy();
     expect(screen.queryByText(/Peg:/)).toBeNull();
+  });
+
+  it("uses the larger desktop radar size in split detail layout", () => {
+    render(
+      <ReportCardDetail
+        card={makeReportCard()}
+        liquidityComponents={null}
+        rightColumn={<div data-testid="reserves-panel">Reserves</div>}
+      />,
+    );
+
+    expect(screen.getByTestId("report-card-radar").getAttribute("data-size")).toBe("340");
   });
 });

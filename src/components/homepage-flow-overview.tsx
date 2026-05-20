@@ -23,12 +23,12 @@ export function HomepageFlowOverview() {
   const hasData = !!summaryData;
 
   return (
-    <section className="space-y-3">
+    <section className="flex h-full flex-col space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-semibold tracking-tight">Mint/Burn Flow Snapshot</h2>
         <Link
           href="/flows/"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex min-h-11 items-center gap-1 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
         >
           View Mint/Burn Flow Tracker
           <ArrowRight className="h-3 w-3" />
@@ -51,6 +51,7 @@ export function HomepageFlowOverview() {
           weeklyHourly={weeklyData?.hourly}
           isLoading={!summaryData && isSummaryLoading}
           variant="compact"
+          className="flex-1"
         />
       )}
     </section>

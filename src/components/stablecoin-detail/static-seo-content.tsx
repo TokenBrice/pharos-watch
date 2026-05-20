@@ -61,6 +61,27 @@ function formatDateLabel(rawDate: string): string {
   }).format(date);
 }
 
+function buildDisclosureLine(summary: StablecoinAiSummary): string | null {
+  const { authoredBy, model, reviewedBy, reviewedAt, factsAsOf } = summary;
+  if (!authoredBy && !model && !reviewedBy && !reviewedAt && !factsAsOf) {
+    return null;
+  }
+  const authorLabel = authoredBy === "human" ? "Human summary" : "AI summary";
+  const segments: string[] = [authorLabel];
+  if (authoredBy === "ai" && model) {
+    segments.push(`drafted by ${model}`);
+  }
+  if (reviewedBy && reviewedAt) {
+    segments.push(`reviewed by ${reviewedBy} on ${formatDateLabel(reviewedAt)}`);
+  } else if (reviewedBy) {
+    segments.push(`reviewed by ${reviewedBy}`);
+  }
+  if (factsAsOf) {
+    segments.push(`facts as of ${formatDateLabel(factsAsOf)}`);
+  }
+  return segments.join(" · ");
+}
+
 function formatList(items: readonly string[]): string {
   if (items.length <= 1) return items[0] ?? "";
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -142,6 +163,12 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
           : `${coin.name} (${coin.symbol}) stablecoin analytics`}
       </h1>
 
+      {coin.oneLiner ? (
+        <p className="text-base italic leading-relaxed text-muted-foreground">
+          {coin.oneLiner}
+        </p>
+      ) : null}
+
       <section
         aria-labelledby="stablecoin-static-profile-title"
         className="pharos-card-shell overflow-hidden px-4 py-4 sm:px-5"
@@ -197,6 +224,12 @@ export function StablecoinDetailSeoContent({ coin, summary = null }: StablecoinD
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summary.text)}</p>
+                {(() => {
+                  const disclosure = buildDisclosureLine(summary);
+                  return disclosure ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{disclosure}</p>
+                  ) : null;
+                })()}
               </div>
             ) : null}
           </div>

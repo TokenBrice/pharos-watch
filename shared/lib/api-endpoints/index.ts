@@ -18,6 +18,7 @@ export {
   type EndpointDependenciesForKey,
   type EndpointDependency,
   type EndpointKey,
+  type EndpointMethod,
   type EndpointMethodValidationError,
   type EndpointProbeGroup,
   type EndpointPublicApiAccess,
@@ -33,6 +34,9 @@ export {
   isProtectedPublicApiPath,
   isSiteDataAllowedPath,
   matchDynamicAdminEndpoint,
+  getEndpointAllowedMethods,
+  validateAllowedEndpointMethods,
   validateEndpointMethod,
 } from "./validation";
 export { getStatusPageActions } from "./status";
+export { SNAPSHOT_DATE_PATTERN } from "./snapshot";

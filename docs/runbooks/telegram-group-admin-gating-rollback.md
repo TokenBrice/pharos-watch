@@ -54,23 +54,21 @@ npx wrangler tail stablecoin-api --format pretty
 
 ## Remediation
 
-1. **Flip to soft.** Set the env and redeploy:
+1. **Flip to soft.** Set the env secret, then follow the standard Worker Versions release flow documented in [deployment-process.md](../deployment-process.md) so the candidate is uploaded, preview-smoked, promoted, and triggers are deployed through the normal path.
 
    ```bash
    cd worker
    npx wrangler secret put TELEGRAM_GROUP_ADMIN_GATING
    # paste: soft
-   npx wrangler deploy
    ```
 
    Verify the next gated command in a non-admin group produces a `warned` row in `telegram_usage_daily` and that the command actually ran (subscribe row written, settings panel rendered, etc.).
 
-2. **Flip back to hard.** Once the upstream cause is fixed, remove the env and redeploy:
+2. **Flip back to hard.** Once the upstream cause is fixed, remove the env secret and use the same Worker Versions release flow.
 
    ```bash
    cd worker
    npx wrangler secret delete TELEGRAM_GROUP_ADMIN_GATING
-   npx wrangler deploy
    ```
 
    Confirm that the next gated command from a non-admin produces a `denied` row in `telegram_usage_daily` and that the command did not run.

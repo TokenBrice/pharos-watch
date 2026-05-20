@@ -1,6 +1,6 @@
-import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ContractDeployment } from "@shared/types/core";
 import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
@@ -48,13 +48,35 @@ function summarizeDiscoveryError(err: unknown): string {
   return String(err).slice(0, 240);
 }
 
-function cadenceEligible(tier: Exclude<EffectiveTier, "skip">, runSeq: number): boolean {
+function discoveryCohort(stablecoinId: string, modulo: number): number {
+  let hash = 0;
+  for (let i = 0; i < stablecoinId.length; i++) {
+    hash = (hash * 31 + stablecoinId.charCodeAt(i)) >>> 0;
+  }
+  return hash % modulo;
+}
+
+function runCohort(runSeq: number, modulo: number): number {
+  return ((runSeq % modulo) + modulo) % modulo;
+}
+
+function cadenceEligible(
+  tier: Exclude<EffectiveTier, "skip">,
+  runSeq: number,
+  stablecoinId?: string,
+): boolean {
   if (tier === "t1") return true;
-  if (tier === "t2") return runSeq % DISCOVERY_TIERS.T2_MODULO === 0;
-  return runSeq % DISCOVERY_TIERS.T3_MODULO === 0;
+  if (!stablecoinId) {
+    if (tier === "t2") return runSeq % DISCOVERY_TIERS.T2_MODULO === 0;
+    return runSeq % DISCOVERY_TIERS.T3_MODULO === 0;
+  }
+
+  const modulo = tier === "t2" ? DISCOVERY_TIERS.T2_MODULO : DISCOVERY_TIERS.T3_MODULO;
+  return discoveryCohort(stablecoinId, modulo) === runCohort(runSeq, modulo);
 }
 
 export function computeEffectiveTier(
+  stablecoinId: string,
   poolCount: number,
   chainCount: number,
   meta: DiscoveryMeta | undefined,
@@ -83,7 +105,7 @@ export function computeEffectiveTier(
     tier = "t2";
   }
 
-  return cadenceEligible(tier, runSeq) ? tier : "skip";
+  return cadenceEligible(tier, runSeq, stablecoinId) ? tier : "skip";
 }
 
 export function isEligibleThisRun(tier: EffectiveTier): boolean {
@@ -156,6 +178,7 @@ export async function syncDexDiscovery(
     for (const coin of ACTIVE_STABLECOINS) {
       const coverage = liquidityCoverage.get(coin.id);
       const tier = computeEffectiveTier(
+        coin.id,
         coverage?.poolCount ?? 0,
         coverage?.chainCount ?? 0,
         metaById.get(coin.id),
@@ -303,7 +326,7 @@ export async function syncDexDiscovery(
     };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    console.error("[dex-discovery] fatal", err);
+    recordCronFailure("dex-discovery", err, { metadata: { stage: "orchestrator", fatal: true, runSeq } });
     return {
       status: "error",
       itemCount: coinsCrawled,

@@ -91,7 +91,12 @@ export function SafetyScoreCalculator() {
       {result.score !== null && (
         <div className="flex flex-wrap items-center gap-3 border-t border-border/50 pt-3">
           <span className="text-sm text-muted-foreground">Computed grade:</span>
-          <SafetyGradeBadge grade={result.grade} score={result.score} size="xs" />
+          <SafetyGradeBadge
+            grade={result.grade}
+            score={result.score}
+            size="xs"
+            versionTopic="safetyScore"
+          />
           <span className="font-mono tabular-nums text-sm text-foreground">
             {result.score} / 100
           </span>

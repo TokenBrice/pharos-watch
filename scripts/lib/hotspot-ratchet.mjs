@@ -17,6 +17,7 @@ export const TARGET_FILES = [
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx",
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx",
   "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx",
+  "src/app/methodology/scoring-changelog/content-v7-0.tsx",
   "src/app/methodology/scoring-changelog/content-v6.tsx",
   "src/app/methodology/scoring-changelog/content-v5.tsx",
   "src/app/methodology/scoring-changelog/content-legacy.tsx",

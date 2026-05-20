@@ -2,6 +2,7 @@
   "id": "mtbill-midas",
   "name": "Midas mTBILL",
   "symbol": "mTBILL",
+  "oneLiner": "mTBILL is Midas's NAV-accreting tokenized U.S. T-Bill fund via BlackRock IB01 ETF, FMA-regulated rails, with daily Ankura Trust NAV attestations.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,16 @@
   },
   "collateral": "Short-duration U.S. Treasury Bills (maturity <3 months) via BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01); physical custody by Maerki Baumann & Co. AG (Switzerland); security ring-fencing by ATG Azimut Treuhandgesellschaft mbH; target return = 8-week U.S. T-Bill yield minus ~50 bps",
   "pegMechanism": "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; NAV oracle published daily by Ankura Trust Company",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "midas-mtbill",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://midas.app/transparency",
-    "provider": "Ankura Trust Company (independent third-party; provides daily on-chain NAV attestations)"
+    "provider": "Ankura Trust Company (independent third-party; provides daily on-chain NAV attestations)",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

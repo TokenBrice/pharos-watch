@@ -2,6 +2,7 @@
   "id": "eursafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (EUR)",
   "symbol": "EURSAFO",
+  "oneLiner": "EURSAFO is Spiko's EUR share of the Spiko/Amundi Smart Cash fund, a UCITS overnight-swap money-market vehicle authorized by the AMF.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,12 +13,17 @@
   },
   "collateral": "EUR share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "EUR-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-eur",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-euro",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS SICAV sub-fund"
   },
   "links": [
     {

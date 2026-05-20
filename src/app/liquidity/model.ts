@@ -1,5 +1,5 @@
 import { PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityMap, PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types/market";
 import type { LiquidityStatsData } from "@/components/liquidity-stats-types";

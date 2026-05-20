@@ -51,6 +51,11 @@ const summary: StablecoinAiSummary = {
   title: "Test Dollar profile",
   text: "The profile summary is concise and specific. Extra detail should stay short enough for the static block.",
   updatedAt: "2026-05-02",
+  authoredBy: "ai",
+  model: "claude-opus-4-7",
+  reviewedBy: "@TokenBrice",
+  reviewedAt: "2026-05-02",
+  factsAsOf: "2026-05-02",
 };
 
 describe("StablecoinDetailSeoContent", () => {
@@ -90,6 +95,11 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText("3 deployments tracked across Ethereum, Base, and Solana.")).toBeTruthy();
     expect(screen.getByText("AI summary / Updated May 2, 2026")).toBeTruthy();
     expect(screen.getByText(/The profile summary is concise and specific/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "AI summary · drafted by claude-opus-4-7 · reviewed by @TokenBrice on May 2, 2026 · facts as of May 2, 2026",
+      ),
+    ).toBeTruthy();
     expect(container.textContent).toContain("Source: checked-in StablecoinMeta profile fields.");
     expect(container.textContent).toContain("the summary above was last updated May 2, 2026");
   });

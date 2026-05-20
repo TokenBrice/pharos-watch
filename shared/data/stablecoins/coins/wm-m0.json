@@ -2,6 +2,7 @@
   "id": "wm-m0",
   "name": "Wrapped M",
   "symbol": "wM",
+  "oneLiner": "wM is M0 Protocol's non-rebasing 1:1 ERC-20 wrapper around M, with M backed by short-term U.S. Treasury bills held in bankruptcy-remote SPVs.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -15,12 +16,15 @@
   ],
   "collateral": "Underlying M (M0 Protocol) is backed 100% by short-term U.S. Treasury bills (30–90 day WAM) held in bankruptcy-remote SPVs by permissioned Minters; M0 Validators independently attest collateral sufficiency on-chain before any M can be minted, and wM holds M 1:1 inside the Wrapped M Token contract",
   "pegMechanism": "Non-rebasing 1:1 ERC-20 wrapper around M: anyone can call wrap() to deposit M and mint wM, or unwrap() to redeem wM back to M at any time without fees or queues; wM holders are non-earning by default, so yield accrued by the underlying M is redirected via TTG-approved earner accounts and the claimExcess() mechanism to ecosystem yield recipients (downstream M0 extensions and apps), leaving wM as a flat USD-denominated unit",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "wrappedm-by-m0",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://dashboard.m0.org/",
-    "provider": "M0 Protocol (on-chain Validator attestations)"
+    "provider": "M0 Protocol (on-chain Validator attestations)",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/app/yield/test-helpers";
-import { buildYieldViewModel } from "@/lib/yield-view-model";
+import { YIELD_FILTER_AXIS_REGISTRY, buildYieldViewModel } from "@/lib/yield-view-model";
 
 const rows = [
   makeYieldRanking({
@@ -135,6 +135,32 @@ describe("buildYieldViewModel", () => {
     });
   });
 
+  it("keeps expanded benchmark registry values valid when matching rows exist", () => {
+    const model = buildYieldViewModel(
+      [
+        makeYieldRanking({
+          id: "mxn-yield-row",
+          symbol: "MXNY",
+          name: "MXN Yield",
+          benchmarkKey: "MXN",
+          benchmarkLabel: "MXN short rate",
+          benchmarkRate: 10.5,
+          provenance: makeYieldProvenance({
+            benchmarkKey: "MXN",
+            benchmarkLabel: "MXN short rate",
+            benchmarkRate: 10.5,
+          }),
+        }),
+      ],
+      { benchmark: "MXN" },
+    );
+
+    expect(model.filters.benchmark).toBe("MXN");
+    expect(model.invalidParamKeys).not.toContain("benchmark");
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["mxn-yield-row"]);
+    expect(model.options.benchmark).toContainEqual({ value: "MXN", label: "MXN", count: 1 });
+  });
+
   it("excludes null safety and TVL only when minimum filters are set", () => {
     expect(buildYieldViewModel(rows, {}).visibleRows.map((row) => row.id)).toContain("eurc-circle");
 
@@ -178,7 +204,7 @@ describe("buildYieldViewModel", () => {
     const model = buildYieldViewModel(rows, { q: "zzzz" });
 
     expect(model.visibleRows).toEqual([]);
-    expect(model.emptyState).toEqual({
+    expect(model.emptyState).toMatchObject({
       isEmpty: true,
       title: "No rows match this view",
       description: "Reset one or more filters to broaden the comparable set.",
@@ -209,5 +235,343 @@ describe("buildYieldViewModel", () => {
       "eurc-circle",
       "usdt-tether",
     ]);
+  });
+
+  it("filters rising rows by current vs 30d APY with observation floor", () => {
+    const trendingRows = [
+      makeYieldRanking({
+        id: "rising-row",
+        symbol: "RISE",
+        name: "Rising",
+        currentApy: 8,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 12 },
+      }),
+      makeYieldRanking({
+        id: "flat-row",
+        symbol: "FLAT",
+        name: "Flat",
+        currentApy: 5,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 12 },
+      }),
+      makeYieldRanking({
+        id: "thin-history-row",
+        symbol: "THIN",
+        name: "Thin History",
+        currentApy: 9,
+        apy30d: 5,
+        sourceRisk: { observationCount30d: 3 },
+      }),
+    ];
+
+    const model = buildYieldViewModel(trendingRows, { trending: "rising" });
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["rising-row"]);
+  });
+
+  it("marks the active preset and counts its matching rows", () => {
+    const warningsModel = buildYieldViewModel(rows, { warnings: "only" });
+    expect(warningsModel.matchingPreset).toBe("watchlist-warnings");
+    const watchlist = warningsModel.presets.find((preset) => preset.key === "watchlist-warnings");
+    expect(watchlist?.active).toBe(true);
+    expect(watchlist?.count).toBe(2);
+
+    const defaultModel = buildYieldViewModel(rows, {});
+    expect(defaultModel.matchingPreset).toBeNull();
+  });
+
+  it("deactivates the preset when an additional filter is toggled", () => {
+    const model = buildYieldViewModel(rows, { warnings: "only", minSafety: "70" });
+    expect(model.matchingPreset).toBeNull();
+  });
+
+  it("builds currency tab options conditional on row presence", () => {
+    const model = buildYieldViewModel(rows, {});
+    const tabValues = model.options.currencyTabs.map((option) => option.value);
+
+    // USD + EUR present in rows; AUD/CAD/Other absent → no tabs for those.
+    expect(tabValues).toEqual(["all", "USD", "EUR"]);
+    expect(model.options.currencyTabs.find((option) => option.value === "all")?.count).toBe(3);
+    expect(model.options.currencyTabs.find((option) => option.value === "USD")?.count).toBe(2);
+    expect(model.options.currencyTabs.find((option) => option.value === "EUR")?.count).toBe(1);
+  });
+
+  it("groups AUD/CAD into a shared tab and aggregates non-enumerated pegs into Other", () => {
+    const audCadOtherRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD", name: "AUDD" }),
+      makeYieldRanking({ id: "cadm-mento", symbol: "CADM", name: "CADM" }),
+      makeYieldRanking({ id: "zarp-zarp", symbol: "ZARP", name: "ZARP" }),
+      makeYieldRanking({ id: "paxg-paxos", symbol: "PAXG", name: "PAXG" }),
+    ];
+
+    const model = buildYieldViewModel(audCadOtherRows, {});
+    const tabValues = model.options.currencyTabs.map((option) => option.value);
+
+    expect(tabValues).toEqual(["all", "aud-cad", "other"]);
+    expect(model.options.currencyTabs.find((option) => option.value === "aud-cad")?.count).toBe(2);
+    expect(model.options.currencyTabs.find((option) => option.value === "other")?.count).toBe(2);
+  });
+
+  it("filters rows by the aud-cad and other peg aggregates", () => {
+    const audCadOtherRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD" }),
+      makeYieldRanking({ id: "cadm-mento", symbol: "CADM" }),
+      makeYieldRanking({ id: "zarp-zarp", symbol: "ZARP" }),
+      makeYieldRanking({ id: "usdc-circle", symbol: "USDC" }),
+    ];
+
+    const audCadModel = buildYieldViewModel(audCadOtherRows, { peg: "aud-cad" });
+    expect(audCadModel.visibleRows.map((row) => row.id)).toEqual(["audd-novatti", "cadm-mento"]);
+    expect(audCadModel.comparisonLabel).toBe("AUD/CAD set");
+
+    const otherModel = buildYieldViewModel(audCadOtherRows, { peg: "other" });
+    expect(otherModel.visibleRows.map((row) => row.id)).toEqual(["zarp-zarp"]);
+    expect(otherModel.comparisonLabel).toBe("Other currencies set");
+  });
+
+  it("accepts aud-cad and other peg URL params even when no peg-pill option matches", () => {
+    const audCadRows = [
+      makeYieldRanking({ id: "audd-novatti", symbol: "AUDD" }),
+    ];
+
+    const model = buildYieldViewModel(audCadRows, { peg: "aud-cad" });
+    expect(model.filters.peg).toBe("aud-cad");
+    expect(model.invalidParamKeys).not.toContain("peg");
+  });
+
+  it("defaults to all when watchlistIds is not provided", () => {
+    const model = buildYieldViewModel(rows, {});
+
+    expect(model.filters.watchlist).toBe("all");
+    expect(model.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "eurc-circle", "usdt-tether"]);
+    expect(model.options.watchlist.find((option) => option.value === "only")?.count).toBe(0);
+  });
+
+  it("counts watchlist matches and filters to only watchlist rows", () => {
+    const watchlistIds = new Set(["usdc-circle", "usdt-tether"]);
+
+    const allModel = buildYieldViewModel(rows, {}, { watchlistIds });
+    expect(allModel.options.watchlist.find((option) => option.value === "only")?.count).toBe(2);
+    expect(allModel.visibleRows).toHaveLength(3);
+
+    const onlyModel = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds });
+    expect(onlyModel.visibleRows.map((row) => row.id)).toEqual(["usdc-circle", "usdt-tether"]);
+  });
+
+  it("normalizes invalid watchlist URL params back to default", () => {
+    const model = buildYieldViewModel(rows, { watchlist: "bogus" });
+
+    expect(model.filters.watchlist).toBe("all");
+    expect(model.invalidParamKeys).toContain("watchlist");
+  });
+
+  it("yields empty visible rows when watchlist=only and no ids are provided", () => {
+    const model = buildYieldViewModel(rows, { watchlist: "only" });
+
+    expect(model.visibleRows).toEqual([]);
+  });
+
+  it("derives ledeFacts counts for A-grade benchmark clearance and double-digit low-grade APYs", () => {
+    const ledeRows = [
+      makeYieldRanking({
+        id: "aplus-clears",
+        symbol: "USDC",
+        safetyGrade: "A+",
+        apy30d: 6.5,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "a-clears",
+        symbol: "USDP",
+        safetyGrade: "A",
+        apy30d: 7.5,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "a-too-tight",
+        symbol: "USDM",
+        safetyGrade: "A",
+        apy30d: 5.0,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "low-grade-big-yield",
+        symbol: "RISKY",
+        safetyGrade: "C-",
+        apy30d: 14,
+        benchmarkRate: 4.25,
+      }),
+      makeYieldRanking({
+        id: "low-grade-modest",
+        symbol: "MID",
+        safetyGrade: "C",
+        apy30d: 8,
+        benchmarkRate: 4.25,
+      }),
+    ];
+
+    const model = buildYieldViewModel(ledeRows, {});
+
+    expect(model.stats.ledeFacts.aGradeAboveBenchmark).toEqual({
+      count: 2,
+      bps: 225,
+    });
+    expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(1);
+  });
+
+  it("supports merging multiple preset overrides on a single model", () => {
+    // Simulates the stackable-preset wire flow: best-dollar then treasury-grade.
+    // best-dollar overrides: { peg: "USD", minSafety: 80 }
+    // treasury-grade overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" }
+    // Merge result (last-applied wins on conflict) should preserve all keys.
+    const merged = buildYieldViewModel(rows, {
+      peg: "USD",
+      minSafety: "80",
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+    });
+
+    expect(merged.filters).toMatchObject({
+      peg: "USD",
+      minSafety: 80,
+      depth: "hide-thin",
+      sourceConfidence: "deterministic",
+    });
+    // No single preset matches the merged state.
+    expect(merged.matchingPreset).toBeNull();
+  });
+
+  it("matches each risk-budget stop's filter overrides to its matching key", () => {
+    const conservative = buildYieldViewModel(rows, {
+      minSafety: "80",
+      depth: "hide-thin",
+      warnings: "hide",
+    });
+    expect(conservative.riskBudget.matching).toBe("conservative");
+
+    const balanced = buildYieldViewModel(rows, {
+      minSafety: "70",
+      depth: "hide-thin",
+      warnings: "hide",
+    });
+    expect(balanced.riskBudget.matching).toBe("balanced");
+
+    const opportunistic = buildYieldViewModel(rows, {
+      minSafety: "50",
+      warnings: "hide",
+    });
+    expect(opportunistic.riskBudget.matching).toBe("opportunistic");
+
+    const all = buildYieldViewModel(rows, {});
+    expect(all.riskBudget.matching).toBe("all");
+
+    const stops = all.riskBudget.stops.map((stop) => stop.key);
+    expect(stops).toEqual(["conservative", "balanced", "opportunistic", "all"]);
+    expect(all.riskBudget.stops.every((stop) => stop.count >= 0)).toBe(true);
+  });
+
+  it("returns null matchingRiskBudget when filters don't match any stop", () => {
+    const model = buildYieldViewModel(rows, { minSafety: "65" });
+    expect(model.riskBudget.matching).toBeNull();
+    expect(model.riskBudget.stops.every((stop) => stop.active === false)).toBe(true);
+  });
+
+  it("computes empty-state suggestions ranked by row recovery", () => {
+    // Designed so dropping any of these three filters recovers a non-empty subset:
+    //   peg=USD ∧ warnings=only ∧ benchmark=EUR
+    // Drop peg → EURC matches (warnings+EUR). Drop benchmark → USDT matches.
+    // Drop warnings → still empty (USDC/USDT are USD-not-EUR). Top 3 by gain.
+    const model = buildYieldViewModel(rows, {
+      peg: "USD",
+      warnings: "only",
+      benchmark: "EUR",
+    });
+
+    expect(model.visibleRows).toEqual([]);
+    expect(model.emptyState.isEmpty).toBe(true);
+    expect(model.emptyState.suggestions.length).toBeGreaterThan(0);
+    expect(model.emptyState.suggestions.length).toBeLessThanOrEqual(3);
+    expect(model.emptyState.suggestions.every((s) => s.gain > 0)).toBe(true);
+    const gains = model.emptyState.suggestions.map((s) => s.gain);
+    expect(gains).toEqual([...gains].sort((a, b) => b - a));
+    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
+    expect(keys).toEqual(expect.arrayContaining(["peg", "benchmark"]));
+  });
+
+  it("emits no empty-state suggestions when the payload itself is empty", () => {
+    const model = buildYieldViewModel([], {});
+    expect(model.emptyState.isEmpty).toBe(true);
+    expect(model.emptyState.suggestions).toEqual([]);
+  });
+
+  it("suggests relaxing the watchlist filter when it leaves zero visible rows", () => {
+    // WHY: regression guard — getActiveFilterSummaries and listFilterRelaxations
+    // used to drift; watchlist used to surface as an active chip but not as a relax
+    // candidate. The registry now drives both.
+    const model = buildYieldViewModel(rows, { watchlist: "only" }, { watchlistIds: new Set<string>() });
+    expect(model.visibleRows).toEqual([]);
+    const keys = model.emptyState.suggestions.map((s) => s.filterKey);
+    expect(keys).toContain("watchlist");
+  });
+
+  it("computes cohort percentile per row and suppresses small cohorts", () => {
+    const cohortRows = Array.from({ length: 12 }, (_, i) =>
+      makeYieldRanking({
+        id: `lend-${i}`,
+        symbol: `LEND${i}`,
+        yieldType: "lending-opportunity",
+        safetyGrade: "A",
+        pharosYieldScore: i * 5,
+      }),
+    );
+    // 3 rows in a "B" band — too small (<8) for a percentile.
+    const smallCohort = Array.from({ length: 3 }, (_, i) =>
+      makeYieldRanking({
+        id: `vault-${i}`,
+        symbol: `VLT${i}`,
+        yieldType: "lending-vault",
+        safetyGrade: "B",
+        pharosYieldScore: i * 10,
+      }),
+    );
+
+    const model = buildYieldViewModel([...cohortRows, ...smallCohort], {});
+    const top = model.visibleRows.find((row) => row.id === "lend-11");
+    const bottom = model.visibleRows.find((row) => row.id === "lend-0");
+    const smallCohortRow = model.visibleRows.find((row) => row.id === "vault-2");
+
+    expect(top?.cohortPercentile?.cohortSize).toBe(12);
+    expect(top?.cohortPercentile?.value).toBe(100);
+    expect(bottom?.cohortPercentile?.value).toBeLessThan(20);
+
+    expect(smallCohortRow?.cohortPercentile?.cohortSize).toBe(3);
+    expect(smallCohortRow?.cohortPercentile?.value).toBeNull();
+  });
+
+  it("returns null ledeFacts halves when no rows meet either threshold", () => {
+    const flatRows = [
+      makeYieldRanking({
+        id: "flat-1",
+        safetyGrade: "A",
+        apy30d: 5.0,
+        benchmarkRate: 4.25,
+      }),
+    ];
+
+    const model = buildYieldViewModel(flatRows, {});
+    expect(model.stats.ledeFacts.aGradeAboveBenchmark).toBeNull();
+    expect(model.stats.ledeFacts.doubleDigitInLowGrade).toBe(0);
+  });
+
+  it("registers a descriptor for every YieldViewModelFilters key (no drift)", () => {
+    // Guards the invariant in yield-view-model.ts:1021-1024 — every filter key
+    // must have a registry entry, or the active-summary chip list and empty-
+    // state suggestion ranker silently miss it (watchlist drift, line 482-484).
+    const defaultFilterKeys = Object.keys(buildYieldViewModel([], {}).filters).sort();
+    const registryKeys = YIELD_FILTER_AXIS_REGISTRY.map((axis) => axis.key as string).sort();
+
+    expect(registryKeys).toEqual(defaultFilterKeys);
+    expect(YIELD_FILTER_AXIS_REGISTRY.length).toBe(defaultFilterKeys.length);
+    expect(new Set(registryKeys).size).toBe(registryKeys.length);
   });
 });

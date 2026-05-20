@@ -2,6 +2,7 @@
   "id": "kgst-kyrgyz-som",
   "name": "Kyrgyz Som Stablecoin",
   "symbol": "KGST",
+  "oneLiner": "KGST is a Kyrgyz som-pegged stablecoin claiming 1:1 KGS bank reserves; no public attestation cadence has been verified.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KGS",
@@ -12,6 +13,7 @@
   },
   "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "kyrgyz-som-stablecoin",
   "links": [

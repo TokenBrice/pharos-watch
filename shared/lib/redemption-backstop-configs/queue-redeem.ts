@@ -15,6 +15,7 @@ const REVIEWED_WRAPPER_QUEUE_AT = "2026-04-21";
 const REVIEWED_PHASE_4_COVERAGE_AT = "2026-05-10";
 const REVIEWED_YIELD_EXPANSION_AT = "2026-05-11";
 const REVIEWED_STABLECOIN_AUDIT_AT = "2026-05-12";
+const REVIEWED_CONFIG_ONLY_GAPS_AT = "2026-05-17";
 const reviewedQueueRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_QUEUE_REDEMPTION_AT);
 
 export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -196,6 +197,33 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Downstream par-exit quality then depends on USDF's own USDT redemption route.",
     ],
   },
+  "susd1plus-lorenzo": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(
+      0,
+      "Lorenzo states it does not charge user deposit or withdrawal fees; yield is distributed net of protocol and execution service fees",
+    ),
+    docs: [
+      sourceRef(
+        "Lorenzo USD1+ OTF launch",
+        "https://medium.com/@lorenzoprotocol/usd1-mainnet-launch-72550abac2ed",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef("Lorenzo OTF app", "https://app.lorenzo-protocol.xyz/otf", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Lorenzo website", "https://lorenzo-protocol.xyz/home", ["capacity"]),
+    ],
+    notes: [
+      "sUSD1+ holders submit withdrawal requests through the Lorenzo OTF flow; published terms describe weekly review cycles and typical 7-14 day settlement.",
+      "Executed redemptions automatically convert sUSD1+ into USD1 at processing-day NAV, so the route is modeled as queued eventual redeemability rather than an immediate stablecoin buffer.",
+    ],
+  },
   "susde-ethena": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_WRAPPER_QUEUE_AT),
@@ -239,6 +267,35 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "sYUSD exits through a documented 7-day cooldown back into YUSD at the live staking-vault exchange rate",
       "The wrapper queue is distinct from YUSD's own primary-market redemption path and does not assume a separate instant-liquidity buffer beyond the contract's cooldown release",
+    ],
+  },
+  "witry-brix": {
+    ...queueRedeemBase,
+    ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
+    accessModel: "whitelisted-onchain",
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    costModel: documentedVariableFee(
+      "Brix protocol materials describe standard wiTRY unstaking through a 3-day cooldown plus a fast-withdraw option with an additional fee; public materials reviewed do not publish one global fixed fee",
+    ),
+    docs: [
+      sourceRef("Brix iTRY audit scope overview", "https://hackmd.io/@EKJz7PaeT2GeAUJS83WWVw/SJPLb3QZWe", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Code4rena Brix Money audit repository", "https://github.com/code-423n4/2025-11-brix-money", [
+        "route",
+        "capacity",
+        "access",
+      ]),
+      sourceRef("Brix website", "https://www.brix.money/", ["route", "access"]),
+    ],
+    notes: [
+      "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented cooldown unless the holder uses the fee-bearing fast-withdraw path.",
+      "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
     ],
   },
   "stkgho-umbrella-aave": {

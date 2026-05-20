@@ -2,6 +2,7 @@
   "id": "cdxusd-cod3x",
   "name": "Cod3x USD",
   "symbol": "cdxUSD",
+  "oneLiner": "cdxUSD is Cod3x's dollar stablecoin on Base, minted and burned by protocol-permissioned Facilitators against strategy-managed crypto and stablecoin collateral.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
   "pegMechanism": "Cod3x Facilitators can mint and burn cdxUSD under protocol-defined limits; supply is expected to remain sufficiently collateralized by strategy assets",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "cod3x-usd",
   "protocolSlug": "cod3x",

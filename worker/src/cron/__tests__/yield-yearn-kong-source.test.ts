@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(async (url: string, init?: RequestInit) => fetch(url, init)),

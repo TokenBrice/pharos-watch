@@ -193,9 +193,13 @@ describe("ApiKeyRequestForm", () => {
       expect(screen.getByRole("heading", { name: "Your API Key Is Ready" })).toBeTruthy();
     });
 
-    const firstUnload = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(firstUnload);
-    expect(firstUnload.defaultPrevented).toBe(true);
+    // The beforeunload listener is registered in a useEffect; waitFor retries
+    // until the effect has committed so this doesn't flake on slower CI runners.
+    await waitFor(() => {
+      const firstUnload = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(firstUnload);
+      expect(firstUnload.defaultPrevented).toBe(true);
+    });
 
     fireEvent.click(screen.getAllByRole("button", { name: /^copy$/i })[0]);
     await waitFor(() => {

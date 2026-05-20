@@ -2,6 +2,7 @@
   "id": "jpyc-jpyc-v1",
   "name": "JPY Coin v1",
   "symbol": "JPYC",
+  "oneLiner": "JPYC v1 is the legacy prepaid-payment yen token series from JPYC Inc., predating the funds-transfer-token migration to the current JPYC contracts.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -12,8 +13,9 @@
   },
   "collateral": "Japanese-yen reserve assets held for the legacy prepaid-payment JPYC v1 token series",
   "pegMechanism": "Legacy prepaid-payment JPYC token series redeemable through JPYC processes before migration to the newer funds-transfer-token contracts",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
-  "geckoId": "jpycoin",
+  "geckoId": "jpyc",
   "protocolSlug": "jpyc",
   "links": [
     {

@@ -11,8 +11,8 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,

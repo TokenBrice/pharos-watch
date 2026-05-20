@@ -2,6 +2,7 @@
   "id": "dusd-dtrinity",
   "name": "dTRINITY dUSD",
   "symbol": "dUSD",
+  "oneLiner": "dUSD is dTRINITY's USD stablecoin minted 1:1 against yield-bearing reserve stablecoins, with Curve AMOs and stability operations defending the peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

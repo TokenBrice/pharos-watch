@@ -2,6 +2,7 @@
   "id": "avusd-avant",
   "name": "Avant USD",
   "symbol": "avUSD",
+  "oneLiner": "avUSD is Avant's centralized dollar stablecoin, redeemable 1:1 for USDC and deployed into actively managed market-neutral strategies for yield.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "USDC deposits backing avUSD are deployed through Avant's actively managed market-neutral strategy framework, including basis trades, lending-rate arbitrage, yield trading, lending markets, liquidity provisioning, and private liquidity deals",
   "pegMechanism": "1:1 redemption for USDC via Avant Protocol with a 0.05% redemption fee and 1–7 day settlement window; avUSD itself receives no yield, while staking into the separate savUSD token is the yield-bearing route",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "271",
   "detailProvider": "defillama",
   "geckoId": "avant-usd",

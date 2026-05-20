@@ -2,6 +2,7 @@
   "id": "wsrusd-reservoir",
   "name": "Wrapped Savings rUSD",
   "symbol": "wsrUSD",
+  "oneLiner": "wsrUSD is a non-rebasing ERC-4626 wrapper of Reservoir's srUSD savings token, accruing yield from T-bill, DeFi lending, and basis strategies behind rUSD.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,15 @@
   },
   "collateral": "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
   "pegMechanism": "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "wrapped-savings-rusd",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.reservoir.xyz/reserves",
-    "provider": "Reservoir Protocol (on-chain live balance sheet)"
+    "provider": "Reservoir Protocol (on-chain live balance sheet)",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -177,7 +181,7 @@
         "source-total-gap"
       ]
     },
-    "breakerScope": "wsrusd-reservoir",
+    "breakerScope": "reservoir",
     "display": {
       "url": "https://app.reservoir.xyz/reserves",
       "label": "Proof of Reserves"

@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FilterSearchInput } from "@/components/filter-search-input";
+import { FilterCombobox } from "@/components/filter-combobox";
 import { PEG_FILTER_OPTIONS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { isUrlFilterClearValue } from "@/hooks/use-url-filters";
 import { TAPE_FILTER_SEVERITY_VALUES } from "@/hooks/use-events";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
+import {
+  SEVERITY_LABEL_INCLUSIVE,
+  type TapeEvent,
+  type TapeEventSeverity,
+} from "@shared/types/tape-event";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 
 export type TapeWindowKey = "24h" | "7d" | "30d" | "90d" | "all";
@@ -20,13 +25,21 @@ const WINDOW_OPTIONS: { value: TapeWindowKey; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-const SEVERITY_LABELS: Record<TapeEventSeverity, string> = {
-  info: "Info+",
-  notice: "Notice+",
-  warning: "Warning+",
-  severe: "Severe+",
-  critical: "Critical",
+// `useUrlFilters` treats the literal string "all" as a sentinel "clear" value,
+// which would delete the param and silently revert to the 7d default. Use a
+// distinct URL token for the all-time window so the click writes through.
+const WINDOW_URL_VALUE: Record<TapeWindowKey, string> = {
+  "24h": "24h",
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+  all: "alltime",
 };
+
+// `notice` is the page-level default. Routine info-tier bookkeeping (e.g.
+// USDT issuer freeze.unblocked actions) drowns the feed otherwise; users
+// can drop the floor by clicking the "Info+" chip.
+const DEFAULT_SEVERITY: TapeEventSeverity = "notice";
 
 const CHAIN_OPTIONS = Object.entries(CHAIN_META)
   .map(([id, meta]) => ({ value: id, label: meta.name }))
@@ -36,7 +49,8 @@ export interface TapeFilterState {
   /** Comma-joined or empty string — the URL representation. */
   typeRaw: string;
   type: string[];
-  severity: TapeEventSeverity | null;
+  /** Always set; defaults to `notice`. Use `info` to drop the floor entirely. */
+  severity: TapeEventSeverity;
   coin: string;
   peg: string;
   chain: string;
@@ -44,7 +58,10 @@ export interface TapeFilterState {
   q: string;
 }
 
+export { DEFAULT_SEVERITY as TAPE_DEFAULT_SEVERITY };
+
 function parseTapeWindow(value: string): TapeWindowKey {
+  if (value === "alltime") return "all";
   if (value === "24h" || value === "7d" || value === "30d" || value === "90d" || value === "all") {
     return value;
   }
@@ -68,12 +85,12 @@ function parseTapeTypes(raw: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-function parseSeverity(raw: string): TapeEventSeverity | null {
-  if (!raw || isUrlFilterClearValue(raw)) return null;
+function parseSeverity(raw: string): TapeEventSeverity {
+  if (!raw || isUrlFilterClearValue(raw)) return DEFAULT_SEVERITY;
   if ((TAPE_FILTER_SEVERITY_VALUES as readonly string[]).includes(raw)) {
     return raw as TapeEventSeverity;
   }
-  return null;
+  return DEFAULT_SEVERITY;
 }
 
 export function readTapeFilterState(getParam: (key: string, defaultValue?: string) => string): TapeFilterState {
@@ -97,6 +114,42 @@ interface TapeFiltersProps {
   eventsForCoinDirectory?: TapeEvent[];
 }
 
+// Wire-service chip primitives (see docs/tape-page.md Aesthetic Lock).
+// Square borders, mono uppercase, active state via foreground color.
+const CHIP_BASE =
+  "pharos-focus-ring inline-flex min-h-11 items-center border px-3 py-2 text-xs uppercase tracking-wide transition-colors sm:min-h-0 sm:px-2 sm:py-0.5";
+const CHIP_INACTIVE = "border-border/50 text-muted-foreground hover:border-foreground/40 hover:text-foreground";
+const CHIP_ACTIVE = "border-foreground bg-foreground/10 text-foreground";
+
+const COMBOBOX_TRIGGER =
+  "min-h-11 border border-border/50 px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground hover:border-foreground/40 hover:text-foreground sm:min-h-0 sm:px-2 sm:py-0.5";
+
+// `q` is server-driven (`/api/events?q=`) so each keystroke would refetch.
+// Debounce 200ms locally and only push to the URL after the user stops
+// typing. The parent reads from URL state so the local-vs-URL drift heals
+// itself when the timer fires.
+function DebouncedSearchInput({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  useEffect(() => {
+    if (local === value) return;
+    const id = setTimeout(() => onCommit(local), 200);
+    return () => clearTimeout(id);
+  }, [local, value, onCommit]);
+  return (
+    <FilterSearchInput
+      value={local}
+      onValueChange={setLocal}
+      placeholder="Search events..."
+      className="relative w-full sm:w-56"
+      inputClassName="h-11 pl-8 text-sm sm:h-8 sm:text-xs"
+      ariaLabel="Search events by title or summary"
+    />
+  );
+}
+
 export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   const onToggleClass = useCallback(
     (slug: string) => {
@@ -113,112 +166,132 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   );
 
   const activeClassSet = useMemo(() => new Set(state.type), [state.type]);
+  const activeClassCount = state.type.length;
+
+  // Mobile-only disclosure for the class chip row. Desktop renders the chips
+  // unconditionally via `hidden sm:block`. Initial state reflects the URL so a
+  // shared link with active classes opens expanded; manual collapse sticks.
+  const [mobileClassesOpen, setMobileClassesOpen] = useState(activeClassCount > 0);
+
+  const classChips = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Filter by event type">
+      {TAPE_CLASSES.map((cls) => {
+        const slug = `${cls.slug}.*`;
+        const active = activeClassSet.has(slug);
+        const planned = !cls.hasProjector;
+        return (
+          <button
+            key={cls.slug}
+            type="button"
+            onClick={() => onToggleClass(cls.slug)}
+            aria-pressed={active}
+            title={planned ? `${cls.label}: projector ships when the source pipeline matures.` : undefined}
+            className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE} ${planned ? "border-dashed opacity-60" : ""}`}
+          >
+            {cls.label}
+            {planned ? <span className="ml-1 text-muted-foreground/70">·soon</span> : null}
+          </button>
+        );
+      })}
+      {state.type.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setParam("type", "")}
+          className={`${CHIP_BASE} border-dashed ${CHIP_INACTIVE}`}
+        >
+          Clear classes
+        </button>
+      ) : null}
+    </div>
+  );
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/60 bg-card/30 p-3">
-      <div className="flex flex-wrap items-center gap-1.5" aria-label="Filter by event type">
-        {TAPE_CLASSES.map((cls) => {
-          const slug = `${cls.slug}.*`;
-          const active = activeClassSet.has(slug);
-          return (
-            <button
-              key={cls.slug}
-              type="button"
-              onClick={() => onToggleClass(cls.slug)}
-              aria-pressed={active}
-              className={`pharos-focus-ring inline-flex items-center rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-foreground"
-                  : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {cls.label}
-            </button>
-          );
-        })}
-        {state.type.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setParam("type", "")}
-            className="pharos-focus-ring inline-flex items-center rounded-full border border-dashed border-border/60 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            Clear types
-          </button>
-        ) : null}
-      </div>
+    <div className="space-y-3 border-y border-border/30 px-3 py-3 font-mono text-xs">
+      <button
+        type="button"
+        onClick={() => setMobileClassesOpen((v) => !v)}
+        aria-expanded={mobileClassesOpen}
+        aria-controls="tape-class-chips-mobile"
+        className="pharos-focus-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground hover:text-foreground sm:hidden"
+      >
+        <span className={`inline-block transition-transform ${mobileClassesOpen ? "rotate-90" : ""}`} aria-hidden="true">▸</span>
+        {activeClassCount > 0 ? `Filter by class · ${activeClassCount} active` : `Filter by class`}
+      </button>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <ToggleGroup
-          type="single"
-          value={state.window}
-          onValueChange={(v) => v && setParam("window", v)}
-          aria-label="Filter by time window"
-          className="flex gap-1"
-        >
-          {WINDOW_OPTIONS.map((opt) => (
-            <ToggleGroupItem key={opt.value} value={opt.value} variant="outline" size="sm" className="text-xs">
-              {opt.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      {mobileClassesOpen ? (
+        <div id="tape-class-chips-mobile" className="sm:hidden">
+          {classChips}
+        </div>
+      ) : null}
 
-        <ToggleGroup
-          type="single"
-          value={state.severity ?? "all"}
-          onValueChange={(v) => setParam("severity", v && v !== "all" ? v : "")}
-          aria-label="Filter by severity floor"
-          className="flex gap-1"
-        >
-          <ToggleGroupItem value="all" variant="outline" size="sm" className="text-xs">
-            Any
-          </ToggleGroupItem>
-          {TAPE_FILTER_SEVERITY_VALUES.map((sev) => (
-            <ToggleGroupItem key={sev} value={sev} variant="outline" size="sm" className="text-xs">
-              {SEVERITY_LABELS[sev]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+      <div className="hidden sm:block">{classChips}</div>
 
-        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Peg</span>
-          <select
-            value={state.peg}
-            onChange={(e) => setParam("peg", e.target.value)}
-            aria-label="Filter by peg currency"
-            className="pharos-focus-ring h-8 rounded-md border border-border/60 bg-background/40 px-2 text-xs"
-          >
-            {PEG_FILTER_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-x-3 sm:gap-y-2">
+        <div role="radiogroup" aria-label="Filter by time window" className="inline-flex flex-wrap gap-2 sm:gap-1">
+          {WINDOW_OPTIONS.map((opt) => {
+            const active = state.window === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setParam("window", WINDOW_URL_VALUE[opt.value])}
+                className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
+              >
                 {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+              </button>
+            );
+          })}
+        </div>
 
-        <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Chain</span>
-          <select
-            value={state.chain}
-            onChange={(e) => setParam("chain", e.target.value)}
-            aria-label="Filter by chain"
-            className="pharos-focus-ring h-8 rounded-md border border-border/60 bg-background/40 px-2 text-xs"
-          >
-            <option value="all">All chains</option>
-            {CHAIN_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div role="radiogroup" aria-label="Filter by severity floor" className="inline-flex flex-wrap gap-2 sm:gap-1">
+                {TAPE_FILTER_SEVERITY_VALUES.map((sev) => {
+                  const active = state.severity === sev;
+                  return (
+                    <button
+                      key={sev}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setParam("severity", sev === DEFAULT_SEVERITY ? "" : sev)}
+                      className={`${CHIP_BASE} ${active ? CHIP_ACTIVE : CHIP_INACTIVE}`}
+                    >
+                      {SEVERITY_LABEL_INCLUSIVE[sev]}
+                    </button>
+                  );
+                })}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              info → notice → warning → severe → critical. The selected tier and above are shown.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-        <FilterSearchInput
+        <FilterCombobox
+          label="Peg"
+          searchable={false}
+          value={state.peg}
+          onValueChange={(v) => setParam("peg", v)}
+          options={PEG_FILTER_OPTIONS}
+          triggerClassName={COMBOBOX_TRIGGER}
+        />
+
+        <FilterCombobox
+          label="Chain"
+          value={state.chain}
+          onValueChange={(v) => setParam("chain", v)}
+          options={[{ value: "all", label: "All chains" }, ...CHAIN_OPTIONS]}
+          triggerClassName={COMBOBOX_TRIGGER}
+        />
+
+        <DebouncedSearchInput
           value={state.q}
-          onValueChange={(v) => setParam("q", v)}
-          placeholder="Search events..."
-          className="relative w-full sm:w-56"
-          inputClassName="pl-8 h-8 text-xs"
-          ariaLabel="Search events by title or summary"
+          onCommit={(v) => setParam("q", v)}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices-shared";

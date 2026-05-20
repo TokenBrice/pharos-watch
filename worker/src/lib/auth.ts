@@ -115,6 +115,21 @@ export async function hasValidSiteProxyCredential(
  *
  * Both patterns are project conventions. Choose based on handler structure.
  *
+ * Defense-in-depth contract:
+ * These wrappers are NOT a standalone authorization check. They do not accept
+ * an `env` parameter, so they cannot independently verify a Cloudflare Access
+ * JWT (which requires `CF_ACCESS_OPS_API_AUD` + `CF_ACCESS_TEAM_DOMAIN`).
+ * They rely entirely on `trustedAdmin` being set upstream by the request
+ * dispatch gate — see `worker/src/handlers/http/gates.ts` and
+ * `worker/src/handlers/http/request-dispatch.ts`, which call
+ * `hasValidAdminCredential(request, false, env)` with full env and propagate
+ * the result as `trustedAdmin` into the route context.
+ *
+ * Calling these without an authenticated upstream gate (i.e. `trustedAdmin`
+ * left at its default of `false`/`undefined`) will always fail-closed with
+ * 401, even if the request carries a valid `Cf-Access-Jwt-Assertion` header.
+ * This is intentional: the upstream gate is the source of truth.
+ *
  * Returns a 401 Response if the request lacks a valid admin signal, or null if authorized.
  */
 export async function requireAdmin(
@@ -127,7 +142,11 @@ export async function requireAdmin(
   return null;
 }
 
-/** Executes the handler only when admin auth passes, otherwise returns 401 response. */
+/**
+ * Executes the handler only when admin auth passes, otherwise returns 401 response.
+ * See `requireAdmin` JSDoc for the defense-in-depth contract — this wrapper
+ * inherits the same upstream-`trustedAdmin` requirement.
+ */
 export async function withAdmin(
   request: Request | undefined,
   handler: () => Promise<Response>,
@@ -138,6 +157,13 @@ export async function withAdmin(
   return handler();
 }
 
+// Per-isolate cache: the HMAC key is derived once per Worker isolate and
+// reused for every `timingSafeCompare` call in that isolate. Module-scope
+// `let` is intentional here — see docs/worker-infrastructure.md
+// "Module-Scope Isolate-Local State" for the cache-pattern allowlist.
+// The key never leaves the isolate (extractable=false) and is regenerated
+// on every cold start; it's purely a performance cache to avoid generating
+// a fresh CryptoKey per request.
 let timingSafeCompareKeyPromise: Promise<CryptoKey> | null = null;
 
 function getTimingSafeCompareKey(): Promise<CryptoKey> {

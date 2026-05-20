@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "./stablecoins/registry";
 import {
   resolveBlacklistStatuses,
   type BlacklistStatus,

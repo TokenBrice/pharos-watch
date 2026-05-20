@@ -11,11 +11,11 @@ Applies to `worker/**`.
 
 ## Rules
 
+See root CLAUDE.md § High-Value Gotchas for cross-cutting rules. This file only documents worker-specific items.
+
 - Do not read `Env` bindings at module initialization time. Derive runtime config inside request or scheduled contexts.
 - Preserve the `worker/src` boundary: worker code may import `@shared/*`, but must not import frontend `src/*` modules.
 - Treat cron trigger slots as capacity decisions. Heavy fetch work competes for the same per-trigger connection pool.
-- Consume or cancel failed upstream response bodies before opening more fetches.
-- Keep D1 migrations backward-compatible unless the user explicitly asks for a coordinated destructive rollout.
 - `value != null` is the intentional D1 null/undefined guard style in worker code.
 
 ## Common Checks

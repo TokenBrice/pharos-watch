@@ -1,0 +1,61 @@
+# Feature Flags
+
+Feature flags gate the riskiest of the May 2026 detail-page changes. Most default to off. `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is default-on after the W3 launch and rolls back only when explicitly set to `false`.
+
+To enable a default-off flag locally: `NEXT_PUBLIC_PHAROS_<NAME>=true npm run dev`.
+
+To disable the default-on Hero Verdict locally: `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false npm run dev`.
+
+To enable in prod: set the env var as a GitHub repository Variable. The Pages build runs in GitHub Actions, so Cloudflare Pages dashboard variables are runtime-only for this app and are not inlined into the static bundle.
+
+Implementation lives in `src/lib/feature-flags.ts`. The flags are read at usage sites by name; they are intentionally not registered in any `.env` file or `next.config.*`.
+
+## Flags
+
+| Flag | Gates | Default | `expiresAt` |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS` | Idea 19 (quiet calm deviations + magnitude-aware mcap delta) | off | 2026-08-01 |
+| `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY` | Idea 20b (mobile sticky compact summary) | off | 2026-08-01 |
+| `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER` | Idea 13b (recent blacklist banner, FE-only v1) | off | 2026-08-01 |
+| `NEXT_PUBLIC_PHAROS_HERO_VERDICT` | Idea 1 (hero `oneLiner` verdict + AI-summary TL;DR promotion) | on unless explicitly `false` | 2026-09-01 |
+| `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` | Idea 4 (curated + tape event-annotated charts) | off | 2026-09-01 |
+
+`expiresAt` is advisory — the corresponding gate in code carries the same date in a comment. Past the date, either flip and inline the on-path, or document the reason for keeping the flag. A stale-flag CI check (`scripts/ci/check-stale-flags.mjs`) runs in `validate:prebuild` and fails the build when any flag's `expiresAt` is today or earlier; it also warns 30 days ahead.
+
+## Flip readiness gates
+
+What must be true before turning each flag on in production:
+
+### `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`
+
+- [x] Magnitude-aware `getTrendClass` lands behind the flag (`src/lib/stablecoin-detail-view-model.ts`).
+- [ ] WCAG AA contrast spot-check on the three calm/warn/severe deviation tokens (light + dark themes).
+- [ ] Visual review on USDC + USDe + a coin with an active depeg.
+
+### `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`
+
+- [x] `MobileStickySummary` publishes its height to `--pharos-sticky-summary-h`; `LongformScrollspyNav` includes it in `scrollMarginTop` via `calc()`.
+- [ ] Real-device QA: iOS Safari + Android Chrome scrollspy behavior with sticky summary mounted.
+
+### `NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`
+
+- [x] Frozen-asset suppression in place.
+- [x] `useRecentBlacklist7d` aggregates client-side from the existing summary endpoint (no extra worker round-trips).
+- [ ] iOS Safari sticky check on a coin with active freezes.
+
+### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
+
+- [x] Hero verdict surface lands behind the flag (`<AiSummary>` hoisted above grid when on).
+- [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
+- [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current coverage: 391/391 one-liners and 391/391 AI summaries are present; TL;DR-first top-60 editorial QA remains in flight.**
+
+### `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS`
+
+- [x] Phase 2 wire-up: `useChartAnnotations` fetches `/api/events`, maps tape rows, clamps to range.
+- [x] Curated annotation layer at `shared/data/annotations/curated-annotations.ts`.
+- [x] ≥10 historical annotations seeded across top 4 coins (USDC / USDT / DAI / USDe). Coverage gate enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
+- [ ] Named owner + cadence for ongoing curation. **Current: not yet named — single biggest atrophy risk for the annotation layer.**
+
+## Spec source
+
+The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-prepare.yml`, `.github/workflows/validate-ci.yml`, and `.github/workflows/deploy-cloudflare.yml`.

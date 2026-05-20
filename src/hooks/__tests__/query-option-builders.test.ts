@@ -49,6 +49,20 @@ describe("query option builders", () => {
     );
   });
 
+  it("builds extended supply-history options when a chart requests long-range overlays", async () => {
+    const options = supplyHistoryQueryOptions("usdc-circle", 5000);
+
+    expect(options.queryKey).toEqual(["supply-history", "usdc-circle", 5000]);
+
+    await options.queryFn?.();
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      "/api/supply-history?stablecoin=usdc-circle&days=5000",
+      expect.anything(),
+      undefined,
+      undefined,
+    );
+  });
+
   it("builds canonical mint/burn per-coin options", async () => {
     const options = mintBurnFlowsCoinQueryOptions("usdc-circle", 168);
 

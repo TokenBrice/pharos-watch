@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCommandPaletteResultDescriptors,
   buildCommandPaletteActionDefinitions,
+  COMMAND_PALETTE_PAGES,
   fuzzyMatch,
   groupCommandPaletteResults,
   rankCommandPaletteResults,
@@ -63,5 +64,35 @@ describe("command palette model", () => {
     expect(stablecoinResults.some((result) => result.section === "Stablecoins" && result.href?.includes("/stablecoin/"))).toBe(true);
     expect(pageAndActionResults.some((result) => result.section === "Pages" && result.href)).toBe(true);
     expect(pageAndActionResults.some((result) => result.section === "Actions" && result.actionId)).toBe(true);
+  });
+
+  it("keeps Start Here unique in the command palette route model", () => {
+    expect(COMMAND_PALETTE_PAGES.filter((page) => page.href === "/start")).toHaveLength(1);
+
+    const startResults = buildCommandPaletteResultDescriptors({
+      query: "start",
+      history: [],
+      isDark: false,
+    });
+    expect(startResults.filter((result) => result.href === "/start")).toHaveLength(1);
+  });
+
+  it("covers important route-only pages in palette search", () => {
+    const routeQueries = [
+      { query: "privacy", href: "/privacy" },
+      { query: "governance", href: "/stablecoins/governance" },
+      { query: "backing", href: "/stablecoins/backing" },
+      { query: "docs", href: "/docs" },
+      { query: "pricing", href: "/methodology/pricing-pipeline-changelog" },
+    ];
+
+    for (const { query, href } of routeQueries) {
+      const results = buildCommandPaletteResultDescriptors({
+        query,
+        history: [],
+        isDark: false,
+      });
+      expect(results.some((result) => result.section === "Pages" && result.href === href)).toBe(true);
+    }
   });
 });

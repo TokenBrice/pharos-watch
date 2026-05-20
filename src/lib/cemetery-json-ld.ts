@@ -11,6 +11,11 @@ type CemeteryDatasetExport = {
   csvUrl: string;
   sourceDataPath: string;
   sourceChecksum: string;
+  sourceData?: {
+    path: string;
+    checksum: string;
+    role: string;
+  }[];
   recordsOrderedBy: string;
   rowCount: number;
   limitations: string[];
@@ -18,6 +23,13 @@ type CemeteryDatasetExport = {
 };
 
 const cemeteryDataset = cemeteryDatasetExport as CemeteryDatasetExport;
+const cemeterySourceData = cemeteryDataset.sourceData ?? [
+  {
+    path: cemeteryDataset.sourceDataPath,
+    checksum: cemeteryDataset.sourceChecksum,
+    role: "Dataset source metadata.",
+  },
+];
 
 export function buildCemeteryDatasetJsonLd() {
   return {
@@ -41,6 +53,11 @@ export function buildCemeteryDatasetJsonLd() {
     identifier: [
       { "@type": "PropertyValue", propertyID: "sourceChecksum", value: cemeteryDataset.sourceChecksum },
       { "@type": "PropertyValue", propertyID: "schemaVersion", value: cemeteryDataset.schemaVersion },
+      ...cemeterySourceData.map((source) => ({
+        "@type": "PropertyValue",
+        propertyID: `sourceChecksum:${source.path}`,
+        value: source.checksum,
+      })),
     ],
     variableMeasured: Object.entries(cemeteryDataset.fields).map(([name, description]) => ({
       "@type": "PropertyValue",
@@ -67,6 +84,12 @@ export function buildCemeteryDatasetJsonLd() {
       { "@type": "PropertyValue", name: "rowCount", value: cemeteryDataset.rowCount },
       { "@type": "PropertyValue", name: "recordsOrderedBy", value: cemeteryDataset.recordsOrderedBy },
       { "@type": "PropertyValue", name: "sourceDataPath", value: cemeteryDataset.sourceDataPath },
+      ...cemeterySourceData.map((source) => ({
+        "@type": "PropertyValue",
+        name: "sourceDataFile",
+        value: source.path,
+        description: source.role,
+      })),
       ...cemeteryDataset.limitations.map((limitation) => ({
         "@type": "PropertyValue",
         name: "limitation",

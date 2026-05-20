@@ -6,12 +6,15 @@ import {
   getAnalyticsPayloadUrls,
   getOverflowRoutes,
   getOverflowWorkerCount,
+  getUnexpectedGaAnalyticsFailures,
   hasGaConfigInit,
   HOMEPAGE_RECENT_EVENTS_SMOKE_PATH,
+  isExpectedGaCollectAbort,
+  isExpectedGaCollectUrl,
   isExpectedGaPageViewCollectUrl,
   isToleratedGaCollectFailure,
   verifyAnalyticsSnippet,
-} from "../smoke-ui.mjs";
+} from "../maintenance/smoke-ui.mjs";
 
 function withEnv(key: string, value: string | undefined, fn: () => void) {
   const previous = process.env[key];
@@ -96,11 +99,96 @@ describe("isExpectedGaPageViewCollectUrl", () => {
   });
 });
 
+describe("isExpectedGaCollectUrl", () => {
+  it("accepts GA4 collect URLs for the configured measurement id even without an event name", () => {
+    expect(
+      isExpectedGaCollectUrl(
+        "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects collect URLs for other measurement ids", () => {
+    expect(
+      isExpectedGaCollectUrl(
+        "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&dp=%2F&dt=Pharos",
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("isToleratedGaCollectFailure", () => {
   it("tolerates Playwright net::ERR_ABORTED reports for collect URLs that also returned success", () => {
     const url = "https://analytics.google.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
     expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set([url]))).toBe(true);
     expect(isToleratedGaCollectFailure({ errorText: "net::ERR_ABORTED", url }, new Set())).toBe(false);
+  });
+});
+
+describe("isExpectedGaCollectAbort", () => {
+  it("accepts aborted GA4 collect requests for the expected measurement id", () => {
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_ABORTED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&dp=%2F&dt=Pharos",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects unrelated collect aborts", () => {
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_ABORTED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&en=page_view",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+    expect(
+      isExpectedGaCollectAbort(
+        {
+          errorText: "net::ERR_FAILED",
+          url: "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view",
+        },
+        "G-6TS0KG8H04",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("getUnexpectedGaAnalyticsFailures", () => {
+  it("tolerates expected GA collect aborts after a successful collect signal", () => {
+    const successfulUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
+    const abortedUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&_s=2";
+
+    expect(
+      getUnexpectedGaAnalyticsFailures(
+        [{ errorText: "net::ERR_ABORTED", url: abortedUrl }],
+        new Set([successfulUrl]),
+        "G-6TS0KG8H04",
+        { tolerateExpectedCollectAbort: true },
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps wrong-measurement GA collect aborts as failures", () => {
+    const successfulUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-6TS0KG8H04&en=page_view";
+    const abortedUrl = "https://www.google-analytics.com/g/collect?v=2&tid=G-OTHER&_s=2";
+
+    expect(
+      getUnexpectedGaAnalyticsFailures(
+        [{ errorText: "net::ERR_ABORTED", url: abortedUrl }],
+        new Set([successfulUrl]),
+        "G-6TS0KG8H04",
+        { tolerateExpectedCollectAbort: true },
+      ),
+    ).toEqual([{ errorText: "net::ERR_ABORTED", url: abortedUrl }]);
   });
 });
 

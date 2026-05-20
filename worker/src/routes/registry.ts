@@ -27,6 +27,7 @@ export function getRouteMatch(path: string): RouteMatch | null {
     return {
       endpoint: staticRoute.endpoint,
       dependencies: staticRoute.endpoint.routeDependencies ?? [],
+      methods: staticRoute.endpoint.methods,
       handle: staticRoute.handler,
     };
   }

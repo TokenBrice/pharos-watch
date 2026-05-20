@@ -2,6 +2,7 @@
   "id": "ist-agoric",
   "name": "Inter Stable Token",
   "symbol": "IST",
+  "oneLiner": "IST is Inter Protocol's decentralized dollar on Agoric, minted from overcollateralized IBC ATOM vaults plus a PSM swapping IBC stablecoins 1:1.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized crypto vaults on Agoric accepting IBC-bridged ATOM and stATOM, plus a Parity Stability Module (PSM) that mints IST 1:1 against approved stablecoins (USDC, USDT, DAI) bridged from Ethereum via IBC",
   "pegMechanism": "Two complementary mechanisms on Agoric: (1) Inter Protocol vaults mint IST against IBC-deposited crypto collateral with a stability fee, liquidation ratio, and Dutch-auction liquidations; (2) the Parity Stability Module swaps approved IBC stablecoins for IST at 1:1, anchoring the peg. IST is also the Agoric platform's native fee token.",
+  "mechanismArchetype": "cdp",
   "llamaId": "135",
   "detailProvider": "defillama",
   "geckoId": "inter-stable-token",
@@ -44,23 +46,12 @@
       "decimals": 6
     }
   ],
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sources": [
-      {
-        "label": "Docs",
-        "url": "https://docs.inter.trade/"
-      },
-      {
-        "label": "GitHub",
-        "url": "https://github.com/Agoric/agoric-sdk/tree/master/packages/inter-protocol"
-      }
-    ],
-    "evidence": "Explicit No retained: reviewed metadata describes on-chain or overcollateralized collateral mechanics and does not identify a direct holder-balance blacklist or freeze surface on the issued token.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12",
-    "upstreamSuppressionRationale": "The reviewed override is scoped to the IST holder-facing token. PSM assets are upstream IBC reserve collateral, so this override records no direct IST holder blacklist surface while documenting the deliberate reserve-side suppression."
+    "reviewedStatus": "inherited",
+    "evidence": "IST itself is minted by the protocol, but PSM collateral assets can inherit issuer-level freeze controls.",
+    "reviewedAt": "2026-05-18",
+    "reviewer": "OpenAI Codex review",
+    "sourceFreeRationale": "Agoric Inter Protocol PSM collateral design"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

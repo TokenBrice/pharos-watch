@@ -10,7 +10,7 @@ import {
   computeGovernanceBreakdown,
 } from "../supply";
 import type { GovernanceType, StablecoinData } from "../../types";
-import { TRACKED_META_BY_ID } from "../stablecoins";
+import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 
 function mockCoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return overrides as StablecoinData;

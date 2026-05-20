@@ -78,7 +78,7 @@ import type {
 
 export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 
-export type LiquiditySourceMix = Partial<Record<LiquidityPoolSourceFamily, LiquiditySourceMixEntry>>;
+export type LiquiditySourceMixByFamily = Partial<Record<LiquidityPoolSourceFamily, LiquiditySourceMixEntry>>;
 
 export interface PoolEntry {
   poolId: string;
@@ -327,7 +327,7 @@ export type FullScoreResult = ScoreResult & {
   lockedLiqPct: number | null;
   coverageClass: LiquidityCoverageClass;
   coverageConfidence: number;
-  sourceMix: LiquiditySourceMix;
+  sourceMix: LiquiditySourceMixByFamily;
   balanceMeasuredTvlUsd: number;
   organicMeasuredTvlUsd: number;
 };

@@ -7,6 +7,7 @@ vi.mock("../../../lib/fetch-retry", () => ({
 
 import { fetchWithRetry } from "../../../lib/fetch-retry";
 import {
+  ADAPTER_USER_AGENT,
   accumulateBucketedExposure,
   buildRedemptionSnapshotMetadata,
   buildBucketSlices,
@@ -452,7 +453,7 @@ describe("fetchJsonWithRetry", () => {
         signal,
         headers: {
           Accept: "application/json",
-          "User-Agent": "Mozilla/5.0",
+          "User-Agent": ADAPTER_USER_AGENT,
         },
       },
       2,
@@ -503,7 +504,7 @@ describe("fetchJsonWithRetry", () => {
         signal,
         headers: {
           Accept: "application/json",
-          "User-Agent": "Mozilla/5.0",
+          "User-Agent": ADAPTER_USER_AGENT,
           Referer: "https://example.com/app",
         },
       },

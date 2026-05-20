@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS, ACTIVE_IDS, ACTIVE_META_BY_ID } from "./stablecoins";
+import { ACTIVE_STABLECOINS, ACTIVE_IDS, ACTIVE_META_BY_ID } from "./stablecoins/registry";
 import { SHADOW_STABLECOINS, SHADOW_IDS, SHADOW_META_BY_ID } from "./shadow-stablecoins";
 
 /** All coins eligible for PSI computation = active tracked + shadow. */

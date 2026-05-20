@@ -1,4 +1,4 @@
-import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";

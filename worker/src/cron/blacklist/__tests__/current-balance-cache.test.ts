@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { type BlacklistRunBudget } from "../run-budget";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),

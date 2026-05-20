@@ -344,7 +344,7 @@ Each detail page shows the short summary intro (`text`) followed by every extend
 
 ## Static Generation Pipeline
 
-**Script:** `scripts/sync-digests.ts`
+**Script:** `scripts/maintenance/sync-digests.ts`
 **Command:** `npm run sync:digests`
 
 Fetches `GET /api/digest-archive` from an explicit API source, transforms it to the `data/digests.json` format (`date`, `digestType`, `editionNumber`, `title`, `text`, `extended`, `generatedAt`), and writes the file. Weekly entries use a `YYYY-MM-DD-weekly` date slug so they cannot shadow daily entries for the same UTC day. The script accepts `--api-url` or `DIGEST_API_URL`, optional `--output`, forwards `DIGEST_API_KEY` when set, and falls back to `SMOKE_API_BASE` / `API_BASE_URL` when those are already set.
@@ -352,13 +352,13 @@ Fetches `GET /api/digest-archive` from an explicit API source, transforms it to 
 For local/manual use, point it at the intended environment explicitly:
 
 ```bash
-npx tsx scripts/sync-digests.ts --api-url https://ops-api.example.com
+npx tsx scripts/maintenance/sync-digests.ts --api-url https://ops-api.example.com
 ```
 
 CI now runs digest sync inside `.github/workflows/pages-prepare.yml`:
 
 1. `build-pages` fetches `GET /api/digest-archive` once from the selected API environment and writes the normalized JSON directly to `data/digests.json` before `next build`.
-2. On combined worker + Pages deploys, that selected API environment is the uploaded worker preview URL, so the static digest pages are built against the exact candidate worker before production promotion completes.
+2. In the direct production deploy workflow, that selected API environment is `vars.SMOKE_API_BASE_URL || vars.API_BASE_URL`; reusable Pages workflows can still override it through `api_base_url`.
 
 This keeps the Pages build itself network-independent once the digest snapshot has been fetched and avoids hard-coding `https://api.pharos.watch` into the build path.
 
@@ -408,7 +408,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Telegram delivery i
 | `src/app/digest/page.tsx` | Archive page route shell (static export) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
 | `src/hooks/api-hooks.ts` | TanStack Query hook exports for `useDailyDigest()`, `useDigestArchive()`, and `useDigestSnapshot()` |
-| `scripts/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
+| `scripts/maintenance/sync-digests.ts` | Pre-build script: fetches archive → writes `data/digests.json` |
 | `.github/workflows/pages-prepare.yml` | CI predeploy path: syncs digests, builds Pages export, runs local browser smoke |
 | `.github/workflows/pages-publish.yml` | CI publish path: deploys the verified artifact and runs live browser smoke |
 | `.github/workflows/pages-release.yml` | Wrapper workflow that composes the prepare + publish paths for scheduled/manual rebuilds |

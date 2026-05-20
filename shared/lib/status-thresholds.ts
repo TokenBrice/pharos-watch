@@ -10,18 +10,28 @@ export const FRESHNESS_RATIOS = {
 } as const;
 
 /**
+ * Canonical freshness status tier emitted by API freshness helpers across the
+ * worker, shared, and worker test suites. Endpoint-specific extensions
+ * (e.g. chains' `"unavailable"` dependency state) compose this union rather
+ * than redeclaring the base literal in each module.
+ */
+export type FreshnessStatus = "fresh" | "degraded" | "stale";
+
+/**
  * Classify an age/interval ratio into the canonical freshness status tier.
  * Shared between worker buildFreshnessMeta and the frontend X-Data-Age fallback
  * so threshold changes propagate in one place.
  */
-export function classifyFreshnessRatio(ratio: number): "fresh" | "degraded" | "stale" {
+export function classifyFreshnessRatio(ratio: number): FreshnessStatus {
   if (ratio <= FRESHNESS_RATIOS.FRESH) return "fresh";
   if (ratio <= FRESHNESS_RATIOS.DEGRADED) return "degraded";
   return "stale";
 }
 
 // --- Blacklist gap thresholds ---
+/** Rolling window (seconds) used to count "recent" missing blacklist amounts when classifying blacklist gap status. */
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
+/** Ratios are fractions of total events (0.01 = 1%); recent counts are absolute amounts within BLACKLIST_RECENT_WINDOW_SEC. */
 export const STATUS_BLACKLIST_THRESHOLDS = {
   missingRatioDegraded: 0.01,
   missingRatioStale: 0.02,
@@ -29,6 +39,7 @@ export const STATUS_BLACKLIST_THRESHOLDS = {
   missingRecentStale: 25,
 } as const;
 
+/** Classify blacklist coverage gaps. Stale tier wins over degraded when either condition triggers. */
 export function getBlacklistGapStatus({
   missingRatio,
   recentMissingAmounts,
@@ -52,6 +63,7 @@ export function getBlacklistGapStatus({
 }
 
 // --- On-chain supply thresholds ---
+/** ratio* fields are fractions of monitored coins; *AbsoluteStale fields are raw coin counts. ratioMinTrackedCoins gates whether the ratio is statistically meaningful. */
 export const STATUS_ONCHAIN_THRESHOLDS = {
   ratioDegraded: 0.1,
   ratioStale: 0.25,
@@ -59,10 +71,14 @@ export const STATUS_ONCHAIN_THRESHOLDS = {
   divergenceAbsoluteStale: 25,
   ratioMinTrackedCoins: 10,
 } as const;
+/** Window for treating an on-chain monitoring source as actively reporting. Sources silent longer than this are excluded from health rollups. */
 export const STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC = 3 * 24 * 3600;
+/** Per-coin on-chain snapshot freshness ceiling. Snapshots older than this contribute to the stale-snapshot count. */
 export const STATUS_ONCHAIN_FRESH_WINDOW_SEC = 2 * 3600;
+/** Per-coin divergence ceiling (fraction). Above this, on-chain supply is considered to disagree with DefiLlama materially. */
 export const STATUS_ONCHAIN_DIVERGENCE_PER_COIN_THRESHOLD = 0.05;
 
+/** Returns true when the tracked-coin count is large enough for ratio-based thresholds to be applied (avoids 1/3 == "33% degraded" noise). */
 export function hasRepresentativeOnchainRatioSample(trackedCoins: number): boolean {
   return trackedCoins >= STATUS_ONCHAIN_THRESHOLDS.ratioMinTrackedCoins;
 }
@@ -82,9 +98,10 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
 } as const;
 
 // --- Cache ratio thresholds (availability status) ---
+/** Age/interval ratio bands for cached endpoint availability. Distinct from FRESHNESS_RATIOS: applied at the endpoint-availability layer, not the per-record freshness layer. */
 export const STATUS_CACHE_RATIO_THRESHOLDS = {
-  degraded: 8,
-  stale: 12,
+  degraded: FRESHNESS_RATIOS.FRESH,
+  stale: FRESHNESS_RATIOS.DEGRADED,
 } as const;
 
 // --- Probe classification thresholds (browser & self-check probe runs) ---
@@ -109,9 +126,11 @@ export const STATUS_PRICE_CONFIDENCE_BANDS = {
 } as const;
 
 // --- CoinGecko comparison thresholds ---
+/** Percent gap (Pharos vs CoinGecko) above which a coin's cross-source price is flagged as divergent. */
 export const STATUS_COINGECKO_PRICE_DIFF_THRESHOLD_PCT = 5;
 
 // --- Mint/burn reconciliation thresholds ---
+/** USD amounts are absolute; ratios are fractions of expected change. Critical tier wins over warn when either trips. */
 export const STATUS_RECONCILIATION_THRESHOLDS = {
   criticalAbsoluteUsd: 100_000_000,
   criticalRatio: 0.3,
@@ -120,8 +139,10 @@ export const STATUS_RECONCILIATION_THRESHOLDS = {
 } as const;
 
 // --- Reserve metadata drift thresholds ---
+/** Drift threshold expressed in raw delta points of the reserve composition score (NOT percentage). */
 export const STATUS_RESERVE_DRIFT_THRESHOLD_POINTS = 15;
 
+/** True when the reserve composition score delta exceeds the curated drift budget, signalling stale or revised reserve metadata. */
 export function isReserveDriftThresholdExceeded(delta: number): boolean {
   return delta > STATUS_RESERVE_DRIFT_THRESHOLD_POINTS;
 }
@@ -142,4 +163,5 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
 } as const;
 
 // --- Discovery scan ---
+/** Minimum mcap (USD) for a coin to surface in the discovery scan. Below this, the universe is too noisy to be actionable. */
 export const DISCOVERY_MIN_MCAP = 5_000_000;

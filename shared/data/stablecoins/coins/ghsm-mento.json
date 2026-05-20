@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Ghanaian Cedi",
   "symbol": "GHSm",
+  "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, backed by a reserve mix (sUSDS, CELO, EURC, USDC, stETH) with FPMM swap routes priced by oracles.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "OTHER",
@@ -14,11 +15,14 @@
   },
   "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
   "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit GHSm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+  "mechanismArchetype": "cdp",
   "geckoId": "cghs",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

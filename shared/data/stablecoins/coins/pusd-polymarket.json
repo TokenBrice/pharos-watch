@@ -2,6 +2,7 @@
   "id": "pusd-polymarket",
   "name": "Polymarket USD",
   "symbol": "PUSD",
+  "oneLiner": "PUSD is Polymarket's USDC-backed prediction-market account stablecoin on Polygon; minted when users deposit USDC and redeemable through the Polymarket app.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

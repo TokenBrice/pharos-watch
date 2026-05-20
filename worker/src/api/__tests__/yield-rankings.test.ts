@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
@@ -669,6 +669,55 @@ describe("handleYieldRankings", () => {
     expect(parsed.rankings[0]?.sourceRisk?.venueRiskTier).toBe("unknown");
     expect(parsed.rankings[0]?.rankChangeAttribution?.driverContributions?.sourceRisk).toBeNull();
     expect(parsed.rankings[0]?.altSources[0]?.sourceRisk?.sourceRiskPenalty).toBeNull();
+  });
+
+  it("propagates decisionLedger through the cache round-trip on the public payload", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 30;
+    const payload = {
+      ...v748RankingsPayload,
+      rankings: [
+        {
+          ...v748RankingsPayload.rankings[0],
+          decisionLedger: {
+            selectedReasonCode: "curated-over-discovered" as const,
+            previousBestSourceKey: "defillama-auto:legacy",
+            sourceSwitch: true,
+            apy30dDeltaFromPrevious: null,
+            rejectedCount: 1,
+            alternatives: [
+              {
+                sourceKey: "defillama-auto:compound-v3:usdc",
+                yieldSource: "Compound V3 USDC",
+                apy30dDelta: -0.51,
+                rejectionReasonCode: "lower-confidence" as const,
+              },
+            ],
+          },
+        },
+      ],
+      updatedAt,
+    } satisfies YieldRankingsResponse;
+    const db = makeCacheDb(payload, updatedAt);
+
+    const res = await handleYieldRankings(db);
+    const body = await res.json() as YieldRankingsResponse;
+
+    expect(res.status).toBe(200);
+    expect(body.rankings[0]?.decisionLedger).toEqual({
+      selectedReasonCode: "curated-over-discovered",
+      previousBestSourceKey: "defillama-auto:legacy",
+      sourceSwitch: true,
+      apy30dDeltaFromPrevious: null,
+      rejectedCount: 1,
+      alternatives: [
+        {
+          sourceKey: "defillama-auto:compound-v3:usdc",
+          yieldSource: "Compound V3 USDC",
+          apy30dDelta: -0.51,
+          rejectionReasonCode: "lower-confidence",
+        },
+      ],
+    });
   });
 
   it("returns 503 when cache is empty", async () => {

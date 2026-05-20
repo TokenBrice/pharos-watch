@@ -85,4 +85,30 @@ describe("buildLiveReportCards variant activeDepeg cascade", () => {
     expect(variantCard?.rawInputs.activeDepeg).toBe(false);
     expect(variantCard?.rawInputs.activeDepegBps).toBeNull();
   });
+
+  it("derives tracked wrapper decentralization from the parent asset score", () => {
+    const { cards } = buildLiveReportCards({
+      pegDataById: new Map(),
+      activeDepegPeakBpsById: new Map(),
+      dexLiqMap: {},
+      redemptionBackstopMap: {},
+      bluechipMap: {},
+      resolvedBlacklistStatuses: new Map(),
+      liveReserveMap: new Map(),
+    });
+
+    const cardById = new Map(cards.map((card) => [card.id, card]));
+    const bold = cardById.get("bold-liquity");
+    const ybold = cardById.get("ybold-yearn");
+    const sbold = cardById.get("sbold-k3-capital");
+    const frxusd = cardById.get("frxusd-frax");
+    const sfrxusd = cardById.get("sfrxusd-frax");
+
+    expect(ybold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
+    expect(sbold?.dimensions.decentralization.score).toBe((bold?.dimensions.decentralization.score ?? 0) - 5);
+    expect(sfrxusd?.dimensions.decentralization.score).toBe((frxusd?.dimensions.decentralization.score ?? 0) - 3);
+    expect(ybold?.dimensions.decentralization.score).toBeGreaterThan(10);
+    expect(sbold?.dimensions.decentralization.score).toBeGreaterThan(10);
+    expect(sfrxusd?.dimensions.decentralization.score).toBeGreaterThan(10);
+  });
 });

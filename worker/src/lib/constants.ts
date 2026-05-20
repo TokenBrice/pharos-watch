@@ -3,8 +3,6 @@ import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-} from "@shared/lib/depeg-config";
-import {
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
   DEPEG_EVENT_MIN_SUPPLY_USD,
@@ -15,7 +13,7 @@ import {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
-} from "@shared/lib/depeg-detection-config";
+} from "@shared/lib/depeg-config";
 
 /** Returns the appropriate depeg threshold for a given peg type */
 export function getDepegThresholdBps(pegType: string | undefined): number {
@@ -94,6 +92,20 @@ export const SIX_SARON_COMPOUND_RATES_REFERER_URL = "https://indexdata.six-group
 export const SIX_SARON_3M_CSV_URL = "https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv";
 /** SIX guest token and report-download endpoints reject the Pharos UA; use a browser-compatible UA instead. */
 export const SIX_BROWSER_USER_AGENT = "Mozilla/5.0";
+/** FRED SONIA daily rate (IUDSOIA) — Sterling Overnight Index Average; used as a proxy for "3M compounded SONIA". */
+export const FRED_SONIA_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA";
+/** FRED uncollateralized overnight call rate for Japan (IRSTCB01JPM156N) — TONA-equivalent proxy. */
+export const FRED_TONA_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N";
+/** FRED 3-month interbank rate for Australia (IR3TIB01AUM156N) — proxy for RBA cash rate target. */
+export const FRED_AUD_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N";
+/** Banxico SIE API — CETES 28-day primary auction yield (series SF43936). Requires Bmx-Token header. */
+export const BANXICO_CETES_28D_URL = "https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno";
+/** Etherfuse app route whose Next data exposes the current CETES Stablebond issuance rate. */
+export const ETHERFUSE_CETES_BOND_PAGE_URL = "https://app.etherfuse.com/bonds/cetes";
+/** Banco Central do Brasil SGS — SELIC over (series 11), latest observation as JSON. */
+export const BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json";
+/** Bank of Canada Valet — overnight repo rate (V122530), latest observation as JSON. */
+export const BOC_CORRA_URL = "https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1";
 export const BENCHMARK_FETCH_TIMEOUT_MS = 15_000;
 export const BENCHMARK_FETCH_MAX_RETRIES = 2;
 export const PYS_SCALING_FACTOR = 8;

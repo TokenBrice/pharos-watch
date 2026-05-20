@@ -108,8 +108,10 @@ A shadcn `Dialog` with three feedback modes selected via a segmented tab control
 | `type` | Must be one of the three valid values |
 | `description` | 10–2000 characters after trim |
 | `title` | 3–100 characters after trim; required for `bug` / `feature-request` |
+| `expectedValue` | Optional; server accepts up to 500 characters after trim (`data-correction` only in the browser UI) |
 | `pageUrl` | Must be a single-slash internal app path such as `"/stablecoin/usdc-circle/"`; protocol-relative `"//..."` values are rejected |
 | `contactHandle` | Optional; server accepts up to 100 characters after trim. The browser form also enforces a 2-character minimum before submission. |
+| `stablecoinName` / `pegValue` | Optional context fields, capped at 100 characters each |
 | `stablecoinId` | Checked with `resolveStablecoinId(...)`; unknown values return `400 Invalid stablecoinId` |
 | `website` | Non-empty → silent 200 OK, no GitHub call |
 

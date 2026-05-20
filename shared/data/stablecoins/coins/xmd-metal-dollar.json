@@ -3,6 +3,7 @@
   "detailProvider": "coingecko",
   "name": "Metal Dollar",
   "symbol": "XMD",
+  "oneLiner": "XMD is Metallicus's basket-backed dollar token on XPR Network, reserved by USDC, PYUSD, and Paxos-dollar stablecoins managed by the issuer.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -44,9 +45,22 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "USDC, PYUSD, and Paxos dollar stablecoin basket",
-      "pct": 100,
-      "risk": "low"
+      "name": "USDC reserve basket component",
+      "pct": 34,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "PYUSD reserve basket component",
+      "pct": 33,
+      "risk": "low",
+      "coinId": "pyusd-paypal"
+    },
+    {
+      "name": "Paxos dollar reserve basket component",
+      "pct": 33,
+      "risk": "low",
+      "coinId": "usdp-paxos"
     }
   ],
   "notices": [
@@ -54,6 +68,23 @@
       "type": "info",
       "title": "XPR Network contract gap",
       "message": "CoinGecko resolves XMD on XPR Network, which is not currently a Pharos-supported chain. Runtime coverage uses CoinGecko price and market cap, while contract-level coverage is intentionally skipped."
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "type": "collateral",
+      "weight": 0.34
+    },
+    {
+      "id": "pyusd-paypal",
+      "type": "collateral",
+      "weight": 0.33
+    },
+    {
+      "id": "usdp-paxos",
+      "type": "collateral",
+      "weight": 0.33
     }
   ]
 }

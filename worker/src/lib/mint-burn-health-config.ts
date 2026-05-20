@@ -1,3 +1,5 @@
+import type { FreshnessStatus } from "@shared/lib/status-thresholds";
+
 const MINT_BURN_MAJOR_SYMBOLS = [
   "USDT",
   "USDC",
@@ -54,11 +56,9 @@ export function resolveMintBurnFreshnessConfig(env?: MintBurnFreshnessEnv): Mint
   };
 }
 
-export type MintBurnSyncFreshnessStatus = "fresh" | "degraded" | "stale";
-
 export interface MintBurnSyncHealth {
   lastSuccessfulSyncAt: number | null;
-  freshnessStatus: MintBurnSyncFreshnessStatus;
+  freshnessStatus: FreshnessStatus;
   warning: string | null;
   criticalLaneHealthy: boolean;
 }
@@ -66,7 +66,7 @@ export interface MintBurnSyncHealth {
 export function computeMintBurnSyncFreshnessStatus(
   nowSec: number,
   lastSuccessfulSyncAt: number | null,
-): MintBurnSyncFreshnessStatus {
+): FreshnessStatus {
   if (lastSuccessfulSyncAt == null) return "stale";
   const ageSec = Math.max(0, nowSec - lastSuccessfulSyncAt);
   const ratio = ageSec / MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC;

@@ -2,8 +2,9 @@
   "id": "bfusd-binance",
   "name": "BFUSD",
   "symbol": "BFUSD",
+  "oneLiner": "BFUSD is a Binance account product redeemable inside Binance against USD stablecoins, backed by an opaque collateral pool and hedging portfolio.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
@@ -12,13 +13,16 @@
   },
   "collateral": "Binance-owned BFUSD Collateral Pool assets, hedging portfolio positions, and a reserve fund described in Binance BFUSD terms",
   "pegMechanism": "Binance account product purchased and redeemed 1:1 against supported USD stablecoins inside Binance, with Binance-controlled fees, limits, delays, and suspension rights",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "bfusd",
   "cmcSlug": "bfusd",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.binance.com/en/support/faq/what-is-bfusd-and-how-to-get-started-with-bfusd-2bb2db6e81bd4958996307bb4b206d97",
-    "provider": "Binance BFUSD product disclosures"
+    "provider": "Binance BFUSD product disclosures",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

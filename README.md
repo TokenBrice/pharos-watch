@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 391 stablecoins in repo metadata: 363 active assets on public data surfaces, 25 pre-launch entries, 3 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 392 stablecoins in repo metadata: 362 active assets on public data surfaces, 26 pre-launch entries, 4 frozen archives (preserved historical records only), plus 2 shadow assets used only for PSI history. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -31,7 +31,7 @@ Public-facing analytics dashboard tracking 391 stablecoins in repo metadata: 363
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
-- **Stablecoin Cemetery** — 91 curated dead stablecoins plus 3 frozen archives documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 91 curated dead stablecoins plus 4 frozen archives documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Redemption Backstops** — modeled issuer / protocol redemption routes with effective-exit scoring for 287 configured assets
 - **Detail pages** — full analytics dossiers for tracked live assets plus dedicated pre-launch detail views, with conditional reserve, redemption backstop, liquidity, and safety surfaces when data exists
@@ -129,15 +129,15 @@ curl "http://localhost:8787/__scheduled?cron=*/15+*+*+*+*"
 **Frontend-only (`npm run dev`)**
 Use one of these paths:
 
-- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
+- Leave `NEXT_PUBLIC_API_BASE` empty and set `SITE_API_SHARED_SECRET` in `.env.local`; `npm run dev` starts `scripts/maintenance/dev-api-proxy.mjs` so local same-origin `/api/*` reads are rewritten through the dev proxy and authenticate against the site-data lane.
 - Set `NEXT_PUBLIC_API_BASE=http://localhost:8787` and run `npm run dev:next` when you are also running a configured local Worker with `cd worker && npx wrangler dev`; `npm run dev` always starts the local site-data proxy as well.
 - `next dev` allows `ops.pharos.watch` as a development origin so the ops host can point at a local dev server during Access/proxy debugging.
 
 **Worker-only (`cd worker && npx wrangler dev`)**
-Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys.
+Requires D1 bindings and external API keys. See `worker/src/lib/env.ts` for the full binding contract and `.env.example` for all keys, including optional provider credentials such as `BANXICO_TOKEN` and operational telemetry kill switches.
 
 **Full-stack local**
-Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals.
+Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separate terminals. `DEV_PROXY_UPSTREAM` and `DEV_PROXY_PORT` override the local site-data proxy target/port when debugging the `npm run dev` proxy path.
 
 ### Other commands
 
@@ -145,8 +145,7 @@ Both sets above. Run `npm run dev` and `cd worker && npx wrangler dev` in separa
 npm run build    # Production static build
 npm run lint     # ESLint
 npm run typecheck # Type-check frontend, shared, Pages Functions, and root scripts
-npm run typecheck:worker # Type-check worker
-npm run typecheck:worker-scripts # Type-check worker-bound operational scripts
+npm run typecheck:worker # Type-check worker (includes worker-bound operational scripts)
 ```
 
 ## Project Structure
@@ -168,16 +167,18 @@ src/                              Frontend (Next.js static export)
 │   ├── docs/                     Public documentation archive (+ docs/[slug]/ pages)
 │   ├── flows/                    Mint/burn flow tracker
 │   ├── funding/                  Static public-good funding ledger
+│   ├── learn/mechanisms/         Stablecoin mechanism explainer hub + archetype pages
 │   ├── api/                      Public API access and self-serve key request flow
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── methodology/              Detailed methodology + changelog routes
 │   ├── portfolio/                Portfolio stress testing & upstream exposure
 │   ├── privacy/                  Privacy policy
 │   ├── safety-scores/            Stablecoin safety grade cards with radar charts
+│   ├── screener/                 Beta multi-signal stablecoin screener
 │   ├── start/                    First-time-user orientation route
 │   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── upcoming/                 Pre-launch stablecoin tracker
-│   ├── stablecoin/[id]/          Detail page per stablecoin
+│   ├── stablecoin/[id]/          Detail page per stablecoin (+ stablecoin/[id]/yield/)
 │   ├── stablecoins/              Stablecoin taxonomy hub
 │   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
 │   ├── stablecoins/backing/      Backing taxonomy hub
@@ -189,7 +190,8 @@ src/                              Frontend (Next.js static export)
 │   ├── admin/                    Access-gated operator admin panel (ops.pharos.watch only)
 │   ├── admin-api/                Access-gated API key/request management panel (ops.pharos.watch only)
 │   ├── status/                   Public system-status dashboard (read-only, indexable)
-│   ├── pharoswatchbot/           Telegram alerts + digest landing page
+│   ├── timeline/                 Cross-class event tape
+│   ├── pharoswatchbot/           Telegram alerts + digest landing page (+ pharoswatchbot/app/)
 │   ├── yield/                    Yield intelligence leaderboard
 │   ├── changelog/                Weekly release notes
 │   └── about/                    About / product overview (+ about/api/ reference)
@@ -203,6 +205,7 @@ functions/                        Cloudflare Pages Functions for same-origin web
 ├── admin/[[path]].ts             Host gate for `/admin/` on `ops.pharos.watch`
 ├── api/admin/[[path]].ts         Same-origin admin proxy from `ops.pharos.watch` to `ops-api.pharos.watch`
 ├── admin-api/[[path]].ts         Host gate for the private API management route
+├── stablecoin/[[path]].ts        Legacy numeric stablecoin URL redirector
 ├── lib/ops-env.ts                Shared Pages Functions env contract for ops-host gating and admin proxying
 ├── lib/ops-origin.ts             Shared ops-origin resolution helper
 ├── lib/proxy-utils.ts            Shared proxy request/response helpers
@@ -231,6 +234,8 @@ worker/                           Cloudflare Worker (API + cron jobs)
 Current source-of-truth product docs live in `/docs/` and this README. Durable process guidance now belongs under `/docs/`; see [docs/process/agent-artifacts.md](./docs/process/agent-artifacts.md) for artifact routing.
 
 - [docs/README.md](./docs/README.md) - verified documentation index and topic map
+- [docs/agent-task-router.md](./docs/agent-task-router.md) - agent-first task routing from user intent to docs, files, checks, and gotchas
+- [docs/agent-code-map.md](./docs/agent-code-map.md) - generated compact code entrypoint/export map for fast discovery
 - [docs/alt-pegs-page.md](./docs/alt-pegs-page.md) - `/alt-pegs/` route contract, crawlability pattern, and homepage integration
 - [docs/api-reference.md](./docs/api-reference.md) - exact API routes, query params, headers, and response contracts
 - [docs/architecture.md](./docs/architecture.md) - curated file tree and architecture-significant routes
@@ -264,14 +269,14 @@ Cloudflare Worker (API layer)
   ├── Cron: 13,43 * * * *                       → mint/burn extended lane (every 30 min)
   ├── Cron: 10,40 * * * *                       → DEX liquidity
   ├── Cron: 16,46 * * * *                       → stablecoin charts (1h cooldown)
-  ├── Cron: 26,56 * * * *                       → DEWS + PSI DB-only compute
+  ├── Cron: 26,56 * * * *                       → DEWS + PSI + Live Tape DB-only compute/projector lane
   ├── Cron: 11 */4 * * *                        → live reserve sync + redemption backstop snapshots + Kinesis supply + collateral drift check (every 4h)
   ├── Cron: 20 * * * *                          → yield sync
   ├── Cron: 25 */4 * * *                        → supplemental yield sync
-  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + degradation watchdog + disambiguation cleanup
+  ├── Cron: 2,7,12,17,22,27,32,37,42,47,52,57 * * * * → Telegram subscriber alerts + bot registration reconciliation + degradation watchdog + disambiguation cleanup + pulse snapshot
   ├── Cron: */5 * * * *                         → manual digest trigger poll
   ├── Cron: 0 3 * * *                           → status-probe TTL prune + cron-history TTL prune + weekly-gated Telegram inactive cleanup
-  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + USDS status
+  ├── Cron: 0 8 * * *                           → supply snapshot + safety-grade snapshot + T-bill rate + PSI daily snapshot + public dataset snapshot + USDS status
   ├── Cron: 5 8 * * *                           → Bluechip sync + daily digest + weekly recap (Mondays)
   ├── Cron: 10 8 * * *                          → discovery scan (Mondays)
   └── Cron: 0 6 1 * *                           → monthly yield coverage audit
@@ -375,18 +380,19 @@ For the canonical delivery workflow (including worktree merge flow and the repo 
 For the full Worker, Pages Functions, and frontend runtime binding table, see [.env.example](./.env.example) and [docs/worker-infrastructure.md](./docs/worker-infrastructure.md).
 For mint/burn ingestion diagnostics and recovery, use [docs/runbooks/mint-burn-integrity.md](./docs/runbooks/mint-burn-integrity.md) for operator remediation and [docs/mint-burn-flows.md](./docs/mint-burn-flows.md) for pipeline details; historical notes are not runbooks.
 
-1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run seo:check` when Pages-impacting files changed → `npm run test:noncritical` → `npm run coverage:critical` → `npm run typecheck:worker` + `npm run typecheck:worker-scripts` when worker-impacting files changed
+1. **Validate gate:** `npm run validate:prebuild` (runs the audit, lint/typecheck, doc, data, route, cron, unused-code, world-map, and worker-boundary guardrails) → `npm run build` + `npm run check:feature-flag-inlining` + `npm run seo:check` plus built-artifact guardrails when Pages-impacting files changed → three `npm run test:noncritical -- --shard=N/3` shards → `npm run coverage:critical` → `npm run typecheck:worker` when worker-impacting files changed
 2. **Worker candidate upload:** `npm ci` → capture the currently live Worker version ID → `cd worker && npx --no-install wrangler versions upload` to expose the candidate preview URL before validation finishes
 3. **Worker migration + preview smoke:** after the aggregate validate gate passes, rerun the migration checker, apply D1 migrations with `cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote`, then run `npm run test:smoke-api` against the uploaded preview URL
 4. **Worker promotion:** `cd worker && npx --no-install wrangler versions deploy <uploaded-version>@100` → `cd worker && npx --no-install wrangler triggers deploy`
 5. **Production API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE` (fed from GitHub variable `SMOKE_API_BASE_URL`, fallback `API_BASE_URL`); if this fails after promotion, CI auto-rolls the Worker back to the previously live version
-6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive` once into `data/digests.json` → `npm run build` → `npm run seo:check` → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
+6. **Pages prepare path:** `npm ci` → fetch `/api/digest-archive`, confirmed depeg events, and public dataset mirrors once from the selected API environment → `npm run build` → `npm run check:feature-flag-inlining` → `npm run seo:check` plus built-artifact guardrails → serve `out/` locally through `npm run serve:static-export` → `npm run test:smoke-ui -- --url http://127.0.0.1:4173`; when both worker and Pages changed, this stage runs against the uploaded worker preview URL in parallel with worker promotion and production API smoke
 7. **Pages publish path:** after `pages-prepare` and, when worker/API changed, after production API smoke passes, publish the already verified artifact with `npx --no-install wrangler pages deploy out` (with retry in CI), then run public live UI, ops, and transport smokes in parallel
 8. **Worker-only live UI smoke:** worker-only deploys still smoke `https://pharos.watch` against the new worker/API when the static export was unchanged
 9. **Post-deploy ops smoke:** `npm run test:smoke-ops` runs after `deploy-pages` inside the Pages publish workflow, or after `smoke-api` on worker-only deploys
 10. **Transport smoke:** `npm run test:smoke-transport` verifies production transport behavior after main deploys and scheduled/manual Pages rebuilds, in parallel with the other live smokes
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `SMOKE_API_KEY`, `DIGEST_API_KEY`, `SITE_API_SHARED_SECRET`, `OPS_SMOKE_CF_ACCESS_CLIENT_ID`, and `OPS_SMOKE_CF_ACCESS_CLIENT_SECRET`
+Optional dedicated GitHub secrets for Pages data sync: `DEPEG_EVENTS_API_KEY` and `PUBLIC_DATASETS_API_KEY` (both fall back to `DIGEST_API_KEY`)
 Required GitHub variable: `API_BASE_URL`
 Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 Optional GitHub variables: `SMOKE_OPS_UI_URL`, `SMOKE_OPS_API_BASE`, `NEXT_PUBLIC_GA_ID`

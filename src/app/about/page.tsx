@@ -5,13 +5,16 @@ import Link from "next/link";
 import { ArrowRight, ExternalLink, GitBranch, Radio } from "lucide-react";
 import { AboutReferenceModule } from "@/components/about-reference-module";
 import { Button } from "@/components/ui/button";
+import { CitationBlock } from "@/components/citation-block";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqSection } from "@/components/faq-section";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildFaqJsonLd } from "@/lib/faq";
+import { getPharosToneClasses, type PharosTone } from "@/lib/tone-classes";
 import {
   COMPANION_FEATURES,
   COMPUTED_FEATURES,
@@ -34,48 +37,6 @@ const INLINE_EXTERNAL_LINK_CLASS =
 const CTA_BUTTON_CLASS =
   "min-h-11 w-full justify-between rounded-2xl border-border/65 bg-background/50 px-4 py-2 whitespace-normal text-left sm:h-9 sm:min-h-0 sm:w-auto sm:justify-center sm:whitespace-nowrap sm:rounded-full";
 
-type AboutTone = "brand" | "data" | "insight" | "classification" | "neutral";
-
-function getToneClasses(tone: AboutTone) {
-  switch (tone) {
-    case "brand":
-      return {
-        border: "border-l-frost-blue",
-        kicker: "text-sky-700 dark:text-frost-blue/82",
-        icon: "text-sky-700 dark:text-frost-blue/82",
-        rule: "from-frost-blue/35 to-transparent",
-      };
-    case "data":
-      return {
-        border: "border-l-amber-500",
-        kicker: "text-amber-700 dark:text-amber-400",
-        icon: "text-amber-700 dark:text-amber-400",
-        rule: "from-amber-500/35 to-transparent",
-      };
-    case "insight":
-      return {
-        border: "border-l-emerald-500",
-        kicker: "text-emerald-700 dark:text-emerald-400",
-        icon: "text-emerald-700 dark:text-emerald-400",
-        rule: "from-emerald-500/35 to-transparent",
-      };
-    case "classification":
-      return {
-        border: "border-l-violet-500",
-        kicker: "text-violet-700 dark:text-violet-400",
-        icon: "text-violet-700 dark:text-violet-400",
-        rule: "from-violet-500/35 to-transparent",
-      };
-    default:
-      return {
-        border: "border-l-zinc-500",
-        kicker: "text-muted-foreground",
-        icon: "text-muted-foreground",
-        rule: "from-border to-transparent",
-      };
-  }
-}
-
 function PipelineSources() {
   return (
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -89,8 +50,8 @@ function PipelineSources() {
   );
 }
 
-function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: AboutTone }) {
-  const toneClasses = getToneClasses(tone);
+function AboutFeatureRow({ item, tone }: { item: AboutFeatureItem; tone: PharosTone }) {
+  const toneClasses = getPharosToneClasses(tone);
   const rowClassName = cn(
     "flex min-h-11 gap-3 rounded-xl px-2 py-4 sm:px-3",
     item.href && "pharos-focus-ring pharos-interactive-card group hover:bg-muted/20",
@@ -142,11 +103,11 @@ function AboutSection({
 }: {
   eyebrow: string;
   title: string;
-  tone: AboutTone;
+  tone: PharosTone;
   children: ReactNode;
   contentClassName?: string;
 }) {
-  const toneClasses = getToneClasses(tone);
+  const toneClasses = getPharosToneClasses(tone);
 
   return (
     <Card className={cn("rounded-xl border-l-[3px]", toneClasses.border)}>
@@ -174,7 +135,7 @@ function AboutFeatureSection({
   title: string;
   intro: ReactNode;
   items: readonly AboutFeatureItem[];
-  tone: AboutTone;
+  tone: PharosTone;
   footer?: ReactNode;
 }) {
   return (
@@ -273,6 +234,13 @@ export default function AboutPage() {
             and make the most of it.
           </p>
           <p>
+            For the editorial position that drives what Pharos computes and refuses to compute, read the{" "}
+            <Link href="/about/principles/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              Pharos Principles
+            </Link>
+            .
+          </p>
+          <p>
             For architecture, methodology, and design references, use the{" "}
             <Link href="/docs/" className={INLINE_EXTERNAL_LINK_CLASS}>
               documentation archive
@@ -358,7 +326,7 @@ export default function AboutPage() {
           tone="brand"
           contentClassName="flex flex-col gap-4 text-sm leading-relaxed text-muted-foreground sm:flex-row sm:items-start"
         >
-          <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getToneClasses("brand").icon)} />
+          <Radio className={cn("mt-0.5 h-5 w-5 shrink-0", getPharosToneClasses("brand").icon)} />
           <div className="space-y-3">
             <p>
               TokenBrice walked through Pharos live on Leviathan News, covering the motivation behind the project, how
@@ -420,7 +388,11 @@ export default function AboutPage() {
             Pharos classifies stablecoins into three governance tiers:{" "}
             <span className="font-medium text-foreground">CeFi</span> (fully centralized),{" "}
             <span className="font-medium text-foreground">CeFi-Dependent</span> (decentralized infrastructure but
-            reliant on centralized collateral or peg mechanisms), and{" "}
+            reliant on centralized collateral or peg{" "}
+            <Link href="/learn/mechanisms/" className={INLINE_EXTERNAL_LINK_CLASS}>
+              mechanisms
+            </Link>
+            ), and{" "}
             <span className="font-medium text-foreground">DeFi</span> (fully on-chain, no centralized custody
             dependency). The classification reflects actual infrastructure dependency, not marketing claims.
           </p>
@@ -525,6 +497,13 @@ export default function AboutPage() {
             </Button>
           </div>
         </AboutSection>
+
+        <CitationBlock
+          entityClass="page"
+          id="about"
+          title="About Pharos"
+          url={`${SITE_ORIGIN}/about/`}
+        />
       </div>
     </FeaturePageShell>
   );

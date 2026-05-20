@@ -3,6 +3,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { MethodologyVersionCard, type MethodologyChangelogEntry } from "@/components/methodology-version-card";
 import { safeJsonLd } from "@/lib/json-ld";
+import type { PharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 interface MethodologyChangelogPageProps {
@@ -16,6 +17,8 @@ interface MethodologyChangelogPageProps {
   railLabel?: string;
   navAriaLabel?: string;
   children?: React.ReactNode;
+  footerContent?: React.ReactNode;
+  jsonLdIdentifier?: PharosUrnJsonLdIdentifier;
 }
 
 function changelogEntryId(version: string) {
@@ -33,6 +36,8 @@ export function MethodologyChangelogPage({
   railLabel = "Jump to Version",
   navAriaLabel,
   children,
+  footerContent,
+  jsonLdIdentifier,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
     { id: "latest-updates", label: "Latest" },
@@ -72,6 +77,7 @@ export function MethodologyChangelogPage({
               publisher: { "@id": `${SITE_URL}#organization` },
               image: `${SITE_URL}/og-card.png`,
               mainEntityOfPage: `${SITE_URL}${path}`,
+              ...(jsonLdIdentifier ? { identifier: [jsonLdIdentifier] } : {}),
             }),
           }}
         />
@@ -163,6 +169,7 @@ export function MethodologyChangelogPage({
           </div>
         </>
       )}
+      {footerContent}
     </div>
   );
 }

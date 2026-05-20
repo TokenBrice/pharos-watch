@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptInfiniFi, fetchInfiniFiReserves, type InfiniFiProtocolData } from "../infinifi";
 
 const SAMPLE_RESPONSE: InfiniFiProtocolData = {
@@ -41,6 +42,12 @@ const SAMPLE_RESPONSE: InfiniFiProtocolData = {
 };
 
 describe("adaptInfiniFi", () => {
+  it("declares the timestamp-less stats API as unverified-only freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
+      "unverified",
+    ]);
+  });
+
   it("converts farm data to ReserveSlice[], skips PROTOCOL and zero-asset farms", () => {
     const { slices, immediateRedeemableUsd, supplyUsd } = adaptInfiniFi(SAMPLE_RESPONSE);
     expect(slices).toHaveLength(3);
@@ -102,6 +109,27 @@ describe("adaptInfiniFi", () => {
     expect(result.slices).toEqual([
       { name: "infinifiUSD Autopool", pct: 90, risk: "medium" },
       { name: "Multi Farm", pct: 10, risk: "low" },
+    ]);
+  });
+
+  it("recognizes current Liquid Cap and CoW Swap fxSave positions", () => {
+    const response: InfiniFiProtocolData = {
+      ...SAMPLE_RESPONSE,
+      data: {
+        ...SAMPLE_RESPONSE.data,
+        farms: [
+          { name: "liquid-cap", label: "Liquid Cap", assetsNormalized: 60, type: "ILLIQUID", underlyingAssetSymbol: "stcUSD" },
+          { name: "cowswap-fxSave", label: "CoW Swap fxSave", assetsNormalized: 40, type: "ILLIQUID", underlyingAssetSymbol: "fxUSD" },
+        ],
+        stats: { asset: { totalTVLAssetNormalized: 100 } },
+      },
+    };
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).toEqual([]);
+    expect(result.slices).toEqual([
+      { name: "Liquid Cap", pct: 60, risk: "medium" },
+      { name: "CoW Swap fxSave", pct: 40, risk: "medium" },
     ]);
   });
 
@@ -233,6 +261,10 @@ describe("adaptInfiniFi", () => {
       expect.objectContaining({ code: "source-total-gap", effect: "degraded" }),
     ]));
     expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "protocol-stats-api",
+      },
       sourceTotalGapPct: 20,
       excludedProtocolFarms: ["ProtocolBuffer"],
     });
@@ -282,11 +314,13 @@ describe("adaptInfiniFi", () => {
     );
 
     expect(result.metadata).toMatchObject({
+      freshnessMode: "unverified",
       pendingRedemptionsUsd: 12,
       redemption: {
         capacityUsd: 35,
         capacityRatioOfSupply: 35 / 80,
         capacityKind: "live-queue",
+        freshnessKind: "unverified",
         routeStatus: "unknown",
         routeStatusSource: "protocol-api",
         queueDepthUsd: 12,

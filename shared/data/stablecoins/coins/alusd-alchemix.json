@@ -2,6 +2,7 @@
   "id": "alusd-alchemix",
   "name": "Alchemix USD",
   "symbol": "ALUSD",
+  "oneLiner": "alUSD is Alchemix's self-repaying CDP stablecoin: users borrow against DAI/USDC/USDT collateral and the yield from those deposits gradually repays the debt.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
   "pegMechanism": "Self-repaying loans: yield from deposited stablecoin collateral automatically repays debt; Transmuter guarantees 1:1 redemption",
+  "mechanismArchetype": "cdp",
   "llamaId": "20",
   "detailProvider": "defillama",
   "geckoId": "alchemix-usd",

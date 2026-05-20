@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Stub external fetches before importing the handler
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
@@ -79,6 +79,61 @@ describe("handleStablecoinDetail", () => {
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body).toHaveProperty("tokens");
     expect(Array.isArray(body.tokens)).toBe(true);
+  });
+
+  it("uses curated metadata contracts for the detail address when DefiLlama is stale", async () => {
+    const dlBody = JSON.stringify({
+      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+      tokens: [
+        {
+          date: 1700000000,
+          totalCirculatingUSD: { peggedUSD: 100_000_000 },
+          totalCirculating: { peggedUSD: 100_000_000 },
+        },
+      ],
+      price: 1.0,
+    });
+
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { address?: string };
+    expect(body.address).toBe("0x57ab1e0003f623289cd798b1824be09a793e4bec");
+  });
+
+  it("applies curated detail address overrides to fresh cache hits", async () => {
+    const cachedValue = JSON.stringify({
+      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+      tokens: [
+        {
+          date: 1700000000,
+          totalCirculatingUSD: { peggedUSD: 100_000_000 },
+          totalCirculating: { peggedUSD: 100_000_000 },
+        },
+      ],
+      price: 1.0,
+    });
+    const now = Math.floor(Date.now() / 1000);
+
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: cachedValue, updated_at: now - 60 },
+      },
+    ]);
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
+
+    expect(res.status).toBe(200);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    const body = (await res.json()) as { address?: string };
+    expect(body.address).toBe("0x57ab1e0003f623289cd798b1824be09a793e4bec");
   });
 
   it("returns cached response when cache is fresh", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   isTelegramPresetAlias,
   listTelegramPresets,
@@ -50,6 +50,9 @@ describe("telegram preset catalog", () => {
       "usd-top10",
       "usd-top25",
       "usd-top50",
+      "non-usd-top10",
+      "non-usd-top25",
+      "non-usd-top50",
       "eur-top10",
       "gold-top5",
       "mcap-ge-1b",
@@ -60,6 +63,8 @@ describe("telegram preset catalog", () => {
   it("recognizes supported preset aliases", () => {
     expect(isTelegramPresetAlias("usd-top25")).toBe(true);
     expect(isTelegramPresetAlias("usd-top-25")).toBe(true);
+    expect(isTelegramPresetAlias("non-usd-top25")).toBe(true);
+    expect(isTelegramPresetAlias("non-usd-top-25")).toBe(true);
     expect(isTelegramPresetAlias("USD-TOP25".toLowerCase())).toBe(true);
     expect(isTelegramPresetAlias("usd-top100")).toBe(false);
   });
@@ -67,6 +72,7 @@ describe("telegram preset catalog", () => {
   it("normalizes dashed aliases to canonical preset ids", () => {
     expect(resolveTelegramPresetAlias("usd-top-25")).toBe("usd-top25");
     expect(resolveTelegramPresetAlias("usd-top25")).toBe("usd-top25");
+    expect(resolveTelegramPresetAlias("non-usd-top-25")).toBe("non-usd-top25");
     expect(resolveTelegramPresetAlias("USD-TOP-10")).toBe("usd-top10");
   });
 });
@@ -126,5 +132,29 @@ describe("resolveTelegramPresetTargets", () => {
       "pyusd-paypal",
     ]);
     expect(result.presets[0]?.stablecoinIds).toHaveLength(10);
+  });
+
+  it("resolves non-USD top presets against every active non-USD peg", async () => {
+    const db = makeDbWithStablecoinsValue({
+      "usdc-circle": 99_000_000_000,
+      "usdt-tether": 98_000_000_000,
+      "eurc-circle": 5_000_000_000,
+      "xaut-tether": 4_000_000_000,
+      "aeur-anchored-coins": 3_000_000_000,
+    });
+
+    const result = await resolveTelegramPresetTargets(db, ["non-usd-top10"]);
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+
+    expect(result.presets[0]?.stablecoinIds.slice(0, 3)).toEqual([
+      "eurc-circle",
+      "xaut-tether",
+      "aeur-anchored-coins",
+    ]);
+    expect(result.presets[0]?.stablecoinIds).toHaveLength(10);
+    expect(result.presets[0]?.stablecoinIds).not.toContain("usdc-circle");
+    expect(result.presets[0]?.stablecoinIds).not.toContain("usdt-tether");
   });
 });

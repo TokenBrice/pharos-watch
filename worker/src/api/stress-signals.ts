@@ -18,7 +18,7 @@ import {
   getDepegDewsMethodologyVersionAt,
 } from "@shared/lib/depeg-dews-version";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
-import { READABLE_IDS } from "@shared/lib/stablecoins";
+import { READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 type StressSignalAgeClassification = "fresh" | "lagging" | "stale" | "retainedLastValid";

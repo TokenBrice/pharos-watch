@@ -2,6 +2,7 @@
   "id": "stcusd-cap",
   "name": "Staked Cap USD",
   "symbol": "stcUSD",
+  "oneLiner": "stcUSD is Cap's ERC-4626 staked wrapper of cUSD; share price accrues reserve and operator-lending yield, with cUSD-tier proportional-basket exit risk.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -35,7 +36,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics"
+      "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
     },
     {
       "label": "GitHub",
@@ -73,7 +74,7 @@
     "semantics": "single-asset",
     "breakerScope": "stcusd-cap",
     "display": {
-      "url": "https://docs.cap.app/protocol-overview/stcusd-mechanics",
+      "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
       "label": "Cap stcUSD"
     },
     "inputs": {

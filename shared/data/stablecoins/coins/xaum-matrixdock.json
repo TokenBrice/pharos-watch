@@ -2,6 +2,7 @@
   "id": "xaum-matrixdock",
   "name": "Matrixdock Gold",
   "symbol": "XAUm",
+  "oneLiner": "XAUm is Matrixdock's gold-backed commodity token, with each token representing one troy ounce of LBMA-certified 99.99% gold vaulted in Singapore and Hong Kong.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold",
-    "provider": "Bureau Veritas"
+    "provider": "Bureau Veritas",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "France/Singapore",
+    "attestorLicense": "Bullion vault inspection and assurance"
   },
   "links": [
     {
@@ -47,6 +52,31 @@
       "chain": "bsc",
       "address": "0x23ae4fd8e7844cdbc97775496ebd0e8248656028",
       "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0xa7e22972a19dd924afeedf3db28033b146801081",
+      "decimals": 18
+    },
+    {
+      "chain": "tron",
+      "address": "TDfX64Ariz5usffBJjtDbiMuCXVpKiDCEb",
+      "decimals": 18
+    },
+    {
+      "chain": "sui",
+      "address": "0x9d297676e7a4b771ab023291377b2adfaa4938fb9080b8d12430e4b108b836a9::xaum::XAUM",
+      "decimals": 9
+    },
+    {
+      "chain": "plume",
+      "address": "0xa0c4f78a29ead4abf6b7f5b3f0d05c0f3eab8ddf",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "5aLhp9VnUEKcsdtkfsf2DUgpJfomx7GmYVny24dHUZoB",
+      "decimals": 9
     }
   ],
   "blacklistabilityReview": {

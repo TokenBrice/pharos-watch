@@ -10,9 +10,12 @@ import type {
   StablecoinData,
   StablecoinMeta,
 } from "@shared/types";
+import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import {
   HeroDesktopIdentity,
+  HeroMobileIdentityDetails,
   HeroMobileIdentity,
+  HeroVerdict,
   SafetyGradeHero,
 } from "./hero-card-identity";
 import {
@@ -22,6 +25,7 @@ import {
   HeroSupplyCard,
   HeroTertiaryMetrics,
 } from "./hero-card-metrics";
+import { RecentBlacklistBanner } from "./recent-blacklist-banner";
 export type {
   HeroSignalRailItem,
   HeroTertiaryMetricConfig,
@@ -69,6 +73,7 @@ interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantChipClass?: string | null;
   infrastructures: Infrastructure[];
@@ -96,6 +101,7 @@ export function HeroCardMobileSection({
   coin,
   coinData,
   logoSrc,
+  verdict,
   reportCard,
   variantParent,
   variantChipClass,
@@ -132,9 +138,20 @@ export function HeroCardMobileSection({
           variantParent={variantParent}
           variantChipClass={variantChipClass}
           infrastructures={infrastructures}
+          verdict={verdict}
+          condensed
         />
-        <SafetyGradeHero reportCard={reportCard} mobile />
+        <div className="self-stretch">
+          <SafetyGradeHero reportCard={reportCard} mobile />
+        </div>
       </div>
+      <HeroMobileIdentityDetails
+        coin={coin}
+        infrastructures={infrastructures}
+        includeClassification={false}
+      />
+
+      <HeroVerdict coinId={coin.id} verdict={verdict} />
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <HeroPriceCard
@@ -148,6 +165,7 @@ export function HeroCardMobileSection({
           mobile
         />
         <HeroMarketCapCard
+          coin={coin}
           mcap={mcap}
           safePrevDay={safePrevDay}
           prevDayTrendClass={prevDayTrendClass}
@@ -170,11 +188,11 @@ export function HeroCardMobileSection({
       <HeroTertiaryMetrics
         metrics={tertiaryMetrics}
         chainCount={chainCount}
-        infrastructures={infrastructures}
         earlyPegScore={earlyPegScore}
         trackingSpanDays={trackingSpanDays}
         activeDepeg={activeDepeg}
         mobile
+        trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
       />
     </div>
   );
@@ -184,6 +202,8 @@ export function HeroCardDesktopSection({
   coin,
   coinData,
   logoSrc,
+  verdict,
+  reportCard,
   variantParent,
   variantChipClass,
   infrastructures,
@@ -208,63 +228,67 @@ export function HeroCardDesktopSection({
   trackingSpanDays,
   activeDepeg,
 }: HeroSectionBaseProps & {
+  reportCard: ReportCard | null;
   signalRailItems: import("./hero-card-metrics").HeroSignalRailItem[];
   tertiaryMetrics: import("./hero-card-metrics").HeroTertiaryMetricConfig[];
 }) {
   return (
-    <div className="hidden px-5 py-5 lg:block">
-      <div className="space-y-4">
-        <div className="flex gap-6">
-          <div className="min-w-0 flex-1">
-            <HeroDesktopIdentity
-              coin={coin}
-              logoSrc={logoSrc}
-              variantParent={variantParent}
-              variantChipClass={variantChipClass}
-              infrastructures={infrastructures}
-            />
+    <div className="hidden px-5 pb-3.5 pt-5 lg:block">
+      <div className="flex gap-6">
+        <div className="min-w-0 flex-1">
+          <HeroDesktopIdentity
+            coin={coin}
+            logoSrc={logoSrc}
+            variantParent={variantParent}
+            variantChipClass={variantChipClass}
+            infrastructures={infrastructures}
+            reportCard={reportCard}
+            verdict={verdict}
+          />
 
-            <div className="mt-5 grid grid-cols-3 gap-4">
-              <HeroPriceCard
-                coin={coin}
-                coinData={coinData}
-                pegRef={pegRef}
-                gaugeDeviationBps={gaugeDeviationBps}
-                deviationBps={deviationBps}
-                isNavToken={isNavToken}
-                limitedDepegCoverageNote={limitedDepegCoverageNote}
-              />
-              <HeroMarketCapCard
-                mcap={mcap}
-                safePrevDay={safePrevDay}
-                prevDayTrendClass={prevDayTrendClass}
-              />
-              <HeroSupplyCard
-                supply={supply}
-                coinSymbol={coin.symbol}
-                mcap={mcap}
-                safePrevWeek={safePrevWeek}
-                prevWeekTrendClass={prevWeekTrendClass}
-                hasPrevMonth={hasPrevMonth}
-                safePrevMonth={safePrevMonth}
-                prevMonthTrendClass={prevMonthTrendClass}
-              />
-            </div>
+          <div className="mt-5 grid grid-cols-3 gap-4">
+            <HeroPriceCard
+              coin={coin}
+              coinData={coinData}
+              pegRef={pegRef}
+              gaugeDeviationBps={gaugeDeviationBps}
+              deviationBps={deviationBps}
+              isNavToken={isNavToken}
+              limitedDepegCoverageNote={limitedDepegCoverageNote}
+            />
+            <HeroMarketCapCard
+              coin={coin}
+              mcap={mcap}
+              safePrevDay={safePrevDay}
+              prevDayTrendClass={prevDayTrendClass}
+            />
+            <HeroSupplyCard
+              supply={supply}
+              coinSymbol={coin.symbol}
+              mcap={mcap}
+              safePrevWeek={safePrevWeek}
+              prevWeekTrendClass={prevWeekTrendClass}
+              hasPrevMonth={hasPrevMonth}
+              safePrevMonth={safePrevMonth}
+              prevMonthTrendClass={prevMonthTrendClass}
+            />
           </div>
 
-          <div className="w-56 shrink-0">
-            <HeroSignalsRail items={signalRailItems} />
+          <div className="mt-3">
+            <HeroTertiaryMetrics
+              metrics={tertiaryMetrics}
+              chainCount={chainCount}
+              earlyPegScore={earlyPegScore}
+              trackingSpanDays={trackingSpanDays}
+              activeDepeg={activeDepeg}
+              trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
+            />
           </div>
         </div>
 
-        <HeroTertiaryMetrics
-          metrics={tertiaryMetrics}
-          chainCount={chainCount}
-          infrastructures={infrastructures}
-          earlyPegScore={earlyPegScore}
-          trackingSpanDays={trackingSpanDays}
-          activeDepeg={activeDepeg}
-        />
+        <div className="w-56 shrink-0">
+          <HeroSignalsRail items={signalRailItems} />
+        </div>
       </div>
     </div>
   );

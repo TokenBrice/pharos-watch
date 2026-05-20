@@ -12,7 +12,7 @@ export function RegimeBar() {
   const [expanded, setExpanded] = useState(false);
 
   const current = psiData?.current;
-  if (!current) return <div className="fixed top-0 z-[60] h-[3px] w-full" />;
+  if (!current) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
 
   const displayedPsi = getDisplayedPsi(current);
   const band = displayedPsi.band as ConditionBand;
@@ -32,7 +32,7 @@ export function RegimeBar() {
     <button
       type="button"
       className={cn(
-        "fixed top-0 z-[60] w-full cursor-pointer select-none overflow-hidden text-left",
+        "fixed left-0 right-0 top-0 z-[60] max-w-[100vw] cursor-pointer select-none overflow-hidden text-left",
         "transition-[background-color] duration-[600ms] ease-out",
         isElevated && "animate-[pharos-regime-pulse_1.5s_ease-in-out_infinite]",
       )}

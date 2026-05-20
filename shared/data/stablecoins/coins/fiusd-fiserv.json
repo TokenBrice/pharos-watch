@@ -2,6 +2,7 @@
   "id": "fiusd-fiserv",
   "name": "Fiserv USD",
   "symbol": "FIUSD",
+  "oneLiner": "FIUSD is a pre-launch fully-reserved dollar stablecoin from Fiserv, built on Solana with Circle and Paxos infrastructure for interbank payments at FI clients.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Fully reserved USD backing for FIUSD, with Fiserv expecting to use Paxos and Circle stablecoin infrastructure",
   "pegMechanism": "Issuer-managed 1:1 dollar redemption model; Fiserv describes FIUSD as a fully reserved USD-backed stablecoin that is always redeemable at $1 USD",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

@@ -6,7 +6,7 @@
  * `frozenAt` date ("YYYY-MM-DD"); we emit one event per id on first
  * observation.
  */
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 
 import { buildTapeEventId } from "../tape-event-helpers";

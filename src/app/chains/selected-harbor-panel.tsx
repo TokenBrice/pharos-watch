@@ -11,7 +11,9 @@ function HealthPill({ entry }: { entry: ChainHarborEntry }) {
     return <span className="rounded-full border border-border/60 px-2 py-0.5 text-xs text-muted-foreground">NR</span>;
   }
   return (
-    <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", HEALTH_BADGE_CLASSES[entry.healthBand])}>
+    <span
+      className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", HEALTH_BADGE_CLASSES[entry.healthBand])}
+    >
       {entry.healthScore} {entry.healthBand}
     </span>
   );
@@ -92,7 +94,7 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
                           alt=""
                           width={28}
                           height={28}
-                          className="h-full w-full object-contain"
+                          className="object-contain"
                           style={{ width: 28, height: 28 }}
                         />
                       ) : (
@@ -107,7 +109,9 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
                     {cargo.sharePct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">{formatCompactUsd(cargo.cargoUsd)} on {entry.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatCompactUsd(cargo.cargoUsd)} on {entry.name}
+                </p>
               </div>
             );
           })}
@@ -115,7 +119,8 @@ export function SelectedHarborPanel({ entry }: { entry: ChainHarborEntry | null 
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        The selected harbor reads the same supply, health, wake, and cargo fields encoded in the chart. It is not issuer redemption capacity.
+        The selected harbor reads the same supply, health, wake, and cargo fields encoded in the chart. It is not issuer
+        redemption capacity.
       </p>
     </section>
   );

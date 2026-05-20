@@ -13,6 +13,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [worker-infrastructure.md](./worker-infrastructure.md) - Worker env bindings, cron slots, cache/auth behavior, and status endpoints
 - [deployment-process.md](./deployment-process.md) - local merge gate, worktree flow, and CI deploy sequence
 - [testing.md](./testing.md) - test commands, CI gates, coverage thresholds, and helpers
+- [pharos-urn.md](./pharos-urn.md) - public citation/URN contract for methodology, depeg, stablecoin, and About trust surfaces
 - [process/agent-artifacts.md](./process/agent-artifacts.md) - routing for durable process docs, trackers, route-maintenance notes, and temporary artifacts
 
 ## System And Operations
@@ -30,9 +31,18 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [deployment-process.md](./deployment-process.md) - production deploy workflow and merge-gate policy
 - [testing.md](./testing.md) - lint/test/coverage workflow and test inventory
 - [scripts.md](./scripts.md) - operational and CI helper script inventory
+- [og-images.md](./og-images.md) - the three OG-image classes (static screenshots, mechanism explainer cards, dynamic Worker cards), how/when to renew, and CI guardrails
 - [process/adding-a-stablecoin.md](./process/adding-a-stablecoin.md) - repeatable checklist for adding active and pre-launch stablecoins
 - [freezing-stablecoins.md](./freezing-stablecoins.md) - operator runbook for transitioning a tracked stablecoin into the `frozen` lifecycle phase
 - [security-governance.md](./security-governance.md) - durable security rules (token-in-URL discipline, inline-script policy) and reactive-playbook routing
+
+## Process Policies
+
+- [process/boundary-waivers.md](./process/boundary-waivers.md) - worker import-boundary waiver inventory with retirement rationale
+- [process/cron-trigger-policy.md](./process/cron-trigger-policy.md) - governance for adding new cron trigger expressions to the Worker
+- [process/d1-baseline-squash-plan.md](./process/d1-baseline-squash-plan.md) - planning doc for the second D1 baseline squash cadence and procedure
+- [process/feature-flags.md](./process/feature-flags.md) - `NEXT_PUBLIC_PHAROS_*` feature flag inventory and default-state rules
+- [process/pages-env-rollout.md](./process/pages-env-rollout.md) - rollout procedure for flipping `NEXT_PUBLIC_PHAROS_*` flags on production Pages
 
 ## Runbooks
 
@@ -50,6 +60,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [runbooks/telegram-operator-queries.md](./runbooks/telegram-operator-queries.md) - read-only SQL queries for PharosWatchBot incident triage
 - [runbooks/telegram-preset-resolution-failure.md](./runbooks/telegram-preset-resolution-failure.md) - investigate rising preset resolver failures and stale `TRACKED_STABLECOINS` drift
 - [runbooks/telegram-rate-limit-storm.md](./runbooks/telegram-rate-limit-storm.md) - Telegram pending queue grows under HTTP 429 retries; backoff and recovery
+- [runbooks/telegram-secret-rotation.md](./runbooks/telegram-secret-rotation.md) - rotate Telegram webhook secret and bot token with overlap windows
 - [runbooks/telegram-setup-wizard-stuck.md](./runbooks/telegram-setup-wizard-stuck.md) - clear stale `setup-step` rows in `telegram_pending_disambiguation`
 - [runbooks/telegram-webhook-retry-dedupe.md](./runbooks/telegram-webhook-retry-dedupe.md) - Telegram webhook retry/dedupe incidents, stuck processing rows, and recovery
 - [runbooks/yield-benchmark-fallback-stale.md](./runbooks/yield-benchmark-fallback-stale.md) - yield benchmark fallback, retained-rate, and stale benchmark triage
@@ -72,6 +83,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [about-page.md](./about-page.md) - `/about/` section contract and update rules
 - [api-page.md](./api-page.md) - `/api/` self-serve API access page plus `/about/api/` public API reference page, auth summary, and build-time docs rendering contract
 - [methodology-page.md](./methodology-page.md) - `/methodology/` section-to-source mapping and changelog/update contract
+- [learn-mechanisms-page.md](./learn-mechanisms-page.md) - `/learn/mechanisms/` hub and `/learn/mechanisms/[archetype]/` explainer contract, content schema, and coverage invariant
 - [stablecoin-detail-page.md](./stablecoin-detail-page.md) - `/stablecoin/[id]/` route shell, view-model wiring, section order, and fallback/staleness rules
 - [chains-page.md](./chains-page.md) - `/chains/` leaderboard, `/chains/[chain]/` profile contract, and Chain Health Score wiring
 - [cemetery-and-compare.md](./cemetery-and-compare.md) - `/cemetery/` and `/compare/` data and URL contracts
@@ -81,6 +93,7 @@ Application source-of-truth docs live in `/docs/` and [../README.md](../README.m
 - [portfolio-page.md](./portfolio-page.md) - `/portfolio/` route shell, local persistence, and report-card dependency contract
 - [privacy-page.md](./privacy-page.md) - `/privacy/` longform policy surface, metadata, and footer integration
 - [status-dashboard.md](./status-dashboard.md) - `/status/` public health surface plus `/admin/` operator dashboard contract
+- [tape-page.md](./tape-page.md) - `/timeline/` cross-class event feed route, URL filter contract, digest grouping, projector pipeline, and homepage marquee integration
 
 ## Public Route Coverage
 
@@ -92,6 +105,8 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/alt-pegs/`                                    | [alt-pegs-page.md](./alt-pegs-page.md)                                                                                                                |
 | `/about/`                                       | [about-page.md](./about-page.md)                                                                                                                      |
 | `/about/api/`                                   | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
+| `/about/editorial/`                             | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
+| `/about/principles/`                            | [about-page.md](./about-page.md), [pharos-urn.md](./pharos-urn.md)                                                                                    |
 | `/api/`                                         | [api-page.md](./api-page.md), [api-reference.md](./api-reference.md)                                                                                  |
 | `/blacklist/`                                   | [blacklist-tracker.md](./blacklist-tracker.md) — legacy noindex redirect wrapper for `/freezewatch/`                                                  |
 | `/freezewatch/`                                 | [blacklist-tracker.md](./blacklist-tracker.md)                                                                                                        |
@@ -103,6 +118,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/compare/[slug]/`                              | [cemetery-and-compare.md](./cemetery-and-compare.md)                                                                                                  |
 | `/coverage/`                                    | [coverage-page.md](./coverage-page.md)                                                                                                                |
 | `/depeg/`                                       | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md)                                                                                      |
+| `/depeg/[event]/`                               | [depeg-detection.md](./depeg-detection.md), [dews.md](./dews.md)                                                                                      |
 | `/dependency-map/`                              | [dependency-map.md](./dependency-map.md)                                                                                                              |
 | `/digest/`                                      | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
 | `/digest/[date]/`                               | [digest-pipeline.md](./digest-pipeline.md)                                                                                                            |
@@ -110,15 +126,21 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/docs/[slug]/`                                 | [architecture.md](./architecture.md), [doc-ownership.json](./doc-ownership.json)                                                                      |
 | `/flows/`                                       | [mint-burn-flows.md](./mint-burn-flows.md)                                                                                                            |
 | `/funding/`                                     | [funding-page.md](./funding-page.md)                                                                                                                  |
+| `/learn/mechanisms/`                            | [learn-mechanisms-page.md](./learn-mechanisms-page.md)                                                                                                |
+| `/learn/mechanisms/[archetype]/`                | [learn-mechanisms-page.md](./learn-mechanisms-page.md), [classification.md](./classification.md)                                                      |
 | `/liquidity/`                                   | [dex-liquidity.md](./dex-liquidity.md)                                                                                                                |
 | `/methodology/`                                 | [methodology-page.md](./methodology-page.md)                                                                                                          |
 | `/portfolio/`                                   | [portfolio-page.md](./portfolio-page.md)                                                                                                              |
 | `/privacy/`                                     | [privacy-page.md](./privacy-page.md)                                                                                                                  |
 | `/safety-scores/`                               | [report-cards.md](./report-cards.md)                                                                                                                  |
+| `/screener/`                                    | [architecture.md](./architecture.md), [homepage.md](./homepage.md), [classification.md](./classification.md), [dews.md](./dews.md), [dex-liquidity.md](./dex-liquidity.md), [report-cards.md](./report-cards.md) |
+| `/screener/selector/`                           | [screener-selector-page.md](./screener-selector-page.md)                                                                                              |
 | `/stablecoin/[id]/`                             | [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                                                                              |
+| `/stablecoin/[id]/yield/`                       | [yield-intelligence.md](./yield-intelligence.md), [stablecoin-detail-page.md](./stablecoin-detail-page.md)                                            |
 | `/stability-index/`                             | [stability-index.md](./stability-index.md)                                                                                                            |
 | `/start/`                                       | [start-page.md](./start-page.md)                                                                                                                      |
 | `/status/`                                      | [status-dashboard.md](./status-dashboard.md)                                                                                                          |
+| `/timeline/`                                    | [tape-page.md](./tape-page.md)                                                                                                                        |
 | `/stablecoins/`                                 | [architecture.md](./architecture.md), [classification.md](./classification.md) — taxonomy surface only; tracked-variant browse ownership stays on `/` |
 | `/stablecoins/[peg]/`                           | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/backing/`                         | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
@@ -128,6 +150,7 @@ Some public routes are documented by feature docs or the architecture doc rather
 | `/stablecoins/infrastructure/`                  | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/stablecoins/infrastructure/[infrastructure]/` | [architecture.md](./architecture.md), [classification.md](./classification.md)                                                                        |
 | `/pharoswatchbot/`                              | [telegram-alerts.md](./telegram-alerts.md) — canonical PharosWatchBot page; `/telegram` is a redirect alias                                           |
+| `/pharoswatchbot/app/`                          | [telegram-mini-app.md](./telegram-mini-app.md) — Telegram Mini App surface; metadata is noindex                                                       |
 | `/upcoming/`                                    | [upcoming-page.md](./upcoming-page.md)                                                                                                                |
 | `/yield/`                                       | [yield-intelligence.md](./yield-intelligence.md)                                                                                                      |
 
@@ -206,6 +229,7 @@ These are public sub-pages of `/methodology/`. Use the route map below when you 
 - [mint-burn-flows-timeline.md](./mint-burn-flows-timeline.md) - mint/burn methodology version history
 - [pricing-pipeline-timeline.md](./pricing-pipeline-timeline.md) - pricing pipeline methodology version history
 - [report-cards-timeline.md](./report-cards-timeline.md) - report-card scoring version history
+- Redemption Backstop history is machine-readable in `shared/lib/methodology-versions/redemption-backstop.ts` and currently deep-links to `/methodology/#safety-scores-methodology` because redemption backstops feed Safety Score liquidity rather than a standalone public changelog route.
 - [stability-index-timeline.md](./stability-index-timeline.md) - PSI version history
 - [yield-intelligence-timeline.md](./yield-intelligence-timeline.md) - yield methodology version history
 

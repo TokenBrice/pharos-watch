@@ -26,6 +26,23 @@ export const PYS_BENCHMARK_SPREAD_WEIGHT = 0.25;
 /** Maximum multiplier applied by explicit source-risk penalties. */
 export const PYS_MAX_SOURCE_RISK_PENALTY = 2.5;
 
+/**
+ * Normalize a resolved source-risk multiplier into a 0-100 display score.
+ * `penalty = 1.0` (neutral) → 0; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (2.5) → 100.
+ * Returns null when the penalty is not a finite number.
+ */
+export function computeSourceRiskScoreFromPenalty(
+  sourceRiskPenalty: number | null | undefined,
+): number | null {
+  if (typeof sourceRiskPenalty !== "number" || !Number.isFinite(sourceRiskPenalty)) {
+    return null;
+  }
+  const span = PYS_MAX_SOURCE_RISK_PENALTY - 1;
+  if (span <= 0) return 0;
+  const raw = ((sourceRiskPenalty - 1) / span) * 100;
+  return clamp(Math.round(raw), 0, 100);
+}
+
 export type PysSourceRiskPenaltyReason =
   | "provided"
   | "missing-neutral"

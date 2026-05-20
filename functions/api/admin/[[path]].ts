@@ -16,8 +16,8 @@ import {
 import {
   DEFAULT_PROXY_TIMEOUT_MS,
   fetchUpstreamProxy,
-  resolveWildcardProxyPath,
 } from "../../lib/upstream-proxy";
+import { resolveOpsAdminUpstreamPath } from "../../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
@@ -52,7 +52,7 @@ interface OpsAdminProxyContext {
 }
 
 function resolveUpstreamPath(params: OpsAdminProxyContext["params"]): string | null {
-  return resolveWildcardProxyPath(params.path, "/api/");
+  return resolveOpsAdminUpstreamPath(params);
 }
 
 function isCloudflareAccessLocation(location: string | null): boolean {

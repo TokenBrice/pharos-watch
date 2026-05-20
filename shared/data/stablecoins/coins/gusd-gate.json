@@ -2,24 +2,28 @@
   "id": "gusd-gate",
   "name": "Gate USD",
   "symbol": "GUSD",
+  "oneLiner": "Gate USD is Gate exchange's yield-bearing dollar, minted 1:1 by staking USDT or USDC and backed mostly by short-term T-bills with CEX-managed yield strategies.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": false
   },
   "collateral": "Short-term U.S. Treasury bonds and stablecoin-backed yield instruments held by Gate; users mint GUSD 1:1 by staking USDT or USDC",
   "pegMechanism": "1:1 mint by staking USDT or USDC on Gate; upon redemption, users receive USDC equal to principal plus accrued interest; GUSD is yield-bearing — appreciation is baked in at redemption",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "306",
   "detailProvider": "defillama",
   "geckoId": "gusd",
-  "cmcSlug": "gatechain-token",
+  "cmcSlug": "gusd",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.gate.com/gusd",
-    "provider": "Gate"
+    "provider": "Gate",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {
@@ -68,6 +72,10 @@
       "risk": "high"
     }
   ],
+  "yieldConfig": {
+    "yieldSource": "Gate USD redemption yield",
+    "yieldType": "governance-set"
+  },
   "liveReservesConfig": {
     "adapter": "curated-validated",
     "version": 1,

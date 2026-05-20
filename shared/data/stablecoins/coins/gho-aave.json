@@ -2,6 +2,7 @@
   "id": "gho-aave",
   "name": "GHO",
   "symbol": "GHO",
+  "oneLiner": "GHO is Aave's decentralized dollar stablecoin, minted by borrowing against any Aave V3 collateral, with peg defended by stablecoin-backed stability modules.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,15 +13,11 @@
   },
   "collateral": "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
   "pegMechanism": "Overcollateralized minting via the Aave V3 facilitator model; live GSM redemption is centered on yield-bearing stability modules such as stataUSDC and stataUSDT, with steward-managed facilitator limits reinforcing the peg",
+  "mechanismArchetype": "cdp",
   "llamaId": "118",
   "detailProvider": "defillama",
   "geckoId": "gho",
   "pythFeedId": "0x2a0e948f637a8c251d9f06055e72eb4b3880dd57848bbdb02993c8165d7df4ee",
-  "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://github.com/aave-dao/gho-origin/tree/main/audits",
-    "provider": "OpenZeppelin, ABDK, Sigma Prime, Certora"
-  },
   "links": [
     {
       "label": "Website",

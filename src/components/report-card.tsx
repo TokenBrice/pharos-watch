@@ -1,17 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReportCard as ReportCardType, DimensionKey } from "@shared/types";
-import {
-  DIMENSION_LABELS,
-  DIMENSION_ORDER,
-  METHODOLOGY_VERSION,
-} from "@shared/lib/report-cards";
+import { DIMENSION_LABELS, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { ReportCardRadar } from "./radar-chart";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { ReportCardRadar } from "@/components/radar-chart";
+import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import Link from "next/link";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
@@ -20,25 +16,23 @@ import { cn } from "@/lib/utils";
 import { parseDimensionDetail } from "@/lib/report-card-parsing";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { CRON_24H } from "@/lib/cron-intervals";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 // ---------------------------------------------------------------------------
-// Grade Glow Component
+// Grade-band tooltip helper
 // ---------------------------------------------------------------------------
 
-function GradeGlow({ grade }: { grade: ReportCardType["overallGrade"] }) {
-  const color = getSafetyGradeMetadata(grade).glowColor;
-  
-  return (
-    <div 
-      className="absolute inset-0 pointer-events-none -z-10"
-      style={{ 
-        background: `radial-gradient(circle at center, ${color}, transparent 70%)`,
-        transform: 'scale(1.2)',
-        filter: 'blur(20px)',
-      }}
-      aria-hidden="true"
-    />
-  );
+function gradeBandLabel(score: number, metric?: string): string {
+  let band: string;
+  if (score >= 90) band = "Excellent — top of the grading scale";
+  else if (score >= 75) band = "Strong — production-ready";
+  else if (score >= 60) band = "Adequate — meaningful weaknesses present";
+  else if (score >= 40) band = "Weak — significant risks";
+  else band = "Poor — major risks";
+  return metric ? `${metric}: ${score} — ${band}` : `${score} — ${band}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -76,18 +70,21 @@ interface DimensionRowProps {
 
 function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const dimBorder = getSafetyGradeMetadata(dim.grade).borderColor;
-  const hasDetails = (dimKey === "resilience" || dimKey === "decentralization" || dimKey === "dependencyRisk" || dimKey === "liquidity") && dim.score !== null;
+  const hasDetails =
+    (dimKey === "resilience" ||
+      dimKey === "decentralization" ||
+      dimKey === "dependencyRisk" ||
+      dimKey === "liquidity") &&
+    dim.score !== null;
   const detailsId = `report-card-${card.id}-${dimKey}-details`;
 
   return (
     <div className="group">
       <div
         className={cn(
-          "relative w-full rounded-lg border border-l-[4px] px-3 py-2.5 transition-colors",
-          hasDetails ? "cursor-pointer hover:bg-muted/30" : "cursor-default"
+          "relative w-full rounded-lg border border-border/60 px-2.5 py-2 transition-colors",
+          hasDetails ? "cursor-pointer hover:border-border/80 hover:bg-muted/30" : "cursor-default",
         )}
-        style={{ borderLeftColor: dimBorder }}
       >
         {hasDetails && (
           <button
@@ -102,27 +99,42 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
             </span>
           </button>
         )}
-        <div className={cn("relative z-10 flex items-center justify-between", hasDetails && "pointer-events-none")}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">
+        <div
+          className={cn("relative z-10 flex items-center justify-between gap-2", hasDetails && "pointer-events-none")}
+        >
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-sm font-medium">
               <DimensionLabel dimKey={dimKey} />
             </span>
-            {hasDetails && (
-              <ChevronDown aria-hidden="true" className={cn("h-4 w-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <SafetyGradeBadge grade={dim.grade} size="sm" />
-            <span className="w-14 text-right text-sm tabular-nums text-muted-foreground">
-              {dim.score !== null ? (
-                <>
-                  {dim.score}
-                  <span className="text-xs">/100</span>
-                </>
-              ) : (
-                "\u2014"
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                !hasDetails && "invisible",
+                hasDetails && expanded && "rotate-180",
               )}
-            </span>
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <SafetyGradeBadge
+              grade={dim.grade}
+              size="sm"
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
+            />
+            {dim.score !== null ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="pointer-events-auto w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">
+                    {dim.score}
+                    <span className="text-xs">/100</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{gradeBandLabel(dim.score, DIMENSION_LABELS[dimKey])}</TooltipContent>
+              </Tooltip>
+            ) : (
+              <span className="w-12 text-right text-sm tabular-nums text-muted-foreground sm:w-14">{"\u2014"}</span>
+            )}
           </div>
         </div>
       </div>
@@ -137,14 +149,13 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 const detail = parseDimensionDetail(part);
                 if (!detail) return null;
                 return (
-                  <div
-                    key={`${dimKey}-${detail.label}`}
-                    className="flex items-center justify-between text-xs"
-                  >
+                  <div key={`${dimKey}-${detail.label}`} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       {detail.label}: <span className="text-foreground/80">{detail.desc}</span>
                     </span>
-                    <span className={`tabular-nums font-mono ${detail.isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}>
+                    <span
+                      className={`tabular-nums font-mono ${detail.isNegative ? "text-amber-700 dark:text-amber-400" : "text-foreground/80"}`}
+                    >
                       {detail.displayScore}
                     </span>
                   </div>
@@ -155,7 +166,9 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
 
           {/* Live data indicator */}
           {dimKey === "resilience" && card.rawInputs.collateralFromLive && (
-            <span className="text-xs text-muted-foreground" title="Scored from live reserve data">(live data)</span>
+            <span className="text-xs text-muted-foreground" title="Scored from live reserve data">
+              (live data)
+            </span>
           )}
 
           {/* Liquidity breakdown */}
@@ -165,9 +178,14 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 {card.rawInputs.liquidityScore != null ? (
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">DEX liquidity</span>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.liquidityScore}/100
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.liquidityScore}/100
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{gradeBandLabel(card.rawInputs.liquidityScore, "DEX liquidity")}</TooltipContent>
+                    </Tooltip>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between text-xs">
@@ -177,21 +195,37 @@ function DimensionRow({ dimKey, dim, card, liquidityComponents }: DimensionRowPr
                 )}
                 {card.rawInputs.redemptionBackstopScore != null && (
                   <div className="flex items-center justify-between text-xs">
-                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">Redemption backstop</MethodologyLabel>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.redemptionBackstopScore}/100
-                      {!card.rawInputs.redemptionUsedForLiquidity
-                        ? " (not used)"
-                        : ""}
-                    </span>
+                    <MethodologyLabel topic="redemptionBackstop" className="text-muted-foreground">
+                      Redemption backstop
+                    </MethodologyLabel>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.redemptionBackstopScore}/100
+                          {!card.rawInputs.redemptionUsedForLiquidity ? " (not used)" : ""}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {gradeBandLabel(card.rawInputs.redemptionBackstopScore, "Redemption backstop")}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
                 {card.rawInputs.effectiveExitScore != null && (
                   <div className="flex items-center justify-between text-xs">
-                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">Effective exit</MethodologyLabel>
-                    <span className="tabular-nums text-foreground font-mono">
-                      {card.rawInputs.effectiveExitScore}/100
-                    </span>
+                    <MethodologyLabel topic="effectiveExit" className="text-muted-foreground">
+                      Effective exit
+                    </MethodologyLabel>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="tabular-nums text-foreground font-mono">
+                          {card.rawInputs.effectiveExitScore}/100
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {gradeBandLabel(card.rawInputs.effectiveExitScore, "Effective exit")}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 )}
               </div>
@@ -238,13 +272,16 @@ interface ReportCardDetailProps {
     durability: number;
     pairDiversity: number;
   } | null;
+  updatedAtMs?: number | null;
+  /** Optional slot rendered as the right column at lg+; when absent, the safety column fills the card. */
+  rightColumn?: ReactNode;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetailProps) {
+export function ReportCardDetail({ card, liquidityComponents, updatedAtMs, rightColumn }: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
@@ -257,12 +294,10 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
-            <SafetyGradeBadge grade="F" size="defunct" />
+            <SafetyGradeBadge grade="F" size="defunct" versionTopic="safetyScore" versionVariant="tooltip-only" />
             <div>
               <p className="text-lg font-medium text-muted-foreground">Defunct</p>
-              <p className="text-sm text-muted-foreground">
-                This stablecoin is no longer active.
-              </p>
+              <p className="text-sm text-muted-foreground">This stablecoin is no longer active.</p>
             </div>
           </div>
         </CardContent>
@@ -282,129 +317,156 @@ export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetail
       ? Math.max(0, card.uncappedOverallScore - card.overallScore)
       : null;
 
-  return (
-    <Card
-      className="overflow-hidden"
-      style={{ borderTopWidth: '3px', borderTopColor: topBorderColor }}
-    >
-      <CardHeader>
-        <CardTitle as="h2" className="text-xl font-bold tracking-tight">
-          <span className="flex items-center justify-between">
-            <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
-            <span className="text-xs font-normal text-muted-foreground">
-              v{METHODOLOGY_VERSION}
-            </span>
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Two-column layout: grade + radar | dimension breakdown */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-stretch">
-          {/* Left column: grade + radar stacked */}
-          <div className="flex flex-col items-center gap-5">
-            {/* Grade hero with glow */}
-            <div className="relative flex flex-col items-center gap-3 pt-4 pb-2 px-6">
-              <GradeGlow grade={card.overallGrade} />
-              <div className="flex items-center gap-4">
-                <SafetyGradeBadge grade={card.overallGrade} size="hero" />
-                {card.overallScore !== null && (
-                  <div className="flex flex-col">
-                    <span className="text-3xl font-bold font-mono tabular-nums tracking-tight text-foreground">
-                      {card.overallScore}
-                      <span className="text-lg text-muted-foreground">/100</span>
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Score breakdown - surfaced from details */}
-              {card.baseScore != null && card.overallScore != null && (
-                <div className="text-xs text-muted-foreground text-center space-y-1 mt-1">
-                  <div className="flex items-center gap-2 justify-center">
-                    <span>Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span></span>
-                    {pegDrag != null && pegDrag > 0 ? (
-                      <>
-                        <span>·</span>
-                        <span>Peg: <span className="font-mono text-amber-600 dark:text-amber-400">−{pegDrag.toFixed(1)}</span></span>
-                      </>
-                    ) : null}
-                    {parentCapDelta != null ? (
-                      <>
-                        <span>·</span>
-                        <span>Parent cap: <span className="font-mono text-amber-600 dark:text-amber-400">−{parentCapDelta.toFixed(1)}</span></span>
-                      </>
-                    ) : null}
-                  </div>
-                  {card.overallCapped === true && card.rawInputs.variantParentId ? (
-                    <div className="flex justify-center">
-                      <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                        Overall capped at parent stablecoin
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-            
-            {/* Radar chart - larger */}
-            <div className="relative w-full max-w-[380px] min-h-[280px] flex-1">
-              <ReportCardRadar card={card} labels="short" />
-            </div>
-          </div>
+  const hasRightColumn = !!rightColumn;
 
-          {/* Right column: Dimension breakdown */}
-          <div className="space-y-2">
-            {DIMENSION_ORDER.map((key) => (
-              <DimensionRow
-                key={key}
-                dimKey={key}
-                dim={card.dimensions[key]}
-                card={card}
-                liquidityComponents={liquidityComponents}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Dependency callout */}
-        {card.rawInputs.dependencies.length > 0 && (
-          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
-            <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">
-              Dependencies
-            </p>
-            <p className="text-sm text-muted-foreground">
-              This stablecoin has exposure to{" "}
-              {card.rawInputs.dependencies.map((dep, i) => {
-                const depMeta = TRACKED_STABLECOINS.find(
-                  (s) => s.id === dep.id,
-                );
-                const name = depMeta?.symbol ?? dep.id;
-                const typeLabel = dep.type === "wrapper" ? " (wrapper)"
-                  : dep.type === "mechanism" ? " (mechanism-critical)"
-                  : "";
-                return (
-                  <span key={`${dep.id}-${dep.type}`}>
-                    {i > 0 && ", "}
-                    <Link
-                      href={buildStablecoinUrl(dep.id)}
-                      className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      {name}
-                    </Link>
-                    {typeLabel && (
-                      <span className="text-xs text-blue-700/80 dark:text-blue-400/80">{typeLabel}</span>
-                    )}
+  const safetyColumn = (
+    <div className="space-y-5">
+      {/* Grade hero — left-aligned in split, centered when single-column */}
+      <div className={cn("flex items-center gap-4 pb-1 pt-1", !hasRightColumn && "justify-center")}>
+        <SafetyGradeBadge
+          grade={card.overallGrade}
+          size="lg"
+          className="sm:hidden"
+          versionTopic="safetyScore"
+          versionVariant="tooltip-only"
+        />
+        <SafetyGradeBadge
+          grade={card.overallGrade}
+          size="hero"
+          className="hidden sm:inline-flex"
+          versionTopic="safetyScore"
+          versionVariant="tooltip-only"
+        />
+        <div className="flex min-w-0 flex-col">
+          {card.overallScore !== null && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="font-mono text-3xl font-bold tracking-tight tabular-nums text-foreground">
+                  {card.overallScore}
+                  <span className="text-lg text-muted-foreground">/100</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{gradeBandLabel(card.overallScore, "Safety Score")}</TooltipContent>
+            </Tooltip>
+          )}
+          {card.baseScore != null && card.overallScore != null && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              <span>
+                Base: <span className="font-mono text-foreground">{card.baseScore.toFixed(1)}</span>
+              </span>
+              {pegDrag != null && pegDrag > 0 ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    Peg: <span className="font-mono">−{pegDrag.toFixed(1)}</span>
                   </span>
-                );
-              })}
-              . Its dependency risk score reflects the health and stability of
-              these assets.
-            </p>
-          </div>
-        )}
+                </>
+              ) : null}
+              {parentCapDelta != null ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>
+                    Parent cap: <span className="font-mono">−{parentCapDelta.toFixed(1)}</span>
+                  </span>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
 
-        <MethodologyCardActions topic="safetyScore" showVersion={false} />
-      </CardContent>
-    </Card>
+      {card.overallCapped === true && card.rawInputs.variantParentId ? (
+        <div className={cn("flex", !hasRightColumn && "justify-center")}>
+          <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+            Overall capped at parent stablecoin
+          </span>
+        </div>
+      ) : null}
+
+      {/* Dimension breakdown — half-width beside the radar at xl+ when the card is in dual-column mode */}
+      <div className={cn("grid grid-cols-1 gap-4", hasRightColumn && "xl:grid-cols-2 xl:gap-6 xl:items-center")}>
+        <div className="space-y-2">
+          {DIMENSION_ORDER.map((key) => (
+            <DimensionRow
+              key={key}
+              dimKey={key}
+              dim={card.dimensions[key]}
+              card={card}
+              liquidityComponents={liquidityComponents}
+            />
+          ))}
+        </div>
+        {hasRightColumn ? (
+          <div className="hidden xl:block">
+            <ReportCardRadar card={card} labels="short" size={340} />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  return (
+    <TooltipProvider>
+      <Card className="overflow-hidden" style={{ borderTopWidth: "3px", borderTopColor: topBorderColor }}>
+        <CardHeader>
+          <CardTitle as="h2" className="text-xl font-bold tracking-tight">
+            <span className="flex items-center justify-between gap-2">
+              <MethodologyLabel topic="safetyScore">Safety Score</MethodologyLabel>
+              {updatedAtMs != null ? (
+                <FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={CRON_24H} labelPrefix="Updated" />
+              ) : null}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {hasRightColumn ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              {safetyColumn}
+              {rightColumn}
+            </div>
+          ) : (
+            <div className="mx-auto max-w-2xl">{safetyColumn}</div>
+          )}
+
+          {/* Dependency callout */}
+          {card.rawInputs.dependencies.length > 0 && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+              <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">Dependencies</p>
+              <p className="text-sm text-muted-foreground">
+                This stablecoin has exposure to{" "}
+                {card.rawInputs.dependencies.map((dep, i) => {
+                  const depMeta = TRACKED_STABLECOINS.find((s) => s.id === dep.id);
+                  const name = depMeta?.symbol ?? dep.id;
+                  const typeLabel =
+                    dep.type === "wrapper" ? " (wrapper)" : dep.type === "mechanism" ? " (mechanism-critical)" : "";
+                  return (
+                    <span key={`${dep.id}-${dep.type}`}>
+                      {i > 0 && ", "}
+                      <Link
+                        href={buildStablecoinUrl(dep.id)}
+                        className="pharos-focus-ring rounded-sm font-medium text-blue-700 underline underline-offset-2 transition-colors hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        {name}
+                      </Link>
+                      {typeLabel && <span className="text-xs text-blue-700/80 dark:text-blue-400/80">{typeLabel}</span>}
+                    </span>
+                  );
+                })}
+                . Its dependency risk score reflects the health and stability of these assets.
+              </p>
+            </div>
+          )}
+
+          <ShowYourWorkPanel
+            kind="report-card"
+            rawInputs={card.rawInputs}
+            stablecoinId={card.id}
+            stablecoinName={card.name}
+          />
+
+          <MethodologyCardActions topic="safetyScore" showWorkToggle className="font-medium" />
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }

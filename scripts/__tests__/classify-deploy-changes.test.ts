@@ -4,11 +4,12 @@ import {
   classifyDeployChanges,
   hasDeployImpact,
   hasPagesDeployImpact,
+  hasPagesUiImpact,
   hasWorkerPackagePromotionImpact,
   hasWorkerDeployImpact,
   hasWorkerPromotionImpact,
   normalizeChangedFiles,
-} from "../classify-deploy-changes.mjs";
+} from "../ci/classify-deploy-changes.mjs";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 
 describe("normalizeChangedFiles", () => {
@@ -50,12 +51,33 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact([".github/workflows/pages-publish.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/pages-release.yml"])).toBe(true);
     expect(hasPagesDeployImpact([".github/workflows/rebuild-pages.yml"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-llms-txt.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-docs-metadata.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/build-world-map-svg.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-markdown-exports.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-openapi-spec.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/generate-postman-collection.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-llms-txt.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-docs-metadata.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-methodology-pdfs.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
+  });
+});
+
+describe("hasPagesUiImpact", () => {
+  it("returns false for workflow-only and script-only Pages changes", () => {
+    expect(
+      hasPagesUiImpact([
+        ".github/workflows/pages-release.yml",
+        "scripts/maintenance/generate-markdown-exports.ts",
+        "scripts/lib/validate-contract.mjs",
+      ]),
+    ).toBe(false);
+  });
+
+  it("returns true for frontend/runtime surface changes", () => {
+    expect(hasPagesUiImpact(["src/app/page.tsx"])).toBe(true);
+    expect(hasPagesUiImpact(["public/logo.svg"])).toBe(true);
+    expect(hasPagesUiImpact(["shared/lib/classification.ts"])).toBe(true);
+    expect(hasPagesUiImpact(["functions/api/admin/[[path]].ts"])).toBe(true);
+    expect(hasPagesUiImpact(["data/depeg-events.json"])).toBe(true);
   });
 });
 
@@ -71,7 +93,7 @@ describe("hasWorkerPromotionImpact", () => {
   it("returns false for validation, root package, tests, and known Pages-only shared changes", () => {
     expect(hasWorkerPromotionImpact(["package.json", "package-lock.json"])).toBe(false);
     expect(hasWorkerPromotionImpact(["scripts/lib/validate-contract.mjs"])).toBe(false);
-    expect(hasWorkerPromotionImpact(["scripts/smoke-ui.mjs"])).toBe(false);
+    expect(hasWorkerPromotionImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerPromotionImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/public-docs.ts"])).toBe(false);
     expect(hasWorkerPromotionImpact(["shared/lib/__tests__/public-docs.test.ts"])).toBe(false);
@@ -125,18 +147,17 @@ describe("hasDeployImpact", () => {
       "scripts/lib/deploy-impact.mjs",
       "scripts/lib/validate-contract.mjs",
       ".github/actions/setup-workspace/action.yml",
-      "scripts/check-cron-abort-contract.mjs",
-      "scripts/check-cron-connection-budget.ts",
-      "scripts/check-doc-source-paths.mjs",
-      "scripts/check-env-contract.mjs",
-      "scripts/check-sql-interpolation-safety.mjs",
-      "scripts/generate-cemetery-dataset.ts",
-      "scripts/run-critical-coverage.mjs",
-      "scripts/run-generated-artifacts.mjs",
-      "scripts/run-noncritical-tests.mjs",
-      "scripts/run-validate-postbuild.mjs",
-      "scripts/run-validate-prebuild.mjs",
-      "scripts/test-merge-gate.mjs",
+      "scripts/ci/check-cron-abort-contract.mjs",
+      "scripts/ci/check-cron-connection-budget.ts",
+      "scripts/ci/check-doc-source-paths.mjs",
+      "scripts/ci/check-env-contract.mjs",
+      "scripts/ci/check-sql-interpolation-safety.mjs",
+      "scripts/maintenance/generate-cemetery-dataset.ts",
+      "scripts/maintenance/run-critical-coverage.mjs",
+      "scripts/maintenance/run-generated-artifacts.mjs",
+      "scripts/maintenance/run-noncritical-tests.mjs",
+      "scripts/maintenance/run-validate-prebuild.mjs",
+      "scripts/maintenance/test-merge-gate.mjs",
     ];
 
     for (const file of deploySupportFiles) {
@@ -147,13 +168,22 @@ describe("hasDeployImpact", () => {
     }
   });
 
-  it("treats static map generation as Pages-only deploy infrastructure", () => {
-    const file = "scripts/build-world-map-svg.ts";
+  it("treats static export build guardrails as Pages-only deploy infrastructure", () => {
+    const files = [
+      "scripts/ci/check-build-attribution.mjs",
+      "scripts/maintenance/build-world-map-svg.ts",
+      "scripts/maintenance/explain-build-chunks.mjs",
+      "scripts/maintenance/generate-methodology-pdfs.ts",
+      "scripts/maintenance/report-build-size.mjs",
+      "scripts/maintenance/update-build-attribution-baseline.mjs",
+    ];
 
-    expect(hasDeployImpact([file])).toBe(true);
-    expect(hasPagesDeployImpact([file])).toBe(true);
-    expect(hasWorkerDeployImpact([file])).toBe(false);
-    expect(hasWorkerPromotionImpact([file])).toBe(false);
+    for (const file of files) {
+      expect(hasDeployImpact([file]), file).toBe(true);
+      expect(hasPagesDeployImpact([file]), file).toBe(true);
+      expect(hasWorkerDeployImpact([file]), file).toBe(false);
+      expect(hasWorkerPromotionImpact([file]), file).toBe(false);
+    }
   });
 
   it("derives deploy support impact from the structured automation registry", () => {
@@ -177,6 +207,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {
@@ -189,6 +220,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("runs only the Pages path for frontend-only push diffs", () => {
@@ -205,6 +237,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "docs/testing.md"]);
   });
 
@@ -222,6 +255,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(false);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual(["worker/src/api/health.ts", "docs/testing.md"]);
   });
 
@@ -239,6 +273,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
     expect(result.changedFiles).toEqual(["src/app/page.tsx", "shared/lib/classification.ts"]);
   });
 
@@ -257,7 +292,7 @@ diff --git a/package-lock.json b/package-lock.json
         "package-lock.json",
         "public/_redirects",
         "scripts/lib/validate-contract.mjs",
-        "scripts/smoke-ui.mjs",
+        "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",
       ].join("\n");
@@ -274,6 +309,7 @@ diff --git a/package-lock.json b/package-lock.json
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("promotes the Worker for root package changes that can affect its bundle", () => {
@@ -299,6 +335,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(true);
     expect(result.workerPromotionRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(true);
   });
 
   it("treats pages workflow-only changes as Pages-impacting", () => {
@@ -315,6 +352,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual([".github/workflows/pages-prepare.yml"]);
   });
 
@@ -332,6 +370,7 @@ diff --git a/package.json b/package.json
     expect(result.workerChanged).toBe(false);
     expect(result.workerPromotionRequired).toBe(false);
     expect(result.pagesChanged).toBe(false);
+    expect(result.pagesUiChanged).toBe(false);
     expect(result.changedFiles).toEqual(["docs/testing.md", "docs/process/notes.md"]);
   });
 

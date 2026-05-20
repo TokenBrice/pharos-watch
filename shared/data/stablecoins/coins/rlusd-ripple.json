@@ -2,6 +2,7 @@
   "id": "rlusd-ripple",
   "name": "Ripple USD",
   "symbol": "RLUSD",
+  "oneLiner": "RLUSD is Ripple's NYDFS-chartered dollar stablecoin redeemable 1:1 and backed by USD deposits, cash equivalents, and short-term U.S. Treasuries.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
   "pegMechanism": "Direct 1:1 redemption through Ripple",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "250",
   "detailProvider": "defillama",
   "geckoId": "ripple-usd",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://ripple.com/solutions/stablecoin/transparency/",
-    "provider": "BPM LLP"
+    "provider": "BPM LLP",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {
@@ -88,5 +94,6 @@
         "url": "https://ripple.com/solutions/stablecoin/transparency/"
       }
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

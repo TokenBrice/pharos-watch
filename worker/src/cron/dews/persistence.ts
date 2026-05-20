@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { batchExecute, buildInClause } from "../../lib/db";
 import { chunkArray } from "../../lib/collections";
 import { writeFreshnessSentinel } from "../../lib/db-cache";

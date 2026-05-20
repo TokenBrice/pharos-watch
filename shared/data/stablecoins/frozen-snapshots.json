@@ -201,5 +201,110 @@
         "Arbitrum"
       ]
     }
+  },
+  {
+    "id": "euroe-membrane",
+    "capturedAt": "2026-05-15T16:39:00Z",
+    "peggedAssetRow": {
+      "id": "euroe-membrane",
+      "name": "EUROe Stablecoin",
+      "symbol": "EUROe",
+      "gecko_id": null,
+      "pegType": "peggedEUR",
+      "priceSource": "defillama",
+      "pegMechanism": "fiat-backed",
+      "circulating": {
+        "peggedEUR": 122630.01242072773
+      },
+      "circulatingPrevDay": {
+        "peggedEUR": 122630.01242072773
+      },
+      "circulatingPrevWeek": {
+        "peggedEUR": 122630.01242072773
+      },
+      "circulatingPrevMonth": {
+        "peggedEUR": 122630.01242072773
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": {
+            "peggedEUR": 20505.128821018876
+          },
+          "circulatingPrevDay": {
+            "peggedEUR": 20505.128821018876
+          },
+          "circulatingPrevWeek": {
+            "peggedEUR": 20505.128821018876
+          },
+          "circulatingPrevMonth": {
+            "peggedEUR": 20505.128821018876
+          }
+        },
+        "Avalanche": {
+          "current": {
+            "peggedEUR": 108.91348923174493
+          },
+          "circulatingPrevDay": {
+            "peggedEUR": 108.91348923174493
+          },
+          "circulatingPrevWeek": {
+            "peggedEUR": 108.91348923174493
+          },
+          "circulatingPrevMonth": {
+            "peggedEUR": 108.91348923174493
+          }
+        },
+        "Polygon": {
+          "current": {
+            "peggedEUR": 37140.509582239494
+          },
+          "circulatingPrevDay": {
+            "peggedEUR": 37140.509582239494
+          },
+          "circulatingPrevWeek": {
+            "peggedEUR": 37140.509582239494
+          },
+          "circulatingPrevMonth": {
+            "peggedEUR": 37140.509582239494
+          }
+        },
+        "Solana": {
+          "current": {
+            "peggedEUR": 57807.061056169085
+          },
+          "circulatingPrevDay": {
+            "peggedEUR": 57807.061056169085
+          },
+          "circulatingPrevWeek": {
+            "peggedEUR": 57807.061056169085
+          },
+          "circulatingPrevMonth": {
+            "peggedEUR": 57807.061056169085
+          }
+        },
+        "Arbitrum": {
+          "current": {
+            "peggedEUR": 7068.399472068519
+          },
+          "circulatingPrevDay": {
+            "peggedEUR": 7068.399472068519
+          },
+          "circulatingPrevWeek": {
+            "peggedEUR": 7068.399472068519
+          },
+          "circulatingPrevMonth": {
+            "peggedEUR": 7068.399472068519
+          }
+        }
+      },
+      "chains": [
+        "Solana",
+        "Polygon",
+        "Ethereum",
+        "Arbitrum",
+        "Avalanche"
+      ],
+      "price": 0.9997566479873777
+    }
   }
 ]

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import type { FreshnessStatus } from "@shared/lib/status-thresholds";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleHealth } from "../health";
 
 describe("handleHealth", () => {
@@ -35,7 +36,7 @@ describe("handleHealth", () => {
         staleMajorSymbols: string[];
         sync: {
           lastSuccessfulSyncAt: number | null;
-          freshnessStatus: "fresh" | "degraded" | "stale";
+          freshnessStatus: FreshnessStatus;
           warning: string | null;
           criticalLaneHealthy: boolean;
         };
@@ -124,7 +125,7 @@ describe("handleHealth", () => {
         majorStaleCount: number;
         staleMajorSymbols: string[];
         sync: {
-          freshnessStatus: "fresh" | "degraded" | "stale";
+          freshnessStatus: FreshnessStatus;
           warning: string | null;
           criticalLaneHealthy: boolean;
         };

@@ -16,6 +16,7 @@
     "node_modules",
     "worker",
     "worktrees",
+    ".worktrees",
     ".next",
     "coverage",
     "out",

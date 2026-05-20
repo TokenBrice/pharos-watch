@@ -21,7 +21,7 @@ The page is intentionally product-facing, not admin-facing. It should describe u
 - **Server shell:** `src/app/coverage/page.tsx`
 - **Client implementation:** `src/app/coverage/client.tsx`
 - **Error boundary:** `src/app/coverage/error.tsx`
-- **Core helpers:** `src/lib/coverage.ts`
+- **Core helpers:** `src/lib/coverage-matrix-model.ts`, `src/lib/coverage.ts`, `src/lib/coverage/*`
 - **Structured data:** `src/app/coverage/page.tsx` emits `COVERAGE_FAQ_JSON_LD` and a static methodological `Dataset` descriptor through JSON-LD `<script>` tags in the page shell
 
 The page uses `createClientFeaturePage(...)`, which wraps the route in the shared feature-page shell for public client-heavy surfaces. It remains indexable like the rest of the public feature routes.
@@ -39,27 +39,27 @@ The matrix currently exposes these columns:
 - `Redemption Backstop`
 - `Yield`
 - `Flows`
-- `Blacklist`
+- `Freezable Status`
 - `Dependency Map`
 
 Status semantics are intentionally user-facing:
 
 - `Price & Depeg`: `Tracked`, `Price only` (NAV-priced assets), or `Missing`
 - `Safety Score`: `Rated` or `NR`
-- `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `NR`, or `Unknown`
+- `DEX Price`: `Primary`, `Mixed`, `Fallback`, `Legacy`, `Not Covered`, `Unknown`, or `Data n/a`
 - `Reserve View`: `Score-grade`, `Configured`, `Checking`, `Curated-Validated`, `Proof`, `Curated`, `Estimated`, or `None`
 - query-backed columns can also emit `Data n/a` while an upstream dataset is unavailable
-- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Heur.`, `Config.`, `Impaired`, `Data n/a`, or `—`
-- `Yield`: `Ranked` or `—`
-- `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.` , `Disabled`, or `—`
-- `Blacklist`: `Tracked` or `—`
-- `Dependency Map`: `Node` or `—`
+- `Redemption Backstop`: `Issuer`, `PSM`, `Queue`, `Collat.`, `Stable`, `Basket`, `Modeled`, `Heur.`, `Config.`, `Impaired`, `Not Covered`, or `Data n/a`
+- `Yield`: `Ranked`, `—`, or `Data n/a`
+- `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Disabled`, `Not Covered`, or `Data n/a`
+- `Freezable Status`: `Live`, `Yes`, `Dilutable`, `Upstream`, `Possible`, `No`, or `Data n/a`
+- `Dependency Map`: `Node`, `—`, or `Data n/a`
 
 ---
 
 ## Source Of Truth Per Column
 
-The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-matrix-model.ts`, which builds one `CoverageRow` per active stablecoin and resolves each column through `src/lib/coverage.ts`.
+The page deliberately mixes structural coverage and live dataset coverage. The implementation entrypoint is `src/hooks/use-coverage-matrix-model.ts`, which wraps `src/lib/coverage-matrix-model.ts`, builds one `CoverageRow` per active stablecoin, and resolves each column through the feature modules under `src/lib/coverage/`.
 
 | Column                | Hook / field used on `/coverage/`                                                                                                                                                                                     | Notes                                                                                                                                                                                                                                                                                                                                                                          |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -70,14 +70,14 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Redemption Backstop` | `useRedemptionBackstops().data.coins[id]`                                                                                                                                                                             | The matrix reflects the live redemption-backstop snapshot exposed by the worker dataset, not static coin metadata alone. Configured-but-unrated routes render as `Config.`; low-confidence heuristic routes render as `Heur.`; neither counts as covered in the headline metric.                                                                                               |
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                                                                                                               | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                                                                                                                                          |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                     | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`.                                                                                                                                                                                                                                                                                            |
-| `Blacklist`           | `BLACKLIST_STABLECOINS` from `@shared/types` for row tracking state, plus resolved `rawInputs.canBeBlacklisted` / `getTrackedBlacklistStatus()` for snapshot eligibility                                              | Structural support flag, matching the shared filter enum used by the blacklist route and worker handlers. The feature snapshot denominator is scoped to coins whose resolved blacklist status is direct `true`; `dilutable`, `possible`, `inherited`, and non-blacklistable assets remain visible in the matrix but do not count as uncovered blacklist-tracker opportunities. |
+| `Freezable Status`    | `getResolvedBlacklistStatus(coin.id, reportCard)` from `src/lib/blacklist-status.ts`, combining static metadata and `reportCard.rawInputs.canBeBlacklisted`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket | Resolved freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No` are resolved status states and all count as available coverage. |
 | `Dependency Map`      | `useReportCards().data.dependencyGraph.edges`, falling back to `buildDependencyGraphEdges(ACTIVE_STABLECOINS)` when the live graph is absent                                                                          | Edges are filtered through `filterDependencyGraphEdgesToLive(...)` with live report-card IDs, then collected with `collectDependencyGraphIds(...)`. This mirrors the live dependency graph rather than deriving visibility directly from static reserve templates.                                                                                                             |
 
 Additional page-level sources:
 
 | Page element                                                              | Source                                                                                                                                |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Base coin universe                                                        | `ACTIVE_STABLECOINS` from `@shared/lib/stablecoins`                                                                                   |
+| Base coin universe                                                        | `ACTIVE_STABLECOINS` from `@shared/lib/stablecoins/registry`                                                                          |
 | Market-cap weights                                                        | `/api/stablecoins` via `useStablecoins()`, using `getCirculatingRaw()` on the cached list payload                                     |
 | Peg/backing/governance labels in each row                                 | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                      | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
@@ -104,7 +104,7 @@ For `Redemption Backstop`, the headline metric intentionally emphasizes strong r
 
 For `Price & Depeg`, the headline metric intentionally emphasizes breadth with corroborated pricing. A coin still renders `Tracked` in the matrix with fewer than 3 sources, but the feature snapshot headline only counts rows whose `consensusSources` depth is at least 3.
 
-For `Blacklist`, the headline metric is scoped to directly blacklistable coins only. Assets with `dilutable`, `possible`, or `inherited` blacklist exposure can still matter for report-card resilience, but they are not treated as missing event-tracker coverage in the snapshot denominator.
+For `Freezable Status`, the headline metric is resolved-status coverage across the active universe. The breakdown distinguishes `Live` FreezeWatch event-tracked assets from direct `Yes`, `Dilutable`, `Upstream`, `Possible`, and `No` states; it no longer treats only direct-blacklistable assets as the denominator.
 
 Breakdowns are intentionally dense and should stay short:
 
@@ -113,13 +113,13 @@ Breakdowns are intentionally dense and should stay short:
 - Redemption: `heuristic / configured / issuer / psm / queue / collateral / stable / basket`
 - Flows: `full / partial / lagging / bootstrapping / data n/a`
 - Price: `tracked / price-only`
-- Blacklist: `covered / uncovered` within the directly blacklistable eligible set
+- Freezable status: `live / yes / dilutable / upstream / possible / no`
 
 #### Source count enrichment
 
 When `consensusSources` data is available from the peg-summary API, the "Tracked" badge shows a source count suffix: "Tracked (5 sources)" (or "Tracked (5)" in compact mode). Tooltip expands to show confidence level and source names (e.g., "High confidence — CoinGecko, DefiLlama, Pyth Network"). The feature snapshot breakdown adds a secondary source-depth distribution: `5+ sources: N · 3-4: N · 1-2: N`. The snapshot header also includes a compact `Source target` tile for the `>=3` candidate-source count and market-cap reach.
 
-If a feature gains richer user-facing states, update both `src/lib/coverage.ts` and this document.
+If a feature gains richer user-facing states, update the relevant resolver under `src/lib/coverage/`, its export surface in `src/lib/coverage.ts`, and this document.
 
 ---
 
@@ -128,10 +128,10 @@ If a feature gains richer user-facing states, update both `src/lib/coverage.ts` 
 - The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
 - The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
-- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist`), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`).
+- Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`).
 - The `Reserves` quick filter is intentionally strict: it matches only rows where `statuses.reserves.kind === "live"`, the score-grade live reserve state, not `Curated-Validated` or `Proof`.
 - Default sort is descending live market cap.
-- On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states.
+- On small screens, the matrix adapts into scan-first per-coin cards that preview the highest-signal statuses and expand for the remaining states. Mobile renders the result set in batches with explicit "show next" and collapse controls so large filtered sets do not mount hundreds of cards before the user asks for them.
 - From `md` upward, the full comparison table renders with the first column sticky.
 - The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.
 - A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.

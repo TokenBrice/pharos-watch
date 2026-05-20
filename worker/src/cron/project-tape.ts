@@ -17,7 +17,7 @@
  * Runs on the `26,56 * * * *` DEWS/PSI DB-only lane (purely D1-bound, no
  * outbound fetches), so it adds zero connection budget to the trigger.
  */
-import type { CronResult } from "../lib/cron-logger";
+import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import {
   projectDepegOpened,
   projectDepegPeakWorsened,
@@ -35,6 +35,10 @@ import {
 import { projectMethodologyBumps } from "../lib/tape-projectors/methodology";
 import { projectCemeteryEntries } from "../lib/tape-projectors/cemetery";
 import { projectLifecycleFrozen } from "../lib/tape-projectors/lifecycle";
+import { projectPsiBandShifts } from "../lib/tape-projectors/psi";
+import { projectMintBurnLargeFlows } from "../lib/tape-projectors/mint-burn";
+import { projectDewsEscalated, projectDewsDeescalated } from "../lib/tape-projectors/dews";
+import { projectYieldWarningEmitted, projectYieldPysDropped } from "../lib/tape-projectors/yield";
 import type { Projector } from "../lib/tape-projectors/types";
 
 export interface ProjectTapeJob {
@@ -47,16 +51,22 @@ export interface ProjectTapeJob {
  * endpoint can dispatch the same code path with operator-supplied overrides.
  */
 export const TAPE_PROJECTOR_JOBS: readonly ProjectTapeJob[] = [
-  { name: "depeg.opened",         run: projectDepegOpened },
-  { name: "depeg.resolved",       run: projectDepegResolved },
-  { name: "depeg.peak_worsened",  run: projectDepegPeakWorsened },
-  { name: "freeze.blocked",       run: projectFreezeBlocked },
-  { name: "freeze.unblocked",     run: projectFreezeUnblocked },
-  { name: "freeze.destroyed",     run: projectFreezeDestroyed },
-  { name: "score.upgraded",       run: projectScoreUpgraded },
-  { name: "score.downgraded",     run: projectScoreDowngraded },
-  { name: "methodology.bumped",   run: projectMethodologyBumps },
-  { name: "cemetery.entry.added", run: projectCemeteryEntries },
+  { name: "depeg.opened",            run: projectDepegOpened },
+  { name: "depeg.resolved",          run: projectDepegResolved },
+  { name: "depeg.peak_worsened",     run: projectDepegPeakWorsened },
+  { name: "freeze.blocked",          run: projectFreezeBlocked },
+  { name: "freeze.unblocked",        run: projectFreezeUnblocked },
+  { name: "freeze.destroyed",        run: projectFreezeDestroyed },
+  { name: "score.upgraded",          run: projectScoreUpgraded },
+  { name: "score.downgraded",        run: projectScoreDowngraded },
+  { name: "psi.band_changed",        run: projectPsiBandShifts },
+  { name: "dews.escalated",          run: projectDewsEscalated },
+  { name: "dews.deescalated",        run: projectDewsDeescalated },
+  { name: "mint_burn.large_flow",    run: projectMintBurnLargeFlows },
+  { name: "yield.warning_emitted",   run: projectYieldWarningEmitted },
+  { name: "yield.pys_dropped",       run: projectYieldPysDropped },
+  { name: "methodology.bumped",      run: projectMethodologyBumps },
+  { name: "cemetery.entry.added",    run: projectCemeteryEntries },
   { name: "lifecycle.tracked.frozen", run: projectLifecycleFrozen },
 ];
 
@@ -76,7 +86,7 @@ export async function projectTape(db: D1Database, signal?: AbortSignal): Promise
       total += result.projected;
       if (result.advanced != null) advancedAny = true;
     } catch (err) {
-      console.error(`[project-tape] class ${job.name} failed:`, err);
+      recordCronFailure("project-tape", err, { metadata: { class: job.name } });
       perClass[job.name] = -1;
     }
   }

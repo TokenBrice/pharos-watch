@@ -2,6 +2,7 @@
   "id": "audd-novatti",
   "name": "AUDD",
   "symbol": "AUDD",
+  "oneLiner": "AUDD is AUDC Pty Ltd's centralized Australian dollar stablecoin, redeemable 1:1 and backed by AUD cash and Treasury bills at regulated Australian banks.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
   "pegMechanism": "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "165",
   "detailProvider": "defillama",
   "geckoId": "novatti-australian-digital-dollar",
@@ -19,7 +21,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audd.digital/transparency/",
-    "provider": "William Buck"
+    "provider": "William Buck",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Australia"
   },
   "links": [
     {
@@ -69,6 +74,21 @@
       "chain": "xrpl",
       "address": "4155444400000000000000000000000000000000.rUN5Zxt3K1AnMRJgEWywDJT8QDMMeLH5ok",
       "decimals": 8
+    },
+    {
+      "chain": "solana",
+      "address": "AUDDttiEpCydTm7joUMbYddm72jAWXZnCpPZtDoxqBSw",
+      "decimals": 6
+    },
+    {
+      "chain": "hedera",
+      "address": "0x39ceba2b467fa987546000eb5d1373acf1f3a2e1",
+      "decimals": 6
+    },
+    {
+      "chain": "redbelly",
+      "address": "0x54a210e824b0f89da988e4b5586440ab354f0e46",
+      "decimals": 6
     }
   ],
   "blacklistabilityReview": {
@@ -106,5 +126,6 @@
       "label": "AUD bank deposits",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

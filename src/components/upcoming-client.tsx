@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS_SHORT,
@@ -145,7 +145,7 @@ export function UpcomingClient() {
       <div className="pharos-subtle-band">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="pharos-kicker">Pre-Launch Universe</p>
+            <p className="pharos-kicker">Pre-launch Universe</p>
             <p className="pharos-meta">Track announced, testing, and launch-approaching stablecoins without mixing them into the live market table.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ export function UpcomingClient() {
       {/* ── Card grid ────────────────────────────────────────────── */}
       {filtered.length === 0 ? (
         <div className="pharos-empty-note flex flex-col items-center gap-3 py-12 text-center">
-          <p>No pre-launch stablecoins match the current filters.</p>
+          <p>No pre-launch coins match. Drop a filter or two.</p>
           <button
             onClick={() => {
               setPhaseFilter(new Set());

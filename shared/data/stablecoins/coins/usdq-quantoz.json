@@ -2,6 +2,7 @@
   "id": "usdq-quantoz",
   "name": "Quantoz USDQ",
   "symbol": "USDQ",
+  "oneLiner": "USDQ is Quantoz's MiCAR-licensed dollar e-money token redeemable 1:1, backed by EU government bonds and tier-1 bank deposits under DNB EMI supervision.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,17 @@
   },
   "collateral": "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserve ratio disclosed on Quantoz's transparency page",
   "pegMechanism": "Direct 1:1 redemption through Quantoz Payments for onboarded customers; reserves are disclosed against circulating supply on the Quantoz transparency page",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "275",
   "detailProvider": "defillama",
   "geckoId": "quantoz-usdq",
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://www.quantoz.com/transparency"
+    "url": "https://www.quantoz.com/transparency",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Netherlands",
+    "attestorLicense": "DNB EMI (MiCAR)"
   },
   "links": [
     {

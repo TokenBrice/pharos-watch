@@ -57,7 +57,11 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 
-function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
+export function pegCurrencySymbol(pegCurrency: string): string {
+  return PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
+}
+
+export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
   if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
   return `${symbol}${price.toFixed(decimals)}`;
 }
@@ -240,9 +244,9 @@ export function formatPercent(value: number | null | undefined, decimals = 2): s
   return value != null ? `${value.toFixed(decimals)}%` : "-";
 }
 
-/** Format a signed percentage with +/- prefix and % suffix. Returns "-" for nullish. */
-export function formatSignedPercent(value: number | null | undefined, decimals = 2): string {
-  if (value == null) return "-";
+/** Format a signed percentage with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
+export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
+  if (value == null) return nullFallback;
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(decimals)}%`;
 }

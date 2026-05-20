@@ -2,6 +2,7 @@
   "id": "usds-sky",
   "name": "Sky Dollar",
   "symbol": "USDS",
+  "oneLiner": "USDS is Sky's upgraded successor to DAI, minted 1:1 from DAI or against the same Maker vault system of RWA, USDC, and crypto collateral.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
   "pegMechanism": "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
+  "mechanismArchetype": "cdp",
   "llamaId": "209",
   "detailProvider": "defillama",
   "geckoId": "usds",

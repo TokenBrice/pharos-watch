@@ -13,8 +13,10 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate } from "@shared/lib/format";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { cn } from "@/lib/utils";
-import { getDewsAmplifiers, getTopDewsContributors, getDewsSignalLabel } from "@/lib/dews-signal-utils";
+import { getDewsAmplifiers, getDewsSignalLabel } from "@/lib/dews-signal-utils";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: getDewsSignalLabel("supply"), metricKey: "delta1d", metricLabel: "1d change" },
@@ -193,8 +195,15 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const bandColor = THREAT_BAND_COLORS[typedBand] ?? "";
   const bandHex = THREAT_BAND_HEX[typedBand] ?? THREAT_BAND_HEX.CALM;
   const availableCount = Object.values(signals).filter((s) => s.available).length;
-  const topContributors = getTopDewsContributors(signals, 2);
   const amplifiers = getDewsAmplifiers(data.current);
+
+  const sortedSignals = Object.entries(SIGNAL_META)
+    .flatMap(([key, meta]) => {
+      const signal = signals[key];
+      if (!signal || !signal.available) return [];
+      return [{ key, meta, signal }];
+    })
+    .sort((a, b) => b.signal.value - a.signal.value);
 
   const unavailableSignalNames = Object.entries(SIGNAL_META)
     .filter(([key]) => signals[key] && !signals[key].available)
@@ -206,12 +215,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         <DetailSectionTitle>
           <MethodologyLabel topic="dews">Depeg Early Warning</MethodologyLabel>
         </DetailSectionTitle>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
-          <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
-            {THREAT_BAND_LABELS[typedBand]}
+        <ScoreBadgeWrapper topic="dews" variant="tooltip-only">
+          <span className="flex items-center gap-2">
+            <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
+            <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
+              {THREAT_BAND_LABELS[typedBand]}
+            </span>
           </span>
-        </div>
+        </ScoreBadgeWrapper>
       </CardHeader>
       <CardContent className="space-y-4">
         {availableCount < 4 && (
@@ -220,16 +231,8 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </p>
         )}
 
-        {(topContributors.length > 0 || amplifiers.length > 0) && (
+        {amplifiers.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {topContributors.map((item) => (
-              <span
-                key={item.key}
-                className="rounded-sm border border-border/70 bg-muted px-2 py-1 text-xs text-muted-foreground"
-              >
-                {item.label} {Math.round(item.value)}/100
-              </span>
-            ))}
             {amplifiers.map((amp) => (
               <span
                 key={amp.key}
@@ -241,46 +244,58 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </div>
         )}
 
-        {/* Signal breakdown */}
-        <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_auto] gap-x-3 text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60">
-            <div className="flex justify-between">
-              <span>Signal</span>
-              <span>Score</span>
+        {/* Signal breakdown, sorted by descending score. Single column below xl, two columns at xl+. */}
+        {(() => {
+          const rowGrid =
+            "grid grid-cols-[minmax(0,8.5rem)_1fr_auto_auto] items-center gap-x-2 sm:grid-cols-[minmax(0,11rem)_1fr_auto_auto] sm:gap-x-3";
+          const renderHeader = () => (
+            <div className={cn(rowGrid, "text-[11px] uppercase tracking-[0.12em] text-muted-foreground/60")}>
+              <span className="col-span-2">Signal</span>
+              <span className="text-right">Score</span>
+              <span className="w-16 text-right sm:w-20">Value</span>
             </div>
-            <span className="w-20 text-right">Value</span>
-          </div>
-
-          {Object.entries(SIGNAL_META).map(([key, meta]) => {
-            const signal = signals[key];
-            if (!signal || !signal.available) return null;
+          );
+          const renderRow = ({ key, meta, signal }: (typeof sortedSignals)[number]) => {
             const metricVal = signal[meta.metricKey];
             const isInactive = Math.round(signal.value) === 0;
-
             return (
-              <div
-                key={key}
-                className={cn(
-                  "grid grid-cols-[1fr_auto] gap-x-3 items-center text-sm",
-                  isInactive && "opacity-50",
-                )}
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground">{meta.name}</span>
-                    <span className="font-mono text-xs tabular-nums">
-                      {Math.round(signal.value)}/100
-                    </span>
-                  </div>
-                  <ProgressBar value={signal.value} />
-                </div>
-                <span className="text-xs text-muted-foreground w-20 text-right truncate" title={meta.metricLabel}>
+              <div key={key} className={cn(rowGrid, "text-sm", isInactive && "opacity-50")}>
+                <span className="truncate text-foreground" title={meta.name}>{meta.name}</span>
+                <ProgressBar value={signal.value} />
+                <span className="whitespace-nowrap text-right font-mono text-xs tabular-nums">
+                  {Math.round(signal.value)}/100
+                </span>
+                <span
+                  className="w-16 truncate text-right text-xs text-muted-foreground sm:w-20"
+                  title={meta.metricLabel}
+                >
                   {formatMetric(meta.metricKey, metricVal)}
                 </span>
               </div>
             );
-          })}
-        </div>
+          };
+          const half = Math.ceil(sortedSignals.length / 2);
+          const leftSignals = sortedSignals.slice(0, half);
+          const rightSignals = sortedSignals.slice(half);
+          return (
+            <>
+              <div className="space-y-1.5 xl:hidden">
+                {renderHeader()}
+                {sortedSignals.map(renderRow)}
+              </div>
+              <div className="hidden xl:grid xl:grid-cols-2 xl:gap-x-6">
+                <div className="space-y-1.5">
+                  {renderHeader()}
+                  {leftSignals.map(renderRow)}
+                </div>
+                <div className="space-y-1.5">
+                  {renderHeader()}
+                  {rightSignals.map(renderRow)}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {unavailableSignalNames.length > 0 && (
           <p className="text-[11px] text-muted-foreground">
@@ -288,21 +303,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </p>
         )}
 
-        <DEWSFiringList signals={signals} />
-
         {/* History chart */}
         {chartData.length > 1 && (
           <>
-            <div className="flex items-center justify-end">
-              <button
-                onClick={() => setShowBreakdown((v) => !v)}
-                className="pharos-focus-ring min-h-11 rounded-md px-2 py-1 text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground lg:min-h-9"
-              >
-                {showBreakdown ? "Show composite" : "Show signal breakdown"}
-              </button>
-            </div>
-
-            <div ref={chartContainerRef} className="h-[180px]" role="figure" aria-label="DEWS score history">
+            <div ref={chartContainerRef} className="h-[140px]" role="figure" aria-label="DEWS score history">
               {isChartReady ? (
                 <AreaChart
                   width={width}
@@ -371,7 +375,23 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           </>
         )}
 
-        <MethodologyCardActions topic="dews" />
+        <ShowYourWorkPanel kind="dews" current={data.current} stablecoinId={stablecoinId} />
+
+        <MethodologyCardActions
+          topic="dews"
+          showWorkToggle
+          trailing={
+            chartData.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => setShowBreakdown((v) => !v)}
+                className="pharos-focus-ring min-h-11 rounded-sm py-2 text-xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground sm:min-h-0 sm:py-0"
+              >
+                {showBreakdown ? "Show composite" : "Show signal breakdown"}
+              </button>
+            ) : null
+          }
+        />
       </CardContent>
     </Card>
   );

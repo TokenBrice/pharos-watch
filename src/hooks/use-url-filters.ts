@@ -17,35 +17,45 @@ let historyPatchSubscribers = 0;
 let originalPushState: History["pushState"] | null = null;
 let originalReplaceState: History["replaceState"] | null = null;
 
-function dispatchHistoryChangeEvent(): void {
-  window.dispatchEvent(new Event(URL_FILTER_HISTORY_CHANGE_EVENT));
+function dispatchHistoryChangeEvent(targetWindow: Window): void {
+  const event = new Event(URL_FILTER_HISTORY_CHANGE_EVENT);
+  const dispatch = () => {
+    if (historyPatchSubscribers === 0) return;
+    targetWindow.dispatchEvent(event);
+  };
+  if (typeof targetWindow.queueMicrotask === "function") {
+    targetWindow.queueMicrotask(dispatch);
+  } else {
+    targetWindow.setTimeout(dispatch, 0);
+  }
 }
 
 function subscribeToHistoryChanges(listener: () => void): () => void {
+  const targetWindow = window;
   if (historyPatchSubscribers === 0) {
-    originalPushState = window.history.pushState;
-    originalReplaceState = window.history.replaceState;
+    originalPushState = targetWindow.history.pushState;
+    originalReplaceState = targetWindow.history.replaceState;
 
-    window.history.pushState = ((data, unused, url) => {
-      originalPushState?.call(window.history, data, unused, url);
-      dispatchHistoryChangeEvent();
+    targetWindow.history.pushState = ((data, unused, url) => {
+      originalPushState?.call(targetWindow.history, data, unused, url);
+      dispatchHistoryChangeEvent(targetWindow);
     }) satisfies History["pushState"];
 
-    window.history.replaceState = ((data, unused, url) => {
-      originalReplaceState?.call(window.history, data, unused, url);
-      dispatchHistoryChangeEvent();
+    targetWindow.history.replaceState = ((data, unused, url) => {
+      originalReplaceState?.call(targetWindow.history, data, unused, url);
+      dispatchHistoryChangeEvent(targetWindow);
     }) satisfies History["replaceState"];
   }
 
   historyPatchSubscribers += 1;
-  window.addEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
+  targetWindow.addEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
 
   return () => {
-    window.removeEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
+    targetWindow.removeEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, listener);
     historyPatchSubscribers = Math.max(0, historyPatchSubscribers - 1);
     if (historyPatchSubscribers === 0 && originalPushState && originalReplaceState) {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
+      targetWindow.history.pushState = originalPushState;
+      targetWindow.history.replaceState = originalReplaceState;
       originalPushState = null;
       originalReplaceState = null;
     }

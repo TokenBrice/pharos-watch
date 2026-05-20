@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleReclassifyAtomicRoundtrips } from "../reclassify-atomic-roundtrips";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 
 vi.mock("../../lib/mint-burn-pipeline/persistence", async (importOriginal) => {

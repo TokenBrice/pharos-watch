@@ -1,5 +1,7 @@
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
+import { PublicSignalCard } from "./public-signal-card";
+import { StatusMetricCard } from "./status-metric-card";
 
 function formatBucketLabel(bucketStart: number): string {
   return new Date(bucketStart * 1000).toLocaleTimeString("en-US", {
@@ -38,30 +40,27 @@ export function RequestSourceAttributionCard({
   const bucketSizeMinutes = stats ? stats.window.bucketSizeSec / 60 : null;
 
   return (
-    <div className="rounded-[1.25rem] border border-border/60 bg-background/35 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold tracking-tight text-foreground">Site vs external demand</h3>
-            {stats ? (
-              <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {Math.round(stats.window.durationSec / 3600)}h window
-              </span>
-            ) : null}
-          </div>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Total request demand across same-origin
-            {" "}
-            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>
-            {" "}
-            and
-            {" "}
-            <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>
-            .
-            Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
-          </p>
-        </div>
-        {totals ? (
+    <PublicSignalCard
+      variant="panel"
+      title="Site vs external demand"
+      titleBadges={
+        stats ? (
+          <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {Math.round(stats.window.durationSec / 3600)}h window
+          </span>
+        ) : null
+      }
+      description={
+        <>
+          Total request demand across same-origin{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">/_site-data/*</code>{" "}
+          and{" "}
+          <code className="rounded bg-background/60 px-1 py-0.5 font-mono text-[0.92em] text-foreground">api.pharos.watch</code>.
+          Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
+        </>
+      }
+      badges={
+        totals ? (
           <div className="flex flex-wrap gap-2">
             <span className="rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-1 text-[11px] font-medium text-sky-700 dark:text-sky-300">
               Site {formatPercent(totals.siteSharePct, 1)}
@@ -70,32 +69,24 @@ export function RequestSourceAttributionCard({
               External {formatPercent(totals.externalSharePct, 1)}
             </span>
           </div>
-        ) : null}
-      </div>
+        ) : null
+      }
+    >
 
       {error ? (
-        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
           {error}
         </div>
       ) : isLoading && !stats ? (
-        <div className="mt-4 text-sm text-muted-foreground">Loading request attribution…</div>
+        <div className="text-sm text-muted-foreground">Loading request attribution…</div>
       ) : !totals || !siteDelivery ? (
-        <div className="mt-4 text-sm text-muted-foreground">No attribution data yet.</div>
+        <div className="text-sm text-muted-foreground">No attribution data yet.</div>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Total demand</div>
-              <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.totalRequests)}</div>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Site</div>
-              <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.siteRequests)}</div>
-            </div>
-            <div className="rounded-xl border border-border/60 bg-background/45 p-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">External</div>
-              <div className="mt-1 font-mono text-xl font-semibold text-foreground">{formatCompactCount(totals.externalRequests)}</div>
-            </div>
+            <StatusMetricCard variant="tile" label="Total demand" value={formatCompactCount(totals.totalRequests)} />
+            <StatusMetricCard variant="tile" label="Site" value={formatCompactCount(totals.siteRequests)} />
+            <StatusMetricCard variant="tile" label="External" value={formatCompactCount(totals.externalRequests)} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -223,6 +214,6 @@ export function RequestSourceAttributionCard({
           </div>
         </div>
       )}
-    </div>
+    </PublicSignalCard>
   );
 }

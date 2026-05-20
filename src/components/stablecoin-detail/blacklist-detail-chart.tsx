@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
 import type { BlacklistQuarterlyEventTypePoint } from "@shared/types";
 
 const CHART_HEIGHT = "h-[220px] sm:h-[260px]";
@@ -93,7 +93,7 @@ export function BlacklistDetailChart({ data, isLoading }: BlacklistDetailChartPr
               data={chartData}
               margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
             >
-              <ChartGrid strokeDasharray="3 3" />
+              <TimeGrid strokeDasharray="3 3" />
               <CategoricalXAxis
                 dataKey="quarter"
                 tick={{

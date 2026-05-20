@@ -2,6 +2,7 @@
   "id": "fxd-fathom",
   "name": "Fathom Dollar",
   "symbol": "FXD",
+  "oneLiner": "FXD is Fathom Protocol's CDP-minted dollar on XDC, overcollateralized by XDC and stabilized by liquidations plus a StableSwap Module.",
   "llamaId": "176",
   "detailProvider": "defillama",
   "geckoId": "fathom-dollar",
@@ -16,6 +17,7 @@
   },
   "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
   "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
+  "mechanismArchetype": "cdp",
   "links": [
     {
       "label": "Website",
@@ -27,7 +29,7 @@
     },
     {
       "label": "Dapp",
-      "url": "https://app.fathom.fi/"
+      "url": "https://dapp.fathom.fi/"
     }
   ],
   "contracts": [

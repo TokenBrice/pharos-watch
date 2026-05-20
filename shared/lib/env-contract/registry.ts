@@ -167,8 +167,8 @@ export const ENV_BINDINGS = [
   {
     key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
     valueType: "string",
-    description: "Optional comma-separated allowlist for exact-address price providers; unset auto-enables no-key providers plus configured key-backed providers. Use `none` to disable.",
-    example: { section: "workerOptional", value: "dexscreener-address,dexpaprika-address,moralis-address,birdeye-address" },
+    description: "Optional comma-separated allowlist for exact-address price providers; unset auto-enables DexPaprika plus configured key-backed providers. Use `none` to disable, or include `dexscreener-address` only for explicit opt-in to that Cloudflare/WAF-protected public lane.",
+    example: { section: "workerOptional", value: "dexpaprika-address,moralis-address,birdeye-address" },
     runtimes: {
       worker: { order: 15, status: "optional" },
     },
@@ -453,12 +453,21 @@ export const ENV_BINDINGS = [
     },
   },
   {
+    key: "BANXICO_TOKEN",
+    valueType: "string",
+    description: "Banxico SIE API token used for official MXN CETES 28-day benchmark rates; when absent/failing, the benchmark cron can use Etherfuse CETES current issuance as an explicit degraded proxy.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 38, status: "optional" },
+    },
+  },
+  {
     key: "CLOUDFLARE_ACCOUNT_ID",
     valueType: "string",
     description: "Cloudflare account scope used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 38, status: "optional" },
+      worker: { order: 39, status: "optional" },
     },
   },
   {
@@ -467,7 +476,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare API token with D1 status/analytics read access for admin metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 39, status: "optional" },
+      worker: { order: 40, status: "optional" },
     },
   },
   {
@@ -476,7 +485,7 @@ export const ENV_BINDINGS = [
     description: "Target D1 database ID used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 40, status: "optional" },
+      worker: { order: 41, status: "optional" },
     },
   },
   {
@@ -485,7 +494,26 @@ export const ENV_BINDINGS = [
     description: "Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 41, status: "optional" },
+      worker: { order: 42, status: "optional" },
+    },
+  },
+  {
+    key: "REQUEST_SOURCE_ATTRIBUTION_DISABLED",
+    valueType: "string",
+    description: "Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 43, status: "optional" },
+      pagesSiteData: { order: 4, status: "optional" },
+    },
+  },
+  {
+    key: "API_KEY_REQUEST_ATTRIBUTION_DISABLED",
+    valueType: "string",
+    description: "Worker-only operational telemetry kill switch for per-key public API attribution writes.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { order: 44, status: "optional" },
     },
   },
   {
@@ -560,6 +588,14 @@ export const ENV_BINDINGS = [
     example: { section: "pagesSiteDataRequired", value: "https://site-api.pharos.watch" },
     runtimes: {
       pagesSiteData: { order: 3, status: "required" },
+    },
+  },
+  {
+    key: "SELECTOR_SNAPSHOTS",
+    valueType: "KVNamespace",
+    description: "KV namespace binding for the Pages-only Stablecoin Selector snapshot store at `functions/selector-snapshot/[[path]].ts`; 5-year TTL on content-addressed `s:{sid}` entries.",
+    runtimes: {
+      pagesSiteData: { order: 5, status: "required" },
     },
   },
 ] satisfies readonly EnvBindingDefinition[];

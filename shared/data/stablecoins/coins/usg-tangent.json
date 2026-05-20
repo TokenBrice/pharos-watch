@@ -2,6 +2,7 @@
   "id": "usg-tangent",
   "name": "Tangent USD",
   "symbol": "USG",
+  "oneLiner": "USG is Tangent's debt token minted against productive DeFi collateral (Curve LP, Pendle PTs), with Peg Keepers and dynamic-interest borrowers defending the peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Over-collateralized productive DeFi collateral, including Curve Finance LP tokens, Pendle PTs, and other yield-bearing or LP positions from protocols such as Curve, Convex, Stake DAO, and Spectra.",
   "pegMechanism": "USG has no collateral redemption path. Tangent targets the peg with Peg Keeper contracts, price-dependent reward deductions, and dynamic interest: HEC borrowers can be interest-free while USG stays above each market's threshold but lose more collateral rewards as USG falls, while LEC borrowers pay price-dependent interest immediately.",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "links": [
     {

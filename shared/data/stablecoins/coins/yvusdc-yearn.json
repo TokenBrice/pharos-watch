@@ -2,6 +2,7 @@
   "id": "yvusdc-yearn",
   "name": "Yearn v3 USDC Vault",
   "symbol": "yvUSDC-1",
+  "oneLiner": "yvUSDC is a Yearn v3 ERC-4626 vault that routes USDC through whitelisted yield strategies (Aave, Compound, Morpho, Sky), inheriting Circle's USDC backing.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -23,6 +24,7 @@
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC allocated by Yearn v3 strategy allocator across whitelisted yield strategies (Aave, Compound, Morpho, Sky and similar protocols) selected by Yearn governance",
   "pegMechanism": "ERC-4626 Yearn v3 vault shares accrue value against USDC as the underlying strategies generate yield; redemptions return USDC subject to the v3 queue and strategy liquidity",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "links": [
     {
@@ -88,6 +90,5 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       }
     }
-  },
-  "canBeBlacklisted": true
+  }
 }

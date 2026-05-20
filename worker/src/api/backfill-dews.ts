@@ -24,7 +24,7 @@ import type {
 import { loadDewsSourceState } from "../cron/dews/source-state";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
-interface DepegEvent {
+interface DepegEventRow {
   stablecoin_id: string;
   started_at: number;
   ended_at: number | null;
@@ -333,7 +333,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
     .prepare(
       "SELECT stablecoin_id, started_at, ended_at, peak_deviation_bps FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at ASC",
     )
-    .all<DepegEvent>();
+    .all<DepegEventRow>();
 
   if (!events.results.length) {
     return errorResponse(404, "No completed depeg events found");

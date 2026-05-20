@@ -2,6 +2,7 @@
   "id": "uusd-anything-labs",
   "name": "Unity USD",
   "symbol": "UUSD",
+  "oneLiner": "UUSD is Anything Labs's BSC-based protocol dollar minted against managed stablecoin and crypto collateral, with limited public mechanism documentation.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

@@ -21,11 +21,11 @@ Light mode keeps the same hierarchy as dark mode, but status/accent text is cali
 
 ### Typography carve-out
 
-Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside these two carve-outs; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
+Newsreader serif is reserved for the Daily Digest editorial surfaces: the `/digest/**` route and the homepage `DailyDigest` preview card. The detail-page `AiSummary` component uses Georgia serif (`font-serif`) for its AI-authored narrative paragraph — this is a second intentional carve-out. The `/timeline/` route is a third carve-out: Geist Mono dominates the wire-service event stream (see `### Tape (Special)` below). Every other dashboard panel on Pharos — including the homepage Market Snapshot, Core Monitoring band, Research Surfaces band, and all stablecoin-detail cards — uses Geist Sans at all weights. Do not introduce new serif usage outside the Digest and `AiSummary` carve-outs, and do not extend the Tape mono treatment to general analytics surfaces; a Vitest invariant in `src/lib/__tests__/design-invariants.test.ts` currently guards component-level drift under `src/components/**`, while route-level files still require manual review.
 
 ### Masthead tagline
 
-The `SiteHeader` tagline reads `Chart your route through the stablecoin market — live peg, safety, liquidity, and dependency signals on every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
+The `SiteHeader` tagline reads `Chart your route through the stablecoin market — depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals for every tracked coin.` It is exposed from `md` upward (not `lg+`-only as before), with `line-clamp-2` at `md`–`lg` widths and `line-clamp-none` at `lg+`. Mobile (`<md`) keeps the compact wordmark + stat-pill card.
 
 ### Hero signals rail (stablecoin detail)
 
@@ -162,11 +162,21 @@ The digest feature employs a dual-font hierarchy that evokes newspaper headlines
 | **Body copy** | `Courier New` italic | Raw urgency — telegrams, terminals, raw intel |
 | **Metadata** | `Courier New` upright | Systematic precision — timestamps, edition numbers |
 
-This pairing creates a "broadsheet newspaper" aesthetic that signals both authority and real-time urgency. It is one of two intentional non-Geist text treatments in Pharos, alongside the stablecoin-detail `AiSummary` Georgia serif paragraph.
+This pairing creates a "broadsheet newspaper" aesthetic that signals both authority and real-time urgency. It is one of three intentional non-Geist text treatments in Pharos, alongside the stablecoin-detail `AiSummary` Georgia serif paragraph and the `/timeline/` wire-service stream documented in `### Tape (Special)` below.
 
 **Implementation**: Import styles from `@/lib/digest`:
 - `EDITORIAL_BODY_STYLE` — Courier italic for prose
 - `EDITORIAL_META_STYLE` — Courier upright for labels
+
+### Tape (Special)
+
+The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthetic** that diverges from the standard `pharos-card-shell` analytics surface. Where Digest is the broadsheet, Timeline is the syslog: Geist Mono everywhere, hairline dividers in place of card chrome, severity expressed as text color, per-class background tints (hue signals class, text-color signals severity), and a `HH:MM` time prefix at the start of every row.
+
+This is a third intentional non-Geist-Sans treatment alongside the Digest dual-font system (Newsreader serif + Courier italic) and the stablecoin-detail `AiSummary` Georgia paragraph. Tape is distinct from both: it leans on Geist Mono as the primary typeface across the stream, not serif for editorial gravitas.
+
+The absence of `pharos-card-shell` on event rows, day groups, the currently-open / linked-event bands, and the filter row is **intentional, not an oversight**. The filter row is a flat wire-control surface with hairline `border-y` dividers and shared control primitives, not a card shell.
+
+The canonical contract — rules, structured row layout, day-separator format, and the Aesthetic Lock against harmonization — lives in [tape-page.md](./tape-page.md) under `## Visual Identity` and `## Aesthetic Lock`. Update both docs together when the wire-service treatment changes.
 
 ### Cemetery (Special)
 
@@ -396,6 +406,32 @@ The preferred finish-level control language is now the shared pill system:
 - selected: `pharos-control-pill pharos-control-pill-active`
 - used on time-range controls, density toggles, lens pills, and lightweight route context summaries
 - pills should feel dense and precise, not marketing-chip playful
+
+`pharos-control-pill` is the **canonical small-control shell** for any dense, secondary action surface — defined in `src/app/globals.css` line 431. Following the May 2026 detail-page pass, this includes the hero tertiary chips (chains pill, proof-of-reserves tier chip, freezable pill), per-section freshness stamps, and the longform scrollspy. New surfaces should reach for this utility before constructing ad-hoc rounded-full button shells.
+
+### Proof-of-Reserves Attestor Tier Ladder
+
+`POR_TIER_STYLES` in `shared/lib/classification/badges.ts` defines a 4-tier categorical color ladder used for the per-coin proof-of-reserves badge on detail pages. The ladder maps directly to `AttestorTier` from `shared/types/core.ts`:
+
+| Tier       | Color            | Token classes                                                                                  | Meaning                                                          |
+| ---------- | ---------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `big4`     | emerald          | `bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30`               | Big-4 firm independent attestation                               |
+| `regional` | blue             | `bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30`                           | Licensed regional CPA / auditor                                  |
+| `niche`    | muted / neutral  | `bg-muted/40 text-muted-foreground border-border/60`                                           | Single-jurisdiction or small-practice attestor                   |
+| `self`     | amber            | `bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30`                       | Issuer self-attestation, no third-party signoff                  |
+| `none`     | red              | `bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30`                               | No attestation surface published                                 |
+
+This is the canonical 4-tier categorical ladder for evidence-quality badges. Reuse `POR_TIER_STYLES` rather than redefining the palette inline. The ladder degrades cleanly to a 3-tier emerald / amber / red flatten for severity-style surfaces; do not introduce a competing "audit quality" palette.
+
+### Freshness Stamps
+
+`FreshnessIndicator` from `src/components/status/freshness-indicator.tsx` is the canonical "Updated X ago" affordance across the dashboard. It computes age client-side from a `updatedAtMs` prop, switches into a stale tone once `staleAfterMs` is exceeded, and pauses ticking while the document is hidden. As of the May 2026 detail-page pass it also renders inside the Safety Score card header on the stablecoin detail route, paired with the per-card `pharos-control-pill` chrome.
+
+When adding a new freshness stamp:
+
+- always pass `updatedAtMs` from the originating cache snapshot, not `Date.now()` at render
+- match `staleAfterMs` to the producer cron interval (see CLAUDE.md hook timing rule)
+- prefer the small inline form inside `CardHeader`; avoid stacking a new "last updated" line of body copy on the same surface
 
 ---
 

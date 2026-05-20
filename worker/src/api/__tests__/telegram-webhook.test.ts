@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { resolveTicker } = await import("../../lib/telegram-alerts");
-const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins");
+const { FROZEN_STABLECOINS } = await import("@shared/lib/stablecoins/registry");
 const { resetTelegramInvalidSecretLogStateForTests } = await import("../../lib/telegram-log");
 
 function makeWebhookRequest(

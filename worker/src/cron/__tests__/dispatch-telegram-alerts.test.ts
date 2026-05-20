@@ -1,21 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import {
+  buildPendingAlertRow,
+  mockCircuitBreaker,
+  mockDbCache,
+} from "../../test-helpers/cron";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 
 const mockGetCache = vi.fn();
 const mockSetCache = vi.fn();
 
-vi.mock("../../lib/db-cache", () => ({
-  getCache: mockGetCache,
-  setCache: mockSetCache,
+vi.mock("../../lib/db-cache", () => mockDbCache({
+  getCacheFn: mockGetCache,
+  setCacheFn: mockSetCache,
 }));
 
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();
 
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: mockShouldAttemptFetch,
-  recordOutcome: mockRecordOutcome,
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker({
+  shouldAttemptFetchFn: mockShouldAttemptFetch,
+  recordOutcomeFn: mockRecordOutcome,
 }));
 
 const mockSendToChat = vi.fn();
@@ -1299,8 +1304,8 @@ describe("dispatchTelegramAlerts", () => {
       {
         match: "SELECT p.id, p.chat_id, p.message_html",
         rows: [
-          { id: 1, chat_id: "100", message_html: "<b>Old alert</b>", disable_notification: 0, created_at: now - 120, attempts: 0 },
-          { id: 2, chat_id: "200", message_html: "<b>Old alert 2</b>", disable_notification: 1, created_at: now - 60, attempts: 0 },
+          buildPendingAlertRow({ id: 1, chatId: "100", html: "<b>Old alert</b>", createdAt: now - 120 }),
+          buildPendingAlertRow({ id: 2, chatId: "200", html: "<b>Old alert 2</b>", disableNotification: 1, createdAt: now - 60 }),
         ],
       },
       // DELETE for delivered pending alerts
@@ -1554,7 +1559,7 @@ describe("dispatchTelegramAlerts", () => {
       { match: "FROM safety_grade_history", rows: [] },
       {
         match: "SELECT p.id, p.chat_id, p.message_html",
-        rows: [{ id: 1, chat_id: "old-chat", message_html: "<b>Old</b>", disable_notification: 0, created_at: now - 60, attempts: 0 }],
+        rows: [buildPendingAlertRow({ id: 1, chatId: "old-chat", html: "<b>Old</b>", createdAt: now - 60 })],
       },
       { match: "sub.alert_dews = 1", rows: [{ stablecoin_id: "usdc-circle", chat_id: "fresh-chat", last_active_at: now }] },
       { match: "UPDATE telegram_pending_alerts SET attempts", rows: [] },

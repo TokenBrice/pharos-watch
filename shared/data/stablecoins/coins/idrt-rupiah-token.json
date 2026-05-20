@@ -2,6 +2,7 @@
   "id": "idrt-rupiah-token",
   "name": "Rupiah Token",
   "symbol": "IDRT",
+  "oneLiner": "IDRT is PT Rupiah Token Indonesia's centralized rupiah stablecoin, backed 1:1 by IDR bank deposits and KYC-gated for direct issuance and redemption.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "IDR",
@@ -12,6 +13,7 @@
   },
   "collateral": "Indonesian rupiah bank deposits held 1:1 by PT Rupiah Token Indonesia; issuer materials describe full fiat backing with regular bank reporting",
   "pegMechanism": "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; the issuer publishes bank-reporting and smart-contract audit materials",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "rupiah-token",
   "links": [
@@ -85,5 +87,14 @@
       "label": "IDR bank deposits",
       "risk": "very-low"
     }
+  },
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z",
+    "provider": "Johannes Juara & Rekan / Hari Manurung, CPA",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Indonesia",
+    "attestorLicense": "Public Accountant License No. AP. 1456"
   }
 }

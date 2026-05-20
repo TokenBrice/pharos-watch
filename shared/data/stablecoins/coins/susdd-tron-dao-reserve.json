@@ -2,6 +2,7 @@
   "id": "susdd-tron-dao-reserve",
   "name": "Savings USDD",
   "symbol": "sUSDD",
+  "oneLiner": "sUSDD is the TRON DAO Reserve's savings wrapper of USDD; share price accrues savings yield while final par exit inherits USDD's PSM and reserve mechanics.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

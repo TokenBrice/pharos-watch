@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 
 type BuildStablecoinDetailViewModelParams = Parameters<typeof buildStablecoinDetailViewModel>[0];
@@ -626,7 +626,6 @@ describe("stablecoin detail hero view-model builder", () => {
         activeDepeg: true,
         depegEventCoverageLimited: true,
       },
-      recordedDepegEventCount: 3,
       liquidityData: {
         liquidityScore: 28,
         poolCount: 4,
@@ -650,8 +649,13 @@ describe("stablecoin detail hero view-model builder", () => {
         overallScore: 79,
         rawInputs: {
           canBeBlacklisted: true,
+          depegEventCount: 3,
         },
       } as never,
+      verdict: {
+        archetype: "distressed",
+        label: "Distressed",
+      },
     });
 
     expect(hero.header.coinName).toBe("USD Coin");
@@ -718,11 +722,14 @@ describe("stablecoin detail hero view-model builder", () => {
         trackingSpanDays: 3,
         activeDepeg: false,
       },
-      recordedDepegEventCount: null,
       liquidityData: undefined,
       yieldRanking: null,
       stressSignal: null,
       reportCard: null,
+      verdict: {
+        archetype: "uncategorized",
+        label: "Uncategorized",
+      },
     });
 
     expect(hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")?.display).toMatchObject({

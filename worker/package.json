@@ -3,13 +3,12 @@
   "private": true,
   "license": "MIT",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24 <26"
   },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "node ../scripts/guard-worker-deploy.mjs",
-    "typecheck": "tsc --noEmit",
-    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20260514.1",

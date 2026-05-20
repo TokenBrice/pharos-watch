@@ -1,7 +1,8 @@
 {
   "id": "usyc-hashnote",
-  "name": "Hashnote USYC",
+  "name": "Circle USYC",
   "symbol": "USYC",
+  "oneLiner": "Circle USYC is Hashnote's tokenized T-bill fund share backed by short-term U.S. Treasuries and reverse repos, redeemable at NAV.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
+  "collateral": "Short-term U.S. Treasury bills and reverse repo agreements held for Circle USYC / Hashnote fund shares in segregated brokerage and custody accounts.",
   "pegMechanism": "Same-day subscription and redemption via USDC at NAV-based token price",
+  "mechanismArchetype": "tbill",
   "llamaId": "237",
   "detailProvider": "defillama",
   "geckoId": "hashnote-usyc",
@@ -31,7 +33,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "Bermuda",
+    "country": "Bermuda / Cayman Islands",
     "regulator": "BMA",
     "license": "DABA License"
   },
@@ -44,6 +46,11 @@
     {
       "chain": "bsc",
       "address": "0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "7LWanZteUKtvFjv4MHYgKXXdAuCQYFPJysL9pxxdRQGn",
       "decimals": 6
     }
   ],

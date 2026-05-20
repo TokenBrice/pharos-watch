@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { mockD1 } from "./helpers/mock-d1";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleNonUsdShare } from "../non-usd-share";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
@@ -30,9 +30,9 @@ describe("handleNonUsdShare", () => {
     vi.restoreAllMocks();
   });
 
-  it("requests the default 5y range and returns split non-USD shares within D1 bind limits", async () => {
+  it("requests the default long-range window and returns split non-USD shares within D1 bind limits", async () => {
     const nowMs = Date.UTC(2026, 3, 8, 12, 0, 0);
-    const cutoff = Math.floor(nowMs / 1000) - 1825 * 86400;
+    const cutoff = Math.floor(nowMs / 1000) - 5000 * 86400;
     const completedSnapshotDate = unix("2026-04-07T00:00:00Z");
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
 
@@ -123,7 +123,7 @@ describe("handleNonUsdShare", () => {
 
   it("downsamples older monthly, mid-range weekly, and recent daily points", async () => {
     const nowMs = Date.UTC(2026, 3, 8, 12, 0, 0);
-    const cutoff = Math.floor(nowMs / 1000) - 1825 * 86400;
+    const cutoff = Math.floor(nowMs / 1000) - 5000 * 86400;
     const completedSnapshotDate = unix("2026-04-08T00:00:00Z");
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
 
@@ -159,7 +159,7 @@ describe("handleNonUsdShare", () => {
       { requireMatch: true },
     );
 
-    const res = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share?days=1825"));
+    const res = await handleNonUsdShare(db, new URL("https://example.com/api/non-usd-share?days=5000"));
     const body = (await res.json()) as NonUsdSharePoint[];
 
     expect(body.map((point) => point.date)).toEqual([

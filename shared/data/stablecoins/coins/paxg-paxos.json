@@ -2,6 +2,7 @@
   "id": "paxg-paxos",
   "name": "PAX Gold",
   "symbol": "PAXG",
+  "oneLiner": "PAXG is Paxos's centralized gold token redeemable 1:1 for fine troy ounces of LBMA Good Delivery bars held in Brink's London vaults under OCC trust supervision.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -20,7 +21,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/paxg-transparency",
-    "provider": "KPMG"
+    "provider": "KPMG",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

@@ -2,6 +2,7 @@
   "id": "srusd-reservoir",
   "name": "Savings rUSD",
   "symbol": "srUSD",
+  "oneLiner": "srUSD is Reservoir's savings wrapper of rUSD; share price accrues yield from RWA, lending vaults, and credit strategies on the Reservoir balance sheet.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -17,7 +18,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.reservoir.xyz/reserves",
-    "provider": "Reservoir Protocol"
+    "provider": "Reservoir Protocol",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -90,7 +93,7 @@
         "source-total-gap"
       ]
     },
-    "breakerScope": "srusd-reservoir",
+    "breakerScope": "reservoir",
     "display": {
       "url": "https://app.reservoir.xyz/reserves",
       "label": "Proof of Reserves"

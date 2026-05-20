@@ -2,6 +2,7 @@
   "id": "msy-main-street",
   "name": "Main Street Yield",
   "symbol": "msY",
+  "oneLiner": "msY is the ERC-4626-style strategy vault token over msUSD, with exchange-rate appreciation from Main Street's delta-neutral options and derivatives book.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

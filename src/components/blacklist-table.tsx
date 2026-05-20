@@ -72,6 +72,13 @@ const BLACKLIST_COLUMNS: readonly DataTableColumn<BlacklistSortKey>[] = [
   { id: "tx", label: "Tx", className: "hidden sm:table-cell text-center" },
 ] as const;
 
+const MOBILE_SORT_OPTIONS: Array<{ key: BlacklistSortKey; label: string }> = [
+  { key: "date", label: "Date" },
+  { key: "stablecoin", label: "Asset" },
+  { key: "chain", label: "Chain" },
+  { key: "event", label: "Action" },
+];
+
 export function BlacklistTable({
   events,
   isLoading,
@@ -178,97 +185,231 @@ export function BlacklistTable({
   }
 
   return (
-    <DataTableShell
-      columns={BLACKLIST_COLUMNS}
-      sort={{
-        sortKey,
-        sortDirection,
-        toggleSort,
-        getAriaSortValue,
-      }}
-      striped
-      containerClassName="rounded-xl border"
-      headerClassName="bg-muted"
-      topSlot={
-        <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
-          <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="pharos-focus-ring min-h-11 sm:min-h-8"
-            onClick={handleCsvExport}
-            disabled={events.length === 0}
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export current page CSV
-          </Button>
+    <>
+      <div className="space-y-3 md:hidden">
+        <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="pharos-kicker">Event Cards</p>
+              <p className="text-xs text-muted-foreground">Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="pharos-focus-ring min-h-11"
+              onClick={handleCsvExport}
+              disabled={events.length === 0}
+            >
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Sort freeze events">
+            {MOBILE_SORT_OPTIONS.map((option) => {
+              const active = sortKey === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => toggleSort(option.key)}
+                  className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
+                      : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                  {active ? (
+                    <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
+                      {sortDirection === "asc" ? "↑" : "↓"}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      }
+        {events.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground">
+            No freeze events match your filters.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {events.map((evt, index) => (
+              <BlacklistEventCard key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <DataTableShell
+          columns={BLACKLIST_COLUMNS}
+          sort={{
+            sortKey,
+            sortDirection,
+            toggleSort,
+            getAriaSortValue,
+          }}
+          striped
+          containerClassName="rounded-xl border"
+          headerClassName="bg-muted"
+          mobileScrollHint={false}
+          topSlot={
+            <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
+              <Button
+                variant="outline"
+                size="sm"
+                className="pharos-focus-ring min-h-11 sm:min-h-8"
+                onClick={handleCsvExport}
+                disabled={events.length === 0}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export current page CSV
+              </Button>
+            </div>
+          }
+        >
+          {events.map((evt, index) => (
+            <BlacklistEventRow key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
+          ))}
+          {events.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={BLACKLIST_COLUMNS.length} className="text-center text-muted-foreground py-12">
+                No freeze events match your filters.
+              </TableCell>
+            </TableRow>
+          )}
+        </DataTableShell>
+      </div>
+    </>
+  );
+}
+
+function BlacklistEventRow({ event: evt, rank }: { event: BlacklistEvent; rank: number }) {
+  return (
+    <TableRow>
+      <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+        {rank}
+      </TableCell>
+      <TableCell className="whitespace-nowrap font-mono text-xs">{formatEventDate(evt.timestamp)}</TableCell>
+      <TableCell className="font-medium">{evt.stablecoin}</TableCell>
+      <TableCell>{evt.chainName}</TableCell>
+      <TableCell>
+        <Badge variant="outline" className={EVENT_BADGE_STYLES[evt.eventType] ?? ""}>
+          {EVENT_LABELS[evt.eventType] ?? evt.eventType}
+        </Badge>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <a
+          href={evt.explorerAddressUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
+          aria-label={`View address ${evt.address} on ${evt.chainName}`}
+        >
+          {formatAddress(evt.address)}
+        </a>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell text-right font-mono">
+        <BlacklistAmount event={evt} />
+      </TableCell>
+      <TableCell className="hidden sm:table-cell text-center">
+        <BlacklistTxLink event={evt} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
+  return (
+    <>
+      {formatBlacklistAmountCell(evt)}
+      {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
+        <span
+          className="ml-1 inline-flex rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+          title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
+        >
+          {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
+        </span>
+      ) : null}
+      {evt.amountStatus !== "resolved" && (
+        <span
+          className="ml-1 inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+          title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
+        >
+          {evt.amountStatus.replace(/_/g, " ")}
+        </span>
+      )}
+    </>
+  );
+}
+
+function BlacklistTxLink({ event: evt }: { event: BlacklistEvent }) {
+  return (
+    <a
+      href={evt.explorerTxUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pharos-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground sm:min-h-8 sm:min-w-8"
+      aria-label={`Open ${evt.chainName} transaction ${evt.txHash} in explorer`}
+      title={`View tx ${evt.txHash.slice(0, 10)}... on ${evt.chainName}`}
     >
-      {events.map((evt, index) => (
-        <TableRow key={evt.id}>
-          <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-            {(page - 1) * pageSize + index + 1}
-          </TableCell>
-          <TableCell className="whitespace-nowrap font-mono text-xs">{formatEventDate(evt.timestamp)}</TableCell>
-          <TableCell className="font-medium">{evt.stablecoin}</TableCell>
-          <TableCell>{evt.chainName}</TableCell>
-          <TableCell>
+      <ExternalLink className="h-4 w-4" />
+    </a>
+  );
+}
+
+function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank: number }) {
+  return (
+    <article className="pharos-card-shell rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{evt.stablecoin}</span>
             <Badge variant="outline" className={EVENT_BADGE_STYLES[evt.eventType] ?? ""}>
               {EVENT_LABELS[evt.eventType] ?? evt.eventType}
             </Badge>
-          </TableCell>
-          <TableCell className="hidden md:table-cell">
-            <a
-              href={evt.explorerAddressUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
-              aria-label={`View address ${evt.address} on ${evt.chainName}`}
-            >
-              {formatAddress(evt.address)}
-            </a>
-          </TableCell>
-          <TableCell className="hidden sm:table-cell text-right font-mono">
-            {formatBlacklistAmountCell(evt)}
-            {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
-              <span
-                className="ml-1 inline-flex rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-                title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}
-              >
-                {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
-              </span>
-            ) : null}
-            {evt.amountStatus !== "resolved" && (
-              <span
-                className="ml-1 inline-flex items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
-                title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}
-              >
-                {evt.amountStatus.replace(/_/g, " ")}
-              </span>
-            )}
-          </TableCell>
-          <TableCell className="hidden sm:table-cell text-center">
-            <a
-              href={evt.explorerTxUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pharos-focus-ring inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={`Open ${evt.chainName} transaction ${evt.txHash} in explorer`}
-              title={`View tx ${evt.txHash.slice(0, 10)}... on ${evt.chainName}`}
-            >
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          </TableCell>
-        </TableRow>
-      ))}
-      {events.length === 0 && (
-        <TableRow>
-          <TableCell colSpan={BLACKLIST_COLUMNS.length} className="text-center text-muted-foreground py-12">
-            No freeze events match your filters.
-          </TableCell>
-        </TableRow>
-      )}
-    </DataTableShell>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            #{rank} · {evt.chainName} · <span className="font-mono">{formatEventDate(evt.timestamp)}</span>
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="pharos-kicker">Amount</p>
+          <p className="font-mono text-sm font-semibold tabular-nums text-foreground">{formatBlacklistAmountCell(evt)}</p>
+        </div>
+      </div>
+
+      <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Address</p>
+        <a
+          href={evt.explorerAddressUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pharos-focus-ring mt-1 inline-flex min-h-11 max-w-full items-center rounded-md font-mono text-xs text-foreground underline-offset-4 hover:underline"
+          aria-label={`View address ${evt.address} on ${evt.chainName}`}
+        >
+          {formatAddress(evt.address)}
+        </a>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+          {evt.amountSource !== "unavailable" || evt.amountStatus === "resolved" ? (
+            <span className="rounded border border-border px-1.5 py-1" title={AMOUNT_SOURCE_TOOLTIPS[evt.amountSource]}>
+              {AMOUNT_SOURCE_LABELS[evt.amountSource] ?? evt.amountSource.replace(/_/g, " ")}
+            </span>
+          ) : null}
+          {evt.amountStatus !== "resolved" ? (
+            <span className="rounded border border-border px-1.5 py-1" title={AMOUNT_STATUS_TOOLTIPS[evt.amountStatus]}>
+              {evt.amountStatus.replace(/_/g, " ")}
+            </span>
+          ) : null}
+        </div>
+        <BlacklistTxLink event={evt} />
+      </div>
+    </article>
   );
 }

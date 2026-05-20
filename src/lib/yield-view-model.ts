@@ -1,4 +1,4 @@
-import { resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
+import { getYieldBenchmarkDisplayLabel, resolveYieldScatterBenchmarkFrame } from "@/lib/yield-benchmark";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
@@ -6,17 +6,19 @@ import {
   type YieldSourceDepthLens,
 } from "@/lib/yield-source-risk";
 import { PEG_BADGE_STYLES, YIELD_TYPE_LABELS } from "@shared/lib/classification";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
-import type {
-  PegCurrency,
-  YieldBenchmarkKey,
-  YieldBenchmarkMeta,
-  YieldBenchmarkRegistry,
-  YieldRanking,
-  YieldType,
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
+import {
+  type PegCurrency,
+  type ReportCardGrade,
+  type YieldBenchmarkKey,
+  type YieldBenchmarkMeta,
+  type YieldBenchmarkRegistry,
+  type YieldRanking,
+  type YieldType,
 } from "@shared/types";
 
-export type YieldPegFilter = PegCurrency | "all" | "non-usd";
+export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
 export type YieldWarningsFilter = "all" | "hide" | "only";
 export type YieldSourceConfidenceFilter =
   | "all"
@@ -25,6 +27,8 @@ export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;
 export type YieldOpportunityFilter = "all" | "holder-yield" | "lending-opportunity";
 export type YieldDepthFilter = "all" | YieldSourceDepthLens | "hide-thin";
 export type YieldSourceChangedFilter = "all" | "only" | "none";
+export type YieldTrendingFilter = "all" | "rising";
+export type YieldWatchlistFilter = "all" | "only";
 
 export interface YieldViewModelUrlParams {
   peg?: string | null;
@@ -38,6 +42,8 @@ export interface YieldViewModelUrlParams {
   opportunity?: string | null;
   depth?: string | null;
   sourceChanged?: string | null;
+  trending?: string | null;
+  watchlist?: string | null;
 }
 
 export interface YieldFilterOption<T extends string = string> {
@@ -58,10 +64,13 @@ export interface YieldViewModelFilters {
   opportunity: YieldOpportunityFilter;
   depth: YieldDepthFilter;
   sourceChanged: YieldSourceChangedFilter;
+  trending: YieldTrendingFilter;
+  watchlist: YieldWatchlistFilter;
 }
 
 export interface YieldViewModelOptions {
   peg: YieldFilterOption<YieldPegFilter>[];
+  currencyTabs: YieldFilterOption<YieldPegFilter>[];
   yieldType: YieldFilterOption<YieldType | "all">[];
   warnings: YieldFilterOption<YieldWarningsFilter>[];
   minSafety: YieldFilterOption[];
@@ -71,6 +80,56 @@ export interface YieldViewModelOptions {
   opportunity: YieldFilterOption<YieldOpportunityFilter>[];
   depth: YieldFilterOption<YieldDepthFilter>[];
   sourceChanged: YieldFilterOption<YieldSourceChangedFilter>[];
+  watchlist: YieldFilterOption<YieldWatchlistFilter>[];
+}
+
+export type YieldPresetKey =
+  | "treasury-grade"
+  | "best-dollar"
+  | "non-usd"
+  | "new-rising"
+  | "watchlist-warnings";
+
+export interface YieldPresetState {
+  key: YieldPresetKey;
+  label: string;
+  description: string;
+  count: number;
+  active: boolean;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+export type YieldRiskBudgetKey =
+  | "conservative"
+  | "balanced"
+  | "opportunistic"
+  | "all";
+
+export interface YieldRiskBudgetStop {
+  key: YieldRiskBudgetKey;
+  label: string;
+  description: string;
+  count: number;
+  active: boolean;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+export interface YieldRiskBudgetState {
+  matching: YieldRiskBudgetKey | null;
+  stops: YieldRiskBudgetStop[];
+}
+
+export interface YieldEmptyStateSuggestion {
+  filterKey: keyof YieldViewModelFilters;
+  targetValue: string | null;
+  gain: number;
+  label: string;
+}
+
+export interface YieldCohortPercentile {
+  value: number | null;
+  cohortSize: number;
+  cohortKey: string;
 }
 
 export interface YieldComparableSet {
@@ -88,10 +147,32 @@ export type YieldViewModelRow = YieldRanking & {
   comparableSetLabel: string;
   opportunity: Exclude<YieldOpportunityFilter, "all">;
   sourceDepthLens: YieldSourceDepthLens;
+  cohortPercentile: YieldCohortPercentile | null;
 };
+
+interface YieldRowFacet {
+  row: YieldRanking;
+  peg: PegCurrency | null;
+  benchmarkKey: YieldBenchmarkKey;
+  opportunity: Exclude<YieldOpportunityFilter, "all">;
+  sourceDepthLens: YieldSourceDepthLens;
+  confidenceTier: Exclude<YieldSourceConfidenceFilter, "all"> | null;
+  hasWarning: boolean;
+  sourceChanged: boolean;
+  isRising: boolean;
+  inWatchlist: boolean;
+}
+
+export interface YieldViewModelLedeFacts {
+  aGradeAboveBenchmark: { count: number; bps: number } | null;
+  doubleDigitInLowGrade: number;
+  benchmarkLabel: string | null;
+}
 
 export interface YieldViewModelStats {
   avgApy: number;
+  medianApy: number;
+  topYield: { symbol: string; apy: number; safetyGrade: string | null } | null;
   bestPys: { name: string; symbol: string; score: number } | null;
   referenceBenchmark: YieldBenchmarkMeta | null;
   hasMixedBenchmarks: boolean;
@@ -100,6 +181,7 @@ export interface YieldViewModelStats {
   warningRowCount: number;
   nullSafetyCount: number;
   nullTvlCount: number;
+  ledeFacts: YieldViewModelLedeFacts;
 }
 
 export interface YieldViewModel {
@@ -113,15 +195,20 @@ export interface YieldViewModel {
     isEmpty: boolean;
     title: string;
     description: string;
+    suggestions: YieldEmptyStateSuggestion[];
   };
   comparableSets: YieldComparableSet[];
   comparisonLabel: string;
   stats: YieldViewModelStats;
+  presets: YieldPresetState[];
+  matchingPreset: YieldPresetKey | null;
+  riskBudget: YieldRiskBudgetState;
 }
 
 export interface BuildYieldViewModelOptions {
   benchmarks?: YieldBenchmarkRegistry | null;
   fallbackBenchmark?: YieldBenchmarkMeta | null;
+  watchlistIds?: ReadonlySet<string> | null;
 }
 
 const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
@@ -148,13 +235,21 @@ const YIELD_PEG_PRIORITY: readonly PegCurrency[] = [
 ];
 
 const HIDDEN_INDIVIDUAL_YIELD_PEG_FILTERS = new Set<PegCurrency>(["SGD", "MXN"]);
+// Currencies that get their own tab in the leaderboard currency tab strip.
+// Anything not in this set rolls into the "Other" tab. AUD + CAD share a tab.
+const CURRENCY_TAB_PEGS: readonly PegCurrency[] = ["USD", "EUR", "GBP", "JPY", "CHF", "MXN", "BRL"];
+const CURRENCY_TAB_AUD_CAD_PEGS: readonly PegCurrency[] = ["AUD", "CAD"];
+const CURRENCY_TAB_ENUMERATED_PEGS = new Set<PegCurrency>([
+  ...CURRENCY_TAB_PEGS,
+  ...CURRENCY_TAB_AUD_CAD_PEGS,
+]);
 const SOURCE_CONFIDENCE_ORDER: readonly Exclude<YieldSourceConfidenceFilter, "all">[] = [
   "deterministic",
   "curated",
   "discovered",
   "fallback",
 ];
-const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = ["USD", "EUR", "CHF"];
+const BENCHMARK_ORDER: readonly YieldBenchmarkKey[] = YIELD_BENCHMARK_KEY_VALUES;
 const MIN_SAFETY_OPTIONS = [50, 60, 70, 80] as const;
 const MIN_TVL_OPTIONS = [1_000_000, 10_000_000, 100_000_000] as const;
 
@@ -170,7 +265,101 @@ const DEFAULT_FILTERS: YieldViewModelFilters = {
   opportunity: "all",
   depth: "all",
   sourceChanged: "all",
+  trending: "all",
+  watchlist: "all",
 };
+
+interface YieldPresetSpec {
+  key: YieldPresetKey;
+  label: string;
+  description: string;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+// Treasury-grade approximates "rate-derived, NAV, lending vaults, lending opportunities"
+// via safety+depth+confidence instead of multi-value yieldType (which is single-select).
+// Best-dollar approximates ">5% APY" via PYS ranking + safety floor; the leaderboard
+// is already sorted by PYS which correlates with APY for safe rows.
+interface YieldRiskBudgetSpec {
+  key: YieldRiskBudgetKey;
+  label: string;
+  description: string;
+  overrides: Partial<YieldViewModelFilters>;
+}
+
+// Risk budget collapses safety/depth/source-confidence/warnings into a single
+// conservative→all dimension. Stops are stackable on top of other
+// filters via merge semantics in `handleApplyRiskBudget`.
+export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
+  {
+    key: "conservative",
+    label: "Conservative",
+    description: "A- safety, hide thin venues, hide warnings",
+    overrides: {
+      minSafety: 80,
+      depth: "hide-thin",
+      warnings: "hide",
+    },
+  },
+  {
+    key: "balanced",
+    label: "Balanced",
+    description: "B- safety, hide thin venues, hide warnings",
+    overrides: {
+      minSafety: 70,
+      depth: "hide-thin",
+      warnings: "hide",
+    },
+  },
+  {
+    key: "opportunistic",
+    label: "Opportunistic",
+    description: "C+ safety, hide warnings",
+    overrides: {
+      minSafety: 50,
+      warnings: "hide",
+    },
+  },
+  {
+    key: "all",
+    label: "All",
+    description: "No constraints — show all rows",
+    overrides: {},
+  },
+];
+
+export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
+  {
+    key: "treasury-grade",
+    label: "Treasury-grade picks",
+    description: "A- safety, non-thin depth, deterministic source",
+    overrides: { minSafety: 80, depth: "hide-thin", sourceConfidence: "deterministic" },
+  },
+  {
+    key: "best-dollar",
+    label: "Best dollar yields",
+    description: "USD-pegged, A- safety, ranked by PYS",
+    overrides: { peg: "USD", minSafety: 80 },
+  },
+  {
+    key: "non-usd",
+    label: "Non-USD opportunities",
+    description: "EUR, GBP, JPY, MXN, BRL and other non-USD pegs",
+    overrides: { peg: "non-usd" },
+  },
+  {
+    key: "new-rising",
+    label: "New & rising",
+    description: "Current APY above 30d average, 7+ daily observations",
+    overrides: { trending: "rising" },
+  },
+  {
+    key: "watchlist-warnings",
+    label: "Watchlist warnings",
+    description: "Rows surfacing one or more warning signals",
+    overrides: { warnings: "only" },
+  },
+];
 
 function formatCountLabel(label: string, count: number): string {
   return `${label} (${count})`;
@@ -237,6 +426,30 @@ function getSourceDepthLens(row: YieldRanking): YieldSourceDepthLens {
   });
 }
 
+function isRowRising(row: YieldRanking): boolean {
+  const observations = row.sourceRisk?.observationCount30d;
+  return row.currentApy > row.apy30d && observations != null && observations >= 7;
+}
+
+function buildYieldRowFacet(row: YieldRanking, watchlistIds: ReadonlySet<string> | null): YieldRowFacet {
+  return {
+    row,
+    peg: getYieldRankingPeg(row.id),
+    benchmarkKey: getBenchmarkKey(row),
+    opportunity: getOpportunity(row),
+    sourceDepthLens: getSourceDepthLens(row),
+    confidenceTier: row.provenance?.confidenceTier ?? null,
+    hasWarning: row.warningSignals.length > 0,
+    sourceChanged: row.provenance?.sourceSwitch === true,
+    isRising: isRowRising(row),
+    inWatchlist: watchlistIds != null && watchlistIds.has(row.id),
+  };
+}
+
+function buildYieldRowFacets(rows: readonly YieldRanking[], watchlistIds: ReadonlySet<string> | null): YieldRowFacet[] {
+  return rows.map((row) => buildYieldRowFacet(row, watchlistIds));
+}
+
 function matchesSearch(row: YieldRanking, query: string): boolean {
   const normalized = query.trim().toLowerCase();
   return normalized.length === 0
@@ -248,20 +461,27 @@ function matchesPeg(peg: PegCurrency | null, filter: YieldPegFilter): boolean {
   if (filter === "all") return true;
   if (!peg) return false;
   if (filter === "non-usd") return peg !== "USD";
+  if (filter === "aud-cad") return peg === "AUD" || peg === "CAD";
+  if (filter === "other") return !CURRENCY_TAB_ENUMERATED_PEGS.has(peg);
   return peg === filter;
 }
 
-function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<YieldPegFilter>[] {
+function countPegs(facets: readonly YieldRowFacet[]): Map<PegCurrency, number> {
   const pegCounts = new Map<PegCurrency, number>();
-  for (const row of rows) {
-    const peg = getYieldRankingPeg(row.id);
-    if (peg) pegCounts.set(peg, (pegCounts.get(peg) ?? 0) + 1);
+  for (const facet of facets) {
+    if (facet.peg) {
+      pegCounts.set(facet.peg, (pegCounts.get(facet.peg) ?? 0) + 1);
+    }
   }
+  return pegCounts;
+}
 
+function buildPegOptions(facets: readonly YieldRowFacet[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(facets);
   const pegs = Array.from(pegCounts.keys()).sort(compareYieldPegs);
   const nonUsdCount = pegs.reduce((sum, peg) => sum + (peg !== "USD" ? pegCounts.get(peg) ?? 0 : 0), 0);
   const options: YieldFilterOption<YieldPegFilter>[] = [
-    { value: "all", label: "All", count: rows.length },
+    { value: "all", label: "All", count: facets.length },
   ];
 
   if (nonUsdCount > 0) options.push({ value: "non-usd", label: "Non-USD", count: nonUsdCount });
@@ -275,7 +495,35 @@ function buildPegOptions(rows: readonly YieldRanking[]): YieldFilterOption<Yield
   return options;
 }
 
-function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
+// Tab-strip option set: a curated, conditional list of currency tabs for the
+// leaderboard. Tabs only appear when at least one row matches.
+function buildCurrencyTabOptions(facets: readonly YieldRowFacet[]): YieldFilterOption<YieldPegFilter>[] {
+  const pegCounts = countPegs(facets);
+  const options: YieldFilterOption<YieldPegFilter>[] = [
+    { value: "all", label: "All", count: facets.length },
+  ];
+
+  for (const peg of CURRENCY_TAB_PEGS) {
+    const count = pegCounts.get(peg) ?? 0;
+    if (count > 0) options.push({ value: peg, label: getYieldPegLabel(peg), count });
+  }
+
+  const audCadCount = CURRENCY_TAB_AUD_CAD_PEGS.reduce(
+    (sum, peg) => sum + (pegCounts.get(peg) ?? 0),
+    0,
+  );
+  if (audCadCount > 0) options.push({ value: "aud-cad", label: "AUD/CAD", count: audCadCount });
+
+  let otherCount = 0;
+  for (const [peg, count] of pegCounts) {
+    if (!CURRENCY_TAB_ENUMERATED_PEGS.has(peg)) otherCount += count;
+  }
+  if (otherCount > 0) options.push({ value: "other", label: "Other", count: otherCount });
+
+  return options;
+}
+
+function buildOptions(facets: readonly YieldRowFacet[]): YieldViewModelOptions {
   const yieldTypeCounts = new Map<YieldType, number>();
   const confidenceCounts = new Map<Exclude<YieldSourceConfidenceFilter, "all">, number>();
   const benchmarkCounts = new Map<YieldBenchmarkKey, number>();
@@ -285,61 +533,65 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
   let lendingOpportunityCount = 0;
   let sourceChangedCount = 0;
   let sourceUnchangedCount = 0;
+  let watchlistCount = 0;
   const depthCounts = new Map<YieldSourceDepthLens, number>();
 
-  for (const row of rows) {
+  for (const facet of facets) {
+    const row = facet.row;
     yieldTypeCounts.set(row.yieldType, (yieldTypeCounts.get(row.yieldType) ?? 0) + 1);
 
-    const confidence = row.provenance?.confidenceTier;
-    if (confidence) confidenceCounts.set(confidence, (confidenceCounts.get(confidence) ?? 0) + 1);
+    if (facet.confidenceTier) {
+      confidenceCounts.set(facet.confidenceTier, (confidenceCounts.get(facet.confidenceTier) ?? 0) + 1);
+    }
 
-    const benchmark = getBenchmarkKey(row);
-    benchmarkCounts.set(benchmark, (benchmarkCounts.get(benchmark) ?? 0) + 1);
+    benchmarkCounts.set(facet.benchmarkKey, (benchmarkCounts.get(facet.benchmarkKey) ?? 0) + 1);
 
-    if (row.warningSignals.length > 0) warningCount += 1;
+    if (facet.hasWarning) warningCount += 1;
     else noWarningCount += 1;
 
-    if (getOpportunity(row) === "lending-opportunity") lendingOpportunityCount += 1;
+    if (facet.opportunity === "lending-opportunity") lendingOpportunityCount += 1;
     else holderYieldCount += 1;
 
-    if (row.provenance?.sourceSwitch) sourceChangedCount += 1;
+    if (facet.sourceChanged) sourceChangedCount += 1;
     else sourceUnchangedCount += 1;
 
-    const sourceDepthLens = getSourceDepthLens(row);
-    depthCounts.set(sourceDepthLens, (depthCounts.get(sourceDepthLens) ?? 0) + 1);
+    if (facet.inWatchlist) watchlistCount += 1;
+
+    depthCounts.set(facet.sourceDepthLens, (depthCounts.get(facet.sourceDepthLens) ?? 0) + 1);
   }
 
   return {
-    peg: buildPegOptions(rows),
+    peg: buildPegOptions(facets),
+    currencyTabs: buildCurrencyTabOptions(facets),
     yieldType: [
-      { value: "all", label: "All types", count: rows.length },
+      { value: "all", label: "All types", count: facets.length },
       ...Array.from(yieldTypeCounts.entries())
         .map(([value, count]) => ({ value, label: YIELD_TYPE_LABELS[value] ?? value, count }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
     ],
     warnings: [
-      { value: "all", label: "All rows", count: rows.length },
+      { value: "all", label: "All rows", count: facets.length },
       { value: "hide", label: "No warnings", count: noWarningCount },
       { value: "only", label: "Warnings", count: warningCount },
     ],
     minSafety: [
-      { value: "all", label: "Any safety", count: rows.length },
+      { value: "all", label: "Any safety", count: facets.length },
       ...MIN_SAFETY_OPTIONS.map((minSafety) => ({
         value: String(minSafety),
         label: `${minSafety}+ safety`,
-        count: rows.filter((row) => row.safetyScore !== null && row.safetyScore >= minSafety).length,
+        count: facets.filter((facet) => facet.row.safetyScore !== null && facet.row.safetyScore >= minSafety).length,
       })),
     ],
     minTvl: [
-      { value: "all", label: "Any TVL", count: rows.length },
+      { value: "all", label: "Any TVL", count: facets.length },
       ...MIN_TVL_OPTIONS.map((minTvl) => ({
         value: String(minTvl),
         label: formatTvlOption(minTvl),
-        count: rows.filter((row) => row.sourceTvlUsd !== null && row.sourceTvlUsd >= minTvl).length,
+        count: facets.filter((facet) => facet.row.sourceTvlUsd !== null && facet.row.sourceTvlUsd >= minTvl).length,
       })),
     ],
     sourceConfidence: [
-      { value: "all", label: "All confidence", count: rows.length },
+      { value: "all", label: "All confidence", count: facets.length },
       ...SOURCE_CONFIDENCE_ORDER
         .filter((value) => confidenceCounts.has(value))
         .map((value) => ({
@@ -349,19 +601,23 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
         })),
     ],
     benchmark: [
-      { value: "all", label: "All benchmarks", count: rows.length },
+      { value: "all", label: "All benchmarks", count: facets.length },
       ...BENCHMARK_ORDER
         .filter((value) => benchmarkCounts.has(value))
         .map((value) => ({ value, label: value, count: benchmarkCounts.get(value) ?? 0 })),
     ],
     opportunity: [
-      { value: "all", label: "All opportunities", count: rows.length },
+      { value: "all", label: "All opportunities", count: facets.length },
       { value: "holder-yield", label: "Holder yield", count: holderYieldCount },
       { value: "lending-opportunity", label: "Lending opp.", count: lendingOpportunityCount },
     ],
     depth: [
-      { value: "all", label: "All depth", count: rows.length },
-      { value: "hide-thin", label: "Hide thin venues", count: rows.filter((row) => getSourceDepthLens(row) !== "thin").length },
+      { value: "all", label: "All depth", count: facets.length },
+      {
+        value: "hide-thin",
+        label: "Hide thin venues",
+        count: facets.filter((facet) => facet.sourceDepthLens !== "thin").length,
+      },
       ...(["deep", "moderate", "thin", "unknown"] as const).map((value) => ({
         value,
         label: YIELD_SOURCE_DEPTH_DEFINITIONS[value].label,
@@ -369,11 +625,23 @@ function buildOptions(rows: readonly YieldRanking[]): YieldViewModelOptions {
       })),
     ],
     sourceChanged: [
-      { value: "all", label: "All changes", count: rows.length },
+      { value: "all", label: "All changes", count: facets.length },
       { value: "only", label: "Source changed", count: sourceChangedCount },
       { value: "none", label: "No source change", count: sourceUnchangedCount },
     ],
+    watchlist: [
+      { value: "all", label: "All rows", count: facets.length },
+      { value: "only", label: "Watchlist only", count: watchlistCount },
+    ],
   };
+}
+
+function countRowsMatchingFilters(facets: readonly YieldRowFacet[], filters: YieldViewModelFilters): number {
+  let count = 0;
+  for (const facet of facets) {
+    if (rowMatchesFilters(facet, filters)) count += 1;
+  }
+  return count;
 }
 
 function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewModelOptions): {
@@ -381,7 +649,10 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   normalizedParams: Record<keyof YieldViewModelUrlParams, string | null>;
   invalidParamKeys: Array<keyof YieldViewModelUrlParams>;
 } {
-  const validPegValues = new Set(options.peg.map((option) => option.value));
+  const validPegValues = new Set<YieldPegFilter>([
+    ...options.peg.map((option) => option.value),
+    ...options.currencyTabs.map((option) => option.value),
+  ]);
   const validYieldTypes = new Set(options.yieldType.map((option) => option.value));
   const validWarnings = new Set(options.warnings.map((option) => option.value));
   const validConfidence = new Set(options.sourceConfidence.map((option) => option.value));
@@ -389,6 +660,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   const validOpportunities = new Set(options.opportunity.map((option) => option.value));
   const validDepth = new Set(options.depth.map((option) => option.value));
   const validSourceChanged = new Set(options.sourceChanged.map((option) => option.value));
+  const validTrending = new Set<YieldTrendingFilter>(["all", "rising"]);
+  const validWatchlist = new Set<YieldWatchlistFilter>(["all", "only"]);
 
   const filters: YieldViewModelFilters = {
     peg: normalizeOption(params.peg, validPegValues, DEFAULT_FILTERS.peg),
@@ -402,6 +675,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     opportunity: normalizeOption(params.opportunity, validOpportunities, DEFAULT_FILTERS.opportunity),
     depth: normalizeOption(params.depth, validDepth, DEFAULT_FILTERS.depth),
     sourceChanged: normalizeOption(params.sourceChanged, validSourceChanged, DEFAULT_FILTERS.sourceChanged),
+    trending: normalizeOption(params.trending, validTrending, DEFAULT_FILTERS.trending),
+    watchlist: normalizeOption(params.watchlist, validWatchlist, DEFAULT_FILTERS.watchlist),
   };
 
   const normalizedParams: Record<keyof YieldViewModelUrlParams, string | null> = {
@@ -416,6 +691,8 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
     opportunity: filters.opportunity === DEFAULT_FILTERS.opportunity ? null : filters.opportunity,
     depth: filters.depth === DEFAULT_FILTERS.depth ? null : filters.depth,
     sourceChanged: filters.sourceChanged === DEFAULT_FILTERS.sourceChanged ? null : filters.sourceChanged,
+    trending: filters.trending === DEFAULT_FILTERS.trending ? null : filters.trending,
+    watchlist: filters.watchlist === DEFAULT_FILTERS.watchlist ? null : filters.watchlist,
   };
 
   const invalidParamKeys = (Object.keys(normalizedParams) as Array<keyof YieldViewModelUrlParams>)
@@ -428,30 +705,37 @@ function normalizeFilters(params: YieldViewModelUrlParams, options: YieldViewMod
   return { filters, normalizedParams, invalidParamKeys };
 }
 
-function rowMatchesFilters(row: YieldRanking, filters: YieldViewModelFilters): boolean {
-  const peg = getYieldRankingPeg(row.id);
+function rowMatchesFilters(facet: YieldRowFacet, filters: YieldViewModelFilters): boolean {
+  const row = facet.row;
 
-  if (!matchesPeg(peg, filters.peg)) return false;
+  if (!matchesPeg(facet.peg, filters.peg)) return false;
   if (filters.yieldType !== "all" && row.yieldType !== filters.yieldType) return false;
   if (!matchesSearch(row, filters.q)) return false;
-  if (filters.warnings === "hide" && row.warningSignals.length > 0) return false;
-  if (filters.warnings === "only" && row.warningSignals.length === 0) return false;
+  if (filters.warnings === "hide" && facet.hasWarning) return false;
+  if (filters.warnings === "only" && !facet.hasWarning) return false;
   if (filters.minSafety !== null && (row.safetyScore === null || row.safetyScore < filters.minSafety)) return false;
   if (filters.minTvl !== null && (row.sourceTvlUsd === null || row.sourceTvlUsd < filters.minTvl)) return false;
-  if (filters.sourceConfidence !== "all" && row.provenance?.confidenceTier !== filters.sourceConfidence) return false;
-  if (filters.benchmark !== "all" && getBenchmarkKey(row) !== filters.benchmark) return false;
-  if (filters.opportunity !== "all" && getOpportunity(row) !== filters.opportunity) return false;
-  if (filters.depth === "hide-thin" && getSourceDepthLens(row) === "thin") return false;
-  if (filters.depth !== "all" && filters.depth !== "hide-thin" && getSourceDepthLens(row) !== filters.depth) return false;
-  if (filters.sourceChanged === "only" && !row.provenance?.sourceSwitch) return false;
-  if (filters.sourceChanged === "none" && row.provenance?.sourceSwitch) return false;
+  if (filters.sourceConfidence !== "all" && facet.confidenceTier !== filters.sourceConfidence) return false;
+  if (filters.benchmark !== "all" && facet.benchmarkKey !== filters.benchmark) return false;
+  if (filters.opportunity !== "all" && facet.opportunity !== filters.opportunity) return false;
+  if (filters.depth === "hide-thin" && facet.sourceDepthLens === "thin") return false;
+  if (filters.depth !== "all" && filters.depth !== "hide-thin" && facet.sourceDepthLens !== filters.depth) return false;
+  if (filters.sourceChanged === "only" && !facet.sourceChanged) return false;
+  if (filters.sourceChanged === "none" && facet.sourceChanged) return false;
+  if (filters.trending === "rising" && !facet.isRising) return false;
+  if (filters.watchlist === "only" && !facet.inWatchlist) return false;
 
   return true;
 }
 
 function getComparisonLabel(filters: YieldViewModelFilters): string {
   if (filters.yieldType !== "all") return YIELD_TYPE_LABELS[filters.yieldType] ?? filters.yieldType;
-  if (filters.peg !== "all") return filters.peg === "non-usd" ? "Non-USD set" : `${getYieldPegLabel(filters.peg)} peg`;
+  if (filters.peg !== "all") {
+    if (filters.peg === "non-usd") return "Non-USD set";
+    if (filters.peg === "aud-cad") return "AUD/CAD set";
+    if (filters.peg === "other") return "Other currencies set";
+    return `${getYieldPegLabel(filters.peg)} peg`;
+  }
   if (filters.benchmark !== "all") return `${filters.benchmark} benchmark`;
   if (filters.warnings === "hide") return "No-warning set";
   if (filters.warnings === "only") return "Warning set";
@@ -464,22 +748,108 @@ function getComparisonLabel(filters: YieldViewModelFilters): string {
   return "Current view";
 }
 
-function rankRows(rows: readonly YieldRanking[], filters: YieldViewModelFilters): YieldViewModelRow[] {
+function rankRows(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  cohortIndex: ReadonlyMap<string, CohortBucket>,
+): YieldViewModelRow[] {
   const comparisonLabel = getComparisonLabel(filters);
-  return rows.map((row, index) => {
+  return facets.map((facet, index) => {
+    const row = facet.row;
     const rank = index + 1;
     return {
       ...row,
-      peg: getYieldRankingPeg(row.id),
+      peg: facet.peg,
       viewRank: rank,
       rankWithinSet: rank,
       rankLabel: `#${rank} in ${comparisonLabel}`,
       comparableSetLabel: comparisonLabel,
-      opportunity: getOpportunity(row),
-      sourceDepthLens: getSourceDepthLens(row),
+      opportunity: facet.opportunity,
+      sourceDepthLens: facet.sourceDepthLens,
+      cohortPercentile: computeRowCohortPercentile(row, cohortIndex),
     };
   });
 }
+
+// Cohort = yieldType + safety band. Bands collapse adjacent letter grades
+// to keep cohort sizes meaningful; A- is grouped with A+/A. F and NR are
+// pooled because NR almost always behaves as a worst-case bucket.
+const COHORT_GRADE_BAND: Readonly<Record<ReportCardGrade, string>> = {
+  "A+": "A",
+  "A": "A",
+  "A-": "A",
+  "B+": "B",
+  "B": "B",
+  "B-": "B",
+  "C+": "C",
+  "C": "C",
+  "C-": "C",
+  "D": "D",
+  "F": "F",
+  "NR": "F",
+};
+const COHORT_MIN_SIZE = 8;
+
+interface CohortBucket {
+  size: number;
+  scoresDescending: number[];
+}
+
+function cohortKey(row: YieldRanking): string | null {
+  if (row.safetyGrade === null) return null;
+  if (row.pharosYieldScore === null) return null;
+  const band = COHORT_GRADE_BAND[row.safetyGrade];
+  if (band === undefined) return null;
+  return `${row.yieldType}::${band}`;
+}
+
+function buildCohortIndex(rows: readonly YieldRanking[]): Map<string, CohortBucket> {
+  const buckets = new Map<string, CohortBucket>();
+  for (const row of rows) {
+    const key = cohortKey(row);
+    if (key === null) continue;
+    const existing = buckets.get(key);
+    if (existing) {
+      existing.size += 1;
+      existing.scoresDescending.push(row.pharosYieldScore!);
+    } else {
+      buckets.set(key, { size: 1, scoresDescending: [row.pharosYieldScore!] });
+    }
+  }
+  for (const bucket of buckets.values()) {
+    bucket.scoresDescending.sort((a, b) => b - a);
+  }
+  return buckets;
+}
+
+function computeRowCohortPercentile(
+  row: YieldRanking,
+  cohortIndex: ReadonlyMap<string, CohortBucket>,
+): YieldCohortPercentile | null {
+  const key = cohortKey(row);
+  if (key === null) return null;
+  const bucket = cohortIndex.get(key);
+  if (!bucket) return null;
+  if (bucket.size < COHORT_MIN_SIZE) {
+    return { value: null, cohortSize: bucket.size, cohortKey: key };
+  }
+  const score = row.pharosYieldScore!;
+  // Rank: how many cohort members have a strictly higher PYS, plus 1 for self.
+  // Percentile reported as "top X%" by mapping rank 1 → 100, rank N → ~0.
+  const sorted = bucket.scoresDescending;
+  let higherCount = 0;
+  for (const candidate of sorted) {
+    if (candidate > score) higherCount += 1;
+    else break;
+  }
+  const percentile = Math.round(((bucket.size - higherCount) / bucket.size) * 100);
+  return { value: percentile, cohortSize: bucket.size, cohortKey: key };
+}
+
+const LEDE_HIGH_GRADE = new Set(["A+", "A"]);
+const LEDE_LOW_GRADE = new Set(["C+", "C", "C-", "D", "F", "NR"]);
+const LEDE_HIGH_GRADE_SPREAD_THRESHOLD = 1.5;
+const LEDE_DOUBLE_DIGIT_THRESHOLD = 10;
 
 function buildStats(
   rows: readonly YieldViewModelRow[],
@@ -495,9 +865,14 @@ function buildStats(
   let weightedApySum = 0;
   let unweightedApySum = 0;
   let bestPys: YieldViewModelStats["bestPys"] = null;
+  let topYield: YieldViewModelStats["topYield"] = null;
   let warningRowCount = 0;
   let nullSafetyCount = 0;
   let nullTvlCount = 0;
+  let aGradeAboveBenchmarkCount = 0;
+  let aGradeMinSpread = Infinity;
+  let doubleDigitInLowGrade = 0;
+  const apys: number[] = [];
 
   for (const row of rows) {
     const tvl = row.sourceTvlUsd ?? 0;
@@ -506,25 +881,66 @@ function buildStats(
       weightedApySum += row.apy30d * tvl;
     }
     unweightedApySum += row.apy30d;
+    apys.push(row.apy30d);
     if (row.pharosYieldScore !== null && (bestPys === null || row.pharosYieldScore > bestPys.score)) {
       bestPys = { name: row.name, symbol: row.symbol, score: row.pharosYieldScore };
+    }
+    if (topYield === null || row.apy30d > topYield.apy) {
+      topYield = { symbol: row.symbol, apy: row.apy30d, safetyGrade: row.safetyGrade };
     }
     if (row.warningSignals.length > 0) warningRowCount += 1;
     if (row.safetyScore === null) nullSafetyCount += 1;
     if (row.sourceTvlUsd === null) nullTvlCount += 1;
+
+    const grade = row.safetyGrade;
+    if (grade !== null && LEDE_HIGH_GRADE.has(grade)) {
+      const benchmarkRate = row.benchmarkRate ?? benchmarkFrame.referenceBenchmark?.rate ?? null;
+      if (benchmarkRate !== null) {
+        const spread = row.apy30d - benchmarkRate;
+        if (spread >= LEDE_HIGH_GRADE_SPREAD_THRESHOLD) {
+          aGradeAboveBenchmarkCount += 1;
+          if (spread < aGradeMinSpread) aGradeMinSpread = spread;
+        }
+      }
+    }
+    if (row.apy30d >= LEDE_DOUBLE_DIGIT_THRESHOLD && grade !== null && LEDE_LOW_GRADE.has(grade)) {
+      doubleDigitInLowGrade += 1;
+    }
   }
+
+  const median = computeMedian(apys);
+  const ledeBenchmarkLabel = benchmarkFrame.referenceBenchmark
+    ? getYieldBenchmarkDisplayLabel(benchmarkFrame.referenceBenchmark)
+    : null;
 
   return {
     avgApy: rows.length === 0 ? 0 : tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rows.length,
+    medianApy: median,
+    topYield,
     bestPys,
     warningRowCount,
     nullSafetyCount,
     nullTvlCount,
+    ledeFacts: {
+      aGradeAboveBenchmark:
+        aGradeAboveBenchmarkCount > 0
+          ? { count: aGradeAboveBenchmarkCount, bps: Math.round(aGradeMinSpread * 100) }
+          : null,
+      doubleDigitInLowGrade,
+      benchmarkLabel: ledeBenchmarkLabel,
+    },
     ...benchmarkFrame,
   };
 }
 
-function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparableSet[] {
+function computeMedian(values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function buildComparableSets(facets: readonly YieldRowFacet[]): YieldComparableSet[] {
   const sets = new Map<string, YieldComparableSet>();
   const add = (basis: YieldComparableSet["basis"], key: string, label: string) => {
     const id = `${basis}:${key}`;
@@ -536,15 +952,15 @@ function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparabl
     }
   };
 
-  for (const row of rows) {
-    const peg = getYieldRankingPeg(row.id);
+  for (const facet of facets) {
+    const row = facet.row;
     add("yield-type", row.yieldType, YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType);
-    if (peg) add("peg", peg, `${getYieldPegLabel(peg)} peg`);
-    add("benchmark", getBenchmarkKey(row), `${getBenchmarkKey(row)} benchmark`);
-    add("warning-state", row.warningSignals.length > 0 ? "warning" : "no-warning", row.warningSignals.length > 0 ? "Warning rows" : "No-warning rows");
-    if (row.provenance?.confidenceTier) add("source-confidence", row.provenance.confidenceTier, `${row.provenance.confidenceTier} confidence`);
+    if (facet.peg) add("peg", facet.peg, `${getYieldPegLabel(facet.peg)} peg`);
+    add("benchmark", facet.benchmarkKey, `${facet.benchmarkKey} benchmark`);
+    add("warning-state", facet.hasWarning ? "warning" : "no-warning", facet.hasWarning ? "Warning rows" : "No-warning rows");
+    if (facet.confidenceTier) add("source-confidence", facet.confidenceTier, `${facet.confidenceTier} confidence`);
     add("tvl", row.sourceTvlUsd === null ? "unknown" : "available", row.sourceTvlUsd === null ? "TVL unknown" : "TVL available");
-    add("source-depth", row.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens].label} source depth`);
+    add("source-depth", facet.sourceDepthLens, `${YIELD_SOURCE_DEPTH_DEFINITIONS[facet.sourceDepthLens].label} source depth`);
   }
 
   return Array.from(sets.values()).sort((a, b) => {
@@ -554,14 +970,24 @@ function buildComparableSets(rows: readonly YieldViewModelRow[]): YieldComparabl
   });
 }
 
-function buildEmptyState(totalRows: number, visibleRows: readonly YieldViewModelRow[]): YieldViewModel["emptyState"] {
+function buildEmptyState(
+  totalRows: number,
+  visibleRows: readonly YieldViewModelRow[],
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  options: YieldViewModelOptions,
+): YieldViewModel["emptyState"] {
   if (visibleRows.length > 0) {
     return {
       isEmpty: false,
       title: "",
       description: "",
+      suggestions: [],
     };
   }
+
+  const suggestions =
+    totalRows > 0 ? buildEmptyStateSuggestions(facets, filters, options) : [];
 
   return {
     isEmpty: true,
@@ -569,7 +995,227 @@ function buildEmptyState(totalRows: number, visibleRows: readonly YieldViewModel
     description: totalRows === 0
       ? "The latest payload did not include any yield rankings."
       : "Reset one or more filters to broaden the comparable set.",
+    suggestions,
   };
+}
+
+const EMPTY_STATE_SUGGESTION_LIMIT = 3;
+
+function describeOption<T extends string>(
+  options: ReadonlyArray<YieldFilterOption<T>>,
+  value: T | string,
+): string {
+  return options.find((option) => option.value === value)?.label ?? String(value);
+}
+
+interface YieldFilterAxisDescriptor {
+  key: keyof YieldViewModelFilters;
+  isActive: (filters: YieldViewModelFilters) => boolean;
+  // Empty-state chip label ("Drop type filter (Lending Opp.)") + URL reset target.
+  describeRelax: (filters: YieldViewModelFilters, options: YieldViewModelOptions) => string;
+  relaxTargetValue: string | null;
+  // Active-filter summary chip label. Undefined = axis has its own UI elsewhere
+  // (currency tabs / search box / trending toggle) and shouldn't appear as a chip.
+  describeActive?: (filters: YieldViewModelFilters, options: YieldViewModelOptions) => string;
+}
+
+// Single source of truth for every filter axis. Active-summary order = array order;
+// `listFilterRelaxations` walks the same array. Adding a 13th axis = one entry, both
+// surfaces update — guards against drift (watchlist was previously in summary but not
+// in relax suggestions).
+export const YIELD_FILTER_AXIS_REGISTRY: readonly YieldFilterAxisDescriptor[] = [
+  {
+    key: "yieldType",
+    isActive: (f) => f.yieldType !== DEFAULT_FILTERS.yieldType,
+    describeRelax: (f, o) => `Drop type filter (${describeOption(o.yieldType, f.yieldType)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Type: ${describeOption(o.yieldType, f.yieldType)}`,
+  },
+  {
+    key: "warnings",
+    isActive: (f) => f.warnings !== DEFAULT_FILTERS.warnings,
+    describeRelax: (f, o) => `Drop warnings filter (${describeOption(o.warnings, f.warnings)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.warnings, f.warnings),
+  },
+  {
+    key: "watchlist",
+    isActive: (f) => f.watchlist !== DEFAULT_FILTERS.watchlist,
+    describeRelax: () => `Drop watchlist-only filter`,
+    relaxTargetValue: null,
+    describeActive: () => "Watching only",
+  },
+  {
+    key: "minSafety",
+    isActive: (f) => f.minSafety !== DEFAULT_FILTERS.minSafety,
+    describeRelax: (f) => `Drop ${f.minSafety}+ safety floor`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.minSafety, String(f.minSafety)),
+  },
+  {
+    key: "minTvl",
+    isActive: (f) => f.minTvl !== DEFAULT_FILTERS.minTvl,
+    describeRelax: (f) => `Drop ${formatTvlOption(f.minTvl!)} TVL floor`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.minTvl, String(f.minTvl)),
+  },
+  {
+    key: "depth",
+    isActive: (f) => f.depth !== DEFAULT_FILTERS.depth,
+    describeRelax: (f, o) => `Drop depth filter (${describeOption(o.depth, f.depth)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Depth: ${describeOption(o.depth, f.depth)}`,
+  },
+  {
+    key: "sourceChanged",
+    isActive: (f) => f.sourceChanged !== DEFAULT_FILTERS.sourceChanged,
+    describeRelax: (f, o) => `Drop source-changed filter (${describeOption(o.sourceChanged, f.sourceChanged)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.sourceChanged, f.sourceChanged),
+  },
+  {
+    key: "sourceConfidence",
+    isActive: (f) => f.sourceConfidence !== DEFAULT_FILTERS.sourceConfidence,
+    describeRelax: (f, o) => `Drop confidence filter (${describeOption(o.sourceConfidence, f.sourceConfidence)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Confidence: ${describeOption(o.sourceConfidence, f.sourceConfidence)}`,
+  },
+  {
+    key: "benchmark",
+    isActive: (f) => f.benchmark !== DEFAULT_FILTERS.benchmark,
+    describeRelax: (f, o) => `Drop benchmark filter (${describeOption(o.benchmark, f.benchmark)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => `Benchmark: ${describeOption(o.benchmark, f.benchmark)}`,
+  },
+  {
+    key: "opportunity",
+    isActive: (f) => f.opportunity !== DEFAULT_FILTERS.opportunity,
+    describeRelax: (f, o) => `Drop opportunity filter (${describeOption(o.opportunity, f.opportunity)})`,
+    relaxTargetValue: null,
+    describeActive: (f, o) => describeOption(o.opportunity, f.opportunity),
+  },
+  // Axes that DON'T render as active-summary chips — they have dedicated UI
+  // (currency tabs, search box, trending toggle), but the empty state still
+  // proposes relaxing them so users can recover rows in one click.
+  {
+    key: "peg",
+    isActive: (f) => f.peg !== DEFAULT_FILTERS.peg,
+    describeRelax: (f, o) => `Drop peg filter (${describeOption(o.peg, f.peg)})`,
+    relaxTargetValue: null,
+  },
+  {
+    key: "q",
+    isActive: (f) => f.q !== DEFAULT_FILTERS.q,
+    describeRelax: (f) => `Clear search "${f.q}"`,
+    relaxTargetValue: null,
+  },
+  {
+    key: "trending",
+    isActive: (f) => f.trending !== DEFAULT_FILTERS.trending,
+    describeRelax: () => `Drop trending filter`,
+    relaxTargetValue: null,
+  },
+];
+
+function buildEmptyStateSuggestions(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+  options: YieldViewModelOptions,
+): YieldEmptyStateSuggestion[] {
+  const scored: YieldEmptyStateSuggestion[] = [];
+  for (const axis of YIELD_FILTER_AXIS_REGISTRY) {
+    if (!axis.isActive(filters)) continue;
+    const relaxed: YieldViewModelFilters = {
+      ...filters,
+      [axis.key]: DEFAULT_FILTERS[axis.key],
+    } as YieldViewModelFilters;
+    const gain = countRowsMatchingFilters(facets, relaxed);
+    if (gain > 0) {
+      scored.push({
+        filterKey: axis.key,
+        targetValue: axis.relaxTargetValue,
+        gain,
+        label: axis.describeRelax(filters, options),
+      });
+    }
+  }
+  scored.sort((a, b) => b.gain - a.gain);
+  return scored.slice(0, EMPTY_STATE_SUGGESTION_LIMIT);
+}
+
+function presetFilters(spec: YieldPresetSpec): YieldViewModelFilters {
+  return { ...DEFAULT_FILTERS, ...spec.overrides };
+}
+
+function filtersMatchPreset(filters: YieldViewModelFilters, spec: YieldPresetSpec): boolean {
+  const target = presetFilters(spec);
+  return (Object.keys(DEFAULT_FILTERS) as Array<keyof YieldViewModelFilters>).every(
+    (key) => filters[key] === target[key],
+  );
+}
+
+function buildPresets(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+): { presets: YieldPresetState[]; matchingPreset: YieldPresetKey | null } {
+  let matchingPreset: YieldPresetKey | null = null;
+  const presets = YIELD_PRESET_SPECS.map((spec) => {
+    const active = filtersMatchPreset(filters, spec);
+    if (active) matchingPreset = spec.key;
+    return {
+      key: spec.key,
+      label: spec.label,
+      description: spec.description,
+      count: countRowsMatchingFilters(facets, presetFilters(spec)),
+      active,
+      overrides: spec.overrides,
+    } satisfies YieldPresetState;
+  });
+  return { presets, matchingPreset };
+}
+
+const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
+  "minSafety",
+  "depth",
+  "sourceConfidence",
+  "warnings",
+];
+
+function riskBudgetTargetFilters(spec: YieldRiskBudgetSpec): YieldViewModelFilters {
+  // A risk-budget stop only constrains the four risk-axis keys; other filters
+  // are normalized to defaults for the purpose of computing the stop's count.
+  return { ...DEFAULT_FILTERS, ...spec.overrides };
+}
+
+function filtersMatchRiskBudget(
+  filters: YieldViewModelFilters,
+  spec: YieldRiskBudgetSpec,
+): boolean {
+  for (const key of RISK_BUDGET_FILTER_KEYS) {
+    const target = (spec.overrides as Record<string, unknown>)[key] ?? DEFAULT_FILTERS[key];
+    if (filters[key] !== target) return false;
+  }
+  return true;
+}
+
+function buildRiskBudget(
+  facets: readonly YieldRowFacet[],
+  filters: YieldViewModelFilters,
+): YieldRiskBudgetState {
+  let matching: YieldRiskBudgetKey | null = null;
+  const stops = YIELD_RISK_BUDGET_SPECS.map((spec) => {
+    const active = filtersMatchRiskBudget(filters, spec);
+    if (active) matching = spec.key;
+    return {
+      key: spec.key,
+      label: spec.label,
+      description: spec.description,
+      count: countRowsMatchingFilters(facets, riskBudgetTargetFilters(spec)),
+      active,
+      overrides: spec.overrides,
+    } satisfies YieldRiskBudgetStop;
+  });
+  return { matching, stops };
 }
 
 export function buildYieldViewModel(
@@ -577,25 +1223,48 @@ export function buildYieldViewModel(
   params: YieldViewModelUrlParams,
   buildOptionsParams: BuildYieldViewModelOptions = {},
 ): YieldViewModel {
-  const filterOptions = buildOptions(rows);
+  const rowFacets = buildYieldRowFacets(rows, buildOptionsParams.watchlistIds ?? null);
+  const filterOptions = buildOptions(rowFacets);
   const { filters, normalizedParams, invalidParamKeys } = normalizeFilters(params, filterOptions);
-  const visibleRows = rankRows(rows.filter((row) => rowMatchesFilters(row, filters)), filters);
+  const visibleFacets = rowFacets.filter((facet) => rowMatchesFilters(facet, filters));
+  const cohortIndex = buildCohortIndex(rows);
+  const visibleRows = rankRows(visibleFacets, filters, cohortIndex);
   const comparisonLabel = getComparisonLabel(filters);
+  const { presets, matchingPreset } = buildPresets(rowFacets, filters);
+  const riskBudget = buildRiskBudget(rowFacets, filters);
 
   return {
     filters,
     options: filterOptions,
     normalizedParams,
     invalidParamKeys,
-    totalRows: rows.length,
+    totalRows: rowFacets.length,
     visibleRows,
-    emptyState: buildEmptyState(rows.length, visibleRows),
-    comparableSets: buildComparableSets(visibleRows),
+    emptyState: buildEmptyState(rowFacets.length, visibleRows, rowFacets, filters, filterOptions),
+    comparableSets: buildComparableSets(visibleFacets),
     comparisonLabel,
     stats: buildStats(visibleRows, buildOptionsParams),
+    presets,
+    matchingPreset,
+    riskBudget,
   };
 }
 
 export function labelYieldFilterOption(option: YieldFilterOption): string {
   return formatCountLabel(option.label, option.count);
+}
+
+export interface YieldActiveFilterSummary {
+  key: string;
+  label: string;
+}
+
+export function getActiveFilterSummaries(viewModel: YieldViewModel): YieldActiveFilterSummary[] {
+  const summaries: YieldActiveFilterSummary[] = [];
+  for (const axis of YIELD_FILTER_AXIS_REGISTRY) {
+    if (!axis.describeActive) continue;
+    if (!axis.isActive(viewModel.filters)) continue;
+    summaries.push({ key: axis.key, label: axis.describeActive(viewModel.filters, viewModel.options) });
+  }
+  return summaries;
 }

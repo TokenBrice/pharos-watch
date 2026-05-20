@@ -21,12 +21,7 @@ import {
   CRITICAL_TEST_FILES,
 } from "../lib/critical-test-files.mjs";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
-import {
-  buildPostPrebuildExecutionUnits,
-  getPostPrebuildCommandEnv,
-  runPostPrebuildValidation,
-} from "../run-validate-postbuild.mjs";
-import { buildGeneratedArtifactExecutionBatches } from "../run-generated-artifacts.mjs";
+import { buildGeneratedArtifactExecutionBatches } from "../maintenance/run-generated-artifacts.mjs";
 
 function extractRunSteps(yaml) {
   const lines = yaml.split(/\r?\n/g);
@@ -92,6 +87,15 @@ function extractJobBlock(yaml: string, jobName: string, nextJobName?: string): s
   return end === -1 ? yaml.slice(start) : yaml.slice(start, end);
 }
 
+function expectTextInOrder(text: string, snippets: readonly string[]): void {
+  let lastIndex = -1;
+  for (const snippet of snippets) {
+    const index = text.indexOf(snippet);
+    expect(index, snippet).toBeGreaterThan(lastIndex);
+    lastIndex = index;
+  }
+}
+
 describe("validate-ci parity", () => {
   it("keeps the shared CI validate workflow aligned with the merge-gate command contract", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/validate-ci.yml"), "utf8");
@@ -103,8 +107,7 @@ describe("validate-ci parity", () => {
     const pagesBuildJob = extractJobBlock(workflow, "pages-build", "test-noncritical");
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const coverageCriticalJob = extractJobBlock(workflow, "coverage-critical", "typecheck-worker");
-    const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "typecheck-worker-scripts");
-    const typecheckWorkerScriptsJob = extractJobBlock(workflow, "typecheck-worker-scripts", "validate");
+    const typecheckWorkerJob = extractJobBlock(workflow, "typecheck-worker", "validate");
     const setupWorkspaceRunSteps = extractRunSteps(setupWorkspaceAction).filter((step) => step.cmd === "npm ci");
 
     expect([...setupWorkspaceRunSteps, ...extractRunSteps(validatePrebuildJob)]).toEqual([
@@ -113,13 +116,10 @@ describe("validate-ci parity", () => {
     ]);
     expect(extractRunSteps(pagesBuildJob)).toEqual(PAGES_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: null })));
     expect(extractRunSteps(testNoncriticalJob)).toEqual([
-      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/3", condition: null },
+      { cmd: "npm run test:noncritical -- --shard=${{ matrix.shard }}/4", condition: null },
     ]);
     expect(extractRunSteps(coverageCriticalJob)).toEqual([{ cmd: "npm run coverage:critical", condition: null }]);
     expect(extractRunSteps(typecheckWorkerJob)).toEqual([{ cmd: "npm run typecheck:worker", condition: null }]);
-    expect(extractRunSteps(typecheckWorkerScriptsJob)).toEqual([
-      { cmd: "npm run typecheck:worker-scripts", condition: null },
-    ]);
   });
 
   it("does not keep a duplicate LTS validate lane after Node 24 became the baseline", () => {
@@ -137,6 +137,7 @@ describe("validate-ci parity", () => {
     );
 
     expect(extractJobBlock(workflow, "validate-prebuild", "pages-build")).toContain("node-version: 24.x");
+    expect(workflow).toContain("runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}");
     expect(setupWorkspaceAction).toContain('default: "24"');
     expect(workflow).not.toContain("node-version: 25");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
@@ -147,17 +148,18 @@ describe("validate-ci parity", () => {
       scripts: Record<string, string>;
     };
 
-    expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/run-validate-prebuild.mjs");
-    expect(packageJson.scripts.prebuild).toBe("node scripts/run-generated-artifacts.mjs");
-    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/run-generated-artifacts.mjs --check");
-    expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/run-noncritical-tests.mjs");
-    expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/run-critical-coverage.mjs");
+    expect(packageJson.scripts["validate:prebuild"]).toBe("node scripts/maintenance/run-validate-prebuild.mjs");
+    expect(packageJson.scripts.prebuild).toBe("node scripts/maintenance/run-generated-artifacts.mjs");
+    expect(packageJson.scripts["check:generated-artifacts"]).toBe("node scripts/maintenance/run-generated-artifacts.mjs --check");
+    expect(packageJson.scripts["test:noncritical"]).toBe("node scripts/maintenance/run-noncritical-tests.mjs");
+    expect(packageJson.scripts["coverage:critical"]).toBe("node scripts/maintenance/run-critical-coverage.mjs");
     expect(VALIDATE_PREBUILD_COMMANDS).toEqual([
       "npm run audit:deps",
       "npm run audit:pricing-providers",
       "npm run lint",
       "npm run typecheck",
       "npm run check:agent-doc-sync",
+      "npm run check:attestor-tier-coverage",
       "npm run check:cron-abort-contract",
       "npm run check:cron-connections",
       "npm run check:cron-sync",
@@ -168,11 +170,20 @@ describe("validate-ci parity", () => {
       "npm run check:env-contract",
       "npm run check:frozen-invariants",
       "npm run check:generated-artifacts",
+      "npm run check:glossary-coverage",
+      "npm run check:one-liner-coverage",
+      "npm run check:mechanism-archetype-coverage",
+      "npm run check:archetype-explainer-coverage",
+      "npm run check:hook-polling-window",
       "npm run check:hotspot-ratchet",
       "npm run check:migrations",
       "npm run check:redemption-backstops",
+      "npm run check:reserve-fixture-freshness",
+      "npm run check:selector-banned-phrases",
       "npm run check:shared-cycles",
+      "npm run check:shared-types-imports",
       "npm run check:sql-safety",
+      "npm run check:stale-flags",
       "npm run check:stablecoin-data",
       "npm run check:supply-helper-usage",
       "npm run check:unused-code",
@@ -184,41 +195,47 @@ describe("validate-ci parity", () => {
 
   it("preserves generated artifact order through the shared prebuild registry and runner", () => {
     const expectedCommands = [
-      "tsx scripts/generate-sitemap-dates.ts",
-      "tsx scripts/generate-docs-metadata.ts",
-      "tsx scripts/generate-cemetery-dataset.ts",
-      "tsx scripts/generate-postman-collection.ts",
-      "tsx scripts/generate-openapi-spec.ts",
-      "tsx scripts/generate-llms-txt.ts",
-      "node scripts/generate-stablecoin-frozen-registry.mjs",
-      "node scripts/generate-api-reference.mjs",
+      "tsx scripts/maintenance/generate-sitemap-dates.ts",
+      "tsx scripts/maintenance/generate-docs-metadata.ts",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts",
+      "tsx scripts/maintenance/generate-public-datasets.ts",
+      "tsx scripts/maintenance/generate-postman-collection.ts",
+      "tsx scripts/maintenance/generate-openapi-spec.ts",
+      "tsx scripts/maintenance/generate-llms-txt.ts",
+      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
+      "node scripts/build-data/build-client-registry.mjs",
+      "node scripts/maintenance/generate-api-reference.mjs",
     ];
     const expectedCheckCommands = [
-      "tsx scripts/generate-sitemap-dates.ts --check",
-      "tsx scripts/generate-docs-metadata.ts --check",
-      "tsx scripts/generate-cemetery-dataset.ts --check",
-      "tsx scripts/generate-postman-collection.ts --check",
-      "tsx scripts/generate-openapi-spec.ts --check",
-      "tsx scripts/generate-llms-txt.ts --check",
-      "node scripts/generate-stablecoin-frozen-registry.mjs --check",
-      "node scripts/generate-api-reference.mjs --check",
+      "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
+      "tsx scripts/maintenance/generate-docs-metadata.ts --check",
+      "tsx scripts/maintenance/generate-cemetery-dataset.ts --check",
+      "tsx scripts/maintenance/generate-public-datasets.ts --check",
+      "tsx scripts/maintenance/generate-postman-collection.ts --check",
+      "tsx scripts/maintenance/generate-openapi-spec.ts --check",
+      "tsx scripts/maintenance/generate-llms-txt.ts --check",
+      "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
+      "node scripts/build-data/build-client-registry.mjs --check",
+      "node scripts/maintenance/generate-api-reference.mjs --check",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
       "sitemap-dates",
       "docs-metadata",
       "cemetery-dataset",
+      "public-datasets",
       "postman",
       "openapi",
       "llms-txt",
       "stablecoin-frozen-registry",
+      "stablecoin-client-registry",
       "api-reference",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
     expect(getNoncriticalTestGeneratedPrerequisites()).toEqual([
-      "scripts/generate-sitemap-dates.ts",
-      "scripts/generate-docs-metadata.ts",
+      "scripts/maintenance/generate-sitemap-dates.ts",
+      "scripts/maintenance/generate-docs-metadata.ts",
     ]);
     expect(buildGeneratedArtifactExecutionBatches().map((batch) => batch.map((unit) => unit.commands))).toEqual(
       expectedCommands.map((cmd) => [[cmd]]),
@@ -232,7 +249,7 @@ describe("validate-ci parity", () => {
     const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
       devDependencies: Record<string, string>;
     };
-    const runner = readFileSync(resolve(process.cwd(), "scripts/run-validate-prebuild.mjs"), "utf8");
+    const runner = readFileSync(resolve(process.cwd(), "scripts/maintenance/run-validate-prebuild.mjs"), "utf8");
 
     expect(packageJson.devDependencies).not.toHaveProperty("npm-run-all2");
     expect(runner).toContain("runParallelExecutionUnits");
@@ -271,17 +288,19 @@ describe("validate-ci parity", () => {
     const testNoncriticalJob = extractJobBlock(workflow, "test-noncritical", "coverage-critical");
     const validateJob = extractJobBlock(workflow, "validate");
 
-    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(3);
+    expect(NONCRITICAL_TEST_SHARD_COUNT).toBe(4);
     expect(buildNoncriticalTestShardCommands()).toEqual([
-      "npm run test:noncritical -- --shard=1/3",
-      "npm run test:noncritical -- --shard=2/3",
-      "npm run test:noncritical -- --shard=3/3",
+      "npm run test:noncritical -- --shard=1/4",
+      "npm run test:noncritical -- --shard=2/4",
+      "npm run test:noncritical -- --shard=3/4",
+      "npm run test:noncritical -- --shard=4/4",
     ]);
-    expect(testNoncriticalJob).toContain("shard: [1, 2, 3]");
+    expect(testNoncriticalJob).toContain("shard: [1, 2, 3, 4]");
     expect(testNoncriticalJob).toContain("fail-fast: false");
-    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/3");
+    expect(testNoncriticalJob).toContain("npm run test:noncritical -- --shard=${{ matrix.shard }}/4");
     expect(validateJob).toContain("- test-noncritical");
-    expect(validateJob).toContain('["test-noncritical", process.env.TEST_NONCRITICAL_RESULT]');
+    expect(validateJob).toContain("node <<'NODE'");
+    expect(validateJob).toContain("test-noncritical");
   });
 
   it("starts non-mutating validate leaf jobs without waiting for validate-prebuild", () => {
@@ -291,8 +310,7 @@ describe("validate-ci parity", () => {
       ["pages-build", "test-noncritical"],
       ["test-noncritical", "coverage-critical"],
       ["coverage-critical", "typecheck-worker"],
-      ["typecheck-worker", "typecheck-worker-scripts"],
-      ["typecheck-worker-scripts", "validate"],
+      ["typecheck-worker", "validate"],
     ] as const) {
       expect(extractJobBlock(workflow, jobName, nextJobName)).not.toContain("needs: validate-prebuild");
     }
@@ -310,6 +328,7 @@ describe("validate-ci parity", () => {
 
     expect(workflow).toContain("run_pages_build_and_seo:");
     expect(pagesBuildJob).toContain("if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}");
+    expect(pagesBuildJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
     expect(validateJob).toContain(
       "PAGES_BUILD_EXPECTED: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}",
     );
@@ -322,30 +341,111 @@ describe("validate-ci parity", () => {
     expect(uploadWorkerJob).not.toContain("- validate");
     expect(uploadWorkerJob).not.toContain("Apply production D1 migrations");
     expect(uploadWorkerJob).not.toContain("Smoke uploaded preview worker");
+    expect(uploadWorkerJob).toContain('install-deps: "false"');
+    expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 deployments status --json");
+    expect(uploadWorkerJob).toContain("npx --yes wrangler@4.91.0 versions upload");
 
     const deployWorkerJob = extractJobBlock(deployWorkflow, "deploy-worker", "pages-release");
+    expect(deployWorkerJob).toContain(
+      "runs-on: ${{ vars.CI_WORKER_DEPLOY_RUNNER != '' && vars.CI_WORKER_DEPLOY_RUNNER || vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
+    );
     expect(deployWorkerJob).toContain("Wait for validation gate");
     expect(deployWorkerJob).toContain("Rehearse D1 migrations locally");
     expect(deployWorkerJob).toContain("Apply production D1 migrations");
     expect(deployWorkerJob).toContain("Smoke uploaded preview worker");
     expect(deployWorkerJob).toContain("Smoke production worker");
+    expect(deployWorkerJob).toContain('SMOKE_API_SCOPE: "canary"');
     expect(deployWorkerJob).toContain("Run worker-only live smokes");
     expect(deployWorkerJob).not.toContain("- pages-prepare");
     expect(deployWorkerJob).not.toContain("needs.pages-prepare.result == 'success'");
 
     const pagesReleaseJob = extractJobBlock(deployWorkflow, "pages-release");
+    expect(pagesReleaseJob).toContain("needs:");
+    expect(pagesReleaseJob).toContain("- detect-changes");
+    expect(pagesReleaseJob).not.toContain("- upload-worker-version");
+    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_URL:");
+    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_URL:");
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(pagesReleaseJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(pagesReleaseJob).toContain("Fetch digests from the target API environment");
+    expect(pagesReleaseJob).toContain("Fetch depeg events from the target API environment");
+    expect(pagesReleaseJob).toContain("Generate public dataset mirrors from the target API environment");
+    expect(pagesReleaseJob).not.toContain("needs.upload-worker-version.outputs.preview_url");
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_API_URL: ""');
+    expect(pagesReleaseJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
     expect(pagesReleaseJob).toContain("Start local export smoke server");
+    expect(pagesReleaseJob).toContain("Run local pre-publish checks in parallel");
+    expect(pagesReleaseJob).toContain("PAGES_UI_CHANGED: ${{ needs.detect-changes.outputs.pages_ui_changed }}");
     expect(pagesReleaseJob).toContain('SMOKE_UI_OVERFLOW_WORKERS: "6"');
+    expect(pagesReleaseJob).toContain("SMOKE_UI_OVERFLOW_ROUTES:");
+    expect(pagesReleaseJob).toContain("npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173");
     expect(pagesReleaseJob).toContain("Wait for validation gate");
     expect(pagesReleaseJob).toContain("Deploy Pages with retry");
-    expect(pagesReleaseJob).toContain("Run post-publish smokes");
+    expect(pagesReleaseJob).toContain("Capture Pages release metrics");
+    expect(pagesReleaseJob).toContain("Run post-publish smokes in parallel");
     expect(pagesReleaseJob).toContain("--mode live --skip-overflow");
     expect(pagesReleaseJob).toContain('SMOKE_OPS_SCOPE: "canary"');
+    expect(pagesReleaseJob).toContain("steps.post-publish-smokes.outputs.ui_status != 'success'");
+    expectTextInOrder(pagesReleaseJob, [
+      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
+      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
+      "npm run generate:public-datasets",
+      "npm run build",
+      "npm run check:feature-flag-inlining",
+      "npm run check:phishing-signatures",
+      "npm run check:classifier-sensitive-copy",
+      "npm run check:build-size",
+      "Capture Pages release metrics",
+      "npm run check:build-attribution",
+      "Start local export smoke server",
+      "Run local pre-publish checks in parallel",
+      "npm run seo:check",
+    ]);
+    expect(pagesReleaseJob).not.toContain("npm run check:methodology-pdfs");
 
     expect(deployWorkflow).not.toContain("  pages-prepare:");
     expect(deployWorkflow).not.toContain("  pages-publish:");
     expect(deployWorkflow).not.toContain("  smoke-api:");
     expect(deployWorkflow).not.toContain("  rollback-worker:");
+  });
+
+  it("keeps reusable Pages preparation aligned with required production prebuild sync and guardrails", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/pages-prepare.yml"), "utf8");
+    const buildPagesJob = extractJobBlock(workflow, "build-pages");
+    const runSteps = extractRunSteps(buildPagesJob).map((step) => step.cmd);
+
+    expect(workflow).toContain("DEPEG_EVENTS_API_KEY:");
+    expect(workflow).toContain("PUBLIC_DATASETS_API_KEY:");
+    expect(buildPagesJob).toContain("DEPEG_EVENTS_API_URL:");
+    expect(buildPagesJob).toContain("PUBLIC_DATASETS_API_URL:");
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: "1"');
+    expect(buildPagesJob).toContain('NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"');
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_API_URL: ""');
+    expect(buildPagesJob).toContain('PUBLIC_DATASETS_REQUIRE_API: ""');
+    expectTextInOrder(buildPagesJob, [
+      "npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json",
+      "npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json",
+      "npm run generate:public-datasets",
+      "npm run build",
+    ]);
+    expect(runSteps.slice(0, 8)).toEqual([
+      "npm run build",
+      "npm run check:feature-flag-inlining",
+      "npm run seo:check",
+      "npm run check:phishing-signatures",
+      "npm run check:classifier-sensitive-copy",
+      "npm run check:build-size",
+      "npm run check:build-attribution",
+      "npm run check:methodology-pdfs",
+    ]);
+  });
+
+  it("forwards dedicated Pages data-sync secrets through the scheduled rebuild workflow", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/rebuild-pages.yml"), "utf8");
+    const pagesReleaseJob = extractJobBlock(workflow, "pages-release");
+
+    expect(pagesReleaseJob).toContain("DEPEG_EVENTS_API_KEY:");
+    expect(pagesReleaseJob).toContain("PUBLIC_DATASETS_API_KEY:");
   });
 
   it("keeps the critical coverage baseline aligned with the ratchet target list", () => {
@@ -356,72 +456,4 @@ describe("validate-ci parity", () => {
     expect(Object.keys(baseline.files)).toEqual(CRITICAL_FILES);
   });
 
-  it("runs post-prebuild CI checks in independent execution groups", () => {
-    expect(
-      buildPostPrebuildExecutionUnits({ pagesChanged: true, workerChanged: true }).map((unit) => unit.commands),
-    ).toEqual([
-      PAGES_VALIDATE_COMMANDS,
-      ["npm run test:noncritical"],
-      ["npm run coverage:critical"],
-      ["npm run typecheck:worker"],
-      ["npm run typecheck:worker-scripts"],
-    ]);
-
-    expect(
-      buildPostPrebuildExecutionUnits({ pagesChanged: false, workerChanged: true }).map((unit) => unit.commands),
-    ).toEqual([
-      ["npm run test:noncritical"],
-      ["npm run coverage:critical"],
-      ["npm run typecheck:worker"],
-      ["npm run typecheck:worker-scripts"],
-    ]);
-  });
-
-  it("threads the coverage compare ref into the post-prebuild coverage command", () => {
-    expect(
-      getPostPrebuildCommandEnv("npm run coverage:critical", {
-        coverageCompareRef: "abc123",
-      }),
-    ).toEqual({ CRITICAL_COVERAGE_COMPARE_REF: "abc123" });
-    expect(getPostPrebuildCommandEnv("npm run test:noncritical", { coverageCompareRef: "abc123" })).toEqual({});
-  });
-
-  it("aborts sibling post-prebuild groups after the first failure", async () => {
-    const calls: string[] = [];
-    const aborted: string[] = [];
-    let exitStatus: number | undefined;
-
-    await runPostPrebuildValidation(
-      { pagesChanged: true, workerChanged: true },
-      {
-        exit: (status) => {
-          exitStatus = status;
-        },
-        runCommandImpl: (cmd, _extraEnv, { signal } = {}) => {
-          calls.push(cmd);
-
-          if (cmd === "npm run build") {
-            return Promise.resolve({ status: 1, aborted: false });
-          }
-
-          return new Promise((resolve) => {
-            signal?.addEventListener("abort", () => {
-              aborted.push(cmd);
-              resolve({ status: 130, aborted: true });
-            });
-          });
-        },
-      },
-    );
-
-    expect(exitStatus).toBe(1);
-    expect(calls).toContain("npm run build");
-    expect(calls).not.toContain("npm run seo:check");
-    expect(aborted).toEqual([
-      "npm run test:noncritical",
-      "npm run coverage:critical",
-      "npm run typecheck:worker",
-      "npm run typecheck:worker-scripts",
-    ]);
-  });
 });

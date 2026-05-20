@@ -4,7 +4,45 @@ import type { MethodologyEnvelope, YieldType } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 import type { ReportCardGrade } from "./report-cards";
 
-export type YieldBenchmarkKey = "USD" | "EUR" | "CHF";
+export type YieldAdapterLifecycle =
+  | "active"
+  | "quarantined"
+  | "intentional-gap"
+  | "experimental";
+
+export interface YieldAdapterLifecycleReason {
+  /** Canonical short code such as "convert-to-assets-empty" or "no-public-yield-source". */
+  code: string;
+  /** ISO date (YYYY-MM-DD) the entry entered this lifecycle state. */
+  since: string;
+  /** Optional ISO date by which an operator should re-review the entry. */
+  nextReviewAt?: string;
+  /** Optional URL to docs, runbook, or evidence. */
+  evidenceUrl?: string;
+  /** Short free-form note (legacy rationale text lives here). */
+  note?: string;
+}
+
+export const YIELD_BENCHMARK_KEY_VALUES = [
+  "USD",
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "MXN",
+  "BRL",
+  "AUD",
+  "CAD",
+  "SGD",
+] as const;
+export type YieldBenchmarkKey = (typeof YIELD_BENCHMARK_KEY_VALUES)[number];
+export const YIELD_PYS_NULL_REASONS = [
+  "apy-non-positive",
+  "effective-yield-non-positive",
+  "scaling-invalid",
+  "missing-inputs",
+] as const;
+export type YieldPysNullReason = (typeof YIELD_PYS_NULL_REASONS)[number];
 export type YieldBenchmarkSelectionMode = "native" | "fallback-usd" | "manual-override";
 export type YieldSafetyProvenance = "live-report-card" | "cached-publish" | "default-safety";
 export type YieldPublicationStatus = "staged" | "published" | "failed";
@@ -33,6 +71,47 @@ const YIELD_RANK_CHANGE_DRIVER_VALUES = [
 ] as const;
 export type YieldRankChangeDriver =
   (typeof YIELD_RANK_CHANGE_DRIVER_VALUES)[number];
+
+export const YIELD_DECISION_REASON_CODES = [
+  "best-by-confidence-and-apy",
+  "deterministic-preferred",
+  "curated-over-discovered",
+  "tier-preference",
+  "tvl-floor",
+  "freshness-tiebreaker",
+  "fallback",
+  "no-alternatives",
+] as const;
+export type YieldDecisionReasonCode = (typeof YIELD_DECISION_REASON_CODES)[number];
+
+export const YIELD_DECISION_REJECTION_REASON_CODES = [
+  "thinner",
+  "stale",
+  "lower-confidence",
+  "rewards-only",
+  "smaller",
+  "unspecified",
+] as const;
+export type YieldDecisionRejectionReasonCode = (typeof YIELD_DECISION_REJECTION_REASON_CODES)[number];
+
+export interface YieldPublicDecisionAlternative {
+  sourceKey: string;
+  yieldSource: string;
+  /** alt.apy30d - selected.apy30d (signed). */
+  apy30dDelta: number;
+  rejectionReasonCode: YieldDecisionRejectionReasonCode;
+}
+
+export interface YieldPublicDecisionLedger {
+  selectedReasonCode: YieldDecisionReasonCode;
+  previousBestSourceKey?: string | null;
+  sourceSwitch: boolean;
+  /** Signed delta of selected.apy30d vs prior cycle's selected.apy30d; null if no prior. */
+  apy30dDeltaFromPrevious?: number | null;
+  rejectedCount: number;
+  /** Capped at 2 entries by absolute APY delta (largest first). */
+  alternatives: YieldPublicDecisionAlternative[];
+}
 
 export interface YieldResponseWarning {
   code: string;
@@ -111,6 +190,13 @@ export interface YieldBenchmarkRegistry {
   USD: YieldBenchmarkMeta;
   EUR?: YieldBenchmarkMeta | null;
   CHF?: YieldBenchmarkMeta | null;
+  GBP?: YieldBenchmarkMeta | null;
+  JPY?: YieldBenchmarkMeta | null;
+  MXN?: YieldBenchmarkMeta | null;
+  BRL?: YieldBenchmarkMeta | null;
+  AUD?: YieldBenchmarkMeta | null;
+  CAD?: YieldBenchmarkMeta | null;
+  SGD?: YieldBenchmarkMeta | null;
 }
 
 export interface YieldSourceInputMeta {
@@ -180,6 +266,11 @@ export interface YieldHistoryPoint {
   sourceSwitch?: boolean;
   publicationGenerationId?: string | null;
   sourceRisk?: YieldSourceRisk | null;
+  /* Optional historical PYS snapshots captured at the row's publish time.
+     Nullable + optional so older rows (before BE persistence shipped) parse cleanly. */
+  pysAtPublish?: number | null;
+  safetyAtPublish?: number | null;
+  varianceAtPublish?: number | null;
 }
 
 const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
@@ -199,6 +290,9 @@ const YieldHistoryPointSchema: z.ZodType<YieldHistoryPoint> = z.object({
   sourceSwitch: z.boolean().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   sourceRisk: z.lazy(() => YieldSourceRiskSchema).nullable().optional(),
+  pysAtPublish: z.number().nullable().optional(),
+  safetyAtPublish: z.number().nullable().optional(),
+  varianceAtPublish: z.number().nullable().optional(),
 });
 
 const YieldPublicationMetadataSchema: z.ZodType<YieldPublicationMetadata> = z.object({
@@ -222,6 +316,22 @@ const YieldSourceRiskSchema: z.ZodType<YieldSourceRisk> = z.object({
   venueChain: z.string().nullable().optional(),
   venueRiskTier: z.enum(["low", "medium", "high", "unknown"]).nullable().optional(),
   investabilityFlags: z.array(z.string()).optional(),
+});
+
+const YieldPublicDecisionAlternativeSchema: z.ZodType<YieldPublicDecisionAlternative> = z.object({
+  sourceKey: z.string(),
+  yieldSource: z.string(),
+  apy30dDelta: z.number(),
+  rejectionReasonCode: z.enum(YIELD_DECISION_REJECTION_REASON_CODES),
+});
+
+const YieldPublicDecisionLedgerSchema: z.ZodType<YieldPublicDecisionLedger> = z.object({
+  selectedReasonCode: z.enum(YIELD_DECISION_REASON_CODES),
+  previousBestSourceKey: z.string().nullable().optional(),
+  sourceSwitch: z.boolean(),
+  apy30dDeltaFromPrevious: z.number().nullable().optional(),
+  rejectedCount: z.number().int().min(0),
+  alternatives: z.array(YieldPublicDecisionAlternativeSchema).max(2),
 });
 
 const YieldRankChangeAttributionSchema: z.ZodType<YieldRankChangeAttribution> = z.object({
@@ -258,7 +368,7 @@ const AltYieldSourceSchema = z.object({
 });
 
 const YieldBenchmarkMetaSchema = z.object({
-  key: z.enum(["USD", "EUR", "CHF"]).optional(),
+  key: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   label: z.string().optional(),
   currency: z.string().optional(),
   rate: z.number(),
@@ -275,6 +385,13 @@ const YieldBenchmarkRegistrySchema = z.object({
   USD: YieldBenchmarkMetaSchema,
   EUR: YieldBenchmarkMetaSchema.nullable().optional(),
   CHF: YieldBenchmarkMetaSchema.nullable().optional(),
+  GBP: YieldBenchmarkMetaSchema.nullable().optional(),
+  JPY: YieldBenchmarkMetaSchema.nullable().optional(),
+  MXN: YieldBenchmarkMetaSchema.nullable().optional(),
+  BRL: YieldBenchmarkMetaSchema.nullable().optional(),
+  AUD: YieldBenchmarkMetaSchema.nullable().optional(),
+  CAD: YieldBenchmarkMetaSchema.nullable().optional(),
+  SGD: YieldBenchmarkMetaSchema.nullable().optional(),
 });
 
 const YieldSourceInputMetaSchema = z.object({
@@ -307,7 +424,7 @@ const YieldRankingProvenanceSchema = z.object({
   usedLegacyHistory: z.boolean(),
   usedDefaultSafety: z.boolean(),
   safetyProvenance: z.enum(["live-report-card", "cached-publish", "default-safety"]).optional(),
-  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
   benchmarkRate: z.number().optional(),
@@ -342,6 +459,7 @@ export interface YieldRanking {
   dataSource: string;
   sourceTvlUsd: number | null;
   pharosYieldScore: number | null;
+  pysNullReason?: YieldPysNullReason | null;
   safetyScore: number | null;
   safetyGrade: ReportCardGrade | null;
   yieldToRisk: number | null;
@@ -367,6 +485,7 @@ export interface YieldRanking {
   liveRank?: number | null;
   sourceRisk?: YieldSourceRisk | null;
   rankChangeAttribution?: YieldRankChangeAttribution | null;
+  decisionLedger?: YieldPublicDecisionLedger | null;
 }
 
 const YieldRankingSchema = z.object({
@@ -384,11 +503,12 @@ const YieldRankingSchema = z.object({
   dataSource: z.string(),
   sourceTvlUsd: z.number().nullable(),
   pharosYieldScore: z.number().nullable(),
+  pysNullReason: z.enum(YIELD_PYS_NULL_REASONS).nullable().optional(),
   safetyScore: z.number().nullable(),
   safetyGrade: ReportCardGradeSchema.nullable(),
   yieldToRisk: z.number().nullable(),
   excessYield: z.number().nullable(),
-  benchmarkKey: z.enum(["USD", "EUR", "CHF"]).optional(),
+  benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),
   benchmarkRate: z.number().optional(),
@@ -409,6 +529,7 @@ const YieldRankingSchema = z.object({
   liveRank: z.number().int().positive().nullable().optional(),
   sourceRisk: YieldSourceRiskSchema.nullable().optional(),
   rankChangeAttribution: YieldRankChangeAttributionSchema.nullable().optional(),
+  decisionLedger: YieldPublicDecisionLedgerSchema.nullable().optional(),
 });
 
 export interface YieldRankingsResponse {
@@ -460,3 +581,35 @@ export const YieldHistoryResponseSchema: z.ZodType<YieldHistoryResponse> = z.obj
   methodology: MethodologyEnvelopeSchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
+
+export const YIELD_ADAPTER_MANIFEST_FAMILY_VALUES = [
+  "onchain",
+  "protocol-api",
+  "defillama",
+  "defillama-auto",
+  "rate-derived",
+  "price-derived",
+  "intentional-gap",
+] as const;
+export type YieldAdapterManifestFamily = (typeof YIELD_ADAPTER_MANIFEST_FAMILY_VALUES)[number];
+
+export interface YieldAdapterManifestPublicEntry {
+  stablecoinId: string;
+  coinSymbol: string;
+  family: YieldAdapterManifestFamily;
+  sourceKey: string | null;
+  sourceKeyPattern?: string | null;
+  label: string;
+  chain?: string | null;
+  project?: string | null;
+  lifecycle: YieldAdapterLifecycle;
+  quarantineReason?: string | null;
+  methodologyVersion: string;
+  updatedAt: number;
+}
+
+export interface YieldAdapterManifestResponse {
+  methodologyVersion: string;
+  updatedAt: number;
+  entries: YieldAdapterManifestPublicEntry[];
+}

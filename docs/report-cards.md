@@ -1,17 +1,17 @@
 # Risk Lab
 
-Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
+Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
 
-The stablecoin registry currently contains 391 tracked metadata entries. Report-card snapshots score the 363 active tracked assets plus the 91 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
+The stablecoin registry currently contains 392 tracked metadata entries. Report-card snapshots score the 362 active tracked assets plus the 91 cemetery assets; frozen-archive tracked entries are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch.
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v7.24`
-- **Runtime/version source:** `shared/lib/safety-score-version-data.ts`
+- **Current methodology version:** `v7.25`
+- **Runtime/version source:** `shared/lib/methodology-versions/safety-score-data.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Version timeline:** [report-cards-timeline.md](./report-cards-timeline.md)
 
-## Overall Grade (v7.24)
+## Overall Grade (v7.25)
 
 Four-step computation:
 
@@ -22,7 +22,7 @@ Four-step computation:
 
 Cemetery coins get a permanent F.
 
-Current-version note: v7.24 makes redemption-backed Liquidity / Exit uplift capacity-aware, confidence-aware, and correlation-aware through Redemption Backstop v4. Eventual-only route quality remains visible, but Safety liquidity now requires current executable redemption capacity for redemption-only uplift.
+Current-version note: v7.25 makes wrapper Decentralization parent-aware for tracked wrapper relationships. A resolvable wrapper inherits the wrapped asset's Decentralization score with a small wrapper-kind haircut instead of falling to the old flat wrapper score.
 
 ## Yield Source-Risk Boundary
 
@@ -45,7 +45,7 @@ Those reasons are documentation and handoff guards, not hidden penalties. Any fu
 | -------------------- | ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore` | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                 |
 | **Resilience**       | 20%    | Token metadata (2 sub-factors)               | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                              |
-| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
+| **Decentralization** | 15%    | Governance quality + chain infrastructure    | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk**  | 25%    | Upstream stablecoin scores                   | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings              |
 
 ### Peg Stability (multiplier)
@@ -136,7 +136,7 @@ independent:
 - authoritative = fresh (< 48h), non-empty, and matched to `reserve_sync_state.last_success_at`
 - clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
 - independent = adapter `evidenceClass` is `independent`
-- scoring-eligible freshness = `freshnessMode === "verified"` or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring
+- scoring-eligible freshness = a verified timestamp-backed snapshot or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring, even if older metadata includes a legacy freshness-approval flag
 - timestamp-backed dashboard/disclosure feeds can qualify only when the adapter preserves a trustworthy upstream `sourceTimestamp` and the adapter's source-age policy still marks it fresh
 - direct one-bucket on-chain reserve proofs can qualify when they are registered as independent (for example LUSD's dedicated `liquity-v1` adapter); generic liveness probes do not qualify just because they are on-chain
 - `validated-static` feeds (for example `curated-validated` and `frax`) and `weak-live-probe` feeds (for example `single-asset` and `tether`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
@@ -239,11 +239,13 @@ Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty fo
 | `multisig`         | 55    | `centralized-dependent`    | Most CeFi-dep coins without explicit override          |
 | `regulated-entity` | 40    | — (auto-promoted)          | Centralized issuers with verified regulatory oversight |
 | `single-entity`    | 20    | `centralized`              | USDT, USDC, PYUSD                                      |
-| `wrapper`          | 10    | — (must be explicit)       | syrupUSDC, Cap cUSD, USX, OUSD, FPI                    |
+| `wrapper`          | parent-derived, fallback 10 | — (must be explicit)       | yBOLD, sBOLD, sfrxUSD; unresolved wrappers fall back to syrupUSDC-style 10 |
 
 Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
 
 **Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
+
+**Wrapper inheritance:** When a `wrapper` asset has a single resolvable tracked wrapped asset, Decentralization inherits the wrapped asset's already-computed Decentralization score and applies the wrapper-kind haircut used by Dependency Risk ceilings: legacy and savings wrappers `−3`, strategy-vault and risk-absorption variants `−5`, and bond-maturity variants `−8`. Parent-linked examples: yBOLD and sBOLD inherit from BOLD; sfrxUSD inherits from frxUSD. Wrappers without a resolvable tracked parent keep the conservative fallback score of 10.
 
 **Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance — immutable-code, wrapper, and centralized issuers are exempt):
 
@@ -255,7 +257,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | 20–39                | −40     |
 | 0–19                 | −60     |
 
-`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because its governance score already reflects inherited upstream governance. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
+`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because resolvable wrappers inherit the wrapped asset's chain-adjusted Decentralization score, while unresolved wrappers keep a conservative fallback. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
 
 #### Chain Infrastructure: Two-Axis Scoring
 
@@ -293,7 +295,7 @@ The chain infrastructure score combines **primary chain maturity** with **deploy
 
 Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
-Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 45) = 85 − 25 = **60**. USDB (multisig, Blast L2) = 55 − 10 = **45**. cUSD (wrapper, Ethereum → infra 100) = **10** (wrapper exempt from chain penalty).
+Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). yBOLD (strategy-vault wrapper over BOLD) = 100 − 5 = **95**. sfrxUSD (savings wrapper over frxUSD) inherits frxUSD Decentralization − 3. LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 45) = 85 − 25 = **60**. USDB (multisig, Blast L2) = 55 − 10 = **45**.
 
 Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `immutable-code`, `wrapper`, `single-entity`, `regulated-entity`.
 
@@ -414,7 +416,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 457 cards (363 active tracked assets plus 91 cemetery entries plus 3 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. The current snapshot size is 457 cards (362 active tracked assets plus 91 cemetery entries plus 4 frozen archives; pre-launch tracked assets are excluded) × 5 dimensions, which remains comfortably sub-millisecond in practice.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

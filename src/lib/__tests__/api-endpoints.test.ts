@@ -18,7 +18,7 @@ import {
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
-import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-api.mjs";
+import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/maintenance/smoke-api.mjs";
 
 describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
@@ -78,6 +78,9 @@ describe("api endpoint registry", () => {
       "/api/reset-cron-lease",
       "/api/safety-score-history",
       "/api/safety-score-history?stablecoin=usdt-tether",
+      "/api/snapshot/:date/stablecoin/:id",
+      "/api/snapshots/:date.json",
+      "/api/snapshots/index",
       "/api/stability-index",
       "/api/stablecoin-charts",
       "/api/stablecoin-reserves/iusd-infinifi",
@@ -100,6 +103,7 @@ describe("api endpoint registry", () => {
       "/api/telegram-webhook",
       "/api/trigger-digest",
       "/api/usds-status",
+      "/api/yield-adapter-manifest",
       "/api/yield-history",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/yield-rankings",
@@ -136,7 +140,9 @@ describe("api endpoint registry", () => {
       "/api/supply-history?stablecoin=usdt-tether",
       "/api/daily-digest",
       "/api/digest-archive",
+      "/api/snapshots/index",
       "/api/yield-rankings",
+      "/api/yield-adapter-manifest",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/safety-score-history?stablecoin=usdt-tether",
       "/api/stability-index",
@@ -186,6 +192,8 @@ describe("api endpoint registry", () => {
 
   it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
     expect(getProbePaths("public")).not.toContain("/api/digest-snapshot");
+    expect(getProbePaths("public")).not.toContain("/api/snapshots/:date.json");
+    expect(getProbePaths("public")).not.toContain("/api/snapshot/:date/stablecoin/:id");
   });
 
   it("flags mutating admin paths for method guards", () => {
@@ -263,7 +271,7 @@ describe("api endpoint registry", () => {
   });
 
   it("keeps the shared dynamic descriptor table aligned with current access and dependency policies", () => {
-    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(11);
+    expect(DYNAMIC_ENDPOINT_DESCRIPTORS).toHaveLength(13);
 
     expect(findDynamicEndpointDescriptor("/api/stablecoin/usdt-tether")).toMatchObject({
       key: "stablecoin-detail",

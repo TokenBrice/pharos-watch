@@ -8,7 +8,7 @@ export interface LiveReserveSyncBudgetConfig {
 
 const DEFAULT_LIVE_RESERVE_SYNC_BUDGETS = {
   adapterTimeoutMs: 20_000,
-  runBudgetMs: 11 * 60 * 1000,
+  runBudgetMs: 10 * 60 * 1000,
   d1FinalizeTimeoutMs: 30_000,
   finalizationMarginMs: 5_000,
 };

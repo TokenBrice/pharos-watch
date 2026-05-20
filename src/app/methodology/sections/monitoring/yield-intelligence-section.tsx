@@ -32,7 +32,7 @@ export function YieldIntelligenceMethodologySection() {
                 ecosystems do not surface as recommended base-asset routes. Eligible tracked wrapper variants can also
                 surface their native/wrapper sources as linked parent routes, so parent assets such as BOLD can show
                 yBOLD and sBOLD context without removing the variants&apos; own rows. The curated auto-discovery lane also
-                pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Rate-derived coverage includes BENJI, WTGXX, USTBL, and EUTBL, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
+                pins current Felix, Sovryn, Loopscale, Resupply, Sovryn XUSD, and Anzens exact venues when they pass the normal source-quality gates, and the allowlist now includes reviewed Tier C venues such as AutoFinance, Neverland, Metrom, Mystic Finance, Bitway, and Frankencoin. Rate-derived coverage includes cgUSD, USDN, BENJI, WTGXX, USTBL, and EUTBL, while commodity exact-pool coverage includes XAUT on Lista Lending and PAXG on Hydration. Published lending-opportunity rows now also
                 require observable venue TVL and a size floor of at least 0.1% of the tracked stablecoin&apos;s current
                 supply before they can become the live recommendation. PYS is benchmark-aware and source-risk-aware,
                 with missing source-risk evidence treated as neutral. Curve Savings crvUSD now follows the active on-chain
@@ -73,6 +73,24 @@ export function YieldIntelligenceMethodologySection() {
                     },
                   ]}
                 />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-foreground font-medium">Adapter manifest</h3>
+                <p>
+                  The adapter manifest is the canonical machine-readable source list for every yield-bearing
+                  asset Pharos tracks. It enumerates the deterministic on-chain readers, curated DeFiLlama
+                  pools, protocol-API venues, rate-derived benchmark fallbacks, price-derived NAV
+                  fallbacks, auto-discovery lending overrides, and intentional coverage gaps that feed the
+                  ranking pipeline, along with each entry&apos;s lifecycle (`active`, `quarantined`,
+                  `intentional-gap`, `experimental`). The manifest is published at{" "}
+                  <a
+                    href="/api/yield-adapter-manifest"
+                    className="text-foreground underline underline-offset-2 hover:text-foreground/80 transition-colors"
+                  >
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/yield-adapter-manifest</code>
+                  </a>
+                  {" "}with a 5-minute cache, stamped with the current methodology version on every entry.
+                </p>
               </div>
               <WorkedExample summary="Worked example (verified against computePYS)">
                 <p className="font-mono">Inputs: apy30d=8.4, benchmarkRate=4.25, safetyScore=72, sourceRisk.sourceRiskPenalty=1.2, apyVarianceScore=0.18, scalingFactor=8</p>

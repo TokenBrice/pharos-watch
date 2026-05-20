@@ -2,8 +2,9 @@
   "id": "pusd-plume",
   "name": "Plume USD",
   "symbol": "pUSD",
+  "oneLiner": "pUSD is Plume's dollar stablecoin minted 1:1 against USDC in a Nucleus BoringVault; zero-fee redemption on Ethereum or Plume Chain with OFAC compliance checks.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
@@ -30,6 +31,9 @@
       "url": "https://docs.plume.org/plume/tokens/plume-usd"
     }
   ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",

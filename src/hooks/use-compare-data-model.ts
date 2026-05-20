@@ -14,7 +14,7 @@ import { COMPARE_COLORS } from "@/lib/compare-config";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   deriveComparisonCoins,
   deriveSupplySeries,

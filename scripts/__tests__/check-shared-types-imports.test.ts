@@ -1,10 +1,9 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findBroadSharedTypesValueImports } from "../check-shared-types-imports.mjs";
+import { findBroadSharedTypesValueImports } from "../ci/check-shared-types-imports.mjs";
 
 let tempDirs: string[] = [];
 

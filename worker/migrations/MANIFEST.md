@@ -73,6 +73,11 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0127     | `0127_depeg_event_provenance_side_table.sql`             | Add side-table depeg event provenance and a JSON-projection view for historical/live event audit metadata                                       |
 | 0128     | `0128_depeg_backfill_runs.sql`                           | Add durable depeg backfill run manifests with status, counts, and replay fingerprints                                                           |
 | 0129     | `0129_tape_events.sql`                                   | Add materialized `tape_events` stream projected from existing producer tables, idempotent on `(source_table, source_row_id, transition)`         |
+| 0130     | `0130_public_snapshots.sql`                              | Add `public_snapshots` table holding daily gzipped JSON payloads for `/api/snapshots/<date>.json` and `/api/snapshot/<date>/stablecoin/<id>`     |
+| 0131     | `0131_usg_tangent_inception_supply_repair.sql`           | Repair Tangent USG early `supply_history` rows so the on-chain-circulating exclusion applies from first tracked chart day                        |
+| 0132     | `0132_yield_history_pys_snapshot.sql`                    | Add `pys_at_publish`, `safety_at_publish`, `variance_at_publish` snapshot columns to `yield_history` for honest reconstruction                  |
+| 0133     | `0133_yield_decision_alternatives.sql`                   | Add sibling `yield_source_decision_alternatives` table for the bounded, public-safe retained alternates surfaced on `/api/yield-rankings`        |
+| 0134     | `0134_yield_decision_retention_reason.sql`               | Add nullable `retention_reason` column to `yield_source_decisions` for per-row trend/audit classification and selective pruning                   |
 
 ## Retired Individual Migrations
 
@@ -99,10 +104,14 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 
 If a migration corrupts data:
 
-1. **Get bookmark:** `cd worker && npx wrangler d1 time-travel info stablecoin-db --remote`
-2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK> --remote`
+1. **Get bookmark:** `cd worker && npx wrangler d1 time-travel info stablecoin-db`
+2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK>`
 3. **Remove bad migration** from `worker/migrations/` directory
 4. **Re-apply remaining:** `cd worker && npx wrangler d1 migrations apply stablecoin-db --remote`
 5. **Redeploy worker:** use the standard production deploy workflow, or manually run the equivalent Worker Versions sequence (`cd worker && npx wrangler versions upload`, smoke the preview URL, `npx wrangler versions deploy <VERSION_ID>@100`, then `npx wrangler triggers deploy`). `wrangler deploy` bypasses the preview-smoke/promotion flow and should be treated as an emergency shortcut only.
 
 Cloudflare D1 Time Travel retention is account-plan dependent. Verify the current retention window in Cloudflare before relying on a rollback bookmark.
+
+## Related process docs
+
+- [`docs/process/d1-baseline-squash-plan.md`](../../docs/process/d1-baseline-squash-plan.md) — cadence, procedure, and risks for the next baseline squash.

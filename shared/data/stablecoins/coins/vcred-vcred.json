@@ -2,6 +2,7 @@
   "id": "vcred-vcred",
   "name": "vCred",
   "symbol": "vCRED",
+  "oneLiner": "vCRED is a Hemi-based credit-token dollar backed by protocol-managed crypto and credit collateral, with admin-controlled mint authority on a young chain.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

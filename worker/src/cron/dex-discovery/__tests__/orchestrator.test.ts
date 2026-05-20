@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DiscoveryMeta } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {
@@ -12,11 +12,17 @@ const nowSec = 1710000000;
 
 describe("computeEffectiveTier", () => {
   it("applies base tiers and cadence gating", () => {
-    expect(computeEffectiveTier(0, 0, undefined, 1, nowSec)).toBe("t1");
-    expect(computeEffectiveTier(3, 1, undefined, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier(3, 1, undefined, 3, nowSec)).toBe("t2");
-    expect(computeEffectiveTier(5, 2, undefined, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier(5, 2, undefined, 10, nowSec)).toBe("t3");
+    expect(computeEffectiveTier("coin-a", 0, 0, undefined, 1, nowSec)).toBe("t1");
+    expect(computeEffectiveTier("coin-a", 3, 1, undefined, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-a", 3, 1, undefined, 3, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-d", 5, 2, undefined, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-d", 5, 2, undefined, 10, nowSec)).toBe("t3");
+  });
+
+  it("shards lower-tier cadence by stablecoin id instead of batching whole tiers", () => {
+    expect(computeEffectiveTier("coin-a", 3, 1, undefined, 3, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-b", 3, 1, undefined, 3, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-b", 3, 1, undefined, 1, nowSec)).toBe("t2");
   });
 
   it("demotes missed coins to lower cadences", () => {
@@ -27,8 +33,8 @@ describe("computeEffectiveTier", () => {
       lastHitAt: null,
     };
 
-    expect(computeEffectiveTier(0, 0, meta, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier(0, 0, meta, 3, nowSec)).toBe("t2");
+    expect(computeEffectiveTier("coin-a", 0, 0, meta, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-a", 0, 0, meta, 3, nowSec)).toBe("t2");
   });
 
   it("puts long-miss coins into dormant mode with daily gating", () => {
@@ -45,8 +51,8 @@ describe("computeEffectiveTier", () => {
       lastHitAt: null,
     };
 
-    expect(computeEffectiveTier(0, 0, recentDormant, 1, nowSec)).toBe("skip");
-    expect(computeEffectiveTier(0, 0, staleDormant, 10, nowSec)).toBe("dormant");
+    expect(computeEffectiveTier("coin-a", 0, 0, recentDormant, 1, nowSec)).toBe("skip");
+    expect(computeEffectiveTier("coin-d", 0, 0, staleDormant, 10, nowSec)).toBe("dormant");
   });
 });
 
@@ -113,7 +119,7 @@ describe("backoff reset integration", () => {
       lastHitAt: nowSec - 100,
     };
 
-    const tier = computeEffectiveTier(0, 0, meta, 1, nowSec);
+    const tier = computeEffectiveTier("test-coin", 0, 0, meta, 1, nowSec);
     expect(tier).toBe("t1");
   });
 
@@ -125,7 +131,7 @@ describe("backoff reset integration", () => {
       lastHitAt: null,
     };
 
-    const tier = computeEffectiveTier(0, 0, meta, 10, nowSec);
+    const tier = computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec);
     expect(tier).not.toBe("skip");
   });
 
@@ -137,7 +143,7 @@ describe("backoff reset integration", () => {
       lastHitAt: null,
     };
 
-    const tier = computeEffectiveTier(0, 0, meta, 10, nowSec);
+    const tier = computeEffectiveTier("coin-d", 0, 0, meta, 10, nowSec);
     expect(tier).toBe("skip");
   });
 });

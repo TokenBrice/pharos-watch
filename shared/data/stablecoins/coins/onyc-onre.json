@@ -2,6 +2,7 @@
   "id": "onyc-onre",
   "name": "Onchain Yield Coin",
   "symbol": "ONYC",
+  "oneLiner": "ONYC is a Solana-based NAV-accreting yield token backed by OnRe-managed structured insurance and reinsurance positions; not a hard $1 peg.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -25,7 +26,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-fund-onyc"
+      "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
     },
     {
       "label": "Transparency",
@@ -36,6 +37,11 @@
       "url": "https://github.com/onre-finance"
     }
   ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "Bermuda Monetary Authority",
+    "license": "IIGB and DABA licenses (Segregated Accounts Company)"
+  },
   "contracts": [
     {
       "chain": "solana",
@@ -80,5 +86,12 @@
         "kind": "onchain-solana"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.onre.finance/introduction/transparency-dashboard",
+    "provider": "OnRe transparency dashboard",
+    "attestorTier": "self",
+    "cadence": "daily-nav"
   }
 }

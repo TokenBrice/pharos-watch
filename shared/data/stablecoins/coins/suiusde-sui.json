@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "eSui Dollar",
   "symbol": "suiUSDe",
+  "oneLiner": "suiUSDe is Sui's Ethena-whitelabel synthetic dollar; peg depends on Ethena-style delta-neutral basis-trade backing and the Sui deployment's admin controls.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "Ethena whitelabel synthetic-dollar backing using digital-asset collateral and short futures exposure for the Sui deployment",
   "pegMechanism": "Sui-native Ethena whitelabel dollar asset whose peg quality depends on Ethena-style delta-neutral backing and Sui deployment controls",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "geckoId": "esui-dollar",
   "protocolSlug": "sui",
   "links": [

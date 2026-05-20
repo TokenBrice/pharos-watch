@@ -1,0 +1,395 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { CitationBlock } from "@/components/citation-block";
+import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
+import { safeJsonLd } from "@/lib/json-ld";
+import { getCitationAccessedDateForPath } from "@/lib/citation-dates";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  getDepegDewsMethodologyVersionAt,
+} from "@shared/lib/depeg-dews-version";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
+import { CURATED_ANNOTATIONS } from "@shared/data/annotations/curated-annotations";
+import type { ChartAnnotation } from "@shared/types/chart-annotation";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import {
+  DEPEG_EVENT_ENTRIES,
+  INDEXABLE_DEPEG_EVENT_SLUGS,
+  eventBySlug,
+  type DepegEventEntry,
+} from "./page-data";
+
+export function generateStaticParams() {
+  return DEPEG_EVENT_ENTRIES.map((event) => ({ event: event.slug }));
+}
+
+const CURATED_MATCH_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+interface CuratedMatch {
+  label: string;
+  href?: string;
+  severity?: ChartAnnotation["severity"];
+}
+
+function findCuratedAnnotation(event: DepegEventEntry): CuratedMatch | null {
+  const annotations = CURATED_ANNOTATIONS[event.stablecoinId];
+  if (!annotations || annotations.length === 0) return null;
+  const eventMs = event.startedAt * 1000;
+  const candidates = annotations
+    .filter((annotation) => annotation.kind === "depeg")
+    .filter((annotation) => Math.abs(annotation.ts - eventMs) <= CURATED_MATCH_WINDOW_MS);
+  if (candidates.length === 0) return null;
+  const severityRank: Record<NonNullable<ChartAnnotation["severity"]>, number> = {
+    high: 3,
+    med: 2,
+    low: 1,
+  };
+  const ranked = [...candidates].sort((a, b) => {
+    const aRank = a.severity ? severityRank[a.severity] : 0;
+    const bRank = b.severity ? severityRank[b.severity] : 0;
+    if (bRank !== aRank) return bRank - aRank;
+    return Math.abs(a.ts - eventMs) - Math.abs(b.ts - eventMs);
+  });
+  const top = ranked[0];
+  return { label: top.label, href: top.href, severity: top.severity };
+}
+
+function formatIsoDate(seconds: number): string {
+  return new Date(seconds * 1000).toISOString().slice(0, 10);
+}
+
+function formatLongDate(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function formatDeviation(bps: number): string {
+  const pct = Math.abs(bps) / 100;
+  return `${pct.toFixed(2)}%`;
+}
+
+function formatDurationSec(seconds: number): string {
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = minutes / 60;
+  if (hours < 24) return `${hours.toFixed(1)} hr`;
+  const days = hours / 24;
+  return `${days.toFixed(1)} days`;
+}
+
+function formatPrice(value: number | null): string | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value < 0.01) return `$${value.toFixed(6)}`;
+  if (value < 1) return `$${value.toFixed(4)}`;
+  return `$${value.toFixed(2)}`;
+}
+
+function directionLabel(direction: "above" | "below"): string {
+  return direction === "below" ? "below peg" : "above peg";
+}
+
+function buildHeroTitle(event: DepegEventEntry, coinName: string | null): string {
+  const base = coinName ?? event.symbol;
+  return `${base} depeg ${directionLabel(event.direction)} — ${formatLongDate(event.startedAt)}`;
+}
+
+function buildHeroDescription(event: DepegEventEntry): string {
+  const status = event.endedAt ? "Recovered" : "Ongoing";
+  const dev = formatDeviation(event.peakDeviationBps);
+  return `${event.symbol} traded ${directionLabel(event.direction)} with a peak deviation of ${dev} starting ${formatIsoDate(event.startedAt)}. Confirmed depeg event, ${status}.`;
+}
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ event: string }> },
+): Promise<Metadata> {
+  const { event: slug } = await params;
+  const event = eventBySlug.get(slug);
+  if (!event) {
+    return { title: "Depeg Event Not Found", robots: { index: false } };
+  }
+  const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
+  const title = buildHeroTitle(event, coin?.name ?? null);
+  const description = buildHeroDescription(event);
+  return buildPageMetadata({
+    title,
+    description,
+    canonical: `/depeg/${event.slug}/`,
+    ogImage: buildApiOgImageUrl(`/api/og/stablecoin/${event.stablecoinId}`),
+    robots: INDEXABLE_DEPEG_EVENT_SLUGS.has(event.slug)
+      ? undefined
+      : { index: false, follow: true },
+  });
+}
+
+function ProvenanceLine({ event }: { event: DepegEventEntry }) {
+  const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
+  const versionLabel = toMethodologyVersionLabel(methodologyVersion);
+  const provenance = event.provenance ?? null;
+  const parts: string[] = [`Detected under ${versionLabel}`];
+  if (provenance?.confidenceTier) parts.push(`${provenance.confidenceTier} confidence`);
+  if (provenance?.auditVerdict) parts.push(`audit: ${provenance.auditVerdict}`);
+  if (event.confirmationSources) parts.push(`confirmed via ${event.confirmationSources}`);
+  return <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>;
+}
+
+function RecoveryPanel({ event }: { event: DepegEventEntry }) {
+  const startPrice = formatPrice(event.startPrice);
+  const peakPrice = formatPrice(event.peakPrice);
+  const recoveryPrice = formatPrice(event.recoveryPrice);
+  const durationSec = event.endedAt ? event.endedAt - event.startedAt : null;
+  return (
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Direction</dt>
+        <dd className="font-medium text-foreground">{directionLabel(event.direction)}</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak deviation</dt>
+        <dd className="font-medium text-foreground">{formatDeviation(event.peakDeviationBps)}</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Started</dt>
+        <dd className="font-medium text-foreground">{formatLongDate(event.startedAt)}</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Ended</dt>
+        <dd className="font-medium text-foreground">
+          {event.endedAt ? formatLongDate(event.endedAt) : "Ongoing"}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Duration</dt>
+        <dd className="font-medium text-foreground">
+          {durationSec != null ? formatDurationSec(durationSec) : "—"}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
+        <dd className="font-medium text-foreground">{formatPrice(event.pegReference) ?? "—"}</dd>
+      </div>
+      {startPrice ? (
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Start price</dt>
+          <dd className="font-medium text-foreground">{startPrice}</dd>
+        </div>
+      ) : null}
+      {peakPrice ? (
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peak price</dt>
+          <dd className="font-medium text-foreground">{peakPrice}</dd>
+        </div>
+      ) : null}
+      {recoveryPrice ? (
+        <div>
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">Recovery price</dt>
+          <dd className="font-medium text-foreground">{recoveryPrice}</dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
+export default async function DepegEventPage(
+  { params }: { params: Promise<{ event: string }> },
+) {
+  const { event: slug } = await params;
+  const event = eventBySlug.get(slug);
+  if (!event) notFound();
+
+  const coin = TRACKED_META_BY_ID.get(event.stablecoinId);
+  const curated = findCuratedAnnotation(event);
+  const heroTitle = curated?.label ?? buildHeroTitle(event, coin?.name ?? null);
+  const heroDescription = buildHeroDescription(event);
+  const methodologyVersion = getDepegDewsMethodologyVersionAt(event.startedAt);
+  const versionLabel = toMethodologyVersionLabel(methodologyVersion);
+  const canonicalUrl = `${SITE_URL}/depeg/${event.slug}/`;
+  const citationAccessedDate = getCitationAccessedDateForPath(`/depeg/${event.slug}/`);
+
+  // Find prev/next confirmed events for the same coin (sorted desc by startedAt)
+  const sameCoin = DEPEG_EVENT_ENTRIES.filter((e) => e.stablecoinId === event.stablecoinId);
+  const sameCoinIdx = sameCoin.findIndex((e) => e.slug === event.slug);
+  const newer = sameCoinIdx > 0 ? sameCoin[sameCoinIdx - 1] : null;
+  const older = sameCoinIdx >= 0 && sameCoinIdx < sameCoin.length - 1 ? sameCoin[sameCoinIdx + 1] : null;
+
+  const startedIso = new Date(event.startedAt * 1000).toISOString();
+  const endedIso = event.endedAt ? new Date(event.endedAt * 1000).toISOString() : null;
+
+  const newsArticleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: heroTitle,
+    description: heroDescription,
+    datePublished: startedIso,
+    dateModified: endedIso ?? startedIso,
+    image: [buildApiOgImageUrl(`/api/og/stablecoin/${event.stablecoinId}`)],
+    author: { "@type": "Organization", name: "Pharos", url: SITE_URL },
+    publisher: {
+      "@type": "Organization",
+      name: "Pharos",
+      url: SITE_URL,
+      logo: `${SITE_URL}/pharos-icon.png`,
+    },
+    mainEntityOfPage: canonicalUrl,
+    identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
+  };
+
+  const eventJsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: heroTitle,
+    description: heroDescription,
+    startDate: startedIso,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+    url: canonicalUrl,
+    organizer: { "@type": "Organization", name: "Pharos", url: SITE_URL },
+    identifier: [buildPharosUrnJsonLdIdentifier("depeg-event", event.slug)],
+  };
+  if (endedIso) eventJsonLd.endDate = endedIso;
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-6">
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Home", url: "/" },
+          { name: "Depeg Tracker", url: "/depeg/" },
+          { name: heroTitle, url: `/depeg/${event.slug}/` },
+        ]}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(newsArticleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(eventJsonLd) }}
+      />
+
+      <div className="space-y-2">
+        <nav aria-label="Breadcrumb">
+          <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <li>
+              <Link
+                href="/"
+                className="pharos-focus-ring transition-colors hover:text-foreground"
+              >
+                Dashboard
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <Link
+                href="/depeg/"
+                className="pharos-focus-ring transition-colors hover:text-foreground"
+              >
+                Depeg Tracker
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="text-foreground">
+              {event.symbol} {formatIsoDate(event.startedAt)}
+            </li>
+          </ol>
+        </nav>
+        <p className="pharos-kicker">Depeg event</p>
+        <h1 className="text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-tight tracking-tight text-foreground/98 [text-wrap:balance]">
+          {heroTitle}
+        </h1>
+        <ProvenanceLine event={event} />
+      </div>
+
+      <section className="pharos-card-shell space-y-4 rounded-[1.25rem] px-5 py-5">
+        <p className="pharos-kicker">Event summary</p>
+        <RecoveryPanel event={event} />
+      </section>
+
+      {coin ? (
+        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+          <p className="pharos-kicker">Stablecoin</p>
+          <Link
+            href={buildStablecoinUrl(coin.id)}
+            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+          >
+            {coin.name} ({coin.symbol}) →
+          </Link>
+          {coin.oneLiner ? (
+            <p className="text-sm text-muted-foreground">{coin.oneLiner}</p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {curated?.href ? (
+        <section className="pharos-card-shell space-y-2 rounded-[1.25rem] px-5 py-5">
+          <p className="pharos-kicker">Primary source</p>
+          <a
+            href={curated.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pharos-focus-ring text-frost-blue underline-offset-2 hover:underline"
+          >
+            {curated.label} ↗
+          </a>
+        </section>
+      ) : null}
+
+      {newer || older ? (
+        <nav
+          aria-label="Event navigation"
+          className="flex items-center justify-between border-t border-border/50 pt-4 text-sm"
+        >
+          {older ? (
+            <Link
+              href={`/depeg/${older.slug}/`}
+              aria-label={`Older ${older.symbol} depeg: ${formatIsoDate(older.startedAt)}`}
+              className="pharos-focus-ring text-muted-foreground transition-colors hover:text-foreground"
+            >
+              ← {older.symbol} {formatIsoDate(older.startedAt)}
+            </Link>
+          ) : (
+            <span />
+          )}
+          {newer ? (
+            <Link
+              href={`/depeg/${newer.slug}/`}
+              aria-label={`Newer ${newer.symbol} depeg: ${formatIsoDate(newer.startedAt)}`}
+              className="pharos-focus-ring text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {newer.symbol} {formatIsoDate(newer.startedAt)} →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      ) : null}
+
+      <CitationBlock
+        entityClass="depeg-event"
+        id={event.slug}
+        title={heroTitle}
+        url={canonicalUrl}
+        version={versionLabel}
+        accessedDate={citationAccessedDate}
+      />
+
+      <p className="text-xs text-muted-foreground">
+        Methodology pin:{" "}
+        <Link
+          href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH}
+          className="pharos-focus-ring underline-offset-2 hover:underline"
+        >
+          {versionLabel} changelog
+        </Link>
+      </p>
+    </div>
+  );
+}

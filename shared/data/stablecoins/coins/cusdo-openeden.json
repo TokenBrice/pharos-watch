@@ -2,6 +2,7 @@
   "id": "cusdo-openeden",
   "name": "Compounding OpenDollar",
   "symbol": "cUSDO",
+  "oneLiner": "cUSDO is OpenEden's non-rebasing wrapper of USDO that compounds T-Bill yield through price appreciation rather than balance changes.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "usdo-openeden",
   "collateral": "USDO wrapped into OpenEden's non-rebasing cUSDO format; the wrapper keeps the same Treasury-backed reserve stack as USDO while yield accrues through price appreciation instead of rebasing",
   "pegMechanism": "Users can wrap USDO into cUSDO or unwrap cUSDO back into USDO at any time; unlike rebasing USDO, cUSDO compounds by increasing in redeemable USDO per token",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "compounding-open-dollar",
   "links": [
@@ -42,6 +44,11 @@
       "url": "https://docs.openeden.com/usdo/developers/integration-guide"
     }
   ],
+  "jurisdiction": {
+    "country": "Bermuda",
+    "regulator": "Bermuda Monetary Authority",
+    "license": "Digital Asset Business Act (DABA) License"
+  },
   "contracts": [
     {
       "chain": "ethereum",

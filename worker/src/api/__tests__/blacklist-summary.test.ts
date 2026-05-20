@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeBlacklistRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { handleBlacklistSummary } from "../blacklist-summary";
 
 describe("handleBlacklistSummary", () => {
   it("returns summary stats, chart payload, and chain options", async () => {
     const db = mockD1([
+      {
+        match: "per_coin_recent_7d",
+        rows: [
+          { stablecoin: "USDT", event_type: "blacklist", n: 2 },
+          { stablecoin: "USDT", event_type: "destroy", n: 1 },
+          { stablecoin: "USDC", event_type: "unblacklist", n: 3 },
+        ],
+      },
       {
         match: "GROUP BY stablecoin, event_type",
         rows: [
@@ -93,6 +101,7 @@ describe("handleBlacklistSummary", () => {
         perCoinFrozenTotal: Record<string, number>;
         perCoinDestroyedTotal: Record<string, number>;
         perCoinQuarterlyEventTypes: Record<string, Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>>;
+        perCoinRecentEventTypes: Record<string, { freezes: number; destroys: number; releases: number }>;
       };
       chart: Array<{ total: number }>;
       chains: Array<{ id: string; name: string }>;
@@ -136,6 +145,11 @@ describe("handleBlacklistSummary", () => {
     expect(body.stats.perCoinQuarterlyEventTypes.USDT).toHaveLength(1);
     expect(body.stats.perCoinQuarterlyEventTypes.USDT[0]).toMatchObject({ blacklist: 1, unblacklist: 0, destroy: 0 });
     expect(body.stats.perCoinQuarterlyEventTypes.USDC[0]).toMatchObject({ blacklist: 0, unblacklist: 0, destroy: 1 });
+    // Per-coin 7d event-type counts back the detail-page RecentBlacklistBanner.
+    expect(body.stats.perCoinRecentEventTypes.USDT).toEqual({ freezes: 2, destroys: 1, releases: 0 });
+    expect(body.stats.perCoinRecentEventTypes.USDC).toEqual({ freezes: 0, destroys: 0, releases: 3 });
+    // Coins without 7d events get zero-default records so clients don't need presence checks.
+    expect(body.stats.perCoinRecentEventTypes.PAXG).toEqual({ freezes: 0, destroys: 0, releases: 0 });
   });
 
   it("summarizes current-balance cache gaps without counting destroy rows as frozen", async () => {
@@ -522,6 +536,7 @@ describe("handleBlacklistSummary", () => {
         perCoinFrozenTotal: Record<string, number>;
         perCoinDestroyedTotal: Record<string, number>;
         perCoinQuarterlyEventTypes: Record<string, unknown[]>;
+        perCoinRecentEventTypes: Record<string, { freezes: number; destroys: number; releases: number }>;
       };
       totalEvents: number;
     };
@@ -533,6 +548,7 @@ describe("handleBlacklistSummary", () => {
     expect(json.stats.perCoinFrozenTotal.USDC).toBe(0);
     expect(json.stats.perCoinDestroyedTotal.USDC).toBe(0);
     expect(json.stats.perCoinQuarterlyEventTypes.USDC).toEqual([]);
+    expect(json.stats.perCoinRecentEventTypes.USDC).toEqual({ freezes: 0, destroys: 0, releases: 0 });
   });
 
   it("preserves net-frozen semantics for frozenAddresses", async () => {

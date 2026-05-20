@@ -2,6 +2,7 @@
   "id": "hbd-hive",
   "name": "Hive Backed Dollar",
   "symbol": "HBD",
+  "oneLiner": "HBD is Hive's algorithmic dollar, redeemable on-chain for $1 of HIVE via a witness-set conversion, with haircut rules when system debt exceeds thresholds.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Hive protocol value and conversion rules between HBD and HIVE, including haircut logic when HBD debt exceeds protocol thresholds",
   "pegMechanism": "Protocol-level conversion mechanism targets one U.S. dollar of HIVE per HBD, with witness-set interest and haircut rules under stress",
+  "mechanismArchetype": "algorithmic",
   "detailProvider": "coingecko",
   "geckoId": "hive_dollar",
   "protocolSlug": "hive",

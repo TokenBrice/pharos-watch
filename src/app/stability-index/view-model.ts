@@ -1,5 +1,6 @@
 import { formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import type { PsiChartPoint } from "@shared/lib/psi-view-model";
 import type { StabilityContributor } from "@/hooks/api-hooks";
 import { BAND_ZONES, PSI_EVENTS } from "@/lib/psi-history-events";
 
@@ -8,7 +9,7 @@ const SCORE_DECIMAL_PLACES = 1;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type PsiHistoryPoint = { date: number; score: number; band: string };
-export type PsiChartPoint = { ts: number; score: number };
+export type { PsiChartPoint };
 
 export interface HistoryStatItem {
   label: string;

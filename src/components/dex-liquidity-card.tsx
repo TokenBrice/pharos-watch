@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { getScoreTier, TIER_TEXT, ratioQualityColor } from "@/lib/severity-colors";
@@ -14,6 +15,7 @@ import {
   getLiquidityEvidenceLabel,
 } from "@/components/dex-liquidity-card-model";
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
   DurabilityBadge,
@@ -24,6 +26,17 @@ import {
   TrendArrow,
   TvlTrendChart,
 } from "@/components/dex-liquidity-card-parts";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
+
+/**
+ * A coin has "meaningful" DEX data only when at least one observed pool or
+ * non-zero TVL exists. Coins like yBOLD have an entry in the map but with
+ * `poolCount === 0` and `totalTvlUsd === 0`; in that case we hide the card.
+ */
+export function hasMeaningfulDexData(liq: DexLiquidityData | undefined): liq is DexLiquidityData {
+  if (!liq) return false;
+  return liq.poolCount > 0 || liq.totalTvlUsd > 0;
+}
 
 export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const { data: liquidityMap, isLoading } = useDexLiquidity();
@@ -48,21 +61,8 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const liq = liquidityMap?.[stablecoinId];
-  if (!liq) {
-    return (
-      <Card className="rounded-xl">
-        <CardHeader className="pb-2">
-          <DetailSectionTitle>
-            <MethodologyLabel topic="liquidityScore">DEX Liquidity</MethodologyLabel>
-          </DetailSectionTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No DEX liquidity data available for this stablecoin.
-          </p>
-        </CardContent>
-      </Card>
-    );
+  if (!hasMeaningfulDexData(liq)) {
+    return null;
   }
 
   const score = liq.liquidityScore ?? 0;
@@ -90,10 +90,12 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             </Badge>
           </div>
           {isRated ? (
-            <div className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
-              {score}
-              <span className="text-sm text-muted-foreground">/100</span>
-            </div>
+            <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
+              <span className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
+                {score}
+                <span className="text-sm text-muted-foreground">/100</span>
+              </span>
+            </ScoreBadgeWrapper>
           ) : (
             <div className="text-xl font-semibold text-muted-foreground">NR</div>
           )}
@@ -252,7 +254,15 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
         </div>
 
-        <MethodologyCardActions topic="liquidityScore" />
+        {liq.scoreComponents ? (
+          <ShowYourWorkPanel
+            kind="liquidity"
+            scoreComponents={liq.scoreComponents}
+            stablecoinId={stablecoinId}
+          />
+        ) : null}
+
+        <MethodologyCardActions topic="liquidityScore" showWorkToggle />
       </CardContent>
     </Card>
   );

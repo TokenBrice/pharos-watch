@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Stub the insights module so /why callback tests do not need to drive the
 // full report-cards snapshot pipeline. Coverage callback uses buildCoverageMessage

@@ -2,6 +2,7 @@
   "id": "jtrsy-anemoy",
   "name": "Janus Henderson Anemoy Treasury Fund",
   "symbol": "JTRSY",
+  "oneLiner": "JTRSY is Anemoy's tokenized short-duration U.S. Treasury fund sub-advised by Janus Henderson; whitelisted investors subscribe and redeem at fund NAV same-day.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -11,19 +12,22 @@
     "navToken": true
   },
   "collateral": "Short-duration U.S. Treasury bills selected and managed by Janus Henderson as sub-advisor inside Anemoy's BVI Professional Fund, tokenised through Centrifuge as ERC-7540 vault shares",
-  "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AA+f / S1+ to the fund",
+  "pegMechanism": "NAV-accreting fund share token; same-day subscription and redemption at fund NAV for whitelisted non-U.S. Professional Investors via the Centrifuge issuer rail; S&P assigns AAAf / S1+ to the fund",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "janus-henderson-anemoy-treasury-fund",
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
-    "type": "independent-audit",
-    "url": "https://centrifuge.io/pools/jtrsy",
-    "provider": "Centrifuge on-chain NAV publishing with Janus Henderson sub-advisory; S&P AA+f / S1+ rating"
+    "type": "real-time",
+    "url": "https://data.chain.link/feeds/ethereum/mainnet/jtrsy-nav-v2",
+    "provider": "Chainlink JTRSY NAV",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
   },
   "links": [
     {
       "label": "Website",
-      "url": "https://centrifuge.io/pools/jtrsy"
+      "url": "https://anemoy.io/funds/jtrsy"
     },
     {
       "label": "Twitter",
@@ -44,6 +48,41 @@
       "chain": "ethereum",
       "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
       "decimals": 6
+    },
+    {
+      "chain": "base",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "plume",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+      "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "AAAJXeGjpKu7W3X4QTSU4pm1Wbj4G2LPcdg7A6xJLLyG",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,
@@ -52,7 +91,7 @@
     "sources": [
       {
         "label": "Centrifuge JTRSY pool",
-        "url": "https://centrifuge.io/pools/jtrsy"
+        "url": "https://anemoy.io/funds/jtrsy"
       }
     ],
     "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",

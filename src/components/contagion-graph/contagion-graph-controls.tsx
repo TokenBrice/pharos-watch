@@ -79,7 +79,7 @@ export function ContagionGraphControls({
           <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             Trace coin
             <select
-              className="h-9 max-w-full rounded-md border bg-background px-2 font-mono text-[11px] text-foreground md:h-7 2xl:w-[11rem]"
+              className="h-11 max-w-full rounded-md border bg-background px-2 font-mono text-[11px] text-foreground md:h-7 2xl:w-[11rem]"
               value={selectedNeighborhoodId ?? ""}
               onChange={(event) => onTraceNodeChange(event.target.value || null)}
             >

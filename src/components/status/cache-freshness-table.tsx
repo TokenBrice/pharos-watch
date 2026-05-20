@@ -2,6 +2,7 @@ import { FRESHNESS_RATIOS, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/sta
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
+import { PublicSignalCard } from "./public-signal-card";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
@@ -152,9 +153,8 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   );
 
   return (
-    <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
-      <h3 className="text-base font-semibold tracking-tight text-foreground">Cache Freshness</h3>
-      <div className="mt-4">
+    <PublicSignalCard title="Cache Freshness">
+      <div>
         <div className="mb-3 text-xs text-muted-foreground">
           Availability uses ratio thresholds of {">"}{STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}{STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale) against each lane availability budget. Endpoint basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
         </div>
@@ -178,6 +178,6 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           )}
         </div>
       </div>
-    </article>
+    </PublicSignalCard>
   );
 }

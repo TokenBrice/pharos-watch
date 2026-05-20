@@ -5,7 +5,7 @@ import {
   extractDestroyAmountFromReceiptLogs,
 } from "../amount-recovery";
 import { shouldSuppressAsMirrorZero } from "../shared";
-import { mockD1 } from "../../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistRow } from "../shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../run-budget";
@@ -101,17 +101,15 @@ describe("enrichRowBalances", () => {
     const limiter = async () => {
       throw new Error("provider should not be called");
     };
-    const result = await enrichRowBalances(
+    const result = await enrichRowBalances({
       rows,
-      makeConfig(),
-      null,
-      null,
-      limiter,
-      makeRunBudget(),
-      undefined,
-      undefined,
-      1,
-    );
+      config: makeConfig(),
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      etherscanLimiter: limiter,
+      runBudget: makeRunBudget(),
+      assetPriceUsd: 1,
+    });
 
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
     expect(rows[0].amount_usd_at_event).toBe(12.5);
@@ -122,14 +120,14 @@ describe("enrichRowBalances", () => {
     const limiter = async () => {
       throw new Error("provider should not be called");
     };
-    const result = await enrichRowBalances(
+    const result = await enrichRowBalances({
       rows,
-      makeConfig(),
-      null,
-      null,
-      limiter,
-      makeRunBudget({ deadlineMs: Date.now() - 1 }),
-    );
+      config: makeConfig(),
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      etherscanLimiter: limiter,
+      runBudget: makeRunBudget({ deadlineMs: Date.now() - 1 }),
+    });
 
     expect(result).toEqual({ attempted: 0, succeeded: 0, failed: 0 });
     expect(rows[0].amount_last_error_class).toBe("runtime_budget");

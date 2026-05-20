@@ -2,6 +2,7 @@
   "id": "cusd-cap",
   "name": "Cap cUSD",
   "symbol": "CUSD",
+  "oneLiner": "CUSD is Cap's USD stablecoin minted against a vault basket of regulated stablecoins and tokenized T-bill funds, with EigenLayer-secured AVS coverage.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "cmcSlug": "cap-cusd",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://cap.app/vault/reserves/cUSD"
+    "url": "https://cap.app/vault/reserves/cUSD",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
@@ -110,7 +113,6 @@
       "decimals": 18
     }
   ],
-  "governanceQuality": "wrapper",
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
@@ -143,5 +145,6 @@
       "risk": "low",
       "coinId": "pyusd-paypal"
     }
-  ]
+  ],
+  "deploymentModel": "third-party-bridge"
 }

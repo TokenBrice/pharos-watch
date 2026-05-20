@@ -2,6 +2,7 @@
   "id": "dllr-sovryn",
   "name": "Sovryn Dollar",
   "symbol": "DLLR",
+  "oneLiner": "DLLR is Sovryn's BTC-backed dollar stablecoin on Rootstock, minted 1:1 via the Mynt aggregator from a basket of underlying CDP stables (mostly ZUSD).",
   "llamaId": "160",
   "detailProvider": "defillama",
   "geckoId": "sovryn-dollar",
@@ -16,6 +17,7 @@
   },
   "collateral": "Basket of BTC-backed Rootstock stablecoins, currently dominated by Sovryn Zero ZUSD with a small Dollar on Chain balance",
   "pegMechanism": "Mynt mints and redeems DLLR 1:1 against accepted bAssets; current supported bAssets include ZUSD and DOC",
+  "mechanismArchetype": "cdp",
   "links": [
     {
       "label": "Website",

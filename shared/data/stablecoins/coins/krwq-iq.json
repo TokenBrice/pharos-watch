@@ -2,6 +2,7 @@
   "id": "krwq-iq",
   "name": "KRWQ",
   "symbol": "KRWQ",
+  "oneLiner": "KRWQ is a Korean won stablecoin issued against USDC, frxUSD, and Korean Treasury Bonds; KYC-gated and not offered to South Korean residents.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "KRW",
@@ -12,12 +13,15 @@
   },
   "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
   "pegMechanism": "Centralized issuance against a 100% reserve. Mint and redemption are gated to KYC-verified institutional counterparties (exchanges, market makers, OTC desks). Ethereum is the canonical mint chain; Base and other destinations share unified supply via LayerZero OFT v2. KRWQ is not offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly.",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "krwt",
   "cmcSlug": "korean-won-iq",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://krwq.cash/transparency"
+    "url": "https://krwq.cash/transparency",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -2,22 +2,28 @@
   "id": "wtgxx-wisdomtree",
   "name": "WisdomTree Government Money Market Digital Fund",
   "symbol": "WTGXX",
+  "oneLiner": "WTGXX is WisdomTree's SEC-registered '40 Act government money market fund tokenized at a stable $1 NAV, with reserves in Treasuries, repos, and cash.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,
-    "navToken": true
+    "navToken": false
   },
   "collateral": "U.S. government obligations, cash, and repurchase agreements held by WisdomTree Digital Government Money Market Fund; '40 Act-registered money market fund administered by WisdomTree Asset Management and recorded natively on-chain via the WisdomTree Connect platform",
   "pegMechanism": "$1.00 stable NAV money market share; SEC-approved 24/7 dealer trading at fixed $1 intraday (Feb 2026); primary subscription and redemption are gated to WisdomTree Connect users with USDC dealer settlement and USD-wire alternatives",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "wisdomtree-treasury-money-market-digital-fund",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx",
-    "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)"
+    "provider": "WisdomTree Asset Management (daily NAV and holdings published on fund page)",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "SEC-registered 1940 Act money market fund"
   },
   "links": [
     {

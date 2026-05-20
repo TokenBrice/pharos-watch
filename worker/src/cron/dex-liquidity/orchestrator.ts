@@ -1,5 +1,5 @@
 import type { CronResult } from "../../lib/cron-logger";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityMetrics, LlamaPool } from "./types";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { throwIfAborted } from "../../lib/abort";

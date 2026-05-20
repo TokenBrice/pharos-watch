@@ -118,6 +118,10 @@ export interface CronConnectionBudgetMeta extends CronConnectionBudgetDefinition
   schedule: CronScheduleExpression;
 }
 
+type CronJobDefinitionInput = Omit<CronJobDefinition, "intervalSec"> & {
+  intervalSec?: number;
+};
+
 export const CRON_GROUPS: readonly CronGroupDefinition[] = [
   {
     key: "quarter-hourly",
@@ -166,12 +170,11 @@ export const CRON_GROUPS: readonly CronGroupDefinition[] = [
   },
 ] as const;
 
-const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
+const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-stablecoins",
     label: "Stablecoin sync",
     group: "quarter-hourly",
-    intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     maxConnections: 3, // DL stablecoins + supplemental tokens (DL coins + CG parallel) + enrich-prices
@@ -200,7 +203,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "stability-index",
     label: "PSI compute",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "dewsPsiOffset",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation
@@ -210,7 +212,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "compute-dews",
     label: "DEWS compute",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "dewsPsiOffset",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation
@@ -220,7 +221,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "project-tape",
     label: "Tape projector",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "dewsPsiOffset",
     triggerMode: "shared",
     maxConnections: 0, // Pure D1 projection from existing source tables
@@ -230,7 +230,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "status-self-check",
     label: "Status self-check",
     group: "quarter-hourly",
-    intervalSec: 900,
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential self-URL probes (loopback or external)
@@ -239,7 +238,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "dispatch-telegram-alerts",
     label: "Telegram alerts",
     group: "five-minute",
-    intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 4, // Telegram sendMessage batches run with SEND_BATCH_SIZE=4
@@ -249,7 +247,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "telegram-degradation-watchdog",
     label: "Telegram degradation watchdog",
     group: "five-minute",
-    intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only inspection plus optional webhook alert
@@ -259,7 +256,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "telegram-disambiguation-cleanup",
     label: "Telegram disambiguation cleanup",
     group: "five-minute",
-    intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE of expired pending disambiguation rows
@@ -269,7 +265,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "telegram-pulse-snapshot",
     label: "Telegram pulse snapshot",
     group: "five-minute",
-    intervalSec: 300,
     scheduleKey: "fiveMinuteTelegramAlerts",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only materialization for the public pulse endpoint
@@ -279,7 +274,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-blacklist",
     label: "Blacklist sync",
     group: "multi-hourly",
-    intervalSec: 6 * 3600,
     scheduleKey: "sixHourlyBlacklist",
     triggerMode: "isolated",
     maxConnections: 1, // Rate-limited sequential Etherscan/TronGrid/RPC calls
@@ -288,7 +282,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-mint-burn",
     label: "Mint/burn critical",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "halfHourlyMintBurnCritical",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
@@ -297,7 +290,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-mint-burn-extended",
     label: "Mint/burn extended",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "halfHourlyMintBurnExtended",
     triggerMode: "isolated",
     maxConnections: 1, // Sequential Alchemy eth_getLogs + eth_getBlockByNumber calls
@@ -306,7 +298,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-dex-discovery",
     label: "DEX pool discovery",
     group: "multi-hourly",
-    intervalSec: 2 * 3600,
     scheduleKey: "twoHourlyDexDiscovery",
     triggerMode: "isolated",
     maxConnections: 1, // Rate-limited sequential GeckoTerminal/CoinGecko crawl
@@ -315,7 +306,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-dex-liquidity",
     label: "DEX liquidity scoring",
     group: "half-hourly",
-    intervalSec: 1800,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
     maxConnections: 4, // DL yields + protocols parallel (2), then Curve chains parallel (4 peak), then GT crawl (1)
@@ -324,7 +314,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-yield-data",
     label: "Yield sync",
     group: "hourly",
-    intervalSec: 3600,
     scheduleKey: "hourlyYieldSync",
     triggerMode: "isolated",
     maxConnections: 1, // on-chain rate batch (1); DL pools read from cache written by sync-dex-liquidity (sequential)
@@ -333,7 +322,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-yield-supplemental",
     label: "Yield supplemental sync",
     group: "multi-hourly",
-    intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyYieldSupplemental",
     triggerMode: "isolated",
     maxConnections: 3, // Supplemental families run serially; Beefy is the peak with 3 parallel API reads
@@ -365,7 +353,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "publish-report-card-cache",
     label: "Report-card cache",
     group: "quarter-hourly",
-    intervalSec: 900,
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
     maxConnections: 0,
@@ -375,7 +362,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "snapshot-safety-grade-history",
     label: "Safety grade snapshot",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 0, // DB-only snapshot
@@ -384,7 +370,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "fetch-tbill-rate",
     label: "T-bill rate",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Sequential benchmark fetches (ECB/FRED/Treasury/SNB)
@@ -394,16 +379,22 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "snapshot-psi",
     label: "PSI snapshot",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 0, // DB-only snapshot
   },
   {
+    job: "snapshot-public-dataset",
+    label: "Public dataset snapshot",
+    group: "daily",
+    scheduleKey: "daily0800Utc",
+    triggerMode: "shared",
+    maxConnections: 0, // D1 read + D1 write; no outbound fetches
+  },
+  {
     job: "sync-usds-status",
     label: "USDS status",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0800Utc",
     triggerMode: "shared",
     maxConnections: 1, // Sequential Etherscan eth_getStorageAt + eth_call probes
@@ -413,7 +404,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-live-reserves",
     label: "Live reserve sync",
     group: "multi-hourly",
-    intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 2, // Sequential per-coin loop with per-adapter I/O limited to 2
@@ -423,7 +413,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-redemption-backstops",
     label: "Redemption backstops",
     group: "multi-hourly",
-    intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 0, // DB-only computation from cached stablecoins + liquidity data
@@ -433,7 +422,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-kinesis-supply",
     label: "Kinesis supply",
     group: "multi-hourly",
-    intervalSec: 4 * 3600,
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
     maxConnections: 1, // 2 sequential Kinesis Horizon fetches (KAU + KAG)
@@ -443,7 +431,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "sync-bluechip",
     label: "Bluechip sync",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 3, // Bluechip fetches in parallel batches of 3
@@ -452,7 +439,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "daily-digest",
     label: "Daily digest",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0805Utc",
     triggerMode: "shared",
     maxConnections: 1, // Anthropic LLM call, then Twitter + Telegram posts (sequential)
@@ -481,7 +467,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "yield-coverage-audit",
     label: "Yield coverage audit",
     group: "other",
-    intervalSec: 30 * 86400,
     scheduleKey: "monthlyYieldAudit",
     triggerMode: "isolated",
     maxConnections: 1,
@@ -490,7 +475,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "prune-status-probe-runs",
     label: "Status probe TTL prune",
     group: "daily",
-    intervalSec: 86400,
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE
@@ -499,7 +483,6 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "prune-cron-history",
     label: "Cron history TTL prune",
     group: "daily",
-    intervalSec: 86400,
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only DELETE of cron_runs + cron_slot_executions
@@ -517,24 +500,27 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinition[] = [
     job: "telegram-retention-cleanup",
     label: "Telegram audit retention cleanup",
     group: "daily",
-    intervalSec: DAY_SECONDS,
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
     maxConnections: 0, // DB-only retention DELETEs and target reconciliation
   },
 ] as const;
 
-export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => ({
-  ...definition,
-  schedule: CRON_SCHEDULES[definition.scheduleKey],
-  statusImpact:
-    definition.job === "sync-stablecoins" ||
-    definition.job === "sync-fx-rates" ||
-    definition.job === "sync-blacklist" ||
-    definition.job === "sync-mint-burn"
-      ? "critical"
-      : "watch",
-}));
+export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => {
+  const intervalSec = definition.intervalSec ?? CRON_SCHEDULE_INTERVALS[definition.scheduleKey];
+  return {
+    ...definition,
+    intervalSec,
+    schedule: CRON_SCHEDULES[definition.scheduleKey],
+    statusImpact:
+      definition.job === "sync-stablecoins" ||
+      definition.job === "sync-fx-rates" ||
+      definition.job === "sync-blacklist" ||
+      definition.job === "sync-mint-burn"
+        ? "critical"
+        : "watch",
+  };
+});
 
 const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefinition[] = [
   {

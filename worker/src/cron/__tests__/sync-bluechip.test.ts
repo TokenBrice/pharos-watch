@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
 
 vi.mock("@shared/lib/bluechip-slugs", () => ({

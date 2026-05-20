@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Argentine Peso",
   "symbol": "WARS",
+  "oneLiner": "WARS is Ripio's wrapped Argentine peso stablecoin targeting 1 WARS = 1 ARS, backed by ARS bank deposits and local-currency instruments via wFIAT.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "ARS",
@@ -14,6 +15,7 @@
   },
   "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
   "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "argentine-peso",
   "links": [
     {
@@ -80,7 +82,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
-    "provider": "Ripio wARS collateral attestations by local public accountants"
+    "provider": "Ripio wARS collateral attestations by local public accountants",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Argentina"
   },
   "reserves": [
     {

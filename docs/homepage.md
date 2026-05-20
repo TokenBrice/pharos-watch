@@ -25,10 +25,10 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 
 ## Top-Fold Contract
 
-`src/app/page.tsx` computes three server-side counts for the masthead:
+`src/app/page.tsx` reads three server-side counts for the masthead:
 
-- tracked stablecoins from `ACTIVE_STABLECOINS.length`
-- peg count from `PEG_CURRENCY_COUNT`
+- tracked stablecoins from `ACTIVE_STABLECOIN_COUNT`, the static projection of `ACTIVE_STABLECOINS.length`
+- peg count from `ACTIVE_PEG_CURRENCY_COUNT`
 - chain count from `CHAIN_META`
 
 The visible top fold is split across four independently composed surfaces:
@@ -48,15 +48,20 @@ The homepage is intentionally decomposed into several cache-sharing clients inst
 
 ### `HomepageClient`
 
-Core query inputs:
+Critical query inputs:
 
 - `useStablecoins()`
 - `useLogos()`
 - `usePegSummary()`
+- `usePinnedStablecoins()` for local pinned-watchlist state
+
+Deferred optional query inputs:
+
 - `useDexLiquidity()`
 - `useReportCards()`
 - `useStressSignals()`
-- `usePinnedStablecoins()` for local pinned-watchlist state
+
+`useDeferredHomepageOptionalQueries()` enables the optional live datasets after the stablecoins and peg-summary queries settle, so the table-critical data path remains separate from deeper monitoring panels.
 
 Derived helpers:
 
@@ -100,7 +105,7 @@ Repeated hook usage is expected. These surfaces share TanStack Query cache state
 
 The live tape reads `useLatestEvents({ limit: 20 })`, which resolves to `GET /api/events?limit=20` and is delivered to browsers through same-origin `/_site-data/events?limit=20` on production Pages hosts. `HomepageTopTape` mounts it only on `/`, directly under the global PSI regime bar. On desktop it starts at the active sidebar width so it does not cover the main navigation; on mobile it spans the full viewport. The component renders nothing on endpoint errors or a valid empty event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
-Each item carries a per-class lucide icon (depeg/freeze/score) plus a 2px severity-tinted left accent sourced from `severityToAccent(...)` in `src/lib/severity-colors.ts`. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/tape/`, the longer-form route covering the same event feed.
+Each item carries a per-class lucide icon (depeg/freeze/score) plus a 2px severity-tinted left accent sourced from `severityToAccent(...)` in `src/lib/severity-colors.ts`. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 
 ---
 

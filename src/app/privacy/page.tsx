@@ -33,7 +33,8 @@ export default function PrivacyPage() {
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts or wallet connections. Portfolio data is stored locally by default, share
             links encode holdings in the URL, analytics are anonymized when enabled, and support or API-access requests
-            route through the feedback/contact channels listed below.
+            route through the feedback/contact channels listed below. The Stablecoin Selector uses functional browser
+            storage and content-addressed share snapshots, described below.
           </p>
         </div>
 
@@ -48,7 +49,31 @@ export default function PrivacyPage() {
             and short-lived pending-command or pending-alert metadata; subscriber rows with no follows or pending state
             and no Telegram activity for 180 days are automatically purged by a weekly cleanup job. If you request API access, Pharos stores the
             email address you verify plus any name, organization, project URL, use-case, intended-endpoint, cadence, and
-            volume details you submit; request throttling stores salted hashes of IP address and user-agent data.
+            volume details you submit; request throttling stores salted hashes of IP address and user-agent data. The
+            Stablecoin Selector stores local browser state for callout dismissal and tab-scoped result recovery, and
+            share links can store a content-addressed snapshot of the generated selector output in Cloudflare KV.
+          </p>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">Stablecoin Selector Storage</h2>
+          <p>
+            The Selector at{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">/screener/selector/</code> uses functional browser
+            storage. The long-lived local key in the current build is the callout dismissal key,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.callout.v1</code>. It is scoped to this
+            site, does not contain an IP address or user identifier, and remains until you clear browser site data.
+            A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded">sessionStorage</code> key,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.sessionResult.v1</code>, can hold the
+            last successful live result for accidental navigation recovery and clears when the browser session ends.
+          </p>
+          <p>
+            Selector share links use a{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded">sid</code> that points to a Cloudflare Pages KV
+            snapshot of the form answers and resulting output. Snapshot IDs are content-addressed, so identical answers
+            against an identical dataset produce the same ID. Anyone with the link can view the frozen artifact.
+            Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and are retained for
+            five years.
           </p>
         </section>
 
@@ -133,7 +158,9 @@ export default function PrivacyPage() {
             rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in the D1
             schema, but the current submission path does not write to it. Self-serve API key requests are stored for
             operator review and duplicate-claim enforcement; verification tokens are stored only as hashes and expire
-            after 30 minutes. Issued self-serve API keys expire after 60 days by default.
+            after 30 minutes. Issued self-serve API keys expire after 60 days by default. Selector localStorage remains
+            until browser site data is cleared. Selector KV snapshots are retained for five years because they are
+            content-addressed analytical records rather than user-account records.
           </p>
         </section>
 

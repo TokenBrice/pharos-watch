@@ -2,6 +2,7 @@
   "id": "gbpsafo-spiko",
   "name": "Spiko Amundi Overnight Swap Fund (GBP)",
   "symbol": "GBPSAFO",
+  "oneLiner": "GBPSAFO is the GBP share of Spiko's UCITS Amundi Smart Cash fund, a regulated overnight-swap money-market vehicle authorized by the AMF.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -17,7 +18,11 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-pound",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS SICAV sub-fund"
   },
   "links": [
     {

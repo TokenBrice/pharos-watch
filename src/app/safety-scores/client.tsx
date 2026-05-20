@@ -8,6 +8,7 @@ import { SystemicRiskHeadline } from "@/components/systemic-risk-headline";
 import { SafetyInspectionBoard } from "./inspection-board";
 import { useReportCards } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
+import { useNearViewport } from "@/hooks/use-near-viewport";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -40,28 +41,11 @@ import {
 } from "./presentational";
 
 function LazyCard({ children, className }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "100px" },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const { ref, near } = useNearViewport<HTMLDivElement>("100px");
 
   return (
-    <div ref={ref} className={cn(className, visible && "pharos-card-enter")}>
-      {visible ? children : (
+    <div ref={ref} className={cn(className, near && "pharos-card-enter")}>
+      {near ? children : (
         <div
           className="h-[340px] rounded-xl border bg-muted/20 animate-pulse flex flex-col items-center justify-center gap-2"
           role="status"
@@ -195,6 +179,7 @@ export function ReportCardsClient() {
         originalScore={originalCardMap.get(card.id)?.overallScore}
         coreSettlement={coreSettlementProfiles.has(card.id)}
         animIndex={index % 5}
+        gradeVersionVariant="tooltip-only"
       />
     </LazyCard>
   ), [affectedIds, coreSettlementProfiles, isSimulating, logos, originalCardMap]);

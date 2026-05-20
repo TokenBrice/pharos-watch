@@ -24,6 +24,7 @@ import {
   toTimestampMs,
   type YieldHistorySourceOption,
   type YieldHistoryChartPoint,
+  type YieldSourceSegment,
 } from "./yield-history-chart-model";
 
 interface AxisTickProps {
@@ -125,18 +126,25 @@ export function SourceSwitchDot({ cx, cy, payload, active = false }: WarningDotP
   );
 }
 
+export interface SpikeTooltipInfo {
+  trailingAvg: number;
+  ratio: number;
+}
+
 export function YieldHistoryTooltip({
   active,
   payload,
   label,
   showBreakdown,
   compact,
+  spikesByDate,
 }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; payload: YieldHistoryChartPoint }>;
   label?: number | string;
   showBreakdown: boolean;
   compact: boolean;
+  spikesByDate?: Map<number, SpikeTooltipInfo>;
 }) {
   const labelTimestamp = toTimestampMs(label);
   if (!active || !payload || payload.length === 0 || !Number.isFinite(labelTimestamp)) {
@@ -145,6 +153,8 @@ export function YieldHistoryTooltip({
 
   const point = payload.find((entry) => entry.dataKey === "apy")?.payload ?? payload[0]?.payload;
   if (!point) return null;
+
+  const spikeInfo = spikesByDate?.get(point.date) ?? null;
 
   return (
     <div
@@ -187,6 +197,14 @@ export function YieldHistoryTooltip({
           <span className="block font-medium uppercase tracking-[0.14em]">Source changed</span>
           <span className="mt-1 block normal-case tracking-normal">
             The selected source changed versus the prior published snapshot. This explains provenance churn, not stablecoin safety.
+          </span>
+        </div>
+      ) : null}
+      {spikeInfo ? (
+        <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-[10px] text-orange-700 dark:text-orange-300">
+          <span className="block font-medium uppercase tracking-[0.14em]">Yield spike</span>
+          <span className="mt-1 block normal-case tracking-normal">
+            {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing 30d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
           </span>
         </div>
       ) : null}
@@ -233,7 +251,7 @@ export function Controls({
   hideSourceSelector?: boolean;
 }) {
   const selectedSourceLabel = selectedSourceKey === "best"
-    ? "Best source"
+    ? "Best yield (highest APY)"
     : getYieldHistorySourceDisplayLabel(
         availableSources.find((source) => source.sourceKey === selectedSourceKey) ?? {
           sourceKey: selectedSourceKey,
@@ -285,7 +303,7 @@ export function Controls({
               <DropdownMenuContent align="start" className="max-h-72 w-[min(22rem,calc(100vw-2rem))]">
                 <DropdownMenuRadioGroup value={selectedSourceKey} onValueChange={onSourceChange}>
                   <DropdownMenuRadioItem value="best" className="text-xs">
-                    Best source
+                    Best yield (highest APY)
                   </DropdownMenuRadioItem>
                   {availableSources.map((source) => (
                     <DropdownMenuRadioItem key={source.sourceKey} value={source.sourceKey} className="text-xs">
@@ -330,4 +348,85 @@ export function ChartShell({ compact, children }: { compact: boolean; children: 
 
 export function renderAxisTick(value: number | string | undefined, days: number) {
   return formatAxisDate(Number(value ?? 0), days);
+}
+
+function formatSourceStripDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function SourceStrip({
+  segments,
+  timeStart,
+  timeEnd,
+}: {
+  segments: ReadonlyArray<YieldSourceSegment>;
+  timeStart: number;
+  timeEnd: number;
+}) {
+  if (segments.length === 0) return null;
+  const span = timeEnd - timeStart;
+  if (!Number.isFinite(span) || span <= 0) return null;
+
+  /* Build legend entries deduped by sourceKey while preserving first-appearance
+     order. "other" — if present — counts how many original sources collapsed. */
+  const legendOrder: string[] = [];
+  const legendByKey = new Map<string, { label: string; color: string; isOther: boolean; count: number }>();
+  for (const segment of segments) {
+    const existing = legendByKey.get(segment.sourceKey);
+    if (existing) {
+      if (segment.isOther) existing.count += 1;
+      continue;
+    }
+    legendByKey.set(segment.sourceKey, {
+      label: segment.sourceLabel,
+      color: segment.color,
+      isOther: segment.isOther,
+      count: 1,
+    });
+    legendOrder.push(segment.sourceKey);
+  }
+  /* For "other", count distinct original-source contributions to display "other (N)". */
+
+  const ariaSummary = segments
+    .map((segment) => `${segment.sourceLabel} from ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`)
+    .join(", ");
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        role="img"
+        aria-label={`Source timeline: ${ariaSummary}`}
+        className="flex h-2.5 w-full overflow-hidden rounded-full border border-border/60 bg-background/40"
+      >
+        {segments.map((segment, index) => {
+          const widthPct = Math.max(((segment.endTs - segment.startTs) / span) * 100, 0);
+          if (widthPct <= 0) return null;
+          return (
+            <div
+              key={`${segment.sourceKey}-${segment.startTs}-${index}`}
+              className={cn(
+                segment.color,
+                index > 0 ? "border-l border-background/80" : null,
+              )}
+              style={{ width: `${widthPct}%` }}
+              title={`${segment.sourceLabel} — ${formatSourceStripDate(segment.startTs)} to ${formatSourceStripDate(segment.endTs)}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+        {legendOrder.map((key) => {
+          const entry = legendByKey.get(key);
+          if (!entry) return null;
+          const label = entry.isOther ? `other (${entry.count})` : entry.label;
+          return (
+            <span key={key} className="inline-flex items-center gap-1.5">
+              <span className={cn("h-2 w-2 rounded-sm", entry.color)} />
+              <span className="truncate">{label}</span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

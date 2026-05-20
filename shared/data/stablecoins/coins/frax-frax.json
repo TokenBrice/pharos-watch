@@ -2,6 +2,7 @@
   "id": "frax-frax",
   "name": "Frax",
   "symbol": "FRAX",
+  "oneLiner": "FRAX is Frax's dollar stablecoin, backed by protocol-owned stable liquidity, tokenized cash/T-bill/MMF assets, and strategy exposure.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
+  "collateral": "Frax balance-sheet assets include protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity; tokenized cash, T-bill, and money-market assets such as WTGXX, USTB, and BUIDL; plus smaller USDe and other strategy or volatile exposures.",
   "pegMechanism": "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
+  "mechanismArchetype": "tbill",
   "llamaId": "6",
   "detailProvider": "defillama",
   "geckoId": "frax",
@@ -112,32 +114,38 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 35,
-      "risk": "low",
-      "coinId": "ustb-superstate"
+      "name": "Protocol-owned FRAX, frxUSD, sFRAX, and sfrxUSD liquidity",
+      "pct": 54,
+      "risk": "low"
     },
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 30,
+      "pct": 17,
       "risk": "low",
       "coinId": "wtgxx-wisdomtree"
     },
     {
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 16,
+      "risk": "low",
+      "coinId": "ustb-superstate"
+    },
+    {
+      "name": "BUIDL (BlackRock tokenized money-market fund)",
+      "pct": 4,
+      "risk": "low",
+      "coinId": "buidl-blackrock"
+    },
+    {
       "name": "USDe / Convex strategy exposure",
-      "pct": 20,
+      "pct": 4,
       "risk": "medium",
       "coinId": "usde-ethena"
     },
     {
-      "name": "Intra-protocol Frax-owned tokens (sFRAX, frxUSD, sfrxUSD)",
-      "pct": 10,
-      "risk": "low"
-    },
-    {
-      "name": "Other tokenized assets (BUIDL, USCC, AUSD, JTRSY)",
+      "name": "Other stablecoin, volatile, and strategy assets",
       "pct": 5,
-      "risk": "low"
+      "risk": "medium"
     }
   ],
   "liveReservesConfig": {

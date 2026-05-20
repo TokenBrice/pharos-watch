@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
 
 describe("handleStablecoinReserves", () => {
-  it("keeps USDAI on the reserve endpoint with the curated PYUSD fallback until a validated snapshot is synced", async () => {
+  it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
     const db = mockD1();
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
 
@@ -18,10 +18,9 @@ describe("handleStablecoinReserves", () => {
       displayUrl: "https://usd.ai/usdai",
       reserves: [
         {
-          name: "PYUSD (PayPal USD)",
+          name: "USDC / USDT stablecoin reserves (variable mix)",
           pct: 100,
           risk: "low",
-          coinId: "pyusd-paypal",
         },
       ],
       sync: {

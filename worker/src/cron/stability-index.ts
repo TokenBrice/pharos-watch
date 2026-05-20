@@ -6,7 +6,7 @@ import type { CronResult } from "../lib/cron-logger";
 import { getPriceCache } from "../lib/db-cache";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { canonicalizePsiStablecoinId } from "../lib/psi-stablecoin-ids";
+import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
 

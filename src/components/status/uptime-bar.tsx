@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<DaySegment["status"], string> = {
   healthy: "Healthy",
   degraded: "Degraded",
   stale: "Stale",
-  unknown: "No data",
+  unknown: "No probe.",
 };
 
 function buildDaySegments(

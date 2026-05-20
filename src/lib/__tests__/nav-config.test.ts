@@ -38,13 +38,13 @@ describe("nav-config", () => {
       "Liquidity",
       "Depeg",
       "Mint/Burn Flows",
-      "The Tape",
       "Chains",
       "Cemetery",
     ]);
 
     expect(analyzeGroup?.label).toBe("ANALYZE");
     expect(analyzeGroup?.items.map((item) => item.href)).toEqual([
+      "/screener",
       "/dependency-map",
       "/portfolio",
       "/compare",
@@ -52,6 +52,7 @@ describe("nav-config", () => {
 
     expect(monitorGroup?.label).toBe("MONITOR");
     expect(monitorGroup?.items.map((item) => ({ href: item.href, label: item.label }))).toEqual([
+      { href: "/timeline", label: "Timeline" },
       { href: "/upcoming", label: "Upcoming" },
       { href: "/digest", label: "Digest" },
       { href: "/status", label: "Pharos Status" },
@@ -64,6 +65,7 @@ describe("nav-config", () => {
       "/about",
       "/funding",
       "/methodology",
+      "/learn/mechanisms",
       "/coverage",
       "/api",
       "/changelog",

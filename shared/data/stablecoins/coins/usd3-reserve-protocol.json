@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Web 3 Dollar",
   "symbol": "USD3",
+  "oneLiner": "USD3 is a Reserve Protocol RToken/DTF backed by yield-bearing USDC and USDS wrappers (Aave, Compound, Steakhouse, Sky savings), governed by RSR stakers.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -27,7 +28,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://reserve.org/protocol/"
+      "url": "https://docs.reserve.org/"
     },
     {
       "label": "Transparency",
@@ -58,7 +59,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://api.reserve.org/discover/dtfs",
-    "provider": "Reserve Protocol"
+    "provider": "Reserve Protocol",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "reserves": [
     {

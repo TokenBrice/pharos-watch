@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { stubCryptoForAuth } from "./helpers/auth";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import type { FeedbackEnv } from "../feedback";
 
 // Stub fetch and crypto.subtle before importing the handler

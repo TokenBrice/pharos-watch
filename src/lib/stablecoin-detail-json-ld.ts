@@ -2,6 +2,7 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
 export const CONTRACT_IDENTIFIER_JSON_LD_LIMIT = 8;
 
@@ -84,6 +85,7 @@ export function buildStablecoinDatasetJsonLd(
       ...statusCopy.keywords,
     ],
     identifier: [
+      buildPharosUrnJsonLdIdentifier("coin", coin.id),
       ...(coin.geckoId ? [{ "@type": "PropertyValue", propertyID: "geckoId", value: coin.geckoId }] : []),
       ...(coin.variantOf ? [{ "@type": "PropertyValue", propertyID: "variantOf", value: coin.variantOf }] : []),
       ...(coin.variantKind ? [{ "@type": "PropertyValue", propertyID: "variantKind", value: coin.variantKind }] : []),
@@ -117,7 +119,7 @@ export function buildPreLaunchStablecoinJsonLd(
       "@context": "https://schema.org",
       "@type": "WebPage",
       "@id": `${detailUrl}#webpage`,
-      name: `${coin.name} (${coin.symbol}) Pre-Launch Stablecoin Tracker`,
+      name: `${coin.name} (${coin.symbol}) Pre-launch Stablecoin Tracker`,
       description,
       url: detailUrl,
       isPartOf: { "@id": `${siteUrl}#website` },

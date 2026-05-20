@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchRedstonePrices, REDSTONE_TRACKED_SYMBOL_ALLOWLIST } from "../redstone";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import redstoneBatchFixture from "./fixtures/redstone-batch.json";
 
 afterEach(() => {

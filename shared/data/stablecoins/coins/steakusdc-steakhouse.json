@@ -2,6 +2,7 @@
   "id": "steakusdc-steakhouse",
   "name": "Steakhouse USDC V2",
   "symbol": "steakUSDC",
+  "oneLiner": "steakUSDC is Steakhouse's curated Morpho ERC-4626 lending vault over USDC; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

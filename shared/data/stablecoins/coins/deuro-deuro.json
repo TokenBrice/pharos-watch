@@ -2,16 +2,18 @@
   "id": "deuro-deuro",
   "name": "Decentralized Euro",
   "symbol": "DEURO",
+  "oneLiner": "DEURO is a decentralized euro stablecoin minted from overcollateralized BTC, ETH, and crypto vaults using a Frankencoin-style oracle-free auction mechanism.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
   "collateral": "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
   "pegMechanism": "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "decentralized-euro",
   "links": [
@@ -69,37 +71,14 @@
   "deploymentModel": "canonical-bridge",
   "reserves": [
     {
-      "name": "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)",
-      "pct": 40,
-      "risk": "medium"
-    },
-    {
-      "name": "WETH (wrapped Ether)",
-      "pct": 25,
-      "risk": "very-low"
-    },
-    {
-      "name": "USDC (stablecoins)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "DAI (stablecoins)",
-      "pct": 7.5,
-      "risk": "low",
-      "coinId": "dai-makerdao"
-    },
-    {
-      "name": "XAUT (tokenized gold)",
-      "pct": 10,
-      "risk": "medium",
-      "coinId": "xaut-tether"
-    },
-    {
-      "name": "UNI / ZCHF (governance / other)",
-      "pct": 10,
+      "name": "WFPS (Wrapped Frankencoin Pool Shares)",
+      "pct": 63,
       "risk": "very-high"
+    },
+    {
+      "name": "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)",
+      "pct": 37,
+      "risk": "medium"
     }
   ],
   "liveReservesConfig": {

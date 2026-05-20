@@ -79,8 +79,9 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
   const hasMoreChains = compactVisibleChains.length < visibleChains.length;
   const hiddenChains = hasMoreChains ? visibleChains.slice(compactVisibleChains.length) : [];
   const hiddenChainIds = new Set(hiddenChains.map((chain) => chain.id));
-  const chainTrackDefinition = isMobile ? "minmax(0, 2rem)" : "minmax(2.5rem, 1fr)";
-  const gridTemplateColumns = `7rem repeat(${compactVisibleChains.length}, ${chainTrackDefinition}) ${hasMoreChains ? "2.5rem " : ""}5rem 6rem`;
+  const chainTrackDefinition = isMobile ? "2.75rem" : "minmax(2.5rem, 1fr)";
+  const moreChainTrackDefinition = isMobile ? "2.75rem" : "2.5rem";
+  const gridTemplateColumns = `7rem repeat(${compactVisibleChains.length}, ${chainTrackDefinition}) ${hasMoreChains ? `${moreChainTrackDefinition} ` : ""}5rem 6rem`;
 
   return (
     <section
@@ -105,7 +106,7 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
           <div
             className="grid gap-1"
             style={{
-              minWidth: isMobile ? "auto" : "820px",
+              minWidth: isMobile ? "34rem" : "820px",
               gridTemplateColumns,
             }}
           >
@@ -164,7 +165,7 @@ function LatticeRowCells({
 
   return (
     <>
-      <div className="flex h-9 items-center rounded-l-lg border border-border/60 bg-background/70 px-2 font-mono text-xs font-semibold text-foreground">
+      <div className="flex h-11 items-center rounded-l-lg border border-border/60 bg-background/70 px-2 font-mono text-xs font-semibold text-foreground sm:h-9">
         {row.stablecoin}
       </div>
       {chains.map((chain) => {
@@ -177,7 +178,7 @@ function LatticeRowCells({
             aria-label={`${row.stablecoin} ${chain.name} coverage ${supported ? "supported" : "not supported"}`}
             title={`${row.stablecoin} on ${chain.name}`}
             className={cn(
-              "relative h-9 overflow-hidden border border-border/60 text-xs transition-colors",
+              "relative h-11 min-w-11 overflow-hidden border border-border/60 text-xs transition-colors sm:h-9 sm:min-w-0",
               supported
                 ? "bg-frost-blue/35 text-foreground hover:bg-frost-blue/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-frost-blue focus-visible:ring-offset-2"
                 : "cursor-not-allowed bg-muted/15 text-muted-foreground/40",
@@ -205,14 +206,14 @@ function LatticeRowCells({
         );
       })}
       {hasMoreChains ? (
-        <div className="flex h-9 items-center justify-center border border-border/60 bg-background/70 px-2 text-xs text-muted-foreground">
+        <div className="flex h-11 items-center justify-center border border-border/60 bg-background/70 px-2 text-xs text-muted-foreground sm:h-9">
           {hiddenSupportedCount > 0 ? `+${hiddenSupportedCount}` : ""}
         </div>
       ) : null}
-      <div className="flex h-9 items-center justify-end border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
+      <div className="flex h-11 items-center justify-end border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground sm:h-9">
         {formatCount(row.eventCount)}
       </div>
-      <div className="flex h-9 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground">
+      <div className="flex h-11 items-center justify-end rounded-r-lg border border-border/60 bg-background/70 px-2 font-mono text-xs tabular-nums text-muted-foreground sm:h-9">
         {row.frozenTotal > 0 ? formatCurrency(row.frozenTotal, 0) : "—"}
       </div>
     </>

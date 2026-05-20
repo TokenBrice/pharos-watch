@@ -2,16 +2,18 @@
   "id": "bold-liquity",
   "name": "Liquity BOLD",
   "symbol": "BOLD",
+  "oneLiner": "BOLD is Liquity V2's decentralized dollar stablecoin, minted from immutable overcollateralized CDP vaults against WETH, wstETH, and rETH only.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "decentralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
   "collateral": "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
   "pegMechanism": "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
+  "mechanismArchetype": "cdp",
   "llamaId": "269",
   "detailProvider": "defillama",
   "geckoId": "liquity-bold-2",
@@ -145,9 +147,5 @@
         }
       ]
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Liquity Stability Pool (via Yearn yBOLD)",
-    "yieldType": "lending-vault"
   }
 }

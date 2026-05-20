@@ -23,7 +23,9 @@ export interface TelegramLogEvent {
 const INVALID_SECRET_SPIKE_WINDOW_MS = 60_000;
 const INVALID_SECRET_SPIKE_THRESHOLD = 5;
 
+// Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let invalidSecretWindowStartedAt = 0;
+// Intentional per-isolate cache — module-scope let used to throttle invalid-secret log noise within a Worker isolate. See docs/worker-infrastructure.md.
 let invalidSecretWindowCount = 0;
 
 interface TelegramLogRecord {

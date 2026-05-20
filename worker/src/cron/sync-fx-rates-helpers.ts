@@ -35,7 +35,7 @@ export interface SecondaryCurrencyPayload {
   usd: Record<string, number>;
 }
 
-export type SecondaryCurrencyEndpoint = "jsdelivr" | "pages.dev";
+export type SecondaryCurrencyEndpoint = "jsdelivr" | "jsdelivr-versioned" | "pages.dev";
 
 export interface SecondaryCurrencyCandidate {
   endpoint: SecondaryCurrencyEndpoint;
@@ -69,6 +69,7 @@ export async function persistFxSyncResult(
   if (lastWriteAdvanced) {
     await setCache(db, "sync-fx-rates:last-write", "1");
   }
+  // TODO(2.6): convert to logCronEvent
   console.log(
     cacheResult.rates.written
       ? `[sync-fx-rates] Cached FX rates: ${JSON.stringify(state.usableRates)}`
@@ -403,6 +404,7 @@ export class FxSyncRunState {
     const ecbUpdatedAt = resolveDatedSourceUpdatedAt(sourceDate, this.syncStartSec, 16);
     const ecbAgeSec = (Date.now() - ecbDateObj.getTime()) / 1000;
     if (ecbAgeSec > DAY_SECONDS) {
+      // TODO(2.6): convert to logCronEvent
       console.warn(
         `[sync-fx-rates] ECB rates are ${Math.round(ecbAgeSec / 3600)}h stale (date=${sourceDate}). ` +
         "Weekend/holiday — non-USD pegs using last published rates.",
@@ -445,6 +447,7 @@ export class FxSyncRunState {
             applied++;
           }
         } else {
+          // TODO(2.6): convert to logCronEvent
           console.warn(
             `[sync-fx-rates] ${pegKey} diverges: current=${currentRate}, realtime=${realtimeRate} ` +
             `(${(delta * 100).toFixed(1)}%)`,
@@ -479,6 +482,7 @@ export class FxSyncRunState {
         existingUpdatedAt > 0 &&
         quote.updatedAt < existingUpdatedAt
       ) {
+        // TODO(2.6): convert to logCronEvent
         console.log(
           `[sync-fx-rates] Skipping older Chainlink ${pegKey} quote: ` +
             `chainlink=${quote.updatedAt}, existing=${existingUpdatedAt}`,
@@ -490,6 +494,7 @@ export class FxSyncRunState {
       if (existing != null && existing > 0) {
         const delta = Math.abs(quote.price - existing) / existing;
         if (delta > 0.05) {
+          // TODO(2.6): convert to logCronEvent
           console.warn(
             `[sync-fx-rates] Chainlink ${pegKey} diverges from current reference: ` +
             `current=${existing}, chainlink=${quote.price} (${(delta * 100).toFixed(1)}%)`,
@@ -527,6 +532,7 @@ export class FxSyncRunState {
 
     this.usableRates[pegKey] = this.prevRates[pegKey]!;
     this.inheritPrevious(pegKey);
+    // TODO(2.6): convert to logCronEvent
     console.log(`[sync-fx-rates] Using cached ${label} rate: ${this.usableRates[pegKey]}`);
     return true;
   }
@@ -537,6 +543,7 @@ export class FxSyncRunState {
 
     this.usableRates[pegKey] = fallbackRate;
     this.setHardcoded(pegKey);
+    // TODO(2.6): convert to logCronEvent
     console.log(`[sync-fx-rates] Using hardcoded ${label} fallback: ${fallbackRate}`);
   }
 
@@ -562,6 +569,7 @@ export class FxSyncRunState {
     if (this.sources.cache === "ok") {
       this.sources.cache = "recovered";
     }
+    // TODO(2.6): convert to logCronEvent
     console.log("[sync-fx-rates] Independent sources restored fresh full-set coverage after cached fallback");
   }
 
@@ -618,6 +626,7 @@ export async function runOpenExchangeRatesOverlay(
   }
 
   if (!(await shouldAttemptFetch(db, CIRCUIT_SOURCE.FX_REALTIME))) {
+    // TODO(2.6): convert to logCronEvent
     console.warn("[sync-fx-rates] OXR real-time circuit open — skipping overlay");
     return "unavailable";
   }
@@ -635,6 +644,7 @@ export async function runOpenExchangeRatesOverlay(
   const elapsedMinutes = (Math.floor(Date.now() / 1000) - lastFetchTime) / 60;
 
   if (elapsedMinutes < 55) {
+    // TODO(2.6): convert to logCronEvent
     console.log(
       `[sync-fx-rates] Skipping OXR fetch (last fetch ${Math.round(elapsedMinutes)}min ago, rate limit: 55min)`,
     );
@@ -659,6 +669,7 @@ export async function runOpenExchangeRatesOverlay(
       });
     }
 
+    // TODO(2.6): convert to logCronEvent
     console.log(
       `[sync-fx-rates] Applied ${realtimeApplied}/${realtimeFetch.rates.size} real-time FX rates`,
     );
@@ -670,6 +681,7 @@ export async function runOpenExchangeRatesOverlay(
       : "unavailable";
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    // TODO(2.6): convert to logCronEvent
     console.warn("[sync-fx-rates] OXR real-time fetch failed:", err);
     await runBestEffort("recordOutcome:fx-realtime-failure", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.FX_REALTIME, false);
@@ -689,6 +701,7 @@ export async function runChainlinkOverlay(
 ): Promise<ChainlinkSourceStatus> {
   const chainlinkAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS);
   if (!chainlinkAllowed) {
+    // TODO(2.6): convert to logCronEvent
     console.warn("[sync-fx-rates] Chainlink reference-feed circuit open — skipping overlay");
     return "unavailable";
   }
@@ -716,6 +729,7 @@ export async function runChainlinkOverlay(
       : "unavailable";
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    // TODO(2.6): convert to logCronEvent
     console.warn("[sync-fx-rates] Chainlink reference feeds failed:", err);
     await runBestEffort("recordOutcome:chainlink-feeds-failure", async () => {
       await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, false);

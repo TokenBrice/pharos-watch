@@ -137,6 +137,20 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...reviewedDirectRedemptionSupplyFull,
     costModel: documentedVariableFee("EEA burn fee is 0 bps; other Circle redemption fees may vary"),
   },
+  "usdc-circle": {
+    ...issuerBase,
+    ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.07, confidence: "documented-bound", basis: "hot-buffer" },
+    reviewedAt: "2026-05-17",
+    costModel: documentedVariableFee("1:1 via Circle Mint; EEA burn fee is 0 bps, other Circle fees may vary"),
+    docs: [
+      sourceRef("Circle Transparency", "https://www.circle.com/transparency", ["capacity"]),
+      sourceRef("Circle USDC terms", "https://www.circle.com/legal/usdc-terms", ["route", "capacity", "access", "fees"]),
+    ],
+    notes: [
+      "Tracked USDC metadata records a 7% cash-deposit reserve slice; Pharos uses that cash slice as the documented hot-buffer lower bound and does not promote the unvalidated 20% proposal.",
+    ],
+  },
   "usdp-paxos": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
@@ -347,9 +361,18 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdtb-ethena": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound", basis: "hot-buffer" },
     costModel: documentedVariableFee(
       "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize",
     ),
+    reviewedAt: "2026-05-17",
+    docs: [
+      sourceRef("USDtb docs", "https://docs.usdtb.money/", ["route", "capacity"]),
+      sourceRef("USDtb reserve attestations", "https://www.anchorage.com/platform/usdtb-reserve-attestations", ["capacity"]),
+    ],
+    notes: [
+      "Tracked USDtb metadata records a 10% USDC redemption reserve; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 30% proposal.",
+    ],
   },
   "pusd-plume": {
     ...issuerBase,

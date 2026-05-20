@@ -36,6 +36,10 @@ interface ContagionGraphSvgProps {
   focusMode: FocusMode;
   supernodeState: SupernodeState;
   logos?: Record<string, string>;
+  logoZoom?: number;
+  nodeScale?: number;
+  suppressHubLabels?: boolean;
+  showTickerLabels?: boolean;
   activeHoveredId: string | null;
   activeHoveredEdge: number | null;
   focusedId: string | null;
@@ -85,6 +89,10 @@ interface NodeRenderProps {
   connectedNodes: Set<string>;
   nodeDistance: Map<string, number>;
   tierById: ReadonlyMap<string, HubTier>;
+  logoZoom: number;
+  nodeScale: number;
+  suppressHubLabels: boolean;
+  showTickerLabels: boolean;
   onPointerDown: (event: PointerEvent, nodeId: string) => void;
   onKeyDown: (event: KeyboardEvent, nodeId: string) => void;
   onMouseEnter: (nodeId: string) => void;
@@ -98,16 +106,18 @@ interface NodeRenderProps {
 function ContagionGraphClipPaths({
   nodes,
   positions,
+  nodeScale,
 }: {
   nodes: GraphNode[];
   positions: PositionMap;
+  nodeScale: number;
 }) {
   return (
     <defs>
       {nodes.map((node) => {
         const pos = positions.get(node.id);
         if (!pos) return null;
-        const innerR = node.r - RING_WIDTH;
+        const innerR = Math.max(node.r * nodeScale - RING_WIDTH, 3);
         return (
           <clipPath key={node.id} id={`clip-n-${node.id}`}>
             <circle cx={pos.x} cy={pos.y} r={innerR} />
@@ -253,6 +263,10 @@ function ContagionGraphNode({
   connectedNodes,
   nodeDistance,
   tierById,
+  logoZoom,
+  nodeScale,
+  suppressHubLabels,
+  showTickerLabels,
   onPointerDown,
   onKeyDown,
   onMouseEnter,
@@ -263,7 +277,8 @@ function ContagionGraphNode({
   onDoubleClick,
 }: NodeRenderProps) {
   const logoUrl = logos?.[node.id];
-  const innerR = node.r - RING_WIDTH;
+  const visualR = node.r * nodeScale;
+  const innerR = Math.max(visualR - RING_WIDTH, 3);
   const { isHovered, isHub, isCoreHub, color, hubLabelY, nodeDelay, nodeOpacity } = getNodePresentation({
     node,
     position,
@@ -274,6 +289,12 @@ function ContagionGraphNode({
   });
 
   const nodeCursor = isPinnedPosition ? "default" : focusMode === "neighborhood" ? "pointer" : "grab";
+  const logoR = innerR * logoZoom;
+  const shouldRenderLabel = showTickerLabels || (!suppressHubLabels && isHub);
+  const tickerFontSize = HUB_LABEL_FONT_SIZE * nodeScale;
+  const labelGap = showTickerLabels ? tickerFontSize * 0.7 : isCoreHub ? 12 : 10;
+  const labelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, position.y + visualR + labelGap));
+  const labelText = showTickerLabels ? node.symbol : `${node.symbol} · ${node.grade}`;
   return (
     <g
       key={node.id}
@@ -295,7 +316,7 @@ function ContagionGraphNode({
       <circle
         cx={position.x}
         cy={position.y}
-        r={node.r}
+        r={visualR}
         fill={logoUrl ? "var(--color-card, #f8f9fa)" : color}
         fillOpacity={logoUrl ? 1 : 0.6}
         stroke={color}
@@ -310,7 +331,7 @@ function ContagionGraphNode({
         <circle
           cx={position.x}
           cy={position.y}
-          r={node.r + 2.5}
+          r={visualR + 2.5 * nodeScale}
           fill="none"
           stroke={color}
           strokeWidth={1.4}
@@ -322,7 +343,7 @@ function ContagionGraphNode({
         <circle
           cx={position.x}
           cy={position.y}
-          r={Math.max(node.r - RING_WIDTH - 2, 3)}
+          r={Math.max(visualR - RING_WIDTH - 2, 3)}
           fill="none"
           stroke="var(--p-frost-blue)"
           strokeWidth={0.9}
@@ -335,10 +356,10 @@ function ContagionGraphNode({
       {logoUrl ? (
         <image
           href={logoUrl}
-          x={position.x - innerR}
-          y={position.y - innerR}
-          width={innerR * 2}
-          height={innerR * 2}
+          x={position.x - logoR}
+          y={position.y - logoR}
+          width={logoR * 2}
+          height={logoR * 2}
           clipPath={`url(#clip-n-${node.id})`}
           preserveAspectRatio="xMidYMid slice"
           pointerEvents="none"
@@ -364,7 +385,7 @@ function ContagionGraphNode({
         <circle
           cx={position.x}
           cy={position.y}
-          r={node.r + (focusedId === node.id ? 3 : 2)}
+          r={visualR + (focusedId === node.id ? 3 : 2) * nodeScale}
           fill="none"
           stroke={
             focusedId === node.id
@@ -379,20 +400,20 @@ function ContagionGraphNode({
         />
       )}
 
-      {isHub && (
+      {shouldRenderLabel && (
         <text
           x={position.x}
-          y={hubLabelY}
+          y={showTickerLabels ? labelY : hubLabelY}
           textAnchor="middle"
           fill="currentColor"
-          fontSize={isCoreHub ? HUB_LABEL_FONT_SIZE : HUB_LABEL_FONT_SIZE - 1}
+          fontSize={showTickerLabels ? tickerFontSize : isCoreHub ? HUB_LABEL_FONT_SIZE : HUB_LABEL_FONT_SIZE - 1}
           fontWeight={isCoreHub ? 700 : 600}
           stroke="var(--color-card, #f8f9fa)"
           strokeWidth={2.4}
           paintOrder="stroke"
           pointerEvents="none"
         >
-          {node.symbol} · {node.grade}
+          {labelText}
         </text>
       )}
     </g>
@@ -409,6 +430,10 @@ export function ContagionGraphSvg({
   focusMode,
   supernodeState,
   logos,
+  logoZoom = 1,
+  nodeScale = 1,
+  suppressHubLabels = false,
+  showTickerLabels = false,
   activeHoveredId,
   activeHoveredEdge,
   focusedId,
@@ -448,7 +473,7 @@ export function ContagionGraphSvg({
       onPointerLeave={onPointerUp}
       onClick={handleSvgClick}
     >
-      <ContagionGraphClipPaths nodes={nodes} positions={positions} />
+      <ContagionGraphClipPaths nodes={nodes} positions={positions} nodeScale={nodeScale} />
 
       {visibleLinks.map((link) => (
         <ContagionGraphEdge
@@ -481,6 +506,10 @@ export function ContagionGraphSvg({
             connectedNodes={connectedNodes}
             nodeDistance={nodeDistance}
             tierById={supernodeState.tierById}
+            logoZoom={logoZoom}
+            nodeScale={nodeScale}
+            suppressHubLabels={suppressHubLabels}
+            showTickerLabels={showTickerLabels}
             onPointerDown={onNodePointerDown}
             onKeyDown={onNodeKeyDown}
             onMouseEnter={onNodeMouseEnter}

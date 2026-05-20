@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildMergedCemetery, frozenToDeadShape } from "../cemetery-merged";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
-import { FROZEN_STABLECOINS } from "../stablecoins";
+import { FROZEN_STABLECOINS } from "../stablecoins/registry";
 
 describe("buildMergedCemetery", () => {
   it("contains every dead-stablecoins entry and every frozen-derived entry", () => {

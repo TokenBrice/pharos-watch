@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 
 // Mock the registry to inject a fixture frozen coin. The fixture exercises
 // every cross-file freeze invariant without polluting the real registry.
-vi.mock("@shared/lib/stablecoins", async () => {
+vi.mock("@shared/lib/stablecoins/registry", async () => {
   const actual =
-    await vi.importActual<typeof import("@shared/lib/stablecoins")>("@shared/lib/stablecoins");
+    await vi.importActual<typeof import("@shared/lib/stablecoins/registry")>("@shared/lib/stablecoins/registry");
   const fixtureFrozen = {
     id: "fixture-frozen",
     name: "Fixture Frozen",
@@ -97,7 +97,7 @@ describe("frozen fixture — end-to-end", () => {
   it("/api/stablecoin-reserves accepts the fixture coin id", async () => {
     // The Worker read-side gate is keyed off READABLE_IDS so the detail-page
     // endpoints continue serving cached/historical data for frozen coins.
-    const { READABLE_IDS } = await import("@shared/lib/stablecoins");
+    const { READABLE_IDS } = await import("@shared/lib/stablecoins/registry");
     expect(READABLE_IDS.has("fixture-frozen")).toBe(true);
   });
 });

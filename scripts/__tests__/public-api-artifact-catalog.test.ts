@@ -50,7 +50,19 @@ describe("public API artifact catalog", () => {
       if (!endpoint.path.includes("{")) {
         expect(endpoint.path, endpoint.key).toBe(definition?.path);
       } else {
-        expect(endpoint.path, endpoint.key).toBe(definition?.path.replace(/\/[^/]+$/, "/{stablecoinId}"));
+        // Catalog uses OpenAPI {placeholder} segments; the runtime definition
+        // ships a canary value (e.g. "usdt-tether", "2026-05-16"). Compare
+        // structural segments by collapsing both sides to the catalog's
+        // template-segment shape: any catalog segment containing `{` matches
+        // ANY single segment in the definition.
+        const catalogSegments = endpoint.path.split("/");
+        const definitionSegments = (definition?.path ?? "").split("/");
+        expect(definitionSegments.length, endpoint.key).toBe(catalogSegments.length);
+        for (let i = 0; i < catalogSegments.length; i++) {
+          const catalogSeg = catalogSegments[i];
+          if (catalogSeg.includes("{")) continue; // placeholder — any value OK
+          expect(definitionSegments[i], `${endpoint.key} segment ${i}`).toBe(catalogSeg);
+        }
       }
     }
   });
@@ -129,12 +141,14 @@ describe("public API artifact catalog", () => {
     expect(endpoint?.parameters?.map((parameter) => parameter.name)).toEqual([
       "stablecoin",
       "chain",
+      "chainId",
       "eventType",
       "q",
       "sortBy",
       "sortDirection",
       "limit",
       "offset",
+      "includeTotal",
     ]);
 
     const stablecoin = endpoint?.parameters?.find((parameter) => parameter.name === "stablecoin");
@@ -149,8 +163,11 @@ describe("public API artifact catalog", () => {
     const sortDirection = endpoint?.parameters?.find((parameter) => parameter.name === "sortDirection");
     expect(sortDirection?.schema.enum).toEqual(["asc", "desc"]);
     const limit = endpoint?.parameters?.find((parameter) => parameter.name === "limit");
+    expect(limit?.schema.minimum).toBe(0);
     expect(limit?.schema.maximum).toBe(1000);
     expect(postmanRequests(endpoint?.postman)[0]?.query?.stablecoin).toBe("{{blacklistStablecoinSymbol}}");
+    expect(postmanRequests(endpoint?.postman)[0]?.query?.chainId).toBe("ethereum");
+    expect(postmanRequests(endpoint?.postman)[0]?.query?.includeTotal).toBe("true");
   });
 
   it("documents the yield-history query contract used by OpenAPI and Postman", () => {

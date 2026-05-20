@@ -2,6 +2,7 @@
   "id": "mmev-midas",
   "name": "Midas mMEV",
   "symbol": "mMEV",
+  "oneLiner": "mMEV is a Midas NAV-accreting liquid-yield token wrapping MEV Capital's DeFi lending, liquidity, arbitrage, and liquidation strategies; not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -17,7 +18,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas transparency dashboard and issuer disclosures"
+    "provider": "Midas transparency dashboard and issuer disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
   },
   "links": [
     {

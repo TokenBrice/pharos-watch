@@ -2,6 +2,7 @@
   "id": "ousd-origin-protocol",
   "name": "Origin Dollar",
   "symbol": "OUSD",
+  "oneLiner": "OUSD is Origin Protocol's yield-bearing rebasing USDC wrapper; deposits are deployed across Morpho and Curve strategies and yield is paid via rebase.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

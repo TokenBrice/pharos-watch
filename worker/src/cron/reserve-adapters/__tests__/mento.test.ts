@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   adaptMentoCdpComposition,
@@ -9,6 +12,9 @@ import {
 } from "../mento";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
 
 const SAMPLE_PAYLOAD = {
   collateral: {
@@ -59,6 +65,14 @@ const SAMPLE_PAYLOAD = {
         collateral_usd: 143_361.85,
         debt_usd: 90_307.02,
         ratio: 1.59,
+        status: "active",
+      },
+      {
+        stablecoin: "XOFm",
+        collateral_token: "USDm",
+        collateral_usd: 25_000,
+        debt_usd: 12_500,
+        ratio: 2,
         status: "active",
       },
       {
@@ -128,17 +142,31 @@ describe("mento adapter", () => {
     });
   });
 
-  it("extracts the dashboard reserve payload timestamp", () => {
+  it("extracts the historical dashboard reserve payload timestamp", () => {
     expect(extractMentoDashboardTimestamp(
-      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
     )).toBe(Math.floor(Date.parse("2026-05-11T23:21:16.007Z") / 1000));
+  });
+
+  it("extracts the current cdp_backings dashboard timestamp with deeper escaped quotes", () => {
+    expect(extractMentoDashboardTimestamp(CURRENT_DASHBOARD_HTML)).toBe(
+      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
+    );
+  });
+
+  it("falls back to numeric dashboard dataUpdatedAt milliseconds", () => {
+    const html = String.raw`...\\"cdp_backings\\":[{\\"stablecoin\\":\\"GBPm\\"}],\\"dataUpdateCount\\":1,\\"dataUpdatedAt\\":1779025576506`;
+
+    expect(extractMentoDashboardTimestamp(html)).toBe(
+      Math.floor(Date.parse("2026-05-17T13:46:16.506Z") / 1000),
+    );
   });
 
   it("ignores unrelated timestamps that appear outside the troves/dataUpdateCount anchor window", () => {
     const buildManifest =
-      'buildManifest\\":{\\"timestamp\\":\\"2099-01-01T00:00:00.000Z\\"},\\"polyfillFiles\\":[]';
+      String.raw`buildManifest\":{\"timestamp\":\"2099-01-01T00:00:00.000Z\"},\"polyfillFiles\":[]`;
     const anchoredPayload =
-      'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1';
+      String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`;
     const html = `${buildManifest}${"x".repeat(1024)}${anchoredPayload}`;
 
     expect(extractMentoDashboardTimestamp(html)).toBe(
@@ -236,6 +264,28 @@ describe("mento adapter", () => {
     });
   });
 
+  it("maps XOFm CDP troves through the same USDm collateral shape", () => {
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
+    expect(result.slices).toEqual([
+      {
+        name: "USDm (Mento Dollar) CDP collateral",
+        pct: 100,
+        risk: "low",
+        coinId: "cusd-celo",
+        depType: "collateral",
+      },
+    ]);
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      cdpStablecoin: "XOFm",
+      cdpActiveTroves: 1,
+      totalCollateralUsd: 25_000,
+      totalDebtUsd: 12_500,
+      collateralizationRatio: 2,
+      freshnessMode: "unverified",
+    });
+  });
+
   it("stamps reserve composition with verified dashboard freshness when available", async () => {
     const result = await fetchMentoReserves(
       { id: "cusd-celo" } as never,
@@ -264,7 +314,7 @@ describe("mento adapter", () => {
           [
             "text-get:https://reserve.mento.org/:12000",
             Promise.resolve(
-              'troves\\":[{}],\\"timestamp\\":\\"2026-05-11T23:21:16.007Z\\"},\\"dataUpdateCount\\":1',
+              String.raw`troves\":[{}],\"timestamp\":\"2026-05-11T23:21:16.007Z\"},\"dataUpdateCount\":1`,
             ),
           ],
         ]),
@@ -336,7 +386,7 @@ describe("mento adapter", () => {
   });
 
   it("produces CDP reserve output that passes adapter validation", () => {
-    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "JPYm");
+    const result = adaptMentoCdpComposition(SAMPLE_PAYLOAD, "XOFm");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("mento") ?? undefined }).valid).toBe(true);
   });
 });

@@ -245,7 +245,11 @@ function SidebarGroup({
       )}
       {sidebarExpanded ? (
         <>
-          <div className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${isGroupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+          <div
+            className={`grid transition-[grid-template-rows] duration-200 ease-[var(--motion-ease-standard)] ${isGroupExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            aria-hidden={!isGroupExpanded}
+            inert={!isGroupExpanded}
+          >
             <div className="overflow-hidden">
               <div id={`nav-group-${groupKey}`} className="space-y-0.5">
                 {items.map((item) => (

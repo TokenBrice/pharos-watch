@@ -2,6 +2,7 @@
   "id": "steakusdt-steakhouse",
   "name": "Steakhouse USDT V2",
   "symbol": "steakUSDT",
+  "oneLiner": "steakUSDT is Steakhouse's curated Morpho ERC-4626 lending vault over USDT; share price accrues borrower interest with FIFO withdrawal queue on Morpho liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

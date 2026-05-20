@@ -2,12 +2,13 @@
   "id": "susdai-usd-ai",
   "name": "Staked USDai",
   "symbol": "sUSDai",
+  "oneLiner": "sUSDai is USD.AI's staked wrapper of USDai; share price accrues yield from a PYUSD liquid sleeve and GPU-backed AI-compute loans, with a 30-day queued exit.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "blacklistabilityReview": {
@@ -39,7 +40,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "United States"
+    "country": "Cayman Islands"
   },
   "contracts": [
     {
@@ -68,14 +69,14 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "PYUSD (PayPal USD)",
-      "pct": 94.4,
+      "name": "PYUSD liquid sleeve",
+      "pct": 82.35,
       "risk": "low",
       "coinId": "pyusd-paypal"
     },
     {
-      "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
-      "pct": 5.6,
+      "name": "GPU-backed infrastructure loans",
+      "pct": 17.65,
       "risk": "high"
     }
   ],
@@ -88,7 +89,10 @@
     "version": 2,
     "semantics": "collateral-mix",
     "scoring": {
-      "allowedDegradedWarningCodes": ["source-timestamp-spread", "usdai-share-coverage-gap"]
+      "allowedDegradedWarningCodes": [
+        "source-timestamp-spread",
+        "usdai-share-coverage-gap"
+      ]
     },
     "breakerScope": "susdai-usd-ai",
     "display": {
@@ -101,5 +105,12 @@
         "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+    "provider": "USD.AI proof-of-reserves API",
+    "attestorTier": "self",
+    "cadence": "real-time"
   }
 }

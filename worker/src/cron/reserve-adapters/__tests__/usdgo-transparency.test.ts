@@ -35,19 +35,72 @@ describe("adaptUsdgoTransparency", () => {
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(417_730_000 / 417_000_000);
   });
 
-  it("fails closed when components do not reconcile", () => {
-    expect(() => adaptUsdgoTransparency({
+  it("accepts current excess-percent collateralization ratio field", () => {
+    const result = adaptUsdgoTransparency({
       ok: true,
       data: {
-        collateralizationRatio: 100,
-        buidlUsdM: "70",
-        gsUsdM: "20",
-        usdUsdM: "1",
-        backingAssetsM: "100",
-        circulationSupplyMFormatted: "100",
-        lastUpdated: "Apr 13, 2026",
+        collateralizationRatio: 0.27,
+        buidlUsdM: "92.15",
+        gsUsdM: "149.63",
+        jltxxUsdM: "100.05",
+        usdUsdM: "1.64",
+        backingAssetsM: "343.46",
+        circulationSupplyMFormatted: "342.54",
+        lastUpdated: "May 18, 2026",
       },
-    })).toThrow("reserve components sum");
+    });
+
+    expect(result.metadata?.publishedCollateralizationRatio).toBeCloseTo(1.0027);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(343_460_000 / 342_540_000);
+    expect(result.metadata).toMatchObject({
+      publishedCollateralizationRatioFormat: "excess-percent",
+      sourceTimestamp: Date.UTC(2026, 4, 18) / 1000,
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "usdgo-collateralization-ratio-excess-percent",
+        severity: "info",
+      }),
+    ]);
+  });
+
+  it("accepts a raw-ratio collateralization field when it matches reserves and supply", () => {
+    const result = adaptUsdgoTransparency({
+      ok: true,
+      data: {
+        collateralizationRatio: 1.002686,
+        buidlUsdM: "92.15",
+        gsUsdM: "149.63",
+        jltxxUsdM: "100.05",
+        usdUsdM: "1.64",
+        backingAssetsM: "343.46",
+        circulationSupplyMFormatted: "342.54",
+        lastUpdated: "May 18, 2026",
+      },
+    });
+
+    expect(result.metadata).toMatchObject({
+      publishedCollateralizationRatioFormat: "raw-ratio",
+    });
+    expect(result.metadata?.publishedCollateralizationRatio).toBeCloseTo(1.002686);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it("fails closed when components do not reconcile", () => {
+    expect(() =>
+      adaptUsdgoTransparency({
+        ok: true,
+        data: {
+          collateralizationRatio: 100,
+          buidlUsdM: "70",
+          gsUsdM: "20",
+          usdUsdM: "1",
+          backingAssetsM: "100",
+          circulationSupplyMFormatted: "100",
+          lastUpdated: "Apr 13, 2026",
+        },
+      }),
+    ).toThrow("reserve components sum");
   });
 
   it("throws when ok is false (parse-failure path)", () => {

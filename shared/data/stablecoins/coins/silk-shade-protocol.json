@@ -2,16 +2,18 @@
   "id": "silk-shade-protocol",
   "name": "SILK",
   "symbol": "SILK",
+  "oneLiner": "SILK is Shade Protocol's basket-pegged stable on Secret Network, tracking a GDP-weighted currency basket and overcollateralized through ShadeLend CDP vaults.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "VAR",
     "governance": "decentralized",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": true
   },
   "collateral": "Crypto assets via ShadeLend overcollateralized vaults (ATOM, SCRT, stablecoins like USDC, SHD governance token) plus stablecoin redemption pools; targets 100-150% system-wide collateralization ratio",
   "pegMechanism": "Basket peg tracking GDP-weighted currencies of the top 20 economies (USD 30%, CNY 22%, EUR 14%, JPY 7%, GBP 4%, etc.); stability maintained via overcollateralized lending (ShadeLend), redemption pools, bounded minting, collateral liquidations, and ShadeDAO bond mechanism",
+  "mechanismArchetype": "cdp",
   "llamaId": "113",
   "detailProvider": "defillama",
   "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
@@ -80,5 +82,9 @@
       "pct": 10,
       "risk": "high"
     }
-  ]
+  ],
+  "yieldConfig": {
+    "yieldSource": "SILK basket index appreciation",
+    "yieldType": "nav-appreciation"
+  }
 }

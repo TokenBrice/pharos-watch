@@ -2,6 +2,7 @@
   "id": "bib01-backed",
   "name": "Backed IB01 Treasury Bond 0-1yr",
   "symbol": "bIB01",
+  "oneLiner": "bIB01 is Backed's NAV-accreting tracker token for the BlackRock iShares 0-1 year U.S. Treasury Bond UCITS ETF, KYC-gated under Swiss DLT Act framework.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,16 @@
   },
   "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
   "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "backed-ib01-treasury-bond-0-1yr",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://app.backed.fi/issuance",
-    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Switzerland"
   },
   "links": [
     {

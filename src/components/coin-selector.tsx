@@ -125,7 +125,7 @@ export function CoinSelector({
   // Selected state: show chip with remove button
   if (selected) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-accent/30">
+      <div className="flex min-h-11 items-center gap-2 rounded-lg border bg-accent/30 px-3 py-2 sm:min-h-9">
         <StablecoinLogo
           src={logos?.[selected.id]}
           name={selected.name}
@@ -151,7 +151,7 @@ export function CoinSelector({
       <Button
         ref={buttonRef}
         variant="outline"
-        className="w-full justify-between text-muted-foreground font-normal"
+        className="min-h-11 w-full justify-between font-normal text-muted-foreground sm:min-h-9"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -182,7 +182,7 @@ export function CoinSelector({
                 setSearch(e.target.value);
                 setFocusedIndex(-1);
               }}
-              className="w-full rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-11 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring sm:min-h-8 sm:py-1.5"
             />
           </div>
           <ul
@@ -207,8 +207,8 @@ export function CoinSelector({
                   aria-disabled={disabled}
                   className={
                     disabled
-                      ? "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm opacity-40 cursor-not-allowed"
-                      : `flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent transition-colors ${focused ? "bg-accent" : ""}`
+                      ? "flex min-h-11 items-center gap-2 rounded-sm px-2 py-2 text-sm opacity-40 cursor-not-allowed sm:min-h-8 sm:py-1.5"
+                      : `flex min-h-11 cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm transition-colors hover:bg-accent sm:min-h-8 sm:py-1.5 ${focused ? "bg-accent" : ""}`
                   }
                   onClick={() => {
                     if (!disabled) {

@@ -16,13 +16,13 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { SectionSkeleton, ChartSkeleton } from "@/components/homepage-skeletons";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { SectionSkeleton } from "@/components/homepage-skeletons";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { HomepageSectionBand } from "@/components/homepage-sections";
 import { HomepageAltPegsTeaser } from "@/components/homepage-alt-pegs-teaser";
 import { Button } from "@/components/ui/button";
 import { UpcomingStablecoinsSection } from "@/components/upcoming-stablecoins-section";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
 import {
   buildHomepageCriticalViewModel,
@@ -31,7 +31,11 @@ import {
 import { getHomepageActiveFilterLabel } from "@/lib/homepage-filter-labels";
 import { buildAltPegSnapshot } from "@/lib/alt-peg-market";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { ACTIVE_STABLECOIN_COUNT, ACTIVE_STABLECOIN_GOVERNANCE_COUNTS } from "@/lib/stablecoin-static-data";
+import {
+  ACTIVE_PEG_CURRENCY_COUNT,
+  ACTIVE_STABLECOIN_COUNT,
+  ACTIVE_STABLECOIN_GOVERNANCE_COUNTS,
+} from "@/lib/stablecoin-static-data";
 
 const CEFI_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS.centralized;
 const CEFI_DEP_COUNT = ACTIVE_STABLECOIN_GOVERNANCE_COUNTS["centralized-dependent"];
@@ -340,7 +344,7 @@ export function HomepageClient() {
       <section
         aria-label="Core monitoring"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
-        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-monitoring)' }}
+        style={{ borderTop: '2px solid var(--section-rule)', background: 'var(--surface-zone-monitoring)' }}
       >
         <HomepageSectionBand
           eyebrow="Core Monitoring"
@@ -348,33 +352,25 @@ export function HomepageClient() {
           description="Depeg risk, flows, safety distribution, and the market-wide stability regime."
         />
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <SectionErrorBoundary name="dews-radar">
-            <section aria-label="DEWS depeg early warning" className="space-y-3">
+            <section aria-label="DEWS depeg early warning" className="flex h-full flex-col space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div role="status" aria-label={`DEWS risk level: ${dewsRiskLevel}`} className={`border-l-4 pl-3 transition-colors duration-300 ${
-                  dewsRiskLevel === "danger"
-                    ? "border-l-red-500"
-                    : dewsRiskLevel === "warning"
-                      ? "border-l-amber-500"
-                      : dewsRiskLevel === "alert"
-                        ? "border-l-orange-500"
-                        : "border-l-transparent"
-                }`}>
+                <div role="status" aria-label={`DEWS risk level: ${dewsRiskLevel}`}>
                   <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
                 </div>
                 <Link
                   href="/depeg/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   View Depeg Tracker
                   <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
               {optionalQueriesEnabled || stressUpdatedAt > 0 || hasStressSignals ? (
-                <DEWSSummary logos={logos} showHeader={false} />
+                <DEWSSummary logos={logos} showHeader={false} className="flex-1" />
               ) : (
-                <ChartSkeleton className="h-[320px] w-full" type="radar" />
+                <ChartSkeleton className="h-[320px] w-full flex-1" type="radar" />
               )}
             </section>
           </SectionErrorBoundary>
@@ -390,7 +386,7 @@ export function HomepageClient() {
                 <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
                 <Link
                   href="/safety-scores/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   View Safety Scores
                   <ArrowRight className="h-3 w-3" />
@@ -407,7 +403,7 @@ export function HomepageClient() {
                 <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
                 <Link
                   href="/stability-index/"
-                  className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
+                  className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground hover:text-foreground sm:min-h-0 sm:py-0"
                 >
                   More Information on PSI
                   <ArrowRight className="h-3 w-3" />
@@ -422,7 +418,7 @@ export function HomepageClient() {
       <section
         aria-label="Research surfaces"
         className="space-y-6 -mx-3 px-3 py-6 rounded-2xl sm:-mx-4 sm:px-4"
-        style={{ borderTop: '2px solid var(--zone-divider)', background: 'var(--surface-zone-research)' }}
+        style={{ borderTop: '2px solid var(--section-rule)', background: 'var(--surface-zone-research)' }}
       >
         <HomepageSectionBand
           eyebrow="Research Surfaces"
@@ -448,7 +444,7 @@ export function HomepageClient() {
 
       <section aria-label="About Pharos" className="space-y-2 border-t border-border/50 pt-6">
         <p className="mx-auto max-w-5xl text-center text-xs leading-relaxed text-muted-foreground">
-          Pharos tracks {ACTIVE_STABLECOIN_COUNT} stablecoins across {PEG_CURRENCY_COUNT} peg currencies with honest
+          Pharos tracks {ACTIVE_STABLECOIN_COUNT} stablecoins across {ACTIVE_PEG_CURRENCY_COUNT} peg currencies with honest
           governance classification:{" "}
           {CEFI_COUNT} CeFi, {CEFI_DEP_COUNT} CeFi-Dependent, and {DEFI_COUNT} DeFi. Use the dashboard
           for live market ranking, then drill into peg stress, safety, liquidity, blacklist risk, flows, and dead-coin

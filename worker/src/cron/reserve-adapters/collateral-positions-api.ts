@@ -6,10 +6,10 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchErc20Balance,
   fetchJsonWithRetry,
+  notApplicableFreshnessMetadata,
   normalizeSlices,
   requireJsonInput,
   reserveDegradedWarning,
-  unverifiedFreshnessMetadata,
   valueUsdFromBigIntPrice,
 } from "./helpers";
 
@@ -258,10 +258,10 @@ export function adaptCollateralPositions(
             },
           }
         : {}),
-      ...unverifiedFreshnessMetadata(
-        "position-and-price-apis",
-        "Collateral positions and price payloads do not expose a trustworthy source timestamp",
-      ),
+      ...notApplicableFreshnessMetadata({
+        freshnessSource: "position-and-price-apis",
+        freshnessReason: "Collateral positions and price payloads represent latest-state protocol API aggregation",
+      }),
     },
   };
 }

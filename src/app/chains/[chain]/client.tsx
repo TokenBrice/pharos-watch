@@ -16,6 +16,7 @@ import {
   HeroCard,
   StablecoinTable,
 } from "./detail-sections";
+import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { buildChainRouteViewModel } from "./view-model";
 
 export function ChainProfileClient({ chainId }: { chainId: string }) {
@@ -68,7 +69,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
           <Info className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="text-center">
-          <p className="font-medium">No data available for this chain</p>
+          <p className="font-medium">Pharos doesn&apos;t have a chain read for this one yet.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             This chain may not be tracked or may have been removed.
           </p>
@@ -114,6 +115,11 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
         />
         <HeroCard chain={chain} chainId={chainId} />
         <HealthBreakdownCard chain={chain} meta={chainsQuery.meta} />
+        <ShowYourWorkPanel
+          kind="chain-health"
+          factors={chain.healthFactors}
+          chainName={chain.name}
+        />
         {canRenderDetailedSections ? (
           <>
             <CompositionSection model={routeModel} />

@@ -2,6 +2,7 @@
   "id": "nusd-neutrl",
   "name": "Neutrl USD",
   "symbol": "NUSD",
+  "oneLiner": "NUSD is Neutrl's synthetic dollar backed by liquid stablecoins and delta-hedged OTC positions; 1:1 mint/redeem via USDC, USDT, or USDe.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Accountable currently shows reserves concentrated in liquid stablecoins, with smaller OTC aggregate and other hedged reserve assets; Neutrl describes NUSD as a fully collateralized synthetic dollar backed by delta-neutral strategies and other crypto assets",
   "pegMechanism": "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "346",
   "detailProvider": "defillama",
   "geckoId": "nusd-2",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://accountable.neutrl.finance/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -111,6 +115,6 @@
   },
   "yieldConfig": {
     "yieldSource": "Neutrl savings (sNUSD)",
-    "yieldType": "lending-vault"
+    "yieldType": "nav-appreciation"
   }
 }

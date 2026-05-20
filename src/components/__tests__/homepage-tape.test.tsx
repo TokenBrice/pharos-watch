@@ -92,7 +92,7 @@ describe("HomepageTape", () => {
     expect(screen.getByText(/loading recent events/i)).toBeTruthy();
   });
 
-  it("renders depeg, freeze, and score events with links and stablecoin logos", () => {
+  it("renders depeg and freeze events with links and stablecoin logos, dropping score events", () => {
     mockLatestEvents({
       data: {
         events: [
@@ -135,18 +135,15 @@ describe("HomepageTape", () => {
     // Items are duplicated for the scrolling loop; expect 2 occurrences per event.
     expect(screen.getAllByText("USDC depeg opened (-1200 bps)")).toHaveLength(2);
     expect(screen.getAllByText(/USDT \$150\.0M destroyed/)).toHaveLength(2);
-    expect(screen.getAllByText("USDT grade A -> B+")).toHaveLength(2);
-    // Events use stablecoin logos when `coinId` is set. Logos resolve to a
-    // letter-fallback (aria-label) when no image src is provided by the
-    // mocked useLogos hook.
+    // Score grade changes are intentionally hidden from the homepage strip.
+    expect(screen.queryByText("USDT grade A -> B+")).toBeNull();
     expect(screen.getAllByLabelText("usdc-circle logo")).toHaveLength(2);
-    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(4);
-    // Source links are present.
+    expect(screen.getAllByLabelText("usdt-tether logo")).toHaveLength(2);
     const links = screen.getAllByRole("link");
     const hrefs = links.map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
-    expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether"))).toBe(true);
+    expect(hrefs.some((h) => h.startsWith("/stablecoin/usdt-tether/#report-card"))).toBe(false);
   });
 
   it("keeps a severity dot fallback when an event is not tied to a stablecoin", () => {
@@ -206,7 +203,170 @@ describe("HomepageTape", () => {
     expect(root?.className).not.toContain("-mx-3");
   });
 
-  it("appends a single non-duplicated 'View all events' terminator linking to /tape/", () => {
+  it("collapses repeated same-coin same-class events into one cell with a count badge", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-3",
+            ts: Date.now() - 60_000,
+            type: "depeg.peak_worsened",
+            title: "USDXL depeg peak worsened (−112 bps)",
+            coinId: "usdxl-last",
+          }),
+          makeTapeEvent({
+            id: "evt-2",
+            ts: Date.now() - 600_000,
+            type: "depeg.opened",
+            title: "USDXL depeg opened (−109 bps)",
+            coinId: "usdxl-last",
+          }),
+          makeTapeEvent({
+            id: "evt-1",
+            ts: Date.now() - 1_200_000,
+            type: "depeg.resolved",
+            title: "USDXL depeg resolved",
+            coinId: "usdxl-last",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // The most recent event's title is kept; the two older same-(coin,class)
+    // events are collapsed into the single cell.
+    expect(screen.getAllByText("USDXL depeg peak worsened (−112 bps)")).toHaveLength(2);
+    expect(screen.queryByText("USDXL depeg opened (−109 bps)")).toBeNull();
+    expect(screen.queryByText("USDXL depeg resolved")).toBeNull();
+    // ×N badge reflects the total event count in the collapsed group, doubled
+    // by the marquee loop.
+    expect(screen.getAllByText("×3")).toHaveLength(2);
+    expect(screen.getAllByLabelText("3 similar events")).toHaveLength(2);
+  });
+
+  it("does not collapse different-class events for the same coin", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-d",
+            type: "depeg.opened",
+            title: "USDT depeg opened (−110 bps)",
+            coinId: "usdt-tether",
+          }),
+          makeTapeEvent({
+            id: "evt-f",
+            type: "freeze.address.blocked",
+            title: "USDT freeze blocked",
+            coinId: "usdt-tether",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    expect(screen.getAllByText("USDT depeg opened (−110 bps)")).toHaveLength(2);
+    expect(screen.getAllByText("USDT freeze blocked")).toHaveLength(2);
+    expect(screen.queryByText(/×\d/)).toBeNull();
+  });
+
+  it("consolidates DEWS band changes across coins into one cell with stacked logos", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-sdx",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 60_000,
+            coinId: "sdx-stable",
+            title: "SDX DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+          makeTapeEvent({
+            id: "evt-usdm",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 65_000,
+            coinId: "usdm-mountain",
+            title: "USDM DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+          makeTapeEvent({
+            id: "evt-usdgo",
+            type: "dews.escalated",
+            severity: "notice",
+            ts: Date.now() - 70_000,
+            coinId: "usdgo-goldfinch",
+            title: "USDGO DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+            sourceUrl: "/depeg/",
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // Three per-coin chips collapse into one consolidated "DEWS CALM → WATCH".
+    expect(screen.getAllByText("DEWS CALM → WATCH")).toHaveLength(2);
+    expect(screen.queryByText("SDX DEWS CALM → WATCH")).toBeNull();
+    expect(screen.queryByText("USDM DEWS CALM → WATCH")).toBeNull();
+    expect(screen.queryByText("USDGO DEWS CALM → WATCH")).toBeNull();
+    // Badge reflects the coin count, not the literal event count.
+    expect(screen.getAllByText("×3")).toHaveLength(2);
+    expect(screen.getAllByLabelText("3 coins")).toHaveLength(4); // stack + badge × marquee dup
+  });
+
+  it("keeps DEWS escalations separate from de-escalations across the same coins", () => {
+    mockLatestEvents({
+      data: {
+        events: [
+          makeTapeEvent({
+            id: "evt-sdx-up",
+            type: "dews.escalated",
+            severity: "notice",
+            coinId: "sdx-stable",
+            title: "SDX DEWS CALM → WATCH",
+            payload: { prevBand: "CALM", newBand: "WATCH" },
+          }),
+          makeTapeEvent({
+            id: "evt-usdm-down",
+            type: "dews.deescalated",
+            severity: "info",
+            coinId: "usdm-mountain",
+            title: "USDM DEWS WATCH → CALM",
+            payload: { prevBand: "WATCH", newBand: "CALM" },
+          }),
+        ],
+        nextCursor: null,
+        total: null,
+        totalExact: false,
+      },
+    });
+
+    render(<HomepageTape />);
+
+    // Single-coin DEWS entries keep their original symbol-prefixed title.
+    expect(screen.getAllByText("SDX DEWS CALM → WATCH")).toHaveLength(2);
+    expect(screen.getAllByText("USDM DEWS WATCH → CALM")).toHaveLength(2);
+    expect(screen.queryByText(/×\d/)).toBeNull();
+  });
+
+  it("appends a single non-duplicated 'View all events' terminator linking to /timeline/", () => {
     mockLatestEvents({
       data: {
         events: [
@@ -229,6 +389,6 @@ describe("HomepageTape", () => {
     expect(screen.getAllByText("View all events")).toHaveLength(1);
     const tapeLink = screen.getByText("View all events").closest("a");
     // Next.js Link may normalize trailing slash; accept either.
-    expect(tapeLink?.getAttribute("href")).toMatch(/^\/tape\/?$/);
+    expect(tapeLink?.getAttribute("href")).toMatch(/^\/timeline\/?$/);
   });
 });

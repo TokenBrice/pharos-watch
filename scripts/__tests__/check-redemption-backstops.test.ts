@@ -8,16 +8,15 @@ describe("check-redemption-backstops CLI", () => {
   it("writes deterministic JSON report data", () => {
     const reportPath = join(mkdtempSync(join(tmpdir(), "redemption-backstops-")), "report.json");
 
-    execFileSync("npx", ["tsx", "scripts/check-redemption-backstops.ts", "--report", reportPath], {
+    execFileSync("npx", ["tsx", "scripts/ci/check-redemption-backstops.ts", "--report", reportPath], {
       cwd: process.cwd(),
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads its own temp report path.
     const report = JSON.parse(readFileSync(reportPath, "utf8"));
-    expect(report.summary.configuredCount).toBe(287);
-    expect(report.auditRows).toHaveLength(287);
+    expect(report.summary.configuredCount).toBe(306);
+    expect(report.auditRows).toHaveLength(306);
     expect(report.auditRows[0]).toMatchObject({
       stablecoinId: expect.any(String),
       routeFamily: expect.any(String),

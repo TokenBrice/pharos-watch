@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   YieldBenchmarkKey,
   YieldBenchmarkMeta,
@@ -18,6 +18,13 @@ export interface ParsedYieldBenchmarkRegistry {
   USD: ParsedYieldBenchmarkMeta;
   EUR: ParsedYieldBenchmarkMeta | null;
   CHF: ParsedYieldBenchmarkMeta | null;
+  GBP: ParsedYieldBenchmarkMeta | null;
+  JPY: ParsedYieldBenchmarkMeta | null;
+  MXN: ParsedYieldBenchmarkMeta | null;
+  BRL: ParsedYieldBenchmarkMeta | null;
+  AUD: ParsedYieldBenchmarkMeta | null;
+  CAD: ParsedYieldBenchmarkMeta | null;
+  SGD: ParsedYieldBenchmarkMeta | null;
 }
 
 const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency: string; isProxy: boolean }> = {
@@ -34,6 +41,48 @@ const BENCHMARK_META_BY_KEY: Record<YieldBenchmarkKey, { label: string; currency
   CHF: {
     label: "CHF 3M compounded SARON",
     currency: "CHF",
+    isProxy: false,
+  },
+  GBP: {
+    // SONIA daily rate via FRED IUDSOIA mirror; used as a proxy for full 3M compounding.
+    label: "GBP SONIA (overnight, proxy)",
+    currency: "GBP",
+    isProxy: true,
+  },
+  JPY: {
+    // FRED IRSTCB01JPM156N — uncollateralized overnight call rate (TONA-equivalent proxy).
+    label: "JPY overnight call (TONA proxy)",
+    currency: "JPY",
+    isProxy: true,
+  },
+  MXN: {
+    // Banxico SF43936 — CETES 28-day primary auction yield.
+    label: "MXN CETES 28d",
+    currency: "MXN",
+    isProxy: false,
+  },
+  BRL: {
+    // BCB SGS series 11 — SELIC over (daily).
+    label: "BRL SELIC over",
+    currency: "BRL",
+    isProxy: false,
+  },
+  AUD: {
+    // FRED IR3TIB01AUM156N — 3-month interbank rate Australia (RBA cash rate proxy).
+    label: "AUD 3M interbank (RBA proxy)",
+    currency: "AUD",
+    isProxy: true,
+  },
+  CAD: {
+    // BoC Valet V122530 — overnight repo (CORRA-equivalent).
+    label: "CAD overnight repo (CORRA proxy)",
+    currency: "CAD",
+    isProxy: true,
+  },
+  SGD: {
+    // TODO: wire MAS SORA feed when a stable public endpoint is identified.
+    label: "SGD SORA (unavailable)",
+    currency: "SGD",
     isProxy: false,
   },
 };
@@ -71,9 +120,25 @@ export function buildHardcodedUsdBenchmark(fallbackMode: string): ParsedYieldBen
   };
 }
 
-function getBenchmarkKeyForPegCurrency(pegCurrency: string | null | undefined): YieldBenchmarkKey | null {
-  if (pegCurrency === "USD" || pegCurrency === "EUR" || pegCurrency === "CHF") {
-    return pegCurrency;
+// Pegs supported by a native benchmark fetcher. SGD is intentionally excluded — its fetcher is
+// a TODO and SGD-pegged rows fall back to USD until a stable SORA feed is wired.
+const NATIVE_BENCHMARK_PEG_CURRENCIES = new Set<YieldBenchmarkKey>([
+  "USD",
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "MXN",
+  "BRL",
+  "AUD",
+  "CAD",
+]);
+
+export function getBenchmarkKeyForPegCurrency(
+  pegCurrency: string | null | undefined,
+): YieldBenchmarkKey | null {
+  if (pegCurrency && NATIVE_BENCHMARK_PEG_CURRENCIES.has(pegCurrency as YieldBenchmarkKey)) {
+    return pegCurrency as YieldBenchmarkKey;
   }
   return null;
 }
@@ -132,5 +197,12 @@ export function toYieldBenchmarkRegistry(
     USD: parsed.USD,
     EUR: parsed.EUR,
     CHF: parsed.CHF,
+    GBP: parsed.GBP,
+    JPY: parsed.JPY,
+    MXN: parsed.MXN,
+    BRL: parsed.BRL,
+    AUD: parsed.AUD,
+    CAD: parsed.CAD,
+    SGD: parsed.SGD,
   };
 }

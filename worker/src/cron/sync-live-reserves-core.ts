@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";

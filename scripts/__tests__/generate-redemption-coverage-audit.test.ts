@@ -5,7 +5,7 @@ import {
   generateRedemptionCoverageAudit,
   parseArgs,
   renderRedemptionCoverageAuditMarkdown,
-} from "../generate-redemption-coverage-audit";
+} from "../maintenance/generate-redemption-coverage-audit";
 
 function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
   return {

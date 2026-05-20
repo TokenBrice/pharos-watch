@@ -12,7 +12,7 @@ import {
   shouldRetryDirectOpsJson,
   shouldSkipOpsUiProxyAssertion,
   shouldRetryOpsUiProxyStatus,
-} from "../smoke-ops.mjs";
+} from "../maintenance/smoke-ops.mjs";
 
 function withEnv(name: string, value: string | undefined, fn: () => void) {
   const original = process.env[name];

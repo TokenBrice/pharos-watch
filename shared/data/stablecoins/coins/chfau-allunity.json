@@ -2,6 +2,7 @@
   "id": "chfau-allunity",
   "name": "AllUnity CHF",
   "symbol": "CHFAU",
+  "oneLiner": "CHFAU is AllUnity's MiCA-licensed Swiss franc stablecoin, redeemable 1:1 against CHF held in segregated accounts at EU credit institutions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CHF",
@@ -12,6 +13,7 @@
   },
   "collateral": "CHF-denominated reserves held 1:1 at CRR credit institutions within the EU in segregated accounts; not used for lending or investment",
   "pegMechanism": "Direct 1:1 redemption through AllUnity; holders have statutory right of redemption at par value under MiCA Article 49; mint and redeem via AllUnity platform with straight-through processing",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "allunity-chf",
   "canBeBlacklisted": true,
@@ -29,7 +31,9 @@
   },
   "proofOfReserves": {
     "type": "self-reported",
-    "url": "https://allunity.com/trust-center/"
+    "url": "https://allunity.com/trust-center/",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "links": [
     {

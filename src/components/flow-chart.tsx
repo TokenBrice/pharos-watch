@@ -1,14 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import {
-  ComposedChart,
-  Area,
-  Line,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from "recharts";
+import { ComposedChart, Area, Line, Tooltip, ReferenceLine } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives";
@@ -16,6 +9,7 @@ import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
 import { DAY_HOURS, HOUR_MS, HOUR_SECONDS } from "@/lib/constants";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 
 interface FlowChartProps {
   hourly: MintBurnHourlyBucket[];
@@ -31,6 +25,7 @@ interface ChartDatum {
 }
 
 export function FlowChart({ hourly, isLoading }: FlowChartProps) {
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo<ChartDatum[]>(() => {
     if (hourly.length === 0) return [];
 
@@ -60,15 +55,18 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
 
   const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
 
-  const formatXAxisTick = useCallback((ts: number) => {
-    if (rangeHours <= 48) {
-      return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-    }
-    if (rangeHours <= 8 * DAY_HOURS) {
-      return formatChartDate(ts, "with-time");
-    }
-    return formatChartDate(ts, "short");
-  }, [rangeHours]);
+  const formatXAxisTick = useCallback(
+    (ts: number) => {
+      if (rangeHours <= 48) {
+        return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      }
+      if (rangeHours <= 8 * DAY_HOURS) {
+        return formatChartDate(ts, "with-time");
+      }
+      return formatChartDate(ts, "short");
+    },
+    [rangeHours],
+  );
 
   if (isLoading) {
     return <Skeleton className={`${CHART_HEIGHT} w-full rounded-xl`} />;
@@ -99,12 +97,18 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         </div>
       </div>
       <div
+        ref={chartContainerRef}
         className={CHART_HEIGHT}
         role="figure"
         aria-label={`Mint and burn flow chart showing ${chartData.length} hourly data points`}
       >
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <ComposedChart data={chartData} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
+        {isChartReady ? (
+          <ComposedChart
+            width={width}
+            height={height}
+            data={chartData}
+            margin={{ top: 5, right: 20, bottom: 20, left: 5 }}
+          >
             <defs>
               <linearGradient id="mintGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={CHART_GREEN} stopOpacity={0.4} />
@@ -118,10 +122,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
             <TimeGrid />
             <TimeXAxis dataKey="ts" minTickGap={72} tickFormatter={formatXAxisTick} />
             <MonoYAxis tickFormatter={(val: number) => formatCurrency(val, 0)} />
-            <Tooltip
-              content={<FlowTooltip />}
-              cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
-            />
+            <Tooltip content={<FlowTooltip />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1} />
             <Area
               type="linear"
@@ -153,12 +154,12 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               isAnimationActive={false}
             />
           </ComposedChart>
-        </ResponsiveContainer>
+        ) : (
+          <Skeleton className="h-full w-full rounded-xl" />
+        )}
       </div>
       {hasInterpolated && (
-        <p className="mt-1 text-xs text-muted-foreground">
-          Gaps in hourly data are filled with zero values.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Gaps in hourly data are filled with zero values.</p>
       )}
     </div>
   );

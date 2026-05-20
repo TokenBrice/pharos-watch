@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { ReportCardRadar } from "@/components/radar-chart";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { UpstreamExposure } from "@/lib/portfolio-analysis";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
@@ -78,14 +79,14 @@ function HoldingRow({
   if (!meta) return null;
 
   return (
-    <div className="flex items-center gap-3 py-2">
+    <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/35 p-3 sm:flex-row sm:items-center sm:border-0 sm:bg-transparent sm:p-0 sm:py-2">
       <StablecoinLogo src={logos?.[coinId]} name={meta.name} size={24} />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{meta.name}</div>
         <div className="text-xs text-muted-foreground">{meta.symbol}</div>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="relative">
+      <div className="flex items-center gap-2 sm:shrink-0">
+        <div className="relative min-w-0 flex-1 sm:flex-none">
           <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
             $
           </span>
@@ -99,7 +100,7 @@ function HoldingRow({
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="0"
-            className="pharos-focus-ring w-28 rounded-md border bg-transparent pl-5 pr-2 py-1.5 text-sm text-right outline-none placeholder:text-muted-foreground"
+            className="pharos-focus-ring min-h-11 w-full rounded-md border bg-transparent pl-5 pr-2 py-2 text-right text-sm outline-none placeholder:text-muted-foreground sm:min-h-0 sm:w-28 sm:py-1.5"
             aria-label={`Amount in USD for ${meta.name}`}
           />
         </div>
@@ -139,22 +140,22 @@ export function PortfolioHoldingsEditor({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-primary/80 shrink-0" />
             <CardTitle className="pharos-kicker">My Holdings</CardTitle>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-in fade-in duration-300">
               {toast}
             </span>
             {holdings.length > 0 && (
               <>
-                <Button variant="outline" size="sm" onClick={onShare} className="pharos-focus-ring">
+                <Button variant="outline" size="sm" onClick={onShare} className="pharos-focus-ring min-h-11 sm:min-h-8">
                   <Share2 className="h-3.5 w-3.5" />
                   Share
                 </Button>
-                <Button variant="ghost" size="sm" onClick={onClear} className="pharos-focus-ring text-muted-foreground">
+                <Button variant="ghost" size="sm" onClick={onClear} className="pharos-focus-ring min-h-11 text-muted-foreground sm:min-h-8">
                   <Trash2 className="h-3.5 w-3.5" />
                   Clear
                 </Button>
@@ -260,18 +261,20 @@ export function PortfolioSummaryCard({
     <Card>
       <CardContent className="pt-6 space-y-6">
         <div className="flex items-center gap-4">
-          <Badge
-            variant="outline"
-            className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolioGrade]}`}
-            aria-label={`Safety grade ${portfolioGrade}${portfolioScore !== null ? `, score ${portfolioScore}` : ""}`}
-          >
-            {portfolioGrade}
-            {portfolioScore !== null && (
-              <span className="ml-1 opacity-70" aria-hidden="true">
-                ({portfolioScore})
-              </span>
-            )}
-          </Badge>
+          <ScoreBadgeWrapper topic="safetyScore">
+            <Badge
+              variant="outline"
+              className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolioGrade]}`}
+              aria-label={`Safety grade ${portfolioGrade}${portfolioScore !== null ? `, score ${portfolioScore}` : ""}`}
+            >
+              {portfolioGrade}
+              {portfolioScore !== null && (
+                <span className="ml-1 opacity-70" aria-hidden="true">
+                  ({portfolioScore})
+                </span>
+              )}
+            </Badge>
+          </ScoreBadgeWrapper>
           <div>
             <div className="text-sm text-muted-foreground">Portfolio Total</div>
             <div className="text-lg font-semibold">{formatUsd(totalUsd)}</div>

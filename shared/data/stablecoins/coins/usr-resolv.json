@@ -2,6 +2,7 @@
   "id": "usr-resolv",
   "name": "Resolv USD",
   "symbol": "USR",
+  "oneLiner": "USR was Resolv Labs's delta-neutral synthetic dollar; it was frozen in 2026 after an EOA-minter exploit produced 80M unbacked tokens and depegged the asset.",
   "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
@@ -36,6 +37,7 @@
   },
   "collateral": "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
   "pegMechanism": "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "197",
   "detailProvider": "defillama",
   "geckoId": "resolv-usr",
@@ -43,7 +45,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://info.apostro.xyz/resolv-reserves",
-    "provider": "Apostro"
+    "provider": "Apostro",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

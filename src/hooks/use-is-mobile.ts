@@ -6,6 +6,7 @@ export function useIsMobile(breakpoint = 640): boolean {
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
+      if (typeof window.matchMedia !== "function") return () => {};
       const mql = window.matchMedia(query);
       mql.addEventListener("change", onStoreChange);
       return () => mql.removeEventListener("change", onStoreChange);
@@ -13,7 +14,10 @@ export function useIsMobile(breakpoint = 640): boolean {
     [query],
   );
 
-  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  const getSnapshot = useCallback(
+    () => (typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false),
+    [query],
+  );
   const getServerSnapshot = useCallback(() => false, []);
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

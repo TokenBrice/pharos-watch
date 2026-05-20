@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load safety scores", "SafetyScoresError");
+export default createPageError("Safety scores didn't reach this view.", "SafetyScoresError");

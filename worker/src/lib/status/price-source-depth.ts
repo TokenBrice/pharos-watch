@@ -1,4 +1,4 @@
-import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import {
   hasUsableStablecoinsPayload,
   loadStablecoinsCache,

@@ -1,6 +1,6 @@
 import { parseQueryParams, jsonResponse, errorResponse } from "../lib/api-utils";
-import { withAdmin } from "../lib/auth";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { withAdminMutation } from "../lib/route-wrappers";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
@@ -110,14 +110,17 @@ interface ContradictoryRecoveryRepairResult {
   repairedEventCount: number;
 }
 
-interface ParsedAuditRequest {
+interface AuditPaginatedRequest {
   limit: number;
   offset: number;
+  dryRun: boolean;
+  symbolFilter: string | null;
+}
+
+interface ParsedAuditRequest extends AuditPaginatedRequest {
   minSupply: number;
   deleteIds: number[] | null;
   repairMode: RepairMode | null;
-  dryRun: boolean;
-  symbolFilter: string | null;
 }
 
 interface AuditMutationPlan {
@@ -667,7 +670,7 @@ function planSyntheticSplitRepair(
 
 async function executeSyntheticSplitRepair(
   db: D1Database,
-  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+  request: AuditPaginatedRequest,
 ): Promise<Response> {
   const allRows = await loadAllDepegEvents(db);
   const groupedCandidates = collectSyntheticSplitGroups(
@@ -718,7 +721,7 @@ function findContradictoryRecoveryCandidates(
 async function executeContradictoryRecoveryRepair(
   db: D1Database,
   events: DepegRow[],
-  request: Pick<ParsedAuditRequest, "limit" | "offset" | "dryRun" | "symbolFilter">,
+  request: AuditPaginatedRequest,
 ): Promise<Response> {
   const filteredCandidates = findContradictoryRecoveryCandidates(events, request.symbolFilter);
   const paginatedCandidates = filteredCandidates.slice(request.offset, request.offset + request.limit);
@@ -752,46 +755,42 @@ export async function handleAuditDepegHistory(
   trustedAdmin?: boolean,
   request?: Request,
 ): Promise<Response> {
-  return withAdmin(
-    request,
-    async () => {
-      try {
-        const auditRequest = parseAuditRequest(url, request);
-        if (auditRequest instanceof Response) return auditRequest;
+  return withAdminMutation(request, trustedAdmin, async () => {
+    try {
+      const auditRequest = parseAuditRequest(url, request);
+      if (auditRequest instanceof Response) return auditRequest;
 
-        if (auditRequest.repairMode === "synthetic-splits") {
-          return await executeSyntheticSplitRepair(db, auditRequest);
-        }
-
-        const events = await loadClosedDepegEvents(db);
-
-        if (auditRequest.deleteIds) {
-          return await executeDirectDelete(db, events, auditRequest.deleteIds, auditRequest.dryRun);
-        }
-
-        if (auditRequest.repairMode === "contradictory-recovery-price") {
-          return await executeContradictoryRecoveryRepair(db, events, auditRequest);
-        }
-
-        const result = await auditEvents(db, {
-          events,
-          minSupply: auditRequest.minSupply,
-          symbolFilter: auditRequest.symbolFilter,
-          offset: auditRequest.offset,
-          limit: auditRequest.limit,
-          dryRun: auditRequest.dryRun,
-        });
-
-        return jsonResponse(result);
-      } catch (error) {
-        if (error instanceof AuditMutationCommitError) {
-          return errorResponse(500, error.message);
-        }
-        throw error;
+      if (auditRequest.repairMode === "synthetic-splits") {
+        return await executeSyntheticSplitRepair(db, auditRequest);
       }
-    },
-    trustedAdmin,
-  );
+
+      const events = await loadClosedDepegEvents(db);
+
+      if (auditRequest.deleteIds) {
+        return await executeDirectDelete(db, events, auditRequest.deleteIds, auditRequest.dryRun);
+      }
+
+      if (auditRequest.repairMode === "contradictory-recovery-price") {
+        return await executeContradictoryRecoveryRepair(db, events, auditRequest);
+      }
+
+      const result = await auditEvents(db, {
+        events,
+        minSupply: auditRequest.minSupply,
+        symbolFilter: auditRequest.symbolFilter,
+        offset: auditRequest.offset,
+        limit: auditRequest.limit,
+        dryRun: auditRequest.dryRun,
+      });
+
+      return jsonResponse(result);
+    } catch (error) {
+      if (error instanceof AuditMutationCommitError) {
+        return errorResponse(500, error.message);
+      }
+      throw error;
+    }
+  });
 }
 
 export interface AuditEventsOptions {
@@ -868,9 +867,7 @@ export async function auditEvents(
     : undefined;
 
   const affectedDays = new Set<number>();
-  const deleteStatements: D1PreparedStatement[] = [];
   const provenanceStatements: D1PreparedStatement[] = [];
-  const deletedIds: number[] = [];
 
   for (const event of paginatedEvents) {
     const meta = TRACKED_META_BY_ID.get(event.stablecoin_id);
@@ -1032,11 +1029,11 @@ export async function auditEvents(
     }
   }
 
-  if (!dryRun && (deleteStatements.length > 0 || provenanceStatements.length > 0)) {
-    const remainingDepegEvents = await loadRemainingDepegEvents(db, deletedIds);
+  if (!dryRun && provenanceStatements.length > 0) {
+    const remainingDepegEvents = await loadRemainingDepegEvents(db);
     result.daysRecomputed = await commitAuditMutation(
       db,
-      [...provenanceStatements, ...deleteStatements],
+      provenanceStatements,
       "False-positive audit persistence failed before the stability-index repair could finish",
       { affectedDays, remainingDepegEvents },
     );

@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Ripio wCOP",
   "symbol": "WCOP",
+  "oneLiner": "WCOP is Ripio's Colombian-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "OTHER",
@@ -14,6 +15,7 @@
   },
   "collateral": "Colombian-peso cash and liquid local-currency instruments backing Ripio wCOP at a one Colombian peso target",
   "pegMechanism": "Issuer-managed local-currency stablecoin route targeting 1 WCOP = 1 COP through Ripio's wFIAT issuance, redemption, and on/off-ramp infrastructure",
+  "mechanismArchetype": "fiat-cash",
   "geckoId": "colombian-peso",
   "links": [
     {

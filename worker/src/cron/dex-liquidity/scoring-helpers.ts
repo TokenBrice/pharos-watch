@@ -2,7 +2,7 @@ import type {
   DexPriceObs,
   LiquidityCoverageClass,
   LiquidityMetrics,
-  LiquiditySourceMix,
+  LiquiditySourceMixByFamily,
 } from "./types";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { clamp } from "@shared/lib/math";
@@ -27,7 +27,7 @@ function getPoolExtraBoolean(
 export function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
   const protocolTvl: Record<string, number> = {};
   const chainTvl: Record<string, number> = {};
-  const sourceMix: LiquiditySourceMix = {};
+  const sourceMix: LiquiditySourceMixByFamily = {};
   const chains = new Set<string>();
   const pairs = new Set<string>();
 
@@ -328,7 +328,7 @@ function clampConfidence(confidence: number): number {
 }
 
 export function classifyCoverage(input: {
-  sourceMix: LiquiditySourceMix;
+  sourceMix: LiquiditySourceMixByFamily;
   totalTvlUsd: number;
   protocolCount: number;
   sourceFamilyCount: number;

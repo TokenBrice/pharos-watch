@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { handleStressSignals } from "../stress-signals";
 

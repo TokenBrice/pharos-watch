@@ -14,7 +14,7 @@ import {
   type GraphNode,
   type GraphLink,
 } from "@/lib/contagion-layout";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
 
 // ---------------------------------------------------------------------------

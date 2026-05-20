@@ -1,10 +1,9 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { collectSeoStaticCheckResult } from "../check-seo-static.mjs";
+import { collectSeoStaticCheckResult } from "../ci/check-seo-static.mjs";
 
 const roots: string[] = [];
 
@@ -156,6 +155,60 @@ describe("check-seo-static", () => {
     const result = collectFixtureSeoResult(root);
 
     expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("/: missing og:type")]));
+  });
+
+  it("fails same-origin og:image / twitter:image references that point at a missing file", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      extraHead:
+        '<meta property="og:image" content="https://pharos.watch/og-missing.png"/><meta name="twitter:image" content="/og-missing.png"/>',
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("/: og:image references missing file /og-missing.png"),
+        expect.stringContaining("/: twitter:image references missing file /og-missing.png"),
+      ]),
+    );
+  });
+
+  it("passes when same-origin og:image references an existing file in out/", async () => {
+    const root = await makeOutDir();
+    await writeFile(path.join(root, "og-card.png"), "");
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      extraHead:
+        '<meta property="og:image" content="https://pharos.watch/og-card.png"/><meta name="twitter:image" content="/og-card.png"/>',
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors.some((error) => error.includes("references missing file"))).toBe(false);
+  });
+
+  it("skips external og:image hosts (dynamic /api/og/* worker route)", async () => {
+    const root = await makeOutDir();
+    await writePage(root, "/", {
+      h1: "Home",
+      links: ["/stability-index/"],
+      extraHead:
+        '<meta property="og:image" content="https://api.pharos.watch/api/og/stablecoin/usdt-tether"/><meta name="twitter:image" content="https://api.pharos.watch/api/og/stablecoin/usdt-tether"/>',
+    });
+    await writePage(root, "/stability-index/", { h1: "Stability Index" });
+    await writeSitemap(root, ["/", "/stability-index/"]);
+
+    const result = collectFixtureSeoResult(root);
+
+    expect(result.errors.some((error) => error.includes("references missing file"))).toBe(false);
   });
 
   it("allows noindex pages to omit canonical", async () => {

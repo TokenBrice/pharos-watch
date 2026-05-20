@@ -7,14 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { formatPegDeviation } from "@shared/lib/format";
+import { formatPegDeviation, getNetColor } from "@shared/lib/format";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { ACTIVE_IDS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_ACTIVE_IDS as ACTIVE_IDS, CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
-const SKELETON_DEPEG_INDICES = Array.from({ length: 6 }, (_, i) => i);
+const SKELETON_DEPEG_INDICES = Array.from({ length: 9 }, (_, i) => i);
 const SKELETON_MOVER_INDICES = Array.from({ length: 3 }, (_, i) => i);
 
 const SUPPLY_FLOOR = 1_000_000;
@@ -23,7 +23,7 @@ const ENTRY_LINK_CLASS =
 
 /**
  * Responsive visibility classes per item index.
- * Depegs: 4 on mobile (2×2), 6 on lg+ (2×3).
+ * Depegs: 4 on mobile (2×2), 9 on lg+ (3×3).
  * Movers: 2 per group on mobile, 3 per group on lg+.
  */
 const DEPEG_VIS: Record<number, string> = {
@@ -33,6 +33,9 @@ const DEPEG_VIS: Record<number, string> = {
   3: "flex",
   4: "hidden lg:flex",
   5: "hidden lg:flex",
+  6: "hidden lg:flex",
+  7: "hidden lg:flex",
+  8: "hidden lg:flex",
 };
 
 const MOVER_VIS: Record<number, string> = {
@@ -85,7 +88,7 @@ function useDepegs(data: StablecoinData[] | undefined, pegScores: Map<string, Pe
     }
 
     entries.sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
-    return entries.slice(0, 6);
+    return entries.slice(0, 9);
   }, [data, pegScores]);
 }
 
@@ -200,7 +203,7 @@ function MoverEntry({
         {entry.symbol}
       </span>
       <span
-        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${isGrower ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+        className={`ml-auto shrink-0 font-mono text-xs font-semibold ${getNetColor(entry.pctChange, { positiveInclusiveZero: true })}`}
       >
         {change}
       </span>
@@ -276,7 +279,7 @@ function MoversGroup({
   if (entries.length === 0) return null;
 
   const Icon = tone === "up" ? TrendingUp : TrendingDown;
-  const toneClass = tone === "up" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400";
+  const toneClass = getNetColor(tone === "up" ? 1 : -1);
 
   return (
     <div className="space-y-1.5">

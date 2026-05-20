@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { getWindowStorage, safeStorageGetItem, safeStorageRemoveItem, safeStorageSetItem } from "@/lib/browser-storage";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  getWindowStorage,
+  readJsonStorageValue,
+  safeStorageRemoveItem,
+  writeJsonStorageValue,
+} from "@/lib/browser-storage";
 export {
   ALL_COLUMNS,
   DEFAULT_VISIBLE_COLUMNS,
@@ -25,29 +30,45 @@ export function usePreference<T>(
   defaultValue: T,
   options: UsePreferenceOptions<T> = {},
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
-  const [value, setValue] = useState<T>(() => {
-    const storage = getWindowStorage("local");
-    if (!storage) return defaultValue;
-    try {
-      const stored = safeStorageGetItem(storage, key);
-      if (stored === null) {
-        return defaultValue;
+  const { decode } = options;
+  const [value, setValue] = useState<T>(defaultValue);
+  const [storageLoadedKey, setStorageLoadedKey] = useState<string | null>(null);
+  const defaultValueRef = useRef(defaultValue);
+  const decodeRef = useRef(decode);
+
+  useEffect(() => {
+    defaultValueRef.current = defaultValue;
+    decodeRef.current = decode;
+  }, [defaultValue, decode]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const storage = getWindowStorage("local");
+      const fallback = defaultValueRef.current;
+      const decodeStored = decodeRef.current;
+      if (!storage) {
+        setStorageLoadedKey(key);
+        return;
       }
-      const parsed = JSON.parse(stored) as unknown;
-      // When no decode function is provided, the parsed value is trusted as T.
-      // Callers handling complex types should supply a decoder for runtime validation.
-      return options.decode ? options.decode(parsed) : (parsed as T);
-    } catch {
-      return defaultValue;
-    }
-  });
+      const storedValue = readJsonStorageValue(
+        storage,
+        key,
+        (parsed) => (decodeStored ? decodeStored(parsed) : (parsed as T)),
+        fallback,
+      );
+      setValue(storedValue);
+      setStorageLoadedKey(key);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [key]);
 
   // Persist to localStorage on change
   useEffect(() => {
+    if (storageLoadedKey !== key) return;
     const storage = getWindowStorage("local");
     if (!storage) return;
-    safeStorageSetItem(storage, key, JSON.stringify(value));
-  }, [key, value]);
+    writeJsonStorageValue(storage, key, value);
+  }, [key, storageLoadedKey, value]);
 
   const reset = useCallback(() => {
     setValue(defaultValue);

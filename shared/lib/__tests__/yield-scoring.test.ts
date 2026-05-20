@@ -8,6 +8,7 @@ import {
   computePysComponents,
   computePysRewardShare,
   computePYS,
+  computeSourceRiskScoreFromPenalty,
   derivePysSourceRiskPenalty,
   resolvePysSourceRiskPenalty,
 } from "../yield-scoring";
@@ -28,6 +29,30 @@ describe("PYS constants", () => {
   });
   it("exports max source-risk penalty of 2.5", () => {
     expect(PYS_MAX_SOURCE_RISK_PENALTY).toBe(2.5);
+  });
+});
+
+describe("computeSourceRiskScoreFromPenalty", () => {
+  it("returns null for missing or non-finite penalties", () => {
+    expect(computeSourceRiskScoreFromPenalty(null)).toBeNull();
+    expect(computeSourceRiskScoreFromPenalty(undefined)).toBeNull();
+    expect(computeSourceRiskScoreFromPenalty(Number.NaN)).toBeNull();
+    expect(computeSourceRiskScoreFromPenalty(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+
+  it("maps neutral penalty (1) to 0 and max penalty (2.5) to 100", () => {
+    expect(computeSourceRiskScoreFromPenalty(1)).toBe(0);
+    expect(computeSourceRiskScoreFromPenalty(PYS_MAX_SOURCE_RISK_PENALTY)).toBe(100);
+  });
+
+  it("scales midpoints linearly between neutral and max", () => {
+    expect(computeSourceRiskScoreFromPenalty(1.75)).toBe(50);
+    expect(computeSourceRiskScoreFromPenalty(1.375)).toBe(25);
+  });
+
+  it("clamps below-neutral and above-max penalties to the 0-100 range", () => {
+    expect(computeSourceRiskScoreFromPenalty(0)).toBe(0);
+    expect(computeSourceRiskScoreFromPenalty(5)).toBe(100);
   });
 });
 

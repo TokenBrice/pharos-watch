@@ -2,6 +2,7 @@
   "id": "yusd-aegis",
   "name": "Aegis YUSD",
   "symbol": "YUSD",
+  "oneLiner": "Aegis YUSD is a synthetic dollar backed by BTC in institutional custody and hedged with equal short COIN-M perpetuals; funding-rate yield goes to holders.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Bitcoin held in institutional custody (Fireblocks, Copper, CEFFU); delta-neutral hedge via COIN-M perpetual futures; funded by user deposits of USDT, USDC, or DAI converted to BTC",
   "pegMechanism": "Delta-neutral hedging: BTC spot long + COIN-M perpetual short; 1:1 redemption via Aegis Mint contract; funding rate yield distributed to registered YUSD holders; insurance fund backstop for extreme events",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "255",
   "detailProvider": "defillama",
   "geckoId": "aegis-yusd",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://aegis.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

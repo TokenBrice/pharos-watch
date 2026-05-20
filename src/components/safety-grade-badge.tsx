@@ -1,7 +1,9 @@
 import type { ComponentProps } from "react";
 import { Badge } from "@/components/ui/badge";
+import { ScoreBadgeWrapper, type ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
+import type { MethodologyContextKey } from "@/lib/methodology-context";
 import type { ReportCardGrade } from "@shared/types";
 
 type SafetyGradeBadgeSize = "xs" | "sm" | "md" | "lg" | "defunct" | "hero";
@@ -22,6 +24,16 @@ interface SafetyGradeBadgeProps extends Omit<ComponentProps<typeof Badge>, "chil
   size?: SafetyGradeBadgeSize;
   animate?: boolean;
   animationDelayMs?: number;
+  /**
+   * When set, wraps the badge in `<ScoreBadgeWrapper>` so it carries the
+   * methodology-aware tooltip and (per `versionVariant`) the inline `vX.Y`
+   * version suffix.
+   */
+  versionTopic?: MethodologyContextKey;
+  /** `"suffix"` (default) shows the version chip; `"tooltip-only"` hides it. */
+  versionVariant?: ScoreBadgeWrapperVariant;
+  /** Disable the methodology trigger when rendering inside an existing link/control. */
+  versionInteractive?: boolean;
 }
 
 export function SafetyGradeBadge({
@@ -33,7 +45,11 @@ export function SafetyGradeBadge({
   animationDelayMs,
   className,
   style,
+  tabIndex,
   "aria-label": ariaLabel,
+  versionTopic,
+  versionVariant,
+  versionInteractive,
   ...props
 }: SafetyGradeBadgeProps) {
   const scoreLabel = showScore && score !== null ? `, score ${score}` : "";
@@ -41,16 +57,18 @@ export function SafetyGradeBadge({
     ? style
     : { ...style, animationDelay: `${animationDelayMs}ms` };
 
-  return (
+  const badge = (
     <Badge
       variant="outline"
       className={cn(
         SIZE_CLASSES[size],
         animate && "pharos-grade-pop",
+        versionTopic && "pharos-focus-ring",
         getSafetyGradeBadgeClassName(grade),
         className,
       )}
       style={mergedStyle}
+      tabIndex={tabIndex}
       aria-label={ariaLabel ?? `Safety grade ${grade}${scoreLabel}`}
       {...props}
     >
@@ -62,4 +80,13 @@ export function SafetyGradeBadge({
       ) : null}
     </Badge>
   );
+
+  if (versionTopic) {
+    return (
+      <ScoreBadgeWrapper topic={versionTopic} variant={versionVariant} interactive={versionInteractive}>
+        {badge}
+      </ScoreBadgeWrapper>
+    );
+  }
+  return badge;
 }

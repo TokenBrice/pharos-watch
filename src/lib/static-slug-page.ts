@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
 interface SlugPageMetadata {
@@ -42,4 +44,35 @@ export async function buildSlugPageMetadata<TParamKey extends string>(
     description: page.description,
     canonical: page.href,
   });
+}
+
+interface StaticSlugRouteConfig<TParamKey extends string, TPage extends SlugPageMetadata> {
+  paramKey: TParamKey;
+  pages: ReadonlyArray<{ slug: string }>;
+  pageBySlug: ReadonlyMap<string, TPage>;
+  missingTitle: string;
+  render: (page: TPage) => ReactNode;
+}
+
+export function createStaticSlugRoute<TParamKey extends string, TPage extends SlugPageMetadata>({
+  paramKey,
+  pages,
+  pageBySlug,
+  missingTitle,
+  render,
+}: StaticSlugRouteConfig<TParamKey, TPage>) {
+  return {
+    generateStaticParams() {
+      return buildSlugStaticParams(paramKey, pages);
+    },
+    generateMetadata({ params }: { params: Promise<Record<TParamKey, string>> }) {
+      return buildSlugPageMetadata(params, paramKey, pageBySlug, missingTitle);
+    },
+    async Page({ params }: { params: Promise<Record<TParamKey, string>> }) {
+      const page = await resolveSlugPage(params, paramKey, pageBySlug);
+      if (!page) notFound();
+
+      return render(page);
+    },
+  };
 }

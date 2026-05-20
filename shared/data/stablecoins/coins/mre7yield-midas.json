@@ -2,6 +2,7 @@
   "id": "mre7yield-midas",
   "name": "Midas mRe7YIELD",
   "symbol": "mRe7YIELD",
+  "oneLiner": "mRe7YIELD is a Midas NAV-accreting liquid-yield token wrapping Re7 Capital DeFi lending, liquidity, restaking, and funding-rate strategies; not a fixed $1 peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

@@ -4,8 +4,8 @@ import {
   runDiaProviderPocAudit,
   selectDiaProbeTargets,
   type DiaAuditReport,
-} from "../audit-dia-provider-poc";
-import type { PriceSourceDepthAudit } from "../audit-price-source-depth";
+} from "../maintenance/audit-dia-provider-poc";
+import type { PriceSourceDepthAudit } from "../maintenance/audit-price-source-depth";
 
 function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
   return {

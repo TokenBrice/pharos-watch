@@ -70,5 +70,5 @@ export interface AddressPriceProviderRunResult {
 export interface AddressPriceProviderCollectionResult {
   quotesByStablecoinId: Map<string, AddressPriceQuote[]>;
   diagnostics: PricingProviderAttemptDiagnostic[];
-  providerOutcomes: Map<AddressPriceProviderKey, boolean>;
+  providerOutcomes: Map<AddressPriceProviderKey, "success" | "failure" | "neutral">;
 }

@@ -2,7 +2,9 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import { encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import {
+  buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchOnchainUint256,
   notApplicableFreshnessMetadata,
@@ -30,6 +32,16 @@ interface OriginVaultBalancesParams {
   assets: OriginVaultAssetConfig[];
 }
 
+interface OriginVaultAssetState {
+  value: number;
+  idleValue: number;
+  idleRaw: string;
+  name: ReserveSlice["name"];
+  risk: ReserveSlice["risk"];
+  coinId?: string;
+  depType?: ReserveSlice["depType"];
+}
+
 function encodeAddressArg(address: string): string {
   const normalized = address.toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(normalized)) {
@@ -51,23 +63,41 @@ export async function fetchOriginVaultBalancesReserves(
   const input = requireOnchainInput(config.inputs.primary, "origin-vault-balances");
   const params = readParams(config);
   const timeoutMs = 12_000;
-  const values = await Promise.all(params.assets.map(async (asset) => {
-    const raw = await fetchOnchainUint256({
-      contract: params.vaultAddress,
-      data: `${CHECK_BALANCE_SELECTOR}${encodeAddressArg(asset.address)}`,
-      signal,
-      ctx,
-      rpcMode: input.rpcMode,
-      chain: input.chain,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs,
-    });
+  const values: OriginVaultAssetState[] = await Promise.all(params.assets.map(async (asset) => {
+    const [raw, idleRaw] = await Promise.all([
+      fetchOnchainUint256({
+        contract: params.vaultAddress,
+        data: `${CHECK_BALANCE_SELECTOR}${encodeAddressArg(asset.address)}`,
+        signal,
+        ctx,
+        rpcMode: input.rpcMode,
+        chain: input.chain,
+        rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl,
+        timeoutMs,
+      }),
+      fetchOnchainUint256({
+        contract: asset.address,
+        data: encodeBalanceOfCallData(params.vaultAddress),
+        signal,
+        ctx,
+        rpcMode: input.rpcMode,
+        chain: input.chain,
+        rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl,
+        timeoutMs,
+      }),
+    ]);
     if (raw == null) {
       throw new Error(`origin-vault-balances checkBalance failed for ${asset.name}`);
     }
+    if (idleRaw == null) {
+      throw new Error(`origin-vault-balances idle balance probe failed for ${asset.name}`);
+    }
     return {
       value: decimalNumberFromBigInt(raw, asset.decimals),
+      idleValue: decimalNumberFromBigInt(idleRaw, asset.decimals),
+      idleRaw: idleRaw.toString(),
       name: asset.name,
       risk: asset.risk,
       ...(asset.coinId ? { coinId: asset.coinId } : {}),
@@ -95,6 +125,7 @@ export async function fetchOriginVaultBalancesReserves(
     throw new Error("origin-vault-balances produced zero reserve value");
   }
   const totalValueUsd = decimalNumberFromBigInt(totalValueRaw, 18);
+  const immediateRedeemableUsd = values.reduce((sum, value) => sum + value.idleValue, 0);
   const assetCoverageRatio = totalReserveUsd / totalValueUsd;
   const warnings = assetCoverageRatio < 0.995
     ? [
@@ -118,6 +149,21 @@ export async function fetchOriginVaultBalancesReserves(
       totalValueUsd,
       assetCoverageRatio,
       totalValueRaw: totalValueRaw.toString(),
+      immediateRedeemableUsd,
+      idleVaultBalances: values.map((value) => ({
+        name: value.name,
+        value: value.idleValue,
+        raw: value.idleRaw,
+        ...(value.coinId ? { coinId: value.coinId } : {}),
+      })),
+      ...buildRedemptionSnapshotMetadata({
+        capacityUsd: immediateRedeemableUsd,
+        capacityKind: "live-direct-bounded",
+        freshnessKind: "same-run-onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        ...(config.display?.url ? { sourceUrls: [config.display.url] } : {}),
+      }),
     },
   };
 }

@@ -2,6 +2,7 @@
   "id": "mf-one-midas",
   "name": "Midas mF-ONE",
   "symbol": "mF-ONE",
+  "oneLiner": "mF-ONE is a Midas tokenized certificate wrapping Fasanara's F-ONE private-credit and digital-asset strategy; NAV-accreting, EEA-restricted rails.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -17,7 +18,9 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://midas.app/transparency",
-    "provider": "Midas transparency dashboard and issuer disclosures"
+    "provider": "Midas transparency dashboard and issuer disclosures",
+    "attestorTier": "niche",
+    "cadence": "daily-nav"
   },
   "links": [
     {

@@ -20,8 +20,8 @@ import {
 import {
   DEFAULT_PROXY_TIMEOUT_MS,
   fetchUpstreamProxy,
-  resolveWildcardProxyPath,
 } from "../lib/upstream-proxy";
+import { resolveSiteDataRequestedPath } from "../lib/proxy-paths";
 
 const FORWARDED_REQUEST_HEADERS = [
   "Accept",
@@ -61,7 +61,7 @@ function methodNotAllowed(): Response {
 }
 
 function resolveRequestedPath(params: SiteDataProxyContext["params"]): string | null {
-  return resolveWildcardProxyPath(params.path, "/_site-data/");
+  return resolveSiteDataRequestedPath(params);
 }
 
 function buildUpstreamHeaders(

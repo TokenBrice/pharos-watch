@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import { scoreToGrade } from "./report-card-core";
 import { joinReportCardDetail } from "./report-card-detail";
+import { wrapperPenaltyForVariant } from "./report-card-wrapper-penalty";
 
 const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
   decentralized: 90,
@@ -22,12 +23,6 @@ const GOVERNANCE_DETAIL_LABEL: Record<GovernanceType, string> = {
 };
 
 const UNAVAILABLE_DEPENDENCY_SCORE = 70;
-const VARIANT_WRAPPER_PENALTY: Record<VariantKind, number> = {
-  "savings-passthrough": 3,
-  "strategy-vault": 5,
-  "risk-absorption": 5,
-  "bond-maturity": 8,
-};
 
 export interface ScoreDependencyRiskArgs {
   governance: GovernanceType;
@@ -116,8 +111,8 @@ export function scoreDependencyRisk(
     if (dependency.type === "wrapper") {
       const wrapperPenalty =
         args.variantParentId != null && args.variantKind != null && dependency.id === args.variantParentId
-          ? VARIANT_WRAPPER_PENALTY[args.variantKind]
-          : 3;
+          ? wrapperPenaltyForVariant(args.variantKind)
+          : wrapperPenaltyForVariant();
       ceiling = Math.min(ceiling, dependency.score - wrapperPenalty);
     } else if (dependency.type === "mechanism") ceiling = Math.min(ceiling, dependency.score);
   }

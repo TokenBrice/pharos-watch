@@ -75,10 +75,31 @@ describe("fetchAnzenUsdzReserves", () => {
         },
       },
     });
+    expect(result.metadata?.redemption).toBeUndefined();
 
     expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(6);
     expect(vi.mocked(fetchErc20TotalSupply).mock.calls[3]?.[4]).toBe("https://rpc.blast.io");
     expect(vi.mocked(fetchErc20TotalSupply).mock.calls[4]?.[4]).toBe("https://pacific-rpc.manta.network/http");
+  });
+
+  it("does not infer redemption capacity from SPCT collateralization alone", async () => {
+    vi.mocked(fetchErc20TotalSupply)
+      .mockResolvedValueOnce(5_000_000n * 10n ** 18n)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce(10_000_000n * 10n ** 18n);
+
+    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 10_000_000,
+      collateralizationRatio: expect.any(Number),
+    });
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableRatio).toBeUndefined();
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("fails closed when required chain metadata is missing", async () => {

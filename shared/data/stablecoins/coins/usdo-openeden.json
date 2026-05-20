@@ -2,23 +2,27 @@
   "id": "usdo-openeden",
   "name": "OpenDollar USDO",
   "symbol": "USDO",
+  "oneLiner": "USDO is OpenEden's rebasing dollar token backed by tokenized U.S. Treasuries (TBILL, BUIDL, BENJI) and a USDC buffer, issued under a Bermuda DABA license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": false,
-    "rwa": false,
+    "yieldBearing": true,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
   "pegMechanism": "Rebasing stablecoin fixed at $1; supply rebases daily to distribute yield; mint/redemption at 1:1 with USDC via OpenEden platform",
+  "mechanismArchetype": "tbill",
   "llamaId": "241",
   "detailProvider": "defillama",
   "geckoId": "openeden-open-dollar",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://openeden.com/usdo/transparency",
-    "provider": "Chainlink PoR"
+    "provider": "Chainlink PoR",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -104,5 +108,9 @@
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       }
     }
+  },
+  "yieldConfig": {
+    "yieldSource": "OpenEden USDO daily rebase",
+    "yieldType": "rebase"
   }
 }

@@ -8,16 +8,11 @@
  */
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { ScheduledRuntimeContext } from "./context";
-import { runBestEffortScheduledJob } from "./run-best-effort-job";
+import { runSingleScheduledJob } from "./slot-groups";
 
 export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext): Promise<void> {
-  const chartsResult = await runBestEffortScheduledJob(
-    runtime,
-    "half-hour charts slot",
-    "sync-stablecoin-charts",
-    (signal) => syncStablecoinCharts(runtime.db, signal),
-  );
-  if (chartsResult?.status === "error" || chartsResult == null) {
-    console.warn("[cron] sync-stablecoin-charts did not complete cleanly");
-  }
+  await runSingleScheduledJob(runtime, "half-hour charts slot", {
+    job: "sync-stablecoin-charts",
+    run: (signal) => syncStablecoinCharts(runtime.db, signal),
+  });
 }

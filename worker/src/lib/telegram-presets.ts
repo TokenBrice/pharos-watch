@@ -3,7 +3,8 @@ import {
   ACTIVE_STABLECOINS,
   TRACKED_STABLECOINS,
   TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
+import type { PegCurrency } from "@shared/types/core";
 import { loadStablecoinsCache } from "./stablecoins-cache";
 
 /** Matches the ResolvedCoin shape from telegram-alerts.ts — duplicated here to avoid a circular import. */
@@ -13,6 +14,9 @@ export type TelegramPresetId =
   | "usd-top10"
   | "usd-top25"
   | "usd-top50"
+  | "non-usd-top10"
+  | "non-usd-top25"
+  | "non-usd-top50"
   | "eur-top10"
   | "gold-top5"
   | "mcap-ge-1b"
@@ -24,7 +28,8 @@ export interface TelegramPresetDefinition {
   description: string;
   category: "peg-leaders" | "market-cap";
   kind: "peg-top" | "market-cap";
-  pegCurrency?: "USD" | "EUR" | "GOLD";
+  pegCurrency?: PegCurrency;
+  excludePegCurrency?: PegCurrency;
   topN?: number;
   minMarketCapUsd?: number;
 }
@@ -75,6 +80,33 @@ const TELEGRAM_PRESET_DEFINITIONS: TelegramPresetDefinition[] = [
     category: "peg-leaders",
     kind: "peg-top",
     pegCurrency: "USD",
+    topN: 50,
+  },
+  {
+    id: "non-usd-top10",
+    label: "Non-USD Top 10",
+    description: "Top 10 non-USD stablecoins by current market cap.",
+    category: "peg-leaders",
+    kind: "peg-top",
+    excludePegCurrency: "USD",
+    topN: 10,
+  },
+  {
+    id: "non-usd-top25",
+    label: "Non-USD Top 25",
+    description: "Top 25 non-USD stablecoins by current market cap.",
+    category: "peg-leaders",
+    kind: "peg-top",
+    excludePegCurrency: "USD",
+    topN: 25,
+  },
+  {
+    id: "non-usd-top50",
+    label: "Non-USD Top 50",
+    description: "Top 50 non-USD stablecoins by current market cap.",
+    category: "peg-leaders",
+    kind: "peg-top",
+    excludePegCurrency: "USD",
     topN: 50,
   },
   {
@@ -187,7 +219,15 @@ export async function resolveTelegramPresetTargets(
     let stablecoinIds: string[];
     if (definition.kind === "peg-top") {
       stablecoinIds = ACTIVE_STABLECOINS
-        .filter((stablecoin) => stablecoin.flags.pegCurrency === definition.pegCurrency)
+        .filter((stablecoin) => {
+          if (definition.pegCurrency != null) {
+            return stablecoin.flags.pegCurrency === definition.pegCurrency;
+          }
+          if (definition.excludePegCurrency != null) {
+            return stablecoin.flags.pegCurrency !== definition.excludePegCurrency;
+          }
+          return true;
+        })
         .map((stablecoin) => stablecoin.id)
         .sort((a, b) => compareStablecoinIdsByMarketCap(a, b, marketCapsById))
         .slice(0, definition.topN);

@@ -2,6 +2,7 @@
   "id": "usd-nubank",
   "name": "Nubank USD Stablecoin",
   "symbol": "USD-NU",
+  "oneLiner": "USD-NU is Nubank's pre-launch dollar-pegged stablecoin pilot for credit-card payments across 100M+ LATAM customers; ticker, chain, and backing model undecided.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

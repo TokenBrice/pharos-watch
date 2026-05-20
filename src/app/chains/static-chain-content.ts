@@ -1,6 +1,6 @@
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import {

@@ -2,6 +2,7 @@
   "id": "gramg-token-teknoloji",
   "name": "Gram Gold",
   "symbol": "GRAMG",
+  "oneLiner": "GRAMG is Token Teknoloji's gram-gold stablecoin from Turkey, backed by one gram of physical gold per token held at Turkish bank custodians.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/",
-    "provider": "Token Teknoloji reserve proof page"
+    "provider": "Token Teknoloji reserve proof page",
+    "attestorTier": "self",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Turkey"
   },
   "links": [
     {

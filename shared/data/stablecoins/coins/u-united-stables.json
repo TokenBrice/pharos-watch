@@ -2,16 +2,18 @@
   "id": "u-united-stables",
   "name": "United Stables",
   "symbol": "U",
+  "oneLiner": "U is a BVI-issued dollar stablecoin backed by a variable mix of cash, U.S. Treasury bills, and approved fiat-referenced stablecoins.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
-  "collateral": "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
+  "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
   "pegMechanism": "Smart contracts mint U 1:1 only upon receipt of USD or whitelisted stablecoins (USDC, USDT, USD1); redemption burns U and returns USD or stablecoins; on-chain oracles enforce total supply never exceeds collateral",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "336",
   "detailProvider": "defillama",
   "geckoId": "united-stables",
@@ -56,27 +58,9 @@
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {
-      "name": "USDC",
-      "pct": 35,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "USDT",
-      "pct": 35,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "USD1 (WLFI stablecoin)",
-      "pct": 15,
-      "risk": "medium",
-      "coinId": "usd1-world-liberty-financial"
-    },
-    {
-      "name": "Fiat USD / U.S. Treasury Bills",
-      "pct": 15,
-      "risk": "very-low"
+      "name": "Cash, U.S. Treasury bills, and fiat-referenced stablecoins (variable mix)",
+      "pct": 100,
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {

@@ -1,5 +1,5 @@
 import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode } from "@shared/types/yield";
+import type { YieldBenchmarkKey, YieldBenchmarkSelectionMode, YieldPysNullReason } from "@shared/types/yield";
 import type { PysSourceRiskPenaltyReason } from "@shared/lib/yield-scoring";
 import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
@@ -50,6 +50,7 @@ export interface EvaluatedYieldSource {
   benchmarkIsProxy: boolean;
   benchmarkMeta: ParsedYieldBenchmarkMeta;
   pharosYieldScore: number;
+  pysNullReason: YieldPysNullReason | null;
   prevExchangeRate: number | null;
   prevTvlUsd: number | null;
   sourceDepthRatio: number | null;

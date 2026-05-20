@@ -2,8 +2,9 @@
   "id": "usdai-usd-ai",
   "name": "USD.AI",
   "symbol": "USDai",
+  "oneLiner": "USDai is USD.AI's non-yielding base dollar, minted 1:1 from USDC/USDT and separately stakeable into sUSDai for GPU-loan yield.",
   "flags": {
-    "backing": "rwa-backed",
+    "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": false,
@@ -17,8 +18,9 @@
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },
-  "collateral": "PYUSD (PayPal USD) reserves used as the liquid settlement layer for USD.AI's base stablecoin mint and redeem rail",
-  "pegMechanism": "Minted and redeemed through the USD.AI platform on a stablecoin/PYUSD rail; base USDai is the liquid, non-yielding token, while staking into sUSDai is a separate queued yield product",
+  "collateral": "USDai is minted 1:1 from USDC or USDT and backed by stablecoin reserves; it is the non-yielding base token separate from staked sUSDai.",
+  "pegMechanism": "Users mint USDai 1:1 with supported stablecoins and can redeem USDai for supported stablecoins without a withdrawal queue; staking into sUSDai is optional.",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "309",
   "detailProvider": "defillama",
   "geckoId": "usdai",
@@ -38,7 +40,7 @@
     }
   ],
   "jurisdiction": {
-    "country": "United States"
+    "country": "Cayman Islands"
   },
   "contracts": [
     {
@@ -66,10 +68,9 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "PYUSD (PayPal USD)",
+      "name": "USDC / USDT stablecoin reserves (variable mix)",
       "pct": 100,
-      "risk": "low",
-      "coinId": "pyusd-paypal"
+      "risk": "low"
     }
   ],
   "liveReservesConfig": {
@@ -88,5 +89,12 @@
         "rpcMode": "public-rpc"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+    "provider": "USD.AI proof-of-reserves API",
+    "attestorTier": "self",
+    "cadence": "real-time"
   }
 }

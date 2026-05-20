@@ -2,6 +2,7 @@
   "id": "spusd-soulpeg",
   "name": "SoulPeg USD",
   "symbol": "spUSD",
+  "oneLiner": "spUSD is SoulPeg's freely tradable BNB Chain wrapper around a soul-bound sUSDC position routed through Venus lending; no Pharos-reviewed holder USDC exit.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

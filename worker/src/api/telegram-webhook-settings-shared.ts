@@ -4,7 +4,7 @@
  * the render builders, and the mutation helpers can each stay narrow.
  */
 
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 /** Default UTC quiet-hours window used when the user toggles quiet hours on
  * without specifying a range. Mirrors the typical late-night window; users who

@@ -931,7 +931,7 @@
           "Blacklist"
         ],
         "summary": "Blacklist events",
-        "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+        "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
         "operationId": "blacklist",
         "parameters": [
           {
@@ -985,6 +985,15 @@
             "in": "query",
             "required": false,
             "description": "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "description": "Optional canonical chain-registry ID filter, for example `ethereum` or `tron`. When both `chain` and `chainId` are supplied, they must identify the same chain.",
             "schema": {
               "type": "string"
             }
@@ -1044,10 +1053,10 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "Maximum number of events to return. Defaults to 1000.",
+            "description": "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
             "schema": {
               "type": "integer",
-              "minimum": 1,
+              "minimum": 0,
               "maximum": 1000
             }
           },
@@ -1059,6 +1068,15 @@
             "schema": {
               "type": "integer",
               "minimum": 0
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When false, skips the exact total count.",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -1276,6 +1294,24 @@
               "type": "integer",
               "minimum": 0
             }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque keyset cursor returned as nextCursor; cannot be combined with a non-zero offset.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeTotal",
+            "in": "query",
+            "required": false,
+            "description": "When false, skips the exact total count.",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -1320,6 +1356,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/YieldRankingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/yield-adapter-manifest": {
+      "get": {
+        "tags": [
+          "Yield"
+        ],
+        "summary": "Yield adapter manifest",
+        "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
+        "operationId": "yieldAdapterManifest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YieldAdapterManifestResponse"
                 }
               }
             }
@@ -1467,10 +1538,11 @@
             "name": "days",
             "in": "query",
             "required": false,
-            "description": "Historical lookback window in days. Endpoint-specific bounds may apply.",
+            "description": "Historical lookback window in days. Defaults to 5000; `0` maps to the default.",
             "schema": {
               "type": "integer",
-              "minimum": 1
+              "minimum": 30,
+              "maximum": 5000
             }
           }
         ],
@@ -1526,7 +1598,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 1825
+              "maximum": 5000
             }
           }
         ],
@@ -1697,6 +1769,143 @@
             "in": "query",
             "required": true,
             "description": "Digest date slug, for example `2026-03-16`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/snapshots/index": {
+      "get": {
+        "tags": [
+          "Digest"
+        ],
+        "summary": "Public snapshot index",
+        "description": "Listing of available daily public snapshots with content hashes and methodology versions.",
+        "operationId": "snapshotsIndex",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/snapshots/{date}.json": {
+      "get": {
+        "tags": [
+          "Digest",
+          "History"
+        ],
+        "summary": "Public snapshot for a single day",
+        "description": "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
+        "operationId": "snapshotsDateJson",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "description": "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. See the public API reference for endpoint-specific payload fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Service unavailable or cache not populated"
+          }
+        }
+      }
+    },
+    "/api/snapshot/{date}/stablecoin/{stablecoinId}": {
+      "get": {
+        "tags": [
+          "Digest",
+          "Stablecoins",
+          "History"
+        ],
+        "summary": "Public snapshot projection for a single coin",
+        "description": "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
+        "operationId": "snapshotDateStablecoinStablecoinId",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "description": "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stablecoinId",
+            "in": "path",
+            "required": true,
+            "description": "Stablecoin id (lowercase-kebab).",
             "schema": {
               "type": "string"
             }
@@ -2369,6 +2578,111 @@
               "failed",
               null
             ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAdapterManifestResponse": {
+        "type": "object",
+        "description": "Yield adapter source-list manifest payload.",
+        "required": [
+          "methodologyVersion",
+          "updatedAt",
+          "entries"
+        ],
+        "properties": {
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Unix seconds for the methodology snapshot backing the manifest."
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/YieldAdapterManifestEntry"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "YieldAdapterManifestEntry": {
+        "type": "object",
+        "description": "One yield adapter manifest row.",
+        "required": [
+          "stablecoinId",
+          "coinSymbol",
+          "family",
+          "sourceKey",
+          "label",
+          "lifecycle",
+          "methodologyVersion",
+          "updatedAt"
+        ],
+        "properties": {
+          "stablecoinId": {
+            "type": "string"
+          },
+          "coinSymbol": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string",
+            "enum": [
+              "onchain",
+              "protocol-api",
+              "defillama",
+              "defillama-auto",
+              "rate-derived",
+              "price-derived",
+              "intentional-gap"
+            ]
+          },
+          "sourceKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Exact runtime source key when the strategy publishes a joinable yield_history/rankings source; null for disabled or runtime-resolved strategies."
+          },
+          "sourceKeyPattern": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable source-key pattern or would-be key for runtime-resolved or disabled strategies."
+          },
+          "label": {
+            "type": "string"
+          },
+          "chain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lifecycle": {
+            "type": "string"
+          },
+          "quarantineReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "methodologyVersion": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "number",
+            "description": "Unix seconds for the methodology snapshot backing the manifest entry."
           }
         },
         "additionalProperties": true

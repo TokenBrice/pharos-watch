@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TIER_BORDER,
   TIER_TEXT,
@@ -13,6 +13,7 @@ import {
   pegScoreColor,
   scoreToColorClass,
 } from "../severity-colors";
+import * as featureFlags from "@/lib/feature-flags";
 
 describe("severity-colors", () => {
   it("maps deviation thresholds to classes, hex values, and icons", () => {
@@ -74,5 +75,24 @@ describe("severity-colors", () => {
       { min: Number.NEGATIVE_INFINITY, className: "low" },
     ])).toBe("mid");
     expect(scoreToColorClass(null, [{ min: 0, className: "x" }], "fallback")).toBe("fallback");
+  });
+
+  describe("with quietDeviations flag enabled", () => {
+    beforeEach(() => {
+      vi.spyOn(featureFlags, "isQuietDeviationsEnabled").mockReturnValue(true);
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("returns muted-foreground below the GREEN threshold and keeps higher tiers", () => {
+      expect(deviationColorClass(0)).toBe("text-muted-foreground");
+      expect(deviationColorClass(49)).toBe("text-muted-foreground");
+      expect(deviationColorClass(50)).toBe("text-amber-700 dark:text-amber-400");
+      expect(deviationColorClass(199)).toBe("text-amber-700 dark:text-amber-400");
+      expect(deviationColorClass(200)).toBe("text-orange-700 dark:text-orange-400");
+      expect(deviationColorClass(499)).toBe("text-orange-700 dark:text-orange-400");
+      expect(deviationColorClass(500)).toBe("text-red-700 dark:text-red-400");
+    });
   });
 });

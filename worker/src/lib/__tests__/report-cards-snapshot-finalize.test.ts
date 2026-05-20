@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildDefunctReportCards } from "../report-cards-snapshot-finalize";
 
 describe("buildDefunctReportCards", () => {

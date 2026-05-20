@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeAsset } from "../../api/__tests__/helpers/fixtures";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../api/__tests__/helpers/mock-d1";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "usdt-tether",

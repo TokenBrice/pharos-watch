@@ -31,7 +31,7 @@ env:
 
 jobs:
   validate-prebuild:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -47,9 +47,17 @@ jobs:
 
   pages-build:
     if: ${{ inputs.pages_changed && inputs.run_pages_build_and_seo }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
+    env:
+      # Match pages-prepare.yml so the validate build inlines the same flags.
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
+      NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
+      NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
+      NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -59,20 +67,25 @@ jobs:
         with:
           node-version: 24.x
           tooling-cache: "true"
+          install-playwright-chromium: "true"
       - run: npm run build
+      - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
+      - run: npm run check:build-size
+      - run: npm run check:build-attribution
+      - run: npm run check:methodology-pdfs
 
   test-noncritical:
-    name: Noncritical Vitest (${{ matrix.shard }}/3)
-    runs-on: ubuntu-latest
+    name: Noncritical Vitest (${{ matrix.shard }}/4)
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -82,10 +95,10 @@ jobs:
         with:
           node-version: 24.x
           tooling-cache: "true"
-      - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/3
+      - run: npm run test:noncritical -- --shard=${{ matrix.shard }}/4
 
   coverage-critical:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     env:
@@ -104,7 +117,7 @@ jobs:
 
   typecheck-worker:
     if: ${{ inputs.worker_changed }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -118,22 +131,6 @@ jobs:
           tooling-cache: "true"
       - run: npm run typecheck:worker
 
-  typecheck-worker-scripts:
-    if: ${{ inputs.worker_changed }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: 24.x
-          tooling-cache: "true"
-      - run: npm run typecheck:worker-scripts
-
   validate:
     needs:
       - validate-prebuild
@@ -141,9 +138,8 @@ jobs:
       - test-noncritical
       - coverage-critical
       - typecheck-worker
-      - typecheck-worker-scripts
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
     steps:
@@ -156,44 +152,25 @@ jobs:
           VALIDATE_PREBUILD_RESULT: ${{ needs.validate-prebuild.result }}
           WORKER_CHANGED: ${{ inputs.worker_changed }}
           TYPECHECK_WORKER_RESULT: ${{ needs.typecheck-worker.result }}
-          TYPECHECK_WORKER_SCRIPTS_RESULT: ${{ needs.typecheck-worker-scripts.result }}
         run: |
           node <<'NODE'
-          const required = [
+          const expectedPagesBuild = process.env.PAGES_BUILD_EXPECTED === "true";
+          const checks = [
             ["validate-prebuild", process.env.VALIDATE_PREBUILD_RESULT],
             ["test-noncritical", process.env.TEST_NONCRITICAL_RESULT],
             ["coverage-critical", process.env.COVERAGE_CRITICAL_RESULT],
+            ...(
+              process.env.WORKER_CHANGED === "true"
+                ? [["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]]
+                : []
+            ),
+            ...(expectedPagesBuild ? [["pages-build", process.env.PAGES_BUILD_RESULT]] : []),
           ];
 
-          const optional = [];
-          if (process.env.PAGES_BUILD_EXPECTED === "true") {
-            required.push(["pages-build", process.env.PAGES_BUILD_RESULT]);
-          } else {
-            optional.push(["pages-build", process.env.PAGES_BUILD_RESULT]);
+          const failures = checks.filter(([, result]) => result !== "success");
+          if (failures.length > 0) {
+            const message = failures.map(([job, result]) => `${job}=${result ?? "missing"}`).join(", ");
+            console.error(`validate gate failed: ${message}`);
+            process.exit(1);
           }
-
-          if (process.env.WORKER_CHANGED === "true") {
-            required.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
-            required.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
-          } else {
-            optional.push(["typecheck-worker", process.env.TYPECHECK_WORKER_RESULT]);
-            optional.push(["typecheck-worker-scripts", process.env.TYPECHECK_WORKER_SCRIPTS_RESULT]);
-          }
-
-          let failed = false;
-          for (const [job, result] of required) {
-            if (result !== "success") {
-              console.error(`${job} result was ${result}; expected success.`);
-              failed = true;
-            }
-          }
-
-          for (const [job, result] of optional) {
-            if (result !== "success" && result !== "skipped") {
-              console.error(`${job} result was ${result}; expected success or skipped.`);
-              failed = true;
-            }
-          }
-
-          process.exit(failed ? 1 : 0);
           NODE

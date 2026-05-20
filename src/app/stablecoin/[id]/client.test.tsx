@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 
 const { useStablecoinDetailViewModelMock } = vi.hoisted(() => ({
@@ -51,8 +51,24 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/notices-and-summary-section", () => ({
-  NoticesAndSummarySection: () => <div data-testid="notices-and-summary" />,
+vi.mock("@/components/stablecoin-detail/overview-section", () => ({
+  OverviewSection: () => null,
+}));
+
+vi.mock("@/components/ai-summary", () => ({
+  AiSummary: () => null,
+}));
+
+vi.mock("@/components/dews-detail", () => ({
+  DEWSDetail: () => null,
+}));
+
+vi.mock("@/components/coin-notice", () => ({
+  CoinNotices: () => null,
+}));
+
+vi.mock("@/components/tape-for-coin-teaser", () => ({
+  TapeForCoinTeaser: () => null,
 }));
 
 vi.mock("@/components/feedback-modal", () => ({
@@ -61,6 +77,19 @@ vi.mock("@/components/feedback-modal", () => ({
 
 vi.mock("@/components/exploit-notice-banner", () => ({
   ExploitNoticeBanner: () => null,
+}));
+
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
+  RecentBlacklistBanner: () => null,
+}));
+
+vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
+  // Render the `variantRelationshipCard` child so tests can still assert it
+  // exists outside the overview section; suppress the inner contagion graph
+  // which would otherwise pull in the live useReportCards query.
+  ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
+    <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
+  ),
 }));
 
 vi.mock("@/components/report-card", () => ({
@@ -121,6 +150,10 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     reserveFetchError: null,
     supplyError: null,
     staleQueries: [],
+    verdict: {
+      archetype: "uncategorized",
+      label: "Uncategorized",
+    },
     handleRetryAll: vi.fn(),
     ...overrides,
   };
@@ -166,7 +199,6 @@ describe("StablecoinDetailClient", () => {
     expect(overviewSections[0]?.contains(screen.getByText("Variants"))).toBe(false);
     expect(screen.getAllByText("Sky Savings USDS").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Staked USDS").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Browse all tracked variants" })).toBeTruthy();
   });
 
   it("renders the underlying asset card outside the overview section for variants", () => {
@@ -204,38 +236,5 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByText("Underlying Asset")).toBeTruthy();
     expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(false);
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Browse all savings variants" })).toBeTruthy();
-  });
-
-  it("falls back to tracked variants browse link for bond variants", () => {
-    const coin = TRACKED_META_BY_ID.get("busd0-usual")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
-      id: coin.id,
-      coin,
-      variantParent: TRACKED_META_BY_ID.get("usd0-usual")!,
-      variantSiblings: [],
-      childVariants: [],
-      isVariant: true,
-      hasVariants: false,
-      coinData: {
-        id: coin.id,
-        name: coin.name,
-        symbol: coin.symbol,
-        pegType: "peggedUSD",
-        price: 1,
-        circulating: { peggedUSD: 100 },
-        circulatingPrevDay: { peggedUSD: 99 },
-        circulatingPrevWeek: { peggedUSD: 98 },
-        circulatingPrevMonth: { peggedUSD: 97 },
-        chainCirculating: {},
-        chains: ["ethereum"],
-      },
-      isNavToken: true,
-    }));
-
-    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
-
-    const browseLink = screen.getByRole("link", { name: "Browse all tracked variants" });
-    expect(browseLink.getAttribute("href")).toBe("/?variant=variant-tracked");
   });
 });

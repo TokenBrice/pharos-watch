@@ -2,6 +2,7 @@
   "id": "nwisdom-nest",
   "name": "Nest Wisdom Vault",
   "symbol": "nWISDOM",
+  "oneLiner": "nWISDOM is a Nest vault share backed mainly by WisdomTree Connect tokenized fund exposure (xCRDYX), accruing yield through NAV rather than a hard $1 peg.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -68,7 +69,8 @@
     {
       "name": "Nest Treasury Vault (nTBILL) liquidity buffer",
       "pct": 3,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "ntbill-nest"
     },
     {
       "name": "Stablecoin liquidity buffer (USDC / pUSD)",

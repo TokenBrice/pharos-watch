@@ -19,7 +19,7 @@ If the coin never launched on Pharos (no historical data), do not freeze: simply
 ### 1. Run the freeze script
 
 ```bash
-PHAROS_API_KEY="$PHAROS_API_KEY" npx tsx scripts/freeze-stablecoin.ts "$COIN_ID"
+PHAROS_API_KEY="$PHAROS_API_KEY" npx tsx scripts/maintenance/freeze-stablecoin.ts "$COIN_ID"
 ```
 
 The script prints two artifacts:
@@ -32,7 +32,7 @@ The script prints two artifacts:
 - Append the snapshot entry to `frozen-snapshots.json`.
 - In the coin's per-coin source file (`shared/data/stablecoins/coins/<id>.json`), set `status: "frozen"`, add `frozenAt: "YYYY-MM-DD"`, and add the `obituary` block. Replace the placeholder strings (`causeOfDeath`, `epitaph`, `obituary`, `sourceUrl`, `sourceLabel`) with finalized copy.
 - Keep the core tracked metadata fields intact (`id`, `name`, `symbol`, and `flags`). Frozen archive pages and cemetery exports still read the tracked metadata source; the freeze transition adds lifecycle fields rather than replacing the coin with a dead-stablecoin-only record.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`. Do not edit the generated aggregate or legacy category shells by hand.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`. Do not edit the generated aggregate or legacy category shells by hand.
 
 The schema enforces the invariant: `frozenAt` is required when `status === "frozen"`, and `obituary` is only allowed when `status === "frozen"`.
 
@@ -63,7 +63,7 @@ cp "public/logos/${LLAMA_ID}-${SYMBOL}.png" "public/logos/cemetery/${SYMBOL_LOWE
 ### 4. Validate
 
 ```bash
-tsx scripts/generate-stablecoin-per-coin-asset.ts
+tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run check:frozen-invariants
 npm run lint

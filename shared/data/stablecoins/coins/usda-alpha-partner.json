@@ -2,6 +2,7 @@
   "id": "usda-alpha-partner",
   "name": "Alpha Partner USDA",
   "symbol": "USDA",
+  "oneLiner": "USDA is Alpha Partners' BSC-only dollar token whose backing is described only as protocol-managed collateral and liquidity reserves; mechanism opaque.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

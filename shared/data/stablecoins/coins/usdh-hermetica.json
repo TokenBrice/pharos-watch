@@ -2,16 +2,18 @@
   "id": "usdh-hermetica",
   "name": "Hermetica USDh",
   "symbol": "USDh",
+  "oneLiner": "USDh is Hermetica's BTC-backed synthetic dollar on Stacks, kept near $1 by pairing spot BTC long with equal-size short BTC perpetual futures positions on CEXes.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
   "collateral": "BTC spot holdings paired with equal short BTC perpetual futures positions on centralized exchanges, creating a delta-neutral synthetic dollar position; collateral custodied through institutional off-exchange settlement providers",
   "pegMechanism": "Delta-neutral hedging: BTC spot long + equal BTC short perpetual futures neutralize directional exposure; mint and redeem via KYC-gated Hermetica app; DIA oracle provides reserve-backed fair value pricing on Stacks",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "242",
   "detailProvider": "defillama",
   "geckoId": "hermetica-usdh",
@@ -29,6 +31,9 @@
       "url": "https://docs.hermetica.fi/usdh/usdh-and-susdh"
     }
   ],
+  "jurisdiction": {
+    "country": "Panama"
+  },
   "contracts": [
     {
       "chain": "stacks",
@@ -54,8 +59,11 @@
       "risk": "high"
     }
   ],
-  "yieldConfig": {
-    "yieldSource": "Hermetica staking (sUSDh)",
-    "yieldType": "lending-vault"
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.hermetica.fi/usdh/how-it-works/backing",
+    "provider": "Hermetica custodian attestations",
+    "attestorTier": "self",
+    "cadence": "monthly"
   }
 }

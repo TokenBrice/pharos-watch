@@ -2,16 +2,16 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS, type ReportCardCacheLoadResult } from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
 
-type ChainsFreshnessStatus = "fresh" | "degraded" | "stale";
-type ChainsDependencyStatus = "fresh" | "degraded" | "stale" | "unavailable";
+type ChainsDependencyStatus = FreshnessStatus | "unavailable";
 
 interface ChainsDependencyMeta {
   updatedAt?: number | null;
@@ -23,7 +23,7 @@ interface ChainsDependencyMeta {
 interface ChainsFreshnessMeta {
   updatedAt: number;
   ageSeconds: number;
-  status: ChainsFreshnessStatus;
+  status: FreshnessStatus;
   warning?: string | null;
   dependencies?: {
     reportCards: ChainsDependencyMeta;
@@ -67,7 +67,7 @@ function buildChainsFreshnessMeta(
   const nowSec = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, nowSec - updatedAt);
   const reportCards = buildReportCardDependencyMeta(reportCardResult, nowSec);
-  let status: ChainsFreshnessStatus;
+  let status: FreshnessStatus;
 
   if (ageSeconds <= CHAINS_FRESHNESS_MAX_AGE_SEC) {
     status = "fresh";

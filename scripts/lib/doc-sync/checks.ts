@@ -33,8 +33,6 @@ import {
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
-} from "../../../shared/lib/depeg-detection-config";
-import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
 } from "../../../shared/lib/depeg-config";
@@ -62,32 +60,9 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "../../../shared/lib/redemption-back
 import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
+  METHODOLOGY_PROVENANCE_FILES,
   SAFETY_SCORE_VERSION_LABEL,
 } from "./methodology-manifest";
-
-const METHODOLOGY_PROVENANCE_FILES = [
-  "docs/blacklist-tracker-timeline.md",
-  "docs/chain-health-timeline.md",
-  "docs/depeg-dews-timeline.md",
-  "docs/liquidity-score-timeline.md",
-  "docs/mint-burn-flows-timeline.md",
-  "docs/pricing-pipeline-timeline.md",
-  "docs/report-cards-timeline.md",
-  "docs/stability-index-timeline.md",
-  "docs/yield-intelligence-timeline.md",
-  "shared/lib/blacklist-tracker-version.ts",
-  "shared/lib/chain-health-version.ts",
-  "shared/lib/depeg-dews-version.ts",
-  "shared/lib/liquidity-score-version.ts",
-  "shared/lib/methodology-version.ts",
-  "shared/lib/mint-burn-flow-version.ts",
-  "shared/lib/pricing-pipeline-version.ts",
-  "shared/lib/redemption-backstop-version.ts",
-  "shared/lib/safety-score-version-data.ts",
-  "shared/lib/safety-score-version.ts",
-  "shared/lib/stability-index-version.ts",
-  "shared/lib/yield-methodology-version.ts",
-] as const;
 
 function checkMethodologyVersions(failures: Failure[]): void {
   for (const check of METHODOLOGY_DOC_VERSION_CHECKS) {

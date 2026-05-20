@@ -34,6 +34,12 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
 }));
 
+vi.mock("@/components/yield-source-risk-bar", () => ({
+  YieldSourceRiskBar: ({ score }: { score: number | null }) => (
+    <div data-testid="yield-source-risk-bar">{score == null ? "unavailable" : String(score)}</div>
+  ),
+}));
+
 function makeRanking(id: string, bestSourceKey: string, altSourceKey: string): YieldRanking {
   return {
     id,
@@ -149,6 +155,166 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByText("Higher confidence than retained alternates.")).toBeTruthy();
   });
 
+  it("renders the confidence-tier color pill with sentence-cased label", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          provenance: {
+            sourceKey: "best-usdc",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 60,
+            confidenceTier: "curated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "Higher confidence.",
+            sourceSwitch: false,
+            previousBestSourceKey: null,
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    const pill = screen.getByText("Curated");
+    expect(pill).toBeTruthy();
+    expect(pill.className).toContain("bg-sky-500/10");
+  });
+
+  it("renders the source-risk sparkbar under the APY with the provided score", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          sourceRisk: { sourceRiskScore: 72, sourceAgeSeconds: null },
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByTestId("yield-source-risk-bar").textContent).toBe("72");
+  });
+
+  it("renders the sparkbar in the unavailable variant when sourceRiskScore is missing", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "alt-usdc")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByTestId("yield-source-risk-bar").textContent).toBe("unavailable");
+  });
+
+  it("renders a freshness stamp when sourceAgeSeconds is provided", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...makeRanking("usdc", "best-usdc", "alt-usdc"),
+          sourceRisk: { sourceRiskScore: null, sourceAgeSeconds: 90 * 60 },
+        }}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    const stamp = screen.getByText("1h ago");
+    expect(stamp).toBeTruthy();
+    expect(stamp.getAttribute("title")).toBe("Source observed 1h ago (fresh)");
+  });
+
+  it("does not render a freshness stamp when sourceAgeSeconds is missing", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "alt-usdc")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.queryByText(/ago$/)).toBeNull();
+  });
+
+  it("renders the deep-dive yield link without a sources param by default", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "alt-usdc")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
+    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?$/);
+  });
+
+  it("appends sources param to deep-dive link when an alternate is selected", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "alt-usdc")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /usdc-alt/i }));
+    const deepDive = screen.getByRole("link", { name: /Deep dive yield/i });
+    expect(deepDive.getAttribute("href")).toMatch(/^\/stablecoin\/usdc\/yield\/?\?sources=alt-usdc$/);
+  });
+
+  it("keeps the existing View full dossier link to the main detail page", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <YieldSourceSheet
+        ranking={makeRanking("usdc", "best-usdc", "alt-usdc")}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    const dossier = screen.getByRole("link", { name: /View full dossier/i });
+    expect(dossier.getAttribute("href")).toBe("/stablecoin/usdc");
+  });
+
   it("shows source-risk driver labels from the shared golden fixture", () => {
     const onOpenChange = vi.fn();
     render(
@@ -175,5 +341,79 @@ describe("YieldSourceSheet", () => {
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
       expect(screen.getByText(label)).toBeTruthy();
     }
+  });
+
+  it("renders a rejection-hint chip on retained alternates when populated", () => {
+    const onOpenChange = vi.fn();
+    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...base,
+          dataSource: "defillama",
+          sourceTvlUsd: 10_000_000,
+          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+          altSources: [
+            {
+              sourceKey: "alt-usdc",
+              yieldSource: "usdc-alt",
+              yieldSourceUrl: null,
+              yieldType: "lending-vault",
+              currentApy: 0.04,
+              apy30d: 0.04,
+              sourceTvlUsd: 10_000_000,
+              dataSource: "defillama",
+              sourceRisk: { sourceDepthRatio: 0.001, sourceAgeSeconds: 60, rewardShare: 0 },
+            },
+          ],
+        } as unknown as YieldRanking}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.getByText("thinner")).toBeTruthy();
+  });
+
+  it("does not render a rejection-hint chip when rejectionHint is null", () => {
+    const onOpenChange = vi.fn();
+    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
+    render(
+      <YieldSourceSheet
+        ranking={{
+          ...base,
+          dataSource: "defillama",
+          sourceTvlUsd: 10_000_000,
+          sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+          altSources: [
+            {
+              sourceKey: "alt-usdc",
+              yieldSource: "usdc-alt",
+              yieldSourceUrl: null,
+              yieldType: "lending-vault",
+              currentApy: 0.04,
+              apy30d: 0.04,
+              sourceTvlUsd: 10_000_000,
+              dataSource: "defillama",
+              sourceRisk: { sourceDepthRatio: 0.05, sourceAgeSeconds: 60, rewardShare: 0 },
+            },
+          ],
+        } as unknown as YieldRanking}
+        logo={undefined}
+        riskFreeRate={0.02}
+        medianApy={0.03}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    );
+
+    expect(screen.queryByText("thinner")).toBeNull();
+    expect(screen.queryByText("stale")).toBeNull();
+    expect(screen.queryByText("rewards-only")).toBeNull();
+    expect(screen.queryByText("lower-conf")).toBeNull();
+    expect(screen.queryByText("smaller")).toBeNull();
   });
 });

@@ -49,7 +49,7 @@ export function TableToolbar({
           {additionalActions}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground">
+              <Button variant="ghost" size="sm" className="min-h-11 gap-1.5 text-xs text-muted-foreground sm:min-h-8">
                 <Settings2 className="h-3.5 w-3.5" />
                 Table settings
               </Button>

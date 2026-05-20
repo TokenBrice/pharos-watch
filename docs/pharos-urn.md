@@ -1,0 +1,94 @@
+# Pharos URN Scheme
+
+`urn:pharos:<entity-class>:<id>[@<qualifier>]`
+
+The Pharos URN scheme is a stable, parser-friendly identifier for every cite-able artifact published by Pharos. It follows RFC 8141 with `pharos` as the namespace identifier. The grammar is **stable**: separator characters and the `urn:pharos:` prefix never change. New entity classes may be appended (additive) but existing entries never get renamed, removed, or repurposed once shipped — see the table below for the canonical list.
+
+Implementation: `shared/lib/citation/urn.ts` (`formatPharosUrn`, `parsePharosUrn`).
+
+---
+
+## Grammar
+
+```
+urn:pharos:<entity-class>:<id>[@<qualifier>]
+```
+
+- **`urn:pharos:`** — fixed prefix. No other repo features may invent their own `pharos:foo:bar` strings.
+- **`<entity-class>`** — one of the closed enum below.
+- **`<id>`** — lowercase, hyphens not underscores, no leading or trailing hyphen.
+- **`@<qualifier>`** — optional version or ISO date, used only when the citation pins a mutable surface to a point in time. Lowercase, hyphens or dots allowed.
+
+The colon `:` is the only structural separator. Reader tooling can split `urn.split(":")` deterministically.
+
+---
+
+## Entity classes (closed enum, immutable from v1)
+
+| Class | Used for | Example |
+|---|---|---|
+| `coin` | A tracked stablecoin's detail page | `urn:pharos:coin:usdc-circle` |
+| `depeg-event` | A confirmed depeg event | `urn:pharos:depeg-event:usdc-2023-03-11` |
+| `methodology` | A methodology document or changelog | `urn:pharos:methodology:dews@v4.2` |
+| `digest` | A daily or weekly digest issue | `urn:pharos:digest:2026-05-16` |
+| `cemetery` | A frozen-coin obituary entry | `urn:pharos:cemetery:basis-cash` |
+| `dataset` | A static dataset export | `urn:pharos:dataset:stablecoin-cemetery` |
+| `snapshot` | A daily public-data snapshot row | `urn:pharos:snapshot:2026-05-16` |
+| `depeg-report` | A per-event depeg report (post-mortem) | `urn:pharos:depeg-report:usdc-2023-03` |
+| `page` | A first-class editorial or policy page | `urn:pharos:page:principles` |
+
+Adding a new entity class is an explicit, deliberate event recorded here. The `page` class was added in 2026-05 to carry citations on the About / Principles / Editorial AI policy surfaces. Existing classes remain stable; do not rename, remove, or repurpose any entry once it has shipped.
+
+---
+
+## When to use the `@<qualifier>` suffix
+
+Pages with permanently immutable URLs (digests, depeg events, cemetery entries) usually omit `@`. Use it only when the citation explicitly needs to pin a mutable surface to a point in time:
+
+- **Methodology versions** — `urn:pharos:methodology:safety-score@v7.2`. The methodology page itself is mutable; the version qualifier pins it.
+- **Coin detail at a freeze date** — `urn:pharos:coin:usdc-circle@2026-05-16`. The detail page is mutable; the date qualifier pins it.
+
+---
+
+## Display rules
+
+1. Render the URN as a `<code>` element with a copy affordance.
+2. **Do not** render the URN as a clickable link in v1. There is no resolver yet (`https://pharos.watch/r/<urn>` is deferred).
+3. The full citation block (BibTeX, APA 7, Chicago, plain) is provided by `<CitationBlock>` in `src/components/citation-block.tsx`.
+
+---
+
+## JSON-LD integration
+
+Add the URN to each surface's existing JSON-LD as an `identifier` `PropertyValue`:
+
+```jsonc
+{
+  "@type": "Article",
+  "@id": "https://pharos.watch/methodology/depeg-changelog/",
+  "identifier": [
+    {
+      "@type": "PropertyValue",
+      "propertyID": "Pharos URN",
+      "value": "urn:pharos:methodology:dews@v4.2"
+    }
+  ]
+}
+```
+
+The pattern already exists for contract addresses in `src/lib/stablecoin-detail-json-ld.ts`. Mirror it for the URN. The canonical URL stays in `@id`; the URN is **only** an `identifier` property — never bake the URN scheme into the JSON-LD `@id` field.
+
+---
+
+## Accessed-date pinning
+
+The "accessed" date in any rendered citation must come from `src/generated/sitemap-dates.json` (the build's freeze date), not from `new Date()` in the browser. This keeps the same date across HTML, RSS feeds, and any future PDF artifact for the same build. The `<CitationBlock>` component handles this automatically.
+
+---
+
+## See also
+
+- `shared/lib/citation/urn.ts` — formatter + parser.
+- `shared/lib/citation/formats.ts` — BibTeX, APA 7, Chicago, plain renderers.
+- `src/components/citation-block.tsx` — UI component.
+- `agents/council13/research/05-citation-seo.md` — original research with rationale.

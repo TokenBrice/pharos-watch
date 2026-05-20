@@ -15,9 +15,13 @@ import {
   buildGraphData,
   buildSupernodeState,
   DEFAULT_NODE_LIMIT,
+  HEIGHT,
   runSimulation,
+  WIDTH,
+  type GraphLink,
   type GraphNode,
   type HubTier,
+  type LayoutTarget,
   type NodeLimitOption,
   type SupernodeState,
 } from "@/lib/contagion-layout";
@@ -27,6 +31,62 @@ interface UseContagionGraphModelOptions {
   cards: ReportCard[];
   dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
   mcapMap: Map<string, number>;
+  focusCoinId?: string;
+  maxNodes?: number;
+}
+
+const FOCUS_NEIGHBOR_RADIUS_X = 240;
+const FOCUS_NEIGHBOR_RADIUS_Y = 180;
+
+function resolveLinkEndpointId(endpoint: GraphLink["source"] | GraphLink["target"]): string {
+  return typeof endpoint === "object" && endpoint !== null
+    ? (endpoint as GraphNode).id
+    : String(endpoint);
+}
+
+function filterToFocusNeighborhood(
+  nodes: GraphNode[],
+  links: GraphLink[],
+  focusCoinId: string,
+): { nodes: GraphNode[]; links: GraphLink[] } {
+  const neighborIds = new Set<string>([focusCoinId]);
+  for (const link of links) {
+    const srcId = resolveLinkEndpointId(link.source);
+    const tgtId = resolveLinkEndpointId(link.target);
+    if (srcId === focusCoinId) neighborIds.add(tgtId);
+    else if (tgtId === focusCoinId) neighborIds.add(srcId);
+  }
+  if (!neighborIds.has(focusCoinId) || neighborIds.size === 1) {
+    return { nodes: [], links: [] };
+  }
+  const filteredNodes = nodes.filter((node) => neighborIds.has(node.id));
+  if (!filteredNodes.some((node) => node.id === focusCoinId)) {
+    return { nodes: [], links: [] };
+  }
+  const filteredLinks = links.filter((link) => {
+    const srcId = resolveLinkEndpointId(link.source);
+    const tgtId = resolveLinkEndpointId(link.target);
+    return srcId === focusCoinId || tgtId === focusCoinId;
+  });
+  return { nodes: filteredNodes, links: filteredLinks };
+}
+
+function buildFocusLayoutTargets(
+  nodes: readonly GraphNode[],
+  focusCoinId: string,
+): Map<string, LayoutTarget> {
+  const targets = new Map<string, LayoutTarget>();
+  targets.set(focusCoinId, { x: WIDTH / 2, y: HEIGHT / 2 });
+  const neighbors = nodes.filter((node) => node.id !== focusCoinId);
+  if (neighbors.length === 0) return targets;
+  for (let i = 0; i < neighbors.length; i++) {
+    const angle = -Math.PI / 2 + (i / neighbors.length) * Math.PI * 2;
+    targets.set(neighbors[i].id, {
+      x: WIDTH / 2 + Math.cos(angle) * FOCUS_NEIGHBOR_RADIUS_X,
+      y: HEIGHT / 2 + Math.sin(angle) * FOCUS_NEIGHBOR_RADIUS_Y,
+    });
+  }
+  return targets;
 }
 
 export interface ContagionGraphNodeSelectOption {
@@ -72,22 +132,36 @@ function buildSimulationKey(
   ].join("::");
 }
 
-export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseContagionGraphModelOptions) {
+export function useContagionGraphModel({
+  cards,
+  dependencyEdges,
+  mcapMap,
+  focusCoinId,
+  maxNodes,
+}: UseContagionGraphModelOptions) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
   const [nodeLimit, setNodeLimit] = useState<NodeLimitOption>(DEFAULT_NODE_LIMIT);
+  const effectiveNodeLimit = maxNodes ?? nodeLimit;
 
-  const { nodes, links } = useMemo(
-    () => buildGraphData(cards, mcapMap, dependencyEdges, nodeLimit),
-    [cards, dependencyEdges, mcapMap, nodeLimit],
-  );
+  const { nodes, links } = useMemo(() => {
+    const built = buildGraphData(cards, mcapMap, dependencyEdges, effectiveNodeLimit);
+    if (!focusCoinId) return built;
+    return filterToFocusNeighborhood(built.nodes, built.links, focusCoinId);
+  }, [cards, dependencyEdges, mcapMap, effectiveNodeLimit, focusCoinId]);
 
-  const supernodeState = useMemo<SupernodeState>(
+  const supernodeState = useMemo<SupernodeState>(() => {
     // eslint-disable-next-line react-hooks/refs -- read-only hysteresis snapshot from previous render
-    () => buildSupernodeState(nodes, links, prevTierByIdRef.current),
-    [nodes, links],
-  );
+    const base = buildSupernodeState(nodes, links, prevTierByIdRef.current);
+    if (!focusCoinId || nodes.length === 0) return base;
+    const layoutTargetById = buildFocusLayoutTargets(nodes, focusCoinId);
+    const anchorStrengthById = new Map<string, number>();
+    for (const node of nodes) {
+      anchorStrengthById.set(node.id, node.id === focusCoinId ? 1 : 0.2);
+    }
+    return { ...base, layoutTargetById, anchorStrengthById };
+  }, [nodes, links, focusCoinId]);
 
   useEffect(() => {
     prevTierByIdRef.current = new Map(supernodeState.tierById);
@@ -197,18 +271,14 @@ export function useContagionGraphModel({ cards, dependencyEdges, mcapMap }: UseC
     setHoveredId(null);
     setFocusedId(null);
   }, []);
-  const dragMoveSuppressClick = useRef(false);
   const handleNodeClick = useCallback(
     (nodeId: string) => {
       if (drag.dragId) return;
-      if (dragMoveSuppressClick.current) {
-        dragMoveSuppressClick.current = false;
-        return;
-      }
+      if (drag.consumeDragMovedSincePointerDown()) return;
       setInspectedId(nodeId);
       setSelectedNeighborhoodId(nodeId);
     },
-    [drag.dragId],
+    [drag],
   );
   const handleNodeDoubleClick = useCallback(
     (nodeId: string) => {

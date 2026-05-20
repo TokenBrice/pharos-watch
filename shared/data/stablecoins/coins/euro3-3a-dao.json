@@ -4,6 +4,8 @@
   "detailProvider": "defillama",
   "name": "EURO3",
   "symbol": "EURO3",
+  "oneLiner": "EURO3 is 3A DAO's overcollateralized euro stablecoin, minted on Polygon and Linea against whitelisted crypto and stablecoin collateral in user-owned vaults.",
+  "mechanismArchetype": "cdp",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",

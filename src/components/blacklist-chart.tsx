@@ -8,7 +8,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { formatCurrency } from "@shared/lib/format";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { CategoricalXAxis, ChartGrid, MonoYAxis } from "@/components/chart-primitives";
+import { CategoricalXAxis, ChartLegendChip, TimeGrid, MonoYAxis } from "@/components/chart-primitives";
 import type { BlacklistSummaryResponse, BlacklistStablecoin } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
@@ -100,18 +100,17 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
           <>
             <div className="mb-3 flex flex-wrap gap-2">
               {chartCoins.map((coin) => (
-                <div key={coin} className="pharos-chart-legend-chip">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-sm"
-                    style={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
-                  />
+                <ChartLegendChip
+                  key={coin}
+                  markerClassName="inline-block h-2.5 w-2.5 rounded-sm"
+                  markerStyle={{ backgroundColor: BLACKLIST_CHART_COLORS[coin] }}
+                >
                   {coin}
-                </div>
+                </ChartLegendChip>
               ))}
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45" />
+              <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm bg-foreground/45">
                 Total
-              </div>
+              </ChartLegendChip>
             </div>
             <div
               ref={chartContainerRef}
@@ -126,7 +125,7 @@ export function BlacklistChart({ chart, isLoading }: BlacklistChartProps) {
                   data={chartData}
                   margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
                 >
-                  <ChartGrid strokeDasharray="3 3" />
+                  <TimeGrid strokeDasharray="3 3" />
                   <CategoricalXAxis
                     dataKey="quarter"
                     tick={{

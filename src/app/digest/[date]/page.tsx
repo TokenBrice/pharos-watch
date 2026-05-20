@@ -9,7 +9,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { summarizeText } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
-import digests from "../../../../data/digests.json";
+import digests from "@data/digests.json";
 
 const allDigests = digests as DigestContentEntry[];
 const digestByDate = new Map(allDigests.map((d) => [d.date, d]));

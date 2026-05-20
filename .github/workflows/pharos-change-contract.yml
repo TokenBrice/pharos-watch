@@ -26,7 +26,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: >-
-          node scripts/pharos-change-contract.mjs
+          node scripts/ci/pharos-change-contract.mjs
           --base-ref "$BASE_SHA"
           --head-ref "$HEAD_SHA"
           --markdown
@@ -36,4 +36,4 @@ jobs:
           COMMENT_FILE: /tmp/pharos-change-contract.md
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node scripts/upsert-github-pr-comment.mjs
+        run: node scripts/ci/upsert-github-pr-comment.mjs

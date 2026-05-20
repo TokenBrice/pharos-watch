@@ -2,6 +2,7 @@
   "id": "cdp-enosys",
   "name": "Enosys Loans CDP",
   "symbol": "CDP",
+  "oneLiner": "CDP is Enosys's overcollateralized dollar stablecoin on Flare, minted from Flare-ecosystem collateral via Enosys Loans CDP vaults.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Flare ecosystem collateral deposited into Enosys Loans CDP positions",
   "pegMechanism": "Overcollateralized CDP stable asset minted against Enosys Loans collateral and managed through liquidations and repayment rules",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "enosys-loans-cdp",
   "protocolSlug": "enosys-loans",
@@ -26,7 +28,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.enosys.global/"
+      "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
     }
   ],
   "contracts": [

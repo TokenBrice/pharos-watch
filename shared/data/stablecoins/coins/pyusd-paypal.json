@@ -2,6 +2,7 @@
   "id": "pyusd-paypal",
   "name": "PayPal USD",
   "symbol": "PYUSD",
+  "oneLiner": "PYUSD is PayPal's regulated dollar stablecoin issued by Paxos, redeemable 1:1 and backed by U.S. Treasury reverse repos and cash deposits.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
   "pegMechanism": "Direct 1:1 redemption through PayPal/Paxos",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "120",
   "detailProvider": "defillama",
   "geckoId": "paypal-usd",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/pyusd-transparency",
-    "provider": "KPMG"
+    "provider": "KPMG",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {

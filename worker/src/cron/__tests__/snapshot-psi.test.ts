@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { snapshotPsiDaily } from "../snapshot-psi";
 
 function yesterdayMidnightFrom(nowMs: number): number {

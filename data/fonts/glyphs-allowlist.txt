@@ -1,0 +1,30 @@
+# Pharos Newsreader subset — Unicode allowlist.
+#
+# Format: one entry per non-comment line. Each entry is either a single
+# codepoint (e.g. `U+0041`) or an inclusive range (e.g. `U+0020-007E`).
+# Lines starting with `#` and blank lines are ignored.
+#
+# The subset must cover every glyph rendered by the digest surfaces:
+#   - /digest/[date]/ titles (Newsreader display)
+#   - / (homepage) DailyDigest preview titles (Newsreader display)
+#
+# Update this file when a future digest title introduces a glyph outside the
+# current set; the vitest in src/lib/fonts/__tests__/ enforces coverage.
+
+# Basic Latin (printable + space, plus tab/LF for parser safety).
+U+0009
+U+000A
+U+0020-007E
+
+# Latin-1 Supplement (covers em-dash neighbours, accented Latin if a coin
+# name ever needs one).
+U+00A0-00FF
+
+# Smart quotes (' ' " ") and primes.
+U+2018-201D
+
+# En dash, em dash.
+U+2013-2014
+
+# Horizontal ellipsis.
+U+2026

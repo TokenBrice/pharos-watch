@@ -13,7 +13,7 @@ Current source of truth is the per-coin JSON registry under `shared/data/stablec
 | File | Purpose |
 |------|---------|
 | `shared/data/stablecoins/coins/*.json` | Editable source of truth for active and pre-launch stablecoin metadata |
-| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/generate-stablecoin-per-coin-asset.ts` |
+| `shared/data/stablecoins/coins.generated.json` | Generated/runtime aggregate; regenerate with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts` |
 | `shared/data/stablecoins/usd-major.json`, `usd-minor.json`, `non-usd.json`, `commodity.json`, `pre-launch.json` | Read-only legacy compatibility shells; do not add entries |
 | `shared/data/stablecoins/canonical-order.json` | Canonical tracked order used to build `TRACKED_STABLECOINS` |
 | `shared/data/stablecoins/AGENTS.md` | Agent notes pinned to the registry directory |
@@ -48,7 +48,7 @@ Useful repo references before editing:
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
 - Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
-- Use only chain IDs that already exist in `shared/lib/chains.ts`.
+- Use only chain IDs that already exist in `shared/lib/chains/index.ts`.
 - If you add a new upstream source, new adapter family, or change a methodology surface, update the relevant verified docs and the about page in the same change.
 
 ---
@@ -164,6 +164,8 @@ These skills do not replace review — they are research scaffolding. Always ver
 
 ### Collect when applicable
 
+- `oneLiner`
+- `mechanismArchetype`
 - `llamaId`
 - `detailProvider`
 - `geckoId`
@@ -172,7 +174,7 @@ These skills do not replace review — they are research scaffolding. Always ver
 - `pythFeedId`
 - `pegReferenceId`
 - `commodityOunces`
-- `proofOfReserves`
+- `proofOfReserves` (with optional `attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`)
 - `jurisdiction`
 - `tradedContracts`
 - `dependencies`
@@ -234,6 +236,9 @@ These skills do not replace review — they are research scaffolding. Always ver
 | `variantKind` | `savings-passthrough` \| `strategy-vault` \| `risk-absorption` \| `bond-maturity` |
 | `yieldConfig.yieldType` | `lending-vault` \| `rebase` \| `fee-sharing` \| `lp-receipt` \| `nav-appreciation` \| `governance-set` \| `lending-opportunity` |
 | `infrastructures[]` | `liquity-v1` \| `liquity-v2` \| `m0` |
+| `mechanismArchetype` | `fiat-cash` \| `tbill` \| `cdp` \| `synthetic-delta-neutral` \| `algorithmic` |
+| `proofOfReserves.attestorTier` | `big4` \| `regional` \| `niche` \| `self` \| `none` |
+| `proofOfReserves.cadence` | `daily-nav` \| `real-time` \| `monthly` \| `quarterly` \| `ad-hoc` \| `none` |
 | `launchPhase` | `announced` \| `testnet` \| `auditing` \| `beta` \| `launching-soon` |
 
 ### Classification rules that are easy to get wrong
@@ -278,6 +283,37 @@ Populate `reserves[]` with real slices, not generic prose.
 - Keep risk tiers aligned with `docs/report-cards.md`.
 - Even with `liveReservesConfig`, keep `reserves[]` up to date because fallback views and dependency logic still use it.
 
+### Hero verdict, mechanism archetype, and attestor-tier surfacing
+
+Three optional clusters on `StablecoinMeta` drive the detail-page hero verdict, mechanism schematic, and attestor-tier badge added in the May 2026 detail-page work (see methodology changelog `v3.12 (2026-05-15)` in `docs/methodology-page.md`). All are additive — omit when uncertain and the UI falls back cleanly.
+
+**`oneLiner` (top-level string, ≤160 chars)** — plain-language one-sentence verdict rendered as the hero TL;DR.
+
+- Active asset: present-tense, names issuer + backing + redemption shape. Example for USDC: "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund."
+- Synthetic / hedged asset: name the hedge shape and where yield comes from. Example for USDe: "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates."
+- Frozen / paused asset: use past tense and name the event. Example: "USR was Resolv Labs's delta-neutral synthetic dollar that paused issuance in 2026..."
+
+**`mechanismArchetype` (top-level enum)** — coarse mechanism class that drives the schematic diagram shown above the Peg Stability prose in `KeyInfoCard`.
+
+Mapping cheatsheet:
+
+- `fiat-cash`: RWA-backed + centralized + cash/repo/short-T-Bill mix (USDC, USDT, PYUSD)
+- `tbill`: RWA-backed + dominantly Treasury fund or NAV-bearing (USTB, USDtb, USDY)
+- `cdp`: crypto-backed + decentralized + overcollateralized vaults (DAI, LUSD, crvUSD)
+- `synthetic-delta-neutral`: crypto + hedging in `pegMechanism` (USDe, USR)
+- `algorithmic`: algorithmic backing flag (USDD, historical FRAX)
+
+Wrappers (with `variantOf` set) generally inherit the parent's archetype; omit on the child if uncertain.
+
+**`proofOfReserves` extensions** — four additive fields inside the existing `proofOfReserves` object, used for the attestor-tier badge.
+
+- `attestorTier`: `"big4"` (Deloitte, EY, KPMG, PwC), `"regional"` (BDO, RSM, Grant Thornton, Crowe, Mazars, Moore Stephens, Baker Tilly, Withum), `"niche"` (smaller / jurisdictionally-thin firms; single-purpose attestors), `"self"` (self-reported, no third-party signoff), or `"none"` (PoR block exists but is unhelpful — usually omit the whole block instead).
+- `cadence`: `"daily-nav"` (daily NAV publications, T-Bill funds, BUIDL-style), `"real-time"` (live on-chain feeds, Chainlink PoR, on-chain dashboards), `"monthly"` (standard monthly attestations), `"quarterly"`, `"ad-hoc"` (irregular or one-off), or `"none"` (not actually published).
+- `attestorJurisdiction`: free-text country/region (e.g. `"United States"`).
+- `attestorLicense`: free-text license/registration (e.g. `"PCAOB-registered"`).
+
+The durable schema lives in `shared/types/core.ts` and `shared/types/stablecoin-meta-schemas.ts`; refer to those schema files and the methodology page for the durable spec.
+
 ### When to override resilience/decentralization fields
 
 Default inference exists, but many real assets need explicit overrides.
@@ -293,6 +329,32 @@ Override when the defaults would hide real structure, especially for:
 
 ---
 
+## Phase 3.5 - Editorial Coverage Gate
+
+Before writing the per-coin JSON in Phase 4, verify that every editorial field is either filled or recorded as an intentional gap. This is the gate that turns the optional fields in Phase 3 into a required-or-waived decision so curation does not silently regress on new additions.
+
+Required fields and their conditions:
+
+| Field | Required when | Acceptable waiver |
+|------|---------------|-------------------|
+| `oneLiner` | every active or pre-launch coin | none — frozen coins follow the past-tense rewrite path instead |
+| `mechanismArchetype` | coin enters the editorial cohort (top-60 by canonical rank in `scripts/lib/curation-baseline-caps.json` or market cap ≥ $50M) | record an "intentional gap" line in Phase 5 coverage notes with reason (e.g. "wrapper inherits parent archetype") |
+| `proofOfReserves.attestorTier` | `proofOfReserves.type === "independent-audit"` | none — if the attestor is genuinely unknown, omit the whole `proofOfReserves` block instead and record the reason |
+| `data/ai-summaries.json` entry | every active coin | record skip reason in Phase 5 coverage notes |
+
+The orchestrator (`stablecoin-addition-orchestrator`) runs this gate in its Phase 3.5 step before saving the per-coin JSON. The maintainer can also run the gate manually by re-checking the four fields against the rubric above.
+
+CI backstops (run in `validate:prebuild`):
+
+- `npm run check:one-liner-coverage` — fails if any active/pre-launch coin lacks `oneLiner`.
+- `npm run check:mechanism-archetype-coverage` — fails if more than ~27% of the cohort (non-variant, non-frozen) lacks an archetype; threshold is documented in the script header and tightens over time per the curation cadence plan.
+- `npm run check:attestor-tier-coverage` — fails if more than 20% of `independent-audit` coins lack a tier.
+- `npm run check:glossary-coverage` — fails if AI summaries reference unknown `{{term:slug}}` markers.
+
+The chart-annotation stream (`shared/data/annotations/curated-annotations.ts`) is not gated by CI because absence is editorially ambiguous (no event vs. unrecorded event). It is handled instead by the `agents/annotation-candidates.md` queue, the `npm run candidates:annotations` producer, the `annotations-refresh` skill, and the `npm run digest:curation` rollup. The orchestrator appends a `launch` candidate row to the queue when a coin enters Pharos via a recent launch (see Phase 5 step on recent-launch annotation candidates).
+
+---
+
 ## Phase 4 - Edit The Registry
 
 Add the new object to the asset's per-coin JSON file using current field names and current enum values.
@@ -304,6 +366,7 @@ Add the new object to the asset's per-coin JSON file using current field names a
   "id": "ausd-acme",
   "name": "Acme USD",
   "symbol": "AUSD",
+  "oneLiner": "AUSD is Acme's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasury bills held in a bankruptcy-remote vehicle.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -317,6 +380,16 @@ Add the new object to the asset's per-coin JSON file using current field names a
   "geckoId": "acme-usd",
   "collateral": "Short-term U.S. Treasury bills held in a bankruptcy-remote vehicle",
   "pegMechanism": "1:1 mint and redemption against issuer-approved cash subscriptions",
+  "mechanismArchetype": "fiat-cash",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://acme.example/transparency",
+    "provider": "Deloitte",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
+  },
   "links": [
     { "label": "Website", "url": "https://acme.example" },
     { "label": "X", "url": "https://x.com/acme" },
@@ -331,10 +404,12 @@ Add the new object to the asset's per-coin JSON file using current field names a
 }
 ```
 
+`oneLiner`, `mechanismArchetype`, and the four `proofOfReserves` extension fields (`attestorTier`, `cadence`, `attestorJurisdiction`, `attestorLicense`) drive the hero verdict, mechanism schematic, and attestor-tier badge on the detail page. Omit when uncertain — they're optional and the UI falls back cleanly. See the Phase 3 "Hero verdict, mechanism archetype, and attestor-tier surfacing" subsection for full guidance.
+
 ### Current registry editing checklist
 
 - Add or update the asset's JSON object in `shared/data/stablecoins/coins/*.json`.
-- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/generate-stablecoin-per-coin-asset.ts`.
+- Regenerate `shared/data/stablecoins/coins.generated.json` with `tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`.
 - Add the ID to `shared/data/stablecoins/canonical-order.json`.
 - Keep new keys canonical and consistent with the current schema.
 - For active assets, ensure there is a runtime cache admission path and a Phase 1a price + market-cap gate record:
@@ -351,6 +426,8 @@ Add the new object to the asset's per-coin JSON file using current field names a
 Do not assume every branch applies. Evaluate each one explicitly.
 
 Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
+
+If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to surface them.
 
 ### 5a. Logo and summary
 
@@ -483,7 +560,7 @@ Example:
 Notes:
 
 - `data/logos.json` currently contains legacy numeric keys. Ignore that for new work.
-- `scripts/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
+- `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
 
 ### 6b. Editorial summary
@@ -512,6 +589,33 @@ If the coin needs explicit user-facing caveats, add `notices`.
 
 Use `tags` sparingly for editorial categorization, not for core classification.
 
+### 6d. Historical chart annotations (optional)
+
+When a coin has notable historical events that the live tape can't recover (regulatory bans, market-wide shocks, mainnet launches, methodology pivots), curate them into `shared/data/annotations/curated-annotations.ts`. These render as dashed vertical markers on `PegDeviationChart` + `McapChart` when `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is on.
+
+Schema (mirrors `shared/types/chart-annotation.ts`):
+
+```ts
+{
+  ts: Date.UTC(YYYY, monthIdx, day), // months are 0-indexed
+  kind: "depeg" | "mint-burn-spike" | "blacklist-surge" | "governance" | "regulatory" | "methodology-change",
+  label: string, // ≤80 chars
+  severity?: "low" | "med" | "high",
+  href?: string, // primary source — issuer post-mortem, regulator filing, methodology changelog
+}
+```
+
+Curation rules:
+
+- One entry per discrete event (don't collapse multi-day depegs).
+- Use the price-bottom / supply-pivot timestamp, not the press cycle.
+- Severity follows the tape vocabulary: `high` for grade-impacting events, `med` for non-fatal stress, `low` for context.
+- Add an inline `// YYYY-MM-DD — short note` comment on each `ts:` line so the date is legible at review time.
+- Sort each coin's array by `ts` ascending.
+- Do NOT invent dates. Drop a candidate rather than guess.
+
+Coverage policy: top-50 coins by market-cap target ≥1 annotation each when a meaningful historical event exists. Coins without notable events stay uncurated (empty / absent key is the correct state). The flag-flip gate for `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` is ≥10 annotations across the top 4 coins by mcap (`usdc-circle`, `usdt-tether`, `dai-makerdao`, `usde-ethena`), enforced by `shared/data/annotations/__tests__/curated-annotations.test.ts`.
+
 ---
 
 ## Phase 7 - Validate
@@ -529,7 +633,7 @@ Before running commands, confirm the addition-specific artifacts:
 For a normal stablecoin addition, run at least:
 
 ```bash
-tsx scripts/generate-stablecoin-per-coin-asset.ts
+tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
 npm run check:stablecoin-data
 npm run validate:prebuild
 npm test
@@ -643,6 +747,31 @@ Do not hardcode direct pushes to `main` into the process. Follow the repo's norm
 - `independent-audit`
 - `real-time`
 - `self-reported`
+
+### Current proof-of-reserves attestor tiers
+
+- `big4`
+- `regional`
+- `niche`
+- `self`
+- `none`
+
+### Current proof-of-reserves cadences
+
+- `daily-nav`
+- `real-time`
+- `monthly`
+- `quarterly`
+- `ad-hoc`
+- `none`
+
+### Current mechanism archetypes
+
+- `fiat-cash`
+- `tbill`
+- `cdp`
+- `synthetic-delta-neutral`
+- `algorithmic`
 
 ### Current live-reserve semantics
 

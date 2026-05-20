@@ -4,6 +4,7 @@ import {
   FRESHNESS_RATIOS,
   STATUS_CACHE_RATIO_THRESHOLDS,
   classifyFreshnessRatio,
+  type FreshnessStatus,
 } from "@shared/lib/status-thresholds";
 import { getCacheFreshnessLane } from "@shared/lib/api-freshness";
 import type { CacheStatus } from "@shared/types/status";
@@ -19,6 +20,7 @@ import {
 } from "./freshness-sentinels";
 
 export type { CacheStatus };
+export type { FreshnessStatus };
 
 export interface CacheStatusFailure {
   key: string;
@@ -37,7 +39,7 @@ export interface CacheFreshnessDiagnostic {
 export interface FreshnessMeta {
   updatedAt: number;
   ageSeconds: number;
-  status: "fresh" | "degraded" | "stale";
+  status: FreshnessStatus;
 }
 
 export type CronTimestampLookupStatus = "ok" | "missing" | "lookup_failed";

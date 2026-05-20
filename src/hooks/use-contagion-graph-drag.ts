@@ -36,7 +36,9 @@ export function useContagionGraphDrag({
 }: UseContagionGraphDragOptions) {
   const [pinnedPositions, setPinnedPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
   const [dragId, setDragId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
   const dragMoved = useRef(false);
+  const dragMovedSincePointerDown = useRef(false);
   const dragStart = useRef<{ mx: number; my: number; nx: number; ny: number } | null>(null);
 
   const positions = useMemo(() => {
@@ -57,8 +59,10 @@ export function useContagionGraphDrag({
     if (!position) return;
 
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragIdRef.current = nodeId;
     setDragId(nodeId);
     dragMoved.current = false;
+    dragMovedSincePointerDown.current = false;
     dragStart.current = {
       mx: svgPoint.x,
       my: svgPoint.y,
@@ -68,28 +72,39 @@ export function useContagionGraphDrag({
   }, [positions, svgRef]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
-    if (!dragId || !dragStart.current) return;
+    const activeDragId = dragIdRef.current;
+    if (!activeDragId || !dragStart.current) return;
     const svgPoint = projectClientPoint(svgRef.current, event.clientX, event.clientY);
     if (!svgPoint) return;
 
     const dx = svgPoint.x - dragStart.current.mx;
     const dy = svgPoint.y - dragStart.current.my;
-    if (Math.abs(dx) + Math.abs(dy) > 1) dragMoved.current = true;
+    if (Math.abs(dx) + Math.abs(dy) > 1) {
+      dragMoved.current = true;
+      dragMovedSincePointerDown.current = true;
+    }
 
     setPinnedPositions((previous) => {
       const next = new Map(previous);
-      const radius = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
+      const radius = nodeMap.get(activeDragId)?.r ?? MIN_RADIUS;
       const start = dragStart.current;
       if (start) {
-        next.set(dragId, clampGraphPosition(start.nx + dx, start.ny + dy, radius));
+        next.set(activeDragId, clampGraphPosition(start.nx + dx, start.ny + dy, radius));
       }
       return next;
     });
-  }, [dragId, nodeMap, svgRef]);
+  }, [nodeMap, svgRef]);
 
   const handlePointerUp = useCallback(() => {
+    dragIdRef.current = null;
     setDragId(null);
     dragStart.current = null;
+  }, []);
+
+  const consumeDragMovedSincePointerDown = useCallback(() => {
+    const moved = dragMovedSincePointerDown.current;
+    dragMovedSincePointerDown.current = false;
+    return moved;
   }, []);
 
   const unpinNode = useCallback((nodeId: string) => {
@@ -113,6 +128,7 @@ export function useContagionGraphDrag({
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
+    consumeDragMovedSincePointerDown,
     unpinNode,
     unpinAll,
   };

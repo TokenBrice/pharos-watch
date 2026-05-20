@@ -139,6 +139,7 @@ export function mergeFrozenSnapshots(
     if (upstreamIds.has(snapshot.id)) {
       continue;
     }
+    // Cast: PeggedAsset is a structural subset of the snapshot row; column projection elsewhere is the source of truth
     additions.push(snapshot.peggedAssetRow as unknown as PeggedAsset);
   }
   if (additions.length === 0) {

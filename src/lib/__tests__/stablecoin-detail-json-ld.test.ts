@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPreLaunchStablecoinJsonLd,
   buildStablecoinDatasetJsonLd,
@@ -19,6 +19,11 @@ describe("buildStablecoinDatasetJsonLd", () => {
 
     expect((coin.contracts ?? []).length).toBeGreaterThan(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
     expect(identifiers).toHaveLength(CONTRACT_IDENTIFIER_JSON_LD_LIMIT);
+    expect(jsonLd.identifier).toContainEqual({
+      "@type": "PropertyValue",
+      propertyID: "Pharos URN",
+      value: "urn:pharos:coin:usdt-tether",
+    });
     expect(jsonLd).toMatchObject({
       inLanguage: "en",
       mainEntityOfPage: "https://pharos.watch/stablecoin/usdt-tether/",
@@ -66,7 +71,7 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
     expect(jsonLd).toHaveLength(2);
     expect(jsonLd[0]).toMatchObject({
       "@type": "WebPage",
-      name: expect.stringContaining("Pre-Launch Stablecoin Tracker"),
+      name: expect.stringContaining("Pre-launch Stablecoin Tracker"),
       url: "https://pharos.watch/stablecoin/fiusd-fiserv/",
     });
     expect(jsonLd[1]).toMatchObject({

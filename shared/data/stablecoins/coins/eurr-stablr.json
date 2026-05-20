@@ -2,6 +2,7 @@
   "id": "eurr-stablr",
   "name": "StablR Euro",
   "symbol": "EURR",
+  "oneLiner": "EURR is StablR's MiCA-licensed euro stablecoin issued from Malta, redeemable 1:1 against euro cash held at regulated EU institutions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,13 +13,18 @@
   },
   "collateral": "Cash and cash equivalents held in segregated accounts at European financial institutions",
   "pegMechanism": "Direct 1:1 redemption through StablR",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "239",
   "detailProvider": "defillama",
   "geckoId": "stablr-euro",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.stablr.com/proof-of-reserve",
-    "provider": "Grant Thornton"
+    "provider": "Grant Thornton",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Malta",
+    "attestorLicense": "EMI (MiCA)"
   },
   "links": [
     {
@@ -39,6 +45,11 @@
     {
       "chain": "ethereum",
       "address": "0x50753cfaf86c094925bf976f218d043f8791e408",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ",
       "decimals": 6
     }
   ],

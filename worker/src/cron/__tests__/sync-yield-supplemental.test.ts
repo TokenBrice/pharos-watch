@@ -13,7 +13,7 @@ const emptyTelemetry = {
   endpointStrategy: "alternating-fallback-primary" as const,
 };
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "usdc-circle",

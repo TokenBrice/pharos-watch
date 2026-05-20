@@ -4,7 +4,7 @@ The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 databa
 
 **Base URL:** `https://api.pharos.watch`
 
-Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` returns `image/png`, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
+Unless noted otherwise, responses are `Content-Type: application/json`. Exceptions: `GET /api/og/*` / `HEAD /api/og/*` return `image/png` for known image routes, and `POST /api/telegram-webhook` returns a plain-text `ok` body. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` allowlist (production repo config: `https://pharos.watch,https://ops.pharos.watch`). When the request `Origin` matches an allowlisted entry, the Worker echoes that origin and sets `Vary: Origin`; when a request includes a foreign `Origin`, the worker omits `Access-Control-Allow-Origin`, and `OPTIONS` preflights from foreign origins receive `403`. Requests without an `Origin` header keep the existing first-allowlisted-origin fallback. Non-exempt `/api/*` requests on `api.pharos.watch` require a valid `X-API-Key`; missing or invalid keys return `401 Unauthorized`. Per-key rate-limit overages return `429`, and cold auth/limiter dependency failures can still return `503`.
 
 ## Surface Split
 
@@ -35,6 +35,7 @@ Public, non-admin routes on `https://api.pharos.watch` that do not require `X-AP
 
 - `GET /api/health`
 - `GET /api/og/*`
+- `HEAD /api/og/*`
 - `POST /api/feedback`
 - `POST /api/api-key-requests`
 - `POST /api/api-key-requests/verify`
@@ -70,7 +71,7 @@ Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated 
 | `"ustb-superstate"` | Superstate USTB |
 | `"gyen-gyen"`       | GYEN            |
 
-The full list is exported from `shared/lib/stablecoins/index.ts`, with editable per-coin metadata stored in `shared/data/stablecoins/coins/*.json`, the checked-in generated aggregate at `shared/data/stablecoins/coins.generated.json`, and validation in `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
+The full list is exported from `shared/lib/stablecoins/registry.ts`, with editable per-coin metadata stored in `shared/data/stablecoins/coins/*.json`, the checked-in generated aggregate at `shared/data/stablecoins/coins.generated.json`, and validation in `shared/lib/stablecoins/schema.ts`. The API accepts canonical IDs only. Non-canonical stablecoin detail URLs and legacy frontend route aliases are retired and unsupported.
 
 ---
 
@@ -138,7 +139,8 @@ These profiles apply while the dataset is within its generic freshness runway. O
 | custom             | `public, s-maxage=300, max-age=300`    | dex-liquidity (browser-side max-age extended to match CDN TTL)                                                                                                                                                                                                                                                                                              |
 | per-coin           | `public, s-maxage=300, max-age=10`     | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1)                                                                                                                                                                                                                                                                                                  |
 | slow               | `public, s-maxage=3600, max-age=300`   | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, non-usd-share                                                                                                                                                                                                                                                 |
-| archive            | `public, s-maxage=86400, max-age=3600` | digest-snapshot                                                                                                                                                                                                                                                                                                                                             |
+| archive            | `public, s-maxage=86400, max-age=3600` | digest-snapshot, snapshots-index                                                                                                                                                                                                                                                                                                                            |
+| immutable-snapshot | `public, s-maxage=31536000, max-age=31536000, immutable` | snapshots/:date.json, snapshot/:date/stablecoin/:id                                                                                                                                                                                                                                                                                                          |
 | public-status      | `public, max-age=60`                   | public-status-history                                                                                                                                                                                                                                                                                                                                       |
 | og-image           | `public, max-age=900, s-maxage=900`    | dynamic Open Graph images                                                                                                                                                                                                                                                                                                                                   |
 | reserve-live       | `public, s-maxage=3600, max-age=300`   | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                               |
@@ -160,7 +162,8 @@ Recommended minimum polling cadence for external integrations:
 | standard      | 300 seconds           | Preferred baseline for most dashboards                          |
 | per-coin      | 300 seconds           | `GET /api/stablecoin/:id` is history-heavy; avoid short loops   |
 | slow          | 3600 seconds          | Historical/timeline endpoints should generally be polled hourly |
-| archive       | 86400 seconds         | Historical snapshot payload for digest SSG and recap pages      |
+| archive       | 86400 seconds         | Historical digest snapshots and public snapshot index listings   |
+| immutable-snapshot | On-demand only        | Dated public dataset snapshots are content-addressed and immutable |
 | no-store      | On-demand only        | Health/admin diagnostics; avoid high-frequency polling          |
 
 Client best practices:
@@ -173,7 +176,7 @@ Client best practices:
 
 ## Rate Limits
 
-Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
+Public API traffic enforces per-key rate limiting to ensure fair usage. Non-exempt `/api/*` requests require a valid `X-API-Key`; the no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `HEAD /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately with `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated with signed Telegram `initData`.
 
 ### Per-key limit
 
@@ -208,7 +211,7 @@ API-key authentication and per-key limiter storage normally rely on D1. For prot
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` returns `image/png` on success; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
+JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` and `HEAD /api/og/*` return `image/png` on success for known image routes; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
 
 | Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -257,6 +260,7 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/backfill-yield-history`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `POST /api/backfill-tape`
 - `POST /api/reclassify-atomic-roundtrips`
 - `POST /api/backfill-dews`
 - `POST /api/audit-depeg-history`
@@ -285,18 +289,18 @@ The `/admin/` UI now sends an `Idempotency-Key` automatically for supported manu
 Unless an endpoint section explicitly says `Authentication: exempt`, routes in this section require `X-API-Key` when called on `https://api.pharos.watch`.
 
 <!-- GENERATED-START: public-endpoints-quick-reference -->
-<!-- This block is generated by scripts/generate-api-reference.mjs from public/openapi.json. -->
-<!-- Do not edit by hand. Run `node scripts/generate-api-reference.mjs` to refresh. -->
+<!-- This block is generated by scripts/maintenance/generate-api-reference.mjs from public/openapi.json. -->
+<!-- Do not edit by hand. Run `node scripts/maintenance/generate-api-reference.mjs` to refresh. -->
 
 ### Public Endpoints Quick Reference
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **32**.
+Total documented public operations: **36**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
-| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?` | 200, 400, 401, 429, 503 |
+| GET | `/api/blacklist` | Blacklist events | Blacklist | X-API-Key | `stablecoin?`, `chain?`, `chainId?`, `eventType?`, `q?`, `sortBy?`, `sortDirection?`, `limit?`, `offset?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/bluechip-ratings` | Bluechip ratings | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/chains` | Chains | Chains | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -308,7 +312,7 @@ Total documented public operations: **32**.
 | GET | `/api/digest-snapshot` | Digest snapshot | Digest | X-API-Key | `date` | 200, 400, 401, 429, 503 |
 | GET | `/api/events` | Tape events | Risk | X-API-Key | `type?`, `class?`, `coin?`, `pegCurrency?`, `chain?`, `severityFloor?`, `since?`, `until?`, `cursor?`, `limit?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/health` | Health check | Health | none | — | 200, 400, 503 |
-| GET | `/api/mint-burn-events` | Mint and burn events | Flows | X-API-Key | `stablecoin`, `direction?`, `chain?`, `burnType?`, `scope?`, `minAmount?`, `limit?`, `offset?` | 200, 400, 401, 429, 503 |
+| GET | `/api/mint-burn-events` | Mint and burn events | Flows | X-API-Key | `stablecoin`, `direction?`, `chain?`, `burnType?`, `scope?`, `minAmount?`, `limit?`, `offset?`, `cursor?`, `includeTotal?` | 200, 400, 401, 429, 503 |
 | GET | `/api/mint-burn-flows` | Mint and burn flows | Flows | X-API-Key | `stablecoin?`, `hours?` | 200, 400, 401, 429, 503 |
 | GET | `/api/non-usd-share` | Non-USD share | Market Structure, History | X-API-Key | `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
@@ -316,6 +320,9 @@ Total documented public operations: **32**.
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards` | Report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
+| GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | X-API-Key | `date`, `stablecoinId` | 200, 400, 401, 429, 503 |
+| GET | `/api/snapshots/{date}.json` | Public snapshot for a single day | Digest, History | X-API-Key | `date` | 200, 400, 401, 429, 503 |
+| GET | `/api/snapshots/index` | Public snapshot index | Digest | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stability-index` | Pharos Stability Index | Risk | X-API-Key | `detail?` | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-charts` | Stablecoin charts | Stablecoins, History | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-reserves/{stablecoinId}` | Stablecoin reserves | Stablecoins, Reserves | X-API-Key | `stablecoinId` | 200, 400, 401, 429, 503 |
@@ -326,10 +333,21 @@ Total documented public operations: **32**.
 | GET | `/api/supply-history` | Supply history | History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/usds-status` | USDS freeze status | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/yield-adapter-manifest` | Yield adapter manifest | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-history` | Yield history | Yield, History | X-API-Key | `stablecoin`, `days?`, `mode?`, `sourceKey?` | 200, 400, 401, 429, 503 |
 | GET | `/api/yield-rankings` | Yield rankings | Yield | X-API-Key | — | 200, 400, 401, 429, 503 |
 
 <!-- GENERATED-END: public-endpoints-quick-reference -->
+
+### `GET /api/events`
+
+Tape events surface, backed by `worker/src/api/events.ts`. The handler already accepts `type`, `class`, `coin` (multi-value), `pegCurrency`, `chain`, `severityFloor`, `since` / `until` (epoch ms), `cursor`, `limit`, and `includeTotal` per the quick-reference table above.
+
+As of the May 2026 detail-page pass, the frontend hook `useChartAnnotations` (`src/hooks/use-chart-annotations.ts`) consumes this endpoint to drive per-coin chart annotations on the stablecoin detail route. The hook is gated by `NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS` — see [process/feature-flags.md](process/feature-flags.md).
+
+**Phase 1 (shipped May 2026):** the hook is wired through the consumer surface (`<ChartAnnotationDots>` + screen-reader-only legend) but returns an empty array. Charts render byte-identically to the pre-flag baseline; the flag-off path never fetches.
+
+**Phase 2 (planned):** align the hook's URL params to the handler's existing shape — `coin=<id>` + `since` / `until` in epoch ms — or extend the worker to accept chart-friendly aliases (`stablecoin`, `from`, `to`). Phase 2 will also wire `useApiQueryWithMeta`, map tape-event rows into `ChartAnnotation`, and clamp results to the rendered chart's `[fromMs, toMs]` window inside the memo so out-of-range markers cannot push the data domain.
 
 ### `GET /api/stablecoins`
 
@@ -375,9 +393,18 @@ The canonical `stablecoins` cache is written only after `StablecoinListResponseS
 | `circulatingPrevMonth`         | `Record<string, number>`                           | Supply ~30 days ago                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `chainCirculating`             | `Record<string, ChainCirculating>`                 | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `chains`                       | `string[]`                                         | List of chain names where the token is deployed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `contracts`                    | `ContractDeployment[] \| undefined`                | Curated on-chain deployments for tracked stablecoins (active and frozen). Omitted when curated metadata has no contracts on file. Use this to map a Pharos `id` to its on-chain token contracts when joining with `/api/report-cards` or other endpoints keyed by `id`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `consensusSources`             | `string[]`                                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined`        | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `agreeSources`                 | `string[] \| undefined`                            | Compatibility alias for agreeing/current price sources when present                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+**`ContractDeployment`**
+
+| Field      | Type     | Description                                                              |
+| ---------- | -------- | ------------------------------------------------------------------------ |
+| `chain`    | `string` | Pharos chain identifier (e.g. `"ethereum"`, `"arbitrum"`, `"solana"`).   |
+| `address`  | `string` | Token contract address as published by the issuer.                       |
+| `decimals` | `number` | Token decimals.                                                          |
 
 **`PriceSourceConfidenceProfile`**
 
@@ -502,9 +529,9 @@ Freshness headers are emitted from the latest completed `snapshot-supply` run wh
 
 | Param  | Type     | Default | Constraints      | Description             |
 | ------ | -------- | ------- | ---------------- | ----------------------- |
-| `days` | `number` | `1825`  | min 30, max 1825 | Lookback window in days |
+| `days` | `number` | `5000`  | min 30, max 5000 | Lookback window in days |
 
-Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `1825` and clamps most out-of-range values into `30..1825` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `1825` rather than the minimum `30`.
+Unlike most numeric-query handlers, this endpoint defaults missing or malformed `days` values to `5000` and clamps most out-of-range values into `30..5000` instead of returning `400`. Current parser quirk: `days=0` is treated like a missing value and returns the default `5000` rather than the minimum `30`.
 
 **Response:** `Array<{ date, commodityShare, fiatNonUsdShare, commodity, fiatNonUsd, total }>`
 
@@ -719,8 +746,9 @@ Freeze, blacklist, block/unblock, account-pause, and token-destruction events fo
 | `q`             | `string`  | —       | Case-insensitive address substring search                                                                                                                                      |
 | `sortBy`        | `string`  | `date`  | Sort field: `date`, `stablecoin`, `chain`, `event`                                                                                                                             |
 | `sortDirection` | `string`  | `desc`  | Sort direction: `asc`, `desc`                                                                                                                                                  |
-| `limit`         | `integer` | `1000`  | Max results (1–1000; `0` maps to default `1000`)                                                                                                                               |
+| `limit`         | `integer` | `1000`  | Max results (0–1000; `0` maps to default `1000`)                                                                                                                               |
 | `offset`        | `integer` | `0`     | Pagination offset                                                                                                                                                              |
+| `includeTotal`  | `boolean` | `true`  | When `false`, skips the exact `COUNT(*)`; `total` becomes a page lower bound and `totalExact` is `false`                                                                       |
 
 **Response**
 
@@ -1333,7 +1361,7 @@ Freshness headers are emitted from the latest completed `snapshot-supply` run wh
 
 | Param  | Type      | Default | Bounds | Description             |
 | ------ | --------- | ------- | ------ | ----------------------- |
-| `days` | `integer` | `365`   | 1–1825 | Lookback window in days |
+| `days` | `integer` | `365`   | 1–5000 | Lookback window in days |
 
 **Response:** Array sorted by `date` ascending.
 
@@ -1539,6 +1567,122 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 | `blacklistEvents` | `array`          | Up to 50 blacklist events on that date                                                          |
 
 **Error responses:** `400` for missing/invalid date, `404` if no digest exists for that date.
+
+---
+
+### `GET /api/snapshots/index`
+
+Lists immutable public daily dataset snapshots written by the `snapshot-public-dataset` cron. Each row points to a dated payload that can be fetched through `GET /api/snapshots/:date.json`.
+
+**Cache:** archive
+
+**Response**
+
+```json
+{
+  "snapshots": [
+    {
+      "snapshotDate": "2026-05-17",
+      "methodologyVersions": { "safetyScore": "5.9", "psi": "3.0" },
+      "contentHash": "sha256-hex",
+      "byteSize": 1234567,
+      "createdAt": 1778976000
+    }
+  ]
+}
+```
+
+| Field                               | Type                       | Description                                      |
+| ----------------------------------- | -------------------------- | ------------------------------------------------ |
+| `snapshots`                         | `array`                    | Snapshot index sorted newest first               |
+| `snapshots[].snapshotDate`          | `string`                   | UTC snapshot date in `YYYY-MM-DD` format         |
+| `snapshots[].methodologyVersions`   | `Record<string, string>?`  | Methodology versions embedded in the snapshot    |
+| `snapshots[].contentHash`           | `string`                   | Snapshot payload hash used by dated `ETag`s      |
+| `snapshots[].byteSize`              | `number`                   | Uncompressed JSON payload size in bytes          |
+| `snapshots[].createdAt`             | `number`                   | Snapshot creation timestamp in Unix seconds      |
+
+---
+
+### `GET /api/snapshots/:date.json`
+
+Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
+
+**Cache:** immutable-snapshot
+
+**Path parameters**
+
+| Param  | Type     | Description                             |
+| ------ | -------- | --------------------------------------- |
+| `date` | `string` | UTC snapshot date in `YYYY-MM-DD` form  |
+
+**Response**
+
+```text
+PublicSnapshotEnvelope {
+  snapshotDate,
+  generatedAt,
+  methodologyVersions,
+  stablecoinRows,
+  fxFallbackRates,
+  reportCards,
+  psi,
+  dewsRows,
+  liquidityRows
+}
+```
+
+**Headers:** `ETag: "<contentHash>"`.
+
+**Error responses:** `400` for invalid date format, `404` if no snapshot exists for that date, `500` if the stored snapshot payload is unreadable or corrupted.
+
+---
+
+### `GET /api/snapshot/:date/stablecoin/:id`
+
+Returns a per-stablecoin projection from a dated public dataset snapshot. The projection includes the stablecoin row plus the matching report-card, DEWS, and liquidity rows when those datasets were present in the snapshot.
+
+**Cache:** immutable-snapshot
+
+**Path parameters**
+
+| Param  | Type     | Description                            |
+| ------ | -------- | -------------------------------------- |
+| `date` | `string` | UTC snapshot date in `YYYY-MM-DD` form |
+| `id`   | `string` | Canonical Pharos stablecoin ID         |
+
+**Response**
+
+```text
+{
+  snapshotDate: "2026-05-17",
+  stablecoinId: "usdt-tether",
+  generatedAt: 1778976000,
+  methodologyVersions: { safetyScore: "5.9", psi: "3.0" },
+  stablecoin: { id: "usdt-tether", symbol: "USDT" },
+  scores: {
+    reportCard,
+    psi,
+    dews,
+    liquidity
+  }
+}
+```
+
+| Field                  | Type      | Description                                                    |
+| ---------------------- | --------- | -------------------------------------------------------------- |
+| `snapshotDate`          | `string`  | Served snapshot date                                           |
+| `stablecoinId`          | `string`  | Requested stablecoin ID                                        |
+| `generatedAt`           | `number`  | Snapshot generation timestamp                                  |
+| `methodologyVersions`   | `object?` | Methodology versions embedded in the snapshot                  |
+| `stablecoin`            | `object`  | Stablecoin row from the dated public dataset                   |
+| `scores.reportCard`     | `object?` | Matching report-card score, or `null`                          |
+| `scores.psi`            | `object?` | Snapshot-level PSI object, or `null`                           |
+| `scores.dews`           | `object?` | Matching DEWS stress-signal row, or `null`                     |
+| `scores.liquidity`      | `object?` | Matching DEX-liquidity row, or `null`                          |
+
+**Headers:** `ETag: "<contentHash>-<stablecoinId>"`.
+
+**Error responses:** `400` for invalid date format, `404` if no snapshot exists or the stablecoin is absent from that snapshot, `500` if the stored snapshot payload is unreadable or corrupted.
 
 ---
 
@@ -1957,7 +2101,7 @@ Latest Pharos Stability Index (PSI) sample plus daily history. The PSI is a comp
 
 ---
 
-### `GET /api/og/*`
+### `GET /api/og/*` / `HEAD /api/og/*`
 
 Dynamic Open Graph PNG images used by share buttons and page metadata.
 
@@ -2351,8 +2495,8 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
     "status": "published"
   },
   "methodology": {
-    "version": "8.12",
-    "currentVersion": "8.12",
+    "version": "8.13",
+    "currentVersion": "8.13",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2363,7 +2507,7 @@ Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint 
 | --------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `rankings`      | `YieldRanking[]`         | All ranked stablecoins, sorted by Pharos Yield Score descending                                                                                                                  |
 | `riskFreeRate`  | `number`                 | Default USD benchmark rate (%) retained for backward compatibility and mixed-view fallback                                                                                       |
-| `benchmarks`    | `object \| null`         | Benchmark registry keyed by currency (`USD`, `EUR`, `CHF`) with label, rate, freshness, fallback, and proxy metadata                                                             |
+| `benchmarks`    | `object \| null`         | Benchmark registry keyed by currency (`USD`, `EUR`, `CHF`, plus v8.13: `GBP`, `JPY`, `MXN`, `BRL`, `AUD`, `CAD`; `SGD` is reserved without a fetcher) with label, rate, freshness, fallback, and proxy metadata |
 | `scalingFactor` | `number`                 | Scaling factor applied in yield score computation                                                                                                                                |
 | `medianApy`     | `number`                 | TVL-weighted median APY (30d) across best-source rows, used as a peer reference in warning heuristics                                                                            |
 | `updatedAt`     | `number`                 | Unix seconds when the rankings were last computed                                                                                                                                |
@@ -2399,7 +2543,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `sourceRisk.investabilityFlags`   | ranking/history/source rows | `string[] \| undefined`                                                                                                                                                                   | Optional investability caveats                                                                                                                          |
 | `rankChangeAttribution`           | ranking rows                | `object \| null \| undefined`                                                                                                                                                             | Optional previous-rank/PYS delta attribution with primary driver and contribution hints                                                                 |
 
-Current `v8.12` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
+Current `v8.13` scoring treats missing source-risk evidence as neutral: omitted or `null` `sourceRisk`, `sourceRisk.sourceRiskPenalty`, or `sourceRisk.venueRiskTier` values resolve to a neutral source-risk penalty and do not change PYS or report-card scoring. `sourceRisk.sourceRiskScore` is now derived from the resolved source-risk penalty when no upstream value is provided. DEWS methodology v5.99 consumes only populated structured yield stress evidence inside its Yield Anomaly sub-signal; neutral, malformed, or missing structured rows remain no-ops. Saved payloads used by calibration tooling should normalize from the nested `sourceRisk.*` fields before analysis rather than assuming flattened row properties.
 
 **`YieldRanking`**
 
@@ -2423,7 +2567,7 @@ Current `v8.12` scoring treats missing source-risk evidence as neutral: omitted 
 | `safetyGrade`             | `string \| null`                                               | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`) from `/api/report-cards`                                                                       |
 | `yieldToRisk`             | `number \| null`                                               | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                                   |
 | `excessYield`             | `number \| null`                                               | 30-day average APY above the row benchmark (percentage points)                                                                                                     |
-| `benchmarkKey`            | `"USD" \| "EUR" \| "CHF" \| undefined`                         | Benchmark selected for this row's `excessYield` and any rate-derived APY logic                                                                                     |
+| `benchmarkKey`            | `"USD" \| "EUR" \| "CHF" \| "GBP" \| "JPY" \| "MXN" \| "BRL" \| "AUD" \| "CAD" \| "SGD" \| undefined` | Benchmark selected for this row's `excessYield` and any rate-derived APY logic (v8.13 expanded the set; `SGD` is reserved without a fetcher and routes to USD fallback) |
 | `benchmarkLabel`          | `string \| undefined`                                          | Human-readable benchmark label for the row                                                                                                                         |
 | `benchmarkCurrency`       | `string \| undefined`                                          | Benchmark currency code used for the row                                                                                                                           |
 | `benchmarkRate`           | `number \| undefined`                                          | Benchmark rate (%) applied to this row                                                                                                                             |
@@ -2450,6 +2594,39 @@ When present, `YieldRanking.provenance` includes:
 - `sourceObservedAt` / `sourceAgeSeconds`: the timestamp and age of the latest observation actually backing the row
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds`: optional prior-anchor timing for APYs derived from two observations, such as price-derived and on-chain exchange-rate rows
 - `benchmarkKey`, `benchmarkLabel`, `benchmarkRate`, `benchmarkIsFallback`, `benchmarkSelectionMode`, and related fields for the exact benchmark applied to that row
+
+---
+
+### `GET /api/yield-adapter-manifest`
+
+Yield adapter manifest for every yield-bearing asset. The route is public-read, uses the standard cache profile (`s-maxage=300`), and requires `X-API-Key` on the public API lane.
+
+`sourceKey` is an exact runtime key only when it can join to `/api/yield-history?sourceKey=...`, rankings provenance, or decision-ledger rows. Runtime-resolved DeFiLlama variant strategies and disabled/quarantined readers return `sourceKey: null` with `sourceKeyPattern` set to the runtime pattern or would-be disabled key instead of a synthetic non-runtime value.
+
+**Response**
+
+```text
+{
+  "methodologyVersion": "v8.16",
+  "updatedAt": 1779210000,
+  "entries": [
+    {
+      "stablecoinId": "susde-ethena",
+      "coinSymbol": "sUSDe",
+      "family": "defillama",
+      "sourceKey": "66985a81-9c51-46ca-9977-42b4fe7bc6df",
+      "sourceKeyPattern": null,
+      "label": "Curated DeFiLlama pool UUID",
+      "chain": null,
+      "project": null,
+      "lifecycle": "active",
+      "quarantineReason": null,
+      "methodologyVersion": "v8.16",
+      "updatedAt": 1779210000
+    }
+  ]
+}
+```
 
 ---
 
@@ -2494,8 +2671,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.12",
-    "currentVersion": "8.12",
+    "version": "8.13",
+    "currentVersion": "8.13",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -3113,7 +3290,114 @@ Telegram Bot API webhook endpoint. Receives user messages, processes bot command
 - `/list` — Show current subscriptions, per-coin settings, and quiet hours
 - `/help` — Command reference
 
-Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+Preset watchlists are stored in `telegram_preset_subscriptions` and resolved dynamically at dispatch/list/status time. Supported aliases are `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, and `mcap-ge-100m`. Presets are supported for `dews`, `depeg`, and `safety`; `launch` still requires explicit tickers or Pharos coin IDs.
+
+---
+
+## Pages Function endpoints
+
+These endpoints are served by Cloudflare Pages Functions from the website host (`pharos.watch`), not by the Worker API host (`api.pharos.watch`). They are out of scope for the public `X-API-Key` regime: no API key is required, they do not appear in the OpenAPI artifact, and they do not honor `Idempotency-Key`.
+
+Same-origin only. Browser CORS blocks cross-origin POST before the function executes; foreign-origin requests receive `404`. Documented for completeness and for external tooling that reads share URLs. These endpoints are snapshot storage for the website UI, not a public integration API.
+
+### `GET /selector-snapshot/:sid`
+
+Returns a previously stored Stablecoin Selector output JSON identified by content-addressed `sid` (32 hex chars). The returned artifact is frozen; clients that offer "Compare to today's data" must compute a separate live Selector run and keep the stored artifact unchanged.
+
+**Authentication:** exempt — same-origin gated via `Origin` / `Referer` allowlist.
+
+**Path parameter:** `sid` — 32 lowercase hex chars, content-addressed SHA-256 truncation per `agents/selector-implementation-plan.md` §0.
+
+**Response (200):**
+
+```json
+{
+  "profile": "treasury",
+  "engineVersion": "selector-v1.3",
+  "datasetHash": "<content hash>",
+  "timestamp": 1715000000,
+  "input": {
+    "profile": "treasury",
+    "pegCurrency": "EUR",
+    "horizon": "6mplus",
+    "depegTolerance": "zero",
+    "composability": "none",
+    "venuePreferences": ["custody"],
+    "exitSpeed": "any",
+    "minApy": null,
+    "yieldNativeOnly": false,
+    "decentralization": "any",
+    "custodyOk": "any"
+  },
+  "universe": { "active": 392, "surviving": 12 },
+  "recommended": [ /* ranked shortlist entries */ ],
+  "lowerRanked": [ /* lower-ranked entries */ ],
+  "usedRelaxedFallback": false,
+  "relaxedReasons": [],
+  "coverageWarnings": {
+    "skippedForCoverageCount": 0,
+    "sparse": false,
+    "uneven": false,
+    "skippedForCoverage": [],
+    "newListingCount": 0,
+    "redistributionCount": 0
+  },
+  "exclusionSummary": [],
+  "closestSurvivors": [],
+  "relaxableConstraints": [],
+  "lowConfidence": false,
+  "methodologyVersions": { "safetyScore": "v7.25" }
+}
+```
+
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. The Pages Function rejects snapshots missing the frontend replay fields (`input.pegCurrency`, `universe`, `lowConfidence`, `usedRelaxedFallback`, `relaxedReasons`, `exclusionSummary`, `closestSurvivors`, `relaxableConstraints`, coverage warning counts, and authored recommendation/lower-ranked prose). Semantic validation rejects impossible component/score ranges, unknown enum values, wrong-profile `venuePreferences`, unknown `whyKeys`, malformed confidence/rank diagnostics, unknown lower-ranked reason keys, malformed `recommendedSource` objects, malformed `perInputStaleness`, and impossible rank/slot values. Readers should treat unknown fields permissively; `datasetHash` is scoped to the selected-peg decision universe and must change when any exclusion, scoring, tie-break, explanation, source-selection, or version-affecting field changes. Freshness-only metadata is excluded unless it affects output semantics. `engineVersion` / selector version carries the bump on deterministic behavior, weight, exclusion-rule, missing-data, tie-break, or explanation changes.
+
+On GET, the Pages Function parses the stored payload, recomputes the canonical sid, and verifies it matches the requested `sid`. A mismatch is treated as corrupt storage and returns `502`.
+
+**Cache:** `private, no-store` — reads are same-origin gated with `Origin` / `Referer`, so stored snapshots are intentionally not served from a public shared cache.
+
+**Failure modes:**
+
+| Status | When |
+| --- | --- |
+| 404 | Origin disallowed, sid not 32 hex chars, or KV miss. |
+| 500 | `SELECTOR_SNAPSHOTS` KV binding missing on the Pages project. |
+| 502 | Stored KV value is corrupt, fails semantic validation, or recomputes to a different sid. |
+| 503 | KV read throws transiently (Cloudflare KV outage). |
+
+### `POST /selector-snapshot`
+
+Stores a Stablecoin Selector output JSON under a server-recomputed `sid`. Idempotent — re-POSTing the same canonical payload returns the same `sid`. Documented here for completeness; external integrations should not call this endpoint (it is bound to the Selector wizard at `https://pharos.watch/screener/selector/`).
+
+**Authentication:** exempt — same-origin gated.
+
+**Body:** `application/json`, a complete `SelectorOutput`. Max 100 KB defensive cap. Debug traces are stripped before canonical sid computation and storage.
+
+**Response (200):** `{ "sid": "<32 hex chars>" }`. The sid is content-addressed: SHA-256 over a canonicalized JSON payload with debug/freshness-derived fields stripped (`timestamp`, `debug`, `perInputStaleness`, plus fields matching the suffixes `ageSeconds` / `capturedAt` / `stalenessMs` / `updatedAt` / `fetchedAt`), with keys lexicographically sorted at every depth. `coverageWarnings.newListingCount` is not stripped because the implemented engine derives it from content-level recent-listing flags. Engine and integration agree on the same strip-list, so a sid computed client-side matches the server's authoritative value.
+
+Share-link privacy property: the stored payload contains the Selector answers and output rows, not IP addresses, browser fingerprints, wallet addresses, or account identifiers. The website UI must disclose that anyone with the resulting link can view the frozen artifact and that the KV entry is retained for 5 years.
+
+**Validation matrix:**
+
+| Case | Status / client contract |
+| --- | --- |
+| Invalid `sid` path syntax | `404`; clients should surface invalid-link/not-found state without replaying unrelated live output. |
+| Missing required replay fields | `400` on POST, `502` on GET. |
+| Unknown enum, reason key, source shape, or impossible score/rank | `400` on POST, `502` on GET. |
+| Stored payload canonical sid differs from requested `sid` | `502`. |
+| Clipboard denied after a successful POST | Endpoint still returns `200`; UI shows a selectable URL fallback. |
+| Trading profile has stale share-blocking inputs | UI should not POST until refreshed; endpoint remains shape-focused and does not recompute live staleness. |
+
+**Failure modes:**
+
+| Status | When |
+| --- | --- |
+| 400 | Body parse error, unsupported JSON, missing required replay fields, malformed recommendation / coverage-warning basics, or semantic validation failure. |
+| 404 | Origin disallowed. |
+| 405 | Method on the wrong path — POST is accepted only at `/selector-snapshot` without a path segment. |
+| 413 | Payload exceeds 100 KB defensive cap. |
+| 500 | `SELECTOR_SNAPSHOTS` KV binding missing. |
+| 503 | KV write throws transiently. |
 
 ---
 
@@ -3873,6 +4157,43 @@ Backfills protocol API yield-history rows for the curated target set used by yie
 | `stablecoin` | `string`  | —       | Process a single supported stablecoin ID |
 | `batchSize`  | `integer` | `10`    | Coins per batch                          |
 | `batch`      | `integer` | `0`     | Batch offset for chunked processing      |
+
+### `POST /api/backfill-tape`
+
+Runs the same TAPE projectors used by the `project-tape` cron with operator-supplied window and limit overrides. Writes are idempotent on `(source_table, source_row_id, transition)`, so the endpoint is safe to re-run. First-observation projectors such as methodology, cemetery, and lifecycle ignore `since` / `until` because they scan static sources keyed by ID.
+
+**Request body or query parameters**
+
+Query parameters win when the same field is supplied in both places.
+
+| Param     | Type      | Default | Description                                                                 |
+| --------- | --------- | ------- | --------------------------------------------------------------------------- |
+| `class`   | `string`  | all     | Repeatable projector class filter, for example `class=depeg.opened`         |
+| `since`   | `integer` | none    | Lower source-row timestamp bound in Unix seconds                            |
+| `until`   | `integer` | none    | Upper source-row timestamp bound in Unix seconds                            |
+| `maxRows` | `integer` | `5000`  | Per-class scan cap, min `1`, max `50000`                                    |
+| `dryRun`  | `boolean` | `false` | Compute results without writing rows or advancing projector watermarks      |
+| `dry-run` | `boolean` | `false` | Query/body alias for `dryRun`                                               |
+
+Supported projector classes are `depeg.opened`, `depeg.resolved`, `depeg.peak_worsened`, `freeze.blocked`, `freeze.unblocked`, `freeze.destroyed`, `score.upgraded`, `score.downgraded`, `psi.band_changed`, `dews.escalated`, `dews.deescalated`, `mint_burn.large_flow`, `yield.warning_emitted`, `yield.pys_dropped`, `methodology.bumped`, `cemetery.entry.added`, and `lifecycle.tracked.frozen`.
+
+**Response**
+
+```json
+{
+  "ok": true,
+  "dryRun": false,
+  "maxRows": 5000,
+  "since": null,
+  "until": null,
+  "selectedClasses": ["depeg.opened"],
+  "projected": 12,
+  "perClass": { "depeg.opened": 12 },
+  "errors": []
+}
+```
+
+**Error responses:** `400` for unknown `class` values, invalid negative timestamps, `since > until`, or `maxRows` outside `1..50000`.
 
 ### `POST /api/backfill-mint-burn-prices`
 

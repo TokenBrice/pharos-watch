@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { getReserveAdapter } from "../reserve-adapters";
 import { syncReserveCoin } from "../sync-live-reserves-core";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";

@@ -2,16 +2,18 @@
   "id": "fpi-frax",
   "name": "Frax Price Index",
   "symbol": "FPI",
+  "oneLiner": "FPI is Frax's CPI-pegged unit-of-account stablecoin, tracking US CPI inflation with 100% FRAX reserves and FPIS token dilution as the algorithmic backstop.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "VAR",
     "governance": "centralized-dependent",
-    "yieldBearing": false,
+    "yieldBearing": true,
     "rwa": false,
     "navToken": true
   },
   "collateral": "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
   "pegMechanism": "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
+  "mechanismArchetype": "algorithmic",
   "llamaId": "66",
   "detailProvider": "defillama",
   "geckoId": "frax-price-index",
@@ -70,6 +72,10 @@
       "depType": "wrapper"
     }
   ],
+  "yieldConfig": {
+    "yieldSource": "FPI CPI redemption price",
+    "yieldType": "nav-appreciation"
+  },
   "liveReservesConfig": {
     "adapter": "frax-fpi-collateral",
     "version": 1,
@@ -86,6 +92,5 @@
       }
     }
   },
-  "collateralQuality": "rwa",
-  "governanceQuality": "wrapper"
+  "collateralQuality": "rwa"
 }

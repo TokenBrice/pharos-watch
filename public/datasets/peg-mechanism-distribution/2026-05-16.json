@@ -1,0 +1,781 @@
+{
+  "_meta": {
+    "endpoint": "peg-mechanism-distribution",
+    "asOfISO": "2026-05-16T21:20:16.676Z",
+    "sourceUrl": "https://pharos.watch/datasets/peg-mechanism-distribution/latest.json",
+    "methodologyLabel": "safety-score v7.25",
+    "rowCount": 110
+  },
+  "rows": [
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 71
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 53
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United States",
+      "coinCount": 27
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 16
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United States",
+      "coinCount": 12
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 10
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "British Virgin Islands",
+      "coinCount": 8
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "France",
+      "coinCount": 8
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "British Virgin Islands",
+      "coinCount": 6
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "British Virgin Islands",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Singapore",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "British Virgin Islands",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Brazil",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Hong Kong",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 5
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "usdc-circle",
+      "jurisdiction": "unknown",
+      "coinCount": 4
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "France",
+      "coinCount": 4
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Switzerland",
+      "coinCount": 4
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Australia",
+      "coinCount": 4
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "South Korea",
+      "coinCount": 4
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "usdc-circle",
+      "jurisdiction": "unknown",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Switzerland",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Netherlands",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Malta",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Singapore",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Japan",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Cayman Islands",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Liechtenstein",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Canada",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Brazil",
+      "coinCount": 3
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "El Salvador",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "usdt-tether",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "usde-ethena",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Cayman Islands",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "usds-sky",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Bermuda",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United States",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "gho-aave",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Kyrgyzstan",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Switzerland",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "algorithmic",
+      "mechanismLabel": "Algorithmic",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "bold-liquity",
+      "jurisdiction": "unknown",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Iceland",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Germany",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Indonesia",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Turkey",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Turkey",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Germany",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United Kingdom",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Mexico",
+      "coinCount": 2
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "usdt-tether",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "usd1-world-liberty-financial",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Denmark",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "dai-makerdao",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "algorithmic",
+      "mechanismLabel": "Algorithmic",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Dominica",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "algorithmic",
+      "mechanismLabel": "Algorithmic",
+      "pegReferenceId": "usdd-tron-dao-reserve",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "usdai-usd-ai",
+      "jurisdiction": "United States",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "usd0-usual",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Dominica",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "cusd-cap",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Switzerland",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "crvusd-curve",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Bermuda",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "usdf-astherus",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Cayman Islands",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "frxusd-frax",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "UAE",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "avusd-avant",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Kyrgyz Republic",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Antigua and Barbuda",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "algorithmic",
+      "mechanismLabel": "Algorithmic",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United States",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Singapore",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "usdo-openeden",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Luxembourg",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "El Salvador",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "yusd-aegis",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Australia",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "fxusd-f-x-protocol",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "usn-noon",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Croatia",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "yzusd-yuzu",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Union of Comoros",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Germany",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "msusd-main-street",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Norway",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Germany",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "synthetic-delta-neutral",
+      "mechanismLabel": "Delta-Neutral",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "France",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "France",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Panama",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Kazakhstan",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "El Salvador",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Liechtenstein",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "United Arab Emirates",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Finland",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "South Africa",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "cdp",
+      "mechanismLabel": "CDP",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Singapore",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "tbill",
+      "mechanismLabel": "Tokenized Treasury",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Mexico",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "algorithmic",
+      "mechanismLabel": "Algorithmic",
+      "pegReferenceId": "zsd-zephyr-protocol",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "aid-gaib",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "unknown",
+      "mechanismLabel": "Unknown",
+      "pegReferenceId": "apxusd-apyx",
+      "jurisdiction": "unknown",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Sweden",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Nigeria",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Argentina",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Chile",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Colombia",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Peru",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Malaysia",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Vietnam",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "India",
+      "coinCount": 1
+    },
+    {
+      "mechanismArchetype": "fiat-cash",
+      "mechanismLabel": "Fiat-Backed",
+      "pegReferenceId": "unknown",
+      "jurisdiction": "Cyprus / Lithuania",
+      "coinCount": 1
+    }
+  ]
+}

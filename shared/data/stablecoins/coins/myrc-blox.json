@@ -2,6 +2,7 @@
   "id": "myrc-blox",
   "name": "MYRC",
   "symbol": "MYRC",
+  "oneLiner": "MYRC is Blox's Malaysian ringgit stablecoin backed 1:1 by MYR at Maybank under UTMB trustee, eKYC-gated to Malaysian residents; issuer unlicensed by BNM.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MYR",
@@ -12,11 +13,13 @@
   },
   "collateral": "Malaysian Ringgit cash deposits held in a ring-fenced bank account at Maybank (Malayan Banking Berhad) under the custody and trustee services of Universal Trustee (Malaysia) Bhd (UTMB)",
   "pegMechanism": "1:1 mint and redemption against Malaysian Ringgit via Malaysian banking rails (FPX). Eligibility requires Malaysian eKYC (MyKad) and a linked Malaysian bank account; mint authority on each chain is restricted to a Blox-controlled key.",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "blox-myrc",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.blox.my/myrc/transparency"
+    "url": "https://www.blox.my/myrc/transparency",
+    "attestorTier": "niche"
   },
   "links": [
     {

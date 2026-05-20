@@ -3,7 +3,10 @@ import type {
   YieldSourceRisk,
   YieldVenueRiskTier,
 } from "@shared/types/yield";
-import { computePysRewardShare } from "@shared/lib/yield-scoring";
+import {
+  computePysRewardShare,
+  computeSourceRiskScoreFromPenalty,
+} from "@shared/lib/yield-scoring";
 import type { EvaluatedYieldSource } from "./evaluation-types";
 
 export const YIELD_RISK_CONFIG_REVIEW_CADENCE = "monthly-yield-coverage-audit";
@@ -47,16 +50,77 @@ function neutralPendingReviewConfig(): YieldRiskConfigEntry {
 }
 
 export const YIELD_RISK_CONFIG = {
-  "aave-v3": neutralPendingReviewConfig(),
-  "compound-v3": neutralPendingReviewConfig(),
-  sparklend: neutralPendingReviewConfig(),
+  // Battle-tested money market since Aave V1 (2020) / V3 (2022); multi-billion-USD TVL
+  // across 10+ chains; multiple independent audits and formal verification; mature
+  // governance with safety-module stake. Low venue risk.
+  "aave-v3": {
+    venueRiskTier: "low",
+    rationale:
+      "Aave V3 is a mature, multi-billion-USD lending venue with repeated independent audits, formal verification, and an active governance + safety-module stake.",
+    evidence: [
+      "Trail of Bits audit (Aave V3, 2022)",
+      "OpenZeppelin audit (Aave V3 core + periphery, 2022)",
+      "Certora formal verification of core invariants",
+      "Live since V1 in Jan 2020 and V3 since March 2022 across 10+ chains",
+      "Multi-billion-USD TVL throughout 2024-2026",
+    ],
+    reviewedAt: "2026-05-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  // Established Compound product line; isolated-asset V3 design has matured since 2022
+  // with multiple audits and active COMP governance. Low venue risk.
+  "compound-v3": {
+    venueRiskTier: "low",
+    rationale:
+      "Compound III (Comet) is an isolated-asset lending market with a multi-year audit history, billions in TVL, and active COMP governance; the Comet codebase narrowed the protocol surface area relative to V2.",
+    evidence: [
+      "OpenZeppelin audit (Compound III, 2022)",
+      "ChainSecurity audit (Compound III, 2022)",
+      "Compound V1 in production since 2018; V3 since August 2022",
+      "Sustained multi-billion-USD TVL across deployments",
+    ],
+    reviewedAt: "2026-05-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
+  // SparkLend is an Aave V3 fork deployed by Sky / former MakerDAO; benefits from
+  // upstream audit inheritance, has a billion-plus TVL, and is operated through Sky
+  // governance. Low venue risk.
+  sparklend: {
+    venueRiskTier: "low",
+    rationale:
+      "SparkLend is an Aave V3 fork operated by the Sky (formerly MakerDAO) ecosystem; it inherits the upstream Aave V3 audit surface, runs significant TVL, and is governed through the Sky framework.",
+    evidence: [
+      "Aave V3 upstream audits (Trail of Bits, OpenZeppelin, Certora) cover the shared codebase",
+      "ChainSecurity audit (SparkLend customizations, 2023)",
+      "Live since May 2023 with multi-hundred-million-USD to billion-USD TVL",
+      "Operated through Sky / MakerDAO governance and the SubDAO framework",
+    ],
+    reviewedAt: "2026-05-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
   "spark-savings": neutralPendingReviewConfig(),
   maple: neutralPendingReviewConfig(),
   yearn: neutralPendingReviewConfig(),
   "yearn-finance": neutralPendingReviewConfig(),
   morpho: neutralPendingReviewConfig(),
   "morpho-v1": neutralPendingReviewConfig(),
-  "morpho-blue": neutralPendingReviewConfig(),
+  // Morpho Blue is the modern immutable lending primitive (January 2024). Audited
+  // family but younger TVL cohort vs Aave/Compound. Medium venue risk reflects the
+  // shorter live track record and the immutable design limiting remediation paths.
+  "morpho-blue": {
+    venueRiskTier: "medium",
+    rationale:
+      "Morpho Blue is an immutable singleton lending primitive launched in January 2024 with multiple audits; design choices reduce ongoing governance surface but limit remediation, and the product is still in its younger TVL cohort versus Aave/Compound.",
+    evidence: [
+      "Spearbit / Cantina audit (Morpho Blue, late 2023)",
+      "OpenZeppelin audit (Morpho Blue, late 2023)",
+      "Runtime Verification formal review (Morpho Blue, 2024)",
+      "Live since January 2024; growing TVL but younger than Aave/Compound cohort",
+      "Immutable singleton; market-creator-permissioned vaults inherit issuer risk",
+    ],
+    reviewedAt: "2026-05-15",
+    reviewCadence: YIELD_RISK_CONFIG_REVIEW_CADENCE,
+  },
   pendle: neutralPendingReviewConfig(),
   beefy: neutralPendingReviewConfig(),
 } satisfies Record<YieldRiskConfigProtocol, YieldRiskConfigEntry>;
@@ -111,8 +175,12 @@ function inferDeploymentPlace(source: EvaluatedYieldSource): YieldDeploymentPlac
   return null;
 }
 
-function inferVenueProtocol(source: EvaluatedYieldSource): string | null {
-  if (source.sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho";
+export function inferVenueProtocol(source: {
+  sourceKey: string;
+  yieldType?: EvaluatedYieldSource["yieldType"] | null;
+  dataSource: EvaluatedYieldSource["dataSource"];
+}): string | null {
+  if (source.sourceKey.startsWith("protocol-api:morpho-vault:")) return "morpho-blue";
   if (source.sourceKey.startsWith("protocol-api:pendle:")) return "pendle";
   if (source.sourceKey.startsWith("protocol-api:yearn:")) return "yearn";
   if (source.sourceKey.startsWith("protocol-api:kong:")) return "kong";
@@ -156,7 +224,8 @@ export function buildYieldSourceRisk(params: {
   const reviewedConfig = resolveReviewedYieldRiskConfig(venueProtocol);
 
   return {
-    sourceRiskScore: existing.sourceRiskScore ?? null,
+    sourceRiskScore:
+      existing.sourceRiskScore ?? computeSourceRiskScoreFromPenalty(params.source.sourceRiskPenalty),
     sourceRiskPenalty: params.source.sourceRiskPenalty,
     sourceDepthRatio: params.source.sourceDepthRatio ?? existing.sourceDepthRatio ?? null,
     rewardShare: computePysRewardShare(params.source.apyReward, params.source.currentApy) ?? existing.rewardShare ?? null,

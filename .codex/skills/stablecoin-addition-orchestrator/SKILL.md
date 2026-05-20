@@ -38,6 +38,14 @@ Use `stablecoin-runtime-price-marketcap-gate` before editing active metadata. Pr
 - Use `write-ai-summaries` for `data/ai-summaries.json`.
 - Use `pre-launch-update` only for pre-launch milestones, phase, featured content, and promotion checks.
 
+3.5. **Editorial coverage gate** — before Phase 4 saves the per-coin JSON, verify all editorial fields are filled or explicitly waived:
+- `oneLiner` (required for all active/pre-launch coins; tense matches `status`; ≤160 chars).
+- `mechanismArchetype` (required when the coin enters the editorial cohort — top-60 by canonical rank or market cap ≥ $50M; otherwise may be null with a recorded "intentional gap" note).
+- `proofOfReserves.attestorTier` (required when `proofOfReserves.type === "independent-audit"`).
+- `data/ai-summaries.json` entry exists (or skip reason is recorded).
+
+Each missing field must either be filled (by re-calling the appropriate specialist skill from step 3) or recorded as an intentional gap in the Phase 5 coverage notes with a one-line reason. Do not declare success while a required field is missing without a recorded gap. CI backstops (`check:one-liner-coverage`, `check:mechanism-archetype-coverage`, `check:attestor-tier-coverage`, `check:glossary-coverage`) will fail the build if this gate is bypassed.
+
 4. **Apply registry and static edits**
 - Add/update exactly one per-coin JSON file under `shared/data/stablecoins/coins/`.
 - Update `shared/data/stablecoins/canonical-order.json`.
@@ -47,6 +55,7 @@ Use `stablecoin-runtime-price-marketcap-gate` before editing active metadata. Pr
 5. **Record downstream coverage decisions**
 - For each branch, mark `added`, `not applicable`, or `intentional gap`: logo/summary, live reserves, yield, redemption backstop, mint/burn, Bluechip, price/discovery, history backfill.
 - If a new data source is added, update the about page and relevant methodology/docs.
+- If the coin is active and entered Pharos via a recent launch (status transitioned from `pre-launch` within the last 90 days, or DefiLlama first observation is within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop catches it.
 
 6. **Validate**
 - At minimum for normal additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
@@ -63,6 +72,8 @@ Before saying the addition is complete, report:
 - generated aggregate status
 - canonical-order status
 - logo and summary status
+- editorial coverage decisions: `oneLiner`, `mechanismArchetype`, `proofOfReserves.attestorTier`, AI summary — each marked filled or recorded intentional gap with reason
 - downstream coverage decision notes
+- `agents/annotation-candidates.md` updated for recent-launch coins (or marked N/A)
 - validation commands run or intentionally not run
 

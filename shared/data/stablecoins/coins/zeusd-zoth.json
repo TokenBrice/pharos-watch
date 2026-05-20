@@ -2,6 +2,7 @@
   "id": "zeusd-zoth",
   "name": "Zoth ZeUSD",
   "symbol": "ZeUSD",
+  "oneLiner": "ZeUSD is Zoth's CDP-style dollar stablecoin, minted against tokenized RWA collateral (USYC, STBT, TBILL, Wrapped M) and off-chain T-bills and MMFs.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
   "pegMechanism": "CDP: users deposit eligible RWA collateral to mint ZeUSD; peg maintained through LTV ratios and collateral redemption (repay ZeUSD to reclaim collateral)",
+  "mechanismArchetype": "cdp",
   "llamaId": "225",
   "detailProvider": "defillama",
   "geckoId": "zeusd",
@@ -43,11 +45,21 @@
   "contracts": [
     {
       "chain": "ethereum",
+      "address": "0xb16eb11db006230d13fc0d9679e50a5a4d389809",
+      "decimals": 18
+    },
+    {
+      "chain": "manta",
       "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
       "decimals": 6
     },
     {
-      "chain": "manta",
+      "chain": "metis",
+      "address": "0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+      "decimals": 6
+    },
+    {
+      "chain": "avalanche",
       "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
       "decimals": 6
     }

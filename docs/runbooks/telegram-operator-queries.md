@@ -134,9 +134,9 @@ Processed updates by status and age:
 SELECT
   status,
   COUNT(*) AS rows,
-  MIN(created_at) AS oldest_created_at,
-  MAX(updated_at) AS newest_updated_at,
-  SUM(CASE WHEN status = 'processing' AND updated_at < ? - 300 THEN 1 ELSE 0 END) AS stale_processing
+  MIN(received_at) AS oldest_received_at,
+  MAX(COALESCE(processed_at, received_at)) AS newest_activity_at,
+  SUM(CASE WHEN status = 'processing' AND received_at < ? - 300 THEN 1 ELSE 0 END) AS stale_processing
 FROM telegram_processed_updates
 GROUP BY status
 ORDER BY rows DESC;
@@ -148,12 +148,12 @@ Recent failed webhook updates:
 SELECT
   update_id,
   status,
-  created_at,
-  updated_at,
-  error
+  received_at,
+  processed_at,
+  error_class
 FROM telegram_processed_updates
 WHERE status = 'failed'
-ORDER BY updated_at DESC
+ORDER BY COALESCE(processed_at, received_at) DESC
 LIMIT 50;
 ```
 

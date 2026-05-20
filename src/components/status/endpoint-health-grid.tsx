@@ -2,6 +2,7 @@ import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
+import { PublicSignalCard } from "./public-signal-card";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
   { key: "public", label: "Public" },
@@ -26,10 +27,9 @@ export function EndpointHealthGrid({
 }: EndpointHealthGridProps) {
   if (isLoading && !probes) {
     return (
-      <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">Browser Endpoint Probes</h3>
-        <p className="mt-3 text-sm text-muted-foreground">Probing endpoints...</p>
-      </article>
+      <PublicSignalCard title="Browser Endpoint Probes" contentClassName="mt-3">
+        <p className="text-sm text-muted-foreground">Probing endpoints...</p>
+      </PublicSignalCard>
     );
   }
 
@@ -52,9 +52,7 @@ export function EndpointHealthGrid({
       : "Shows public canary coverage only. Admin and manual action routes are intentionally excluded.");
 
   return (
-    <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
-      <h3 className="text-base font-semibold tracking-tight text-foreground">Browser Endpoint Probes</h3>
-      <div className="mt-4 space-y-4">
+    <PublicSignalCard title="Browser Endpoint Probes">
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
@@ -149,7 +147,6 @@ export function EndpointHealthGrid({
             </div>
           );
         })}
-      </div>
-    </article>
+    </PublicSignalCard>
   );
 }

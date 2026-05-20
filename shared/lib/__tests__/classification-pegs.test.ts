@@ -6,7 +6,7 @@ import {
   mapPegMetadata,
 } from "@shared/lib/classification-pegs";
 import type { PegCurrency } from "../../types";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Snapshot of PEG_METADATA keys at the time this test was written (regression net).
 const KNOWN_PEG_KEYS: PegCurrency[] = [

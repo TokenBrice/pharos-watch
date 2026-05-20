@@ -2,6 +2,7 @@
   "id": "usdglo-glo",
   "name": "Glo Dollar",
   "symbol": "USDGLO",
+  "oneLiner": "USDGLO is Brale-issued dollar stablecoin whose reserve yield is directed to extreme-poverty alleviation, redeemable 1:1 against cash and U.S. government debt.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash, cash equivalents, and U.S. government-backed debt held by Brale in segregated, unencumbered accounts",
   "pegMechanism": "Brale-issued fiat-backed stablecoin redeemable 1:1 for USD or USDC by eligible Brale customers; Brale manages reserves and liquidity for redemption obligations",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "155",
   "detailProvider": "defillama",
   "geckoId": "glo-dollar",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brale.xyz/stablecoins/USDGLO",
-    "provider": "Brale"
+    "provider": "Brale",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "Money Services Business / Money Transmitter (NMLS #2376957)"
   },
   "links": [
     {

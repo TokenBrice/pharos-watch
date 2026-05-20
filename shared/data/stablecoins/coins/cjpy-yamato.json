@@ -2,6 +2,7 @@
   "id": "cjpy-yamato",
   "name": "Convertible JPY Token",
   "symbol": "CJPY",
+  "oneLiner": "CJPY is Yamato's decentralized Japanese yen stablecoin, minted from overcollateralized ETH pledges via Liquity-v1-style permissionless CDPs.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "JPY",
@@ -12,6 +13,10 @@
   },
   "collateral": "ETH only; 130% minimum collateralization ratio at issuance (110% MCR for liquidation); one-time borrowing fee with no accrued interest",
   "pegMechanism": "Overcollateralized ETH CDPs (pledges) with game-theory peg maintenance: (1) hard floor via on-chain redemption of 1 CJPY for 1 JPY worth of ETH from the riskiest pledge; (2) subrogation mechanism uses accumulated protocol fees to automatically repay positions below 100% health rate; (3) non-forced liquidation where any user can redeem debt positions below 130% using market-purchased CJPY",
+  "mechanismArchetype": "cdp",
+  "infrastructures": [
+    "liquity-v1"
+  ],
   "llamaId": "179",
   "detailProvider": "defillama",
   "geckoId": "convertible-jpy-token",
@@ -60,9 +65,6 @@
   "deploymentModel": "single-chain",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
-  "infrastructures": [
-    "liquity-v1"
-  ],
   "reserves": [
     {
       "name": "ETH",

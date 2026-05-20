@@ -489,7 +489,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   } = viewModel;
 
   return (
-    <Card className={cn(className, showHeader ? "flex flex-col" : undefined)}>
+    <Card className={cn("flex flex-col", className)}>
       {showHeader && (
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -504,8 +504,8 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           </div>
         </CardHeader>
       )}
-      <CardContent className={showHeader ? "flex flex-col pb-4" : "flex flex-col gap-2.5 p-3 sm:p-4"}>
-        <div className={cn(showHeader ? undefined : "flex items-start justify-center")}>
+      <CardContent className={showHeader ? "flex flex-col pb-4" : "flex flex-1 flex-col gap-2.5 p-3 sm:p-4"}>
+        <div className={cn(showHeader ? undefined : "flex flex-1 items-center justify-center")}>
           <DEWSRadar
             elevated={elevated}
             calmDots={calmDots}

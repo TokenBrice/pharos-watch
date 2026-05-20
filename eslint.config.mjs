@@ -34,7 +34,7 @@ const eslintConfig = defineConfig([
     // Repo-local maintenance scripts intentionally walk dynamic paths inside the
     // checked-out workspace. The security rule is useful for runtime code, but
     // it produces false positives for these controlled CLI scripts.
-    files: ["scripts/**/*.mjs"],
+    files: ["scripts/**/*.{mjs,ts}"],
     rules: {
       "security/detect-non-literal-fs-filename": "off",
     },
@@ -121,6 +121,29 @@ const eslintConfig = defineConfig([
             group: ["@shared/*"],
             message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
           }],
+        },
+      ],
+    },
+  },
+  {
+    // Force callers to route /api/ paths through the shared registry so the
+    // surface stays grep-able and typed. The selector only catches literals
+    // passed as function-call arguments — object/JSX-attribute literals (doc
+    // pages, config tables) are intentionally allowed.
+    files: ["src/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}", "worker/**/*.{ts,tsx}", "functions/**/*.{ts,tsx}"],
+    ignores: [
+      "shared/lib/api-endpoints/**",
+      "scripts/**",
+      "**/__tests__/**",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.type!='MemberExpression'] > Literal[value=/^\\/api\\//]",
+          message: "Use API_PATHS or FRONTEND_API_QUERY_REGISTRY from shared/lib/api-endpoints instead of a /api/ string literal.",
         },
       ],
     },

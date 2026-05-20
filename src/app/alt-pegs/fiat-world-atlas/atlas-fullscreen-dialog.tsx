@@ -2,12 +2,7 @@
 
 import { useRef } from "react";
 import { X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PegDiversityHeroLive } from "@/app/alt-pegs/fiat-world-atlas/peg-diversity-hero-live";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
@@ -38,9 +33,7 @@ export function AtlasFullscreenDialog({
         }}
       >
         <div className="atlas-fullscreen-dialog__toolbar">
-          <DialogTitle className="atlas-fullscreen-dialog__title">
-            Peg Diversity Atlas
-          </DialogTitle>
+          <DialogTitle className="atlas-fullscreen-dialog__title">Peg Diversity Atlas</DialogTitle>
           <DialogDescription className="sr-only">
             Expanded inspection view of the Peg Diversity Atlas. Press Escape to close.
           </DialogDescription>
@@ -49,6 +42,7 @@ export function AtlasFullscreenDialog({
             type="button"
             variant="ghost"
             size="icon-sm"
+            className="h-11 w-11 sm:h-8 sm:w-8"
             aria-label="Close atlas"
             onClick={() => onOpenChange(false)}
           >
@@ -56,11 +50,7 @@ export function AtlasFullscreenDialog({
           </Button>
         </div>
         <div className="atlas-fullscreen-dialog__body">
-          <div
-            className="peg-hero__viewport"
-            role="group"
-            aria-label="Peg diversity map atlas"
-          >
+          <div className="peg-hero__viewport" role="group" aria-label="Peg diversity map atlas">
             <PegDiversityHeroLive worldMap={<WorldMap />} variant="fullscreen" />
           </div>
         </div>

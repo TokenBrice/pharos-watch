@@ -2,6 +2,7 @@
   "id": "hkd-hsbc",
   "name": "HSBC HKD Stablecoin",
   "symbol": "HKD-HSBC",
+  "oneLiner": "HKD-HSBC is HSBC's pre-launch HKD stablecoin, HKMA-licensed in April 2026 with H2 2026 launch planned via PayMe and the HSBC HK app.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
   "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once HSBC launches the business",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

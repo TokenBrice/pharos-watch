@@ -2,6 +2,7 @@
   "id": "xusd-babelfish",
   "name": "XUSD",
   "symbol": "XUSD",
+  "oneLiner": "XUSD is BabelFish's Rootstock dollar token, minted 1:1 from a basket of bridged stablecoins (DLLR, USDT, USDC, DAI) with basket-balance constraints.",
   "llamaId": "162",
   "detailProvider": "defillama",
   "geckoId": "xusd-babelfish",
@@ -16,6 +17,7 @@
   },
   "collateral": "Rootstock basket of accepted stablecoins, dominated by DLLR with bridged USDT, USDC, DAI variants, and small DOC exposure",
   "pegMechanism": "BabelFish mints XUSD 1:1 from accepted stablecoins and allows redemption into accepted bAssets, subject to basket-balance constraints and balancing fees",
+  "mechanismArchetype": "fiat-cash",
   "links": [
     {
       "label": "Website",

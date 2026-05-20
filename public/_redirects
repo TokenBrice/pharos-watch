@@ -11,6 +11,24 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# Tape → Timeline rename; /timeline/ is canonical. Query string is preserved
+# by Cloudflare Pages, so existing `?event=`, `?coin=`, `?type=` permalinks
+# survive the redirect.
+/tape/* /timeline/:splat 301
+/tape/ /timeline/ 301
+/tape /timeline/ 301
+
+# RSS feeds moved to explicit .xml paths; preserve legacy extensionless
+# subscribers.
+/feed/digest/ /feed/digest.xml 301
+/feed/digest /feed/digest.xml 301
+/feed/depeg/ /feed/depeg.xml 301
+/feed/depeg /feed/depeg.xml 301
+/feed/methodology/ /feed/methodology.xml 301
+/feed/methodology /feed/methodology.xml 301
+/feed/cemetery/ /feed/cemetery.xml 301
+/feed/cemetery /feed/cemetery.xml 301
+
 /report-cards /safety-scores/ 301
 /report-cards/ /safety-scores/ 301
 /report-cards/* /safety-scores/:splat 301

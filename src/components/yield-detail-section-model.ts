@@ -8,8 +8,8 @@ import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel, type YieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceDepthLens, YieldSourceRiskDriver } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
-import { formatPercentFromRatio, formatSignedPercent as sharedFormatSignedPercent } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { formatPercentFromRatio } from "@shared/lib/format";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { YieldRanking } from "@shared/types";
 
 export const ALT_SOURCE_INITIAL_COUNT = 6;
@@ -40,11 +40,6 @@ const DATA_SOURCE_BADGES: Record<string, { label: string; badge: string }> = {
     badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
   },
 };
-
-export function formatSignedPercent(value: number | null) {
-  if (value === null) return "\u2014";
-  return sharedFormatSignedPercent(value);
-}
 
 export interface YieldDetailSectionReadyModel {
   status: "ready";
@@ -113,27 +108,11 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const { getParam, replaceParams } = useUrlFilters();
   const { data, meta: apiMeta, error, isLoading } = useYieldRankings();
 
-  const selectedSourceKeys = useMemo(
+  const rawSelectedSourceKeys = useMemo(
     () => new Set(getParam("sources").split(",").filter(Boolean)),
     [getParam],
   );
   const [showAllSources, setShowAllSources] = useState(false);
-
-  const toggleSource = (sourceKey: string) => {
-    const next = new Set(selectedSourceKeys);
-    if (next.has(sourceKey)) {
-      next.delete(sourceKey);
-    } else if (next.size < 4) {
-      next.add(sourceKey);
-    }
-    replaceParams((params) => {
-      if (next.size > 0) {
-        params.set("sources", [...next].join(","));
-      } else {
-        params.delete("sources");
-      }
-    });
-  };
 
   const ranking = data?.rankings.find((row) => row.id === stablecoinId);
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -174,8 +153,29 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   const stabilityValue = ranking.yieldStability !== null ? formatPercentFromRatio(ranking.yieldStability, 0) : "—";
   const dataSourceMeta = DATA_SOURCE_BADGES[ranking.dataSource] ?? DATA_SOURCE_BADGES.defillama;
   const sourceExplorer = buildYieldSourceExplorerModel(ranking);
+  const availableSourceKeys = new Set(sourceExplorer.historySources.map((source) => source.sourceKey));
+  const selectedSourceKeys = new Set(
+    [...rawSelectedSourceKeys].filter((sourceKey) => availableSourceKeys.has(sourceKey)),
+  );
+  const externalSourceKeys = selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined;
   const singleWarning = ranking.warningSignals.length === 1 ? ranking.warningSignals[0] : null;
   const benchmarkSubtitle = getYieldBenchmarkGapReferenceText(ranking, { includePeriod: false });
+  const toggleSource = (sourceKey: string) => {
+    if (!availableSourceKeys.has(sourceKey)) return;
+    const next = new Set(selectedSourceKeys);
+    if (next.has(sourceKey)) {
+      next.delete(sourceKey);
+    } else if (next.size < 4) {
+      next.add(sourceKey);
+    }
+    replaceParams((params) => {
+      if (next.size > 0) {
+        params.set("sources", [...next].join(","));
+      } else {
+        params.delete("sources");
+      }
+    });
+  };
 
   return {
     status: "ready",
@@ -188,7 +188,7 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
     sourceExplorer,
     sourceDepthLens: sourceExplorer.sourceDepthLens,
     sourceRiskDrivers: sourceExplorer.sourceRiskDrivers,
-    externalSourceKeys: selectedSourceKeys.size > 0 ? [...selectedSourceKeys] : undefined,
+    externalSourceKeys,
     historySources: sourceExplorer.historySources,
     dataSourceMeta,
     warningSignals: ranking.warningSignals,

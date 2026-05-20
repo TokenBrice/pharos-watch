@@ -2,6 +2,7 @@
   "id": "syrupusdt-maple",
   "name": "Maple syrupUSDT",
   "symbol": "syrupUSDT",
+  "oneLiner": "syrupUSDT is Maple's ERC-4626 receipt for USDT lent to institutional borrowers as overcollateralized fixed-rate loans; withdrawals served by a FIFO queue.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://maple.finance/insights/introducing-proof-of-reserves",
-    "provider": "The Network Firm"
+    "provider": "The Network Firm",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {
@@ -38,6 +42,16 @@
     {
       "chain": "ethereum",
       "address": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+      "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+      "decimals": 6
+    },
+    {
+      "chain": "bsc",
+      "address": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
       "decimals": 6
     }
   ],

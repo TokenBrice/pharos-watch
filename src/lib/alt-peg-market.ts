@@ -1,6 +1,6 @@
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";

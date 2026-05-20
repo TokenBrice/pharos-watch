@@ -64,6 +64,42 @@ describe("normalizeDefiLlamaDetailBody", () => {
     });
   });
 
+  it("overrides stale DefiLlama top-level address with the curated registry contract", () => {
+    const body = JSON.stringify({
+      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+      price: 0.99,
+      tokens: [
+        {
+          circulating: { peggedUSD: 100 },
+        },
+      ],
+    });
+
+    expect(
+      JSON.parse(
+        normalizeDefiLlamaDetailBody(body, {
+          flags: { pegCurrency: "USD" },
+          contracts: [
+            {
+              chain: "ethereum",
+              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+              decimals: 18,
+            },
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      tokens: [
+        {
+          totalCirculatingUSD: { peggedUSD: 100 },
+          totalCirculating: { peggedUSD: 100 },
+          circulating: { peggedUSD: 100 },
+        },
+      ],
+    });
+  });
+
   it("derives native units from USD totals when non-USD payload only exposes totalCirculatingUSD", () => {
     const body = JSON.stringify({
       price: 2,

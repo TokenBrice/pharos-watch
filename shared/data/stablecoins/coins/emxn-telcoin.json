@@ -2,6 +2,7 @@
   "id": "emxn-telcoin",
   "name": "Telcoin MXN",
   "symbol": "eMXN",
+  "oneLiner": "eMXN is Telcoin's centralized Mexican peso stablecoin on Polygon, backed by MXN reserves managed by Telcoin and used for Digital Cash payments.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
@@ -12,6 +13,7 @@
   },
   "collateral": "Mexican-peso Digital Cash reserve backing managed by Telcoin for eMXN issued on Polygon",
   "pegMechanism": "Issuer-managed Mexican-peso Digital Cash stablecoin used for payments and settlement in the Telcoin Wallet; public materials do not yet expose an eMXN-specific redemption or reserve-attestation report",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "telcoin-mxn",
   "links": [
@@ -28,6 +30,9 @@
       "url": "https://bank.telco.in/"
     }
   ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
   "contracts": [
     {
       "chain": "polygon",
@@ -42,7 +47,7 @@
     "reviewer": "Codex Worker B metadata pass",
     "reviewedAt": "2026-05-14"
   },
-  "chainTier": "stage1-l2",
+  "chainTier": "mature-alt-l1",
   "custodyModel": "institutional-unregulated",
   "reserves": [
     {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type {
   ApiKeySelfServeAdminMutationResponse,
   ApiKeySelfServeRequestAdminSummary,

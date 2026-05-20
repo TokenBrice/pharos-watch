@@ -43,7 +43,7 @@ export function SortableTableHead<T extends string = string>({
       <span className={cn("flex w-full items-center gap-1", getButtonAlignment(className))}>
         <button
           type="button"
-          className="pharos-focus-ring -mx-1 inline-flex min-h-8 items-center gap-1 rounded-sm px-1 text-inherit transition-colors hover:bg-muted/50"
+          className="pharos-focus-ring -mx-2 inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-inherit transition-colors hover:bg-muted/50 sm:-mx-1 sm:min-h-8 sm:px-1"
           onClick={() => toggleSort(sortKey)}
           aria-label={label ? `Sort by ${label}` : undefined}
         >

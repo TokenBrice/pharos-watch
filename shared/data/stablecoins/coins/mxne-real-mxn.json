@@ -2,6 +2,7 @@
   "id": "mxne-real-mxn",
   "name": "Real MXN",
   "symbol": "MXNe",
+  "oneLiner": "MXNe is Brale's Mexican peso stablecoin issued in partnership with Etherfuse, backed by Etherfuse Stablebonds (CETES exposure) on Base, Solana, and Stellar.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "MXN",
@@ -12,6 +13,7 @@
   },
   "collateral": "Mexican-peso backing issued by Brale in partnership with Etherfuse, with public materials describing MXNe as supported by Etherfuse Stablebonds and CETES exposure",
   "pegMechanism": "Issuer-managed mint and redemption through Brale onboarding, with MXNe intended to remain redeemable 1:1 for the equivalent value of Mexican pesos and usable for payments, remittances, and payroll",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "real-mxn",
   "links": [
@@ -22,10 +24,6 @@
     {
       "label": "Brale announcement",
       "url": "https://brale.xyz/blog/introducing-mxne"
-    },
-    {
-      "label": "Etherfuse announcement",
-      "url": "https://www.etherfuse.com/blogs/etherfuse-r-introduces-real-mxn-mxne-stablecoin-on-solana-base-and-stellar"
     }
   ],
   "jurisdiction": {
@@ -63,7 +61,8 @@
     {
       "name": "MXN-denominated Etherfuse Stablebonds / CETES exposure",
       "pct": 100,
-      "risk": "low"
+      "risk": "low",
+      "coinId": "cetes-etherfuse"
     }
   ]
 }

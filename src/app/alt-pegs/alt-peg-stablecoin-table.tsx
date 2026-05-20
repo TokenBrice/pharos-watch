@@ -6,7 +6,7 @@ import { HomepageSectionBand } from "@/components/homepage-sections";
 import { SectionSkeleton } from "@/components/homepage-skeletons";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { buildAltPegLinkHubGroups } from "@/lib/alt-peg-market";
 import type {
   DexLiquidityMap,

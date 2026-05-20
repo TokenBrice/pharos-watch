@@ -27,6 +27,7 @@ export function selectDigestIntelligence(input: unknown): DigestIntelligenceSumm
   }
 
   return {
+    // Cast: isRecord runtime check narrows unknown → record but TS can't validate the inner field shape; trusting the runtime contract
     changeSummary: isRecord(input.changeSummary) ? input.changeSummary as unknown as DigestChangeSummary : null,
     nextTriggers: Array.isArray(input.nextTriggers) ? input.nextTriggers as DigestNextTrigger[] : null,
     forwardLookOutcomes: Array.isArray(input.forwardLookOutcomes)

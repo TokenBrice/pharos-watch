@@ -7,6 +7,7 @@ import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_VERSION_LABEL,
@@ -19,7 +20,7 @@ export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
   canonical: "/safety-scores/",
-  ogImage: buildApiOgImageUrl("/api/og/safety-scores"),
+  ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
 });
 
 const FAQ_ITEMS = [
@@ -57,7 +58,7 @@ export default createClientFeaturePage({
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",
     title: "Safety Scores",
-    statusBadge: { status: "mature", version: SAFETY_SCORE_VERSION_LABEL },
+    statusBadge: { status: "mature" },
     methodology: {
       version: SAFETY_SCORE_VERSION_LABEL,
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -65,8 +66,14 @@ export default createClientFeaturePage({
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
     leadParagraphs: [
       "Letter grades from A+ to F computed from live reserve feeds, transitive dependency scoring, and redemption-backstop blending — not just market-cap rankings.",
-      "Each grade weights four base dimensions — liquidity / exit capacity, resilience, decentralization, and dependency risk — then applies peg stability as a multiplier and caps wrapper or mechanism dependencies against upstream scores. The contagion simulator shows exactly how a major failure cascades through collateral chains.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        Each grade weights four base dimensions — liquidity / exit capacity, resilience, decentralization, and
+        dependency risk — then applies peg stability as a multiplier and caps wrapper or mechanism dependencies against
+        upstream scores. The contagion simulator shows exactly how a major failure cascades through collateral chains.
+      </p>
+    ),
   },
   afterClient: (
     <>

@@ -2,6 +2,7 @@
   "id": "hlscope-hamilton-lane",
   "name": "Hamilton Lane Senior Credit Opportunities Securitize Fund",
   "symbol": "HLSCOPE",
+  "oneLiner": "HLSCOPE is Hamilton Lane's SCOPE senior secured private-credit fund tokenized via Securitize for qualified purchasers, priced at NAV rather than $1.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",

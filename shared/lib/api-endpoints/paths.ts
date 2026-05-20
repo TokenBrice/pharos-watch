@@ -55,7 +55,12 @@ export const API_PATHS = {
   digestArchive: () => "/api/digest-archive",
   digestSnapshotBase: () => "/api/digest-snapshot",
   digestSnapshot: (date: string) => buildQueryPath("/api/digest-snapshot", { date }),
+  snapshotsIndex: () => "/api/snapshots/index",
+  snapshotDay: (date: string) => `/api/snapshots/${date}.json`,
+  snapshotCoin: (date: string, stablecoinId: string) =>
+    `/api/snapshot/${date}/stablecoin/${encodeURIComponent(stablecoinId)}`,
   yieldRankings: () => "/api/yield-rankings",
+  yieldAdapterManifest: () => "/api/yield-adapter-manifest",
   yieldHistoryBase: () => "/api/yield-history",
   yieldHistory: (stablecoinId: string, days = 90, mode?: string, sourceKey?: string) =>
     buildQueryPath("/api/yield-history", {
@@ -84,6 +89,9 @@ export const API_PATHS = {
   chains: () => "/api/chains",
   nonUsdShareBase: () => "/api/non-usd-share",
   nonUsdShare: (days?: number) => buildQueryPath("/api/non-usd-share", days ? { days } : undefined),
+  ogDepeg: () => "/api/og/depeg",
+  ogSafetyScores: () => "/api/og/safety-scores",
+  ogStabilityIndex: () => "/api/og/stability-index",
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
       limit: params?.limit,

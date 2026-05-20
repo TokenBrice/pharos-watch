@@ -2,6 +2,7 @@
   "id": "dai-makerdao",
   "name": "Dai",
   "symbol": "DAI",
+  "oneLiner": "DAI is MakerDAO/Sky's dollar stablecoin, minted from crypto and RWA vaults and supported by stablecoin PSM liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
+  "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
   "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
+  "mechanismArchetype": "cdp",
   "llamaId": "5",
   "detailProvider": "defillama",
   "geckoId": "dai",
@@ -118,20 +120,20 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
+      "name": "Spark (lending)",
+      "pct": 33,
+      "risk": "low"
+    },
+    {
       "name": "Stablecoins (PSM)",
-      "pct": 38,
+      "pct": 32,
       "risk": "very-low",
       "coinId": "usdc-circle",
       "depType": "mechanism"
     },
     {
-      "name": "Spark (lending)",
-      "pct": 28,
-      "risk": "low"
-    },
-    {
       "name": "Grove (RWA)",
-      "pct": 23,
+      "pct": 24,
       "risk": "low"
     },
     {

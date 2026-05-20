@@ -41,7 +41,13 @@ export {
   readHtmlAttribute,
   stripTags,
 } from "./html";
-export { fetchJsonPostWithRetry, fetchJsonWithRetry, fetchPrimaryHtmlInput, fetchTextWithRetry } from "./request";
+export {
+  ADAPTER_USER_AGENT,
+  fetchJsonPostWithRetry,
+  fetchJsonWithRetry,
+  fetchPrimaryHtmlInput,
+  fetchTextWithRetry,
+} from "./request";
 export { fetchDefiLlamaPrices } from "./defillama";
 export {
   fetchErc20Balance,

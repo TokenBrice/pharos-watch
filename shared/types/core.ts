@@ -65,10 +65,27 @@ export interface StablecoinFlags {
 export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 export type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
 
+export const ATTESTOR_TIER_VALUES = ["big4", "regional", "niche", "self", "none"] as const;
+export type AttestorTier = (typeof ATTESTOR_TIER_VALUES)[number];
+
+export const PROOF_OF_RESERVES_CADENCE_VALUES = [
+  "daily-nav",
+  "real-time",
+  "monthly",
+  "quarterly",
+  "ad-hoc",
+  "none",
+] as const;
+export type ProofOfReservesCadence = (typeof PROOF_OF_RESERVES_CADENCE_VALUES)[number];
+
 export interface ProofOfReserves {
   type: ProofOfReservesType;
   url: string;
   provider?: string;
+  attestorTier?: AttestorTier;
+  cadence?: ProofOfReservesCadence;
+  attestorJurisdiction?: string;
+  attestorLicense?: string;
 }
 
 export interface StablecoinLink {
@@ -137,6 +154,14 @@ export const COLLATERAL_QUALITY_VALUES = ["native", "rwa", "eth-lst", "alt-lst-b
 export const CUSTODY_MODEL_VALUES = ["onchain", "institutional-top", "institutional-regulated", "institutional-unregulated", "institutional-sanctioned", "cex"] as const;
 export const VARIANT_KIND_VALUES = ["savings-passthrough", "strategy-vault", "risk-absorption", "bond-maturity"] as const;
 export type VariantKind = (typeof VARIANT_KIND_VALUES)[number];
+export const MECHANISM_ARCHETYPE_VALUES = [
+  "fiat-cash",
+  "tbill",
+  "cdp",
+  "synthetic-delta-neutral",
+  "algorithmic",
+] as const;
+export type MechanismArchetype = (typeof MECHANISM_ARCHETYPE_VALUES)[number];
 export const GOVERNANCE_QUALITY_VALUES = [
   "immutable-code",
   "dao-governance",
@@ -256,10 +281,12 @@ export interface StablecoinMeta {
   detailProvider?: DetailProvider;
   name: string;
   symbol: string;
+  oneLiner?: string;
   flags: StablecoinFlags;
   pegReferenceId?: string;
   collateral?: string;
   pegMechanism?: string;
+  mechanismArchetype?: MechanismArchetype;
   commodityOunces?: number;
   geckoId?: string;
   cmcSlug?: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   resolveTicker,
   parseTargetArgs,
@@ -123,6 +123,15 @@ describe("parseSubscribeArgs", () => {
     expect(result.invalidTargets).toEqual([]);
   });
 
+  it("accepts non-USD preset aliases and canonicalizes dashed forms", () => {
+    const result = parseSubscribeArgs("dews,depeg non-usd-top-25");
+    expect(result.alertTypes).toEqual(new Set(["dews", "depeg"]));
+    expect(result.subscribeAll).toBe(false);
+    expect(result.presetIds).toEqual(["non-usd-top25"]);
+    expect(result.tickers).toEqual([]);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
   it("classifies unknown tokens as invalidTargets", () => {
     const result = parseSubscribeArgs("foo dews USDC");
     expect(result.alertTypes).toEqual(new Set(["dews"]));
@@ -194,6 +203,14 @@ describe("parseTargetArgs", () => {
     expect(result.includeAll).toBe(false);
     expect(result.presetIds).toEqual(["usd-top25"]);
     expect(result.tickers).toEqual(["USDC"]);
+    expect(result.invalidTargets).toEqual([]);
+  });
+
+  it("accepts non-USD preset aliases for unsubscribe-style commands", () => {
+    const result = parseTargetArgs("non-usd-top-50");
+    expect(result.includeAll).toBe(false);
+    expect(result.presetIds).toEqual(["non-usd-top50"]);
+    expect(result.tickers).toEqual([]);
     expect(result.invalidTargets).toEqual([]);
   });
 

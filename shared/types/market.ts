@@ -7,6 +7,7 @@ import {
   PriceConfidenceSchema,
   PriceObservedAtModeSchema,
 } from "./core";
+import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 
 const PegBucketsSchema = z.record(z.string(), z.number());
 const PriceSourceConfidenceProfileSchema = z.object({
@@ -49,6 +50,7 @@ const StablecoinDataRawSchema = z.object({
   circulatingPrevMonth: PegBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
+  contracts: z.array(ContractDeploymentSchema).optional(),
   frozen: z.boolean().optional(),
   frozenAt: z.string().optional(),
 });
@@ -79,6 +81,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
   chainCirculating: asset.chainCirculating,
   chains: asset.chains,
+  ...(asset.contracts && asset.contracts.length > 0 ? { contracts: asset.contracts } : {}),
   ...(asset.frozen != null ? { frozen: asset.frozen } : {}),
   ...(asset.frozenAt != null ? { frozenAt: asset.frozenAt } : {}),
 }));
@@ -621,6 +624,13 @@ export const BlacklistQuarterlyEventTypePointSchema = z.object({
 });
 export type BlacklistQuarterlyEventTypePoint = z.infer<typeof BlacklistQuarterlyEventTypePointSchema>;
 
+export const BlacklistRecentEventTypeCountsSchema = z.object({
+  freezes: z.number(),
+  destroys: z.number(),
+  releases: z.number(),
+});
+export type BlacklistRecentEventTypeCounts = z.infer<typeof BlacklistRecentEventTypeCountsSchema>;
+
 const BlacklistSummaryStatsSchema = z.object({
   usdcBlacklisted: z.number(),
   usdtBlacklisted: z.number(),
@@ -642,6 +652,15 @@ const BlacklistSummaryStatsSchema = z.object({
   perCoinFrozenTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinDestroyedTotal: z.record(z.enum(BLACKLIST_STABLECOINS), z.number()),
   perCoinQuarterlyEventTypes: z.record(z.enum(BLACKLIST_STABLECOINS), z.array(BlacklistQuarterlyEventTypePointSchema)),
+  // Key is `z.string()` (not the BLACKLIST_STABLECOINS enum) so older cached
+  // payloads — which either omit the field entirely or carry a partial record
+  // — still parse. Optional with `{}` default covers the missing-field case;
+  // the detail-page banner hook does `record[symbol] ?? zero-counts` for the
+  // missing-coin case at runtime.
+  perCoinRecentEventTypes: z
+    .record(z.string(), BlacklistRecentEventTypeCountsSchema)
+    .optional()
+    .default({}),
 });
 
 const BlacklistChainOptionSchema = z.object({

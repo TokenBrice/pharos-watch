@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import type { ContractDeployment } from "@shared/types/core";
 import {
   type DetailResponseHelpers,
   DETAIL_UPSTREAM_MAX_RETRIES,
@@ -10,7 +11,11 @@ import {
   logUpstreamFailure,
 } from "./shared";
 
-interface PegMeta {
+interface DetailMeta {
+  contracts?: ContractDeployment[];
+}
+
+interface PegMeta extends DetailMeta {
   flags: {
     pegCurrency: string;
   };
@@ -66,6 +71,24 @@ function scalePegBuckets(buckets: PegBuckets, multiplier: number): PegBuckets {
   return scaled;
 }
 
+function getCuratedPrimaryAddress(meta: DetailMeta | undefined): string | null {
+  const contract = meta?.contracts?.find((entry) => entry.chain === "ethereum") ?? meta?.contracts?.[0];
+  return contract?.address ?? null;
+}
+
+export function applyCuratedDetailAddress(body: string, meta: DetailMeta | undefined): string {
+  const curatedAddress = getCuratedPrimaryAddress(meta);
+  if (!curatedAddress) return body;
+
+  try {
+    const parsed = JSON.parse(body) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return body;
+    return JSON.stringify({ ...parsed, address: curatedAddress });
+  } catch {
+    return body;
+  }
+}
+
 /**
  * Validates upstream JSON and materializes consistent chart fields:
  * - totalCirculating: native units
@@ -86,6 +109,7 @@ export function normalizeDefiLlamaDetailBody(
       circulating?: Record<string, number>;
       [key: string]: unknown;
     }>;
+    address?: unknown;
   };
 
   const schemaResult = DlDetailResponseSchema.safeParse(parsed);
@@ -96,8 +120,13 @@ export function normalizeDefiLlamaDetailBody(
     console.warn(`[defillama-detail] Response schema mismatch: ${issues}`);
   }
 
+  const curatedAddress = getCuratedPrimaryAddress(meta);
+  if (curatedAddress) {
+    parsed.address = curatedAddress;
+  }
+
   if (!Array.isArray(parsed.tokens)) {
-    return body;
+    return curatedAddress ? JSON.stringify(parsed) : body;
   }
 
   const isNonUsd = isNonUsdPeg(meta);

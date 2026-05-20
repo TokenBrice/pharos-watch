@@ -2,6 +2,7 @@
   "id": "usd1-world-liberty-financial",
   "name": "World Liberty Financial USD",
   "symbol": "USD1",
+  "oneLiner": "USD1 is World Liberty Financial's Trump-affiliated dollar stablecoin, issued 1:1 via BitGo Trust against short-term Treasuries, MMFs, and cash deposits.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
   "pegMechanism": "Direct 1:1 mint and redemption through BitGo Trust Company (issuer); arbitrage incentivizes peg maintenance",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "262",
   "detailProvider": "defillama",
   "geckoId": "usd1-wlfi",
@@ -19,7 +21,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.bitgo.com/usd1/attestations/",
-    "provider": "BitGo"
+    "provider": "Independent accounting firm via BitGo",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

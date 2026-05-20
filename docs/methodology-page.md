@@ -29,17 +29,17 @@
 
 | Methodology Section   | Primary Runtime Source(s)                                                                                                                                                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources.ts`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
+| Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/pricing-pipeline-version.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts`                                                                                                                                                         |
-| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/safety-score-version-data.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
-| Liquidity Score       | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts`                                                                                                                                             |
+| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score-data.ts`, `shared/lib/safety-score-version.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
+| Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/liquidity-score-version.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
 | Mint/Burn Flow        | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts`                                                                                                                     |
 | Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/yield-methodology-version.ts` |
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts`                                                                                                                                              |
 | Contagion Test        | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/blacklist-tracker-version.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chain-health.ts`, `shared/lib/chains.ts`, `shared/lib/chain-health-version.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and resilience-tier-based chain environment (tier 1 = 100, tier 2 = 60, tier 3 = 20). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
+| Chain Health Score    | `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/chain-health-version.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (report-card grades with a 40-point fallback for unrated coins once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and resilience-tier-based chain environment (tier 1 = 100, tier 2 = 60, tier 3 = 20). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
 
 ---
 
@@ -81,10 +81,55 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 For the safety-score changelog specifically, update both:
 
-1. `shared/lib/safety-score-version-data.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
+1. `shared/lib/methodology-versions/safety-score-data.ts` for the machine-readable safety-score changelog and current version exported through `shared/lib/safety-score-version.ts`.
 2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v7.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form version cards and reference tables (with `content-v6.tsx` composing from `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
 
 ---
+
+## Methodology-Context Anchors
+
+`src/lib/methodology-context.ts` deep-links from in-app tooltips and metric cards into the methodology page. The full long-form sections live under the `METHODOLOGY_SECTIONS` ids in `src/app/methodology/methodology-shared.tsx`. In addition, three single-topic sub-anchors are exposed so per-metric labels (added in the May 2026 detail-page work) can target them without re-rendering a full top-level section:
+
+Score badges across the site (Safety Score, DEWS, LiquidityScore, Redemption Backstop, Chain Health, PSI) are wrapped in `<ScoreBadgeWrapper>` (`src/components/score-badge-wrapper.tsx`), which appends the inline `vX.Y` methodology version as a small superscript and routes the badge through the unified `MethodologyHint` tooltip. Table-context badges use `variant="tooltip-only"` so rows stay clean and the column-header `<MethodologyHint>` carries the version chip.
+
+### Blacklist tracker {#blacklist-tracker}
+
+Per-coin record of issuer-led freeze, release, and destroy events drawn from on-chain freeze-ledger logs. Pharos tracks the centralized stablecoins listed in `BLACKLIST_STABLECOINS` (`shared/types/market.ts`) — assets outside that list are excluded because they lack a confirmed admin freeze surface. The supported set today covers fiat-backed majors (USDT, USDC, PYUSD, FDUSD, USD1, USDP, TUSD, RLUSD, EURC, BUIDL, etc.) plus tokenised metals (PAXG, XAUT, XAUM).
+
+The detail page renders the existing per-coin blacklist module unchanged, plus a "Recent activity" banner above the report-card section when one of two thresholds is hit over a trailing 7-day window:
+
+- `freezes + destroys >= 5`, or
+- any `destroys > 0`.
+
+The banner is feature-flagged (`NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER`, see [process/feature-flags.md](process/feature-flags.md)) and suppressed when the coin is already in `frozen` status so it does not double up with the existing frozen badge. Runtime source: `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, plus `shared/lib/blacklist-tracker-version.ts` for the versioned methodology snapshot.
+
+### Bluechip rating {#bluechip}
+
+Top-tier classification surfaced on the homepage Bluechip rail and on per-coin detail pages. A coin is rated bluechip only when it meets strict floors across safety, liquidity, and resilience simultaneously — there is no weighted blend that lets a weak factor be averaged away. The runtime gates and current eligibility cohort are documented in [bluechip-ratings.md](bluechip-ratings.md); the methodology page exposes the `#bluechip` anchor so per-card tooltips can link directly into the summary.
+
+### Proof of Reserves
+
+`StablecoinMeta.proofOfReserves` (in `shared/types/core.ts`) was extended in May 2026 with an `attestorTier` field — one of `big4` / `regional` / `niche` / `self` / `none` — paired with a `cadence` field of `daily-nav` / `real-time` / `monthly` / `quarterly` / `ad-hoc` / `none`. The combination determines the badge color and label rendered by `POR_TIER_STYLES` in `shared/lib/classification/badges.ts`:
+
+- `big4` — emerald. Independent attestation from a Big-4 firm (Deloitte, EY, KPMG, PwC).
+- `regional` — blue. Licensed regional CPA or auditor with a recognized practice.
+- `niche` — muted/neutral. Small or single-jurisdiction attestor without a wide reputation.
+- `self` — amber. Issuer-published self-attestation, no third-party signoff.
+- `none` — red. No attestation surface published.
+
+The cadence field is rendered alongside the tier badge as supporting text (e.g. "Big-4 attestor · monthly"). The methodology anchor `#proof-of-reserves` covers the tier ladder and cadence semantics; it intentionally lives under the safety-scores group rather than as a top-level section because it feeds the same Resilience / Dependency dimensions that already anchor under `#safety-scores-methodology`.
+
+## StablecoinMeta surfacing fields (May 2026)
+
+`StablecoinMeta` carries three optional editorial fields used by the detail-page hero and mechanism diagram. None of these change scoring — they only affect how a coin is presented:
+
+- `oneLiner?: string` — short editorial verdict rendered as the hero TL;DR when `NEXT_PUBLIC_PHAROS_HERO_VERDICT` is on (see [process/feature-flags.md](process/feature-flags.md)).
+- `mechanismArchetype?: MechanismArchetype` — coarse classification (e.g. `fiat-backed`, `cdp`, `delta-neutral`, etc.) used by the mechanism diagram primitives. The full enum lives in `shared/types/core.ts`.
+- `proofOfReserves.attestorTier?` and `proofOfReserves.cadence?` — see the [Proof of Reserves](#proof-of-reserves) sub-section above.
+
+## Show Your Work
+
+Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; once a user hides or shows the panel, that explicit `localStorage` preference under `pharos.show-work` wins over the URL flag until changed again. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
 
 ## Verification Shortcuts
 
@@ -98,6 +143,7 @@ For the safety-score changelog specifically, update both:
 
 ## Changelog
 
+- **v3.12** (2026-05-15): Documented the new `#blacklist-tracker`, `#bluechip`, and `#proof-of-reserves` methodology-context sub-anchors used by the May 2026 detail-page work, plus the surfacing fields (`oneLiner`, `mechanismArchetype`, `attestorTier`, `cadence`) now carried on `StablecoinMeta`.
 - **v3.11** (2026-05-11): Moved methodology markdown-export summaries and stable section ids/titles into `src/app/methodology/sections/methodology-content.ts` so markdown generation no longer imports React section modules.
 - **v3.10** (2026-03-24): Corrected the methodology route contract to include the dedicated pricing-section source file, clarified that `src/lib/methodology-context.ts` owns hard-coded methodology anchors while changelog paths come from shared version modules, and fixed the stale liquidity-discovery cadence/budget note.
 - **v3.9** (2026-03-22): Corrected the update contract so authored methodology copy points to the grouped section modules under `src/app/methodology/sections/`, not the thin `methodology-sections.tsx` composition wrapper.

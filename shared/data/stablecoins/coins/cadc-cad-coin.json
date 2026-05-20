@@ -2,6 +2,7 @@
   "id": "cadc-cad-coin",
   "name": "CAD Coin",
   "symbol": "CADC",
+  "oneLiner": "CADC is Loon's centralized Canadian dollar stablecoin, redeemable 1:1 against CAD held in trust at a FINTRAC-regulated Canadian institution.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
@@ -12,13 +13,16 @@
   },
   "collateral": "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
   "pegMechanism": "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "145",
   "detailProvider": "defillama",
   "geckoId": "cad-coin",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://dune.com/cadc/stablecoin",
-    "provider": "Loon (on-chain Dune dashboard)"
+    "provider": "Loon (on-chain Dune dashboard)",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -96,5 +100,6 @@
       "label": "CAD bank deposits",
       "risk": "very-low"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

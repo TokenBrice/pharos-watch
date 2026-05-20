@@ -47,7 +47,7 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 | CoinGecko `/simple/price` | 2 | built-in | Primary market data |
 | CoinGecko ticker | 2 | `worker/src/lib/cg-ticker.ts` | Curated ticker corroboration surface for tracked exchange pairs |
 | DefiLlama stablecoins list | 1 | built-in | Independent typed DL-list quote with explicit freshness provenance |
-| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in the per-coin stablecoin metadata assets (`shared/data/stablecoins/coins/*.json` via `shared/lib/stablecoins/index.ts`) |
+| Pyth Network Hermes | 2 | `worker/src/lib/pyth.ts` | Oracle prices with confidence intervals; coverage is driven by curated `pythFeedId` entries in the per-coin stablecoin metadata assets (`shared/data/stablecoins/coins/*.json`, loaded through `shared/lib/stablecoins/registry.ts`) |
 | Binance spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Direct CEX prices (single batch call) |
 | Kraken spot tickers | 2 | `worker/src/lib/cex-tickers.ts` | Alias-safe explicit pair mapping |
 | Bitstamp spot tickers | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue |
@@ -98,7 +98,7 @@ These rules live in `worker/src/lib/pyth.ts`, `worker/src/lib/redstone.ts`, and 
 
 After the CG/DL primary pass is applied, `syncStablecoins()` can still replace market-derived prices for specific redeemable assets when a shared authoritative-price provider exposes a better executable mark than secondary-market liquidity.
 
-The registry lives in `worker/src/lib/authoritative-price-sources.ts` and supports two capabilities:
+The registry lives under `worker/src/lib/authoritative-price-sources/` and supports two capabilities:
 
 - **Live override** — used by `syncStablecoins()` to replace the current cached price
 - **Historical replay** — used by `backfill-depegs.ts` so historical rebuilds can consult the same authoritative provider instead of drifting back to CoinGecko/DefiLlama for those assets

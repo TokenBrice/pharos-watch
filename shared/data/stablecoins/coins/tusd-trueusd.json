@@ -2,6 +2,7 @@
   "id": "tusd-trueusd",
   "name": "TrueUSD",
   "symbol": "TUSD",
+  "oneLiner": "TUSD is a centralized dollar stablecoin from Techteryx with a Chainlink Proof-of-Reserve feed, though current reserves sit in opaque First Digital Trust funds.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
+  "collateral": "Daily Moore Hong Kong / Chainlink-attested TUSD reserves, currently modeled by Pharos as concentrated in opaque First Digital Trust fund investments with a small cash-at-depository-institutions balance.",
   "pegMechanism": "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "7",
   "detailProvider": "defillama",
   "geckoId": "true-usd",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore Hong Kong / Chainlink"
+    "provider": "Moore Hong Kong / Chainlink",
+    "attestorTier": "niche",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Hong Kong",
+    "attestorLicense": "HK CPA"
   },
   "links": [
     {
@@ -123,7 +129,7 @@
     "params": {
       "porFeedAddress": "0xBE456fd14720C3aCCc30A2013Bffd782c9Cb75D5",
       "assetLabel": "USD reserves (Moore Hong Kong attested)",
-      "assetRisk": "very-low"
+      "assetRisk": "very-high"
     }
   }
 }

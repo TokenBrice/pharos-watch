@@ -2,6 +2,7 @@
   "id": "eutbl-spiko",
   "name": "Spiko EU T-Bills Money Market Fund",
   "symbol": "EUTBL",
+  "oneLiner": "EUTBL is Spiko's AMF-authorized UCITS short-term VNAV money-market fund backed by Eurozone sovereign T-bills, tokenized for KYC-gated investors.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,12 +13,17 @@
   },
   "collateral": "Short-dated Eurozone sovereign Treasury bills (issued by AAA / strong-Member-State issuers) with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
   "pegMechanism": "EUR-denominated NAV-accreting share token (ISIN FR001400ODL1) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed primarily by French and German Eurozone sovereign T-bills (and other top-rated Member-State issuers such as the Netherlands) with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a €1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "eutbl",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/",
-    "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    "provider": "Spiko (daily NAV and fund holdings disclosures)",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
   },
   "links": [
     {

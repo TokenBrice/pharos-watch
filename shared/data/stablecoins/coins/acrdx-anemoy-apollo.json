@@ -2,6 +2,7 @@
   "id": "acrdx-anemoy-apollo",
   "name": "Anemoy Tokenized Apollo Diversified Credit Fund",
   "symbol": "ACRDX",
+  "oneLiner": "ACRDX is a permissioned, NAV-accreting share token from Anemoy and Centrifuge giving on-chain access to Apollo's diversified private credit strategy.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse",
-    "provider": "Chronicle Proof of Asset"
+    "provider": "Chronicle Proof of Asset",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

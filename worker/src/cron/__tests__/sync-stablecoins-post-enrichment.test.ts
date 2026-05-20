@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
-vi.mock("@shared/lib/stablecoins", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@shared/lib/stablecoins")>();
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
   return {
     ...actual,
     TRACKED_META_BY_ID: new Map([

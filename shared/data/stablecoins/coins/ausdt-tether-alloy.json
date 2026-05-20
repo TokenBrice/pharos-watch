@@ -2,6 +2,7 @@
   "id": "ausdt-tether-alloy",
   "name": "Alloy Tether",
   "symbol": "aUSD₮",
+  "oneLiner": "aUSDT is Alloy by Tether's dollar stablecoin, minted by KYC-verified users depositing Tether Gold (XAUT) into Ethereum vaults at up to 75% LTV.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,15 @@
   },
   "collateral": "Overcollateralized Tether Gold (XAUT) deposited into the Alloy by Tether Ethereum vault; XAUT represents physical gold stored in Swiss vaults",
   "pegMechanism": "KYC-verified, whitelisted users mint aUSDT by depositing Ethereum XAUT into Alloy vaults, with positions limited by a 75% maximum mint-to-value ratio. Users return aUSDT to withdraw XAUT collateral, and whitelisted liquidators can repay aUSDT against undercollateralized positions.",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "alloy-tether",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://docs.alloy.tether.to/alloy-by-tether/alloy-by-tether-vaults",
-    "provider": "Alloy by Tether Ethereum Vault"
+    "provider": "Alloy by Tether Ethereum Vault",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

@@ -5,11 +5,11 @@
  */
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
-import { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
+import { DS_CHAIN_MAP } from "@shared/lib/chains";
 import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 
-export { DS_CHAIN_MAP } from "@shared/lib/chain-provider-registry";
+export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
 
@@ -50,6 +50,20 @@ function isDsPair(value: unknown): value is DsPair {
     && !!pair.quoteToken
     && typeof pair.quoteToken.address === "string"
     && typeof pair.quoteToken.symbol === "string";
+}
+
+function parseDexScreenerTokenPoolsResponse(data: unknown): DsPair[] | null {
+  if (Array.isArray(data)) {
+    return data.filter(isDsPair);
+  }
+  if (
+    data != null &&
+    typeof data === "object" &&
+    Array.isArray((data as { pairs?: unknown }).pairs)
+  ) {
+    return (data as { pairs: unknown[] }).pairs.filter(isDsPair);
+  }
+  return null;
 }
 
 /**
@@ -111,16 +125,25 @@ export async function fetchDsTokenPoolsWithStatus(
   // timeout here caused retries to be silently killed (the outer fired during
   // retry waits, producing an AbortError that callers swallowed as a failure).
   const res = await fetchWithRetry(url, {
-    headers: { "User-Agent": USER_AGENT },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": USER_AGENT,
+    },
     signal,
   }, maxRetries, { timeoutMs });
   if (!res?.ok) return { ok: false, pairs: [] };
 
   try {
     const data = (await res.json()) as unknown;
-    if (!Array.isArray(data)) return { ok: false, pairs: [] };
-    const pairs = data.filter(isDsPair);
-    return { ok: data.length === 0 || pairs.length > 0, pairs };
+    const parsedPairs = parseDexScreenerTokenPoolsResponse(data);
+    if (parsedPairs == null) return { ok: false, pairs: [] };
+
+    const rawCount = Array.isArray(data)
+      ? data.length
+      : Array.isArray((data as { pairs?: unknown }).pairs)
+        ? (data as { pairs: unknown[] }).pairs.length
+        : 0;
+    return { ok: rawCount === 0 || parsedPairs.length > 0, pairs: parsedPairs };
   } catch {
     return { ok: false, pairs: [] };
   }

@@ -8,6 +8,7 @@
   --nc-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   overflow-x: auto;
   overflow-y: hidden;
+  position: relative;
   overscroll-behavior-x: contain;
   border-top: 1px solid oklch(1 0 0 / 0.06);
   background: oklch(0.08 0.025 252);
@@ -31,6 +32,19 @@
 @media (min-width: 768px) {
   .nc-chart-svg {
     width: 66rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .nc-chart-viewport::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 3rem;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, oklch(0.08 0.025 252 / 0.92));
   }
 }
 

@@ -3,6 +3,7 @@ set -euo pipefail
 
 zero_sha_re='^0+$'
 main_update_seen=0
+pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   if [[ -z "${local_ref:-}" ]]; then
@@ -22,13 +23,13 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   echo "[pre-push] Running merge gate for main push range ${remote_sha}...${local_sha}..."
   if [[ "$remote_sha" =~ $zero_sha_re ]]; then
-    MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" npm run test:merge-gate
+    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" npm run test:merge-gate
   else
-    MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" npm run test:merge-gate
+    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" npm run test:merge-gate
   fi
 done
 
 if [[ "$main_update_seen" -eq 0 ]]; then
   echo "[pre-push] No main ref update detected; running merge gate against the default local range."
-  npm run test:merge-gate
+  MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" npm run test:merge-gate
 fi

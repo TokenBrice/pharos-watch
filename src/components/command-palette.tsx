@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound } from "lucide-react";
+import { Moon, Sun, FileText, Coins, Clock, Trash2, Search, Copy, BookOpen, Newspaper, KeyRound, X } from "lucide-react";
 import { useLogos } from "@/hooks/use-logos";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCommandPaletteHistory } from "@/hooks/use-command-palette-history";
@@ -289,7 +289,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search stablecoins, pages..."
-            className="h-12 w-full border-b border-border/70 bg-transparent pl-10 pr-4 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="h-14 w-full border-b border-border/70 bg-transparent pl-10 pr-14 text-base text-foreground placeholder:text-muted-foreground focus:outline-none sm:h-12 sm:pr-4"
             aria-label="Search"
             role="combobox"
             aria-expanded={flatResults.length > 0}
@@ -300,6 +300,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 : undefined
             }
           />
+          <button
+            type="button"
+            onClick={closePalette}
+            className="pharos-focus-ring absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground sm:hidden"
+            aria-label="Close command palette"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Results */}
@@ -307,11 +315,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           ref={listRef}
           id="command-palette-results"
           role="listbox"
-          className="min-h-0 flex-1 overflow-y-auto py-2 sm:max-h-[60vh] sm:flex-initial"
+          className="min-h-0 flex-1 overflow-y-auto py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:max-h-[60vh] sm:flex-initial sm:pb-2"
         >
           {query.trim() && flatResults.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No results found for &ldquo;{query}&rdquo;</p>
+              <p className="text-sm text-muted-foreground">Nothing found for &ldquo;{query}&rdquo;. Try a ticker or chain name.</p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Try searching by symbol (e.g., USDT) or browse by category
               </p>
@@ -333,7 +341,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 {group.section === "Recent" && history.length > 0 && (
                   <button
                     onClick={clearHistory}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="pharos-focus-ring -mr-2 flex min-h-11 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground sm:mr-0 sm:min-h-0 sm:px-0 sm:hover:bg-transparent"
                     title="Clear recent items"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -352,7 +360,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     role="option"
                     aria-selected={isSelected}
                     data-selected={isSelected}
-                    className={`pharos-focus-ring mx-2 flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm text-foreground transition-all duration-150 ${
+                    className={`pharos-focus-ring mx-2 flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm text-foreground transition-all duration-150 sm:min-h-0 ${
                       isSelected
                         ? "border-border/70 bg-muted/55 shadow-sm"
                         : "border-transparent hover:border-border/55 hover:bg-muted/45"
@@ -412,7 +420,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:hidden">
+          <span>Tap a result to open it.</span>
+          <button
+            type="button"
+            onClick={closePalette}
+            className="pharos-focus-ring min-h-11 rounded-md px-3 text-foreground transition-colors hover:bg-muted/45"
+          >
+            Close
+          </button>
+        </div>
+        <div className="hidden shrink-0 items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:flex">
           <span>
             <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#8593;&#8595;</kbd> navigate
           </span>

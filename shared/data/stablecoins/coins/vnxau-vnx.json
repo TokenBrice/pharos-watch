@@ -2,6 +2,7 @@
   "id": "vnxau-vnx",
   "name": "VNX Gold",
   "symbol": "VNXAU",
+  "oneLiner": "VNXAU is VNX's Liechtenstein-licensed gold token where each unit represents one gram of allocated physical gold vaulted under the FMA Blockchain Act.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -19,7 +20,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf",
-    "provider": "AREVA General Auditing and Trust Company Limited"
+    "provider": "AREVA General Auditing and Trust Company Limited",
+    "attestorTier": "niche",
+    "cadence": "ad-hoc",
+    "attestorJurisdiction": "Liechtenstein",
+    "attestorLicense": "FMA TVTG (Blockchain Act)"
   },
   "links": [
     {

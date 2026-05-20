@@ -12,6 +12,12 @@ import {
   SIX_REPORT_DOWNLOAD_URL,
   SIX_SARON_3M_CSV_URL,
   SIX_SARON_COMPOUND_RATES_REFERER_URL,
+  FRED_SONIA_CSV_URL,
+  FRED_TONA_CSV_URL,
+  FRED_AUD_CSV_URL,
+  BANXICO_CETES_28D_URL,
+  BCB_SELIC_URL,
+  BOC_CORRA_URL,
   BENCHMARK_FETCH_TIMEOUT_MS,
   BENCHMARK_FETCH_MAX_RETRIES,
 } from "../lib/constants";
@@ -28,7 +34,13 @@ import {
   type ParsedYieldBenchmarkMeta,
   type ParsedYieldBenchmarkRegistry,
 } from "./yield-sync/benchmarks";
+import {
+  ETHERFUSE_CETES_BENCHMARK_SOURCE,
+  fetchEtherfuseCetesIssuance,
+} from "./yield-sync/etherfuse-cetes";
 import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
+import type { YieldBenchmarkKey } from "@shared/types/yield";
+import type { Env } from "../lib/env";
 
 const RISK_FREE_RATES_CACHE_KEY = "risk_free_rates";
 const LEGACY_USD_RISK_FREE_RATE_CACHE_KEY = "risk_free_rate";
@@ -189,6 +201,13 @@ async function writeStructuredBenchmarks(
         USD: toCacheEntry(benchmarks.USD)!,
         EUR: toCacheEntry(benchmarks.EUR),
         CHF: toCacheEntry(benchmarks.CHF),
+        GBP: toCacheEntry(benchmarks.GBP),
+        JPY: toCacheEntry(benchmarks.JPY),
+        MXN: toCacheEntry(benchmarks.MXN),
+        BRL: toCacheEntry(benchmarks.BRL),
+        AUD: toCacheEntry(benchmarks.AUD),
+        CAD: toCacheEntry(benchmarks.CAD),
+        SGD: toCacheEntry(benchmarks.SGD),
       }),
     ),
   );
@@ -208,18 +227,20 @@ function buildRetainedBenchmark(
     previous.lastMarketSource &&
     previous.lastMarketSource !== "hardcoded-fallback"
   ) {
+    const retained = withYieldBenchmarkStaticMeta(previous.key ?? "USD", {
+      rate: previous.lastMarketRate,
+      recordDate: previous.lastMarketRecordDate,
+      fetchedAt: previous.lastMarketFetchedAt,
+      ageSeconds: previous.lastMarketFetchedAt != null
+        ? Math.max(0, Math.floor(Date.now() / 1000) - previous.lastMarketFetchedAt)
+        : null,
+      source: previous.lastMarketSource,
+      isFallback: true,
+      fallbackMode: `${fallbackMode}-retained`,
+    });
     return {
-      ...withYieldBenchmarkStaticMeta(previous.key ?? "USD", {
-        rate: previous.lastMarketRate,
-        recordDate: previous.lastMarketRecordDate,
-        fetchedAt: previous.lastMarketFetchedAt,
-        ageSeconds: previous.lastMarketFetchedAt != null
-          ? Math.max(0, Math.floor(Date.now() / 1000) - previous.lastMarketFetchedAt)
-          : null,
-        source: previous.lastMarketSource,
-        isFallback: true,
-        fallbackMode: `${fallbackMode}-retained`,
-      }),
+      ...retained,
+      isProxy: previous.isProxy,
       lastMarketRate: previous.lastMarketRate,
       lastMarketRecordDate: previous.lastMarketRecordDate,
       lastMarketFetchedAt: previous.lastMarketFetchedAt,
@@ -231,27 +252,55 @@ function buildRetainedBenchmark(
 }
 
 function buildResolvedBenchmark(params: {
-  key: "USD" | "EUR" | "CHF";
+  key: YieldBenchmarkKey;
   rate: number;
   recordDate: string;
   fetchedAt: number;
   source: string;
+  isFallback?: boolean;
+  fallbackMode?: string | null;
+  isProxy?: boolean;
 }): ParsedYieldBenchmarkMeta {
+  const resolved = withYieldBenchmarkStaticMeta(params.key, {
+    rate: params.rate,
+    recordDate: params.recordDate,
+    fetchedAt: params.fetchedAt,
+    ageSeconds: 0,
+    source: params.source,
+    isFallback: params.isFallback ?? false,
+    fallbackMode: params.fallbackMode ?? null,
+  });
   return {
-    ...withYieldBenchmarkStaticMeta(params.key, {
-      rate: params.rate,
-      recordDate: params.recordDate,
-      fetchedAt: params.fetchedAt,
-      ageSeconds: 0,
-      source: params.source,
-      isFallback: false,
-      fallbackMode: null,
-    }),
+    ...resolved,
+    isProxy: params.isProxy ?? resolved.isProxy,
     lastMarketRate: params.rate,
     lastMarketRecordDate: params.recordDate,
     lastMarketFetchedAt: params.fetchedAt,
     lastMarketSource: params.source,
   };
+}
+
+type BenchmarkFetchResult = { rate: number; recordDate: string };
+type BenchmarkProviderKey = Exclude<YieldBenchmarkKey, "USD" | "SGD">;
+type BenchmarkProviderEnvKey = keyof Pick<Env, "BANXICO_TOKEN">;
+
+interface BenchmarkProvider {
+  key: BenchmarkProviderKey;
+  fetch: (params: {
+    env?: Pick<Env, "BANXICO_TOKEN">;
+    signal?: AbortSignal;
+  }) => Promise<BenchmarkFetchResult | null>;
+  source: string;
+  fallbackMode: string;
+  requiredEnv?: BenchmarkProviderEnvKey;
+  missingEnvFallbackMode?: string;
+}
+
+interface ResolvedBenchmarkProvider {
+  key: BenchmarkProviderKey;
+  parsed: BenchmarkFetchResult | null;
+  meta: ParsedYieldBenchmarkMeta | null;
+  failureMode: string | null;
 }
 
 async function tryFredCsv(
@@ -377,25 +426,332 @@ async function trySixSar3mcCsv(signal?: AbortSignal): Promise<{ rate: number; re
   }
 }
 
-export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+/**
+ * Parse a Banxico SIE response. Shape:
+ *   { bmx: { series: [{ datos: [{ fecha: "DD/MM/YYYY", dato: "11.43" }] }] } }
+ * Dates use `DD/MM/YYYY` (Banxico) — normalize to ISO `YYYY-MM-DD`.
+ */
+export function parseBanxicoSeries(json: string): { recordDate: string; rate: number } | null {
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const bmx = parsed.bmx as Record<string, unknown> | undefined;
+    const series = (bmx?.series as Array<Record<string, unknown>> | undefined)?.[0];
+    const datos = series?.datos as Array<{ fecha?: unknown; dato?: unknown }> | undefined;
+    if (!Array.isArray(datos) || datos.length === 0) return null;
+    for (let i = datos.length - 1; i >= 0; i--) {
+      const row = datos[i];
+      const rate = parseRate(typeof row?.dato === "string" ? row.dato : null);
+      const fechaRaw = typeof row?.fecha === "string" ? row.fecha : null;
+      if (!fechaRaw || !isValidBenchmarkRate(rate)) continue;
+      const match = fechaRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) continue;
+      return { rate, recordDate: `${match[3]}-${match[2]}-${match[1]}` };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a BCB SGS response. Shape:
+ *   [{ data: "DD/MM/YYYY", valor: "12.75" }]
+ * BCB returns SELIC over as a daily rate; we treat it directly as a daily APY proxy.
+ */
+export function parseBcbSelicSeries(json: string): { recordDate: string; rate: number } | null {
+  try {
+    const parsed = JSON.parse(json) as Array<{ data?: unknown; valor?: unknown }>;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    for (let i = parsed.length - 1; i >= 0; i--) {
+      const row = parsed[i];
+      const rate = parseRate(typeof row?.valor === "string" ? row.valor : null);
+      const dataRaw = typeof row?.data === "string" ? row.data : null;
+      if (!dataRaw || !isValidBenchmarkRate(rate)) continue;
+      const match = dataRaw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!match) continue;
+      return { rate, recordDate: `${match[3]}-${match[2]}-${match[1]}` };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a Bank of Canada Valet observations response. Shape:
+ *   { observations: [{ d: "YYYY-MM-DD", V122530: { v: "4.75" } }] }
+ */
+export function parseBocValetSeries(
+  json: string,
+  seriesCode: string,
+): { recordDate: string; rate: number } | null {
+  try {
+    const parsed = JSON.parse(json) as { observations?: Array<Record<string, unknown>> };
+    const observations = parsed.observations;
+    if (!Array.isArray(observations) || observations.length === 0) return null;
+    for (let i = observations.length - 1; i >= 0; i--) {
+      const obs = observations[i];
+      const d = typeof obs?.d === "string" ? obs.d : null;
+      const cell = obs?.[seriesCode] as { v?: unknown } | undefined;
+      const rate = parseRate(typeof cell?.v === "string" ? cell.v : null);
+      if (!d || !isValidBenchmarkRate(rate)) continue;
+      return { rate, recordDate: d };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function tryBanxicoCetes(
+  banxicoToken: string | null,
+  signal?: AbortSignal,
+): Promise<{ rate: number; recordDate: string } | null> {
+  if (!banxicoToken) return null;
+  try {
+    const res = await fetchWithRetry(BANXICO_CETES_28D_URL, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "application/json",
+        "Bmx-Token": banxicoToken,
+      },
+      signal,
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+    if (!res?.ok) return null;
+    return parseBanxicoSeries(await res.text());
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] Banxico CETES failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+async function tryBcbSelic(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  try {
+    const res = await fetchWithRetry(BCB_SELIC_URL, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal,
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+    if (!res?.ok) return null;
+    return parseBcbSelicSeries(await res.text());
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] BCB SELIC failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+async function tryBocCorra(signal?: AbortSignal): Promise<{ rate: number; recordDate: string } | null> {
+  try {
+    const res = await fetchWithRetry(BOC_CORRA_URL, {
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      signal,
+    }, BENCHMARK_FETCH_MAX_RETRIES, { timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS });
+    if (!res?.ok) return null;
+    return parseBocValetSeries(await res.text(), "V122530");
+  } catch (err) {
+    console.warn(`[fetch-tbill-rate] BoC Valet CORRA failed: ${String(err).slice(0, 200)}`);
+    return null;
+  }
+}
+
+const BENCHMARK_PROVIDERS: readonly BenchmarkProvider[] = [
+  {
+    key: "EUR",
+    fetch: ({ signal }) => tryEcbCompoundedEstrCsv(signal),
+    source: "ecb-estr-3m",
+    fallbackMode: "ecb-failed",
+  },
+  {
+    key: "CHF",
+    fetch: ({ signal }) => trySixSar3mcCsv(signal),
+    source: "six-sar3mc",
+    fallbackMode: "six-saron-failed",
+  },
+  {
+    key: "GBP",
+    fetch: ({ signal }) => tryFredCsv(FRED_SONIA_CSV_URL, signal),
+    source: "fred-iudsoia",
+    fallbackMode: "fred-sonia-failed",
+  },
+  {
+    key: "JPY",
+    fetch: ({ signal }) => tryFredCsv(FRED_TONA_CSV_URL, signal),
+    source: "fred-jpy-overnight",
+    fallbackMode: "fred-jpy-failed",
+  },
+  {
+    key: "AUD",
+    fetch: ({ signal }) => tryFredCsv(FRED_AUD_CSV_URL, signal),
+    source: "fred-aud-3m",
+    fallbackMode: "fred-aud-failed",
+  },
+  {
+    key: "MXN",
+    fetch: ({ env, signal }) => tryBanxicoCetes(env?.BANXICO_TOKEN?.trim() || null, signal),
+    source: "banxico-cetes-28d",
+    fallbackMode: "banxico-cetes-failed",
+    requiredEnv: "BANXICO_TOKEN",
+    missingEnvFallbackMode: "banxico-token-missing",
+  },
+  {
+    key: "BRL",
+    fetch: ({ signal }) => tryBcbSelic(signal),
+    source: "bcb-selic",
+    fallbackMode: "bcb-selic-failed",
+  },
+  {
+    key: "CAD",
+    fetch: ({ signal }) => tryBocCorra(signal),
+    source: "boc-valet-v122530",
+    fallbackMode: "boc-corra-failed",
+  },
+] as const;
+
+const BENCHMARK_DEGRADATION_ORDER: readonly BenchmarkProviderKey[] = [
+  "EUR",
+  "CHF",
+  "GBP",
+  "JPY",
+  "MXN",
+  "BRL",
+  "AUD",
+  "CAD",
+] as const;
+
+async function resolveBenchmarkProvider(params: {
+  provider: BenchmarkProvider;
+  previous: ParsedYieldBenchmarkRegistry;
+  fetchedAt: number;
+  env?: Pick<Env, "BANXICO_TOKEN">;
+  signal?: AbortSignal;
+}): Promise<ResolvedBenchmarkProvider> {
+  const { provider, previous, fetchedAt, env, signal } = params;
+  if (provider.key === "MXN") {
+    return resolveMxnBenchmarkProvider({ previous, fetchedAt, env, signal });
+  }
+
+  const missingRequiredEnv = provider.requiredEnv ? !env?.[provider.requiredEnv]?.trim() : false;
+  const fallbackMode = missingRequiredEnv
+    ? (provider.missingEnvFallbackMode ?? provider.fallbackMode)
+    : provider.fallbackMode;
+  const parsed = missingRequiredEnv ? null : await provider.fetch({ env, signal });
+  const meta = parsed
+    ? buildResolvedBenchmark({
+      key: provider.key,
+      rate: parsed.rate,
+      recordDate: parsed.recordDate,
+      fetchedAt,
+      source: provider.source,
+    })
+    : buildRetainedBenchmark(previous[provider.key], fallbackMode);
+
+  return {
+    key: provider.key,
+    parsed,
+    meta,
+    failureMode: parsed ? null : (meta?.fallbackMode ?? fallbackMode),
+  };
+}
+
+async function resolveMxnBenchmarkProvider(params: {
+  previous: ParsedYieldBenchmarkRegistry;
+  fetchedAt: number;
+  env?: Pick<Env, "BANXICO_TOKEN">;
+  signal?: AbortSignal;
+}): Promise<ResolvedBenchmarkProvider> {
+  const { previous, fetchedAt, env, signal } = params;
+  const token = env?.BANXICO_TOKEN?.trim() || null;
+  const banxicoParsed = token ? await tryBanxicoCetes(token, signal) : null;
+  if (banxicoParsed) {
+    return {
+      key: "MXN",
+      parsed: banxicoParsed,
+      meta: buildResolvedBenchmark({
+        key: "MXN",
+        rate: banxicoParsed.rate,
+        recordDate: banxicoParsed.recordDate,
+        fetchedAt,
+        source: "banxico-cetes-28d",
+      }),
+      failureMode: null,
+    };
+  }
+
+  const baseFallbackMode = token ? "banxico-cetes-failed" : "banxico-token-missing";
+  const etherfuseIssuance = await fetchEtherfuseCetesIssuance({
+    signal,
+    timeoutMs: BENCHMARK_FETCH_TIMEOUT_MS,
+    retries: BENCHMARK_FETCH_MAX_RETRIES,
+  });
+
+  if (etherfuseIssuance && isValidBenchmarkRate(etherfuseIssuance.apyPercent)) {
+    const fallbackMode = `${baseFallbackMode}-etherfuse-stablebond`;
+    const parsed = {
+      rate: etherfuseIssuance.apyPercent,
+      recordDate: etherfuseIssuance.recordDate,
+    };
+    return {
+      key: "MXN",
+      parsed,
+      meta: buildResolvedBenchmark({
+        key: "MXN",
+        rate: parsed.rate,
+        recordDate: parsed.recordDate,
+        fetchedAt,
+        source: ETHERFUSE_CETES_BENCHMARK_SOURCE,
+        isFallback: true,
+        fallbackMode,
+        isProxy: true,
+      }),
+      failureMode: fallbackMode,
+    };
+  }
+
+  const meta = buildRetainedBenchmark(previous.MXN, baseFallbackMode);
+  return {
+    key: "MXN",
+    parsed: null,
+    meta,
+    failureMode: meta?.fallbackMode ?? baseFallbackMode,
+  };
+}
+
+export async function fetchTbillRate(
+  db: D1Database,
+  signal?: AbortSignal,
+  env?: Pick<Env, "BANXICO_TOKEN">,
+): Promise<CronResult> {
   const previous = await loadRiskFreeRateRegistry(db);
 
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
     const usdRetained = buildRetainedBenchmark(previous.USD, "circuit-open");
-    const eurRetained = buildRetainedBenchmark(previous.EUR, "circuit-open");
-    const chfRetained = buildRetainedBenchmark(previous.CHF, "circuit-open");
+    const retainedByKey: Record<Exclude<YieldBenchmarkKey, "USD">, ParsedYieldBenchmarkMeta | null> = {
+      EUR: buildRetainedBenchmark(previous.EUR, "circuit-open"),
+      CHF: buildRetainedBenchmark(previous.CHF, "circuit-open"),
+      GBP: buildRetainedBenchmark(previous.GBP, "circuit-open"),
+      JPY: buildRetainedBenchmark(previous.JPY, "circuit-open"),
+      MXN: buildRetainedBenchmark(previous.MXN, "circuit-open"),
+      BRL: buildRetainedBenchmark(previous.BRL, "circuit-open"),
+      AUD: buildRetainedBenchmark(previous.AUD, "circuit-open"),
+      CAD: buildRetainedBenchmark(previous.CAD, "circuit-open"),
+      SGD: null,
+    };
     await writeStructuredBenchmarks(db, {
       USD: usdRetained ?? buildHardcodedUsdBenchmark("circuit-open"),
-      EUR: eurRetained,
-      CHF: chfRetained,
+      ...retainedByKey,
     });
     return {
       status: "degraded",
       metadata: buildMetadata({
         fallbackMode: "circuit-open",
         usdSource: usdRetained?.source ?? "hardcoded-fallback",
-        eurSource: eurRetained?.source ?? null,
-        chfSource: chfRetained?.source ?? null,
+        eurSource: retainedByKey.EUR?.source ?? null,
+        chfSource: retainedByKey.CHF?.source ?? null,
+        gbpSource: retainedByKey.GBP?.source ?? null,
+        jpySource: retainedByKey.JPY?.source ?? null,
+        mxnSource: retainedByKey.MXN?.source ?? null,
+        brlSource: retainedByKey.BRL?.source ?? null,
+        audSource: retainedByKey.AUD?.source ?? null,
+        cadSource: retainedByKey.CAD?.source ?? null,
       }),
     };
   }
@@ -421,45 +777,57 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
     await recordOutcome(db, CIRCUIT_SOURCE.TREASURY_RATES, false);
   }
 
-  const eurParsed = await tryEcbCompoundedEstrCsv(signal);
-  const eurSource = eurParsed ? "ecb-estr-3m" : null;
-  const eurMeta = eurParsed && eurSource
-    ? buildResolvedBenchmark({
-      key: "EUR",
-      rate: eurParsed.rate,
-      recordDate: eurParsed.recordDate,
+  const resolvedProviders: ResolvedBenchmarkProvider[] = [];
+  for (const provider of BENCHMARK_PROVIDERS) {
+    resolvedProviders.push(await resolveBenchmarkProvider({
+      provider,
+      previous,
       fetchedAt,
-      source: eurSource,
-    })
-    : buildRetainedBenchmark(previous.EUR, "ecb-failed");
+      env,
+      signal,
+    }));
+  }
+  const resolvedByKey = Object.fromEntries(
+    resolvedProviders.map((entry) => [entry.key, entry]),
+  ) as Record<BenchmarkProviderKey, ResolvedBenchmarkProvider>;
 
-  const chfParsed = await trySixSar3mcCsv(signal);
-  const chfMeta = chfParsed
-    ? buildResolvedBenchmark({
-      key: "CHF",
-      rate: chfParsed.rate,
-      recordDate: chfParsed.recordDate,
-      fetchedAt,
-      source: "six-sar3mc",
-    })
-    : buildRetainedBenchmark(previous.CHF, "six-saron-failed");
+  const eurMeta = resolvedByKey.EUR.meta;
+  const chfMeta = resolvedByKey.CHF.meta;
+  const gbpMeta = resolvedByKey.GBP.meta;
+  const jpyMeta = resolvedByKey.JPY.meta;
+  const mxnMeta = resolvedByKey.MXN.meta;
+  const brlMeta = resolvedByKey.BRL.meta;
+  const audMeta = resolvedByKey.AUD.meta;
+  const cadMeta = resolvedByKey.CAD.meta;
+
+  // SGD: TODO — no stable public SORA endpoint identified yet; SGD pegs fall back to USD.
+  const sgdMeta: ParsedYieldBenchmarkMeta | null = null;
 
   await writeStructuredBenchmarks(db, {
     USD: usdMeta,
     EUR: eurMeta,
     CHF: chfMeta,
+    GBP: gbpMeta,
+    JPY: jpyMeta,
+    MXN: mxnMeta,
+    BRL: brlMeta,
+    AUD: audMeta,
+    CAD: cadMeta,
+    SGD: sgdMeta,
   });
 
-  const eurFailureMode = eurParsed ? null : (eurMeta?.fallbackMode ?? "ecb-failed");
-  const chfFailureMode = chfParsed ? null : (chfMeta?.fallbackMode ?? "six-saron-failed");
   const degradationReasons: string[] = [];
   if (usdMeta.isFallback) degradationReasons.push(`usd:${usdMeta.fallbackMode}`);
-  if (eurFailureMode) degradationReasons.push(`eur:${eurFailureMode}`);
-  if (chfFailureMode) degradationReasons.push(`chf:${chfFailureMode}`);
+  for (const key of BENCHMARK_DEGRADATION_ORDER) {
+    const failureMode = resolvedByKey[key].failureMode;
+    if (failureMode) degradationReasons.push(`${key.toLowerCase()}:${failureMode}`);
+  }
 
   return {
     status: degradationReasons.length > 0 ? "degraded" : "ok",
-    itemCount: [usdMeta, eurMeta, chfMeta].filter((entry) => entry != null).length,
+    itemCount: [usdMeta, eurMeta, chfMeta, gbpMeta, jpyMeta, mxnMeta, brlMeta, audMeta, cadMeta]
+      .filter((entry) => entry != null)
+      .length,
     metadata: buildMetadata({
       fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
       usdSource: usdMeta.source,
@@ -471,6 +839,24 @@ export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Prom
       chfSource: chfMeta?.source ?? null,
       chfRate: chfMeta?.rate ?? null,
       chfRecordDate: chfMeta?.recordDate ?? null,
+      gbpSource: gbpMeta?.source ?? null,
+      gbpRate: gbpMeta?.rate ?? null,
+      gbpRecordDate: gbpMeta?.recordDate ?? null,
+      jpySource: jpyMeta?.source ?? null,
+      jpyRate: jpyMeta?.rate ?? null,
+      jpyRecordDate: jpyMeta?.recordDate ?? null,
+      mxnSource: mxnMeta?.source ?? null,
+      mxnRate: mxnMeta?.rate ?? null,
+      mxnRecordDate: mxnMeta?.recordDate ?? null,
+      brlSource: brlMeta?.source ?? null,
+      brlRate: brlMeta?.rate ?? null,
+      brlRecordDate: brlMeta?.recordDate ?? null,
+      audSource: audMeta?.source ?? null,
+      audRate: audMeta?.rate ?? null,
+      audRecordDate: audMeta?.recordDate ?? null,
+      cadSource: cadMeta?.source ?? null,
+      cadRate: cadMeta?.rate ?? null,
+      cadRecordDate: cadMeta?.recordDate ?? null,
     }),
   };
 }

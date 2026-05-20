@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleStressSignals } from "../stress-signals";
 import {
   StressSignalsAllResponseSchema,

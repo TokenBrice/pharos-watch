@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { makeAsset, makeReportCardsDb } from "../../api/__tests__/helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { handleReportCards } from "../../api/report-cards";
 import { buildReportCardsSnapshot, ReportCardsSnapshotUnavailableError } from "../report-cards-snapshot";
 import { RedemptionBackstopSnapshotUnavailableError } from "../redemption-backstops-store";

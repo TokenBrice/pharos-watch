@@ -1,12 +1,20 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Rss } from "lucide-react";
 import { CATEGORY_LINKS } from "@/lib/constants";
+import { TrustStrip } from "@/components/trust-strip";
 
 interface FooterLink {
   href: string;
   label: string;
   external?: boolean;
 }
+
+const FEED_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/feed/digest.xml", label: "Digest" },
+  { href: "/feed/depeg.xml", label: "Depeg events" },
+  { href: "/feed/methodology.xml", label: "Methodology" },
+  { href: "/feed/cemetery.xml", label: "Cemetery" },
+];
 
 const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/", label: "Dashboard" },
@@ -21,6 +29,7 @@ const FOOTER_PRIMARY_LINKS: readonly FooterLink[] = [
   { href: "/funding/", label: "Funding" },
   { href: "/api/", label: "API" },
   { href: "/about/", label: "About" },
+  { href: "/about/principles/", label: "Principles" },
   { href: "https://pharosville.pharos.watch/", label: "PharosVille", external: true },
 ];
 
@@ -28,6 +37,27 @@ export function Footer() {
   return (
     <footer className="border-t border-border/70 py-8 sm:py-10">
       <div className="container mx-auto space-y-6 px-4 pb-[var(--mobile-utility-safe-offset,0px)] sm:pb-0">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <TrustStrip />
+          <nav
+            aria-label="Feeds"
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:ml-auto"
+          >
+            <span className="inline-flex items-center gap-1 text-foreground/80">
+              <Rss className="h-3 w-3" aria-hidden="true" />
+              <span className="pharos-kicker">Subscribe</span>
+            </span>
+            {FEED_LINKS.map((feed) => (
+              <Link
+                key={feed.href}
+                href={feed.href}
+                className="pharos-focus-ring rounded-sm hover:text-foreground hover:underline hover:underline-offset-4"
+              >
+                {feed.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
           <div className="min-w-0 space-y-2 lg:pr-6">
             <p className="pharos-kicker">Watching The Peg</p>
@@ -81,7 +111,7 @@ export function Footer() {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="pharos-focus-ring inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4"
+                className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline hover:underline-offset-4 sm:min-h-0 sm:py-0"
               >
                 {link.label}
                 <ArrowUpRight className="h-3 w-3 text-muted-foreground/70" aria-hidden="true" />
@@ -99,7 +129,7 @@ export function Footer() {
         </nav>
 
         <details className="sm:hidden">
-          <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground transition-colors">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground">
             Browse stablecoins by category
           </summary>
           <nav

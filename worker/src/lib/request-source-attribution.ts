@@ -1,9 +1,10 @@
 import {
   REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
   REQUEST_ATTRIBUTION_RETENTION_DAYS,
+  createBufferedAttributionRecorder,
   type ApiRequestRouteMetric,
+  type BufferedAttributionEntry,
 } from "@shared/lib/request-attribution";
-import { IsolateLocalState } from "./isolate-local-state";
 import type {
   ApiRequestAttributionApiKeyStat,
   ApiRequestAttributionKeyedPublicApiSummary,
@@ -17,113 +18,25 @@ import type {
   ApiRequestWorkerLane,
 } from "@shared/types";
 
+export { isRequestSourceAttributionDisabled } from "@shared/lib/request-attribution";
+
 export const API_REQUEST_SOURCE_STATS_RETENTION_DAYS = REQUEST_ATTRIBUTION_RETENTION_DAYS;
 const API_REQUEST_SOURCE_STATS_RETENTION_SEC = API_REQUEST_SOURCE_STATS_RETENTION_DAYS * 24 * 60 * 60;
 const REQUEST_ATTRIBUTION_FLUSH_DELAY_MS = 10;
 const REQUEST_ATTRIBUTION_BATCH_SIZE = 50;
-const REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV = "REQUEST_SOURCE_ATTRIBUTION_DISABLED";
 const API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV = "API_KEY_REQUEST_ATTRIBUTION_DISABLED";
 
-interface BufferedWorkerRequestAttribution {
-  bucketStart: number;
-  route: ApiRequestRouteMetric;
+interface BufferedWorkerRequestAttribution extends BufferedAttributionEntry {
   lane: ApiRequestWorkerLane;
   consumerClass: ApiRequestConsumerClass;
-  requestCount: number;
 }
 
-const _rsa = new IsolateLocalState(() => ({
-  lastApiRequestSourcePruneBucket: null as number | null,
-  pendingApiRequestSourcePrune: null as Promise<void> | null,
-  bufferedWorkerRequestAttribution: new Map<string, BufferedWorkerRequestAttribution>(),
-  pendingWorkerRequestAttributionFlush: null as Promise<void> | null,
-}));
-
-export function resetRequestAttributionStateForTests(): void {
-  _rsa.reset();
-}
-
-export function isRequestSourceAttributionDisabled(env: unknown): boolean {
-  const value = (env as Record<string, unknown> | null | undefined)?.[REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV];
-  if (typeof value !== "string") return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
-  const value = (env as Record<string, unknown> | null | undefined)?.[API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV];
-  if (typeof value !== "string") return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
-
-async function maybePruneRequestAttributionStats(
-  db: D1Database,
-  nowSec: number,
-): Promise<void> {
-  const pruneBucket = nowSec - (nowSec % REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC);
-  if (_rsa.state.lastApiRequestSourcePruneBucket !== pruneBucket && !_rsa.state.pendingApiRequestSourcePrune) {
-    _rsa.state.lastApiRequestSourcePruneBucket = pruneBucket;
-    const prunePromise = Promise.all([
-      db.prepare("DELETE FROM api_request_consumer_stats WHERE bucket_start < ?")
-        .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
-        .run(),
-      db.prepare("DELETE FROM api_key_request_stats WHERE bucket_start < ?")
-        .bind(nowSec - API_REQUEST_SOURCE_STATS_RETENTION_SEC)
-        .run(),
-    ])
-      .then(() => {})
-      .catch((error) => {
-        console.warn("[request-attribution] worker prune failed:", error);
-      })
-      .finally(() => {
-        if (_rsa.state.pendingApiRequestSourcePrune === prunePromise) {
-          _rsa.state.pendingApiRequestSourcePrune = null;
-        }
-      });
-    _rsa.state.pendingApiRequestSourcePrune = prunePromise;
-  }
-
-  if (_rsa.state.pendingApiRequestSourcePrune) {
-    await _rsa.state.pendingApiRequestSourcePrune;
-  }
-}
-
-export async function recordWorkerRequestAttribution(
-  db: D1Database,
-  route: ApiRequestRouteMetric,
-  lane: ApiRequestWorkerLane,
-  consumerClass: ApiRequestConsumerClass,
-  nowSec = Math.floor(Date.now() / 1000),
-): Promise<void> {
-  const bucketStart = nowSec - (nowSec % 60);
-  const key = `${bucketStart}\t${route.routeKey}\t${lane}\t${consumerClass}`;
-  const buffered = _rsa.state.bufferedWorkerRequestAttribution.get(key);
-  if (buffered) {
-    buffered.requestCount += 1;
-    buffered.route = route;
-  } else {
-    _rsa.state.bufferedWorkerRequestAttribution.set(key, {
-      bucketStart,
-      route,
-      lane,
-      consumerClass,
-      requestCount: 1,
-    });
-  }
-
-  await scheduleWorkerRequestAttributionFlush(db, nowSec);
-}
-
-async function flushBufferedWorkerRequestAttribution(db: D1Database, nowSec: number): Promise<void> {
-  while (_rsa.state.bufferedWorkerRequestAttribution.size > 0) {
-    const entries = Array.from(_rsa.state.bufferedWorkerRequestAttribution.values());
-    _rsa.state.bufferedWorkerRequestAttribution.clear();
-
-    for (let index = 0; index < entries.length; index += REQUEST_ATTRIBUTION_BATCH_SIZE) {
-      const chunk = entries.slice(index, index + REQUEST_ATTRIBUTION_BATCH_SIZE);
-      await db.batch(chunk.map((entry) => db.prepare(
-        `INSERT INTO api_request_consumer_stats (
+const workerRequestRecorder = createBufferedAttributionRecorder<BufferedWorkerRequestAttribution, D1Database>({
+  batchSize: REQUEST_ATTRIBUTION_BATCH_SIZE,
+  flushDelayMs: REQUEST_ATTRIBUTION_FLUSH_DELAY_MS,
+  pruneIntervalSec: REQUEST_ATTRIBUTION_PRUNE_INTERVAL_SEC,
+  retentionSec: API_REQUEST_SOURCE_STATS_RETENTION_SEC,
+  insertSql: `INSERT INTO api_request_consumer_stats (
            bucket_start,
            route_key,
            route_path,
@@ -136,43 +49,56 @@ async function flushBufferedWorkerRequestAttribution(db: D1Database, nowSec: num
          DO UPDATE SET
            request_count = request_count + excluded.request_count,
            route_path = excluded.route_path`,
-      )
-        .bind(
-          entry.bucketStart,
-          entry.route.routeKey,
-          entry.route.routePath,
-          entry.lane,
-          entry.consumerClass,
-          entry.requestCount,
-        )));
-    }
-  }
+  pruneSql: [
+    "DELETE FROM api_request_consumer_stats WHERE bucket_start < ?",
+    "DELETE FROM api_key_request_stats WHERE bucket_start < ?",
+  ],
+  logLabel: "worker",
+  buildKey: (entry) => `${entry.bucketStart}\t${entry.route.routeKey}\t${entry.lane}\t${entry.consumerClass}`,
+  bindInsertParams: (entry) => [
+    entry.bucketStart,
+    entry.route.routeKey,
+    entry.route.routePath,
+    entry.lane,
+    entry.consumerClass,
+    entry.requestCount,
+  ],
+  mergeBuffered: (existing, incoming) => {
+    existing.requestCount += incoming.requestCount;
+    existing.route = incoming.route;
+  },
+});
 
-  await maybePruneRequestAttributionStats(db, nowSec);
+export function resetRequestAttributionStateForTests(): void {
+  workerRequestRecorder.reset();
 }
 
-function scheduleWorkerRequestAttributionFlush(db: D1Database, nowSec: number): Promise<void> {
-  if (_rsa.state.pendingWorkerRequestAttributionFlush) {
-    return _rsa.state.pendingWorkerRequestAttributionFlush;
-  }
+export function isApiKeyRequestAttributionDisabled(env: unknown): boolean {
+  const value = (env as Record<string, unknown> | null | undefined)?.[API_KEY_REQUEST_ATTRIBUTION_DISABLED_ENV];
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
+}
 
-  const flushPromise = new Promise<void>((resolve) => {
-    setTimeout(resolve, REQUEST_ATTRIBUTION_FLUSH_DELAY_MS);
-  })
-    .then(() => flushBufferedWorkerRequestAttribution(db, nowSec))
-    .catch((error) => {
-      console.warn("[request-attribution] worker attribution flush failed:", error);
-    })
-    .finally(() => {
-      if (_rsa.state.pendingWorkerRequestAttributionFlush === flushPromise) {
-        _rsa.state.pendingWorkerRequestAttributionFlush = null;
-      }
-      if (_rsa.state.bufferedWorkerRequestAttribution.size > 0 && !_rsa.state.pendingWorkerRequestAttributionFlush) {
-        _rsa.state.pendingWorkerRequestAttributionFlush = scheduleWorkerRequestAttributionFlush(db, Math.floor(Date.now() / 1000));
-      }
-    });
-  _rsa.state.pendingWorkerRequestAttributionFlush = flushPromise;
-  return flushPromise;
+export async function recordWorkerRequestAttribution(
+  db: D1Database,
+  route: ApiRequestRouteMetric,
+  lane: ApiRequestWorkerLane,
+  consumerClass: ApiRequestConsumerClass,
+  nowSec = Math.floor(Date.now() / 1000),
+): Promise<void> {
+  const bucketStart = nowSec - (nowSec % 60);
+  await workerRequestRecorder.record(
+    db,
+    {
+      bucketStart,
+      route,
+      lane,
+      consumerClass,
+      requestCount: 1,
+    },
+    nowSec,
+  );
 }
 
 export async function recordApiKeyRequestAttribution(
@@ -194,7 +120,7 @@ export async function recordApiKeyRequestAttribution(
     .bind(apiKeyId, bucketStart)
     .run();
 
-  await maybePruneRequestAttributionStats(db, nowSec);
+  await workerRequestRecorder.maybePrune(db, nowSec);
 }
 
 function roundPct(value: number): number {

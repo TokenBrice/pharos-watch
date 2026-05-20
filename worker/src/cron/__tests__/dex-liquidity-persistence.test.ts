@@ -4,7 +4,7 @@ vi.mock("../../lib/db", () => ({
   batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
 }));
 
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import { initMetrics } from "../dex-liquidity/pool-helpers";

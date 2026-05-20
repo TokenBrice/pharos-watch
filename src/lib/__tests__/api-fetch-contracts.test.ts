@@ -16,8 +16,15 @@ import {
   SchemaValidationError,
 } from "../api";
 
+const ORIGINAL_FORCE_SITE_DATA_PROXY = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+
 describe("api contract validation policy", () => {
   afterEach(() => {
+    if (ORIGINAL_FORCE_SITE_DATA_PROXY === undefined) {
+      delete process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY;
+    } else {
+      process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = ORIGINAL_FORCE_SITE_DATA_PROXY;
+    }
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -233,6 +240,16 @@ describe("api contract validation policy", () => {
     expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
     expect(buildRequestUrl("/api/public-status-history")).toBe("/_site-data/public-status-history");
     expect(buildRequestUrl("/api/telegram-pulse")).toBe("/_site-data/telegram-pulse");
+  });
+
+  it("can force same-origin site-data routing for local static-export smoke builds", () => {
+    process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY = "true";
+    vi.stubGlobal("window", { location: { hostname: "127.0.0.1" } });
+
+    expect(buildRequestUrl("/api/stablecoins")).toBe("/_site-data/stablecoins");
+    expect(buildRequestUrl("/api/public-status-history?limit=10")).toBe("/_site-data/public-status-history?limit=10");
+    expect(buildRequestUrl("/api/api-key-requests", { method: "POST" })).toBe("/api/api-key-requests");
+    expect(buildRequestUrl("/api/og/stablecoin/usdt-tether")).toBe("/api/og/stablecoin/usdt-tether");
   });
 
   it("keeps browser public POST and non-site-data GET routes off the site-data proxy", () => {

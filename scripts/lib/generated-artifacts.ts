@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- build/check scripts operate on explicit repo-local generated artifact paths. */
-
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 

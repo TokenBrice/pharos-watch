@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeYieldHistoryRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
@@ -607,6 +607,50 @@ describe("handleYieldHistory", () => {
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
     expect(historyQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
     expect(historyQuery?.binds[2]).toBe(publishedAt);
+  });
+
+  it("exposes pysAtPublish / safetyAtPublish / varianceAtPublish snapshot fields on history points", async () => {
+    const snapshotRow = makeYieldHistoryRow({
+      pys_at_publish: 73.5,
+      safety_at_publish: 81,
+      variance_at_publish: 0.18,
+    });
+    const db = mockD1([{ match: "yield_history", rows: [snapshotRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      history: Array<{
+        pysAtPublish?: number | null;
+        safetyAtPublish?: number | null;
+        varianceAtPublish?: number | null;
+      }>;
+    };
+    expect(body.history[0]?.pysAtPublish).toBe(73.5);
+    expect(body.history[0]?.safetyAtPublish).toBe(81);
+    expect(body.history[0]?.varianceAtPublish).toBe(0.18);
+  });
+
+  it("returns nullable snapshot fields when not yet populated", async () => {
+    const legacyRow = makeYieldHistoryRow({
+      pys_at_publish: null,
+      safety_at_publish: null,
+      variance_at_publish: null,
+    });
+    const db = mockD1([{ match: "yield_history", rows: [legacyRow] }]);
+
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      history: Array<{
+        pysAtPublish?: number | null;
+        safetyAtPublish?: number | null;
+        varianceAtPublish?: number | null;
+      }>;
+    };
+    expect(body.history[0]?.pysAtPublish).toBeNull();
+    expect(body.history[0]?.safetyAtPublish).toBeNull();
+    expect(body.history[0]?.varianceAtPublish).toBeNull();
   });
 
   it("surfaces a warning and uses cache metadata when the cron timestamp lookup fails", async () => {

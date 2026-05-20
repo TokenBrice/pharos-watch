@@ -2,16 +2,18 @@
   "id": "wemix-dollar-wemix",
   "name": "WEMIX Dollar",
   "symbol": "WEMIX$",
+  "oneLiner": "WEMIX Dollar is the WEMIX ecosystem's centralized dollar token, backed by USDC and fiat reserve assets on the non-EVM-indexed WEMIX chain.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
-  "collateral": "WEMIX ecosystem reserve assets and issuer-managed liquidity on WEMIX chain",
-  "pegMechanism": "WEMIX ecosystem dollar token with issuer-controlled reserve and liquidity management",
+  "collateral": "USDC and fiat reserve assets held for WEMIX Dollar on WEMIX3.0; issuer materials describe full collateralization by secure on-chain and off-chain assets.",
+  "pegMechanism": "Issuer-managed mint and redemption system using WEMIX$ treasury collateral, DIOS stabilization, and USDC/fiat reserve management to keep WEMIX$ near one U.S. dollar.",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "wemix-dollar",
   "protocolSlug": "wemix",
@@ -29,6 +31,9 @@
       "url": "https://docs.wemix.com/"
     }
   ],
+  "jurisdiction": {
+    "country": "Singapore"
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
@@ -40,9 +45,10 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "WEMIX ecosystem reserve assets",
+      "name": "USDC and fiat reserve assets",
       "pct": 100,
-      "risk": "high"
+      "risk": "low",
+      "coinId": "usdc-circle"
     }
   ],
   "notices": [
@@ -50,6 +56,13 @@
       "type": "info",
       "title": "Non-indexed issuance chain",
       "message": "WEMIX Dollar primarily circulates on WEMIX chain, which is not EVM-indexed by Pharos. No on-chain contract is stored; supply and metadata are supplemented by external sources only."
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "type": "collateral",
+      "weight": 1
     }
   ]
 }

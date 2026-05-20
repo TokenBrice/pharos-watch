@@ -42,8 +42,9 @@ export interface ChainlinkNavParams {
   assetRisk: ReserveSlice["risk"];
   /** "latestRoundData" (default) = standard AggregatorV3Interface;
    *  "getPrice" = Ondo-style oracle returning a single uint256 with 18 decimals.
+   *  "getPriceData" = Ondo-style oracle returning uint256 price + uint256 timestamp.
    *  "getAssetPrice" = Ondo oracle router returning a token-scoped uint256 with 18 decimals. */
-  oracleMethod?: "latestRoundData" | "getPrice" | "getAssetPrice";
+  oracleMethod?: "latestRoundData" | "getPrice" | "getPriceData" | "getAssetPrice";
   rpcUrl?: string;
   fallbackRpcUrl?: string;
   maxOracleAgeSec?: number;
@@ -195,6 +196,21 @@ export async function fetchChainlinkNavCore(
       "oracle-freshness-unverified",
       "chainlink-nav getPrice() mode does not expose an oracle update timestamp",
     ));
+  } else if (method === "getPriceData") {
+    const rawPriceData = await fetchOnchainRawCall({
+      ...oracleCallBase,
+      data: GET_PRICE_DATA_SELECTOR,
+    });
+    if (rawPriceData == null) {
+      throw new Error("chainlink-nav: getPriceData() call failed");
+    }
+
+    const parsed = parseOndoPriceData(rawPriceData);
+    navPerToken = parsed.price;
+    navDecimals = 18;
+    roundId = 0n;
+    updatedAt = parsed.updatedAt;
+    oracleTimestampSource = "ondo-price-data";
   } else if (method === "getAssetPrice") {
     const rawPrice = await fetchOnchainUint256({
       ...oracleCallBase,

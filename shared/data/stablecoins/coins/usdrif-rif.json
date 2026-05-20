@@ -2,6 +2,7 @@
   "id": "usdrif-rif",
   "name": "RIF US Dollar",
   "symbol": "USDRIF",
+  "oneLiner": "USDRIF is RIF On Chain's dollar token on Rootstock, minted against RIF token collateral via overcollateralized CDP-style positions.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "RIF tokens locked in the RIF On Chain protocol on Rootstock",
   "pegMechanism": "USDRIF is minted against RIF collateral and can be redeemed for the same dollar value in RIF through the protocol, with smart-contract rules and scheduled settlement supporting the peg",
+  "mechanismArchetype": "cdp",
   "llamaId": "159",
   "detailProvider": "defillama",
   "geckoId": "rif-us-dollar",
@@ -22,7 +24,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+      "url": "https://docs.moneyonchain.com/rdoc-contract/integration-with-roc-platform/introduction-to-roc"
     },
     {
       "label": "Dapp",
@@ -33,6 +35,11 @@
     {
       "chain": "rootstock",
       "address": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
       "decimals": 18
     }
   ],

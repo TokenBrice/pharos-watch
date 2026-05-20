@@ -1,4 +1,4 @@
-import type { PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
+import type { ContractDeployment, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 
 export interface PrimaryPriceResult {
   price: number;
@@ -46,6 +46,7 @@ export interface PeggedAsset {
   circulatingPrevWeek?: Record<string, number> | null;
   circulatingPrevMonth?: Record<string, number> | null;
   chains?: string[];
+  contracts?: ContractDeployment[];
   chainCirculating?: Record<string, Record<string, unknown>>;
   consensusSources?: string[];
   agreeSources?: string[];

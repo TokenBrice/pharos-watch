@@ -18,6 +18,10 @@ inputs:
     description: Whether to run npm ci after setup.
     required: false
     default: "true"
+  install-playwright-chromium:
+    description: Whether to install the Playwright Chromium browser after npm dependencies are installed.
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -51,11 +55,12 @@ runs:
         echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"
 
     - if: ${{ inputs.tooling-cache == 'true' }}
-      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           .next/cache
           .cache/eslint
+          ~/.cache/ms-playwright
           *.tsbuildinfo
           worker/*.tsbuildinfo
         key: tooling-cache-${{ runner.os }}-${{ steps.tooling-cache-key.outputs.node-key }}-${{ hashFiles('package-lock.json', 'next.config.ts', 'tsconfig.json', 'tsconfig.typecheck.json', 'worker/tsconfig.json') }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -67,3 +72,7 @@ runs:
     - if: ${{ inputs.install-deps == 'true' }}
       shell: bash
       run: npm ci
+
+    - if: ${{ inputs.install-playwright-chromium == 'true' }}
+      shell: bash
+      run: npx --no-install playwright install --with-deps chromium

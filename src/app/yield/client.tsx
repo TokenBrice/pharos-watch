@@ -2,97 +2,36 @@
 
 import { useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useLogos } from "@/hooks/use-logos";
+import { useYieldWatchlist } from "@/hooks/use-yield-watchlist";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
+import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { YieldSourceBoard } from "@/app/yield/source-board";
 import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
-import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
-import { buildYieldViewModel, type YieldViewModel } from "@/lib/yield-view-model";
+import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
+import { YieldCoinIndex } from "@/app/yield/coin-index";
+import {
+  buildYieldViewModel,
+  getActiveFilterSummaries,
+  YIELD_PRESET_SPECS,
+  YIELD_RISK_BUDGET_SPECS,
+  type YieldPresetKey,
+  type YieldRiskBudgetKey,
+  type YieldViewModel,
+} from "@/lib/yield-view-model";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { formatPercent } from "@shared/lib/format";
+import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
-import type { YieldRankingsResponse } from "@shared/types";
-
-interface YieldScatterCardProps {
-  data: YieldRankingsResponse;
-  logos: Record<string, string> | undefined;
-  rows: YieldViewModel["visibleRows"];
-  stats: YieldViewModel["stats"];
-  headingId: string;
-  onDotClick: (id: string) => void;
-}
-
-function YieldScatterCard({ data, logos, rows, stats, headingId, onDotClick }: YieldScatterCardProps) {
-  return (
-    <Card className="rounded-2xl border-border/70 bg-card/80">
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <h2 id={headingId} className="text-xl font-semibold">
-              Yield vs Safety
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-prose">
-              {stats.hasMixedBenchmarks
-                ? "Each logo marks a stablecoin. Mixed views keep the USD frame for orientation, while each row still carries its local benchmark context."
-                : "Each logo marks a stablecoin. Click a point to open the detail page."}
-            </p>
-          </div>
-          <div className="flex animate-fade-in flex-wrap items-start gap-x-6 gap-y-2 sm:shrink-0 sm:text-right">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Avg Yield</p>
-              <p className="text-lg font-bold font-mono tabular-nums leading-tight">{formatPercent(stats.avgApy)}</p>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {stats.usesDefaultBenchmarkFrame ? "Frame (USD)" : "Benchmark"}
-              </p>
-              <p className="text-lg font-bold font-mono tabular-nums leading-tight">
-                {formatPercent(stats.referenceBenchmark?.rate ?? data.riskFreeRate)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {stats.referenceBenchmark
-                  ? getYieldBenchmarkDisplayLabel({
-                    benchmarkLabel: stats.referenceBenchmark.label,
-                    benchmarkIsFallback: stats.referenceBenchmark.isFallback,
-                  })
-                  : "USD default"}
-              </p>
-            </div>
-            {stats.bestPys ? (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Best PYS</p>
-                <p className="text-lg font-bold leading-tight">{stats.bestPys.symbol}</p>
-                <p className="text-[10px] font-mono text-muted-foreground tabular-nums">PYS {stats.bestPys.score.toFixed(1)}</p>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <YieldScatterPlot
-          rankings={rows}
-          benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
-          benchmarkLabel={stats.referenceBenchmark?.label}
-          benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
-          showBenchmarkReference
-          usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
-          logos={logos}
-          onDotClick={onDotClick}
-        />
-      </CardContent>
-    </Card>
-  );
-}
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
 
 export function YieldClient() {
   const { data, meta, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
@@ -101,6 +40,7 @@ export function YieldClient() {
   const router = useRouter();
 
   const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
+  const watchlist = useYieldWatchlist();
   const urlParams = useMemo(
     () => ({
       peg: searchParams.get("peg"),
@@ -114,6 +54,8 @@ export function YieldClient() {
       opportunity: searchParams.get("opportunity"),
       depth: searchParams.get("depth"),
       sourceChanged: searchParams.get("sourceChanged"),
+      trending: searchParams.get("trending"),
+      watchlist: searchParams.get("watchlist"),
     }),
     [searchParams],
   );
@@ -121,10 +63,41 @@ export function YieldClient() {
     () => buildYieldViewModel(rankings, urlParams, {
       benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
       fallbackBenchmark: data?.provenance?.benchmark ?? null,
+      watchlistIds: watchlist.ids,
     }),
-    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams],
+    [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, rankings, urlParams, watchlist.ids],
   );
   const visibleRows = viewModel.visibleRows;
+  const storyCallouts = useMemo(() => {
+    if (visibleRows.length === 0) return null;
+
+    const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+
+    const topYield = [...visibleRows].sort(
+      (a, b) => b.apy30d - a.apy30d || byId(a, b),
+    )[0] ?? null;
+
+    const stableAplusRows = visibleRows
+      .filter((r) => (r.safetyGrade === "A+" || r.safetyGrade === "A") && r.apy30d > 0)
+      .sort((a, b) => {
+        const sa = a.yieldStability ?? -1;
+        const sb = b.yieldStability ?? -1;
+        return sb - sa || b.apy30d - a.apy30d || byId(a, b);
+      });
+    const mostStable = stableAplusRows[0] ?? null;
+
+    const largestMarket = [...visibleRows]
+      .filter((r) => (r.sourceTvlUsd ?? 0) > 0)
+      .sort((a, b) => (b.sourceTvlUsd ?? 0) - (a.sourceTvlUsd ?? 0) || byId(a, b))[0] ?? null;
+
+    return { topYield, mostStable, largestMarket };
+  }, [visibleRows]);
+
+  const handleScrollToRow = useCallback((id: string) => {
+    const el = document.getElementById(`yield-row-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
   const sourceBoardModel = useMemo(
     () => buildYieldSourceBoardModel(visibleRows, {
       benchmarks: data?.benchmarks ?? data?.provenance?.benchmarks ?? null,
@@ -132,6 +105,19 @@ export function YieldClient() {
     }),
     [data?.benchmarks, data?.provenance?.benchmark, data?.provenance?.benchmarks, visibleRows],
   );
+
+  // Counts the full /yield ranking universe per peg currency (not filter-
+  // aware), so the reference-rates table can show how many tracked coins
+  // each benchmark currency covers.
+  const currencyCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const option of viewModel.options.peg) {
+      if (option.value === "all" || option.value === "non-usd"
+        || option.value === "aud-cad" || option.value === "other") continue;
+      counts[option.value] = option.count;
+    }
+    return counts;
+  }, [viewModel.options.peg]);
 
   useEffect(() => {
     if (viewModel.invalidParamKeys.length === 0) return;
@@ -156,6 +142,45 @@ export function YieldClient() {
     });
   }, [replaceParams, viewModel.normalizedParams]);
 
+  const handleApplyPreset = useCallback(
+    (presetKey: YieldPresetKey) => {
+      const spec = YIELD_PRESET_SPECS.find((entry) => entry.key === presetKey);
+      if (!spec) return;
+      // Stackable presets: merge spec.overrides on top of current params.
+      // Re-clicking the active preset clears just that preset's keys.
+      replaceParams((params) => {
+        if (viewModel.matchingPreset === presetKey) {
+          for (const key of Object.keys(spec.overrides)) {
+            params.delete(key);
+          }
+          return;
+        }
+        for (const [key, value] of Object.entries(spec.overrides)) {
+          if (value == null) continue;
+          params.set(key, String(value));
+        }
+      });
+    },
+    [replaceParams, viewModel.matchingPreset],
+  );
+
+  const handleApplyRiskBudget = useCallback(
+    (key: YieldRiskBudgetKey) => {
+      const spec = YIELD_RISK_BUDGET_SPECS.find((entry) => entry.key === key);
+      if (!spec) return;
+      replaceParams((params) => {
+        for (const paramKey of Object.keys(viewModel.normalizedParams)) {
+          params.delete(paramKey);
+        }
+        for (const [paramKey, value] of Object.entries(spec.overrides)) {
+          if (value == null) continue;
+          params.set(paramKey, String(value));
+        }
+      });
+    },
+    [replaceParams, viewModel.normalizedParams],
+  );
+
   const handleNavigate = useCallback(
     (id: string) => {
       router.push(buildStablecoinUrl(id));
@@ -164,6 +189,28 @@ export function YieldClient() {
   );
 
   const stats = viewModel.stats;
+
+  const ledeText = useMemo(() => {
+    if (visibleRows.length === 0) return "No yield rows match this view.";
+    const { ledeFacts, topYield, medianApy } = stats;
+    const aGrade = ledeFacts.aGradeAboveBenchmark;
+    const benchmarkLabel = ledeFacts.benchmarkLabel ?? "benchmark";
+    const lowGradeCount = ledeFacts.doubleDigitInLowGrade;
+    if (aGrade !== null && lowGradeCount > 0) {
+      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps; ${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
+    }
+    if (aGrade !== null) {
+      return `${aGrade.count} A-grade ${aGrade.count === 1 ? "coin clears" : "coins clear"} the ${benchmarkLabel} by ≥${aGrade.bps}bps.`;
+    }
+    if (lowGradeCount > 0) {
+      return `${lowGradeCount} double-digit APY${lowGradeCount === 1 ? "" : "s"} concentrate in C-or-lower venues.`;
+    }
+    if (topYield) {
+      const grade = topYield.safetyGrade ? ` (${topYield.safetyGrade})` : "";
+      return `Top yield ${topYield.symbol} ${formatPercent(topYield.apy)}${grade}; median APY ${formatPercent(medianApy)}.`;
+    }
+    return "No notable yield highlights in this view.";
+  }, [stats, visibleRows.length]);
 
   if (isLoading) {
     return (
@@ -190,6 +237,8 @@ export function YieldClient() {
       </SectionErrorBoundary>
     );
   }
+
+  const exhibitTiles = storyCallouts;
 
   return (
     <div className="space-y-6">
@@ -220,192 +269,171 @@ export function YieldClient() {
       ) : null}
 
       <div className="flex flex-col gap-6">
-        <section aria-label="Yield view trust rail" className="order-1 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Visible Rows</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">
-              {visibleRows.length}
-              <span className="text-sm font-normal text-muted-foreground">/{rankings.length}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">{viewModel.comparisonLabel}</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Avg Yield</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">{formatPercent(stats.avgApy)}</p>
-            <p className="text-xs text-muted-foreground">TVL-weighted when available</p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Best PYS</p>
-            <p className="text-xl font-semibold text-foreground">
-              {stats.bestPys ? stats.bestPys.symbol : "—"}
-            </p>
-            <p className="font-mono text-xs tabular-nums text-muted-foreground">
-              {stats.bestPys ? `PYS ${stats.bestPys.score.toFixed(1)}` : "No scored row"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Warnings</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">{stats.warningRowCount}</p>
-            <p className="text-xs text-muted-foreground">
-              {visibleRows.length > 0 ? `${Math.round((stats.warningRowCount / visibleRows.length) * 100)}% of view` : "No visible rows"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
-            <p className="pharos-kicker">Safety Coverage</p>
-            <p className="font-mono text-xl font-semibold tabular-nums text-foreground">
-              {data.provenance ? `${(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}%` : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {stats.nullSafetyCount > 0 ? `${stats.nullSafetyCount} visible unscored` : "Visible rows scored"}
-            </p>
-          </div>
+        <section aria-label="Yield view highlights" className="order-1 space-y-4">
+          <p className="text-base leading-relaxed text-foreground">{ledeText}</p>
+          {exhibitTiles === null ? (
+            <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-5 text-center text-sm text-muted-foreground">
+              No rows match your filters
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {exhibitTiles.topYield ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(exhibitTiles.topYield!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Top yield this week</h3>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[exhibitTiles.topYield.id]} name={exhibitTiles.topYield.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.topYield.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.topYield.name}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatPercent(exhibitTiles.topYield.apy30d)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {exhibitTiles.topYield.warningSignals.length > 0
+                      ? formatYieldWarningSignal(exhibitTiles.topYield.warningSignals[0]!)
+                      : exhibitTiles.topYield.yieldStability !== null && exhibitTiles.topYield.yieldStability >= 80
+                        ? "Stable 30d range"
+                        : "30d avg APY"}
+                  </p>
+                </button>
+              ) : null}
+              {exhibitTiles.mostStable ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(exhibitTiles.mostStable!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Most stable A+ yield</h3>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[exhibitTiles.mostStable.id]} name={exhibitTiles.mostStable.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.mostStable.symbol}</span>
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{exhibitTiles.mostStable.safetyGrade}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatPercent(exhibitTiles.mostStable.apy30d)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {exhibitTiles.mostStable.yieldStability !== null
+                      ? `${Math.round(exhibitTiles.mostStable.yieldStability * 100)}% consistency`
+                      : "Yield stability unscored"}
+                  </p>
+                </button>
+              ) : null}
+              {exhibitTiles.largestMarket ? (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToRow(exhibitTiles.largestMarket!.id)}
+                  className="group rounded-xl border border-border/70 bg-card/80 px-4 py-4 text-left transition-colors hover:border-border hover:bg-card"
+                >
+                  <h3 className="mb-2 text-base font-semibold tracking-tight text-foreground">Largest market</h3>
+                  <div className="flex items-center gap-2">
+                    <StablecoinLogo src={logos?.[exhibitTiles.largestMarket.id]} name={exhibitTiles.largestMarket.name} size={20} />
+                    <span className="font-semibold text-foreground">{exhibitTiles.largestMarket.symbol}</span>
+                    <span className="hidden truncate text-xs text-muted-foreground sm:inline">{exhibitTiles.largestMarket.name}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-foreground">
+                    {formatCurrency(exhibitTiles.largestMarket.sourceTvlUsd!)} TVL
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatPercent(exhibitTiles.largestMarket.apy30d)} APY
+                  </p>
+                </button>
+              ) : null}
+            </div>
+          )}
         </section>
 
-        <section className="order-2" aria-label="Yield filters">
+        {visibleRows.length > 0 ? (
+          <section aria-label="Yield vs Safety landscape" className="order-2 space-y-3">
+            <YieldRiskBudgetSlider
+              stops={viewModel.riskBudget.stops}
+              onSelect={handleApplyRiskBudget}
+            />
+            <YieldScatterPlot
+              rankings={visibleRows}
+              benchmarkRate={stats.referenceBenchmark?.rate ?? data.riskFreeRate}
+              benchmarkLabel={stats.referenceBenchmark?.label}
+              benchmarkIsFallback={stats.referenceBenchmark?.isFallback}
+              showBenchmarkReference
+              usesDefaultBenchmarkFrame={stats.usesDefaultBenchmarkFrame}
+              logos={logos}
+              onDotClick={handleNavigate}
+              compact
+            />
+          </section>
+        ) : null}
+
+        <section className="order-3" aria-label="Yield filters">
           <YieldLeaderboardControls
             viewModel={viewModel}
             onFilterChange={handleFilterChange}
             onClearFilters={handleClearFilters}
+            onApplyPreset={handleApplyPreset}
           />
         </section>
 
-        <section aria-labelledby="leaderboard-heading" className="order-3">
+        <section aria-labelledby="leaderboard-heading" className="order-4">
           <div className="space-y-3">
-            <h2 id="leaderboard-heading" className="text-xl font-semibold">
-              Yield Leaderboard
-            </h2>
             <YieldLeaderboard
               rows={visibleRows}
               logos={logos ?? {}}
               riskFreeRate={data.riskFreeRate}
               medianApy={data.medianApy ?? 0}
               emptyMessage={viewModel.emptyState.description}
+              filterSummary={{
+                visibleCount: visibleRows.length,
+                totalCount: viewModel.totalRows,
+                comparisonLabel: viewModel.comparisonLabel,
+                activeFilters: getActiveFilterSummaries(viewModel),
+              }}
             />
           </div>
         </section>
 
-        <section className="order-4 space-y-3" aria-label="Yield provenance">
+        <section className="order-5 space-y-6" aria-label="Yield reference rates and sources">
           {viewModel.emptyState.isEmpty ? (
             <div className="rounded-xl border border-border/70 bg-card/80 px-4 py-6 text-center">
               <p className="font-medium text-foreground">{viewModel.emptyState.title}</p>
               <p className="mt-1 text-sm text-muted-foreground">{viewModel.emptyState.description}</p>
+              {viewModel.emptyState.suggestions.length > 0 ? (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {viewModel.emptyState.suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.filterKey}
+                      type="button"
+                      onClick={() =>
+                        handleFilterChange(suggestion.filterKey, suggestion.targetValue ?? "all")
+                      }
+                      className="pharos-focus-ring inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      <span>{suggestion.label}</span>
+                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                        +{suggestion.gain}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
-
-          {data?.provenance ? (
-            <details className="group rounded-xl border border-border/70 bg-card/80 text-sm">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-3 text-xs font-medium text-muted-foreground select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" />
-                Data Provenance
-                <span className="flex w-full flex-wrap items-center justify-end gap-x-3 gap-y-1 font-mono tabular-nums text-foreground sm:ml-auto sm:w-auto sm:flex-nowrap">
-                  {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
-                    .filter((b): b is NonNullable<typeof b> => b != null)
-                    .map((b) => (
-                      <span key={b.key ?? b.label ?? b.currency} className="inline-flex items-center gap-1.5">
-                        <span className="text-muted-foreground font-sans">{b.currency ?? "USD"}</span>
-                        {formatPercent(b.rate)}
-                      </span>
-                    ))}
-                  <span className="text-muted-foreground font-sans">
-                    {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% scored
-                  </span>
-                </span>
-              </summary>
-              <div className="grid grid-cols-1 gap-4 border-t border-border/50 px-4 py-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <p className="pharos-kicker">Benchmarks</p>
-                  {Object.values(data.benchmarks ?? data.provenance.benchmarks ?? { USD: data.provenance.benchmark })
-                    .filter((benchmark): benchmark is NonNullable<typeof benchmark> => benchmark != null)
-                    .map((benchmark) => (
-                      <div key={benchmark.key ?? benchmark.label ?? benchmark.currency} className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">{getYieldBenchmarkDisplayLabel(benchmark)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {benchmark.recordDate
-                              ? `as of ${benchmark.recordDate}`
-                              : benchmark.ageSeconds != null
-                                ? `age ${Math.round(benchmark.ageSeconds / 3600)}h`
-                                : "record date unavailable"}
-                          </p>
-                        </div>
-                        <span className="font-mono tabular-nums text-foreground">{formatPercent(benchmark.rate)}</span>
-                      </div>
-                    ))}
-                </div>
-                <div className="space-y-1">
-                  <p className="pharos-kicker">Yield Input Freshness</p>
-                  <p className="font-medium text-foreground">
-                    {data.provenance.dlPools.mode === "dex-cache"
-                      ? "DEX-sync cached DeFiLlama pools"
-                      : data.provenance.dlPools.mode === "direct-fetch"
-                        ? "Direct DeFiLlama pool fetch"
-                        : "DeFiLlama pool input unavailable"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {data.provenance.dlPools.ageSeconds != null
-                      ? `Pool input age ${Math.round(data.provenance.dlPools.ageSeconds / 60)}m`
-                      : data.provenance.dlPools.fallbackMode
-                        ? `Reason: ${data.provenance.dlPools.fallbackMode}`
-                        : "Pool input age unavailable"}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="pharos-kicker">Safety Coverage</p>
-                  <p className="font-medium text-foreground">
-                    {(data.provenance.safetySnapshot.coverageRatio * 100).toFixed(0)}% of tracked coins scored
-                  </p>
-                  <p className="text-muted-foreground">
-                    {data.provenance.safetySnapshot.kind === "ok"
-                      ? "Confidence-weighted source arbitration active"
-                      : data.provenance.safetySnapshot.reason ?? "Safety snapshot degraded"}
-                  </p>
-                </div>
-              </div>
-            </details>
-          ) : null}
-        </section>
-
-        {visibleRows.length > 0 ? (
-          <>
-            <details className="group order-5 lg:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-card/80 px-4 py-3 text-sm font-medium text-foreground select-none [&::-webkit-details-marker]:hidden">
-                <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" />
-                Yield vs Safety Scatter
-              </summary>
-              <div className="mt-3">
-                <YieldScatterCard
-                  data={data}
-                  logos={logos}
-                  rows={visibleRows}
-                  stats={stats}
-                  headingId="scatter-heading-mobile"
-                  onDotClick={handleNavigate}
-                />
-              </div>
-            </details>
-            <section aria-labelledby="scatter-heading" className="order-5 hidden lg:block">
-              <YieldScatterCard
-                data={data}
-                logos={logos}
-                rows={visibleRows}
-                stats={stats}
-                headingId="scatter-heading"
-                onDotClick={handleNavigate}
+          {visibleRows.length > 0 ? (
+            <>
+              <ReferenceRatesStrip
+                benchmarks={data.benchmarks ?? data.provenance?.benchmarks ?? null}
+                poolInputMeta={data.provenance?.dlPools ?? null}
+                safetySnapshot={data.provenance?.safetySnapshot ?? null}
+                currencyCounts={currencyCounts}
               />
-            </section>
-            <section className="order-6" aria-label="Yield sources">
               <YieldSourceBoard model={sourceBoardModel} />
-            </section>
-          </>
-        ) : null}
+            </>
+          ) : null}
+          <YieldCoinIndex />
+        </section>
       </div>
-
-      {/* Disclaimer */}
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
-        figures blend deterministic on-chain, benchmark-derived, DeFiLlama, and price-derived sources with
-        confidence-aware arbitration. Past yields do not guarantee future returns.
-      </p>
     </div>
   );
 }

@@ -218,7 +218,14 @@ export function CoreSettlementStrip({
                     <p className="truncate text-xs text-muted-foreground">{card.name}</p>
                   </div>
                   <div className="text-right">
-                    <SafetyGradeBadge grade={card.overallGrade} size="xs" className="font-mono font-semibold" />
+                    <SafetyGradeBadge
+                      grade={card.overallGrade}
+                      size="xs"
+                      className="font-mono font-semibold"
+                      versionTopic="safetyScore"
+                      versionVariant="tooltip-only"
+                      versionInteractive={false}
+                    />
                     <div className="text-[10px] text-muted-foreground">
                       {profile ? `${formatCurrency(profile.marketCapUsd)} / ${profile.chainCount} chains` : ""}
                     </div>
@@ -445,7 +452,7 @@ export function SafetyEmptyState({
 }) {
   return (
     <div className="text-center py-12 space-y-2">
-      <p className="text-sm text-muted-foreground">No coins match this filter.</p>
+      <p className="text-sm text-muted-foreground">No coins match this filter. Loosen one and look again.</p>
       {gradeFilter !== "all" && (
         <Button
           variant="outline"

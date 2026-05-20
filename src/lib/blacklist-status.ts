@@ -5,6 +5,24 @@ import {
 import { getTrackedBlacklistStatus } from "@shared/lib/tracked-blacklist-status";
 import type { ReportCard } from "@shared/types";
 
+// Shared label vocabulary for the hero pill and the mobile tertiary chip.
+// Returns null for `false` so the pill knows to skip rendering; the chip
+// surfaces "No" explicitly via the view-model's blacklistDisplay fallback.
+export function getFreezableLabel(status: BlacklistStatus): string | null {
+  switch (status) {
+    case true:
+      return "Freezable";
+    case "dilutable":
+      return "Dilutable";
+    case "possible":
+      return "Possible Freeze";
+    case "inherited":
+      return "Upstream Freeze";
+    default:
+      return null;
+  }
+}
+
 export function getResolvedBlacklistStatus(
   stablecoinId: string,
   reportCard?: Pick<ReportCard, "rawInputs"> | null,

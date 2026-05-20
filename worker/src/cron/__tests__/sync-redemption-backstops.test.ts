@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
-import { makeAsset } from "../../api/__tests__/helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 
 const loadStablecoinsCacheMock = vi.fn();
 const loadDexLiquiditySnapshotMock = vi.fn();
@@ -337,6 +337,45 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.availabilityDegraded).toBe(1);
   });
 
+  it("caps availability-degraded metadata ids at 25 and marks truncation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 26 }, (_value, index) => `coin-${index + 1}`);
+
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: configuredIdsMock.map((id) =>
+          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
+        ),
+      },
+    });
+    loadDexLiquiditySnapshotMock.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: now,
+    });
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(
+        makeResolvedSnapshot(asset.id, now, {
+          score: null,
+          effectiveExitScore: null,
+          resolutionState: "impaired",
+          routeStatus: "degraded",
+          routeStatusSource: "market-implied",
+          modelConfidence: "low",
+        }),
+      ),
+    );
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.availabilityDegraded).toBe(26);
+    expect(metadata.availabilityDegradedIds).toEqual(configuredIdsMock.slice(0, 25));
+    expect(metadata.availabilityDegradedIdsTruncated).toBe(true);
+  });
+
   it("still snapshots configured ids that are missing from the stablecoins cache", async () => {
     loadStablecoinsCacheMock.mockResolvedValue({
       kind: "ok",
@@ -411,6 +450,50 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.resolved).toBe(1);
     expect(metadata.unresolved).toBe(1);
     expect(metadata.missingFromCache).toEqual(["iusd-infinifi"]);
+  });
+
+  it("caps missing-from-cache metadata ids at 25 and marks truncation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 27 }, (_value, index) => `coin-${index + 1}`);
+    const cachedId = configuredIdsMock[0];
+    const missingIds = configuredIdsMock.slice(1);
+
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: [makeAsset({ id: cachedId, symbol: "COIN1", circulating: { peggedUSD: 1_000_000 } })],
+      },
+    });
+    loadDexLiquiditySnapshotMock.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: now,
+    });
+    resolveRedemptionBackstopEntryMock.mockResolvedValueOnce(makeResolvedSnapshot(cachedId, now));
+    buildRedemptionBackstopEntryMock.mockImplementation(
+      (_db: unknown, stablecoinId: string, _config: unknown, _asset: null, dexLiquidityScore: number | null) =>
+        Promise.resolve({
+          ...makeResolvedSnapshot(stablecoinId, now, {
+            score: null,
+            effectiveExitScore: null,
+            dexLiquidityScore,
+            sourceMode: "static",
+            resolutionState: "missing-cache",
+            capacityConfidence: "heuristic",
+            capacitySemantics: "eventual-only",
+            modelConfidence: "low",
+            immediateCapacityUsd: null,
+            immediateCapacityRatio: null,
+          }),
+        }),
+    );
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.missingFromCache).toEqual(missingIds.slice(0, 25));
+    expect(metadata.missingFromCacheTruncated).toBe(true);
   });
 
   it("keeps a tiny missing-capacity tail as ok when no failures or cache misses remain", async () => {
@@ -591,6 +674,34 @@ describe("syncRedemptionBackstops", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.failed).toBe(1);
     expect(metadata.failedIds).toEqual(["iusd-infinifi"]);
+  });
+
+  it("caps failed metadata ids at 25 and marks truncation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 26 }, (_value, index) => `coin-${index + 1}`);
+
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: configuredIdsMock.map((id) =>
+          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
+        ),
+      },
+    });
+    loadDexLiquiditySnapshotMock.mockResolvedValue({
+      map: {},
+      latestUpdatedAt: now,
+    });
+    resolveRedemptionBackstopEntryMock.mockRejectedValue(new Error("resolver blew up"));
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.failed).toBe(26);
+    expect(metadata.failedIds).toEqual(configuredIdsMock.slice(0, 25));
+    expect(metadata.failedIdsTruncated).toBe(true);
   });
 
   it("marks the run degraded but keeps computing effective-exit scores from stale-but-present DEX data", async () => {

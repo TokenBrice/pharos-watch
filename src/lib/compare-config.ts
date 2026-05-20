@@ -1,11 +1,11 @@
-import { READABLE_STABLECOINS } from "@shared/lib/stablecoins";
+import { CLIENT_READABLE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
 
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;
 
-export const COMPARE_COIN_OPTIONS: CoinOption[] = READABLE_STABLECOINS.map((c) => ({
+export const COMPARE_COIN_OPTIONS: CoinOption[] = CLIENT_READABLE_STABLECOINS.map((c) => ({
   id: c.id,
   name: c.name,
   symbol: c.symbol,

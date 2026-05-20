@@ -272,10 +272,22 @@ export function StressTestPanel({
                         {mcap != null ? formatCurrency(mcap) : "—"}
                       </td>
                       <td className="py-2.5 pr-3 text-center">
-                        <SafetyGradeBadge grade={impact.gradeBefore} score={impact.scoreBefore} size="xs" />
+                        <SafetyGradeBadge
+                          grade={impact.gradeBefore}
+                          score={impact.scoreBefore}
+                          size="xs"
+                          versionTopic="safetyScore"
+                          versionVariant="tooltip-only"
+                        />
                       </td>
                       <td className="py-2.5 pr-3 text-center">
-                        <SafetyGradeBadge grade={impact.gradeAfter} score={impact.scoreAfter} size="xs" />
+                        <SafetyGradeBadge
+                          grade={impact.gradeAfter}
+                          score={impact.scoreAfter}
+                          size="xs"
+                          versionTopic="safetyScore"
+                          versionVariant="tooltip-only"
+                        />
                       </td>
                       <td className="py-2.5 text-right">
                         <span className={cn("font-mono font-semibold", severityColor)}>

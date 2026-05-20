@@ -30,7 +30,7 @@ import {
   getPrevMonthRawOrNull,
   getPrevWeekRawOrNull,
 } from "@shared/lib/supply";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
@@ -39,18 +39,40 @@ import {
 } from "@/lib/stablecoin-detail-derive";
 import type { ApiMeta } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-detection-config";
-import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { THREAT_BAND_LABELS, THREAT_BAND_TEXT_COLORS, isThreatBand, type ThreatBand } from "@shared/lib/classification";
+import { isThreatBand } from "@shared/lib/classification";
+import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { getVariantParent, getVariantRelationship, getVariants } from "@shared/lib/stablecoins";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getVariantDisplay } from "@/lib/variant-display";
-import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
+import {
+  HERO_MUTED_CLASS,
+  HERO_NEGATIVE_TREND_CLASS,
+  HERO_POSITIVE_TREND_CLASS,
+  buildBlacklistDisplay,
+  buildDewsAccent,
+  buildDewsDisplay,
+  buildExcessYieldDisplay,
+  buildLimitedDepegCoverageNote,
+  buildLiquidityAccent,
+  buildLiquidityDisplay,
+  buildPegScoreAccent,
+  buildPegScoreDisplay,
+  buildPerformanceVsUsdDisplay,
+  type HeroBlacklistDisplay,
+  type HeroDewsDisplay,
+  type HeroDisplayValue,
+} from "@/lib/stablecoin-detail-hero-metrics";
+
+export type {
+  HeroBlacklistDisplay,
+  HeroDewsDisplay,
+  HeroDisplayValue,
+} from "@/lib/stablecoin-detail-hero-metrics";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -259,45 +281,29 @@ export function buildFeatureAvailability(
   };
 }
 
+function staleQueryFrom<T>(
+  preset: StablecoinDetailStaleQuery["preset"],
+  query: DetailQueryResource<T>,
+  hasData: (data: T | undefined) => boolean,
+): StablecoinDetailStaleQuery {
+  return {
+    preset,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    hasData: hasData(query.data),
+    meta: query.meta,
+  };
+}
+
 export function buildStaleQueryInputs(
   queries: StablecoinDetailViewModelQueryInputs,
 ): StablecoinDetailStaleQuery[] {
   return [
-    {
-      preset: "stablecoins",
-      dataUpdatedAt: queries.stablecoinList.dataUpdatedAt,
-      error: queries.stablecoinList.error,
-      hasData: !!queries.stablecoinList.data?.peggedAssets?.length,
-      meta: queries.stablecoinList.meta,
-    },
-    {
-      preset: "pegSummary",
-      dataUpdatedAt: queries.pegSummary.dataUpdatedAt,
-      error: queries.pegSummary.error,
-      hasData: !!queries.pegSummary.data?.coins?.length,
-      meta: queries.pegSummary.meta,
-    },
-    {
-      preset: "dexLiquidity",
-      dataUpdatedAt: queries.dexLiquidity.dataUpdatedAt,
-      error: queries.dexLiquidity.error,
-      hasData: !!queries.dexLiquidity.data,
-      meta: queries.dexLiquidity.meta,
-    },
-    {
-      preset: "reportCards",
-      dataUpdatedAt: queries.reportCards.dataUpdatedAt,
-      error: queries.reportCards.error,
-      hasData: !!queries.reportCards.data?.cards?.length,
-      meta: queries.reportCards.meta,
-    },
-    {
-      preset: "redemptionBackstops",
-      dataUpdatedAt: queries.redemptionBackstops.dataUpdatedAt,
-      error: queries.redemptionBackstops.error,
-      hasData: !!queries.redemptionBackstops.data?.coins,
-      meta: queries.redemptionBackstops.meta,
-    },
+    staleQueryFrom("stablecoins", queries.stablecoinList, (data) => !!data?.peggedAssets?.length),
+    staleQueryFrom("pegSummary", queries.pegSummary, (data) => !!data?.coins?.length),
+    staleQueryFrom("dexLiquidity", queries.dexLiquidity, (data) => !!data),
+    staleQueryFrom("reportCards", queries.reportCards, (data) => !!data?.cards?.length),
+    staleQueryFrom("redemptionBackstops", queries.redemptionBackstops, (data) => !!data?.coins),
   ];
 }
 
@@ -327,6 +333,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: ReportCard | undefined;
+  reportCardUpdatedAt: number | null;
   variantParent: StablecoinMeta | null;
   variantSiblings: StablecoinMeta[];
   childVariants: StablecoinMeta[];
@@ -360,25 +367,7 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   reserveFetchError: unknown | null;
   supplyError: unknown | null;
   staleQueries: StablecoinDetailStaleQuery[];
-}
-
-export interface HeroDisplayValue {
-  value: string;
-  sub?: string;
-  color: string;
-}
-
-export interface HeroBlacklistDisplay extends HeroDisplayValue {
-  status: ReturnType<typeof getResolvedBlacklistStatus>;
-  source?: StablecoinMeta["canBeBlacklistedSource"];
-  methodologyTopic: "freezable" | "freezableNo" | "freezablePossible" | "freezableDilutable" | "freezableUpstream";
-}
-
-export interface HeroDewsDisplay {
-  value: string;
-  band: ThreatBand | null;
-  sub?: string;
-  color: string;
+  verdict: StablecoinVerdict;
 }
 
 export interface HeroTertiaryMetricViewModel {
@@ -404,6 +393,7 @@ export interface HeroCardViewModel {
   coinData: StablecoinData;
   logoSrc?: string;
   reportCard: ReportCard | null;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantKind?: VariantKind | null;
   variantChipClass: string | null;
@@ -462,10 +452,6 @@ interface BuildStablecoinDetailViewModelParams {
   queries: StablecoinDetailViewModelQueryInputs;
   supplemental: StablecoinDetailViewModelSupplementalInputs;
 }
-const HERO_POSITIVE_TREND_CLASS = "text-green-700 dark:text-green-400";
-const HERO_NEGATIVE_TREND_CLASS = "text-red-700 dark:text-red-400";
-const HERO_MUTED_CLASS = "text-muted-foreground";
-
 export interface BuildHeroCardViewModelParams {
   coin: StablecoinMeta;
   coinData: StablecoinData;
@@ -481,31 +467,24 @@ export interface BuildHeroCardViewModelParams {
   deviationBps: number;
   gaugeDeviationBps: number;
   pegScoreResult: PegSummaryCoin | null;
-  recordedDepegEventCount: number | null;
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
   reportCard: ReportCard | null;
+  verdict: StablecoinVerdict;
   variantParent?: StablecoinMeta | null;
   variantKind?: VariantKind | null;
 }
 
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
   if (!hasPreviousValue) return HERO_MUTED_CLASS;
-  return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
-}
-
-function buildPegScoreEventLine(
-  pegScoreResult: PegSummaryCoin | null,
-  recordedDepegEventCount: number | null,
-): string | null {
-  if (!pegScoreResult) return null;
-  const scoreWindowCount = pegScoreResult.eventCount;
-  const totalRecorded = recordedDepegEventCount;
-  if (totalRecorded == null || totalRecorded === scoreWindowCount) {
-    return `${scoreWindowCount.toLocaleString()} event${scoreWindowCount !== 1 ? "s" : ""}`;
+  if (isQuietDeviationsEnabled()) {
+    if (previousValue <= 0) return HERO_MUTED_CLASS;
+    const pctChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
+    if (pctChange < 0.5) return HERO_MUTED_CLASS;
+    return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
   }
-  return `${totalRecorded.toLocaleString()} recorded · ${scoreWindowCount.toLocaleString()} in 4y window`;
+  return currentValue >= previousValue ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS;
 }
 
 export function buildStablecoinDetailHeroViewModel({
@@ -523,14 +502,15 @@ export function buildStablecoinDetailHeroViewModel({
   deviationBps,
   gaugeDeviationBps,
   pegScoreResult,
-  recordedDepegEventCount,
   liquidityData,
   yieldRanking,
   stressSignal,
   reportCard,
+  verdict,
   variantParent,
   variantKind,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
+  const recordedDepegEventCount = reportCard?.rawInputs.depegEventCount ?? null;
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
   const chainCount = coinData?.chains?.length ?? 0;
   const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
@@ -553,148 +533,24 @@ export function buildStablecoinDetailHeroViewModel({
   const prevWeekValue = safePrevWeek ?? 0;
   const prevMonthValue = safePrevMonth ?? 0;
 
-  const tooNewForPegScore =
-    !isNavToken &&
-    pegScoreResult !== null &&
-    pegScoreResult.pegScore === null &&
-    pegScoreResult.trackingSpanDays > 0 &&
-    pegScoreResult.trackingSpanDays < 7;
   const earlyPegScore =
     !isNavToken && pegScoreResult !== null && pegScoreResult.pegScore !== null && pegScoreResult.trackingSpanDays < 30;
 
-  const pegScoreEventLine = buildPegScoreEventLine(pegScoreResult, recordedDepegEventCount);
-  const pegScoreDisplay: HeroDisplayValue = !isNavToken
-    ? pegScoreResult?.pegScore != null
-      ? {
-          value: String(pegScoreResult.pegScore),
-          sub: pegScoreEventLine ?? `${pegScoreResult.pegPct.toFixed(1)}% at peg`,
-          color: pegScoreColor(pegScoreResult.pegScore),
-        }
-      : tooNewForPegScore
-        ? {
-            value: "NR",
-            sub: `${pegScoreResult?.trackingSpanDays ?? 0}d tracked`,
-            color: HERO_MUTED_CLASS,
-          }
-        : { value: "—", color: HERO_MUTED_CLASS }
-    : { value: "NAV", sub: "Token", color: HERO_MUTED_CLASS };
-
-  const liquidityScore = liquidityData?.liquidityScore ?? null;
-  const liqDisplay: HeroDisplayValue =
-    liquidityData == null || (liquidityScore === null && liquidityData.poolCount === 0)
-      ? { value: "—", color: HERO_MUTED_CLASS }
-      : {
-          value: String(Math.round(liquidityScore ?? 0)),
-          sub: `${liquidityData.poolCount} pools`,
-          color: getScoreColor(liquidityScore ?? 0),
-        };
-
-  const blacklistDisplay: HeroBlacklistDisplay = (() => {
-    switch (blacklistStatus) {
-      case true:
-        return {
-          status: blacklistStatus,
-          value: "Yes",
-          color: HERO_NEGATIVE_TREND_CLASS,
-          methodologyTopic: "freezable",
-        };
-      case "dilutable":
-        return {
-          status: blacklistStatus,
-          value: "Dilutable",
-          color: "text-purple-700 dark:text-purple-400",
-          source: blacklistSource,
-          methodologyTopic: "freezableDilutable",
-        };
-      case "possible":
-        return {
-          status: blacklistStatus,
-          value: "Possible",
-          color: "text-amber-700 dark:text-amber-400",
-          methodologyTopic: "freezablePossible",
-        };
-      case "inherited":
-        return {
-          status: blacklistStatus,
-          value: "Upstream",
-          color: "text-amber-700 dark:text-amber-400",
-          methodologyTopic: "freezableUpstream",
-        };
-      default:
-        return {
-          status: blacklistStatus,
-          value: "No",
-          color: HERO_POSITIVE_TREND_CLASS,
-          methodologyTopic: "freezableNo",
-        };
-    }
-  })();
-
-  const excessYieldDisplay: HeroDisplayValue = (() => {
-    if (!yieldRanking) return { value: "—", color: HERO_MUTED_CLASS };
-    if (yieldRanking.excessYield === null) {
-      return {
-        value: "—",
-        sub: getYieldBenchmarkGapUnavailableText(),
-        color: HERO_MUTED_CLASS,
-      };
-    }
-    return {
-      value: formatSignedPercent(yieldRanking.excessYield),
-      sub: getYieldBenchmarkGapReferenceText(yieldRanking),
-      color: yieldRanking.excessYield >= 0 ? HERO_POSITIVE_TREND_CLASS : HERO_NEGATIVE_TREND_CLASS,
-    };
-  })();
-
-  const performanceVsUsdDisplay: HeroDisplayValue | null =
-    performanceVsUsd1y === null
-      ? null
-      : {
-          value: formatSignedPercent(performanceVsUsd1y),
-          color:
-            performanceVsUsd1y > 0
-              ? HERO_POSITIVE_TREND_CLASS
-              : performanceVsUsd1y < 0
-                ? HERO_NEGATIVE_TREND_CLASS
-                : HERO_MUTED_CLASS,
-        };
-
-  const dewsDisplay: HeroDewsDisplay =
-    stressSignal && isThreatBand(stressSignal.band)
-      ? {
-          value: THREAT_BAND_LABELS[stressSignal.band],
-          band: stressSignal.band,
-          sub: `${Math.round(stressSignal.score)}/100`,
-          color: THREAT_BAND_TEXT_COLORS[stressSignal.band],
-        }
-      : { value: "—", band: null, color: HERO_MUTED_CLASS };
-
-  const pegScoreAccent = (() => {
-    const score = pegScoreResult?.pegScore;
-    if (score == null) return undefined;
-    if (score < 50) return "border-l-2 border-l-red-500";
-    if (score < 70) return "border-l-2 border-l-amber-500";
-    return undefined;
-  })();
-  const liqAccent = (() => {
-    const score = liquidityData?.liquidityScore;
-    if (score == null) return undefined;
-    if (score < 30) return "border-l-2 border-l-red-500";
-    if (score < 50) return "border-l-2 border-l-amber-500";
-    return undefined;
-  })();
-  const dewsAccent = (() => {
-    if (!stressSignal || !isThreatBand(stressSignal.band)) return undefined;
-    if (stressSignal.band === "DANGER") return "border-l-2 border-l-red-500";
-    if (stressSignal.band === "WARNING") return "border-l-2 border-l-orange-500";
-    return undefined;
-  })();
-
-  const depegThresholdBps = coinData.pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
-  const limitedDepegCoverageNote =
-    !isNavToken && pegScoreResult?.depegEventCoverageLimited === true && Math.abs(deviationBps) >= depegThresholdBps
-      ? `Below ${formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live-event floor. Deviation is shown, but event history may stay empty.`
-      : null;
+  const pegScoreDisplay = buildPegScoreDisplay(isNavToken, pegScoreResult, recordedDepegEventCount);
+  const liqDisplay = buildLiquidityDisplay(liquidityData);
+  const blacklistDisplay = buildBlacklistDisplay(blacklistStatus, blacklistSource);
+  const excessYieldDisplay = buildExcessYieldDisplay(yieldRanking);
+  const performanceVsUsdDisplay = buildPerformanceVsUsdDisplay(performanceVsUsd1y);
+  const dewsDisplay = buildDewsDisplay(stressSignal);
+  const pegScoreAccent = buildPegScoreAccent(pegScoreResult);
+  const liqAccent = buildLiquidityAccent(liquidityData);
+  const dewsAccent = buildDewsAccent(stressSignal);
+  const limitedDepegCoverageNote = buildLimitedDepegCoverageNote(
+    coinData,
+    isNavToken,
+    pegScoreResult,
+    deviationBps,
+  );
 
   const tertiaryMetrics: HeroTertiaryMetricViewModel[] = [
     {
@@ -787,6 +643,7 @@ export function buildStablecoinDetailHeroViewModel({
     coinData,
     logoSrc,
     reportCard,
+    verdict,
     variantParent,
     variantKind,
     variantChipClass: variantKind ? getVariantDisplay(variantKind).chipClass : null,
@@ -822,7 +679,9 @@ export function buildStablecoinDetailHeroViewModel({
       activeDepeg: pegScoreResult?.activeDepeg === true,
     },
     tertiaryMetrics,
-    desktopTertiaryMetrics: tertiaryMetrics.filter((metric) => metric.key !== "dews" && metric.key !== "liquidity"),
+    desktopTertiaryMetrics: tertiaryMetrics.filter(
+      (metric) => !["dews", "liquidity", "peg-score", "blacklistable"].includes(metric.key),
+    ),
     signalRailItems,
   };
 }
@@ -869,6 +728,19 @@ export function buildStablecoinDetailViewModel({
   const variantParent = getVariantParent(id);
   const childVariants = getVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
+  const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
+    ? featureAvailability.stressSignal.band
+    : null;
+  const verdict = deriveStablecoinVerdict({
+    status: coin.status,
+    reportCardGrade: reportCard?.overallGrade ?? null,
+    pegScore: pegPrice.pegScoreResult?.pegScore ?? null,
+    dewsBand: stressBand,
+    mechanismArchetype: coin.mechanismArchetype,
+    governance: coin.flags.governance,
+    yieldBearing: coin.flags.yieldBearing ?? false,
+    activeDepeg: pegPrice.pegScoreResult?.activeDepeg === true,
+  });
 
   return {
     status: "ready",
@@ -878,6 +750,7 @@ export function buildStablecoinDetailViewModel({
     summary,
     logoSrc,
     reportCard,
+    reportCardUpdatedAt: reportCards.dataUpdatedAt > 0 ? reportCards.dataUpdatedAt : null,
     variantParent,
     variantSiblings: variantRelationship?.siblings ?? [],
     childVariants,
@@ -911,5 +784,6 @@ export function buildStablecoinDetailViewModel({
     reserveFetchError: supplemental.reserves.error ?? null,
     supplyError: supplyHistory.error,
     staleQueries: buildStaleQueryInputs(queries),
+    verdict,
   };
 }

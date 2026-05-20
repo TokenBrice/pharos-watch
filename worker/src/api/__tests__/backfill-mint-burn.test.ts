@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 stubCryptoForAuth();
 

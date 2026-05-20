@@ -2,6 +2,7 @@
   "id": "usat-tether",
   "name": "Tether USA-T",
   "symbol": "USAT",
+  "oneLiner": "USAT is Tether's GENIUS-Act-compliant U.S. dollar stablecoin, issued 1:1 by Anchorage Digital Bank with reserves custodied at Cantor Fitzgerald.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
+  "collateral": "Cash and reverse repurchase agreements collateralized by U.S. Treasuries, held for USAT reserves under Anchorage Digital Bank issuance.",
   "pegMechanism": "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "343",
   "detailProvider": "defillama",
   "geckoId": "usa",
@@ -23,6 +25,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/usat"
+    },
+    {
+      "label": "Reserve attestations",
+      "url": "https://www.anchorage.com/platform/usat-reserve-attestations"
     }
   ],
   "jurisdiction": {
@@ -53,7 +59,7 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. Treasury bills",
+      "name": "Treasury-collateralized reverse repos",
       "pct": 80,
       "risk": "very-low"
     },
@@ -83,5 +89,13 @@
       "label": "U.S. Treasury bills & cash deposits",
       "risk": "very-low"
     }
+  },
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://www.anchorage.com/platform/usat-reserve-attestations",
+    "provider": "Anchorage Digital Bank reserve attestations",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   }
 }

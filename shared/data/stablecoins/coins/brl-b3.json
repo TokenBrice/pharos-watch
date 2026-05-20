@@ -2,6 +2,7 @@
   "id": "brl-b3",
   "name": "B3 BRL Stablecoin",
   "symbol": "BRL-B3",
+  "oneLiner": "BRL-B3 is a pre-launch Brazilian real settlement stablecoin from B3, Latin America's largest stock exchange, designed for its tokenized asset trading platform.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 Brazilian Real reserves; designed as settlement layer for B3's tokenized asset trading platform",
   "pegMechanism": "Issuer-managed Brazilian-real settlement token for B3's tokenization platform; B3 materials describe it as value-linked to fiat currency and as the real-denominated settlement instrument for tokenized-asset trading",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

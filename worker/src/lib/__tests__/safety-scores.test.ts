@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const buildReportCardsSnapshotMock = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -47,7 +47,7 @@ const reportCardsSnapshotUnavailableErrorCtor = vi.hoisted(
   () => class ReportCardsSnapshotUnavailableError extends Error {},
 );
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "usdt-tether",

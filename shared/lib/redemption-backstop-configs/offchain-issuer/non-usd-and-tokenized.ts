@@ -273,8 +273,10 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "mtbill-midas": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: fixedFee(7, "Midas documents a 0.07% redemption fee"),
+    reviewedAt: "2026-05-17",
     docs: [
       sourceRef("Midas mTBILL atomic redemptions", "https://docs.midas.app/tokens/mtbill/atomic-redemptions", ["route", "capacity", "settlement"]),
       sourceRef("Midas prospectus documents", "https://docs.midas.app/resources/legal-documents/prospectus-documents", ["fees"]),
@@ -282,14 +284,23 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ],
     notes: [
       "Midas documents atomic USDC redemptions when protocol liquidity is available, while standard processing completes within two business days in normal conditions and up to seven business days in stressed cases",
-      "Current model scores reviewed eventual redeemability rather than claiming a separately measured live instant buffer from the transparency page",
+      "Tracked mTBILL metadata records a 3% USD cash buffer; Pharos uses a 2% documented hot-buffer lower bound rather than claiming the full daily NAV redeemability as immediate capacity",
     ],
   },
   "usdy-ondo-finance": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: documentedVariableFee("Bank wire redemption at NAV-based price; public fee schedule not disclosed"),
+    reviewedAt: "2026-05-17",
+    docs: [
+      sourceRef("Ondo USDY", "https://ondo.finance/usdy", ["route", "capacity"]),
+      sourceRef("Ondo docs", "https://docs.ondo.finance/", ["route", "capacity"]),
+    ],
+    notes: [
+      "Tracked USDY metadata records a 5% bank-demand-deposit slice; Pharos uses that reserve slice as the documented hot-buffer lower bound and does not promote the unvalidated 8% proposal.",
+    ],
   },
   "thbill-theo": {
     ...issuerBase,
@@ -371,13 +382,18 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "tbill-openeden": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
     settlementModel: "days",
     costModel: fixedFee(5, "OpenEden TBILL FAQ lists a 5 bps redemption transaction fee"),
+    reviewedAt: "2026-05-17",
     docs: [
       sourceRef("OpenEden TBILL redemptions", "https://docs.openeden.com/tbill/redemptions", ["route", "capacity"]),
       sourceRef("OpenEden TBILL FAQ", "https://docs.openeden.com/tbill/faq", ["fees"]),
+      sourceRef("OpenEden TBILL transparency", "https://openeden.com/tbill/transparency", ["capacity"]),
     ],
-    notes: ["Redemptions are queued FIFO and are typically processed on the next 1 U.S. business day"],
+    notes: [
+      "Tracked TBILL metadata records a 5% USD cash buffer; Pharos uses that reserve slice as the documented hot-buffer lower bound while keeping issuer redemptions queued/next-business-day.",
+    ],
   },
   "eure-monerium": {
     ...issuerBase,

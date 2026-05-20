@@ -47,6 +47,7 @@ BotFather-owned release checklist:
 - `worker/src/cron/dispatch-telegram-alerts.ts`
 - `worker/src/cron/daily-digest.ts`
 - `worker/src/lib/telegram-webhook-registration.ts`
+- `shared/lib/telegram-bot-registration.ts`
 - `worker/src/lib/telegram.ts`
 - `worker/src/lib/telegram-alerts.ts`
 - `worker/src/lib/telegram-presets.ts`
@@ -67,8 +68,8 @@ BotFather-owned release checklist:
 - `worker/migrations/0000_baseline.sql`
 - `worker/migrations/0123_telegram_usage_analytics.sql`
 - `worker/migrations/MANIFEST.md`
-- `scripts/register-telegram-webhook.sh`
-- `scripts/register-telegram-commands.sh`
+- `scripts/maintenance/register-telegram.ts --action webhook`
+- `scripts/maintenance/register-telegram.ts --action commands`
 
 ## Frontend Main Page
 
@@ -138,7 +139,7 @@ When Telegram upgrades a group to a supergroup, the webhook handles `migrate_to_
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | No | Temporary overlap secret accepted by `POST /api/telegram-webhook` during secret rotation; registration still emits only `TELEGRAM_WEBHOOK_SECRET` |
 | `TELEGRAM_CHAT_ID` | No | Daily digest channel posting, including appended cemetery and tracking notices |
 
-Webhook registration is handled by `scripts/register-telegram-webhook.sh`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
+Webhook registration is handled by `scripts/maintenance/register-telegram.ts --action webhook`, which calls Telegram `setWebhook` with the webhook URL and the JSON `secret_token` field:
 
 - URL: `https://api.pharos.watch/api/telegram-webhook`
 - Secret token: `<TELEGRAM_WEBHOOK_SECRET>`
@@ -209,7 +210,7 @@ Settings callbacks edit the message in place via `editMessageText`. If the edit 
 Unknown action codes receive a visible callback toast but are not treated as
 errors, so the bot stays forward-compatible with future keyboards.
 
-Registration script `scripts/register-telegram-webhook.sh` declares
+Registration script `scripts/maintenance/register-telegram.ts --action webhook` declares
 `allowed_updates = ["message", "callback_query", "my_chat_member"]` so Telegram forwards only
 update types the bot handles.
 
@@ -248,6 +249,7 @@ Wizard state is persisted as a row in `telegram_pending_disambiguation` with `ac
 | `/start` | Opens the two-branch setup wizard (Recommended / Custom / Type commands myself). Deep-link payload `?start=setup` also opens the wizard. Unknown payloads fall back to the long-form start message. |
 | `/help` | Sends command reference; private replies include a Mini App settings button |
 | `/presets` | Returns the preset watchlist catalog plus subscribe and unsubscribe examples; private replies include a Mini App presets button |
+| `/sample` | Private-chat-only preview of a synthetic USDC DEWS alert so users can inspect the alert format before subscribing. It does not read live data or mutate subscription state. |
 | `/list` | Returns enabled alert types plus subscribed coins for the chat. When the chat has at least one explicit coin subscription the reply carries a `[ Manage ]` inline button that opens a paginated keyboard (5 coins per page) where each row is a one-tap `[ ❌ <SYMBOL> ]` removal. The keyboard edits the same message in place via `editMessageText`. Group chats apply the same admin gate as `/unsubscribe`. |
 | `/status <ticker>` | Returns a compact snapshot: current price freshness, supply, DEWS band, safety grade, active-depeg state, DEX liquidity, and best yield context for the given coin. No subscription required. The reply carries a `[ Why? ] [ Coverage ] [ Subscribe ]` inline keyboard so users can drill down or quick-subscribe (DEWS + depeg) without retyping a command. The `Subscribe` button is gated by the same group admin check as `/subscribe`. |
 | `/brief` | Returns the latest compact market brief from the daily digest inputs. `/market` is a deprecated compatibility alias and shares the same cooldown bucket. |
@@ -286,6 +288,7 @@ Supported payload schemes (lowercase, no spaces, max 64 characters, characters `
 | `why_<id>` | Runs the existing `/why` handler. Allowed in any chat. |
 | `coverage_<id>` | Runs the existing `/coverage` handler. Allowed in any chat. |
 | `setup` | Opens the standard two-branch setup wizard. |
+| `app` / `home` | Sends a Mini App launch nudge. Private chats receive a Web App button for the home panel; groups receive a DM link because Telegram rejects `web_app` buttons outside private chats. |
 | Unknown or malformed | Falls back to the standard `/start` reply; the user never sees an error. |
 
 Telegram only delivers `?start=` deep links in private chats, but the dispatcher still defensively checks `chat.type === "private"` before running mutating `sub_*` payloads.
@@ -301,10 +304,10 @@ Telegram only delivers `?start=` deep links in private chats, but the dispatcher
 
 Preset watchlists are persistent dynamic follows on top of the existing per-coin subscription model.
 
-- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
-- Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
+- Supported canonical aliases: `usd-top10`, `usd-top25`, `usd-top50`, `non-usd-top10`, `non-usd-top25`, `non-usd-top50`, `eur-top10`, `gold-top5`, `mcap-ge-1b`, `mcap-ge-100m`
+- Top-N peg presets also accept dashed aliases, for example `usd-top-10`, `non-usd-top-25`, and `usd-top-50`; commands canonicalize them before subscription storage.
 - Resolution happens at command and dispatch/list time inside `worker/src/lib/telegram-presets.ts`
-- The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs
+- The resolver uses the current strict `stablecoins` cache plus tracked stablecoin metadata to map each preset alias to concrete active coin IDs; `non-usd-top*` includes active tracked coins whose `flags.pegCurrency` is not `USD`
 - `/subscribe ... <preset>` stores a persistent row in `telegram_preset_subscriptions` and also updates the currently resolved coin rows for backwards-compatible list/explicit-row behavior
 - `/unsubscribe <preset>` deletes the persistent preset row and removes the currently resolved coin rows for that chat
 - `/list` shows both dynamic preset rows and explicit coin rows
@@ -713,9 +716,9 @@ Digest posting uses `TELEGRAM_CHAT_ID`; subscriber alerts use the chat IDs store
 
 - The dedicated 5-minute Telegram trigger reconciles both webhook registration and native slash-command suggestions through `worker/src/lib/telegram-webhook-registration.ts`. After deploying a command-list change, the production bot menu users see when typing `/` should update on the next Telegram slot.
 - The command reconciliation issues two scoped `setMyCommands` calls: the full list under `scope: { type: "all_private_chats" }` and a slim list (`subscribe`, `unsubscribe`, `list`, `status`, `mute`, `help`) under `scope: { type: "all_group_chats" }`. Both scopes share a single cache key (`telegram:commands-reconciled`); a fresh cache hit skips both round trips, and bumping `TELEGRAM_COMMANDS_CACHE_VERSION` forces every deployment to reconcile once.
-- The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `worker/src/lib/telegram-webhook-registration.ts` so changes flow through code review. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Profile-photo updates are not exposed via the Bot API — set the avatar manually through @BotFather using `public/pharos-icon.png`.
+- The same trigger reconciles the bot profile metadata (display name, short description, long description) under cache key `telegram:profile-reconciled` on the same 15-minute cadence. The configured strings are exported constants in `shared/lib/telegram-bot-registration.ts` so changes flow through code review and are reused by manual recovery tooling. Telegram returns a 400 "is not modified" response when the submitted value already matches the live one; the reconcile treats that as success and still refreshes the cache marker so the next 15 minutes are a true no-op. Profile-photo updates are not exposed via the Bot API — set the avatar manually through @BotFather using `public/pharos-icon.png`.
 - The cron connection-budget check includes the command/profile/webhook reconciliation as a budget-only entry on the same chained five-minute Telegram group. It is not a separate status-tracked `cron_runs` job, but its serial Bot API calls are still visible to `npm run check:cron-connections`.
-- `scripts/register-telegram-webhook.sh`, `scripts/register-telegram-commands.sh`, and `scripts/register-telegram-profile.sh` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop.
+- `scripts/maintenance/register-telegram.ts --action webhook`, `scripts/maintenance/register-telegram.ts --action commands`, and `scripts/maintenance/register-telegram.ts --action profile` remain manual recovery tools when an operator needs to force Bot API state outside the Worker reconciliation loop. Command, profile, and allowed-update payloads are shared with Worker reconciliation through `shared/lib/telegram-bot-registration.ts`.
 - The webhook intentionally returns `200` on most malformed or unauthorized cases so Telegram does not keep retrying noisy payloads.
 - The dedicated 5-minute Telegram trigger runs registration reconciliation first, then subscriber alert fan-out through `dispatch-telegram-alerts`.
 - The dispatcher consumes Bot API response bodies before returning, which matters under the Workers per-trigger connection cap.

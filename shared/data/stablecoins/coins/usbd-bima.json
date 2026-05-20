@@ -2,6 +2,7 @@
   "id": "usbd-bima",
   "name": "Bima USBD",
   "symbol": "USBD",
+  "oneLiner": "USBD is Bima's Bitcoin-backed CDP stablecoin minted from overcollateralized BTC LST vaults under Liquity-style mechanics with a USDC/USDP/GUSD PSM.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Bitcoin liquid staking/restaking derivatives and other approved BTC wrappers deposited into BIMA vaults; the Peg Stability Module can also hold approved stablecoins such as USDC, USDP, and GUSD for peg operations",
   "pegMechanism": "Liquity-style overcollateralized vaults with a 150% minimum collateral ratio; USBD can be redeemed permissionlessly for $1 of BTC-denominated collateral from the lowest-ratio vaults with a fee of coreRate + 75 bps; a Peg Stability Module adds near-1:1 USDC/USDP/GUSD swaps",
+  "mechanismArchetype": "cdp",
   "llamaId": "253",
   "detailProvider": "defillama",
   "geckoId": "usbd",
@@ -52,6 +54,11 @@
     },
     {
       "chain": "bsc",
+      "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
+      "decimals": 18
+    },
+    {
+      "chain": "nibiru",
       "address": "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c",
       "decimals": 18
     }

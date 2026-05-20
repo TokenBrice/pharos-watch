@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { BackingType, FilterTag, GovernanceType, Infrastructure, StablecoinMeta } from "@shared/types";
 
 export type InfrastructureTaxonomyValue = Infrastructure;

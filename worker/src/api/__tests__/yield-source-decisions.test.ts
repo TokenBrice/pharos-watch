@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getEndpointDefinition, getSiteDataAccess, isAdminLikePath } from "@shared/lib/api-endpoints";
 import { handleYieldSourceDecisions } from "../yield-source-decisions";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 function buildRequest(query = ""): { request: Request; url: URL } {
   const url = new URL(`https://ops-api.pharos.watch/api/yield-source-decisions${query}`);
@@ -150,6 +150,73 @@ describe("handleYieldSourceDecisions", () => {
       },
     ]);
     db.assertAllMatchesUsed();
+  });
+
+  it("returns retentionReason and publicAlternatives when includePublicAlternatives=1 is requested", async () => {
+    const db = mockD1([
+      {
+        match: "FROM yield_publication_generations",
+        rows: [],
+      },
+      {
+        match: "FROM yield_source_decisions",
+        rows: [
+          {
+            generation_id: "yield-1773000000",
+            stablecoin_id: "usdc-circle",
+            selected_source_key: "defillama:best",
+            selected_confidence_tier: "curated",
+            selected_data_source: "defillama",
+            selected_apy_30d: 4.7,
+            selected_score: 82.5,
+            selected_reason: "Curated source selected",
+            previous_best_source_key: null,
+            source_switch: 0,
+            rejected_count: 1,
+            alternatives_json: "[]",
+            created_at: 1_773_000_000,
+            retention_reason: "trend",
+          },
+        ],
+      },
+      {
+        match: "FROM yield_source_decision_alternatives",
+        rows: [
+          {
+            generation_id: "yield-1773000000",
+            stablecoin_id: "usdc-circle",
+            alt_source_key: "defillama-auto:compound-v3",
+            alt_yield_source: "Compound V3",
+            alt_apy30d_delta: -0.5,
+            rejection_reason_code: "lower-confidence",
+            recorded_at: 1_773_000_000,
+          },
+        ],
+      },
+    ]);
+    const { request, url } = buildRequest("?stablecoin=usdc-circle&includePublicAlternatives=1");
+
+    const response = await handleYieldSourceDecisions({ db, url, request, trustedAdmin: true });
+    const body = await response.json() as {
+      filters: { includePublicAlternatives: boolean };
+      decisions: Array<{
+        retentionReason: string | null;
+        publicAlternatives?: Array<{ sourceKey: string; rejectionReasonCode: string }>;
+      }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.filters.includePublicAlternatives).toBe(true);
+    expect(body.decisions[0]?.retentionReason).toBe("trend");
+    expect(body.decisions[0]?.publicAlternatives).toEqual([
+      {
+        sourceKey: "defillama-auto:compound-v3",
+        yieldSource: "Compound V3",
+        apy30dDelta: -0.5,
+        rejectionReasonCode: "lower-confidence",
+        recordedAt: 1_773_000_000,
+      },
+    ]);
   });
 
   it("returns compact generation summaries without raw evidence blobs", async () => {

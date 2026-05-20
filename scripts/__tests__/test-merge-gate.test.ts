@@ -5,17 +5,21 @@ import {
   buildExecutionBatches,
   buildCommandPlan,
   buildFullCommandPlan,
+  fetchBaseRef,
   getChangedFiles,
   runExecutionBatches,
-} from "../test-merge-gate.mjs";
-import { getCommandEnv } from "../test-merge-gate.mjs";
+  runMergeGate,
+} from "../maintenance/test-merge-gate.mjs";
+import { getCommandEnv } from "../maintenance/test-merge-gate.mjs";
 import {
   buildCiValidateCommands,
   buildCiValidateStepPlan,
   buildNoncriticalTestShardCommands,
   COMMON_VALIDATE_POSTBUILD_COMMANDS,
   COMMON_VALIDATE_PREBUILD_COMMANDS,
+  PAGES_SMOKE_VALIDATE_COMMANDS,
   PAGES_VALIDATE_COMMANDS,
+  WORKER_SMOKE_VALIDATE_COMMANDS,
   WORKER_VALIDATE_COMMANDS,
 } from "../lib/validate-contract.mjs";
 
@@ -77,11 +81,103 @@ describe("buildCommandPlan", () => {
   });
 
   it("provides the changed-file set to the local critical coverage command", () => {
-    expect(getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"])).toEqual({
+    expect(
+      getCommandEnv("npm run coverage:critical", ["worker/src/api/status.ts", "docs/testing.md"], {}),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
       CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts,docs/testing.md",
     });
 
-    expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"])).toEqual({});
+    expect(getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+    });
+  });
+
+  it("skips base env injection when MERGE_GATE_NATIVE_ENV=1 is set", () => {
+    expect(
+      getCommandEnv(
+        "npm run coverage:critical",
+        ["worker/src/api/status.ts"],
+        { MERGE_GATE_NATIVE_ENV: "1" },
+      ),
+    ).toEqual({
+      CRITICAL_COVERAGE_CHANGED_FILES: "worker/src/api/status.ts",
+    });
+
+    expect(
+      getCommandEnv("npm run test:noncritical", ["worker/src/api/status.ts"], { MERGE_GATE_NATIVE_ENV: "1" }),
+    ).toEqual({});
+  });
+
+  it("skips local mobile smoke when pages smoke runs for non-UI diffs", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", [".github/workflows/pages-release.yml"], {}),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "0",
+    });
+  });
+
+  it("applies the local mobile canary profile for UI-impacting pages smoke", () => {
+    expect(
+      getCommandEnv("npm run validate:pages-smoke", ["src/app/page.tsx"], {}),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+      SMOKE_MOBILE_UI_ROUTES: "/,/stablecoins/,/screener/,/stablecoin/usdt-tether/,/timeline/,/flows/,/liquidity/,/yield/",
+      SMOKE_MOBILE_UI_VIEWPORTS: "360x740,390x844",
+      SMOKE_MOBILE_UI_SKIP_DESKTOP: "1",
+      SMOKE_MOBILE_UI_WORKERS: "3",
+      SMOKE_MOBILE_UI_WAIT_MS: "1500",
+    });
+  });
+
+  it("does not override explicit local mobile smoke env overrides", () => {
+    expect(
+      getCommandEnv(
+        "npm run validate:pages-smoke",
+        ["src/app/page.tsx"],
+        {
+          SMOKE_MOBILE_UI_ROUTES: "/custom/",
+          SMOKE_MOBILE_UI_VIEWPORTS: "412x915",
+          SMOKE_MOBILE_UI_SKIP_DESKTOP: "0",
+          SMOKE_MOBILE_UI_WORKERS: "5",
+          SMOKE_MOBILE_UI_WAIT_MS: "2100",
+        },
+      ),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      PAGES_SMOKE_INCLUDE_MOBILE: "1",
+    });
+  });
+
+  it("defaults local worker smoke to canary API scope", () => {
+    expect(getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], {})).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+      SMOKE_API_SCOPE: "canary",
+    });
+  });
+
+  it("preserves explicit local worker smoke API scope overrides", () => {
+    expect(
+      getCommandEnv("npm run validate:worker-smoke", ["worker/src/api/status.ts"], { SMOKE_API_SCOPE: "full" }),
+    ).toEqual({
+      TZ: "UTC",
+      LANG: "C.UTF-8",
+      CI: "true",
+    });
   });
 
   it("groups independent post-validate checks for parallel local execution", () => {
@@ -93,14 +189,20 @@ describe("buildCommandPlan", () => {
       [
         [
           "npm run build",
+          "npm run check:feature-flag-inlining",
           "npm run seo:check",
           "npm run check:phishing-signatures",
           "npm run check:classifier-sensitive-copy",
+          "npm run check:build-size",
+          "npm run check:build-attribution",
+          "npm run check:methodology-pdfs",
         ],
-        ["npm run test:noncritical"],
+        ["npm run test:noncritical -- --shard=1/4"],
+        ["npm run test:noncritical -- --shard=2/4"],
+        ["npm run test:noncritical -- --shard=3/4"],
+        ["npm run test:noncritical -- --shard=4/4"],
         ["npm run coverage:critical"],
         ["npm run typecheck:worker"],
-        ["npm run typecheck:worker-scripts"],
       ],
     ]);
   });
@@ -114,7 +216,7 @@ describe("buildCommandPlan", () => {
     await runExecutionBatches(
       plan,
       ["shared/lib/classification.ts"],
-      {},
+      { MERGE_GATE_PARALLEL: "1" },
       {
         exit: (status) => {
           exitStatus = status;
@@ -145,10 +247,12 @@ describe("buildCommandPlan", () => {
     expect(calls).toContain("npm run build");
     expect(calls).not.toContain("npm run seo:check");
     expect(aborted).toEqual([
-      "npm run test:noncritical",
+      "npm run test:noncritical -- --shard=1/4",
+      "npm run test:noncritical -- --shard=2/4",
+      "npm run test:noncritical -- --shard=3/4",
+      "npm run test:noncritical -- --shard=4/4",
       "npm run coverage:critical",
       "npm run typecheck:worker",
-      "npm run typecheck:worker-scripts",
     ]);
   });
 
@@ -161,7 +265,7 @@ describe("buildCommandPlan", () => {
         { cmd: "npm run coverage:critical", reasons: ["test"] },
       ],
       ["src/app/page.tsx", "worker/src/api/status.ts"],
-      { MERGE_GATE_SERIAL: "1" },
+      { MERGE_GATE_SERIAL: "1", MERGE_GATE_NATIVE_ENV: "1" },
       {
         exit: () => {
           throw new Error("unexpected exit");
@@ -219,12 +323,14 @@ describe("getChangedFiles", () => {
 });
 
 describe("pre-push hook", () => {
-  it("passes exact main push refs into the local merge gate", () => {
+  it("passes exact main push refs into the local merge gate and defaults Pages smoke on", () => {
     const hook = readFileSync(resolve(process.cwd(), ".githooks/pre-push"), "utf8");
 
+    expect(hook).toContain('pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"');
     expect(hook).toContain('remote_ref" != "refs/heads/main"');
-    expect(hook).toContain('MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
-    expect(hook).toContain('MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha"');
+    expect(hook).toContain('MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" npm run test:merge-gate');
   });
 });
 
@@ -247,5 +353,177 @@ describe("validate workflow command model", () => {
       { cmd: "npm run coverage:critical", condition: null },
       ...WORKER_VALIDATE_COMMANDS.map((cmd) => ({ cmd, condition: "worker_changed" })),
     ]);
+  });
+});
+
+describe("opt-in smoke wiring", () => {
+  it("appends Pages smoke after Pages build when MERGE_GATE_PAGES_SMOKE is requested", () => {
+    expect(
+      buildCommandPlan(["src/app/page.tsx"], { pagesSmoke: true }).map((item) => item.cmd),
+    ).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...PAGES_VALIDATE_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...PAGES_SMOKE_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("does not append Pages smoke for worker-only changes", () => {
+    expect(
+      buildCommandPlan(["worker/src/api/status.ts"], { pagesSmoke: true }).map((item) => item.cmd),
+    ).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...WORKER_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("appends worker smoke after worker typechecks when MERGE_GATE_WORKER_SMOKE is requested", () => {
+    expect(
+      buildCommandPlan(["worker/src/api/status.ts"], { workerSmoke: true }).map((item) => item.cmd),
+    ).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...WORKER_VALIDATE_COMMANDS,
+      ...WORKER_SMOKE_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("appends both smokes in buildFullCommandPlan when requested", () => {
+    expect(
+      buildFullCommandPlan("forced", { pagesSmoke: true, workerSmoke: true }).map((item) => item.cmd),
+    ).toEqual([
+      ...COMMON_VALIDATE_PREBUILD_COMMANDS,
+      ...PAGES_VALIDATE_COMMANDS,
+      ...COMMON_VALIDATE_POSTBUILD_COMMANDS,
+      ...WORKER_VALIDATE_COMMANDS,
+      ...PAGES_SMOKE_VALIDATE_COMMANDS,
+      ...WORKER_SMOKE_VALIDATE_COMMANDS,
+    ]);
+  });
+
+  it("sequences smoke commands in a third batch after the parallel post-validate batch", () => {
+    const plan = buildCommandPlan(["shared/lib/classification.ts"], { pagesSmoke: true, workerSmoke: true });
+    expect(
+      buildExecutionBatches(plan).map((batch) => batch.map((unit) => unit.commands.map((item) => item.cmd))),
+    ).toEqual([
+      [["npm run validate:prebuild"]],
+      [
+        [
+          "npm run build",
+          "npm run check:feature-flag-inlining",
+          "npm run seo:check",
+          "npm run check:phishing-signatures",
+          "npm run check:classifier-sensitive-copy",
+          "npm run check:build-size",
+          "npm run check:build-attribution",
+          "npm run check:methodology-pdfs",
+        ],
+        ["npm run test:noncritical -- --shard=1/4"],
+        ["npm run test:noncritical -- --shard=2/4"],
+        ["npm run test:noncritical -- --shard=3/4"],
+        ["npm run test:noncritical -- --shard=4/4"],
+        ["npm run coverage:critical"],
+        ["npm run typecheck:worker"],
+      ],
+      [["npm run validate:pages-smoke"], ["npm run validate:worker-smoke"]],
+    ]);
+  });
+});
+
+describe("fetchBaseRef", () => {
+  it("runs git fetch for the branch suffix of origin-prefixed base refs", () => {
+    const calls: unknown[] = [];
+    const execFile = (cmd: string, args: string[]) => {
+      calls.push([cmd, args]);
+      return "";
+    };
+
+    fetchBaseRef({ baseRef: "origin/main", execFile });
+    expect(calls).toEqual([["git", ["fetch", "--quiet", "origin", "main"]]]);
+  });
+
+  it("skips non-origin base refs", () => {
+    const calls: unknown[] = [];
+    const execFile = (cmd: string, args: string[]) => {
+      calls.push([cmd, args]);
+      return "";
+    };
+
+    fetchBaseRef({ baseRef: "abc123", execFile });
+    expect(calls).toEqual([]);
+  });
+
+  it("warns but does not throw when the fetch fails", () => {
+    const execFile = () => {
+      throw new Error("network down");
+    };
+
+    expect(() => fetchBaseRef({ baseRef: "origin/main", execFile })).not.toThrow();
+  });
+});
+
+describe("runMergeGate fetch and node_modules wiring", () => {
+  function makeStubs() {
+    const fetchCalls: string[][] = [];
+    const execFile = (cmd: string, args: string[], options?: { encoding?: string }) => {
+      if (args[0] === "fetch") {
+        fetchCalls.push(args);
+        return "";
+      }
+      if (args[0] === "diff") {
+        if (options?.encoding === "utf8") {
+          return "";
+        }
+        return Buffer.from("");
+      }
+      return "";
+    };
+    const runCommandCalls: string[] = [];
+    const runCommandImpl = (cmd: string) => {
+      runCommandCalls.push(cmd);
+      return Promise.resolve({ status: 0, aborted: false });
+    };
+    return { fetchCalls, execFile, runCommandCalls, runCommandImpl };
+  }
+
+  it("runs git fetch when no MERGE_GATE_BASE_REF is set and not in staged or full-deploy mode", async () => {
+    const { fetchCalls, execFile, runCommandImpl } = makeStubs();
+    await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
+    expect(fetchCalls).toEqual([["fetch", "--quiet", "origin", "main"]]);
+  });
+
+  it("skips the fetch when MERGE_GATE_BASE_REF is explicitly set (pre-push hook case)", async () => {
+    const { fetchCalls, execFile, runCommandImpl } = makeStubs();
+    await runMergeGate({
+      argv: [],
+      env: { MERGE_GATE_BASE_REF: "abc123", MERGE_GATE_HEAD_REF: "def456" },
+      runCommandImpl,
+      execFile,
+    });
+    expect(fetchCalls).toEqual([]);
+  });
+
+  it("skips the fetch when MERGE_GATE_NO_FETCH=1 is set", async () => {
+    const { fetchCalls, execFile, runCommandImpl } = makeStubs();
+    await runMergeGate({
+      argv: [],
+      env: { MERGE_GATE_NO_FETCH: "1" },
+      runCommandImpl,
+      execFile,
+    });
+    expect(fetchCalls).toEqual([]);
+  });
+
+  it("skips the fetch in --staged mode", async () => {
+    const { fetchCalls, execFile, runCommandImpl } = makeStubs();
+    await runMergeGate({ argv: ["--staged"], env: {}, runCommandImpl, execFile });
+    expect(fetchCalls).toEqual([]);
+  });
+
+  it("invokes the node_modules drift check before any other work", async () => {
+    const { execFile, runCommandImpl, runCommandCalls } = makeStubs();
+    await runMergeGate({ argv: [], env: {}, runCommandImpl, execFile });
+    expect(runCommandCalls[0]).toBe("node scripts/ci/check-node-modules-fresh.mjs");
   });
 });

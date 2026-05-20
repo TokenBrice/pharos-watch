@@ -1,3 +1,4 @@
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   createApiKey,
   deactivateApiKey,
@@ -46,7 +47,7 @@ export const handleApiKeysRoute = makeAdminRoute<ApiKeysRouteContext>(
 export function handleApiKeys(
   db: D1Database,
   trustedAdmin = false,
-  request: Request = fallbackAdminRequest("/api/api-keys"),
+  request: Request = fallbackAdminRequest(API_PATHS.apiKeys()),
   apiKeyHashPepper?: string,
 ): Promise<Response> {
   return handleApiKeysRoute({ db, trustedAdmin, request, apiKeyHashPepper });

@@ -1,0 +1,64 @@
+<svg width="88" height="88" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#0d1f3c"/>
+      <stop offset="100%" stop-color="#050a14"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E8DCC4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#E8DCC4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tBody" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D4C8B0"/>
+      <stop offset="40%" stop-color="#E8DCC4"/>
+      <stop offset="100%" stop-color="#C8BBAA"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed dark background (no transparency; covers entire viewBox for maskable safety) -->
+  <rect width="88" height="88" fill="#050a14"/>
+  <!-- Subtle radial gradient layered on top (still opaque) -->
+  <rect width="88" height="88" fill="url(#bg)"/>
+
+  <!-- Maskable safe zone: scale art to 0.78 around center (44, 44) to fit inside the 80% inner circle.
+       Original art group used translate(0, 5) for optical centering; we re-anchor to keep the
+       lantern + shield + base entirely inside the safe radius (~35 px from center). -->
+  <g transform="translate(44, 44) scale(0.78) translate(-44, -39)">
+    <!-- Glow behind lantern -->
+    <circle cx="44" cy="20" r="12" fill="url(#glow)"/>
+
+    <!-- Beams -->
+    <line x1="44" y1="20" x2="44" y2="6" stroke="#E8DCC4" stroke-width="2" opacity="0.5" stroke-linecap="round"/>
+    <line x1="44" y1="20" x2="28" y2="9" stroke="#E8DCC4" stroke-width="1.8" opacity="0.35" stroke-linecap="round"/>
+    <line x1="44" y1="20" x2="60" y2="9" stroke="#E8DCC4" stroke-width="1.8" opacity="0.35" stroke-linecap="round"/>
+    <line x1="44" y1="20" x2="14" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+    <line x1="44" y1="20" x2="74" y2="14" stroke="#E8DCC4" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+
+    <!-- Shield outline -->
+    <path d="M20,14 L68,14 L68,38 Q68,68 44,78 Q20,68 20,38 Z" fill="none" stroke="#E8DCC4" stroke-width="2.5" opacity="0.45" stroke-linejoin="round"/>
+
+    <!-- Lantern light -->
+    <circle cx="44" cy="20" r="4" fill="white" opacity="0.85"/>
+
+    <!-- Dome -->
+    <path d="M40,25 C40,19 48,19 48,25 Z" fill="#E8DCC4" opacity="0.9"/>
+
+    <!-- Lantern room -->
+    <rect x="39.5" y="25" width="9" height="5.5" rx="0.8" fill="#F5F0E6" opacity="0.85"/>
+    <line x1="42.5" y1="25" x2="42.5" y2="30.5" stroke="#0a1628" stroke-width="0.7" opacity="0.3"/>
+    <line x1="45.5" y1="25" x2="45.5" y2="30.5" stroke="#0a1628" stroke-width="0.7" opacity="0.3"/>
+
+    <!-- Gallery -->
+    <rect x="36" y="30.5" width="16" height="3" rx="1.2" fill="#E8DCC4" opacity="0.85"/>
+
+    <!-- Tower shaft -->
+    <path d="M38.5,33.5 L49.5,33.5 L52,60 L36,60 Z" fill="url(#tBody)" opacity="0.8"/>
+    <!-- Bands -->
+    <line x1="37.8" y1="43" x2="50.5" y2="43" stroke="#0d1f3c" stroke-width="1.8" opacity="0.35"/>
+    <line x1="37" y1="52" x2="51.3" y2="52" stroke="#0d1f3c" stroke-width="1.8" opacity="0.35"/>
+
+    <!-- Base -->
+    <rect x="33" y="60" width="22" height="4" rx="2" fill="#E8DCC4" opacity="0.7"/>
+    <rect x="30" y="64" width="28" height="4" rx="2" fill="#E8DCC4" opacity="0.45"/>
+  </g>
+</svg>

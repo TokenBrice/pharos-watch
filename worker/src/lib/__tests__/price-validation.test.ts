@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_META_BY_ID: new Map([
     ["brz-transfero", { flags: { pegCurrency: "BRL", navToken: false } }],
     ["ggbr-goldfish-gold", { flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 }],

@@ -1,0 +1,365 @@
+import type { ReportCard } from "@shared/types/report-cards";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import {
+  YieldRankingsResponseSchema,
+  type YieldRankChangeAttribution,
+  type YieldRankChangeDriver,
+  type YieldRanking,
+  type YieldRankingsResponse,
+} from "@shared/types/yield";
+import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { derivePysNullReason } from "../cron/yield-helpers";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@shared/lib/yield-methodology-version";
+import {
+  addFreshnessHeaders,
+  buildFreshnessMeta,
+  buildMethodologyEnvelope,
+  createCacheHandler,
+  jsonResponse,
+} from "../lib/api-utils";
+import { CACHE_PROFILES, DEFAULT_SAFETY_SCORE } from "../lib/constants";
+import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
+import { loadPublishedReportCardsSnapshot } from "../lib/report-cards-snapshot-cache";
+
+const YIELD_RANKINGS_MAX_AGE_SEC = CRON_INTERVALS["sync-yield-data"];
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function positiveInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function roundDelta(value: number | null): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  const rounded = Number(value.toFixed(4));
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function buildYieldMethodology(asOf: number) {
+  return buildMethodologyEnvelope({
+    version: YIELD_METHODOLOGY_VERSION,
+    versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+    currentVersion: YIELD_METHODOLOGY_VERSION,
+    currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+    changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+    asOf,
+  });
+}
+
+function resolveYieldPublicationMetadata(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+): YieldRankingsResponse["publication"] {
+  if (payload.publication) return payload.publication;
+
+  const generationIds = new Set(
+    payload.rankings
+      .map((row) => row.publicationGenerationId)
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+  );
+  if (generationIds.size !== 1) return payload.publication;
+
+  const updatedAt = finiteNumber(payload.updatedAt) ?? cached.updatedAt;
+  return {
+    generationId: [...generationIds][0] ?? null,
+    updatedAt,
+    cutoffAt: updatedAt,
+    schemaVersion: 1,
+    status: "published",
+  };
+}
+
+function normalizeYieldRankingsContract(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+): YieldRankingsResponse {
+  const publication = resolveYieldPublicationMetadata(payload, cached);
+  const generationId = typeof publication?.generationId === "string" && publication.generationId.length > 0
+    ? publication.generationId
+    : null;
+
+  return {
+    ...payload,
+    ...(publication ? { publication } : {}),
+    methodology: payload.methodology ?? buildYieldMethodology(finiteNumber(payload.updatedAt) ?? cached.updatedAt),
+    rankings: payload.rankings.map((row, index) => ({
+      ...row,
+      ...(row.publicationGenerationId === undefined && generationId
+        ? { publicationGenerationId: generationId }
+        : {}),
+      ...(row.publishedRank === undefined && generationId ? { publishedRank: index + 1 } : {}),
+    })),
+  };
+}
+
+function recomputeYieldScore(row: YieldRanking, safetyInputScore: number, scalingFactor: number): number {
+  return computePYS({
+    apy30d: row.apy30d,
+    safetyScore: safetyInputScore,
+    apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+    scalingFactor,
+    benchmarkRate: row.benchmarkRate ?? null,
+    sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
+  });
+}
+
+function selectRankChangeDriver(params: {
+  row: YieldRanking;
+  anySafetyHydrationChanged: boolean;
+  pysDelta: number | null;
+  rankDelta: number;
+}): YieldRankChangeDriver {
+  if (params.anySafetyHydrationChanged) return "stablecoin-safety";
+  if (params.row.provenance?.sourceSwitch) return "source-switch";
+  const sourceRiskPenalty = finiteNumber(params.row.sourceRisk?.sourceRiskPenalty);
+  if (sourceRiskPenalty != null && sourceRiskPenalty > 1) return "source-risk";
+  if (params.row.warningSignals.includes("data-stale")) return "freshness";
+  if (finiteNumber(params.row.yieldStability) != null && (params.row.yieldStability ?? 1) < 0.7) {
+    return "volatility";
+  }
+  if (
+    finiteNumber(params.row.sourceRisk?.sourceDepthRatio) != null &&
+    (params.row.sourceRisk?.sourceDepthRatio ?? 1) < 0.05
+  ) {
+    return "tvl-depth";
+  }
+  if (params.row.benchmarkIsFallback === true || params.row.benchmarkFallbackMode) return "benchmark";
+  return params.pysDelta == null || params.pysDelta === 0 ? "apy" : "stablecoin-safety";
+}
+
+function buildRankChangeAttribution(params: {
+  originalRow: YieldRanking;
+  hydratedRow: YieldRanking;
+  anySafetyHydrationChanged: boolean;
+}): YieldRankChangeAttribution | null {
+  const previousRank = positiveInteger(params.hydratedRow.publishedRank);
+  const liveRank = positiveInteger(params.hydratedRow.liveRank);
+  if (previousRank == null || liveRank == null || previousRank === liveRank) {
+    return params.originalRow.rankChangeAttribution ?? null;
+  }
+
+  const previousPys = finiteNumber(params.originalRow.pharosYieldScore);
+  const livePys = finiteNumber(params.hydratedRow.pharosYieldScore);
+  const pysDelta = previousPys != null && livePys != null ? roundDelta(livePys - previousPys) : null;
+  const rankDelta = previousRank - liveRank;
+  const sourceRiskPenalty = finiteNumber(params.hydratedRow.sourceRisk?.sourceRiskPenalty);
+  const sourceDepthRatio = finiteNumber(params.hydratedRow.sourceRisk?.sourceDepthRatio);
+
+  const primaryDriver = selectRankChangeDriver({
+    row: params.hydratedRow,
+    anySafetyHydrationChanged: params.anySafetyHydrationChanged,
+    pysDelta,
+    rankDelta,
+  });
+
+  return {
+    previousRank,
+    rankDelta,
+    previousPys,
+    pysDelta,
+    primaryDriver,
+    driverContributions: {
+      apy: primaryDriver === "apy" ? rankDelta : null,
+      benchmark: primaryDriver === "benchmark" ? rankDelta : null,
+      stablecoinSafety: params.anySafetyHydrationChanged ? (pysDelta ?? 0) : null,
+      sourceRisk: sourceRiskPenalty != null && sourceRiskPenalty > 1 ? roundDelta(1 - sourceRiskPenalty) : null,
+      sourceSwitch: params.hydratedRow.provenance?.sourceSwitch ? rankDelta : null,
+      freshness: params.hydratedRow.warningSignals.includes("data-stale") ? rankDelta : null,
+      volatility:
+        finiteNumber(params.hydratedRow.yieldStability) != null && (params.hydratedRow.yieldStability ?? 1) < 0.7
+          ? rankDelta
+          : null,
+      tvlDepth: sourceDepthRatio != null && sourceDepthRatio < 0.05 ? rankDelta : null,
+    },
+  };
+}
+
+function hydrateYieldRankingsWithLiveSafety(
+  payload: YieldRankingsResponse,
+  cards: ReportCard[],
+): { payload: YieldRankingsResponse; degradationReasons: string[] } {
+  const reportCardById = new Map(cards.filter((card) => !card.isDefunct).map((card) => [card.id, card]));
+
+  const hydratedRows = payload.rankings
+    .map((row) => {
+      const card = reportCardById.get(row.id);
+      const safetyInputScore = card?.overallScore ?? DEFAULT_SAFETY_SCORE;
+      const pharosYieldScore = recomputeYieldScore(row, safetyInputScore, payload.scalingFactor);
+      const pysNullReason = pharosYieldScore > 0
+        ? null
+        : derivePysNullReason({
+            apy30d: row.apy30d,
+            safetyScore: safetyInputScore,
+            apyVarianceScore: yieldStabilityToApyVarianceScore(row.yieldStability),
+            scalingFactor: payload.scalingFactor,
+            benchmarkRate: row.benchmarkRate ?? null,
+            sourceRiskPenalty: row.sourceRisk?.sourceRiskPenalty ?? null,
+          });
+
+      return {
+        originalRow: row,
+        safetyChanged: row.safetyScore !== safetyInputScore,
+        row: {
+          ...row,
+          safetyScore: safetyInputScore,
+          safetyGrade: card?.overallGrade ?? "NR",
+          pharosYieldScore,
+          pysNullReason,
+          yieldToRisk: 101 - safetyInputScore > 0 ? row.apy30d / (101 - safetyInputScore) : null,
+          provenance: row.provenance
+            ? {
+                ...row.provenance,
+                usedDefaultSafety: card?.overallScore == null,
+                safetyProvenance:
+                  card?.overallScore == null ? ("default-safety" as const) : ("live-report-card" as const),
+              }
+            : null,
+        },
+      };
+    })
+    .sort((a, b) => {
+      const scoreDiff =
+        (b.row.pharosYieldScore ?? Number.NEGATIVE_INFINITY) - (a.row.pharosYieldScore ?? Number.NEGATIVE_INFINITY);
+      if (scoreDiff !== 0) return scoreDiff;
+      const apyDiff = b.row.currentApy - a.row.currentApy;
+      if (apyDiff !== 0) return apyDiff;
+      return a.row.name.localeCompare(b.row.name);
+    });
+
+  const anySafetyHydrationChanged = hydratedRows.some((entry) => entry.safetyChanged);
+  const rankings = hydratedRows.map((entry, index) => {
+    const row = {
+      ...entry.row,
+      liveRank: index + 1,
+    };
+    const rankChangeAttribution = buildRankChangeAttribution({
+      originalRow: entry.originalRow,
+      hydratedRow: row,
+      anySafetyHydrationChanged,
+    });
+    return rankChangeAttribution == null && entry.originalRow.rankChangeAttribution === undefined
+      ? row
+      : { ...row, rankChangeAttribution };
+  });
+
+  const coveredCount = rankings.filter((row) => row.provenance?.safetyProvenance === "live-report-card").length;
+  const trackedCount = rankings.length;
+  const coverageRatio = trackedCount > 0 ? Number((coveredCount / trackedCount).toFixed(4)) : 1;
+  const degradationReasons = coverageRatio < 0.75 ? ["low-row-safety-coverage"] : [];
+
+  return {
+    degradationReasons,
+    payload: {
+      ...payload,
+      methodology: payload.methodology ?? buildYieldMethodology(finiteNumber(payload.updatedAt) ?? Math.floor(Date.now() / 1000)),
+      ...(degradationReasons.length > 0
+        ? {
+            warnings: [
+              ...(payload.warnings ?? []),
+              {
+                code: "yield-safety-hydration-degraded",
+                message: "Live safety hydration coverage is degraded for public yield rankings.",
+                reasons: degradationReasons,
+              },
+            ],
+          }
+        : {}),
+      rankings,
+      provenance: payload.provenance
+        ? {
+            ...payload.provenance,
+            safetySnapshot: {
+              ...payload.provenance.safetySnapshot,
+              coveredCount,
+              trackedCount,
+              coverageRatio,
+              reason: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
+            },
+          }
+        : payload.provenance,
+    },
+  };
+}
+
+function buildYieldRankingsResponse(
+  payload: YieldRankingsResponse,
+  cached: { updatedAt: number },
+  warningReasons: string[],
+): Response {
+  const warning =
+    warningReasons.length > 0 ? `199 - "Yield safety hydration degraded: ${warningReasons.join(",")}"` : null;
+  const headers = addFreshnessHeaders(
+    {
+      "Content-Type": "application/json",
+      "Cache-Control": CACHE_PROFILES.standard,
+      ...(warning ? { Warning: warning } : {}),
+    },
+    cached.updatedAt,
+    YIELD_RANKINGS_MAX_AGE_SEC,
+  );
+  if (warning && headers.Warning && !headers.Warning.includes(warning)) {
+    headers.Warning = `${headers.Warning}, ${warning}`;
+  }
+  return jsonResponse(
+    {
+      ...payload,
+      _meta: buildFreshnessMeta(cached.updatedAt, YIELD_RANKINGS_MAX_AGE_SEC),
+    },
+    headers,
+  );
+}
+
+/**
+ * GET /api/yield-rankings
+ * Returns cached yield rankings, with live Safety Score fields hydrated from the
+ * current report-card snapshot so the endpoint cannot drift from /api/report-cards.
+ */
+export const handleYieldRankings = createCacheHandler(
+  "yield-rankings",
+  "yield-rankings",
+  CACHE_PROFILES.standard,
+  YIELD_RANKINGS_MAX_AGE_SEC,
+  {
+    schema: YieldRankingsResponseSchema,
+    malformedMessage: "Cached yield-rankings payload is malformed",
+    transform: async (payload, { db, cached }) => {
+      const validatedPayload = normalizeYieldRankingsContract(payload as YieldRankingsResponse, cached);
+      try {
+        const publishedSnapshot = await loadPublishedReportCardsSnapshot(db);
+        const cards = publishedSnapshot.kind === "ok"
+          ? publishedSnapshot.payload.cards
+          : (await buildReportCardsSnapshot(db)).cards;
+        if (publishedSnapshot.kind !== "ok") {
+          console.warn(
+            `[yield-rankings] Published report-card snapshot unavailable; computed fallback reason=${publishedSnapshot.reason}`,
+          );
+        }
+        const hydrated = hydrateYieldRankingsWithLiveSafety(validatedPayload, cards);
+        if (hydrated.degradationReasons.length > 0) {
+          return buildYieldRankingsResponse(hydrated.payload, cached, hydrated.degradationReasons);
+        }
+        return hydrated.payload;
+      } catch (err) {
+        console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
+        const degradedPayload: YieldRankingsResponse = {
+          ...validatedPayload,
+          warnings: [
+            ...(validatedPayload.warnings ?? []),
+            {
+              code: "yield-safety-hydration-degraded",
+              message: "Live safety hydration failed; cached published safety fields were returned.",
+              reasons: ["live-report-card-hydration-failed"],
+            },
+          ],
+        };
+        return buildYieldRankingsResponse(degradedPayload, cached, ["live-report-card-hydration-failed"]);
+      }
+    },
+  },
+);

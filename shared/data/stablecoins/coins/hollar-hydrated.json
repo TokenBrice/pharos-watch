@@ -2,6 +2,7 @@
   "id": "hollar-hydrated",
   "name": "Hydrated Dollar",
   "symbol": "HOLLAR",
+  "oneLiner": "HOLLAR is Hydration's overcollateralized dollar stablecoin, minted from DOT, ETH, BTC, and stablecoin collateral on an Aave v3 fork with HSM-anchored peg swaps.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized by DOT, ETH, vDOT, WBTC, tBTC, USDT, USDC, and giga-token variants (GIGADOT, GIGAETH) on the Hydration appchain; built on Aave v3-forked code",
   "pegMechanism": "Overcollateralized CDP with automated partial liquidations per block; peg stabilized by the HOLLAR Stability Module (HSM), which enables direct stablecoin swaps near $1 and deploys received stablecoins into yield strategies",
+  "mechanismArchetype": "cdp",
   "llamaId": "312",
   "detailProvider": "defillama",
   "geckoId": "hydrated-dollar",

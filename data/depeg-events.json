@@ -1,0 +1,20 @@
+[
+  {
+    "slug": "usdc-2023-03-11",
+    "id": 1,
+    "stablecoinId": "usdc-circle",
+    "symbol": "USDC",
+    "pegType": "USD",
+    "direction": "below",
+    "peakDeviationBps": 1300,
+    "startedAt": 1678492800,
+    "endedAt": 1678838400,
+    "startPrice": 1.0,
+    "peakPrice": 0.87,
+    "recoveryPrice": 1.0,
+    "pegReference": 1.0,
+    "source": "backfill",
+    "confirmationSources": "Curated annotation — SVB reserve exposure incident",
+    "pendingReason": null
+  }
+]

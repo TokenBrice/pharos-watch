@@ -4,14 +4,13 @@ import {
   getSecondaryFallbackRpcUrl,
 } from "./public-rpc-registry";
 export {
-  CHAIN_REGISTRY,
   CG_CHAIN_MAP,
   CG_CHAIN_REVERSE,
   DS_CHAIN_MAP,
   GT_CHAIN_MAP,
   GT_CHAIN_REVERSE,
   GT_ONLY_CHAIN_MAP,
-} from "@shared/lib/chain-provider-registry";
+} from "@shared/lib/chains";
 
 /**
  * Unified chain registry — single source of truth for chain name mappings

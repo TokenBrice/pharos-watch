@@ -12,6 +12,9 @@ interface SupplyHistoryRow {
   price: number | null;
 }
 
+const DEFAULT_SUPPLY_HISTORY_DAYS = 365;
+const MAX_SUPPLY_HISTORY_DAYS = 5000;
+
 export const handleSupplyHistory = withErrorHandler("supply-history", async (
   db: D1Database,
   url: URL
@@ -24,9 +27,9 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
 
   return handleStablecoinHistoryRequest(db, url, {
     query: {
-      defaultDays: 365,
+      defaultDays: DEFAULT_SUPPLY_HISTORY_DAYS,
       minDays: 1,
-      maxDays: 1825,
+      maxDays: MAX_SUPPLY_HISTORY_DAYS,
       rangePolicy: "reject",
     },
     cacheControl: CACHE_PROFILES.slow,

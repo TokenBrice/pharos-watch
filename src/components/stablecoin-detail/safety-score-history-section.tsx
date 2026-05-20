@@ -178,10 +178,22 @@ export function SafetyScoreHistorySection({
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <StatBox label="Best Grade">
-              <SafetyGradeBadge grade={stats.best.grade} score={stats.best.score} size="xs" />
+              <SafetyGradeBadge
+                grade={stats.best.grade}
+                score={stats.best.score}
+                size="xs"
+                versionTopic="safetyScore"
+                versionVariant="tooltip-only"
+              />
             </StatBox>
             <StatBox label="Lowest Grade">
-              <SafetyGradeBadge grade={stats.worst.grade} score={stats.worst.score} size="xs" />
+              <SafetyGradeBadge
+                grade={stats.worst.grade}
+                score={stats.worst.score}
+                size="xs"
+                versionTopic="safetyScore"
+                versionVariant="tooltip-only"
+              />
             </StatBox>
             <StatBox label="Current Streak">
               <div className="flex items-center gap-1.5">
@@ -189,7 +201,13 @@ export function SafetyScoreHistorySection({
                   {formatTrackingSpanDays(stats.streakDays)}
                 </span>
                 <span className="text-xs text-muted-foreground">at</span>
-                <SafetyGradeBadge grade={stats.lastEntry.grade} score={stats.lastEntry.score} size="xs" />
+                <SafetyGradeBadge
+                  grade={stats.lastEntry.grade}
+                  score={stats.lastEntry.score}
+                  size="xs"
+                  versionTopic="safetyScore"
+                  versionVariant="tooltip-only"
+                />
               </div>
             </StatBox>
           </div>
@@ -247,7 +265,13 @@ export function SafetyScoreHistorySection({
                 <span className="text-xs font-medium tabular-nums">
                   {formatChartDate(point.date * 1000, "long")}
                 </span>
-                <SafetyGradeBadge grade={point.grade} score={point.score} size="xs" />
+                <SafetyGradeBadge
+                  grade={point.grade}
+                  score={point.score}
+                  size="xs"
+                  versionTopic="safetyScore"
+                  versionVariant="tooltip-only"
+                />
               </div>
               <TransitionIndicator point={point} />
             </li>

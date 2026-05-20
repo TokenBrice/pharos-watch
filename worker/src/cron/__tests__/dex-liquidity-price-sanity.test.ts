@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@shared/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_STABLECOINS: [
     { id: "brz-transfero", flags: { pegCurrency: "BRL", navToken: false } },
     { id: "eurc-circle", flags: { pegCurrency: "EUR", navToken: false } },

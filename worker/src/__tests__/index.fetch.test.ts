@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
-import { mockD1, type MockTableConfig } from "../api/__tests__/helpers/mock-d1";
-import { hmacSha256Hex, makeExecutionContext } from "../api/__tests__/helpers/auth";
+import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { getApiKeyAuthCacheTtlMs, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRateLimitStateForTests } from "../lib/rate-limit";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
@@ -1049,7 +1049,7 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
     });
   });
 
@@ -1151,7 +1151,7 @@ describe("worker.fetch", () => {
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({
-      error: "Unauthorized: valid X-API-Key required. Contact me@tokenbrice.com for access.",
+      error: "Unauthorized: valid X-API-Key required. Request self-serve access at https://pharos.watch/api/.",
     });
   });
 });

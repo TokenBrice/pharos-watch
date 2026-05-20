@@ -8,7 +8,7 @@ import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "@shared/lib/live-reserve-adapters";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getReserveAdapter } from "../index";
 
 const VALID_INPUT_KINDS = new Set([
@@ -18,6 +18,30 @@ const VALID_INPUT_KINDS = new Set([
   "onchain-solana",
   "onchain-evm",
 ]);
+
+function canonicalStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalStringify(item)).join(",")}]`;
+  return `{${Object.keys(value as Record<string, unknown>)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${canonicalStringify((value as Record<string, unknown>)[key])}`)
+    .join(",")}}`;
+}
+
+function liveReserveSourceFingerprint(
+  config: NonNullable<(typeof ACTIVE_STABLECOINS)[number]["liveReservesConfig"]>,
+): string {
+  return canonicalStringify({
+    adapter: config.adapter,
+    version: config.version,
+    semantics: config.semantics,
+    inputs: {
+      primary: config.inputs.primary,
+      fallbacks: config.inputs.fallbacks ?? null,
+    },
+    params: config.params ?? null,
+  });
+}
 
 describe("adapter registry completeness", () => {
   it.each(LIVE_RESERVE_ADAPTER_KEYS)(
@@ -192,5 +216,37 @@ describe("adapter registry completeness", () => {
       assetLabel: "USDC",
       assetRisk: "low",
     });
+  });
+
+  it("documents safe source-invariant flip candidates without relying on coin-specific parser params", () => {
+    const expectedDuplicateGroups: Record<string, string[][]> = {
+      "frax-balance-sheet": [],
+      reservoir: [["srusd-reservoir", "wsrusd-reservoir"]],
+    };
+
+    for (const adapterKey of Object.keys(expectedDuplicateGroups)) {
+      const groups = new Map<string, string[]>();
+      for (const coin of ACTIVE_STABLECOINS) {
+        const config = coin.liveReservesConfig;
+        if (config?.adapter !== adapterKey) continue;
+        expect(
+          config.inputs.primary.kind === "http-json" || config.inputs.primary.kind === "http-html",
+          `${coin.id} uses ${adapterKey} but its primary input cannot participate in HTTP source sharing`,
+        ).toBe(true);
+        expect(
+          config.params ?? null,
+          `${coin.id} uses ${adapterKey} with parser params; do not flip source-invariant until params are in the cache key`,
+        ).toBeNull();
+        const fingerprint = liveReserveSourceFingerprint(config);
+        groups.set(fingerprint, [...(groups.get(fingerprint) ?? []), coin.id]);
+      }
+
+      const duplicateGroups = Array.from(groups.values())
+        .map((ids) => ids.sort())
+        .filter((ids) => ids.length > 1)
+        .sort((a, b) => a[0]!.localeCompare(b[0]!));
+
+      expect(duplicateGroups).toEqual(expectedDuplicateGroups[adapterKey]);
+    }
   });
 });

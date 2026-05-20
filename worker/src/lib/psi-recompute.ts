@@ -5,7 +5,7 @@ import {
   type SupplySnapshotMap,
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { canonicalizePsiStablecoinId } from "./psi-stablecoin-ids";
+import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 

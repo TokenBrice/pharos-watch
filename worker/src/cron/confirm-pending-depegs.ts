@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   getDepegThresholdBps,
   DEPEG_PENDING_MIN_AGE_SEC,
@@ -14,19 +13,9 @@ import {
   POOL_CHALLENGE_CONFIRM_MIN,
   POOL_CHALLENGE_HIGH_TVL_USD,
 } from "../lib/constants";
-
-const CoinGeckoPriceSchema = z.record(z.string(), z.object({
-  usd: z.number().optional(),
-  last_updated_at: z.number().optional(),
-}));
-const DefiLlamaPriceSchema = z.object({
-  coins: z.record(z.string(), z.object({
-    price: z.number().optional(),
-    timestamp: z.number().optional(),
-  })).optional(),
-});
+import { CoinGeckoSimplePriceSchema, DefiLlamaCoinsPriceSchema } from "../lib/upstream-schemas";
 import { batchExecute } from "../lib/db";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cancelResponseBodyQuietly } from "../lib/response-body";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -49,6 +38,7 @@ import {
   chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
   isTrustedDexPriceRow,
+  type OffchainDepegConfirmerKey,
 } from "../lib/depeg-trust-policy";
 import { fetchCurrentNativePegQuotes, normalizeSupportedPegCurrency } from "../lib/native-peg-quotes";
 import {
@@ -253,6 +243,138 @@ function getPendingExpiryLimitSec(params: {
     expirySec = Math.max(expirySec, DEPEG_PENDING_SEVERE_EXPIRY_SEC);
   }
   return expirySec;
+}
+
+type OffchainUnavailableReason =
+  | "non-ok"
+  | "empty-response"
+  | "upstream-error"
+  | `${ConfirmationTimestampStatus}-timestamp`;
+
+type OffchainConfirmerResult =
+  | { kind: "no-confirmer" }
+  | { kind: "circuit-open"; sourceKey: OffchainDepegConfirmerKey }
+  | {
+      kind: "classified";
+      sourceKey: OffchainDepegConfirmerKey;
+      status: DirectionalSignalStatus;
+      signal: DepegSignal | null;
+      price: number;
+    }
+  | { kind: "unavailable"; sourceKey: OffchainDepegConfirmerKey; reason: OffchainUnavailableReason };
+
+async function evaluateOffchainConfirmer(args: {
+  db: D1Database;
+  symbol: string;
+  geckoId: string;
+  pegReference: number;
+  secondaryBar: number;
+  direction: PendingDepegState["direction"];
+  agreeSources: string[] | undefined;
+  priceSource: string | null | undefined;
+  defillamaAllowed: boolean;
+  coingeckoAllowed: boolean;
+  coingeckoApiKey: string | null | undefined;
+  signal: AbortSignal | undefined;
+  now: number;
+}): Promise<OffchainConfirmerResult> {
+  const {
+    db,
+    symbol,
+    geckoId,
+    pegReference,
+    secondaryBar,
+    direction,
+    agreeSources,
+    priceSource,
+    defillamaAllowed,
+    coingeckoAllowed,
+    coingeckoApiKey,
+    signal,
+    now,
+  } = args;
+  const confirmerKey = chooseIndependentOffchainDepegConfirmer({ agreeSources, priceSource });
+  if (confirmerKey == null) {
+    console.log(
+      `[depeg-confirm] ${symbol} off-chain skipped: primary agreement already includes CoinGecko and DefiLlama families`,
+    );
+    return { kind: "no-confirmer" };
+  }
+
+  const useDefiLlamaSecondary = confirmerKey === "defillama-confirm";
+  const offchainLabel = useDefiLlamaSecondary ? "DefiLlama" : "CoinGecko";
+  const circuitKey = useDefiLlamaSecondary
+    ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
+    : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
+  const offchainAllowed = useDefiLlamaSecondary ? defillamaAllowed : coingeckoAllowed;
+  if (!offchainAllowed) {
+    console.log(`[depeg-confirm] ${symbol} ${offchainLabel} skipped: circuit open`);
+    return { kind: "circuit-open", sourceKey: confirmerKey };
+  }
+
+  try {
+    const offchainRes = await fetchWithRetry(
+      useDefiLlamaSecondary
+        ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
+        : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
+      useDefiLlamaSecondary
+        ? { headers: { "User-Agent": USER_AGENT }, signal }
+        : {
+            headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
+            signal,
+          },
+      1, // single retry
+    );
+    if (!offchainRes?.ok) {
+      await cancelResponseBodyQuietly(offchainRes);
+      await recordOutcomeSafe(db, circuitKey, false);
+      return { kind: "unavailable", sourceKey: confirmerKey, reason: "non-ok" };
+    }
+
+    let offchainPrice: number | undefined;
+    let observedAt: number | undefined;
+    if (useDefiLlamaSecondary) {
+      const parsed = DefiLlamaCoinsPriceSchema.safeParse(await offchainRes.json());
+      const coin = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`] : undefined;
+      offchainPrice = coin?.price;
+      observedAt = coin?.timestamp;
+    } else {
+      const parsed = CoinGeckoSimplePriceSchema.safeParse(await offchainRes.json());
+      const coin = parsed.success ? parsed.data[geckoId] : undefined;
+      offchainPrice = coin?.usd;
+      observedAt = coin?.last_updated_at;
+    }
+
+    const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
+    if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
+      const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
+      const status = classifyDirectionalSignal(offchainSignal, secondaryBar, direction);
+      console.log(
+        `[depeg-confirm] ${symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
+        `bar=${secondaryBar}bps, status=${status}`
+      );
+      await recordOutcomeSafe(db, circuitKey, true);
+      return { kind: "classified", sourceKey: confirmerKey, status, signal: offchainSignal, price: offchainPrice };
+    }
+    if (offchainPrice && offchainPrice > 0) {
+      console.log(
+        `[depeg-confirm] ${symbol} ${offchainLabel} skipped ${timestampStatus} timestamp=${observedAt ?? "missing"}`,
+      );
+      await recordOutcomeSafe(db, circuitKey, true);
+      return {
+        kind: "unavailable",
+        sourceKey: confirmerKey,
+        reason: `${timestampStatus}-timestamp` as OffchainUnavailableReason,
+      };
+    }
+    await recordOutcomeSafe(db, circuitKey, true);
+    return { kind: "unavailable", sourceKey: confirmerKey, reason: "empty-response" };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    await recordOutcomeSafe(db, circuitKey, false);
+    console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${symbol}:`, err);
+    return { kind: "unavailable", sourceKey: confirmerKey, reason: "upstream-error" };
+  }
 }
 
 /**
@@ -501,98 +623,40 @@ export async function confirmPendingDepegs(
         `bar=${secondaryBar}bps, status=${offchainStatus}`,
       );
     } else if (geckoId) {
-      const confirmerKey = chooseIndependentOffchainDepegConfirmer({
+      const result = await evaluateOffchainConfirmer({
+        db,
+        symbol: row.symbol,
+        geckoId,
+        pegReference,
+        secondaryBar,
+        direction: pendingState.direction,
         agreeSources: asset?.agreeSources,
         priceSource: asset?.priceSource,
+        defillamaAllowed,
+        coingeckoAllowed,
+        coingeckoApiKey,
+        signal,
+        now,
       });
-      const useDefiLlamaSecondary = confirmerKey === "defillama-confirm";
-      const offchainLabel =
-        confirmerKey === "defillama-confirm"
-          ? "DefiLlama"
-          : confirmerKey === "coingecko-confirm"
-            ? "CoinGecko"
-            : null;
-      const circuitKey =
-        confirmerKey === "defillama-confirm"
-          ? CIRCUIT_SOURCE.DEFILLAMA_CONFIRM
-          : CIRCUIT_SOURCE.COINGECKO_CONFIRM;
-      const offchainAllowed =
-        confirmerKey === "defillama-confirm"
-          ? defillamaAllowed
-          : confirmerKey === "coingecko-confirm"
-            ? coingeckoAllowed
-            : false;
-      if (confirmerKey == null) {
-        console.log(
-          `[depeg-confirm] ${row.symbol} off-chain skipped: primary agreement already includes CoinGecko and DefiLlama families`,
-        );
-      } else if (offchainAllowed) {
-        try {
-          const offchainRes = await fetchWithRetry(
-            useDefiLlamaSecondary
-              ? `${DEFILLAMA_COINS}/prices/current/coingecko:${geckoId}`
-              : cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd&include_last_updated_at=true`, coingeckoApiKey ?? null),
-            useDefiLlamaSecondary
-              ? { headers: { "User-Agent": USER_AGENT }, signal }
-              : {
-                  headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }, coingeckoApiKey ?? null),
-                  signal,
-                },
-            1, // single retry
-          );
-          if (offchainRes?.ok) {
-            let offchainPrice: number | undefined;
-            let observedAt: number | undefined;
-            if (useDefiLlamaSecondary) {
-              const parsed = DefiLlamaPriceSchema.safeParse(await offchainRes.json());
-              const coin = parsed.success ? parsed.data.coins?.[`coingecko:${geckoId}`] : undefined;
-              offchainPrice = coin?.price;
-              observedAt = coin?.timestamp;
-            } else {
-              const parsed = CoinGeckoPriceSchema.safeParse(await offchainRes.json());
-              const coin = parsed.success ? parsed.data[geckoId] : undefined;
-              offchainPrice = coin?.usd;
-              observedAt = coin?.last_updated_at;
-            }
-
-            const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
-            if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
-              const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
-              offchainStatus = classifyDirectionalSignal(offchainSignal, secondaryBar, pendingState.direction);
-              offchainSourceKey = confirmerKey;
-              if (offchainStatus === "confirm") {
-                offchainPeakCandidate = { bps: offchainSignal?.bps, price: offchainPrice };
-                addSource(confirmingSources, confirmerKey);
-              } else if (isOpposingConfirmationStatus(offchainStatus)) {
-                addSource(opposingSources, confirmerKey);
-              }
-              console.log(
-                `[depeg-confirm] ${row.symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
-                `bar=${secondaryBar}bps, status=${offchainStatus}`
-              );
-            } else if (offchainPrice && offchainPrice > 0) {
-              addSource(unavailableSources, `${confirmerKey}:${timestampStatus}-timestamp`);
-              console.log(
-                `[depeg-confirm] ${row.symbol} ${offchainLabel} skipped ${timestampStatus} timestamp=${observedAt ?? "missing"}`,
-              );
-            } else {
-              addSource(unavailableSources, `${confirmerKey}:empty-response`);
-            }
-            await recordOutcomeSafe(db, circuitKey, true);
-          } else {
-            addSource(unavailableSources, `${confirmerKey}:non-ok`);
-            await cancelResponseBodyQuietly(offchainRes);
-            await recordOutcomeSafe(db, circuitKey, false);
+      switch (result.kind) {
+        case "no-confirmer":
+          break;
+        case "circuit-open":
+          addSource(circuitOpenSources, result.sourceKey);
+          break;
+        case "unavailable":
+          addSource(unavailableSources, `${result.sourceKey}:${result.reason}`);
+          break;
+        case "classified":
+          offchainStatus = result.status;
+          offchainSourceKey = result.sourceKey;
+          if (result.status === "confirm") {
+            offchainPeakCandidate = { bps: result.signal?.bps, price: result.price };
+            addSource(confirmingSources, result.sourceKey);
+          } else if (isOpposingConfirmationStatus(result.status)) {
+            addSource(opposingSources, result.sourceKey);
           }
-        } catch (err) {
-          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-          addSource(unavailableSources, `${confirmerKey}:upstream-error`);
-          await recordOutcomeSafe(db, circuitKey, false);
-          console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${row.symbol}:`, err);
-        }
-      } else {
-        addSource(circuitOpenSources, confirmerKey);
-        console.log(`[depeg-confirm] ${row.symbol} ${offchainLabel} skipped: circuit open`);
+          break;
       }
     }
 

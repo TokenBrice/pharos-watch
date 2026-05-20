@@ -41,6 +41,8 @@ describe("getRedemptionBackstopConfig", () => {
       ["idrx-idrx", "offchain-issuer"],
       ["mxnb-juno", "offchain-issuer"],
       ["zchf-frankencoin", "stablecoin-redeem"],
+      ["susd1plus-lorenzo", "queue-redeem"],
+      ["witry-brix", "queue-redeem"],
     ] as const;
 
     for (const [id, routeFamily] of expectedRouteFamilies) {
@@ -93,6 +95,28 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
     });
 
+    expect(getRedemptionBackstopConfig("susd1plus-lorenzo")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "fee-bps", feeBps: 0 },
+      reviewedAt: "2026-05-17",
+    });
+
+    expect(getRedemptionBackstopConfig("witry-brix")).toMatchObject({
+      routeFamily: "queue-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "days",
+      executionModel: "rules-based-nav",
+      outputAssetType: "stable-single",
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      costModel: { kind: "dynamic-or-unclear" },
+      reviewedAt: "2026-05-17",
+    });
+
     expect(getRedemptionBackstopConfig("bold-liquity")).toMatchObject({
       routeFamily: "collateral-redeem",
       accessModel: "permissionless-onchain",
@@ -138,6 +162,12 @@ describe("getRedemptionBackstopConfig", () => {
       costModel: { kind: "fee-bps", feeBps: 0 },
       reviewedAt: "2026-04-06",
     });
+
+    for (const id of ["susd1plus-lorenzo", "witry-brix"] as const) {
+      const config = getRedemptionBackstopConfig(id);
+      expect(config?.docs?.length).toBeGreaterThanOrEqual(3);
+      expect(resolveCapacitySemantics(config!.capacityModel)).toBe("eventual-only");
+    }
   });
 
   it("promotes reviewed stable-buffer routes out of the heuristic bucket", () => {
@@ -257,8 +287,9 @@ describe("getRedemptionBackstopConfig", () => {
     });
   });
 
-  it("does not model HOLLAR as a deterministic redemption backstop", () => {
+  it("keeps explicitly unmodeled protocol routes unmodeled", () => {
     expect(getRedemptionBackstopConfig("hollar-hydrated")).toBeNull();
+    expect(getRedemptionBackstopConfig("frax-frax")).toBeNull();
   });
 
   it("promotes the remaining issuer-style tranche to reviewed documented-bound", () => {
@@ -358,9 +389,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("tbill-openeden")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.05, confidence: "documented-bound", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 5 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-05-17",
     });
 
     expect(getRedemptionBackstopConfig("usdcv-societe-generale-forge")).toMatchObject({
@@ -728,9 +759,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("mtbill-midas")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "days",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      capacityModel: { kind: "supply-ratio", ratio: 0.02, confidence: "documented-bound", basis: "hot-buffer" },
       costModel: { kind: "fee-bps", feeBps: 7 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-05-17",
     });
 
     expect(getRedemptionBackstopConfig("musd-metamask")).toMatchObject({

@@ -3,11 +3,12 @@ import { computePysComponents, computePysRewardShare, derivePysSourceRiskPenalty
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
-import { computeApyVarianceScore, computePYS, computeYieldStability, detectWarningSignals } from "../yield-helpers";
+import { computeApyVarianceScore, computePYS, computeYieldStability, derivePysNullReason, detectWarningSignals } from "../yield-helpers";
 import type { YieldHistorySnapshotRow } from "./history";
 import { computeTvlWeightedMedianApy } from "./rankings";
 import type { ResolvedYield, ResolvedYieldEntry } from "./types";
 import { resolveBenchmarkForStablecoin, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
+import { inferVenueProtocol, resolveReviewedYieldRiskConfig } from "./source-risk";
 import { buildHistoryKey, pickHistoryRowsForSource } from "./evaluation-history";
 import { compareCandidates, getConfidencePriority, getConfidenceTier, relativeDivergence, resolveYieldSourceLabel, resolveYieldTypeLabel } from "./evaluation-arbitration";
 import type { EvaluatedYieldSource } from "./evaluation-types";
@@ -225,6 +226,10 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
       const rewardShare = computePysRewardShare(y.apyReward, y.currentApy);
       const sourceObservedAt = resolveSourceObservedAt(y, input.dlPoolsMeta);
       const sourceAgeSeconds = resolveSourceAgeSeconds(input.startSec, y, sourceObservedAt, input.dlPoolsMeta);
+      const resolvedVenueRiskTier =
+        y.sourceRisk?.venueRiskTier ??
+        resolveReviewedYieldRiskConfig(inferVenueProtocol(y))?.venueRiskTier ??
+        "unknown";
       const sourceRiskPenaltyInput =
         y.sourceRisk?.sourceRiskPenalty ??
         derivePysSourceRiskPenalty({
@@ -233,7 +238,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
           sourceAgeSeconds,
           sourceSwitchCount30d: candidateSwitchCount30d,
           observationCount30d,
-          venueRiskTier: y.sourceRisk?.venueRiskTier ?? "unknown",
+          venueRiskTier: resolvedVenueRiskTier,
         });
       const pysComponents = computePysComponents({
         apy30d,
@@ -250,6 +255,16 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         benchmarkRate: benchmarkSelection.meta.rate,
         sourceRiskPenalty: sourceRiskPenaltyInput,
       });
+      const pysNullReason = pharosYieldScore > 0
+        ? null
+        : derivePysNullReason({
+            apy30d,
+            safetyScore,
+            apyVarianceScore,
+            scalingFactor: PYS_SCALING_FACTOR,
+            benchmarkRate: benchmarkSelection.meta.rate,
+            sourceRiskPenalty: sourceRiskPenaltyInput,
+          });
       const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
 
       const anomalies: string[] = [];
@@ -302,6 +317,7 @@ export function evaluateYieldSources(input: EvaluateYieldSourcesInput): Evaluate
         benchmarkIsProxy: benchmarkSelection.meta.isProxy ?? false,
         benchmarkMeta: benchmarkSelection.meta,
         pharosYieldScore: Number.isFinite(pharosYieldScore) ? pharosYieldScore : 0,
+        pysNullReason,
         prevExchangeRate,
         prevTvlUsd,
         sourceDepthRatio,

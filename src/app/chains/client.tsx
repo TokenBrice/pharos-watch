@@ -15,7 +15,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { HEALTH_BADGE_CLASSES, trendColor } from "@/lib/chain-ui";
-import { formatSignedPercent } from "@shared/lib/format";
+import { formatSignedPercent, getNetColor } from "@shared/lib/format";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { ChainTypeBadge } from "@/components/chain-type-badge";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -23,6 +23,7 @@ import { formatCompactUsd } from "@shared/lib/format";
 import type { StablecoinData } from "@shared/types";
 import type { HealthBand, ChainSummary } from "@shared/types/chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { logosById } from "@/lib/logos";
 import { NauticalChart } from "./nautical-chart";
 import { buildChainHarborEntries, buildChainHarborModelFromEntries, HARBOR_MAX } from "./harbor-map";
@@ -33,15 +34,22 @@ import { SelectedHarborPanel } from "./selected-harbor-panel";
 const DOMINANCE_COLORS = [
   "oklch(0.62 0.14 250)", // blue
   "oklch(0.58 0.14 300)", // violet
-  "oklch(0.70 0.13 80)",  // amber
+  "oklch(0.70 0.13 80)", // amber
   "oklch(0.62 0.14 160)", // teal
-  "oklch(0.62 0.12 20)",  // rose
+  "oklch(0.62 0.12 20)", // rose
 ];
 const OTHER_CHAINS_COLOR = "oklch(0.55 0.02 260)";
 const UNATTRIBUTED_COLOR = "oklch(0.66 0.03 245)";
 const HARBOR_LIGHT_SWEEP_MS = 7_000;
 
-type ChainSortKey = "totalUsd" | "healthScore" | "change24hPct" | "change7dPct" | "change30dPct" | "stablecoinCount" | "dominanceShare";
+type ChainSortKey =
+  | "totalUsd"
+  | "healthScore"
+  | "change24hPct"
+  | "change7dPct"
+  | "change30dPct"
+  | "stablecoinCount"
+  | "dominanceShare";
 const CHAIN_COLUMNS: readonly DataTableColumn<ChainSortKey>[] = [
   { id: "rank", label: "#", className: "w-[40px] text-right" },
   { id: "chain", label: "Chain" },
@@ -58,13 +66,20 @@ function HealthBadge({ score, band }: { score: number | null; band: HealthBand |
     return <span className="text-xs text-muted-foreground">--</span>;
   }
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", HEALTH_BADGE_CLASSES[band])} title={`${score} — ${band}`}>
-      {score}
-      <span className="hidden sm:inline capitalize">{band}</span>
-    </span>
+    <ScoreBadgeWrapper topic="chainHealth" variant="tooltip-only">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+          HEALTH_BADGE_CLASSES[band],
+        )}
+        title={`${score} — ${band}`}
+      >
+        {score}
+        <span className="hidden sm:inline capitalize">{band}</span>
+      </span>
+    </ScoreBadgeWrapper>
   );
 }
-
 
 function sortChains(chains: ChainSummary[], key: ChainSortKey, dir: "asc" | "desc"): ChainSummary[] {
   return [...chains].sort((a, b) => {
@@ -105,10 +120,13 @@ function deriveTopStablecoinsByChain(
     if (totalUsd <= 0) continue;
     topByChain.set(
       chainId,
-      cargos.sort((a, b) => b.supplyUsd - a.supplyUsd).slice(0, 5).map((cargo) => ({
-        ...cargo,
-        share: cargo.supplyUsd / totalUsd,
-      })),
+      cargos
+        .sort((a, b) => b.supplyUsd - a.supplyUsd)
+        .slice(0, 5)
+        .map((cargo) => ({
+          ...cargo,
+          share: cargo.supplyUsd / totalUsd,
+        })),
     );
   }
 
@@ -166,19 +184,15 @@ export function ChainsLeaderboardClient() {
   }, [harborEntries, globalTotalUsd]);
 
   const selectedHarbor = useMemo(() => {
-    return harborEntries.find((entry) => entry.id === selectedChainId)
-      ?? harborEntries[0]
-      ?? null;
+    return harborEntries.find((entry) => entry.id === selectedChainId) ?? harborEntries[0] ?? null;
   }, [harborEntries, selectedChainId]);
 
-  const visibleHarborIds = useMemo(
-    () => harborEntries.slice(0, HARBOR_MAX).map((entry) => entry.id),
-    [harborEntries],
-  );
+  const visibleHarborIds = useMemo(() => harborEntries.slice(0, HARBOR_MAX).map((entry) => entry.id), [harborEntries]);
 
   useEffect(() => {
     if (visibleHarborIds.length <= 1) return;
-    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return;
 
     const intervalId = window.setInterval(() => {
       setSelectedChainId((currentId) => {
@@ -220,176 +234,199 @@ export function ChainsLeaderboardClient() {
   }
   if (isError && !data) {
     return (
-      <QueryErrorNotice error={error} onRetry={() => { void refetch(); }} />
+      <QueryErrorNotice
+        error={error}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
   if (!data) return null;
 
-  const fallbackGlobalChange7d = data.globalTotalUsd > 0
-    ? data.chains.reduce((sum, c) => sum + (c.change7dPct || 0) * c.totalUsd, 0) / data.globalTotalUsd
-    : 0;
+  const fallbackGlobalChange7d =
+    data.globalTotalUsd > 0
+      ? data.chains.reduce((sum, c) => sum + (c.change7dPct || 0) * c.totalUsd, 0) / data.globalTotalUsd
+      : 0;
   const change7dPct = (Number.isFinite(data.globalChange7dPct) ? data.globalChange7dPct : fallbackGlobalChange7d) * 100;
   const show7dTrend = Math.abs(change7dPct) >= 0.05;
 
   return (
     <SectionErrorBoundary name="Chains">
-    <div className="space-y-4">
-      <QueryErrorNotice error={error} hasData={!!data?.chains?.length} onRetry={() => { void refetch(); }} />
-      <StaleDataBanner queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length, meta }]} />
+      <div className="space-y-4">
+        <QueryErrorNotice
+          error={error}
+          hasData={!!data?.chains?.length}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+        <StaleDataBanner
+          queries={[{ preset: "chains", dataUpdatedAt, error, hasData: !!data?.chains?.length, meta }]}
+        />
 
-      {/* Hero summary */}
-      <div className="pharos-subtle-band space-y-3 py-4">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-          <div>
-            <p className="pharos-kicker">Total Stablecoin Supply</p>
-            <p className="mt-1 text-3xl font-extrabold font-mono tabular-nums tracking-tight">
-              {formatCompactUsd(data.globalTotalUsd)}
-            </p>
-          </div>
-          <div className="flex items-center gap-5 pb-1 text-sm">
-            {show7dTrend && (
-              <span>
-                <span className="pharos-kicker mr-1.5">7d</span>
-                <span className={cn("font-mono font-semibold tabular-nums", change7dPct > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                  {change7dPct >= 0 ? "+" : ""}{change7dPct.toFixed(1)}%
+        {/* Hero summary */}
+        <div className="pharos-subtle-band space-y-3 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <div>
+              <p className="pharos-kicker">Total Stablecoin Supply</p>
+              <p className="mt-1 text-3xl font-extrabold font-mono tabular-nums tracking-tight">
+                {formatCompactUsd(data.globalTotalUsd)}
+              </p>
+            </div>
+            <div className="flex items-center gap-5 pb-1 text-sm">
+              {show7dTrend && (
+                <span>
+                  <span className="pharos-kicker mr-1.5">7d</span>
+                  <span className={cn("font-mono font-semibold tabular-nums", getNetColor(change7dPct))}>
+                    {change7dPct >= 0 ? "+" : ""}
+                    {change7dPct.toFixed(1)}%
+                  </span>
                 </span>
+              )}
+              <span>
+                <span className="pharos-kicker mr-1.5">Chains</span>
+                <span className="font-mono font-semibold tabular-nums">{data.chains.length}</span>
               </span>
-            )}
-            <span>
-              <span className="pharos-kicker mr-1.5">Chains</span>
-              <span className="font-mono font-semibold tabular-nums">{data.chains.length}</span>
-            </span>
+            </div>
           </div>
+
+          {/* Dominance breakdown */}
+          {topBySupply.length > 0 &&
+            (() => {
+              const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
+              const chainAttributedTotalUsd = Number.isFinite(data.chainAttributedTotalUsd)
+                ? data.chainAttributedTotalUsd
+                : data.chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
+              const chainAttributedShare = data.globalTotalUsd > 0 ? chainAttributedTotalUsd / data.globalTotalUsd : 0;
+              const unattributedShare =
+                data.globalTotalUsd > 0 && Number.isFinite(data.unattributedTotalUsd)
+                  ? data.unattributedTotalUsd / data.globalTotalUsd
+                  : 0;
+              const otherChainsShare = Math.max(0, chainAttributedShare - topShare);
+              return (
+                <>
+                  <div
+                    className="flex h-2.5 w-full overflow-hidden rounded-full"
+                    role="img"
+                    aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${otherChainsShare > 0.005 ? `, Other chains ${(otherChainsShare * 100).toFixed(1)}%` : ""}${unattributedShare > 0.005 ? `, Unattributed ${(unattributedShare * 100).toFixed(1)}%` : ""}`}
+                  >
+                    {topBySupply.map((chain, idx) => (
+                      <div
+                        key={chain.id}
+                        className="h-full transition-all duration-500"
+                        style={{
+                          width: `${chain.dominanceShare * 100}%`,
+                          backgroundColor: DOMINANCE_COLORS[idx],
+                        }}
+                      />
+                    ))}
+                    {otherChainsShare > 0.005 && (
+                      <div
+                        className="h-full"
+                        style={{ width: `${otherChainsShare * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
+                      />
+                    )}
+                    {unattributedShare > 0.005 && (
+                      <div
+                        className="h-full"
+                        style={{
+                          width: `${unattributedShare * 100}%`,
+                          backgroundColor: UNATTRIBUTED_COLOR,
+                          backgroundImage:
+                            "repeating-linear-gradient(135deg, transparent 0 4px, oklch(0.95 0.01 245 / 0.35) 4px 6px)",
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {topBySupply.map((chain, idx) => (
+                      <span key={chain.id} className="inline-flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: DOMINANCE_COLORS[idx] }}
+                        />
+                        <Image
+                          src={chain.logoPath}
+                          alt=""
+                          width={14}
+                          height={14}
+                          className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
+                          style={{ width: 14, height: 14 }}
+                        />
+                        <span>{chain.name}</span>
+                        <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+                      </span>
+                    ))}
+                    {otherChainsShare > 0.005 && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{ backgroundColor: OTHER_CHAINS_COLOR }}
+                        />
+                        <span>Other chains</span>
+                        <span className="font-mono tabular-nums">{(otherChainsShare * 100).toFixed(1)}%</span>
+                      </span>
+                    )}
+                    {unattributedShare > 0.005 && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-2 w-2 rounded-full"
+                          style={{
+                            backgroundColor: UNATTRIBUTED_COLOR,
+                            backgroundImage:
+                              "repeating-linear-gradient(135deg, transparent 0 3px, oklch(0.95 0.01 245 / 0.45) 3px 4px)",
+                          }}
+                        />
+                        <span>Unattributed</span>
+                        <span className="font-mono tabular-nums">{(unattributedShare * 100).toFixed(1)}%</span>
+                      </span>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
         </div>
 
-        {/* Dominance breakdown */}
-        {topBySupply.length > 0 && (() => {
-          const topShare = topBySupply.reduce((s, c) => s + c.dominanceShare, 0);
-          const chainAttributedTotalUsd = Number.isFinite(data.chainAttributedTotalUsd)
-            ? data.chainAttributedTotalUsd
-            : data.chains.reduce((sum, chain) => sum + chain.totalUsd, 0);
-          const chainAttributedShare = data.globalTotalUsd > 0 ? chainAttributedTotalUsd / data.globalTotalUsd : 0;
-          const unattributedShare = data.globalTotalUsd > 0 && Number.isFinite(data.unattributedTotalUsd)
-            ? data.unattributedTotalUsd / data.globalTotalUsd
-            : 0;
-          const otherChainsShare = Math.max(0, chainAttributedShare - topShare);
-          return (
-            <>
-              <div
-                className="flex h-2.5 w-full overflow-hidden rounded-full"
-                role="img"
-                aria-label={`Supply dominance: ${topBySupply.map((c) => `${c.name} ${(c.dominanceShare * 100).toFixed(1)}%`).join(", ")}${otherChainsShare > 0.005 ? `, Other chains ${(otherChainsShare * 100).toFixed(1)}%` : ""}${unattributedShare > 0.005 ? `, Unattributed ${(unattributedShare * 100).toFixed(1)}%` : ""}`}
+        <NauticalChart
+          chains={chartChains}
+          globalTotalUsd={data.globalTotalUsd}
+          selectedChainId={selectedHarbor?.id ?? selectedChainId}
+          onSelectChain={setSelectedChainId}
+          harborModel={harborModel}
+        />
+
+        <SelectedHarborPanel entry={selectedHarbor} />
+
+        {/* Table */}
+        <p className="sm:hidden font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          Swipe table horizontally for health, supply, share, and stablecoin counts.
+        </p>
+        <DataTableShell
+          columns={CHAIN_COLUMNS}
+          striped
+          sort={{
+            sortKey,
+            sortDirection,
+            toggleSort,
+            getAriaSortValue,
+          }}
+          containerClassName="overflow-y-auto overscroll-x-contain pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 md:max-h-[70vh]"
+          tableClassName="min-w-[760px] w-full"
+          headerClassName="sticky top-0 z-10"
+        >
+          {sorted.map((chain, i) => {
+            const rank = i + 1;
+            return (
+              <InteractiveTableRow
+                key={chain.id}
+                role="link"
+                ariaLabel={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
+                className="group h-11 border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue sm:h-auto"
+                onHover={() => setSelectedChainId(chain.id)}
+                onActivate={() => router.push(`/chains/${chain.id}/`)}
               >
-                {topBySupply.map((chain, idx) => (
-                  <div
-                    key={chain.id}
-                    className="h-full transition-all duration-500"
-                    style={{
-                      width: `${chain.dominanceShare * 100}%`,
-                      backgroundColor: DOMINANCE_COLORS[idx],
-                    }}
-                  />
-                ))}
-                {otherChainsShare > 0.005 && (
-                  <div
-                    className="h-full"
-                    style={{ width: `${otherChainsShare * 100}%`, backgroundColor: OTHER_CHAINS_COLOR }}
-                  />
-                )}
-                {unattributedShare > 0.005 && (
-                  <div
-                    className="h-full"
-                    style={{
-                      width: `${unattributedShare * 100}%`,
-                      backgroundColor: UNATTRIBUTED_COLOR,
-                      backgroundImage: "repeating-linear-gradient(135deg, transparent 0 4px, oklch(0.95 0.01 245 / 0.35) 4px 6px)",
-                    }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                {topBySupply.map((chain, idx) => (
-                  <span key={chain.id} className="inline-flex items-center gap-1.5">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ backgroundColor: DOMINANCE_COLORS[idx] }}
-                    />
-                    <Image
-                      src={chain.logoPath}
-                      alt=""
-                      width={14}
-                      height={14}
-                      className={cn("rounded-full", CHAIN_META[chain.id]?.darkInvert ? "dark:invert" : "")}
-                      style={{ width: 14, height: 14 }}
-                    />
-                    <span>{chain.name}</span>
-                    <span className="font-mono tabular-nums">{(chain.dominanceShare * 100).toFixed(1)}%</span>
-                  </span>
-                ))}
-                {otherChainsShare > 0.005 && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: OTHER_CHAINS_COLOR }} />
-                    <span>Other chains</span>
-                    <span className="font-mono tabular-nums">{(otherChainsShare * 100).toFixed(1)}%</span>
-                  </span>
-                )}
-                {unattributedShare > 0.005 && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{
-                        backgroundColor: UNATTRIBUTED_COLOR,
-                        backgroundImage: "repeating-linear-gradient(135deg, transparent 0 3px, oklch(0.95 0.01 245 / 0.45) 3px 4px)",
-                      }}
-                    />
-                    <span>Unattributed</span>
-                    <span className="font-mono tabular-nums">{(unattributedShare * 100).toFixed(1)}%</span>
-                  </span>
-                )}
-              </div>
-            </>
-          );
-        })()}
-      </div>
-
-      <NauticalChart
-        chains={chartChains}
-        globalTotalUsd={data.globalTotalUsd}
-        selectedChainId={selectedHarbor?.id ?? selectedChainId}
-        onSelectChain={setSelectedChainId}
-        harborModel={harborModel}
-      />
-
-      <SelectedHarborPanel entry={selectedHarbor} />
-
-      {/* Table */}
-      <DataTableShell
-        columns={CHAIN_COLUMNS}
-        striped
-        sort={{
-          sortKey,
-          sortDirection,
-          toggleSort,
-          getAriaSortValue,
-        }}
-        containerClassName="overflow-y-auto md:max-h-[70vh]"
-        tableClassName="min-w-[760px] w-full"
-        headerClassName="sticky top-0 z-10"
-      >
-        {sorted.map((chain, i) => {
-          const rank = i + 1;
-          return (
-            <InteractiveTableRow
-              key={chain.id}
-              role="link"
-              ariaLabel={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
-              className="group border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue"
-              onHover={() => setSelectedChainId(chain.id)}
-              onActivate={() => router.push(`/chains/${chain.id}/`)}
-            >
-                <TableCell className="text-right tabular-nums text-muted-foreground">
-                  {rank}
-                </TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">{rank}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Image
@@ -414,9 +451,14 @@ export function ChainsLeaderboardClient() {
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
                     <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary/60" style={{ width: `${Math.min(100, chain.dominanceShare * 100)}%` }} />
+                      <div
+                        className="h-full rounded-full bg-primary/60"
+                        style={{ width: `${Math.min(100, chain.dominanceShare * 100)}%` }}
+                      />
                     </div>
-                    <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right">{(chain.dominanceShare * 100).toFixed(1)}%</span>
+                    <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right">
+                      {(chain.dominanceShare * 100).toFixed(1)}%
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">{chain.stablecoinCount}</TableCell>
@@ -428,14 +470,16 @@ export function ChainsLeaderboardClient() {
                       size={18}
                     />
                     <span className="text-sm">{chain.dominantStablecoin.symbol}</span>
-                    <span className="text-xs text-muted-foreground">({(chain.dominantStablecoin.share * 100).toFixed(0)}%)</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({(chain.dominantStablecoin.share * 100).toFixed(0)}%)
+                    </span>
                   </div>
                 </TableCell>
-            </InteractiveTableRow>
-          );
-        })}
-      </DataTableShell>
-    </div>
+              </InteractiveTableRow>
+            );
+          })}
+        </DataTableShell>
+      </div>
     </SectionErrorBoundary>
   );
 }

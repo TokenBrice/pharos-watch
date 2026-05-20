@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCoverageAuditOperatorQueue, identifyCoverageGaps } from "../yield-coverage-audit";
+import {
+  buildCoverageAuditOperatorQueue,
+  identifyCoverageGaps,
+  summarizeAdapterLifecycle,
+} from "../yield-coverage-audit";
+import type { YieldAdapterLifecycleEntry } from "../yield-config-registry";
 import type { DlPool } from "../yield-sync/types";
 
 describe("identifyCoverageGaps", () => {
@@ -170,5 +175,90 @@ describe("identifyCoverageGaps", () => {
         expect.objectContaining({ kind: "lending-allowlist", project: "new-lender" }),
       ]),
     );
+  });
+});
+
+describe("summarizeAdapterLifecycle", () => {
+  const syntheticRegistry: Record<string, YieldAdapterLifecycleEntry> = {
+    "alpha-active": { lifecycle: "active" },
+    "beta-quarantined": {
+      lifecycle: "quarantined",
+      reason: {
+        code: "convert-to-assets-empty",
+        since: "2026-04-01",
+        nextReviewAt: "2026-05-01",
+        note: "needs protocol-specific reader",
+      },
+    },
+    "gamma-gap": {
+      lifecycle: "intentional-gap",
+      reason: {
+        code: "no-public-yield-source",
+        since: "2026-03-10",
+        note: "issuer publishes no APY oracle",
+      },
+    },
+    "delta-experimental": {
+      lifecycle: "experimental",
+      reason: { code: "exploratory", since: "2026-05-15" },
+    },
+  };
+
+  it("counts lifecycle states matching the synthetic registry", () => {
+    const buckets = summarizeAdapterLifecycle(
+      ["alpha-active", "beta-quarantined", "gamma-gap", "delta-experimental", "epsilon-unknown"],
+      syntheticRegistry,
+    );
+
+    expect(buckets.lifecycleSummary).toEqual({
+      active: 2, // alpha + epsilon (unknown defaults to active)
+      quarantined: 1,
+      intentionalGap: 1,
+      experimental: 1,
+    });
+  });
+
+  it("surfaces quarantined adapters with their structured reason", () => {
+    const buckets = summarizeAdapterLifecycle(
+      ["alpha-active", "beta-quarantined"],
+      syntheticRegistry,
+    );
+
+    expect(buckets.quarantinedAdapters).toContainEqual({
+      stablecoinId: "beta-quarantined",
+      code: "convert-to-assets-empty",
+      since: "2026-04-01",
+      nextReviewAt: "2026-05-01",
+      note: "needs protocol-specific reader",
+    });
+  });
+
+  it("surfaces intentional gaps in their own bucket", () => {
+    const buckets = summarizeAdapterLifecycle(["gamma-gap"], syntheticRegistry);
+
+    expect(buckets.intentionalGaps).toContainEqual({
+      stablecoinId: "gamma-gap",
+      code: "no-public-yield-source",
+      since: "2026-03-10",
+      nextReviewAt: undefined,
+      note: "issuer publishes no APY oracle",
+    });
+    expect(buckets.quarantinedAdapters).toEqual([]);
+  });
+
+  it("treats legacy/untyped IDs as active and leaves them out of buckets", () => {
+    const buckets = summarizeAdapterLifecycle(
+      ["only-legacy-id"],
+      {}, // empty registry: every ID falls through to the default
+    );
+
+    expect(buckets.lifecycleSummary).toEqual({
+      active: 1,
+      quarantined: 0,
+      intentionalGap: 0,
+      experimental: 0,
+    });
+    expect(buckets.quarantinedAdapters).toEqual([]);
+    expect(buckets.intentionalGaps).toEqual([]);
   });
 });

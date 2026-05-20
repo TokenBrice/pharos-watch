@@ -2,6 +2,7 @@
   "id": "busd0-usual",
   "name": "Bond USD0",
   "symbol": "bUSD0",
+  "oneLiner": "bUSD0 is Usual's bond-leg wrapper of USD0, splitting deposited USD0 into a fixed-notional bond token plus a separate early-exit right redeemable at maturity.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -15,6 +16,7 @@
   "pegReferenceId": "usd0-usual",
   "collateral": "Locked USD0 bond position backed by the Usual USD0 reserve stack; bUSD0 is the fixed-notional bond leg formerly known as USD0++",
   "pegMechanism": "Depositing 1 USD0 mints 1 bUSD0 plus 1 rt-bUSD0 early-exit right; before June 11, 2028 par redemption requires both tokens, while bUSD0 alone redeems 1:1 for USD0 at maturity and may trade below par before then",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "usd0-liquid-bond",
   "cmcSlug": "usd0-liquid-bond",

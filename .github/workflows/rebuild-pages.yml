@@ -17,6 +17,8 @@ jobs:
     uses: ./.github/workflows/pages-release.yml
     secrets:
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY }}
+      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY }}
       SITE_API_SHARED_SECRET: ${{ secrets.SITE_API_SHARED_SECRET }}
       SMOKE_API_KEY: ${{ secrets.SMOKE_API_KEY }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

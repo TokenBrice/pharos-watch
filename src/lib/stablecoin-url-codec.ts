@@ -1,4 +1,4 @@
-import { REGISTRY_BY_ID } from "@shared/lib/stablecoin-id-registry";
+import { CLIENT_TRACKED_IDS } from "@shared/lib/stablecoins/client-registry";
 
 export function encodeStablecoinUrlToken(canonicalId: string): string {
   return canonicalId;
@@ -8,5 +8,5 @@ export function decodeStablecoinUrlToken(token: string | null | undefined): stri
   const trimmed = token?.trim();
   if (!trimmed) return null;
 
-  return REGISTRY_BY_ID.has(trimmed) ? trimmed : null;
+  return CLIENT_TRACKED_IDS.has(trimmed) ? trimmed : null;
 }

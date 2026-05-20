@@ -19,6 +19,11 @@ import {
   YIELD_POOL_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "./yield-config";
+import {
+  YIELD_ADAPTER_LIFECYCLE,
+  type YieldAdapterLifecycleEntry,
+} from "./yield-config-registry";
+import type { YieldAdapterLifecycle } from "@shared/types/yield";
 import type { DlPool } from "./yield-sync/types";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 
@@ -26,6 +31,92 @@ import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin
 const HIGH_TVL_THRESHOLD_USD = 5_000_000;
 const OPERATOR_QUEUE_ITEM_LIMIT = 20;
 const OPERATOR_QUEUE_ACTIONS = ["accept", "dismiss", "intentional-gap", "watch"] as const;
+const LIFECYCLE_BUCKET_LIMIT = 100;
+
+export interface LifecycleAdapterBucketItem {
+  stablecoinId: string;
+  code: string;
+  since: string;
+  nextReviewAt?: string;
+  note?: string;
+}
+
+export interface LifecycleSummary {
+  active: number;
+  quarantined: number;
+  intentionalGap: number;
+  experimental: number;
+}
+
+export interface LifecycleAuditBuckets {
+  lifecycleSummary: LifecycleSummary;
+  quarantinedAdapters: LifecycleAdapterBucketItem[];
+  intentionalGaps: LifecycleAdapterBucketItem[];
+}
+
+function lifecycleBucketKey(lifecycle: YieldAdapterLifecycle): keyof LifecycleSummary {
+  switch (lifecycle) {
+    case "active":
+      return "active";
+    case "quarantined":
+      return "quarantined";
+    case "intentional-gap":
+      return "intentionalGap";
+    case "experimental":
+      return "experimental";
+  }
+}
+
+/**
+ * Pure function: given the set of yield-bearing stablecoin IDs and the typed
+ * adapter lifecycle registry, returns a summary count and bounded actionable
+ * lists of quarantined adapters and intentional gaps.
+ */
+export function summarizeAdapterLifecycle(
+  yieldBearingIds: readonly string[],
+  lifecycleRegistry: Record<string, YieldAdapterLifecycleEntry> = YIELD_ADAPTER_LIFECYCLE,
+): LifecycleAuditBuckets {
+  const summary: LifecycleSummary = {
+    active: 0,
+    quarantined: 0,
+    intentionalGap: 0,
+    experimental: 0,
+  };
+  const quarantinedAdapters: LifecycleAdapterBucketItem[] = [];
+  const intentionalGaps: LifecycleAdapterBucketItem[] = [];
+
+  for (const stablecoinId of yieldBearingIds) {
+    const entry = lifecycleRegistry[stablecoinId] ?? { lifecycle: "active" };
+    summary[lifecycleBucketKey(entry.lifecycle)] += 1;
+
+    if (entry.lifecycle === "quarantined" && entry.reason) {
+      quarantinedAdapters.push({
+        stablecoinId,
+        code: entry.reason.code,
+        since: entry.reason.since,
+        nextReviewAt: entry.reason.nextReviewAt,
+        note: entry.reason.note,
+      });
+    } else if (entry.lifecycle === "intentional-gap" && entry.reason) {
+      intentionalGaps.push({
+        stablecoinId,
+        code: entry.reason.code,
+        since: entry.reason.since,
+        nextReviewAt: entry.reason.nextReviewAt,
+        note: entry.reason.note,
+      });
+    }
+  }
+
+  quarantinedAdapters.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
+  intentionalGaps.sort((a, b) => a.stablecoinId.localeCompare(b.stablecoinId));
+
+  return {
+    lifecycleSummary: summary,
+    quarantinedAdapters: quarantinedAdapters.slice(0, LIFECYCLE_BUCKET_LIMIT),
+    intentionalGaps: intentionalGaps.slice(0, LIFECYCLE_BUCKET_LIMIT),
+  };
+}
 
 export type CoverageAuditQueueAction = typeof OPERATOR_QUEUE_ACTIONS[number];
 
@@ -429,6 +520,10 @@ export async function runYieldCoverageAudit(
     yieldBearingMissingFromRankings,
   });
 
+  const lifecycleBuckets = summarizeAdapterLifecycle(
+    ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
+  );
+
   const reportedAt = Math.floor(Date.now() / 1000);
   const report = {
     reportedAt,
@@ -457,6 +552,9 @@ export async function runYieldCoverageAudit(
     sourceFamilyAdapterRecommendations: gaps.sourceFamilyAdapterRecommendations,
     lendingAllowlistRecommendations: gaps.lendingAllowlistRecommendations,
     operatorQueue,
+    lifecycleSummary: lifecycleBuckets.lifecycleSummary,
+    quarantinedAdapters: lifecycleBuckets.quarantinedAdapters,
+    intentionalGaps: lifecycleBuckets.intentionalGaps,
     manifest: YIELD_ADAPTER_MANIFEST.map((entry) => ({
       stablecoinId: entry.stablecoinId,
       status: entry.status,

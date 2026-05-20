@@ -7,7 +7,7 @@ import {
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_ONCHAIN_MONITORING_ACTIVE_WINDOW_SEC,
 } from "@shared/lib/status-thresholds";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DataQuality, StatusResponse } from "@shared/types/status";
 
 type DataQualitySourceKey = StatusResponse["dataQuality"]["sourceFailures"][number]["source"];

@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
@@ -125,6 +125,12 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
     }
     if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
       asset.address = ADDRESS_OVERRIDES[asset.id];
+    }
+    // contracts come from curated tracked metadata (covers active + frozen),
+    // since ACTIVE_META_BY_ID alone would skip frozen rows injected by mergeFrozenSnapshots.
+    const trackedMeta = meta ?? TRACKED_META_BY_ID.get(String(asset.id));
+    if (trackedMeta?.contracts && trackedMeta.contracts.length > 0) {
+      asset.contracts = trackedMeta.contracts;
     }
   }
 }

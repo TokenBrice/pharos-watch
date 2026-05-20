@@ -1,6 +1,6 @@
 import { flushPendingApiKeyPrunes } from "../../lib/api-key-rate-limit";
 import { flushPendingPrunes } from "../../lib/rate-limit";
-import { getRouteDependencies, route } from "../../router";
+import { resolveRoute, route } from "../../router";
 import type { Env } from "../../lib/env";
 import {
   createRequestSourceRecorder,
@@ -106,8 +106,8 @@ export async function handleHttpRequestImpl(
     return finalizeResponse(cached, origin, ctx);
   }
 
-  const routeDependencies = getRouteDependencies(url);
-  if (routeDependencies == null) {
+  const resolvedRoute = resolveRoute(url, request.method);
+  if (resolvedRoute == null) {
     recordRequestSource();
     return finalizeResponse(notFoundResponse(), origin, ctx);
   }
@@ -119,8 +119,9 @@ export async function handleHttpRequestImpl(
       env,
       execCtx: ctx,
       trustedAdmin: isAdmin,
-      routeDependencies,
+      routeDependencies: resolvedRoute.routeDependencies,
     }),
+    resolvedRoute,
   );
 
   if (!response) {

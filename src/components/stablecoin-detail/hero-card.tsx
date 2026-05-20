@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ExternalLink } from "lucide-react";
 import { THREAT_BAND_COLORS } from "@shared/lib/classification";
 import type {
@@ -67,8 +67,23 @@ function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode
 
 function renderMetricLabel(metric: HeroTertiaryMetricViewModel, mobile = false): React.ReactNode {
   const label = mobile ? (metric.mobileLabel ?? metric.label) : metric.label;
+  if (mobile && metric.key === "blacklistable" && metric.methodologyTopic) {
+    return (
+      <>
+        <span className="sr-only">Freezable</span>
+        <MethodologyHint
+          topic={metric.methodologyTopic}
+          buttonClassName="!h-11 !w-11 !min-h-11 border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
+        />
+      </>
+    );
+  }
   if (!metric.methodologyTopic) return label;
-  return <MethodologyLabel topic={metric.methodologyTopic}>{label}</MethodologyLabel>;
+  return (
+    <MethodologyLabel topic={metric.methodologyTopic} compact={mobile}>
+      {label}
+    </MethodologyLabel>
+  );
 }
 
 function toMetricConfig(metric: HeroTertiaryMetricViewModel): HeroTertiaryMetricConfig {
@@ -93,6 +108,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     coinData,
     logoSrc,
     reportCard,
+    verdict,
     variantParent,
     variantChipClass,
     infrastructures,
@@ -120,6 +136,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         coinData={coinData}
         logoSrc={logoSrc}
         reportCard={reportCard}
+        verdict={verdict}
         variantParent={variantParent}
         variantChipClass={variantChipClass}
         infrastructures={infrastructures}
@@ -147,6 +164,8 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
         coin={coin}
         coinData={coinData}
         logoSrc={logoSrc}
+        reportCard={reportCard}
+        verdict={verdict}
         variantParent={variantParent}
         variantChipClass={variantChipClass}
         infrastructures={infrastructures}

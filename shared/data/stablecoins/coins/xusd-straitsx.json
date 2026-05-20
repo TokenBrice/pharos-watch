@@ -2,23 +2,29 @@
   "id": "xusd-straitsx",
   "name": "StraitsX XUSD",
   "symbol": "XUSD",
+  "oneLiner": "XUSD is StraitsX's MAS-licensed dollar stablecoin, redeemable 1:1 against cash and short-term U.S. government securities held at Tier-1 banks in Singapore.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": false,
-    "rwa": false,
+    "rwa": true,
     "navToken": false
   },
   "collateral": "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",
   "pegMechanism": "Fiat-backed 1:1 mint and redeem: users deposit USD to a StraitsX-designated bank account to mint XUSD; redemption returns USD to a whitelisted beneficiary bank account within 5 business days; reserve assets held at 100%+ of circulating supply at all times per MAS SCS framework",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "290",
   "detailProvider": "defillama",
   "geckoId": "straitsx-xusd",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.straitsx.com/xusd",
-    "provider": "KK Yap & Associates"
+    "provider": "KK Yap & Associates",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Singapore",
+    "attestorLicense": "ACRA-registered public accountants"
   },
   "links": [
     {
@@ -44,6 +50,11 @@
     {
       "chain": "bsc",
       "address": "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z",
       "decimals": 6
     }
   ],

@@ -173,8 +173,10 @@ export function SafetyScoresScoringDetails() {
           with staleness surfaced through <code className="text-xs">liquidityStale</code> /{" "}
           <code className="text-xs">inputFreshness.dexLiquidity.stale</code>. Materially stale or missing redemption
           snapshots are suppressed from Safety Score liquidity; normal 4-hourly redemption-sync lag remains inside the
-          scoring freshness runway. Redemption metadata emitted by a live reserve adapter ages out with the reserve
-          snapshot; if it is stale or degraded, the route stays visible but does not score as current capacity.
+          scoring freshness runway. Unknown route status remains low confidence for proxy-only or weaker evidence, but
+          reviewed documented-bound routes can retain medium confidence when the rest of the evidence gates pass.
+          Redemption metadata emitted by a live reserve adapter ages out with the reserve snapshot; if it is stale or
+          degraded, the route stays visible but does not score as current capacity.
         </p>
         <p>
           Current route coverage includes reviewed issuer rails, on-chain collateral redemptions, protocol NAV wrappers,

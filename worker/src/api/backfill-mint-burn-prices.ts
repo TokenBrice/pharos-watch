@@ -3,7 +3,7 @@ import { batchExecute } from "../lib/db";
 import { loadMintBurnPriceHistoryBatch, findMintBurnHistoricalPrice } from "../lib/mint-burn-pipeline/context";
 import { rebuildHourlyForStablecoinIds } from "../lib/mint-burn-pipeline/persistence";
 import { runAdminRoute } from "../lib/route-wrappers";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 
 interface CoinRepairSummary {
   id: string;

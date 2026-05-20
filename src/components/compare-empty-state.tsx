@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, LockKeyhole, Waves } from "lucide-react";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { PresetCard } from "@/components/preset-card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
@@ -21,27 +21,27 @@ function ComparePreview({
   featuredCoins: readonly string[];
 }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+    <div className="min-w-0 space-y-4">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <p className="pharos-kicker">Preview</p>
           <p className="mt-1 text-sm font-medium text-foreground">Comparison output unlocks after two selections</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-3 py-1 text-xs text-muted-foreground">
+        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-3 py-1 text-xs text-muted-foreground">
           <LockKeyhole className="h-3.5 w-3.5" />
-          Share stays hidden until then
+          <span className="min-w-0 truncate">Share stays hidden until then</span>
         </span>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-background/45 p-4">
-        <div className="flex items-center gap-2">
+      <div className="min-w-0 rounded-2xl border border-border/60 bg-background/45 p-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           {featuredCoins.map((coinId) => {
             const coin = TRACKED_META_BY_ID.get(coinId);
             if (!coin) return null;
             return (
               <div
                 key={coinId}
-                className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs text-muted-foreground"
+                className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1.5 text-xs text-muted-foreground"
               >
                 <StablecoinLogo src={logos?.[coinId]} name={coin.name} size={20} />
                 <span className="font-medium text-foreground">{coin.symbol}</span>
@@ -50,9 +50,9 @@ function ComparePreview({
           })}
         </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="mt-4 grid min-w-0 gap-3">
           <div className="rounded-2xl border border-border/50 bg-muted/20 p-3">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium text-foreground">Market cap history</p>
               <span className="text-xs text-muted-foreground">Normalized overlays</span>
             </div>
@@ -62,8 +62,8 @@ function ComparePreview({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1.05fr_0.95fr]">
-            <div className="rounded-2xl border border-border/50 bg-muted/20 p-3">
-              <div className="mb-2 flex items-center justify-between">
+            <div className="min-w-0 rounded-2xl border border-border/50 bg-muted/20 p-3">
+              <div className="mb-2 flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-medium text-foreground">Quick deltas</p>
                 <span className="text-xs text-muted-foreground">peg, supply, liquidity</span>
               </div>

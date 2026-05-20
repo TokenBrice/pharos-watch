@@ -73,7 +73,7 @@ export function BlacklistFilters({
               onClick={() => setShowWithoutEvents((v) => !v)}
               aria-expanded={showWithoutEvents}
               aria-controls="blacklist-no-events-filter-group"
-              className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
+              className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:min-h-0 sm:py-0"
             >
               <ChevronDown
                 className={`h-3 w-3 transition-transform ${showWithoutEvents ? "rotate-0" : "-rotate-90"}`}

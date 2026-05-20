@@ -2,6 +2,7 @@
   "id": "usdx-hex-trust",
   "name": "Hex Trust USDX",
   "symbol": "USDX",
+  "oneLiner": "USDX is Hex Trust's U.S. dollar stablecoin redeemable 1:1, backed by 1-3 month U.S. Treasury bills and cash at tier-1 banks under a TCSP license.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
   "pegMechanism": "Direct 1:1 redemption through Hex Trust",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "263",
   "detailProvider": "defillama",
   "geckoId": "hex-trust-usdx",

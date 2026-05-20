@@ -2,6 +2,7 @@
   "id": "hkdr-rd-technologies",
   "name": "RD Technologies HKDR",
   "symbol": "HKDR",
+  "oneLiner": "HKDR is RD InnoTech's pre-launch HKD stablecoin, in HKMA sandbox since 2024 but not in the first April 2026 license batch; H2 2026 candidate.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
@@ -12,6 +13,7 @@
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets in segregated custody at licensed financial institutions; reserves to be disclosed via periodic independent attestation per HKMA Stablecoins Ordinance",
   "pegMechanism": "Planned HKD fiat-referenced stablecoin targeting 1:1 HKD backing and regulated issuer redemption under the HKMA Stablecoins Ordinance; as of 2026-05-13, RD InnoTech remains pre-launch and was not included in the first HKMA licensed issuer batch",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {

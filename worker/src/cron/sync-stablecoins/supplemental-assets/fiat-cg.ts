@@ -1,0 +1,135 @@
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { throwIfAborted } from "../../../lib/abort";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { PeggedAsset } from "../enrich-prices";
+import {
+  buildZephyrProtocolPeggedAsset,
+  fetchZephyrProtocolStats,
+  isZephyrScannerAssetId,
+} from "../zephyr-zsd";
+import { fetchOnChainMcap } from "./onchain-supply";
+import {
+  fetchSupplementalPriceData,
+  getSupplementalChainLabels,
+  pegTypeKey,
+  resolveSupplementalPrice,
+  toPositiveFiniteNumber,
+  type CoinGeckoMcapData,
+} from "./shared";
+
+const FIAT_CG_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
+
+export async function fetchFiatCoinGeckoTokens(
+  cgData: CoinGeckoMcapData,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  fxFallbackRates?: Record<string, number>,
+): Promise<PeggedAsset[]> {
+  if (FIAT_CG_METAS.length === 0) return [];
+  throwIfAborted(signal);
+
+  try {
+    const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
+    const [priceData, zephyrProtocolStats] = await Promise.all([
+      fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal),
+      hasZephyrScannerAsset ? fetchZephyrProtocolStats(signal) : Promise.resolve(null),
+    ]);
+
+    const mcapMap: Record<string, number> = {};
+    for (const token of FIAT_CG_METAS) {
+      const mcap = token.geckoId ? toPositiveFiniteNumber(cgData[token.geckoId]?.usd_market_cap) : undefined;
+      if (mcap && mcap > 0) mcapMap[token.id] = mcap;
+    }
+
+    const results = await Promise.all(
+      FIAT_CG_METAS.map(async (meta) => {
+        const nowSec = Math.floor(Date.now() / 1000);
+        const pKey = pegTypeKey(meta);
+        // Strict path first (15-min freshness gate). If that rejects but CG returned
+        // a valid price, fall back to the relaxed `coingecko-low-volume` lane so
+        // CG-only stablecoins with slow upstream tickers don't surface as
+        // `priceSource: missing`. Diagnosis pattern: detailProvider="coingecko"
+        // with llamaId=null + low volume → upstream last_updated_at exceeds 15min.
+        let priceResolution = resolveSupplementalPrice(priceData, cgData, meta.geckoId);
+        if (!priceResolution && meta.geckoId) {
+          const cgEntry = cgData[meta.geckoId];
+          const cgPrice = toPositiveFiniteNumber(cgEntry?.usd);
+          if (cgPrice != null) {
+            const observedAt = toPositiveFiniteNumber(cgEntry?.last_updated_at) ?? null;
+            priceResolution = {
+              price: cgPrice,
+              source: "coingecko-low-volume",
+              observedAt,
+              observedAtMode: observedAt != null ? "upstream" : "local_fetch",
+            };
+          }
+        }
+        const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
+        // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
+        // USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
+        const usdPegDefault = meta.flags.pegCurrency === "USD" ? 1.0 : undefined;
+        const priceForSupply = priceResolution?.price ?? pegReferencePrice ?? usdPegDefault;
+
+        if (isZephyrScannerAssetId(meta.id)) {
+          if (!zephyrProtocolStats) {
+            console.log(`[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
+            return null;
+          }
+          return buildZephyrProtocolPeggedAsset(meta, zephyrProtocolStats, priceResolution, nowSec);
+        }
+
+        let mcap = mcapMap[meta.id];
+        let supplySource: string = "coingecko-fallback";
+
+        // Fallback: on-chain totalSupply × market/peg-reference price when CG has no market cap.
+        // This keeps preview-only fiat assets in supply coverage without inventing a live market quote.
+        if (!mcap && priceForSupply != null) {
+          const onChainMcap = await fetchOnChainMcap(meta, priceForSupply, chainRpcs, signal);
+          if (onChainMcap) {
+            mcap = onChainMcap.mcap;
+            supplySource = onChainMcap.supplySource;
+          }
+        }
+
+        if (!mcap) {
+          console.log(`[fiat-cg] No mcap for ${meta.symbol}, skipping`);
+          return null;
+        }
+
+        const priceConfidence: PeggedAsset["priceConfidence"] = priceResolution
+          ? priceResolution.source === "coingecko-low-volume"
+            ? "fallback"
+            : "single-source"
+          : null;
+        return {
+          id: meta.id,
+          name: meta.name,
+          symbol: meta.symbol,
+          geckoId: meta.geckoId,
+          pegType: pKey,
+          pegMechanism: meta.flags.backing,
+          price: priceResolution?.price ?? null,
+          priceSource: priceResolution?.source,
+          priceConfidence,
+          priceUpdatedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
+          priceObservedAt: priceResolution ? priceResolution.observedAt ?? nowSec : null,
+          priceObservedAtMode: priceResolution ? priceResolution.observedAtMode ?? "local_fetch" : null,
+          priceSyncedAt: priceResolution ? nowSec : null,
+          supplySource,
+          circulating: { [pKey]: mcap },
+          circulatingPrevDay: null,
+          circulatingPrevWeek: null,
+          circulatingPrevMonth: null,
+          chainCirculating: {},
+          chains: getSupplementalChainLabels(meta),
+        } as PeggedAsset;
+      }),
+    );
+
+    return results.filter((token): token is PeggedAsset => token !== null);
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.error("[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
+    return [];
+  }
+}

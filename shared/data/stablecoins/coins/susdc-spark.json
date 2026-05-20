@@ -2,6 +2,7 @@
   "id": "susdc-spark",
   "name": "Spark Savings USDC",
   "symbol": "spUSDC",
+  "oneLiner": "spUSDC is Spark's ERC-4626 savings wrapper of USDC; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDC liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

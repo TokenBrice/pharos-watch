@@ -2,6 +2,7 @@
   "id": "jusd-jusd-stable-token",
   "name": "JUSD",
   "symbol": "JUSD",
+  "oneLiner": "JUSD is an issuer-managed dollar stablecoin with crypto collateral and protocol-managed reserve liquidity; redemption backstop is not source-verified by Pharos.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

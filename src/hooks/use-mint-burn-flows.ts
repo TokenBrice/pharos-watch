@@ -2,26 +2,20 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { ApiMeta } from "@/lib/api";
 import {
   createApiPollingQueryOptionsWithMeta,
   unwrapApiQueryWithMetaResult,
   useApiQueryWithMeta,
 } from "./use-api-query";
-import { CRON_MINT_BURN } from "@/lib/cron-intervals";
 import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types";
-import {
-  MintBurnFlowsResponseSchema,
-  MintBurnPerCoinResponseSchema,
-  MintBurnEventsResponseSchema,
-} from "@shared/types/mint-burn";
 import { normalizeToSignedFlowIntensity, type FlowIntensitySemantics } from "@/lib/flow-intensity";
 import { inferHas24hActivity } from "@/lib/mint-burn-coin-helpers";
 import { getNetFlowDirection24h, getPressureShiftState } from "@shared/lib/mint-burn-signals";
-
-const MINT_BURN_META_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
+import {
+  FRONTEND_API_QUERY_REGISTRY,
+  type MintBurnEventsDescriptorOptions,
+} from "@/lib/api-query-registry";
 
 function resolveFlowSemantics(response: MintBurnFlowsResponse): FlowIntensitySemantics {
   return response.gauge.intensitySemantics ?? "midpoint-v1";
@@ -70,11 +64,12 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24) {
+  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnFlows(hours);
   const query = useApiQueryWithMeta<MintBurnFlowsResponse>(
-    ["mint-burn-flows", "all", hours],
-    API_PATHS.mintBurnFlows(hours !== 24 ? { hours } : undefined),
-    CRON_MINT_BURN,
-    { schema: MintBurnFlowsResponseSchema, metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC },
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
+    { schema: descriptor.schema, metaMaxAgeSec: descriptor.metaMaxAgeSec },
   );
   const normalizedData = useMemo(
     () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),
@@ -87,14 +82,15 @@ export function useMintBurnFlows(hours = 24) {
 }
 
 export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
+  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnFlowsCoin(stablecoinId, hours);
   return createApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
-    ["mint-burn-flows", stablecoinId, hours],
-    API_PATHS.mintBurnFlows({ stablecoin: stablecoinId, hours: hours !== 24 ? hours : undefined }),
-    CRON_MINT_BURN,
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
     {
       enabled: !!stablecoinId && (opts?.enabled ?? true),
-      schema: MintBurnPerCoinResponseSchema,
-      metaMaxAgeSec: MINT_BURN_META_MAX_AGE_SEC,
+      schema: descriptor.schema,
+      metaMaxAgeSec: descriptor.metaMaxAgeSec,
     },
   );
 }
@@ -110,37 +106,16 @@ export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24, opts?: { 
 
 export function useMintBurnEvents(
   stablecoinId: string,
-  opts?: {
-    direction?: string;
-    burnType?: "effective_burn" | "bridge_burn" | "review_required";
-    scope?: "all" | "counted";
-    limit?: number;
-    offset?: number;
-  },
+  opts?: MintBurnEventsDescriptorOptions,
 ) {
-  const params = new URLSearchParams({ stablecoin: stablecoinId });
-  if (opts?.direction) params.set("direction", opts.direction);
-  if (opts?.burnType) params.set("burnType", opts.burnType);
-  if (opts?.scope && opts.scope !== "all") params.set("scope", opts.scope);
-  if (opts?.limit) params.set("limit", opts.limit.toString());
-  if (opts?.offset) params.set("offset", opts.offset.toString());
-  const queryParams = Object.fromEntries(params.entries());
-
+  const descriptor = FRONTEND_API_QUERY_REGISTRY.mintBurnEvents(stablecoinId, opts);
   return useApiQueryWithMeta<MintBurnEventsResponse>(
-    [
-      "mint-burn-events",
-      stablecoinId,
-      opts?.scope ?? "all",
-      opts?.direction ?? "all",
-      opts?.burnType ?? "all",
-      opts?.limit ?? 50,
-      opts?.offset ?? 0,
-    ],
-    API_PATHS.mintBurnEvents(queryParams),
-    CRON_MINT_BURN,
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
     {
-      schema: MintBurnEventsResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
+      schema: descriptor.schema,
+      metaMaxAgeSec: descriptor.metaMaxAgeSec,
     },
   );
 }

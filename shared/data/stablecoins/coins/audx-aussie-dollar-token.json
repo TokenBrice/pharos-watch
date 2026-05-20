@@ -2,6 +2,7 @@
   "id": "audx-aussie-dollar-token",
   "name": "Aussie Dollar Token",
   "symbol": "AUDX",
+  "oneLiner": "AUDX is TAU Pty Ltd's centralized Australian dollar stablecoin, designed for 1:1 AUD redemption and backed by AUD cash and government-backed instruments.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Australian-dollar cash and government-backed instruments held 1:1 for AUDX by TAU Pty Ltd trading as AUDX Token",
   "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "aussie-dollar-token",
   "links": [
@@ -69,7 +71,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.audxtoken.com/transparency",
-    "provider": "AUDX monthly reserve audit reports"
+    "provider": "AUDX monthly reserve audit reports",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Australia"
   },
   "reserves": [
     {

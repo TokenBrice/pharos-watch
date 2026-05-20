@@ -1,11 +1,18 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
-import { TOTAL_SUPPLY_SELECTOR, encodeUint256Arg } from "../../lib/evm-selectors";
+import {
+  DECIMALS_SELECTOR,
+  TOTAL_SUPPLY_SELECTOR,
+  encodeBalanceOfCallData,
+  encodeUint256Arg,
+} from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
+  decimalNumberFromBigInt,
   fetchOnchainRawCall,
+  fetchOnchainUint256,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
   reserveDegradedWarning,
@@ -14,6 +21,8 @@ import {
 const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
 const ERC4626_CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const MAX_ERC20_DECIMALS = 36;
+const RATIO_SCALE = 1_000_000_000_000n;
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -23,6 +32,13 @@ interface SingleAssetSliceConfig {
   expectedAssetAddress?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+}
+
+interface RedemptionCapacityTelemetry {
+  capacityUsd: number;
+  idleUnderlyingBalanceRaw: string;
+  underlyingDecimals: number;
+  capacityRatioOfSupply?: number;
 }
 
 function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
@@ -37,6 +53,39 @@ function parseSliceConfig(config: LiveReservesConfig): SingleAssetSliceConfig {
       : {}),
     ...(params.rpcUrl ? { rpcUrl: params.rpcUrl } : {}),
     ...(params.fallbackRpcUrl ? { fallbackRpcUrl: params.fallbackRpcUrl } : {}),
+  };
+}
+
+function decodeErc20Decimals(raw: bigint | null): number | null {
+  if (raw == null || raw > BigInt(MAX_ERC20_DECIMALS)) return null;
+  return Number(raw);
+}
+
+function ratioFromRaw(numerator: bigint, denominator: bigint): number | undefined {
+  if (denominator <= 0n) return undefined;
+  if (numerator >= denominator) return 1;
+  const ratio = Number((numerator * RATIO_SCALE) / denominator) / Number(RATIO_SCALE);
+  return Number.isFinite(ratio) ? ratio : undefined;
+}
+
+function buildRedemptionCapacityTelemetry(
+  idleUnderlyingBalanceRaw: bigint | null,
+  underlyingDecimalsRaw: bigint | null,
+  supplyAssetsRaw: bigint,
+): RedemptionCapacityTelemetry | null {
+  if (idleUnderlyingBalanceRaw == null) return null;
+  const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
+  if (underlyingDecimals == null) return null;
+
+  const capacityUsd = decimalNumberFromBigInt(idleUnderlyingBalanceRaw, underlyingDecimals);
+  if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
+
+  const capacityRatioOfSupply = ratioFromRaw(idleUnderlyingBalanceRaw, supplyAssetsRaw);
+  return {
+    capacityUsd,
+    idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString(),
+    underlyingDecimals,
+    ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
   };
 }
 
@@ -126,6 +175,39 @@ export async function fetchErc4626SingleAssetReserves(
     }
   }
 
+  let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
+  if (assetAddress) {
+    const [idleUnderlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
+      fetchOnchainUint256({
+        contract: assetAddress,
+        data: encodeBalanceOfCallData(contractAddress),
+        signal,
+        ctx: _ctx,
+        rpcMode: primaryInput.rpcMode,
+        chain: primaryInput.chain,
+        rpcUrl: sliceConfig.rpcUrl,
+        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+        timeoutMs: timeout,
+      }),
+      fetchOnchainUint256({
+        contract: assetAddress,
+        data: DECIMALS_SELECTOR,
+        signal,
+        ctx: _ctx,
+        rpcMode: primaryInput.rpcMode,
+        chain: primaryInput.chain,
+        rpcUrl: sliceConfig.rpcUrl,
+        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+        timeoutMs: timeout,
+      }),
+    ]);
+    redemptionCapacity = buildRedemptionCapacityTelemetry(
+      idleUnderlyingBalanceRaw,
+      underlyingDecimalsRaw,
+      convertToAssetsRaw ?? totalAssetsRaw,
+    );
+  }
+
   return {
     slices: [
       {
@@ -148,13 +230,29 @@ export async function fetchErc4626SingleAssetReserves(
       contractAddress,
       totalAssetsRaw: totalAssetsRaw.toString(),
       ...(assetAddress ? { assetAddress } : {}),
+      ...(redemptionCapacity
+        ? {
+            idleUnderlyingBalanceRaw: redemptionCapacity.idleUnderlyingBalanceRaw,
+            underlyingDecimals: redemptionCapacity.underlyingDecimals,
+          }
+        : {}),
       ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
       ...(convertToAssetsRaw != null ? { convertToAssetsRaw: convertToAssetsRaw.toString() } : {}),
       ...(collateralizationRatio != null && Number.isFinite(collateralizationRatio)
         ? { collateralizationRatio }
         : {}),
       redemption: {
-        capacityKind: "documented-eventual" as const,
+        ...(redemptionCapacity
+          ? {
+              capacityUsd: redemptionCapacity.capacityUsd,
+              ...(redemptionCapacity.capacityRatioOfSupply != null
+                ? { capacityRatioOfSupply: redemptionCapacity.capacityRatioOfSupply }
+                : {}),
+              capacityKind: "live-direct" as const,
+            }
+          : {
+              capacityKind: "documented-eventual" as const,
+            }),
         freshnessKind: "same-run-onchain" as const,
         routeStatus: warnings.length > 0 ? "degraded" as const : "unknown" as const,
       },

@@ -6,15 +6,25 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.12`
+- **Current methodology version:** `v8.16`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
+Yield v8.16 fixes `fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for `cgusd-cygnus-finance` and `usdn-noble`.
+
+Yield v8.15 gives `cetes-etherfuse` a curated `protocol-api:etherfuse-cetes-current-issuance` APY source from Etherfuse's current Stablebond issuance rate. This replaces the selected USD price-derived NAV fallback when Etherfuse is reachable, so MXN/USD FX movement is no longer interpreted as CETES yield. The MXN benchmark still prefers Banxico SIE `SF43936`, but when `BANXICO_TOKEN` is missing or Banxico fails, the daily benchmark cron can use the Etherfuse CETES current issuance rate as an explicit degraded proxy fallback (`isFallback: true`, `isProxy: true`).
+
+Yield v8.14 ships the public adapter manifest endpoint at `/api/yield-adapter-manifest` as the canonical machine-readable source list for every yield-bearing asset. Each entry carries `stablecoinId`, `coinSymbol`, `family` (`onchain` / `protocol-api` / `defillama` / `defillama-auto` / `rate-derived` / `price-derived` / `intentional-gap`), nullable `sourceKey`, optional `sourceKeyPattern`, `label`, optional `chain`/`project` hints, `lifecycle` (`active` / `quarantined` / `intentional-gap` / `experimental`), `quarantineReason` when lifecycle is `quarantined`, the current `methodologyVersion` label, and a methodology-snapshot `updatedAt`. `sourceKey` is populated only when the entry has an exact runtime key that can join to rankings, decision rows, or `/api/yield-history?sourceKey=...`; runtime-resolved DeFiLlama variant rows and disabled/quarantined readers use `sourceKey: null` plus `sourceKeyPattern` instead of publishing synthetic keys. Scoring, source resolution, history semantics, and publication rules are unchanged in v8.14; the bump tracks the new public contract only.
+
+Yield v8.14 also exposes a bounded public decision ledger on every `/api/yield-rankings` row through `decisionLedger`, persists `pys_at_publish` / `safety_at_publish` / `variance_at_publish` snapshots on each `yield_history` row, and migrates retained alternates from the legacy `alternatives_json` blob to a sibling `yield_source_decision_alternatives` table. `decisionLedger.selectedReasonCode` is a stable enum (`best-by-confidence-and-apy`, `deterministic-preferred`, `curated-over-discovered`, `tier-preference`, `tvl-floor`, `freshness-tiebreaker`, `fallback`, `no-alternatives`) so UI surfaces render display text from a client-side template. Up to 2 alternates are retained per row, sorted by absolute APY30d delta; each carries a coded `rejectionReasonCode` (`thinner`, `stale`, `lower-confidence`, `rewards-only`, `smaller`, `unspecified`). When a source switch's previous source is present in the evaluated candidate set, `decisionLedger.apy30dDeltaFromPrevious` carries the selected source's APY30d delta versus that previous source. A new nullable `retention_reason` column on `yield_source_decisions` tags each row as `trend` (source switch, any evaluated-source anomaly, or rejected higher-confidence source) or `audit`; audit-only rows and old null rollout rows that cannot be inferred as trend are pruned at 30 days while trend rows persist for long-running analytics. The legacy `alternatives_json` blob is still written for one cycle of co-existence.
+
 The `/yield` route-level Yield Sources board is presentation-only: it derives chosen sources and retained alternate source observations from the existing `/api/yield-rankings` payload and does not change APY source resolution, source arbitration, scoring, or methodology versioning.
 
 Yield v8 activates nested source-risk penalties for PYS and same-confidence source arbitration while preserving neutral behavior for missing evidence and old payloads. The publisher derives the penalty from measured reward share, source depth, source age, source changes, bootstrap observation count, and sourced venue tier where those inputs exist. Public source-risk fields are nested under `sourceRisk.*`; calibration artifacts may normalize those fields internally, but public API examples must not present flattened row fields such as top-level `sourceRiskPenalty`.
+
+Yield v8.13 expands the benchmark registry to GBP, JPY, MXN, BRL, AUD, and CAD, ending the universal USD T-Bill fallback for those non-USD-pegged stablecoins. The same release derives `sourceRisk.sourceRiskScore` from the resolved source-risk penalty when no upstream value is provided (ending the 100% null rate documented in the v8 production-sample calibration) and lands the first reviewed venue tier batch: Aave V3, Compound V3, and Spark move to `low` (currently a no-op penalty), and Morpho Blue moves to `medium` (+0.15 penalty contribution). Remaining tracked venue families stay `unknown` with rationale/evidence fields until the next monthly coverage audit. AED, IDR, TRY, ZAR, and SGD continue to fall back to USD until a stable public feed is wired for each.
 
 Rankings provenance now carries source-native freshness for derived sources:
 
@@ -25,6 +35,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - dTRINITY dUSD now publishes sdUSD yield from a curated TVL-weighted DeFiLlama pool group across the Ethereum and Fraxtal dStake vaults, with a new source key so Ethereum-only history is not treated as equivalent
 - `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, and `savUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, and `avUSD`
 - Solayer `sUSD` now has rate-derived Treasury fallback coverage through the yield manifest, while newly added reward-bearing account or restricted strategy assets stay out of runtime yield until a reliable APY source is wired
+- `cgusd-cygnus-finance` and `usdn-noble` now have rate-derived proxy coverage through the yield manifest
 - Parent-side wrapper history for those five base assets is filtered immediately from `/api/yield-history` and purged on the hourly sync path, so the post-handoff discontinuity is explicit rather than silently grandfathered
 - `sUSDai` is now a first-class tracked yield-bearing NAV token, so base `USDai` no longer inherits the USD.AI savings venue through `YIELD_VARIANT_MAP`
 - Risk-bearing wrappers with materially different holder exposure now own their yield rows directly when they are tracked as separate assets: `stcUSD`, `sAID`, `msY`, and K3 `sBOLD` no longer publish through their base stablecoin rows
@@ -37,7 +48,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - read-time `data-stale` warnings now follow source cadence: hourly families use the shared three-cycle publish threshold, supplemental families wait 6 hours so they do not false-positive inside their 4-hour refresh window, and `price-derived` rows wait 36 hours because they are backed by daily `supply_history` snapshots
 - published `lending-opportunity` suggestions now require observable venue TVL and a size floor of `max(existing absolute floor, 0.1% of the tracked stablecoin supply)`, so tiny markets do not surface as the live recommendation for large base assets
 - published `lending-opportunity` suggestions now explicitly exclude Resolv / `USR`, `stUSR`, and `wstUSR`-linked venues across both supplemental protocol APIs and auto-discovered DeFiLlama lending pools, so impaired wrapper ecosystems do not surface as recommended base-asset yield routes
-- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and the four Tradable private-credit notes
+- yield-bearing assets with no live runtime source now publish as explicit intentional manifest gaps rather than appearing as covered entries with zero strategies; this currently includes account-product assets such as `bfusd-binance` and `gusd-gate`, `bd-basedollar`, `pusd-polaris`, `trusd-tori`, and the Tradable private-credit notes
 - `usg-tangent` is not marked `yieldBearing`: USG is the borrowable stablecoin, while sUSG is the separate savings wrapper that accrues protocol revenue
 - Zephyr yield is attributed to `zys-zephyr-protocol`, the tracked ZYS yield-share NAV wrapper. Base `zsd-zephyr-protocol` stays non-yield-bearing.
 - explicit and deterministic lending candidates are ignored unless the target asset is in the active stablecoin universe, so pre-launch metadata cannot surface on the live yield leaderboard before launch
@@ -47,7 +58,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/index.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch status is declared in the asset's per-coin file under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`, and skipped by explicit lending override publication until the per-coin entry moves into the active lifecycle. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers own their own runtime pool/on-chain readers and history. When a tracked wrapper has a live native/wrapper yield source, the publisher may also expose that source on the active parent stablecoin with a `linked-variant:<variantId>:<sourceKey>` key for comparison and coverage context; this does not mark the parent `yieldBearing` purely because the wrapper exists, and third-party `lending-opportunity` rows are not projected from variants to parents.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/registry.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch status is declared in the asset's per-coin file under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`, and skipped by explicit lending override publication until the per-coin entry moves into the active lifecycle. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers own their own runtime pool/on-chain readers and history. When a tracked wrapper has a live native/wrapper yield source, the publisher may also expose that source on the active parent stablecoin with a `linked-variant:<variantId>:<sourceKey>` key for comparison and coverage context; this does not mark the parent `yieldBearing` purely because the wrapper exists, and third-party `lending-opportunity` rows are not projected from variants to parents.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -91,13 +102,12 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for 13 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
+Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `convertToAssets(uint256)`):
 
 | Coin ID | Wrapper | Contract | Chain |
 |---------|---------|----------|-------|
 | `susde-ethena` | sUSDe | `0x9D39...7497` | Ethereum |
 | `iusd-infinifi` | siUSD | `0xDBDC...bCB` | Ethereum |
-| `usdp-parallel` | sUSDp | `0x472e...7e7` | Base |
 | `susds-sky` | sUSDS | `0xa393...fbD` | Ethereum |
 | `stusds-sky` | stUSDS | `0x99cd...eB9` | Ethereum |
 | `sdai-sky` | sDAI | `0x83F2...BEeA` | Ethereum |
@@ -227,12 +237,15 @@ Published lending-opportunity suggestions also apply an explicit venue exclusion
 | ------- | ------ | -------- |
 | `scrvusd-curve` | `Curve Savings crvUSD current-rate` | on-chain scrvUSD Yearn V3 profit-unlock reader |
 | `usbd-bima` | `BIMA savings (sUSBD)` | `https://bima.money/api/earn/pools?network=Ethereum&user=0x0000000000000000000000000000000000000000` |
+| `cetes-etherfuse` | `Etherfuse CETES current issuance` | Etherfuse first-party Next data at `https://app.etherfuse.com/bonds/cetes` |
 | `lusd-liquity` | `B.Protocol LQTY-only source` | deterministic on-chain LQTY-only source reader |
 | `usyc-hashnote` | `Hashnote USYC` | Hashnote protocol API |
 | `usdy-ondo-finance` | `Ondo USDY oracle` | on-chain Ondo oracle with historical anchor rows |
 | `zys-zephyr-protocol` | `Zephyr Scanner ZYS returns` | `https://zephyrprotocol.com/api/v1/historicalreturns` |
 
 The BIMA adapter uses the protocol's published Ethereum earn feed, selects the USBD savings row, maps `amountTVL` to `sourceTvlUsd`, and uses the higher of `unboostedAPR` / `boostedAPR` as the current APY. Low-signal rows with negligible TVL or effectively zero APR are dropped instead of being published as meaningful yield. These rows are source-keyed as `protocol-api:bima-susbd` and participate in the same confidence-weighted arbitration as other curated sources.
+
+The Etherfuse CETES adapter reads the current CETES Stablebond issuance from Etherfuse's first-party Next data and maps `interestRateBps / 100` to APY. It publishes `protocol-api:etherfuse-cetes-current-issuance` with the current token amount as the exchange-rate observation when available. This source prevents MXN NAV appreciation plus USD/MXN FX movement from being annualized by the generic price-derived fallback.
 
 The Zephyr adapter reads the protocol's historical-return API and publishes the one-day effective APY only for `zys-zephyr-protocol`. This keeps base ZSD non-yield-bearing while still showing the native ZYS yield-share return on `/yield`.
 
@@ -252,7 +265,7 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 ### Tier 4: Rate-Derived APY
 
-For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints) and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
+For dividend-distributing tokens (maintain $1.00 NAV, pay yield as new token mints), rebase proxies, and T-bill-backed funds whose yield mechanically tracks short-term rates. Configured via `RATE_DERIVED_CONFIGS` in `yield-config.ts`.
 
 ```
 apy = max(0, benchmarkRate - spreadBps / 100)
@@ -265,9 +278,11 @@ Uses the structured benchmark cache refreshed daily by `fetch-tbill-rate`. USD d
 | Token | Spread (bps) | Rationale |
 | ----- | ------------ | --------- |
 | BUIDL | 20 | BlackRock fund, 0.20% management fee |
+| cgUSD | 35 | Cygnus Finance T-bill proxy, net of 0.35% protocol fee |
 | USYC | 50 | Hashnote fund, modeled as ~10% performance fee at a 5% T-bill baseline |
 | YLDS  | 50 | Figure Markets, T-bill rate - 50 bps formula |
 | mTBILL | 0 | Midas, tracks T-bill rate directly |
+| USDN | 0 | Noble M0 T-bill rebase proxy |
 | OUSG  | 50 | Ondo US Government Bond fund, 0.50% management fee |
 | BENJI | 20 | Franklin Templeton FOBXX gov MMF, 0.20% mgmt fee |
 | WTGXX | 25 | WisdomTree Government MMF Digital Fund, 0.25% mgmt fee |
@@ -363,9 +378,10 @@ Yield v8 exposes optional `sourceRisk` and `rankChangeAttribution` shapes in sha
 - The `/yield` depth lens is explanatory context, not guaranteed executable capacity. It classifies rows only when both `sourceRisk.sourceDepthRatio` and `sourceTvlUsd` are present: `deep` is `>= 1%` of tracked stablecoin supply, `moderate` is `0.1%` to `< 1%`, `thin` is `< 0.1%`, and missing TVL or supply-relative depth is `unknown`.
 - DeFiLlama rows use the shared DeFiLlama input metadata timestamp/age when an individual resolved row does not carry `sourceObservedAt`, so provenance and PYS source-age penalties are based on the same freshness evidence.
 - `sourceRisk.venueRiskTier: "unknown"`, `null`, or omitted means the venue tier has not been sourced. Unknown tier is neutral, not a hidden high-risk default.
-- `worker/src/cron/yield-sync/source-risk.ts` owns the sparse typed `yieldRiskConfig` home for reviewed venue tiers. The current entries for Aave, Compound, Spark, Maple, Yearn, Morpho, Pendle, and Beefy remain `unknown` with rationale/evidence fields until approved methodology evidence assigns a non-unknown tier. Review is tied to the monthly yield coverage audit; guessed venue penalties are explicitly out of scope.
-- `sourceRisk.sourceRiskScore`, `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
-- v8 rollout calibration evidence is split between `docs/process/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the current `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts.
+- `worker/src/cron/yield-sync/source-risk.ts` owns the sparse typed `yieldRiskConfig` home for reviewed venue tiers. The first reviewed batch (v8.13) assigns `aave-v3`, `compound-v3`, and `sparklend` to `low` (currently a no-op on penalty derivation because no negative bonus exists today) and `morpho-blue` to `medium` (+0.15 contribution on affected rows). Maple, Yearn, Pendle, and Beefy remain `unknown` with rationale/evidence fields until approved methodology evidence assigns a non-unknown tier. Review is tied to the monthly yield coverage audit; guessed venue penalties are explicitly out of scope.
+- `sourceRisk.sourceRiskScore` is the 0–100 display normalization of the resolved source-risk penalty. As of v8.13, when no upstream score is provided, the publisher fills it via `computeSourceRiskScoreFromPenalty` (`penalty = 1.0` → `0`; `penalty = PYS_MAX_SOURCE_RISK_PENALTY` (`2.5`) → `100`). The score is informational and does not change PYS — PYS continues to consume the `sourceRiskPenalty` directly. Rollback compatibility: legacy v7.48 payloads still resolve to a neutral penalty when source-risk is absent, and an explicit upstream `sourceRiskScore` value still wins over derivation.
+- `sourceRisk.sourceDepthRatio`, `sourceRisk.rewardShare`, `sourceRisk.sourceAgeSeconds`, `sourceRisk.observationCount30d`, `sourceRisk.sourceSwitchCount30d`, `sourceRisk.deploymentPlace`, `sourceRisk.venueProtocol`, `sourceRisk.venueChain`, and `sourceRisk.investabilityFlags` are populated only when supported by existing rows, provenance, publication-generation evidence, or sourced yield-risk config. Missing precision stays missing instead of being guessed from labels.
+- v8 rollout calibration evidence is split between `docs/process/archive/yield-pys-v8-calibration-2026-05-13.md` for source-risk golden fixtures and `docs/process/archive/yield-pys-v8-production-sample-calibration-2026-05-13.md` for the current production snapshot. The production snapshot was regenerated after publication generation `yield-1778700012` emitted populated public ranking `sourceRisk.*` fields, so it records live source-risk coverage, including the prior `sourceRiskScore` null-rate, plus rank churn, capped rows, distribution, movers, and non-USD cohorts. The v8.13 delta — benchmark registry expansion, `sourceRiskScore` derivation rule, and the first venue tier batch — is documented in `docs/process/archive/yield-pys-v8-13-calibration-2026-05-15.md`.
 - External `lending-opportunity` rows do not modify the base stablecoin's Safety Score, Dependency Risk, Resilience, or overall report-card grade. They may inform opportunity-level yield risk labels or DEWS yield anomaly inputs only through explicitly versioned consumer methodology; report-card modifiers still require a separate report-card methodology update.
 - Report-card consumers treat yield source-risk as no-op today. `shared/lib/report-card-yield-risk.ts` names the no-op reasons as `external-lending-opportunity`, `missing-yield-config`, `missing-source-risk`, and `source-risk-unconsumed`; the helper may normalize the source-risk payload, but it does not emit score modifiers, Resilience caps, or Dependency Risk caps.
 - Any future report-card score impact from yield source-risk requires a report-card methodology update and matching report-card timeline entry before runtime scoring can consume those fields.
@@ -399,6 +415,13 @@ Yield Intelligence now uses a small benchmark registry instead of a single globa
 | `USD` | USD 3M T-Bill | FRED `DGS3MO`, then Treasury.gov yield curve XML | Default benchmark and backward-compatible top-level `riskFreeRate`; Treasury.gov is used as a fallback when FRED is unavailable |
 | `EUR` | EUR 3M compounded €STR | ECB Data API (`EST/B.EU000A2QQF32.CR`) | Native benchmark for EUR pegs; retained-last-market fallback covers feed outages |
 | `CHF` | CHF 3M compounded SARON | SIX delayed `SAR3MC` download | Public feed is delayed by one business day; not labeled as a proxy |
+| `GBP` | GBP SONIA (overnight, proxy) | FRED `IUDSOIA` mirror | Used as a proxy for "3M compounded SONIA"; full compounding can be added later |
+| `JPY` | JPY overnight call (TONA proxy) | FRED `IRSTCB01JPM156N` (uncollateralized overnight call rate) | Used as a TONA-equivalent proxy |
+| `MXN` | MXN CETES 28d | Banxico SIE API (series `SF43936`), then Etherfuse CETES current issuance fallback | `BANXICO_TOKEN` enables the official Banxico feed; when missing/failing, Etherfuse is marked `isFallback` and `isProxy`. CETES (Etherfuse) is itself a 28d CETES tokenization, so the spread is ~0% — see "Self-reference caveat" below |
+| `BRL` | BRL SELIC over | BCB SGS API (series `11`) | No auth required; daily |
+| `AUD` | AUD 3M interbank (RBA proxy) | FRED `IR3TIB01AUM156N` | 3-month interbank as a proxy for the RBA cash rate target |
+| `CAD` | CAD overnight repo (CORRA proxy) | Bank of Canada Valet API (series `V122530`) | Overnight repo; CORRA-equivalent |
+| `SGD` | SGD SORA (unavailable) | — | Reserved for a future MAS SORA feed; SGD pegs fall back to USD until a stable public source is wired |
 
 **Source URLs:**
 
@@ -409,11 +432,22 @@ https://data-api.ecb.europa.eu/service/data/EST/B.EU000A2QQF32.CR?lastNObservati
 https://indexdata.six-group.com/pro/oauth/token
 https://indexdata.six-group.com/pro/api/report-download
 https://indexdata.six-group.com/download/saron/h_sar3mc_delayed.csv
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IUDSOIA
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IRSTCB01JPM156N
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=IR3TIB01AUM156N
+https://www.banxico.org.mx/SieAPIRest/service/v1/series/SF43936/datos/oportuno
+https://app.etherfuse.com/bonds/cetes
+https://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados/ultimos/1?formato=json
+https://www.bankofcanada.ca/valet/observations/V122530/json?recent=1
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rates"`, with the legacy USD-only key `"risk_free_rate"` still written for compatibility.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. EUR and CHF prefer a retained last-known market benchmark when available; otherwise they remain unavailable and rows fall back to USD when selection requires it.
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 3.75%` applies to USD only. Other benchmarks prefer a retained last-known source-backed value when available; otherwise they remain unavailable and rows fall back to USD when selection requires it. MXN additionally tries Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable.
+
+**Self-reference caveat (CETES):** Benchmarking the CETES (Etherfuse) yield against the MXN CETES rate produces a ~0% spread, which under-rewards the asset. The MXN benchmark is wired here and may use Etherfuse as a fallback proxy when Banxico is unavailable; a future tokenized-treasury rule can override per-source by selecting the next-tier-up safe rate in the same currency. The same pattern applies to EUTBL (vs €STR) and to any future UKTBL (vs SONIA).
+
+**Currencies still falling back to USD:** AED, IDR, TRY, ZAR, SGD (and any other peg currency not listed above). These remain as `benchmarkSelectionMode: "fallback-usd"` until a stable public feed is wired for each.
 
 **Selection rules:**
 
@@ -617,6 +651,12 @@ Fetches the benchmark registry used by Yield Intelligence:
 - USD 3M Treasury yield from FRED `DGS3MO`, falling back to Treasury.gov yield XML when FRED is unavailable
 - EUR 3M compounded €STR from the ECB Data API (`EST/B.EU000A2QQF32.CR`)
 - CHF 3M compounded SARON (`SAR3MC`) from SIX's delayed public download, fetched through the guest OAuth + report-download flow used by their public site
+- GBP SONIA daily proxy from FRED `IUDSOIA` (v8.13)
+- JPY call-rate proxy from FRED `IRSTCB01JPM156N` (v8.13)
+- MXN CETES 28-day from Banxico SIE (`SF43936`), falling back to Etherfuse CETES current issuance as a degraded proxy when Banxico is unavailable (v8.15)
+- BRL SELIC overnight from BCB SGS series 11 (no auth) (v8.13)
+- AUD interbank proxy from FRED `IR3TIB01AUM156N` (v8.13)
+- CAD CORRA proxy from Bank of Canada Valet `V122530` (v8.13)
 
 Validated rates must stay within `[-10, 20]` so EUR / CHF support can tolerate negative-rate regimes. The cron writes the structured `"risk_free_rates"` cache and also mirrors USD into the legacy `"risk_free_rate"` key for compatibility.
 
@@ -722,8 +762,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.12",
-    "currentVersion": "8.12",
+    "version": "8.16",
+    "currentVersion": "8.16",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }
@@ -795,6 +835,12 @@ Each `history` row includes:
 6. Yield Sources board for the active peg-filtered ranking scope
 7. Disclaimer
 
+### Page: `/stablecoin/[id]/yield/`
+
+**Files:** `src/app/stablecoin/[id]/yield/page.tsx` (SSG wrapper), `src/app/stablecoin/[id]/yield/client.tsx` (interactive)
+
+Generated only for tracked coins with `flags.yieldBearing`. The route renders per-source APY history, warning-signal timeline, and source-switch history for the selected coin; non-yield-bearing or unknown IDs return `notFound()` and noindex metadata.
+
 ### `YieldSourceBoard` (`src/app/yield/source-board.tsx`)
 
 Compact source-mix board rendered after the scatter on `/yield`. It consumes the pure `buildYieldSourceBoardModel(rankings, options)` output from `src/app/yield/source-board-model.ts` and stays scoped to the currently visible, peg-filtered rankings.
@@ -843,7 +889,7 @@ Dashed reference line at the benchmark frame rate. On benchmark-homogeneous scop
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
-Sortable, paginated table (25 rows/page). Default sort: PYS descending. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
+Sortable, paginated leaderboard (25 rows/page). Default sort: PYS descending. From `md` upward it renders the dense table; below `md` it renders first-class mobile cards with the same sort and pagination state plus direct Detail, Provider, Source, and History actions. Table headers for `PYS`, `Stability`, and `Signals` use the shared methodology-hint trigger so users can read the local definition without leaving the leaderboard.
 
 The filter row above the table is backed by `YieldViewModel` and URL query keys for `q`, `peg`, `yieldType`, `warnings`, `minSafety`, `minTvl`, `depth`, `sourceChanged`, `sourceConfidence`, `benchmark`, and `opportunity`. The trust rail promotes body-level API warnings from `YieldRankingsResponse.warnings`, including degraded live safety hydration, before the table. Search and filters feed rows into the shared sort/pagination pipeline, with page index reset whenever controls change the visible row set.
 
@@ -977,7 +1023,7 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/yield-sync/pool-filter.ts`          | Pre-filter for wrapper-relevant DeFiLlama pools before matching                                                                               |
 | `worker/src/lib/yield-source-links.ts`               | Curated yield-source link registry plus metadata fallback resolver for rankings/history payloads                                               |
-| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON)                                                  |
+| `worker/src/cron/fetch-tbill-rate.ts`                | Daily benchmark-registry cron (USD T-bill, EUR 3M compounded €STR, CHF 3M compounded SARON, GBP SONIA proxy, JPY call-rate proxy, MXN CETES 28d with Etherfuse fallback, BRL SELIC, AUD interbank proxy, CAD CORRA proxy) |
 | `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler with live Safety Score hydration (`handleYieldRankings`)                                      |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
@@ -989,6 +1035,8 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/app/yield/source-board-model.ts`                | Pure source-board model for chosen/retained-alternate source counts, source lanes, confidence counts, anomaly/source-change counts, depth counts, APY context, and benchmarks |
 | `src/app/yield/source-board.tsx`                     | Compact `/yield` source-provenance board rendered before the scatter                                                                         |
+| `src/app/stablecoin/[id]/yield/page.tsx`             | SSG per-coin yield-analysis wrapper for yield-bearing stablecoins only                                                                       |
+| `src/app/stablecoin/[id]/yield/client.tsx`           | Interactive per-coin yield-analysis surface with APY history, warning timeline, and source-switch history                                    |
 | `src/components/yield-detail-section.tsx`            | Stablecoin detail-page yield section with warnings, source metadata, metric cards, and shared history chart                                 |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
 | `src/components/yield-history-chart.tsx`             | Shared APY history chart with row-benchmark / peer-median reference lines, optional base-reward split, and warning markers                   |
@@ -999,3 +1047,51 @@ The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) p
 | `worker/src/cron/__tests__/yield-resolve.test.ts`    | Resolve/arbitration tests (price-derived, auto-discovery, DL source selection, warnings)                                                     |
 | `worker/src/cron/__tests__/yield-cache.test.ts`      | Cache parsing tests for DL pools and benchmark caches                                                                                        |
 | `worker/src/lib/__tests__/yield-source-links.test.ts` | Yield source link resolution tests (curated, protocol, metadata fallback)                                                                   |
+
+---
+
+## Presentation Contracts (v8.13.x)
+
+These conventions govern how `/yield/`-adjacent surfaces render the data already
+published by `/api/yield-rankings`. They are presentation rules, not methodology
+changes; the underlying scores and warnings are unchanged.
+
+### Row visual budget
+
+Every leaderboard row carries at most three fixed chip positions, in this order:
+(a) confidence tier pill, (b) freshness stamp, (c) severity glyph stack that
+combines warning-signal count with the source-risk penalty severity. New
+row-level affordances must reuse one of these three positions or be deferred
+to the expanded panel or detail page; the row itself stays scannable.
+
+### Sparkbar grammar
+
+The page exposes exactly two sparkbar idioms. The source-risk score (0-100)
+sparkbar lives only in the source cell of leaderboard rows and in the
+chosen-source card of the source sheet. The PYS history sparkline (planned
+Phase 4) lives only in the expanded-row panel. No other sparkbar grammars
+are introduced on `/yield/`.
+
+### Embedded vs deep-link contract
+
+The embedded yield section on the stablecoin detail page
+(`src/components/yield-detail-section.tsx`) is at-a-glance: current state,
+recent narrative, one chart, and the top alternates. The deep-link
+`/stablecoin/<id>/yield/` surface
+(`src/app/stablecoin/[id]/yield/client.tsx`) is history-first: full
+timelines, decision rationale, and (planned) peer rail. Embedded summarises;
+deep-link reveals. Both surfaces must avoid duplicating panels.
+Deep-link yield pages are `noindex` and omitted from `sitemap.xml`; the indexable
+SEO surface remains `/yield/` plus each stablecoin detail page because the
+deep-link pages are runtime-data workbenches rather than static crawl targets.
+
+### PYS attribution convention
+
+To express a PYS component as a marginal-point delta, neutralize the factor
+under inspection (set it to its neutral baseline: source-risk penalty &rarr;
+`1.0`, sustainability multiplier &rarr; `1.0`, safety penalty &rarr; `1.0`)
+and recompute PYS via `computePYS`. The signed difference vs the actual PYS
+is that factor's contribution in PYS points. Because attribution is
+per-factor and not sequential, the attributed points may not sum exactly to
+the total PYS; this caveat must accompany any rendered attribution so users
+read it as decomposition, not a residual-free reconciliation.

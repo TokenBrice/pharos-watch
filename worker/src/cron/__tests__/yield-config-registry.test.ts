@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { PRE_LAUNCH_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
   AUTO_LENDING_POOL_MAP,
@@ -26,6 +26,7 @@ const directProtocolApiIds = new Set(
     .filter((entry) => entry.directProtocolApiLabel)
     .map((entry) => entry.stablecoinId),
 );
+const NON_YIELD_BEARING_ONCHAIN_IDS = new Set(["bold-liquity", "usdf-falcon"]);
 
 function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
     return (
@@ -70,9 +71,16 @@ describe("yield config registry", () => {
     for (const config of ON_CHAIN_RATE_CONFIGS) {
       const coin = TRACKED_STABLECOINS.find((entry) => entry.id === config.stablecoinId);
       expect(coin, config.stablecoinId).toBeDefined();
-      expect(coin?.flags.yieldBearing, config.stablecoinId).toBe(true);
+      if (!NON_YIELD_BEARING_ONCHAIN_IDS.has(config.stablecoinId)) {
+        expect(coin?.flags.yieldBearing, config.stablecoinId).toBe(true);
+      }
       expect((coin?.contracts ?? []).length, config.stablecoinId).toBeGreaterThan(0);
     }
+  });
+
+  it("keeps rate-derived configs unique", () => {
+    const ids = RATE_DERIVED_CONFIGS.map((config) => config.stablecoinId);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("requires every safety-bypass id to have a deterministic lending override", () => {
@@ -189,12 +197,62 @@ describe("yield config registry", () => {
     expect(YIELD_POOL_MAP["aa-falconx-mev-capital"]).toBeUndefined();
 
     for (const stablecoinId of [
+      "cgusd-cygnus-finance",
+      "usdn-noble",
       "benji-franklin-templeton",
       "wtgxx-wisdomtree",
       "ustbl-spiko",
       "eutbl-spiko",
     ]) {
       expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
+    }
+
+    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "rate-derived",
+          }),
+        ],
+      });
+    }
+  });
+
+  it("wires v8.16 coverage additions to runtime source keys", () => {
+    for (const stablecoinId of [
+      "fpi-frax",
+      "silk-shade-protocol",
+      "isc-international-stable-currency",
+    ]) {
+      const coin = TRACKED_STABLECOINS.find((entry) => entry.id === stablecoinId);
+      expect(coin?.flags.yieldBearing, stablecoinId).toBe(true);
+      expect(coin?.flags.navToken, stablecoinId).toBe(true);
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "price-derived",
+            sourceKey: "price-derived",
+          }),
+        ],
+      });
+    }
+
+    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+      expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
+      expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
+        status: "covered",
+        strategies: [
+          expect.objectContaining({
+            kind: "rate-derived",
+            sourceKey: "rate-derived",
+          }),
+        ],
+      });
     }
   });
 

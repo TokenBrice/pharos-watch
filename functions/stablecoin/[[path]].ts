@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 interface StablecoinRouteEnv {
   ASSETS: {

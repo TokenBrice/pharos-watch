@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { batchExecute } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { makeAsset, makeReportCardsDb } from "../../api/__tests__/helpers/fixtures";
+import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
 import { buildReportCardsSnapshot } from "../report-cards-snapshot";
 import type { PegSummaryCoin } from "@shared/types/market";
 

@@ -2,6 +2,7 @@
   "id": "usdr-stablr",
   "name": "StablR USD",
   "symbol": "USDR",
+  "oneLiner": "USDR is StablR's MiCA-licensed dollar e-money token redeemable 1:1, backed by cash and short-term EU government bonds under Malta MFSA EMI supervision.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,18 @@
   },
   "collateral": "Cash and short-term government bonds held with regulated European financial institutions",
   "pegMechanism": "Direct 1:1 redemption through StablR (MFSA-supervised EMI)",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "240",
   "detailProvider": "defillama",
   "geckoId": "stablr-usd",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.stablr.com/proof-of-reserve",
-    "provider": "Grant Thornton"
+    "provider": "Grant Thornton",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Malta",
+    "attestorLicense": "MFSA EMI (MiCA)"
   },
   "links": [
     {

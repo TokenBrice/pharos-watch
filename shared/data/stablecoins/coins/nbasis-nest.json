@@ -2,16 +2,18 @@
   "id": "nbasis-nest",
   "name": "Nest Basis Vault",
   "symbol": "nBASIS",
+  "oneLiner": "nBASIS is Nest's basis-trade vault token combining Superstate T-bill collateral with perpetual shorts; value drifts with funding-rate, not pegged 1:1.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
     "yieldBearing": true,
-    "rwa": false,
+    "rwa": true,
     "navToken": true
   },
   "collateral": "Basis-trade strategy book combining tokenised T-bill collateral (Superstate USTB / USCC) on Plume with perpetual short positions; risk-managed and rebalanced by Nest",
   "pegMechanism": "Vault LP token whose value targets a dollar base and drifts with the basis-trade strategy NAV; primary mint and redemption occur through Nest at vault NAV against USDC and pUSD",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "nest-basis-vault",
   "protocolSlug": "nest-credit",
@@ -39,6 +41,11 @@
       "chain": "plume",
       "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
       "decimals": 6
+    },
+    {
+      "chain": "plasma",
+      "address": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,
@@ -61,16 +68,15 @@
   "governanceQuality": "single-entity",
   "reserves": [
     {
-      "name": "Superstate USTB / USCC Treasury and credit collateral",
-      "pct": 95,
-      "risk": "very-low",
-      "coinId": "ustb-superstate"
+      "name": "Superstate USCC cash-and-carry fund",
+      "pct": 64,
+      "risk": "low"
     },
     {
-      "name": "Stablecoin liquidity buffer",
-      "pct": 5,
+      "name": "Superstate USTB Treasury Fund",
+      "pct": 36,
       "risk": "low",
-      "coinId": "usdc-circle"
+      "coinId": "ustb-superstate"
     }
   ],
   "liveReservesConfig": {

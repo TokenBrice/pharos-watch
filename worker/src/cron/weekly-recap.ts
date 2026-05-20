@@ -18,6 +18,7 @@ import {
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import type { DigestValidationProfile } from "./daily-digest/response";
+import { rollupDigestInputs } from "./daily-digest/collectors-shared";
 
 const WEEKLY_SYSTEM_PROMPT = [
   "You write the weekly editorial recap for Pharos, a stablecoin analytics dashboard.",
@@ -149,22 +150,29 @@ interface WeeklyInputData {
   } | null;
 }
 
-interface WeeklyBasicsParsedRow {
+interface WeeklyParsedRow {
   inputData: DigestInputData;
   date: string;
+  title: string;
+  text: string;
 }
 
-interface WeeklyBasics {
-  mcapEnd: number;
-  psiMid: number;
-  psiDominantBand: string;
-  activeDepegObs: number;
-  uniqueDepegSignals: number;
-  blacklistEvents: number;
-  blacklistUsd: number;
-  gradeTransitions: number;
-  gaugeMid: number | null;
-  days: number;
+/**
+ * File-local helper: collapse the `flatMap → sort desc → slice` shape used
+ * for every weekly signal leaderboard. The `project` callback receives the
+ * full parsed row (not just `inputData`) so projections can include the
+ * day's date alongside per-row signal fields.
+ */
+function topSignals<TOut>(
+  parsed: ReadonlyArray<WeeklyParsedRow>,
+  project: (row: WeeklyParsedRow) => TOut[],
+  sortKey: (out: TOut) => number,
+  limit = 7,
+): TOut[] {
+  return parsed
+    .flatMap(project)
+    .sort((a, b) => sortKey(b) - sortKey(a))
+    .slice(0, limit);
 }
 
 function weeklySignalId(kind: WeeklyRiskKind, parts: readonly string[]): string {
@@ -311,46 +319,10 @@ function buildWeeklyRiskLeaderboard(params: {
     .slice(0, 7);
 }
 
-function aggregateBasics(parsed: WeeklyBasicsParsedRow[]): WeeklyBasics {
-  const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
-  const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
-  const psiBands = parsed.map((d) => d.inputData.stabilityIndex?.band).filter((b): b is string => b != null);
-  const bandFreq = new Map<string, number>();
-  for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
-  const psiDominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
-  const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
-  const depegObs = parsed.reduce((sum, d) => sum + d.inputData.activeDepegCount, 0);
-  const depegKeys = new Set<string>();
-  for (const d of parsed) {
-    for (const depeg of d.inputData.topDepegs ?? []) {
-      depegKeys.add(depeg.startedAt != null
-        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:active`
-        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.bps}:active`);
-    }
-    for (const depeg of d.inputData.resolvedDepegs ?? []) {
-      depegKeys.add(depeg.startedAt != null
-        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:resolved`
-        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.peakBps}:resolved`);
-    }
-  }
-  return {
-    mcapEnd: mcaps[mcaps.length - 1] ?? 0,
-    psiMid: psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0,
-    psiDominantBand,
-    activeDepegObs: depegObs,
-    uniqueDepegSignals: depegKeys.size,
-    blacklistEvents: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.eventCount ?? 0), 0),
-    blacklistUsd: parsed.reduce((s, d) => s + (d.inputData.blacklistActivity?.totalAmountUsd ?? 0), 0),
-    gradeTransitions: parsed.reduce((s, d) => s + (d.inputData.gradeTransitions?.length ?? 0), 0),
-    gaugeMid: gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null,
-    days: parsed.length,
-  };
-}
-
 function parseDailyRows(
   dailyRows: { generated_at: number; digest_title: string | null; digest_text: string; input_data: string }[],
-): { date: string; title: string; text: string; inputData: DigestInputData }[] {
-  const parsed: { date: string; title: string; text: string; inputData: DigestInputData }[] = [];
+): WeeklyParsedRow[] {
+  const parsed: WeeklyParsedRow[] = [];
   for (const row of dailyRows) {
     try {
       const inputData = JSON.parse(row.input_data) as DigestInputData;
@@ -379,24 +351,16 @@ function buildWeeklyInputData(
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
-  const psiBands = parsed.map((d) => d.inputData.stabilityIndex?.band).filter((b): b is string => b != null);
   const mcaps = parsed.map((d) => d.inputData.totalMcapUsd);
   const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
 
   if (psiScores.length === 0 || mcaps.length === 0) return null;
 
-  const bandFreq = new Map<string, number>();
-  for (const b of psiBands) bandFreq.set(b, (bandFreq.get(b) ?? 0) + 1);
-  const dominantBand = [...bandFreq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "BEDROCK";
+  const current = rollupDigestInputs(parsed.map((d) => d.inputData));
+  const dominantBand = current.psiDominantBand;
 
-  const totalDepegObservations = parsed.reduce((sum, d) => sum + d.inputData.activeDepegCount, 0);
-  const depegSignalKeys = new Set<string>();
   const allDepegSignals = parsed.flatMap((d) => [
     ...(d.inputData.topDepegs ?? []).map((depeg) => {
-      const key = depeg.startedAt != null
-        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:active`
-        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.bps}:active`;
-      depegSignalKeys.add(key);
       const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.bps, depeg.mcapUsd);
       return {
         id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "active"]),
@@ -413,10 +377,6 @@ function buildWeeklyInputData(
       };
     }),
     ...(d.inputData.resolvedDepegs ?? []).map((depeg) => {
-      const key = depeg.startedAt != null
-        ? `${depeg.stablecoinId ?? depeg.symbol}:${depeg.startedAt}:resolved`
-        : `${depeg.symbol}:${depeg.direction ?? ""}:${depeg.peakBps}:resolved`;
-      depegSignalKeys.add(key);
       const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
       return {
         id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "resolved"]),
@@ -435,10 +395,7 @@ function buildWeeklyInputData(
   const topDepegSignals = [...allDepegSignals]
     .sort((a, b) => Number(b.critical) - Number(a.critical) || b.severityScore - a.severityScore || b.impactScore - a.impactScore)
     .slice(0, 7);
-  const totalBlacklist = parsed.reduce((sum, d) => sum + (d.inputData.blacklistActivity?.eventCount ?? 0), 0);
-  const totalBlacklistAmountUsd = parsed.reduce((sum, d) => sum + (d.inputData.blacklistActivity?.totalAmountUsd ?? 0), 0);
-  const gradeTransitionCount = parsed.reduce((sum, d) => sum + (d.inputData.gradeTransitions?.length ?? 0), 0);
-  const topSupplySignals = parsed.flatMap((d) => {
+  const topSupplySignals = topSignals(parsed, (d) => {
     const rows: { symbol: string; label: string; amountUsd: number }[] = [];
     if (d.inputData.biggestSupplyChange) {
       rows.push({
@@ -455,72 +412,87 @@ function buildWeeklyInputData(
       });
     }
     return rows;
-  }).sort((a, b) => Math.abs(b.amountUsd) - Math.abs(a.amountUsd)).slice(0, 7);
-  const topDewsChanges = parsed.flatMap((d) =>
-    (d.inputData.dewsStress?.bandChanges ?? []).map((change) => ({
+  }, (row) => Math.abs(row.amountUsd));
+  // DEWS uses an mcap-major / score-minor sort. Encode as a single numeric
+  // key (mcap is non-negative USD, score is a bounded small integer) so we
+  // can flow through the generic `sortKey: number` helper while preserving
+  // the original `b.mcapUsd - a.mcapUsd || b.score - a.score` ordering.
+  const topDewsChanges = topSignals(
+    parsed,
+    (d) => (d.inputData.dewsStress?.bandChanges ?? []).map((change) => ({
       symbol: change.symbol,
       from: change.from,
       to: change.to,
       score: change.score,
       mcapUsd: change.mcapUsd ?? 0,
       driver: change.topDriver,
-    }))
-  ).sort((a, b) => b.mcapUsd - a.mcapUsd || b.score - a.score).slice(0, 7);
+    })),
+    (row) => row.mcapUsd * 1000 + row.score,
+  );
   const maxAlertPlusMcapUsd = Math.max(
     0,
     ...parsed.map((d) => (d.inputData.dewsStress?.elevatedCoins ?? []).reduce((sum, coin) => sum + coin.mcapUsd, 0)),
   );
-  const topPressureSignals = parsed.flatMap((d) =>
-    (d.inputData.mintBurnFlows?.topPressure ?? []).map((pressure) => ({
+  const topPressureSignals = topSignals(
+    parsed,
+    (d) => (d.inputData.mintBurnFlows?.topPressure ?? []).map((pressure) => ({
       symbol: pressure.symbol,
       intensity: pressure.intensity,
       net24hUsd: pressure.net24hUsd,
       date: d.date,
-    }))
-  ).sort((a, b) => Math.abs(b.intensity) - Math.abs(a.intensity)).slice(0, 7);
-  const topBlacklistEvents = parsed.flatMap((d) =>
-    (d.inputData.blacklistActivity?.topEvents ?? []).map((event) => ({
+    })),
+    (row) => Math.abs(row.intensity),
+  );
+  const topBlacklistEvents = topSignals(
+    parsed,
+    (d) => (d.inputData.blacklistActivity?.topEvents ?? []).map((event) => ({
       symbol: event.symbol,
       chain: event.chain,
       type: event.type,
       amountUsd: event.amountUsd,
       date: d.date,
-    }))
-  ).sort((a, b) => b.amountUsd - a.amountUsd).slice(0, 7);
-  const topGradeTransitions = parsed.flatMap((d) =>
-    (d.inputData.gradeTransitions ?? []).map((transition) => ({
-      symbol: transition.symbol,
-      fromGrade: transition.fromGrade,
-      toGrade: transition.toGrade,
-      mcapUsd: transition.mcapUsd,
-      date: d.date,
-    }))
-  )
-    .filter((transition): transition is { symbol: string; fromGrade: string; toGrade: string; mcapUsd: number; date: string } =>
-      typeof transition.symbol === "string"
-      && typeof transition.fromGrade === "string"
-      && typeof transition.toGrade === "string"
-      && typeof transition.mcapUsd === "number",
-    )
-    .sort((a, b) => b.mcapUsd - a.mcapUsd)
-    .slice(0, 7);
-  const topYieldAnomalies = parsed.flatMap((d) =>
-    (d.inputData.yieldAnomalies ?? []).map((anomaly) => ({
+    })),
+    (row) => row.amountUsd,
+  );
+  const topGradeTransitions = topSignals(
+    parsed,
+    (d) => (d.inputData.gradeTransitions ?? [])
+      .map((transition) => ({
+        symbol: transition.symbol,
+        fromGrade: transition.fromGrade,
+        toGrade: transition.toGrade,
+        mcapUsd: transition.mcapUsd,
+        date: d.date,
+      }))
+      .filter((transition): transition is { symbol: string; fromGrade: string; toGrade: string; mcapUsd: number; date: string } =>
+        typeof transition.symbol === "string"
+        && typeof transition.fromGrade === "string"
+        && typeof transition.toGrade === "string"
+        && typeof transition.mcapUsd === "number",
+      ),
+    (row) => row.mcapUsd,
+  );
+  const topYieldAnomalies = topSignals(
+    parsed,
+    (d) => (d.inputData.yieldAnomalies ?? []).map((anomaly) => ({
       symbol: anomaly.symbol,
       apy: anomaly.currentApy,
       warnings: anomaly.warnings,
       mcapUsd: anomaly.mcapUsd,
       date: d.date,
-    }))
-  ).sort((a, b) => b.mcapUsd - a.mcapUsd).slice(0, 7);
-  const topLiquidityShifts = parsed.flatMap((d) =>
-    (d.inputData.liquidityShifts ?? []).map((shift) => ({
+    })),
+    (row) => row.mcapUsd,
+  );
+  const topLiquidityShifts = topSignals(
+    parsed,
+    (d) => (d.inputData.liquidityShifts ?? []).map((shift) => ({
       symbol: shift.symbol,
       scoreDelta: shift.scoreDelta,
       mcapUsd: shift.mcapUsd,
       date: d.date,
-    }))
-  ).sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd).slice(0, 7);
+    })),
+    (row) => Math.abs(row.scoreDelta) * row.mcapUsd,
+  );
 
   const psiObservations = parsed
     .map((d) => d.inputData.stabilityIndex ? { date: d.date, score: d.inputData.stabilityIndex.score, band: d.inputData.stabilityIndex.band } : null)
@@ -572,27 +544,22 @@ function buildWeeklyInputData(
 
   let weekOverWeekDeltas: WeeklyInputData["weekOverWeekDeltas"] = null;
   if (priorParsed.length >= 5) {
-    // Reuse already-computed current-week values; only run the aggregation
-    // pass on the prior-week rows.
-    const currentMcapEnd = mcaps[mcaps.length - 1] ?? 0;
-    const currentPsiMid = psiScores.length > 0 ? psiScores.reduce((s, v) => s + v, 0) / psiScores.length : 0;
-    const currentGaugeMid = gauges.length >= 3 ? gauges.reduce((s, v) => s + v, 0) / gauges.length : null;
-    const pri = aggregateBasics(priorParsed);
+    const prior = rollupDigestInputs(priorParsed.map((d) => d.inputData));
     weekOverWeekDeltas = {
       mcap: {
-        current: currentMcapEnd,
-        prior: pri.mcapEnd,
-        deltaPct: pri.mcapEnd > 0 ? ((currentMcapEnd - pri.mcapEnd) / pri.mcapEnd) * 100 : null,
+        current: current.mcapEnd,
+        prior: prior.mcapEnd,
+        deltaPct: prior.mcapEnd > 0 ? ((current.mcapEnd - prior.mcapEnd) / prior.mcapEnd) * 100 : null,
       },
-      psi: { current: currentPsiMid, prior: pri.psiMid, delta: currentPsiMid - pri.psiMid },
-      psiDominantBand: { current: dominantBand, prior: pri.psiDominantBand },
-      activeDepegObservations: { current: totalDepegObservations, prior: pri.activeDepegObs },
-      uniqueDepegSignals: { current: depegSignalKeys.size, prior: pri.uniqueDepegSignals },
-      blacklistEvents: { current: totalBlacklist, prior: pri.blacklistEvents },
-      blacklistUsd: { current: totalBlacklistAmountUsd, prior: pri.blacklistUsd },
-      gradeTransitions: { current: gradeTransitionCount, prior: pri.gradeTransitions },
-      gauge: { current: currentGaugeMid, prior: pri.gaugeMid },
-      dataCoverage: { currentDays: parsed.length, priorDays: pri.days },
+      psi: { current: current.psiMid, prior: prior.psiMid, delta: current.psiMid - prior.psiMid },
+      psiDominantBand: { current: current.psiDominantBand, prior: prior.psiDominantBand },
+      activeDepegObservations: { current: current.activeDepegObs, prior: prior.activeDepegObs },
+      uniqueDepegSignals: { current: current.uniqueDepegSignals, prior: prior.uniqueDepegSignals },
+      blacklistEvents: { current: current.blacklistEvents, prior: prior.blacklistEvents },
+      blacklistUsd: { current: current.blacklistUsd, prior: prior.blacklistUsd },
+      gradeTransitions: { current: current.gradeTransitions, prior: prior.gradeTransitions },
+      gauge: { current: current.gaugeMid, prior: prior.gaugeMid },
+      dataCoverage: { currentDays: current.days, priorDays: prior.days },
     };
   }
 
@@ -616,11 +583,11 @@ function buildWeeklyInputData(
         ? null
         : ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100,
     },
-    activeDepegObservationsThisWeek: totalDepegObservations,
-    uniqueDepegSignalsThisWeek: depegSignalKeys.size,
-    totalBlacklistEventsThisWeek: totalBlacklist,
-    totalBlacklistAmountUsd,
-    gradeTransitionCount,
+    activeDepegObservationsThisWeek: current.activeDepegObs,
+    uniqueDepegSignalsThisWeek: current.uniqueDepegSignals,
+    totalBlacklistEventsThisWeek: current.blacklistEvents,
+    totalBlacklistAmountUsd: current.blacklistUsd,
+    gradeTransitionCount: current.gradeTransitions,
     gaugeRange: gauges.length >= 3 ? { min: Math.min(...gauges), max: Math.max(...gauges) } : null,
     spikeMetrics,
     weeklySignals: {

@@ -7,6 +7,7 @@ import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { RegimeBar } from "@/components/regime-bar";
 import { HomepageTopTape } from "@/components/homepage-top-tape";
@@ -14,10 +15,9 @@ import { MainContent, RouteChrome } from "@/components/route-chrome";
 import { PHAROS_ORG_NODE, PHAROS_PERSON_TOKENBRICE_NODE, safeJsonLd } from "@/lib/json-ld";
 import { API_ORIGIN as API_URL, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { geistMono, geistSans } from "@/lib/fonts/geist";
-import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
-import { ACTIVE_STABLECOIN_COUNT, DEAD_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
+import { ACTIVE_PEG_CURRENCY_COUNT, ACTIVE_STABLECOIN_COUNT, DEAD_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
-const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
+const siteDescription = `Track ${ACTIVE_STABLECOIN_COUNT} stablecoins across ${ACTIVE_PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOIN_COUNT} dead stablecoins, with core market data updated every 15 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -57,6 +57,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-touch-icon.png",
   },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
@@ -71,9 +72,14 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={API_URL} />
         {gaId && <link rel="preload" href={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} as="script" />}
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Daily digest" href="/feed/digest.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Depeg events" href="/feed/depeg.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Methodology changelog" href="/feed/methodology.xml" />
+        <link rel="alternate" type="application/rss+xml" title="Pharos · Stablecoin cemetery" href="/feed/cemetery.xml" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {gaId && <GoogleAnalytics measurementId={gaId} />}
+        {gaId && <WebVitalsReporter />}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"

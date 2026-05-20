@@ -1,30 +1,28 @@
 "use client";
 
-import { API_PATHS } from "@shared/lib/api-endpoints";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { CRON_BLACKLIST } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta } from "./use-api-query";
 import { buildBlacklistEventsPath, type FetchBlacklistEventsParams } from "@/lib/blacklist-api";
 import type { BlacklistResponse, BlacklistSummaryResponse } from "@shared/types";
-import { BlacklistResponseSchema, BlacklistSummaryResponseSchema } from "@shared/types/market";
+import { FRONTEND_API_QUERY_REGISTRY } from "@/lib/api-query-registry";
 
 export function useBlacklistSummary(options?: { enabled?: boolean }) {
+  const descriptor = FRONTEND_API_QUERY_REGISTRY.blacklistSummary;
   return useApiQueryWithMeta<BlacklistSummaryResponse>(
-    ["blacklist-summary"],
-    API_PATHS.blacklistSummary(),
-    CRON_BLACKLIST,
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
     {
       enabled: options?.enabled,
       retry: 1,
-      schema: BlacklistSummaryResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklistSummary,
+      schema: descriptor.schema,
+      metaMaxAgeSec: descriptor.metaMaxAgeSec,
     },
   );
 }
 
 export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
-  return useApiQueryWithMeta<BlacklistResponse>(
-    [
+  const descriptor = FRONTEND_API_QUERY_REGISTRY.blacklistEvents({
+    queryKey: [
       "blacklist-events",
       params.stablecoin ?? "all",
       params.chainName ?? "all",
@@ -35,12 +33,16 @@ export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
       params.limit ?? 50,
       params.offset ?? 0,
     ],
-    buildBlacklistEventsPath(params),
-    CRON_BLACKLIST,
+    path: buildBlacklistEventsPath(params),
+  });
+  return useApiQueryWithMeta<BlacklistResponse>(
+    descriptor.queryKey,
+    descriptor.path,
+    descriptor.producerIntervalMs,
     {
       retry: 1,
-      schema: BlacklistResponseSchema,
-      metaMaxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
+      schema: descriptor.schema,
+      metaMaxAgeSec: descriptor.metaMaxAgeSec,
     },
   );
 }

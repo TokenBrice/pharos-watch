@@ -7,6 +7,7 @@ import type {
   ApiKeyRotateResponse,
   ApiKeySummary,
 } from "@shared/types";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { postAdminJson } from "@/lib/admin-access";
 import { useApiKeys } from "@/hooks/use-api-keys";
@@ -68,7 +69,7 @@ export function ApiKeysPanel() {
     setCreateBusy(true);
     try {
       const response = await postAdminJson<ApiKeyCreateResponse>(
-        "/api/api-keys",
+        API_PATHS.apiKeys(),
         buildCreateApiKeyPayload(createState),
       );
       setRevealedToken({ label: `Created ${response.key.name}`, token: requirePlaintextToken(response, "created") });

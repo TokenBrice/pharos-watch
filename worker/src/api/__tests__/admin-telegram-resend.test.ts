@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAdminTelegramResend } from "../admin-telegram-resend";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const fetchSpy = vi.fn();
 vi.stubGlobal("fetch", fetchSpy);

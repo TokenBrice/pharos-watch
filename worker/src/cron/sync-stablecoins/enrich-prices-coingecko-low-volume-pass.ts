@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { fetchCoingeckoSimplePrices } from "../../lib/coingecko-simple-price";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";

@@ -1,6 +1,12 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.24 (2026-02-25 → 2026-05-12). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/safety-score-version-data.ts` for canonical machine ordering.
+Internal changelog reconstructed from git history plus the live version metadata source. Covers v1.0 through v7.25 (2026-02-25 → 2026-05-15). The newest sections track the machine-readable version source closely; older reconstructed sections below v6.92 preserve the original authoring-era grouping and are not guaranteed to be in strict descending source order. Use `shared/lib/methodology-versions/safety-score-data.ts` for canonical machine ordering.
+
+## v7.25 — Wrapper decentralization inherits from tracked parent assets (2026-05-15)
+
+- Tracked wrappers with a resolvable parent asset now derive Decentralization from the wrapped asset's Decentralization score instead of receiving the old flat 10-point wrapper score
+- Savings wrappers inherit parent Decentralization minus 3 points; strategy-vault and risk-absorption variants inherit parent minus 5; bond-maturity variants inherit parent minus 8
+- yBOLD and sBOLD now inherit from BOLD, while sfrxUSD inherits from frxUSD; wrappers without a resolvable single tracked parent keep the conservative fallback score of 10
 
 ## v7.24 — Capacity-aware redemption effective-exit blending (2026-05-12)
 
@@ -342,7 +348,7 @@ New types: `ChainRisk`, `CollateralQuality`, `CustodyModel`. Defaults inferred f
 
 **Commit:** `69ea4c9`
 
-Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/safety-score-version-data.ts`.
+Unversioned note for the steeper chain-risk penalties already applied inside the v3.0 era (stage1-l2 −15, established-alt-l1 −50, unproven −65). This was not a machine-readable methodology version in `shared/lib/methodology-versions/safety-score-data.ts`.
 
 ### v3.2 — Dependency type ceilings (Feb 27)
 

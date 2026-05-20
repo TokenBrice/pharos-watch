@@ -12,6 +12,7 @@ import {
   Info,
   Layers,
   LayoutDashboard,
+  Lightbulb,
   Network,
   Newspaper,
   Rocket,
@@ -325,6 +326,12 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
         description: "Reference manual for formulas, thresholds, and changelogs.",
         href: "/methodology/",
         icon: BookOpen,
+      },
+      {
+        title: "Stablecoin mechanism explainers",
+        description: "Plain-English explainers of each stablecoin design pattern Pharos tracks.",
+        href: "/learn/mechanisms/",
+        icon: Lightbulb,
       },
       {
         title: "About",

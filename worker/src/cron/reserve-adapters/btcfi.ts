@@ -5,15 +5,16 @@ import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   fetchJsonWithRetry,
+  notApplicableFreshnessMetadata,
   requireJsonInput,
   reserveDegradedWarning,
   slicesFromValues,
-  unverifiedFreshnessMetadata,
 } from "./helpers";
 
 interface BtcfiMarketRow {
   token_handler_id: number;
   deposit_value?: string;
+  borrow_value?: string;
 }
 
 interface BtcfiHandlerRow {
@@ -91,10 +92,10 @@ export function adaptBtcfi(market: BtcfiMarketRow[], handlers: BtcfiHandlerRow[]
     metadata: {
       handlerCount: handlers.length,
       ...(unknownValue > 0 ? { unknownExposurePct: (unknownValue / total) * 100 } : {}),
-      ...unverifiedFreshnessMetadata(
-        "protocol-market-and-handler-apis",
-        "btcfi market and handler payloads do not expose a trustworthy source timestamp",
-      ),
+      ...notApplicableFreshnessMetadata({
+        freshnessSource: "protocol-market-and-handler-apis",
+        freshnessReason: "btcfi market and handler payloads represent latest-state protocol API aggregation",
+      }),
     },
     ...(warnings.length > 0 ? { warnings } : {}),
   };

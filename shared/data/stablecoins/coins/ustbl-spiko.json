@@ -2,6 +2,7 @@
   "id": "ustbl-spiko",
   "name": "Spiko US T-Bills Money Market Fund",
   "symbol": "USTBL",
+  "oneLiner": "USTBL is Spiko's regulated short-term U.S. Treasury fund tokenized for EU and global investors under an AMF-authorized UCITS money market structure.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,6 +11,7 @@
     "rwa": true,
     "navToken": true
   },
+  "mechanismArchetype": "tbill",
   "collateral": "Short-dated U.S. Treasury bills with weighted average maturity under two months, held by a UCITS-compliant short-term money market fund administered under Spiko's AMF authorization",
   "pegMechanism": "USD-denominated NAV-accreting share token (ISIN FR001400ODM9) of the Spiko SICAV short-term VNAV money market sub-fund authorised by the AMF, backed exclusively by short-dated U.S. Treasury bills with a regulatory weighted-average maturity ceiling under 60 days; subscription and redemption are KYC-gated to allowlisted wallets through Spiko's transfer agent with a daily 11:30 Paris cutoff settling at the day's published NAV (T+0 / next-business-day for late orders) and a $1k minimum; cross-chain issuance on Ethereum, Arbitrum, and Polygon is relayed through Chainlink CCIP. Prospectus: https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
   "detailProvider": "coingecko",
@@ -17,7 +19,11 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/",
-    "provider": "Spiko (daily NAV and fund holdings disclosures)"
+    "provider": "Spiko (daily NAV and fund holdings disclosures)",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
   },
   "links": [
     {
@@ -138,7 +144,7 @@
     {
       "type": "info",
       "title": "Multi-chain EU-regulated MMF",
-      "message": "USTBL is issued on Ethereum, Arbitrum, and Polygon, with cross-chain transfers relayed via Chainlink CCIP."
+      "message": "USTBL is issued on Ethereum, Arbitrum, Polygon, Base, Etherlink, Stellar, and Starknet, with cross-chain transfers relayed via Chainlink CCIP."
     }
   ]
 }

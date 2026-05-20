@@ -49,13 +49,13 @@ describe("route context typing", () => {
   });
 
   it("narrows dynamic route contexts to declared dependencies", () => {
-    defineDynamicRoute(/^\/example$/, ["coingeckoApiKey"], async (routeCtx) => {
+    defineDynamicRoute(/^\/example$/, ["coingeckoApiKey"], ["GET"], async (routeCtx) => {
       expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null>();
       expectTypeOf(routeCtx.feedbackEnv).toEqualTypeOf<FeedbackEnv | undefined>();
       return new Response("ok");
     });
 
-    defineDynamicRoute(/^\/admin$/, [], async (routeCtx) => {
+    defineDynamicRoute(/^\/admin$/, [], ["GET"], async (routeCtx) => {
       expectTypeOf(routeCtx.coingeckoApiKey).toEqualTypeOf<string | null | undefined>();
       return new Response("ok");
     });

@@ -2,23 +2,26 @@
   "id": "usn-noon",
   "name": "Noon USN",
   "symbol": "USN",
+  "oneLiner": "USN is Noon's base dollar, minted 1:1 from USDC/USDT or short-term T-bills while yield accrues through separate sUSN.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
-    "rwa": false,
+    "yieldBearing": false,
+    "rwa": true,
     "navToken": false
   },
-  "collateral": "Current Accountable deployment disclosure is concentrated in Fasanara private credit, Janus Henderson JAAA CLOs, DeFi lending, Pendle principal tokens, and a smaller tokenized U.S. Treasury bill sleeve; USN is minted and redeemed 1:1 against USDC or USDT",
-  "pegMechanism": "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
+  "collateral": "USN is backed 1:1 by USDT, USDC, or short-term U.S. Treasury bills, with reserve assets deployable into approved yield strategies including CLOs, private credit, DeFi lending, Pendle PTs, and tokenized T-bills.",
+  "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
   "llamaId": "230",
   "detailProvider": "defillama",
   "geckoId": "noon-usn",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://noon.accountable.capital/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -45,7 +48,17 @@
     },
     {
       "chain": "sophon",
+      "address": "0xc1aa99c3881b26901af70738a7c217dc32536d36",
+      "decimals": 18
+    },
+    {
+      "chain": "zksync",
       "address": "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6",
+      "decimals": 18
+    },
+    {
+      "chain": "starknet",
+      "address": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
       "decimals": 18
     }
   ],
@@ -77,7 +90,8 @@
     {
       "name": "CLOs (JAAA)",
       "pct": 13,
-      "risk": "high"
+      "risk": "high",
+      "coinId": "jaaa-janus-henderson-anemoy"
     },
     {
       "name": "DeFi Lending",
@@ -121,9 +135,5 @@
         "Funding Rate (BTC)": "high"
       }
     }
-  },
-  "yieldConfig": {
-    "yieldSource": "Noon savings (sUSN)",
-    "yieldType": "governance-set"
   }
 }

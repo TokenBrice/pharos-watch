@@ -2,6 +2,7 @@
   "id": "jusd-juicedollar",
   "name": "Juice Dollar",
   "symbol": "JUSD",
+  "oneLiner": "JUSD is Juice Dollar's decentralized dollar on Citrea, minted from oracle-free overcollateralized BTC positions using a Frankencoin/d-EURO architecture.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "BTC deposited on Citrea (Bitcoin L2) in oracle-free overcollateralized positions; user collateral is not rehypothecated. Protocol is forked from the d-EURO / Frankencoin architecture.",
   "pegMechanism": "Overcollateralized minting against BTC collateral on Citrea with automated on-chain liquidations when collateral ratios fall below required thresholds; no external price oracles; positions and debt are verifiable on-chain (Frankencoin-style design)",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "juice-dollar",
   "links": [

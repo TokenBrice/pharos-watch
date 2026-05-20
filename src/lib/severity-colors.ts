@@ -11,6 +11,8 @@
  *   >= ORANGE  red    (severe)
  */
 
+import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
+
 const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
 
 /** Severity hex token map — single source of truth for JS-side hex values */
@@ -38,6 +40,12 @@ export function deviationBorderClass(absBps: number): string {
 }
 
 export function deviationColorClass(absBps: number): string {
+  if (isQuietDeviationsEnabled()) {
+    if (absBps < THRESHOLDS.GREEN) return "text-muted-foreground";
+    if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";
+    if (absBps < THRESHOLDS.ORANGE) return "text-orange-700 dark:text-orange-400";
+    return "text-red-700 dark:text-red-400";
+  }
   if (absBps < THRESHOLDS.GREEN) return "text-green-700 dark:text-green-400";
   if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";
   if (absBps < THRESHOLDS.ORANGE) return "text-orange-700 dark:text-orange-400";
@@ -173,7 +181,7 @@ export function ratioQualityColor(ratio: number, highThreshold = 0.8, midThresho
 // ---------------------------------------------------------------------------
 
 const TAPE_SEVERITY_ACCENT: Record<string, string> = {
-  info: "border-l-emerald-500",
+  info: "border-l-zinc-500",
   notice: "border-l-sky-500",
   warning: "border-l-amber-500",
   severe: "border-l-orange-500",

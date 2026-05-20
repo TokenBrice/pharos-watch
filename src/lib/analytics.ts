@@ -30,6 +30,15 @@ type EventMap = {
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
   panel_toggled: { panel: string; action: string };
+  // Tier 4 — Web Vitals
+  web_vital: {
+    name: "CLS" | "FCP" | "INP" | "LCP" | "TTFB" | "FID" | "Next.js-hydration" | "Next.js-route-change-to-render" | "Next.js-render";
+    value: number;
+    id: string;
+    rating: "good" | "needs-improvement" | "poor";
+    navigation_type: string;
+    page_path: string;
+  };
 };
 
 // ---------------------------------------------------------------------------

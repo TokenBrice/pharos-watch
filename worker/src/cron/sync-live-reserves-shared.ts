@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { ReserveAdapterDefinition } from "./reserve-adapters/index";
 import type { ReserveSyncStateRecord } from "../lib/live-reserves-store";
 

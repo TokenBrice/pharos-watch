@@ -2,6 +2,7 @@
   "id": "sbc-brale",
   "name": "Brale SBC",
   "symbol": "SBC",
+  "oneLiner": "SBC is Brale's centralized USD stablecoin backed 1:1 by cash and short-duration U.S. Treasuries in segregated accounts at regulated financial institutions.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,13 +13,17 @@
   },
   "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
   "pegMechanism": "Direct 1:1 redemption through Brale (registered MSB and licensed U.S. money transmitter)",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "324",
   "detailProvider": "defillama",
   "geckoId": "stable-coin-2",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://brale.xyz/stablecoins/SBC",
-    "provider": "Abdo"
+    "provider": "Abdo",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

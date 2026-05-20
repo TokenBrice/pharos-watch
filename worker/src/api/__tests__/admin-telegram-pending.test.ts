@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handleClearTelegramPending } from "../admin-telegram-pending";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Tests intentionally omit Idempotency-Key so the handler bypasses the
 // idempotency layer (which requires admin_idempotency_keys rows in the mock).

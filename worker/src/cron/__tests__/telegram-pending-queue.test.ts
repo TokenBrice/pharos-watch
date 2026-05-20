@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 const mockSendToChat = vi.fn();
 

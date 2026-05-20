@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 
 export type SortDirection = "asc" | "desc";
 
-interface SortState<K extends string> {
+export interface SortState<K extends string> {
   key: K;
   direction: SortDirection;
 }

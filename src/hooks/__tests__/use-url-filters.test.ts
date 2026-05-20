@@ -32,13 +32,14 @@ describe("isUrlFilterClearValue", () => {
 });
 
 describe("useUrlFilters", () => {
-  it("syncs search params after same-page history navigation", () => {
+  it("syncs search params after same-page history navigation", async () => {
     render(createElement(UrlFilterProbe));
 
     expect(screen.getByTestId("peg-filter").textContent).toBe("");
 
-    act(() => {
+    await act(async () => {
       window.history.pushState(null, "", "/?peg=fiat-non-usd-peg#filter-bar");
+      await Promise.resolve();
     });
 
     expect(screen.getByTestId("peg-filter").textContent).toBe("fiat-non-usd-peg");

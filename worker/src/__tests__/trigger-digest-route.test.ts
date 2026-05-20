@@ -16,7 +16,7 @@ vi.mock("../lib/db-cache", async (importOriginal) => {
   };
 });
 
-import { mockD1 } from "../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../test-helpers/__shared/mock-d1";
 import { buildRouteContext } from "../handlers/http/context";
 import { getRouteDependencies, route } from "../router";
 

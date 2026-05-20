@@ -435,7 +435,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BblacklistStablecoinSymbol%7D%7D&chain=Ethereum&eventType=blacklist&q=&sortBy=date&sortDirection=desc&limit=%7B%7Blimit%7D%7D&offset=0",
+              "raw": "{{apiBaseUrl}}/api/blacklist?stablecoin=%7B%7BblacklistStablecoinSymbol%7D%7D&chain=Ethereum&chainId=ethereum&eventType=blacklist&q=&sortBy=date&sortDirection=desc&limit=%7B%7Blimit%7D%7D&offset=0&includeTotal=true",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -451,6 +451,10 @@
                 {
                   "key": "chain",
                   "value": "Ethereum"
+                },
+                {
+                  "key": "chainId",
+                  "value": "ethereum"
                 },
                 {
                   "key": "eventType",
@@ -475,10 +479,14 @@
                 {
                   "key": "offset",
                   "value": "0"
+                },
+                {
+                  "key": "includeTotal",
+                  "value": "true"
                 }
               ]
             },
-            "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based."
+            "description": "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based."
           },
           "response": []
         },
@@ -536,7 +544,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&direction=&chain=ethereum&burnType=&scope=all&minAmount=0&limit=%7B%7Blimit%7D%7D&offset=0",
+              "raw": "{{apiBaseUrl}}/api/mint-burn-events?stablecoin=%7B%7BstablecoinId%7D%7D&direction=&chain=ethereum&burnType=&scope=all&minAmount=0&limit=%7B%7Blimit%7D%7D&offset=0&includeTotal=true",
               "host": [
                 "{{apiBaseUrl}}"
               ],
@@ -576,6 +584,10 @@
                 {
                   "key": "offset",
                   "value": "0"
+                },
+                {
+                  "key": "includeTotal",
+                  "value": "true"
                 }
               ]
             },
@@ -599,6 +611,25 @@
               ]
             },
             "description": "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Yield adapter manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/yield-adapter-manifest",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "yield-adapter-manifest"
+              ]
+            },
+            "description": "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version."
           },
           "response": []
         },
@@ -923,6 +954,68 @@
               ]
             },
             "description": "Build-time digest context snapshot for a specific digest date."
+          },
+          "response": []
+        },
+        {
+          "name": "Public snapshot index",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshots/index",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshots",
+                "index"
+              ]
+            },
+            "description": "Listing of available daily public snapshots with content hashes and methodology versions."
+          },
+          "response": []
+        },
+        {
+          "name": "Public snapshot for a single day",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshots/{{snapshotDate}}.json",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshots",
+                "{{snapshotDate}}.json"
+              ]
+            },
+            "description": "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers."
+          },
+          "response": []
+        },
+        {
+          "name": "Public snapshot projection for a single coin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{apiBaseUrl}}/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}",
+              "host": [
+                "{{apiBaseUrl}}"
+              ],
+              "path": [
+                "api",
+                "snapshot",
+                "{{snapshotDate}}",
+                "stablecoin",
+                "{{stablecoinId}}"
+              ]
+            },
+            "description": "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers."
           },
           "response": []
         }

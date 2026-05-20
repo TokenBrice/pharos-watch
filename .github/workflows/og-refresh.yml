@@ -1,0 +1,56 @@
+name: OG Refresh
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: 24
+          tooling-cache: "true"
+          install-playwright-chromium: "true"
+      - name: Capture OG screenshots from production
+        run: npm run og:capture
+      - name: Detect diff
+        id: diff
+        run: |
+          if git diff --quiet -- public/og-*.png; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            git status --short -- public/og-*.png
+          fi
+      - name: Open or update refresh PR
+        if: steps.diff.outputs.has_diff == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH=automated/og-refresh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add public/og-*.png
+          git commit -m "chore(og): refresh static OG screenshots"
+          git push --force-with-lease -u origin "$BRANCH"
+          if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
+            echo "Existing open PR for $BRANCH updated by force-push."
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(og): refresh static OG screenshots" \
+              --body "Automated weekly refresh of static OG screenshots via \`npm run og:capture\` against \`https://pharos.watch\`. See [docs/og-images.md](../blob/main/docs/og-images.md). If CI did not auto-run for this PR, close and reopen it to trigger workflows."
+          fi

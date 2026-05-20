@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   getCanonicalReserveAssetRisk,
   CANONICAL_RESERVE_ASSET_RISK_BY_SYMBOL,

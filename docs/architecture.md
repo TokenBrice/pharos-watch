@@ -8,7 +8,7 @@ Curated architecture-significant routes. Start with the [Documentation Index](./
 
 Static route metadata is declared once in the folderized `shared/lib/api-endpoints/` module surface (`@shared/lib/api-endpoints`). That shared descriptor list carries path, method, admin/cache/probe/status-action metadata, shared dynamic-admin path matching, plus the worker dependency-hydration hints needed for static routes. Worker route primitives now live in `worker/src/routes/shared.ts`, domain route arrays are split under `worker/src/routes/`, and `worker/src/routes/registry.ts` composes them into the dispatch map that `worker/src/router.ts` consumes for method validation and generic dispatch. Dependency hydration lives in `worker/src/routes/dependency-hydrators.ts` and stays exhaustive/keyed by `EndpointDependency`, so adding a new dependency without wiring hydration still fails at compile time instead of silently defaulting.
 
-Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
+Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-jobs.ts` remains the schedule authority, while `shared/lib/scheduled-runner-registry.ts` binds each cron expression to a symbolic scheduled-runner key that both the worker scheduler and `scripts/ci/check-cron-schedule-sync.ts` consume. That keeps `worker/wrangler.toml`, shared cron metadata, and scheduled-runner dispatch in lockstep.
 
 | Endpoint                                             | Description                                                                                                                                                                                                                                                                                               |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,6 +21,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/blacklist`                                 | Freeze/blacklist events (filterable by token, chain)                                                                                                                                                                                                                                                      |
 | `GET /api/blacklist-summary`                         | Blacklist summary stats, chart data, chain options, and methodology envelope                                                                                                                                                                                                                              |
 | `GET /api/depeg-events`                              | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`)                                                                                                                                                                                                                                      |
+| `GET /api/events`                                    | Materialized tape event feed with type/class/coin/severity/time filters and keyset pagination                                                                                                                                                                                                             |
 | `GET /api/peg-summary`                               | Per-coin peg scores + aggregate summary stats                                                                                                                                                                                                                                                             |
 | `GET /api/usds-status`                               | USDS Sky protocol status                                                                                                                                                                                                                                                                                  |
 | `GET /api/bluechip-ratings`                          | Bluechip safety ratings (keyed by Pharos ID)                                                                                                                                                                                                                                                              |
@@ -32,6 +33,9 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/daily-digest`                              | AI-generated daily market summary (latest)                                                                                                                                                                                                                                                                |
 | `GET /api/digest-archive`                            | All daily digests, newest-first                                                                                                                                                                                                                                                                           |
 | `GET /api/digest-snapshot`                           | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD` or `YYYY-MM-DD-weekly`) for SSG builds                                                                                                                                                                                            |
+| `GET /api/snapshots/index`                           | Daily public snapshot index with available dates, content hashes, byte sizes, and methodology versions                                                                                                                                                                                                     |
+| `GET /api/snapshots/:date.json`                      | Immutable full daily public dataset snapshot for a specific date                                                                                                                                                                                                                                          |
+| `GET /api/snapshot/:date/stablecoin/:id`             | Immutable per-coin projection from a daily public dataset snapshot                                                                                                                                                                                                                                        |
 | `GET /api/health`                                    | Worker health check (includes circuit breaker states)                                                                                                                                                                                                                                                     |
 | `GET /api/public-status-history`                     | Public `/status/` transition history and current-status runway data                                                                                                                                                                                                                                       |
 | `GET /api/status`                                    | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Preferred access is `ops.pharos.watch/admin/` (browser) or `ops-api.pharos.watch/api/status` with Access service-token headers                                                                            |
@@ -44,6 +48,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `GET /api/telegram-pulse`                            | Public PharosWatchBot page adoption metrics (watcher counts, subscription counts, top subscribed coins, all-time current-active watcher growth)                                                                                                                                                           |
 | `GET /api/yield-rankings`                            | Cache-backed yield rankings with live-hydrated Safety Scores and risk-adjusted metrics                                                                                                                                                                                                                    |
 | `GET /api/yield-history`                             | Per-coin historical yield data (`?stablecoin=ID&days=90`)                                                                                                                                                                                                                                                 |
+| `GET /api/yield-source-decisions`                    | Admin: source-decision audit trail for yield publication decisions (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                                              |
 | `GET /api/mint-burn-flows`                           | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`)                                                                                                                                                                        |
 | `GET /api/mint-burn-events`                          | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=ethereum`, `?burnType=`, `?scope=all or counted`, `?minAmount=`, `?limit=N&offset=M`)                                                                                                                     |
 | `GET /api/stress-signals`                            | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`)                                                                                                                                                                                                                                          |
@@ -55,6 +60,7 @@ Cron trigger metadata follows the same single-source pattern. `shared/lib/cron-j
 | `POST /api/backfill-cg-prices`                       | Admin: backfill CoinGecko historical prices into price_cache (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                                                    |
 | `POST /api/backfill-yield-history`                   | Admin: backfill curated protocol API yield-history rows, currently for Zephyr ZYS (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                              |
 | `POST /api/backfill-mint-burn`                       | Admin: controlled mint/burn ingestion backfill by `configKey` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                                                   |
+| `POST /api/backfill-tape`                            | Admin: backfill materialized tape events by class/time window, with dry-run support (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                             |
 | `POST /api/reclassify-atomic-roundtrips`             | Admin: retroactively tag same-tx mint/burn noise as `flow_type='atomic_roundtrip'` (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                              |
 | `POST /api/audit-depeg-history`                      | Admin: audit depeg events against CoinGecko price data for false positive detection, synthetic split consolidation, or contradictory terminal-price repair (GET supports `dry-run=true` previews only; preferred access: `ops-api.pharos.watch` + Access service-token headers)                           |
 | `POST /api/trigger-digest`                           | Admin: force digest regeneration bypassing 1h dedup (preferred access: `ops-api.pharos.watch` + Access service-token headers)                                                                                                                                                                             |
@@ -133,9 +139,9 @@ rg --files src shared worker scripts data functions
 
 Shared runtime host/origin defaults live in `shared/lib/runtime-origins.json` and `shared/lib/runtime-origins.ts`. Frontend API-base inference, `/_site-data/*` Pages Functions, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
 
-The Stablecoin Cemetery public dataset export is static Pages data, not a Worker API route. `scripts/generate-cemetery-dataset.ts` reads `shared/data/dead-stablecoins.json` and writes `public/datasets/stablecoin-cemetery.json` plus `public/datasets/stablecoin-cemetery.csv` during `prebuild`; `npm run check:cemetery-dataset` guards drift in CI.
+The Stablecoin Cemetery public dataset export is static Pages data, not a Worker API route. `scripts/maintenance/generate-cemetery-dataset.ts` consumes the merged cemetery entry registry from `shared/lib/cemetery-merged.ts`, backed by curated dead rows in `shared/data/dead-stablecoins.json` and frozen tracked rows from `shared/data/stablecoins/coins.generated.json`. It writes `public/datasets/stablecoin-cemetery.json` plus `public/datasets/stablecoin-cemetery.csv` during `prebuild`, with per-source checksums recorded in the JSON metadata; `npm run check:cemetery-dataset` guards drift in CI.
 
-The API integration artifacts follow the same static-export pattern. `scripts/generate-postman-collection.ts` writes `public/postman/pharos-api.postman_collection.json` plus `public/postman/pharos-api.postman_environment.json`, and `scripts/generate-openapi-spec.ts` writes `public/openapi.json` during `prebuild`; `npm run check:postman` and `npm run check:openapi` guard drift.
+The API integration artifacts follow the same static-export pattern. `scripts/maintenance/generate-postman-collection.ts` writes `public/postman/pharos-api.postman_collection.json` plus `public/postman/pharos-api.postman_environment.json`, and `scripts/maintenance/generate-openapi-spec.ts` writes `public/openapi.json` during `prebuild`; `npm run check:postman` and `npm run check:openapi` guard drift.
 
 Worker cron refactors should place reusable stage contracts under `worker/src/cron/shared/`. The seed contract layer in `worker/src/cron/shared/stage-contracts.ts` defines the shared vocabulary for stage progress, abort results, and handoff context so large cron decompositions do not each invent incompatible result shapes.
 
@@ -147,6 +153,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/coverage/`
   - `/chains/` and `/chains/[chain]/`
   - `/stablecoin/[id]/`
+  - `/stablecoin/[id]/yield/` for yield-bearing tracked stablecoins
   - `/stablecoins/`
   - `/stablecoins/[peg]/`
   - `/stablecoins/governance/` and `/stablecoins/governance/[governance]/`
@@ -154,25 +161,32 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
   - `/stablecoins/infrastructure/` and `/stablecoins/infrastructure/[infrastructure]/`
   - `/compare/[slug]/`
   - `/digest/` and `/digest/[date]/`
+  - `/depeg/[event]/` for the newest confirmed events whose absolute peak deviation is at least 5.0%; older dedicated event pages remain direct-linkable but noindexed
   - `/methodology/` and `/methodology/*-changelog/`
+  - `/learn/mechanisms/` and `/learn/mechanisms/[archetype]/` — see [learn-mechanisms-page.md](./learn-mechanisms-page.md)
   - `/docs/` and `/docs/[slug]/` for the curated public documentation archive; the allowlist lives in `shared/lib/public-docs.ts`
   - `/about/api/`
+  - `/about/editorial/`
+  - `/about/principles/`
   - `/api/`
   - `/changelog/`
-  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/freezewatch/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
+  - major feature pages with standalone static copy (`/start/`, `/alt-pegs/`, `/upcoming/`, `/freezewatch/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/screener/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/pharoswatchbot/`, `/funding/`, `/status/`, `/about/`, `/privacy/`)
 - Legacy aliases are maintained through `public/_redirects` and are not sitemap entries: `/telegram` and `/telegram/*` redirect to `/pharoswatchbot/`; `/blacklist` and `/blacklist/*` redirect to `/freezewatch/`; `/report-cards` and `/risk-lab` redirect to `/safety-scores/`; `/peg-tracker` redirects to `/`; `/stability-index-alt` redirects to `/stability-index/`.
 - Tool roots intentionally marked `noindex,follow`:
   - `/compare/`
   - `/portfolio/`
+  - `/screener/selector/` (profile-driven shortlist; Pages-only; KV-backed snapshot pinning at same-origin `/selector-snapshot/`; see [Screener Selector Page](./screener-selector-page.md))
+- Public noindex utility route:
+  - `/pharoswatchbot/app/` is the Telegram Mini App control panel and is marked `noindex,nofollow`.
 - Tracked-variant browse ownership stays on the homepage query state (`/?variant=...`). The repo does not ship a dedicated `/stablecoins/variants/*` family.
 - Legacy numeric stablecoin URLs from the pre-canonical-ID era (`/stablecoin/<DefiLlama id>/`) redirect to the matching canonical `/stablecoin/[id]/` route through `functions/stablecoin/[[path]].ts`.
 - Private operator routes marked `noindex,nofollow`:
   - `/admin/`
   - `/admin-api/`
   - `/api/admin/`
-- Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
+- Crawlable server-rendered link hubs now live on the digest archive, depeg event archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
 - `/llms.txt` is generated during `prebuild` from checked-in route/data sources as a curated LLM-facing index. It is a community proposal/inference aid, not a robots or sitemap replacement.
-- Markdown content negotiation for agents is handled by `functions/_middleware.ts` for `/methodology/`, `/stablecoin/<id>/`, `/changelog/`, `/digest/<date>/`, and `/docs/*`. The `.md` variants are generated by `scripts/generate-markdown-exports.ts` during `postbuild` and are written as `out/<route>/index.md`. Responses include `Vary: Accept` plus CDN no-store headers because Cloudflare's default CDN cache does not key on arbitrary `Vary: Accept`.
+- Markdown content negotiation for agents is handled by `functions/_middleware.ts` for `/methodology/`, `/stablecoin/<id>/`, `/changelog/`, `/digest/<date>/`, and `/docs/*`. The `.md` variants are generated by `scripts/maintenance/generate-markdown-exports.ts` during `postbuild` and are written as `out/<route>/index.md`. Responses include `Vary: Accept` plus CDN no-store headers because Cloudflare's default CDN cache does not key on arbitrary `Vary: Accept`.
 - The same Pages middleware also nonce-authorizes inline scripts on HTML responses and overwrites the CSP to remove script `unsafe-inline`. `public/_routes.json` uses a single broad `/*` include so exported document routes pass through this middleware, while static asset prefixes such as `/_next/*`, `/logos/*`, `/dexes/*`, and `/featured/*` stay excluded from function routing. Nonced HTML responses set `Cloudflare-CDN-Cache-Control: no-store` / `CDN-Cache-Control: no-store` so a random nonce is not shared from CDN cache. Cloudflare Pages static headers live in `public/_headers`; the broad fallback CSP also omits script `unsafe-inline`, and static assets with their own cache policy detach the broad `Cache-Control` rule with `! Cache-Control` so Pages does not comma-join duplicate values.
 
 ### Runtime host and env rules
@@ -188,7 +202,7 @@ Worker cron refactors should place reusable stage contracts under `worker/src/cr
 
 - `src/lib/page-metadata.ts` is the shared helper for per-route canonical metadata, Open Graph images, Twitter cards, and sentence-aware description trimming.
 - `src/app/layout.tsx` owns the sitewide metadata baseline, icons, `api.pharos.watch` preconnect, and root JSON-LD (`WebSite`, `Organization`, `Person`, `WebApplication`) with stable `#website`, `#organization`, `#person-tokenbrice`, and `#webapp` anchors. It intentionally does not emit `SearchAction` until the site has a real query handler.
-- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, and `/admin/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/generate-docs-metadata.ts` for git-derived first/last modified dates.
+- `src/app/sitemap.ts` owns sitemap output for indexable routes. `/compare/`, `/portfolio/`, `/admin/`, `/admin-api/`, and `/pharoswatchbot/app/` are omitted; `/compare/[slug]/` static comparison pages are included. `/funding/` uses the latest of route edit time and checked-in funding data timestamps for `lastModified`. `LAST_EDITED` dates are auto-generated from git history during prebuild (`scripts/maintenance/generate-sitemap-dates.ts`) and written to a generated JSON file (gitignored). Public docs use `scripts/maintenance/generate-docs-metadata.ts` for git-derived first/last modified dates.
 - `src/app/robots.ts` publishes an allow-all crawl policy and the sitemap location. Operator surfaces (`/admin/`, `/admin-api/`, and `/api/admin/*`) rely on route metadata, Pages host gates, and `X-Robots-Tag: noindex, nofollow` headers for deindexing so crawlers can observe the noindex/404 or Access-gated response instead of reporting a robots.txt block.
 
 ### Standalone PharosVille
@@ -203,6 +217,15 @@ The standalone app reads Pharos data through its own same-origin Pages Function
 proxy. That proxy owns the PharosVille API key server-side and calls only the
 allowlisted public read endpoints on `https://api.pharos.watch`, so the host
 Worker does not need a CORS allowlist change for the split.
+
+### Pages Function endpoints (not Worker API)
+
+These are same-origin Pages Functions backed by Pages-only bindings (KV, D1). They do not appear in the Worker API catalogue and are not part of the `api.pharos.watch` surface.
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /selector-snapshot` | Pages Function (`functions/selector-snapshot/[[path]].ts`): stores a semantically validated `SelectorOutput` JSON under a server-recomputed content-addressed `sid` in the `SELECTOR_SNAPSHOTS` KV namespace. Origin-gated, 100 KB defensive size cap, debug-stripped, 5-year TTL. See [Screener Selector Page](./screener-selector-page.md). |
+| `GET /selector-snapshot/:sid` | Pages Function: returns the previously stored frozen `SelectorOutput` or `404`. It recomputes the canonical sid before replay, returns `502` for corrupt/mismatched stored values, and uses `private, no-store` so public shared caches cannot bypass the origin gate. |
 
 ---
 
@@ -238,7 +261,7 @@ The worker codebase deliberately uses `!= null` (loose equality) as the standard
 
 ### Worker import boundary waiver
 
-`npm run check:worker-boundary` enforces the worker/frontend/shared import boundary. The only named non-test waiver is `frozen-invariants-lifecycle-registry-check` for `scripts/check-frozen-invariants.ts`, which imports worker and frontend registries to prove frozen stablecoin IDs were removed from lifecycle surfaces. Keep that waiver documented in the script header and guarded by `scripts/__tests__/worker-boundary-waivers.test.ts`; new cross-layer checks should move runtime-neutral metadata into `shared/` instead of expanding the waiver set.
+`npm run check:worker-boundary` enforces the worker/frontend/shared import boundary. The only named non-test waiver is `frozen-invariants-lifecycle-registry-check` for `scripts/ci/check-frozen-invariants.ts`, which imports worker and frontend registries to prove frozen stablecoin IDs were removed from lifecycle surfaces. Keep that waiver documented in the script header and guarded by `scripts/__tests__/worker-boundary-waivers.test.ts`; new cross-layer checks should move runtime-neutral metadata into `shared/` instead of expanding the waiver set.
 
 ---
 

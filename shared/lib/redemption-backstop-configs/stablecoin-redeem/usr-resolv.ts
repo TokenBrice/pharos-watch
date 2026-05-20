@@ -1,0 +1,23 @@
+import {
+  documentedVariableFee,
+  NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  type RedemptionBackstopConfig,
+  sourceRef,
+  stablecoinRedeemBase,
+} from "../shared";
+import { REVIEWED_DIRECT_REDEMPTION_AT } from "./shared";
+
+export const USR_RESOLV_STABLECOIN_REDEEM_CONFIG: RedemptionBackstopConfig = {
+  ...stablecoinRedeemBase,
+  capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "documented-bound" },
+  costModel: documentedVariableFee(NO_PUBLIC_NUMERIC_REDEMPTION_FEE),
+  reviewedAt: REVIEWED_DIRECT_REDEMPTION_AT,
+  docs: [
+    sourceRef("Resolv docs", "https://docs.resolv.xyz/", ["route", "capacity"]),
+    sourceRef("Resolv Apostro reserves", "https://info.apostro.xyz/resolv-reserves", ["capacity"]),
+  ],
+  notes: [
+    "Resolv docs describe USR as mintable and redeemable 1:1 by users against collateral",
+    "The reviewed 10% bound matches the tracked USD stablecoin buffer rather than assuming the full delta-neutral reserve stack is immediately withdrawable",
+  ],
+};

@@ -19,7 +19,7 @@ import {
   fetchCoinbasePrices,
   fetchKrakenPrices,
 } from "../cex-tickers";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
 
 beforeEach(() => sleepWithSignalMock.mockClear());

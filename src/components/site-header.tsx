@@ -5,7 +5,7 @@ import { formatCompactCount } from "@shared/lib/format";
 import { useDexLiquidity, useHealth } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { PharosLogo } from "@/components/pharos-logo";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 interface SiteHeaderProps {
   total: number;
@@ -14,7 +14,7 @@ interface SiteHeaderProps {
 }
 
 const METRIC_PILL_CLASS =
-  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-muted-foreground" +
+  "inline-flex items-center rounded-full border px-2 py-0.5 font-mono tabular-nums text-muted-foreground sm:px-2.5 sm:py-1" +
   " border-[var(--control-pill-border)] bg-[var(--control-pill-bg)] shadow-[inset_0_1px_0_oklch(1_0_0_/0.08)]";
 
 interface MetricPill {
@@ -78,10 +78,10 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   );
 
   return (
-    <div className="pharos-card-shell flex flex-col gap-3 px-4 py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5">
-      <div className="flex min-w-0 items-center gap-3 md:gap-4">
+    <div className="pharos-card-shell flex flex-col gap-2.5 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 md:flex-row md:items-end md:justify-between md:gap-6 md:px-5 md:py-5">
+      <div className="flex min-w-0 items-center gap-2.5 md:gap-4">
         <span className="md:hidden">
-          <PharosLogo size={28} className="shrink-0 rounded-lg shadow-sm" priority />
+          <PharosLogo size={26} className="shrink-0 rounded-lg shadow-sm" priority />
         </span>
         <span className="hidden md:block">
           <PharosLogo size={40} className="rounded-xl shadow-sm" priority />
@@ -91,7 +91,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
             Pharos
           </h1>
           <p className="hidden max-w-2xl text-sm leading-relaxed tracking-[0.01em] text-muted-foreground/88 md:line-clamp-2 md:block lg:line-clamp-none">
-            Chart your route through the stablecoin market — live peg, safety, liquidity, and dependency signals on every tracked coin.
+            Chart your route through the stablecoin market — depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals for every tracked coin.
           </p>
         </div>
         <div className="ml-auto flex flex-wrap gap-1.5 text-[11px] md:hidden">

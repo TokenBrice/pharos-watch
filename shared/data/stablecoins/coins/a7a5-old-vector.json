@@ -2,6 +2,7 @@
   "id": "a7a5-old-vector",
   "name": "A7A5",
   "symbol": "A7A5",
+  "oneLiner": "A7A5 is a centralized ruble stablecoin from Old Vector LLC, backed 1:1 by RUB deposits at sanctioned Russian state bank Promsvyazbank.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "RUB",
@@ -12,6 +13,7 @@
   },
   "collateral": "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
   "pegMechanism": "Fiat-backed 1:1 peg to the Russian ruble enforced exclusively via off-chain primary-market mint and redemption with KYC-verified authorized partners (e.g. a7a5.kg for Russian-account holders depositing or withdrawing RUB); no on-chain DEX-based RUB liquidity exists, so USD-denominated price prints reflect RUB/USD spot movements rather than secondary-market arbitrage; since 2026-02-09 the issuer (Old Vector LLC) distributes nearly all overnight reserve income to holders as additional A7A5 using a formula of the Central Bank of Russia key rate minus 1 percentage point, recalculated when the key rate changes",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "258",
   "detailProvider": "defillama",
   "geckoId": "a7a5",
@@ -81,5 +83,6 @@
       "label": "Russian ruble bank deposits",
       "risk": "very-high"
     }
-  }
+  },
+  "deploymentModel": "native-multichain"
 }

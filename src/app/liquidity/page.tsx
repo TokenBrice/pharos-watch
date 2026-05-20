@@ -90,15 +90,21 @@ export default createClientFeaturePage({
     breadcrumbName: "DEX Liquidity",
     path: "/liquidity/",
     title: "DEX Liquidity",
-    statusBadge: { status: "mature", version: LIQUIDITY_METHODOLOGY_VERSION_LABEL },
+    statusBadge: { status: "mature" },
     methodology: {
       version: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
       changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
       "Pool depth scored across 15+ DEX protocols — because liquidity is your only exit route in a panic.",
-      "The liquidity score weights on-chain depth, 24h volume, venue diversity, and redemption-backstop quality. A coin with deep pools on one protocol scores lower than a coin with durable liquidity across Curve, Uniswap, Fluid, Balancer, and native redemption rails.",
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        The liquidity score weights on-chain depth, 24h volume, venue diversity, and redemption-backstop quality. A
+        coin with deep pools on one protocol scores lower than a coin with durable liquidity across Curve, Uniswap,
+        Fluid, Balancer, and native redemption rails.
+      </p>
+    ),
   },
   beforeClient: LIQUIDITY_STATIC_SECTION,
   afterClient: <FaqSection items={LIQUIDITY_FAQ_ITEMS} includeJsonLd />,

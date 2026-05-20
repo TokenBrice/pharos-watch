@@ -101,7 +101,7 @@ Observed event history stays in the event ledger. Event counts are observed supp
 
 **File:** `worker/src/lib/blacklist-contracts.ts`
 
-Canonical token addresses and decimals now resolve from the shared stablecoin loader in `shared/lib/stablecoins/index.ts`, backed by per-coin metadata in `shared/data/stablecoins/coins/*.json` and the generated aggregate `shared/data/stablecoins/coins.generated.json`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
+Canonical token addresses and decimals now resolve from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, backed by per-coin metadata in `shared/data/stablecoins/coins/*.json` and the generated aggregate `shared/data/stablecoins/coins.generated.json`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
 
 ### USDC (6 chains)
 
@@ -888,6 +888,10 @@ Both endpoints now emit freshness headers from the same 6-hourly `sync-blacklist
 | BlacklistStats   | `src/components/blacklist-stats.tsx`   | Unfreezable market share, last-known freeze-ledger totals, and wiped value                      |
 | BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of tracked freeze-ledger balances by stablecoin, attributed to blacklist quarter |
 | CSV export       | (inline)                               | Download the currently loaded table page as CSV, after server-side filters/sort/search/pagination |
+
+On mobile, the event ledger renders event cards instead of the dense table. The same server-side sort, filter, search,
+pagination, and CSV export state is preserved; cards prioritize asset, chain, action, event time, amount provenance,
+address, and transaction link. From `md` upward, the full table remains the primary ledger.
 
 ### Amount Display Logic
 

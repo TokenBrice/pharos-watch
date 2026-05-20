@@ -9,6 +9,8 @@ export interface TotalMcapChartRow {
   total: number;
 }
 
+export const TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS = 5000;
+
 function alignHistoryAtOrBeforeDate(
   chartPoints: StablecoinChartPoint[],
   history: SupplyHistoryPoint[],

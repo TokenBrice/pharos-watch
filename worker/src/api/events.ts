@@ -149,6 +149,8 @@ export const handleEvents = withErrorHandler(
     const coinIds = params.getAll("coin").map((raw) => raw.trim()).filter(Boolean);
     const pegCurrency = params.get("pegCurrency");
     const chain = params.get("chain");
+    const qRaw = params.get("q");
+    const q = qRaw ? qRaw.trim().toLowerCase() : "";
 
     const filters: TapeEventQueryFilters = {
       typeExact: typeFilters.exact,
@@ -159,6 +161,7 @@ export const handleEvents = withErrorHandler(
       severitiesAllowed,
       since,
       until,
+      q: q.length > 0 ? q : null,
     };
 
     const { rows, hasMore, total } = await queryTapeEvents(db, {

@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
 import type { DirectCexOrderbookDepthSummary } from "../../lib/cex-orderbooks";

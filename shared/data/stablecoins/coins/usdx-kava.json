@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "USDX",
   "symbol": "USDX",
+  "oneLiner": "USDX is Kava Mint's legacy CDP dollar, sustained by crypto-collateralized debt positions and currently trading at a ~45% discount to peg.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "Kava CDP collateral and protocol liquidity backing the legacy USDX debt token",
   "pegMechanism": "Kava Mint overcollateralized debt positions issue USDX against crypto collateral, with liquidations and protocol parameters intended to defend the peg",
+  "mechanismArchetype": "cdp",
   "geckoId": "usdx",
   "cmcSlug": "usdx-kava",
   "protocolSlug": "kava-mint",

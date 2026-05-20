@@ -2,6 +2,7 @@
   "id": "susdt-spark",
   "name": "Spark Savings USDT",
   "symbol": "spUSDT",
+  "oneLiner": "spUSDT is Spark's ERC-4626 savings wrapper of USDT; share price compounds the Sky Savings Rate via Spark PSM routing while exits draw on vault USDT liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -91,6 +92,5 @@
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       }
     }
-  },
-  "canBeBlacklisted": true
+  }
 }

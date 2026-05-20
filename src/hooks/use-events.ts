@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   TAPE_EVENT_SEVERITY_VALUES,
   TapeEventsResponseSchema,
@@ -13,6 +12,7 @@ import {
 import { apiFetchWithMeta } from "@/lib/api";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
+import { useAutoLoadInfinitePages } from "@/hooks/use-auto-load-infinite-pages";
 
 // The wire `TapeEventsResponseSchema` includes the `_meta` envelope. Our
 // `apiFetchWithMeta` lifts `_meta` off the body before schema parsing, so we
@@ -21,7 +21,7 @@ import { useApiQueryWithMeta, getPollingWindow } from "./use-api-query";
 const TapeEventsResponseBodySchema = TapeEventsResponseSchema.omit({ _meta: true });
 type TapeEventsResponseBody = z.infer<typeof TapeEventsResponseBodySchema>;
 
-const TAPE_EVENTS_PAGE_SIZE = 50;
+const TAPE_EVENTS_PAGE_SIZE = 500;
 
 export interface UseEventsFilter {
   /** Type slugs (exact or `prefix.*` wildcard). Comma-joined when passed via URL. */
@@ -38,6 +38,8 @@ export interface UseEventsFilter {
   since?: number;
   /** Epoch ms — inclusive upper bound. */
   until?: number;
+  /** Free-text query matched against title/summary/coin_id. */
+  q?: string;
 }
 
 function eventsQueryKeyFilters(filter: UseEventsFilter): Record<string, unknown> {
@@ -51,12 +53,19 @@ function eventsQueryKeyFilters(filter: UseEventsFilter): Record<string, unknown>
     severityFloor: filter.severityFloor ?? null,
     since: filter.since ?? null,
     until: filter.until ?? null,
+    q: filter.q ?? null,
   };
+}
+
+interface BuildEventsPathOptions {
+  limit: number;
+  cursor?: string | null;
+  includeTotal?: boolean;
 }
 
 function buildEventsParams(
   filter: UseEventsFilter,
-  options: { limit: number; cursor?: string | null },
+  options: BuildEventsPathOptions,
 ): URLSearchParams {
   const params = new URLSearchParams();
   if (filter.type) {
@@ -71,12 +80,14 @@ function buildEventsParams(
   if (filter.severityFloor) params.set("severityFloor", filter.severityFloor);
   if (filter.since != null) params.set("since", String(filter.since));
   if (filter.until != null) params.set("until", String(filter.until));
+  if (filter.q) params.set("q", filter.q);
   params.set("limit", String(options.limit));
   if (options.cursor) params.set("cursor", options.cursor);
+  if (options.includeTotal) params.set("includeTotal", "true");
   return params;
 }
 
-function buildEventsPath(filter: UseEventsFilter, options: { limit: number; cursor?: string | null }): string {
+function buildEventsPath(filter: UseEventsFilter, options: BuildEventsPathOptions): string {
   const params = buildEventsParams(filter, options);
   return `${API_PATHS.events()}?${params.toString()}`;
 }
@@ -89,9 +100,16 @@ function eventsInfiniteQueryOptions(filter: UseEventsFilter = {}) {
     staleTime,
     refetchInterval,
     retry: 2,
+    // `includeTotal` runs an extra COUNT(*) on D1; only request it on the
+    // first page so the badge can show "Showing N of M" without paying the
+    // cost on every paginated load.
     queryFn: async ({ pageParam, signal }) =>
       apiFetchWithMeta<TapeEventsResponseBody>(
-        buildEventsPath(filter, { limit: TAPE_EVENTS_PAGE_SIZE, cursor: pageParam }),
+        buildEventsPath(filter, {
+          limit: TAPE_EVENTS_PAGE_SIZE,
+          cursor: pageParam,
+          includeTotal: pageParam == null,
+        }),
         TapeEventsResponseBodySchema,
         { signal },
       ),
@@ -112,32 +130,20 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     enabled,
   });
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
-  const retryCountRef = useRef(0);
-  const MAX_AUTO_LOAD_RETRIES = 3;
-
-  useEffect(() => {
-    if (!autoLoadAll) {
-      retryCountRef.current = 0;
-    }
-  }, [autoLoadAll]);
-
-  useEffect(() => {
-    if (!autoLoadAll || !enabled || !hasNextPage || isFetchingNextPage) {
-      return;
-    }
-    if (error) {
-      retryCountRef.current += 1;
-      if (retryCountRef.current > MAX_AUTO_LOAD_RETRIES) return;
-    } else {
-      retryCountRef.current = 0;
-    }
-    void fetchNextPage();
-  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  useAutoLoadInfinitePages({
+    enabled,
+    autoLoadAll,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  });
 
   const events: TapeEvent[] = query.data?.pages.flatMap((page) => page.data.events) ?? [];
   const pages = query.data?.pages ?? [];
   const nextCursor = pages[pages.length - 1]?.data.nextCursor ?? null;
   const meta = query.data?.pages[0]?.meta ?? null;
+  const total = query.data?.pages[0]?.data.total ?? null;
 
   return {
     ...query,
@@ -145,6 +151,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     loadedCount: events.length,
     isFullyLoaded: nextCursor == null,
     meta,
+    total,
   };
 }
 
@@ -159,14 +166,16 @@ export interface UseLatestEventsOptions {
   since?: number;
   /** Event type slugs (exact or `prefix.*`). */
   type?: readonly string[];
+  /** Severity floor (inclusive). */
+  severityFloor?: TapeEventSeverity;
   enabled?: boolean;
 }
 
 export function useLatestEvents(options: UseLatestEventsOptions = {}) {
-  const { limit = 20, coin, classSlug, since, type, enabled = true } = options;
+  const { limit = 20, coin, classSlug, since, type, severityFloor, enabled = true } = options;
   const typeFilters = classSlug ? [`${classSlug}.*`] : type;
   const path = buildEventsPath(
-    { coin, since, type: typeFilters },
+    { coin, since, type: typeFilters, severityFloor },
     { limit },
   );
   const result = useApiQueryWithMeta<TapeEventsResponseBody>(
@@ -178,6 +187,7 @@ export function useLatestEvents(options: UseLatestEventsOptions = {}) {
         coin: coin ?? null,
         since: since ?? null,
         type: typeFilters ? [...typeFilters].sort() : null,
+        severityFloor: severityFloor ?? null,
       },
     ],
     path,

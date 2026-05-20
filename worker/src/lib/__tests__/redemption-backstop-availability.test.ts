@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { loadSevereActiveDepegAvailabilityMap } from "../redemption-backstop-availability";
 
 const REVIEW_DATE = "2026-04-22";

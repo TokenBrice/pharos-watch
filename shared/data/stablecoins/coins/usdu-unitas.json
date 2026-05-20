@@ -2,6 +2,7 @@
   "id": "usdu-unitas",
   "name": "Unitas",
   "symbol": "USDU",
+  "oneLiner": "USDU is Unitas's delta-neutral synthetic dollar: long JLP hedged by short perps via Copper/Ceffu, with permissionless USDC mint/redeem on Solana and BSC.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
   "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced hourly via Copper/Ceffu off-exchange settlement; mainnet mint/redeem against USDC is permissionless on Solana and BSC, with the DAO retaining optional KYC/KYB gating powers",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "283",
   "detailProvider": "defillama",
   "geckoId": "usdu",
@@ -19,7 +21,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://accountable.unitas.so/",
-    "provider": "Accountable"
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

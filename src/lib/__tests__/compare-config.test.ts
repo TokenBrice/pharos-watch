@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FROZEN_IDS, READABLE_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS, READABLE_IDS } from "@shared/lib/stablecoins/registry";
 import { COMPARE_COIN_OPTIONS, resolveCompareSelectedIds } from "../compare-config";
 
 describe("resolveCompareSelectedIds", () => {

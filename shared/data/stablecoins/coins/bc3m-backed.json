@@ -2,6 +2,7 @@
   "id": "bc3m-backed",
   "name": "Backed GOVIES 0-6 months EURO investment grade",
   "symbol": "bC3M",
+  "oneLiner": "bC3M is Backed's NAV-accreting tracker token for Amundi's short-dated Eurozone government bond UCITS ETF, KYC-gated and registered under Swiss DLT Act.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,12 +13,16 @@
   },
   "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
   "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "backed-govies-0-6-months-euro",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://app.backed.fi/issuance",
-    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)"
+    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Switzerland"
   },
   "links": [
     {
@@ -41,6 +46,36 @@
   "contracts": [
     {
       "chain": "ethereum",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "gnosis",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
       "address": "0x2f123cf3f37ce3328cc9b5b8415f9ec5109b45e7",
       "decimals": 18
     }
@@ -95,7 +130,7 @@
     {
       "type": "info",
       "title": "Multi-chain Backed product",
-      "message": "bC3M is also issued on Base, BNB Chain, Polygon, and Gnosis (same contract address pattern as Backed's other tokens). Pharos currently tracks the Ethereum supply contract pending per-chain verification."
+      "message": "bC3M is also listed across Arbitrum, Avalanche, Base, BNB Chain, Polygon, and Gnosis. Pharos currently tracks the Ethereum supply contract pending per-chain verification."
     },
     {
       "type": "info",

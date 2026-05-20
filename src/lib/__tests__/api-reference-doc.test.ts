@@ -23,7 +23,7 @@ describe("loadApiReferenceDocument", () => {
 
     expect(publicEndpoints).toBeDefined();
     expect(endpointSubsections.length).toBeGreaterThan(10);
-    expect(endpointSubsections[0]?.title).toBe("`GET /api/stablecoins`");
+    expect(endpointSubsections[0]?.title).toBe("`GET /api/events`");
   });
 
   it("builds a concise section set for /about/api without embedding full endpoint docs", async () => {
@@ -42,10 +42,10 @@ describe("loadApiReferenceDocument", () => {
 
     expect(endpoints.length).toBeGreaterThan(10);
     expect(endpoints[0]).toEqual({
-      id: "get-api-stablecoins",
+      id: "get-api-events",
       method: "GET",
-      path: "/api/stablecoins",
-      title: "GET /api/stablecoins",
+      path: "/api/events",
+      title: "GET /api/events",
     });
     expect(endpoints.some((endpoint) => endpoint.path === "/api/status")).toBe(false);
   });

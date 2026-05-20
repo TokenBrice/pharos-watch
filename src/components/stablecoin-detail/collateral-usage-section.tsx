@@ -2,12 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { deriveDependencies } from "@shared/lib/dependency-derivation";
 import type { DependencyType, StablecoinMeta } from "@shared/types";
 
@@ -41,29 +38,24 @@ function useCollateralUsage(stablecoinId: string): CollateralUsageEntry[] {
   }, [stablecoinId]);
 }
 
-/** Percentage text color scaled by dependency significance */
-function weightColorClass(weight: number): string {
-  if (weight >= 0.5) return "text-foreground";
-  if (weight >= 0.1) return "text-foreground/70";
-  return "text-muted-foreground";
-}
-
 function CollateralUsageItem({ entry, logoSrc }: { entry: CollateralUsageEntry; logoSrc: string | undefined }) {
   const pct = Math.round(entry.weight * 100);
 
   return (
     <Link
       href={`/stablecoin/${entry.coin.id}`}
-      className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/50"
+      className="pharos-focus-ring flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/40"
     >
       <StablecoinLogo src={logoSrc} name={entry.coin.name} size={24} />
-      <span className="min-w-0 truncate text-sm font-medium">{entry.coin.symbol}</span>
-      {entry.type !== "collateral" && (
-        <span className="shrink-0 rounded bg-muted/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">
-          {entry.type}
-        </span>
-      )}
-      <span className={`ml-auto shrink-0 font-mono text-sm tabular-nums ${weightColorClass(entry.weight)}`}>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="min-w-0 truncate text-sm font-medium">{entry.coin.symbol}</span>
+        {entry.type !== "collateral" && (
+          <span className="shrink-0 rounded-sm bg-muted/50 px-1.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            {entry.type}
+          </span>
+        )}
+      </div>
+      <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">
         {pct}%
       </span>
     </Link>
@@ -78,7 +70,6 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
   const usage = useCollateralUsage(stablecoinId);
   const { data: logos } = useLogos();
   const [showAll, setShowAll] = useState(false);
-  const ticker = TRACKED_STABLECOINS.find((c) => c.id === stablecoinId)?.symbol ?? "This Stablecoin";
 
   if (usage.length === 0) return null;
 
@@ -104,56 +95,48 @@ export function CollateralUsageSection({ stablecoinId }: CollateralUsageSectionP
   );
 
   const GRID_CLASSES = "grid grid-cols-1 gap-0.5 sm:grid-cols-2 lg:grid-cols-3";
+  const showsTypeBreakdown = usage.length > 3 && wrapperCount > 0;
 
   return (
-    <section id="collateral-usage">
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500 animate-in fade-in duration-300">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            <DetailSectionTitle>
-              {ticker} Is Used as Collateral by:
-            </DetailSectionTitle>
-            <Badge variant="outline" className="text-[11px]">
-              {usage.length} {usage.length === 1 ? "stablecoin" : "stablecoins"}
-            </Badge>
+    <section id="collateral-usage" className="animate-in fade-in space-y-2.5 duration-300">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-2.5">
+        <h3 className="text-sm font-semibold text-foreground">
+          Used by <span className="ml-1 font-normal text-muted-foreground tabular-nums">{usage.length}</span>
+        </h3>
+        {showsTypeBreakdown && (
+          <span className="pharos-meta">
+            {collateralCount > 0 && `${collateralCount} collateral`}
+            {collateralCount > 0 && wrapperCount > 0 && " · "}
+            {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
+          </span>
+        )}
+      </div>
+      <div className={showAll ? "max-h-96 overflow-y-auto" : undefined}>
+        {isCompact ? (
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
+            {visible.map(renderItem)}
           </div>
-          {usage.length > 3 && wrapperCount > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              {collateralCount > 0 && `${collateralCount} collateral`}
-              {collateralCount > 0 && wrapperCount > 0 && " · "}
-              {wrapperCount > 0 && `${wrapperCount} wrapper${wrapperCount !== 1 ? "s" : ""}`}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          {isCompact ? (
-            <div className="flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4">
-              {visible.map(renderItem)}
-            </div>
-          ) : showTierLabels ? (
-            <div className="space-y-3">
-              {tierSections.map((tier) => (
-                <div key={tier.key}>
-                  <p className="mb-1 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {tier.label}
-                  </p>
-                  <div className={GRID_CLASSES}>{tier.items.map(renderItem)}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className={GRID_CLASSES}>{visible.map(renderItem)}</div>
-          )}
-          {needsCollapse && (
-            <button
-              onClick={() => setShowAll((prev) => !prev)}
-              className="pharos-focus-ring mt-3 inline-flex min-h-11 items-center rounded-md px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground lg:min-h-9"
-            >
-              {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
-            </button>
-          )}
-        </CardContent>
-      </Card>
+        ) : showTierLabels ? (
+          <div className="space-y-3">
+            {tierSections.map((tier) => (
+              <div key={tier.key}>
+                <p className="pharos-kicker mb-1 px-2.5">{tier.label}</p>
+                <div className={GRID_CLASSES}>{tier.items.map(renderItem)}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={GRID_CLASSES}>{visible.map(renderItem)}</div>
+        )}
+      </div>
+      {needsCollapse && (
+        <button
+          onClick={() => setShowAll((prev) => !prev)}
+          className="pharos-focus-ring inline-flex min-h-11 w-fit items-center px-2.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline lg:min-h-9"
+        >
+          {showAll ? "Show less" : `Show all ${usage.length} stablecoins`}
+        </button>
+      )}
     </section>
   );
 }

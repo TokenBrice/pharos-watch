@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID, PSI_ELIGIBLE_STABLECOINS } from "../psi-eligible";
-import { ACTIVE_IDS, ACTIVE_STABLECOINS, FROZEN_IDS, PRE_LAUNCH_STABLECOINS } from "../stablecoins";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, FROZEN_IDS, PRE_LAUNCH_STABLECOINS } from "../stablecoins/registry";
 import { SHADOW_IDS, SHADOW_STABLECOINS } from "../shadow-stablecoins";
 
 describe("PSI eligibility", () => {

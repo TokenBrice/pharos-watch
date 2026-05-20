@@ -11,7 +11,7 @@ import {
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
   validateRolloutSafetyPolicy,
-} from "../check-worker-migrations.mjs";
+} from "../ci/check-worker-migrations.mjs";
 
 describe("parseDuplicatePrefixAllowlist", () => {
   it("reads the legacy duplicate allowlist from the manifest text", () => {

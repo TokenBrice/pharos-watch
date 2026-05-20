@@ -2,6 +2,7 @@
   "id": "sgho-aave",
   "name": "Aave Savings GHO",
   "symbol": "sGHO",
+  "oneLiner": "sGHO is Aave's savings wrapper of GHO; deposit GHO to earn the Aave governance-set savings rate in GHO, with GHO-tier CDP risk underneath.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "gho-aave",
   "collateral": "GHO deposited into Aave's current sGHO / legacy stkGHO-compatible savings contract; reward emissions accrue to depositors in GHO at the Aave-governance-set savings rate",
   "pegMechanism": "Deposit GHO to mint sGHO at a 1:1 conversion; the current contract exposes `previewRedeem` for GHO exits but does not expose standard ERC-4626 `asset()` / `convertToAssets()` reads. Pharos prices this entry from the protocol redeem preview rather than secondary-market liquidity.",
+  "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "aave-stkgho",
   "links": [

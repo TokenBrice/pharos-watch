@@ -1,5 +1,36 @@
 import type { YieldType } from "@shared/types/core";
-import type { YieldBenchmarkKey } from "@shared/types/yield";
+import type {
+  YieldAdapterLifecycle,
+  YieldAdapterLifecycleReason,
+  YieldBenchmarkKey,
+} from "@shared/types/yield";
+import { buildOnChainSourceKey } from "../lib/yield-utils";
+
+export type { YieldAdapterLifecycle, YieldAdapterLifecycleReason };
+
+export interface YieldAdapterLifecycleEntry {
+  lifecycle: YieldAdapterLifecycle;
+  reason?: YieldAdapterLifecycleReason;
+}
+
+/**
+ * Typed registry mapping stablecoin IDs to their adapter lifecycle state.
+ *
+ * Default for unlisted IDs is `{ lifecycle: "active" }`. Quarantines and
+ * intentional gaps carry a structured reason that supersedes the legacy
+ * free-form rationale strings in `QUARANTINED_DETERMINISTIC_ADAPTERS` and
+ * `INTENTIONAL_GAP_REASONS`. The legacy string maps remain in place so the
+ * existing manifest descriptor `rationale` fields stay populated.
+ */
+export const YIELD_ADAPTER_LIFECYCLE: Record<string, YieldAdapterLifecycleEntry> = {};
+
+export function registerYieldAdapterLifecycle(
+  entries: Record<string, YieldAdapterLifecycleEntry>,
+): void {
+  for (const [id, entry] of Object.entries(entries)) {
+    YIELD_ADAPTER_LIFECYCLE[id] = entry;
+  }
+}
 
 export interface YieldVariant {
   variantSymbol: string;
@@ -30,8 +61,10 @@ export interface YieldRegistryEntry {
   stablecoinId: string;
   variant?: YieldVariant;
   nativePoolId?: string;
+  weightedPoolGroupSourceKey?: string;
   onChainRate?: OnChainRateConfig;
   directProtocolApiLabel?: string;
+  directProtocolApiSourceKey?: string;
   priceDerivedFallback?: boolean;
   rateDerived?: RateDerivedConfig;
   autoLendingPoolId?: string;
@@ -43,6 +76,7 @@ export interface YieldRegistryEntry {
 export type YieldStrategyKind =
   | "native-pool"
   | "variant-pool"
+  | "weighted-pool"
   | "deterministic-onchain"
   | "protocol-api"
   | "price-derived"
@@ -54,7 +88,11 @@ export type YieldStrategyKind =
 export interface YieldStrategyDescriptor {
   kind: YieldStrategyKind;
   label: string;
+  sourceKey?: string | null;
+  sourceKeyPattern?: string | null;
   rationale?: string;
+  lifecycle?: YieldAdapterLifecycle;
+  lifecycleReason?: YieldAdapterLifecycleReason;
   priority: number;
 }
 
@@ -64,6 +102,7 @@ export interface YieldAdapterManifestEntry {
   strategies: YieldStrategyDescriptor[];
   variant?: YieldVariant;
   nativePoolId?: string;
+  weightedPoolGroupSourceKey?: string;
   onChainRate?: OnChainRateConfig;
   priceDerivedFallback?: boolean;
   rateDerived?: RateDerivedConfig;
@@ -77,8 +116,10 @@ export function deriveYieldRegistry(args: {
   navTokenIds: Set<string>;
   variantMap: Record<string, YieldVariant>;
   poolMap: Record<string, string>;
+  weightedPoolGroups: Record<string, { sourceKey: string }>;
   onChainRateConfigs: OnChainRateConfig[];
   directProtocolApiStrategies: Record<string, string>;
+  directProtocolApiSourceKeys: Record<string, string>;
   priceDerivedFallbackIds: Set<string>;
   rateDerivedConfigs: RateDerivedConfig[];
   autoLendingPoolMap: Record<string, string>;
@@ -100,8 +141,10 @@ export function deriveYieldRegistry(args: {
     ...args.yieldBearingIds,
     ...Object.keys(args.variantMap),
     ...Object.keys(args.poolMap),
+    ...Object.keys(args.weightedPoolGroups),
     ...args.onChainRateConfigs.map((config) => config.stablecoinId),
     ...Object.keys(args.directProtocolApiStrategies),
+    ...Object.keys(args.directProtocolApiSourceKeys),
     ...args.priceDerivedFallbackIds,
     ...args.rateDerivedConfigs.map((config) => config.stablecoinId),
     ...Object.keys(args.autoLendingPoolMap),
@@ -116,8 +159,10 @@ export function deriveYieldRegistry(args: {
       stablecoinId,
       variant: args.variantMap[stablecoinId],
       nativePoolId: args.poolMap[stablecoinId],
+      weightedPoolGroupSourceKey: args.weightedPoolGroups[stablecoinId]?.sourceKey,
       onChainRate: args.onChainRateConfigs.find((config) => config.stablecoinId === stablecoinId),
       directProtocolApiLabel: args.directProtocolApiStrategies[stablecoinId],
+      directProtocolApiSourceKey: args.directProtocolApiSourceKeys[stablecoinId],
       priceDerivedFallback: args.priceDerivedFallbackIds.has(stablecoinId) || undefined,
       rateDerived: args.rateDerivedConfigs.find((config) => config.stablecoinId === stablecoinId),
       autoLendingPoolId: args.autoLendingPoolMap[stablecoinId],
@@ -161,39 +206,92 @@ export function deriveYieldRegistry(args: {
       const strategies: YieldStrategyDescriptor[] = [];
 
       if (entry?.nativePoolId) {
-        strategies.push({ kind: "native-pool", label: "Curated DeFiLlama pool UUID", priority: 10 });
+        strategies.push({
+          kind: "native-pool",
+          label: "Curated DeFiLlama pool UUID",
+          sourceKey: entry.nativePoolId,
+          priority: 10,
+        });
       }
       if (entry?.variant) {
-        strategies.push({ kind: "variant-pool", label: entry.variant.variantSymbol, priority: 20 });
+        strategies.push({
+          kind: "variant-pool",
+          label: entry.variant.variantSymbol,
+          sourceKey: null,
+          sourceKeyPattern: "defillama:<runtime-pool-uuid>",
+          priority: 20,
+        });
+      }
+      if (entry?.weightedPoolGroupSourceKey) {
+        strategies.push({
+          kind: "weighted-pool",
+          label: "TVL-weighted DeFiLlama pool group",
+          sourceKey: entry.weightedPoolGroupSourceKey,
+          priority: 25,
+        });
       }
       if (entry?.onChainRate) {
-        strategies.push({ kind: "deterministic-onchain", label: "On-chain exchange-rate reader", priority: 30 });
+        strategies.push({
+          kind: "deterministic-onchain",
+          label: "On-chain exchange-rate reader",
+          sourceKey: buildOnChainSourceKey(stablecoinId),
+          priority: 30,
+        });
       }
       if (entry?.directProtocolApiLabel) {
-        strategies.push({ kind: "protocol-api", label: entry.directProtocolApiLabel, priority: 40 });
+        strategies.push({
+          kind: "protocol-api",
+          label: entry.directProtocolApiLabel,
+          sourceKey: entry.directProtocolApiSourceKey ?? null,
+          priority: 40,
+        });
       }
       if (entry?.rateDerived) {
-        strategies.push({ kind: "rate-derived", label: "Benchmark-linked rate fallback", priority: 50 });
+        strategies.push({
+          kind: "rate-derived",
+          label: "Benchmark-linked rate fallback",
+          sourceKey: "rate-derived",
+          priority: 50,
+        });
       }
       if (args.navTokenIds.has(stablecoinId) || entry?.priceDerivedFallback) {
-        strategies.push({ kind: "price-derived", label: "Supply-history NAV appreciation fallback", priority: 60 });
+        strategies.push({
+          kind: "price-derived",
+          label: "Supply-history NAV appreciation fallback",
+          sourceKey: "price-derived",
+          priority: 60,
+        });
       }
       if (entry?.autoLendingPoolId) {
-        strategies.push({ kind: "auto-discovery-override", label: "Explicit lending override pool", priority: 70 });
+        strategies.push({
+          kind: "auto-discovery-override",
+          label: "Explicit lending override pool",
+          sourceKey: entry.autoLendingPoolId,
+          priority: 70,
+        });
       }
       if (entry?.deterministicQuarantineReason) {
+        const lifecycleEntry = YIELD_ADAPTER_LIFECYCLE[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
           kind: "quarantined",
           label: "Quarantined deterministic reader",
+          sourceKey: null,
+          sourceKeyPattern: buildOnChainSourceKey(stablecoinId),
           rationale: entry.deterministicQuarantineReason,
+          lifecycle: "quarantined",
+          lifecycleReason: lifecycleEntry.lifecycle === "quarantined" ? lifecycleEntry.reason : undefined,
           priority: 80,
         });
       }
       if (entry?.intentionalGapReason) {
+        const lifecycleEntry = YIELD_ADAPTER_LIFECYCLE[stablecoinId] ?? { lifecycle: "active" };
         strategies.push({
           kind: "intentional-gap",
           label: "Intentional coverage gap",
+          sourceKey: null,
           rationale: entry.intentionalGapReason,
+          lifecycle: "intentional-gap",
+          lifecycleReason: lifecycleEntry.lifecycle === "intentional-gap" ? lifecycleEntry.reason : undefined,
           priority: 90,
         });
       }
@@ -204,6 +302,7 @@ export function deriveYieldRegistry(args: {
         strategies: strategies.sort((a, b) => a.priority - b.priority),
         variant: entry?.variant,
         nativePoolId: entry?.nativePoolId,
+        weightedPoolGroupSourceKey: entry?.weightedPoolGroupSourceKey,
         onChainRate: entry?.onChainRate,
         priceDerivedFallback: (args.navTokenIds.has(stablecoinId) || entry?.priceDerivedFallback) || undefined,
         rateDerived: entry?.rateDerived,

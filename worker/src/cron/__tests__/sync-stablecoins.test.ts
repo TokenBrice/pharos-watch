@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockRegistry, mockCircuitBreaker } from "../../test-helpers/cron";
 
 const fetchWithRetryMock = vi.fn();
 
@@ -29,7 +30,7 @@ function mockFetch(routes: MockRoute[] = []): ReturnType<typeof vi.fn> {
 // --- Module-level mocks ---
 
 // Stub the stablecoins list to avoid importing the full registry
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const fallbackTrackedTokens = Array.from({ length: 60 }, (_, i) => ({
     id: `fb-${i}`,
     name: `Fallback Coin ${i}`,
@@ -130,86 +131,73 @@ vi.mock("@shared/lib/stablecoins", () => {
       contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
       flags: { pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
-      ...fallbackTrackedTokens,
-    ];
-    const trackedMetaById = new Map<string, unknown>([
-      ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
-      ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
-      ["eurcv-societe-generale-forge", {
-        geckoId: "societe-generale-forge-eurcv",
-        cmcSlug: undefined,
-        contracts: [
-          { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
-          { chain: "xrpl", address: "EURCV.XRPL", decimals: 0 },
-          { chain: "stellar", address: "EURCV.STELLAR", decimals: 7 },
-          { chain: "solana", address: "EURCV.SOL", decimals: 2 },
-        ],
-        detailProvider: "defillama",
-        flags: { navToken: false, pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
-      }],
-      ["tryb-bilira", {
-        geckoId: "bilira",
-        cmcSlug: undefined,
-        llamaId: "300",
-        contracts: [
-          { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
-          { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
-        ],
-        detailProvider: "defillama",
-        flags: { navToken: false, pegCurrency: "TRY", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
-      }],
-      ["dgld-gold-token-sa", {
-        geckoId: "gold-token-sa-dgld-tokenized-gold",
-        cmcSlug: undefined,
-        commodityOunces: 1,
-        flags: { navToken: false },
-      }],
-      ["pgold-pleasing", {
-        geckoId: "pleasing-gold",
-        cmcSlug: undefined,
-        commodityOunces: 1,
-        flags: { navToken: false },
-      }],
-      ["chfau-allunity", {
-        geckoId: "allunity-chf",
-        cmcSlug: undefined,
-        flags: { navToken: false },
-      }],
-      ["usdk-kast", {
-        geckoId: undefined,
-        cmcSlug: undefined,
-        detailProvider: "coingecko",
-        contracts: [{ chain: "solana", address: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", decimals: 6 }],
-        flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-      }],
-      ["xo-exodus", {
-        geckoId: "xo-cash",
-        cmcSlug: undefined,
-        detailProvider: "coingecko",
-        contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
-        flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
-      }],
-      ["ggbr-goldfish-gold", {
-        geckoId: "goldfish-gold",
-        cmcSlug: undefined,
-        commodityOunces: 0.001,
-        flags: { navToken: false },
-      }],
-    ]);
-    const activeMetaById = new Map(stablecoins.map((stablecoin) => [stablecoin.id, stablecoin]));
-    return {
-      TRACKED_STABLECOINS: stablecoins,
-      ACTIVE_IDS: new Set(stablecoins.map((s) => s.id)),
-      ACTIVE_STABLECOINS: stablecoins,
-      TRACKED_META_BY_ID: trackedMetaById,
-      ACTIVE_META_BY_ID: activeMetaById,
-      FROZEN_IDS: new Set<string>(),
-      FROZEN_META_BY_ID: new Map<string, never>(),
-      FROZEN_STABLECOINS: [],
-      READABLE_IDS: new Set(stablecoins.map((s) => s.id)),
-      READABLE_STABLECOINS: stablecoins,
-      READABLE_META_BY_ID: activeMetaById,
-    };
+    ...fallbackTrackedTokens,
+  ];
+  const trackedMetaById = new Map<string, unknown>([
+    ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
+    ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
+    ["eurcv-societe-generale-forge", {
+      geckoId: "societe-generale-forge-eurcv",
+      cmcSlug: undefined,
+      contracts: [
+        { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+        { chain: "xrpl", address: "EURCV.XRPL", decimals: 0 },
+        { chain: "stellar", address: "EURCV.STELLAR", decimals: 7 },
+        { chain: "solana", address: "EURCV.SOL", decimals: 2 },
+      ],
+      detailProvider: "defillama",
+      flags: { navToken: false, pegCurrency: "EUR", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
+    }],
+    ["tryb-bilira", {
+      geckoId: "bilira",
+      cmcSlug: undefined,
+      llamaId: "300",
+      contracts: [
+        { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+        { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
+      ],
+      detailProvider: "defillama",
+      flags: { navToken: false, pegCurrency: "TRY", backing: "fiat-backed", yieldBearing: false, governance: "centralized" },
+    }],
+    ["dgld-gold-token-sa", {
+      geckoId: "gold-token-sa-dgld-tokenized-gold",
+      cmcSlug: undefined,
+      commodityOunces: 1,
+      flags: { navToken: false },
+    }],
+    ["pgold-pleasing", {
+      geckoId: "pleasing-gold",
+      cmcSlug: undefined,
+      commodityOunces: 1,
+      flags: { navToken: false },
+    }],
+    ["chfau-allunity", {
+      geckoId: "allunity-chf",
+      cmcSlug: undefined,
+      flags: { navToken: false },
+    }],
+    ["usdk-kast", {
+      geckoId: undefined,
+      cmcSlug: undefined,
+      detailProvider: "coingecko",
+      contracts: [{ chain: "solana", address: "usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX", decimals: 6 }],
+      flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
+    }],
+    ["xo-exodus", {
+      geckoId: "xo-cash",
+      cmcSlug: undefined,
+      detailProvider: "coingecko",
+      contracts: [{ chain: "solana", address: "xoUSDq85Rjsb6SbUwJyreFgeWQvxdkT7R3c3g7s6p5Y", decimals: 6 }],
+      flags: { navToken: false, pegCurrency: "USD", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
+    }],
+    ["ggbr-goldfish-gold", {
+      geckoId: "goldfish-gold",
+      cmcSlug: undefined,
+      commodityOunces: 0.001,
+      flags: { navToken: false },
+    }],
+  ]);
+  return mockRegistry({ stablecoins, trackedMetaById });
 });
 
 vi.mock("@shared/lib/stablecoins/frozen-snapshots", () => ({
@@ -270,11 +258,7 @@ vi.mock("../../lib/fetch-retry", () => ({
 }));
 
 // Stub circuit-breaker
-vi.mock("../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcome: vi.fn(async () => {}),
-  recordOutcomeSafe: vi.fn(async () => {}),
-}));
+vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 // Stub coingecko helpers
 vi.mock("../../lib/coingecko", () => ({

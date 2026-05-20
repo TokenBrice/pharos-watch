@@ -2,6 +2,7 @@
   "id": "usdc-circle",
   "name": "USD Coin",
   "symbol": "USDC",
+  "oneLiner": "USDC is Circle's centralized dollar stablecoin, redeemable 1:1 and backed by short-term U.S. Treasuries, repos, and cash held in an SEC-regulated reserve fund.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
   "pegMechanism": "Direct 1:1 redemption through Circle",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "2",
   "detailProvider": "defillama",
   "geckoId": "usd-coin",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.circle.com/transparency",
-    "provider": "Deloitte"
+    "provider": "Deloitte",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {

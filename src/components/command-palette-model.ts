@@ -1,4 +1,18 @@
-import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
+import {
+  BookOpen,
+  Coins,
+  FileText,
+  KeyRound,
+  Landmark,
+  LockKeyhole,
+  Newspaper,
+  Scale,
+  ScrollText,
+  ShieldCheck,
+  TableProperties,
+} from "lucide-react";
+import { NAV_ITEMS } from "@/lib/nav-config";
+import type { NavItem } from "@/lib/nav-config";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -29,7 +43,94 @@ export interface CommandPaletteSectionedItem {
   section: CommandPaletteSection;
 }
 
-const COMMAND_PALETTE_PAGES = [...NAV_ITEMS, ...BOTTOM_NAV_ITEMS] as const;
+const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
+  {
+    href: "/stablecoins",
+    label: "Stablecoins",
+    icon: Coins,
+    description: "Full tracked stablecoin directory with peg, backing, and risk filters",
+  },
+  {
+    href: "/stablecoins/governance",
+    label: "Governance Taxonomy",
+    icon: Scale,
+    description: "Browse stablecoins by issuer and governance model",
+  },
+  {
+    href: "/stablecoins/backing",
+    label: "Backing Taxonomy",
+    icon: ShieldCheck,
+    description: "Browse stablecoins by reserve and collateral design",
+  },
+  {
+    href: "/stablecoins/infrastructure",
+    label: "Infrastructure Taxonomy",
+    icon: Landmark,
+    description: "Browse shared stablecoin infrastructure and deployment families",
+  },
+  {
+    href: "/docs",
+    label: "Docs",
+    icon: BookOpen,
+    description: "Public documentation archive for Pharos methods and data contracts",
+  },
+  {
+    href: "/privacy",
+    label: "Privacy",
+    icon: LockKeyhole,
+    description: "Privacy policy for Pharos web, API, and alert surfaces",
+  },
+  {
+    href: "/about/api",
+    label: "API Reference",
+    icon: KeyRound,
+    description: "Endpoint reference, authentication model, and public API access",
+  },
+  {
+    href: "/about/editorial",
+    label: "Editorial Policy",
+    icon: Newspaper,
+    description: "How Pharos separates data, automated summaries, and editorial judgment",
+  },
+  {
+    href: "/about/principles",
+    label: "Principles",
+    icon: FileText,
+    description: "Operating principles for stablecoin risk coverage and public methodology",
+  },
+  {
+    href: "/methodology/pricing-pipeline-changelog",
+    label: "Pricing Pipeline Changelog",
+    icon: ScrollText,
+    description: "Version history for Pharos price source and consensus rules",
+  },
+  {
+    href: "/methodology/scoring-changelog",
+    label: "Report Card Changelog",
+    icon: TableProperties,
+    description: "Version history for Safety Score and report-card scoring",
+  },
+] as const;
+
+function normalizePaletteHref(href: string): string {
+  if (href === "/") return href;
+  return href.replace(/\/+$/, "");
+}
+
+function dedupeCommandPalettePages(pages: readonly NavItem[]): NavItem[] {
+  const seen = new Set<string>();
+  return pages.filter((page) => {
+    const key = normalizePaletteHref(page.href);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export const COMMAND_PALETTE_PAGES = dedupeCommandPalettePages([
+  ...NAV_ITEMS,
+  ...COMMAND_PALETTE_EXTRA_PAGES,
+]);
 type CommandPalettePage = (typeof COMMAND_PALETTE_PAGES)[number];
 
 export interface CommandPaletteHistoryItem {

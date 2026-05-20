@@ -8,7 +8,7 @@ Independent stablecoin safety ratings fetched from Bluechip and exposed through 
 
 - **Source:** `https://backend.bluechip.org/coin-data/{slug}`
 - **Cron:** `sync-bluechip` (`worker/src/cron/sync-bluechip.ts`)
-- **Schedule:** daily at `5 8 * * *`
+- **Schedule:** `daily0805Utc` (`5 8 * * *`)
 - **Storage:** D1 `cache` row with key `bluechip-ratings`
 - **API:** `GET /api/bluechip-ratings`
 
@@ -22,6 +22,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`.
 
 - `BLUECHIP_SLUG_MAP` contains 19 Bluechip slugs mapped to canonical Pharos IDs.
 - Only coins present in both systems are fetched.
+- The daily sync applies `excludeFrozenIds()` before fetching, so any mapped asset that later becomes frozen is skipped at runtime instead of being refreshed into the active ratings cache.
 - Missing or unrated Bluechip rows are skipped rather than synthesized.
 
 Current map covers:
@@ -51,7 +52,7 @@ Failure behavior:
 
 ## Data Shape
 
-Each cached map value is a `BluechipRating`:
+Each cached map value is a `BluechipRating` (`shared/types/market.ts`); the grade union is defined in `shared/types/core.ts`.
 
 | Field | Meaning |
 |-------|---------|

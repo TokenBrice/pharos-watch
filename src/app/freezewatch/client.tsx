@@ -94,7 +94,6 @@ export default function FreezeWatchClient() {
       title="FreezeWatch"
       statusBadge={{
         status: "mature",
-        version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
       }}
       methodology={{
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -102,8 +101,13 @@ export default function FreezeWatchClient() {
       }}
       leadParagraphs={[
         "Live issuer freeze, release, and wipe events across supported stablecoin contracts.",
-        "Use FreezeWatch to see affected addresses, chains, timing, current frozen value, and whether each asset has direct or upstream freeze exposure.",
       ]}
+      headerSupplement={(
+        <p className="pharos-lead hidden sm:block">
+          Use FreezeWatch to see affected addresses, chains, timing, current frozen value, and whether each asset has
+          direct or upstream freeze exposure.
+        </p>
+      )}
     >
       <QueryErrorNotice
         error={error}
@@ -208,10 +212,10 @@ export default function FreezeWatchClient() {
 
         <div className="flex justify-end">
           <Link
-            href="/tape/?type=freeze.*"
+            href="/timeline/?type=freeze.*"
             className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
           >
-            See all freeze events on the Tape →
+            See all freeze events on the Timeline →
           </Link>
         </div>
       </FreezeWatchSection>

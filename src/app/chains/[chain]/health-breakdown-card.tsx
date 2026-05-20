@@ -13,6 +13,7 @@ import { formatElapsedSeconds } from "@shared/lib/format";
 import type { ChainSummary, HealthBand } from "@shared/types/chains";
 import type { ApiMeta } from "@/lib/api";
 import { MethodologyCardActions, MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
+import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HEALTH_BADGE_CLASSES, HEALTH_FILL_CLASSES, HEALTH_TEXT_CLASSES } from "@/lib/chain-ui";
 import { cn } from "@/lib/utils";
@@ -116,14 +117,16 @@ export function HealthBreakdownCard({
       <CardContent className="space-y-5">
         {hasScore ? (
           <div className="flex items-center gap-4">
-            <div
-              className={cn(
-                "flex h-20 w-20 items-center justify-center rounded-2xl text-3xl font-bold shadow-sm",
-                HEALTH_BADGE_CLASSES[healthBand],
-              )}
-            >
-              {healthScore}
-            </div>
+            <ScoreBadgeWrapper topic="chainHealth">
+              <span
+                className={cn(
+                  "flex h-20 w-20 items-center justify-center rounded-2xl text-3xl font-bold shadow-sm",
+                  HEALTH_BADGE_CLASSES[healthBand],
+                )}
+              >
+                {healthScore}
+              </span>
+            </ScoreBadgeWrapper>
             <div className="space-y-1">
               <p className={cn("text-lg font-semibold capitalize", HEALTH_TEXT_CLASSES[healthBand])}>{healthBand}</p>
               <p className="max-w-[280px] text-sm text-muted-foreground">
@@ -168,7 +171,7 @@ export function HealthBreakdownCard({
           />
         </div>
 
-        <MethodologyCardActions topic="chainHealth" />
+        <MethodologyCardActions topic="chainHealth" showWorkToggle />
       </CardContent>
     </Card>
   );

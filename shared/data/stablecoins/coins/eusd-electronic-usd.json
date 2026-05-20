@@ -2,6 +2,7 @@
   "id": "eusd-electronic-usd",
   "name": "Electronic USD",
   "symbol": "EUSD",
+  "oneLiner": "EUSD is a Reserve Protocol RToken backed by a basket of yield-bearing Aave and Compound USDC/USDT lending positions, with RSR stakers as first-loss buffer.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,15 @@
   },
   "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
   "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
+  "mechanismArchetype": "cdp",
   "llamaId": "106",
   "detailProvider": "defillama",
   "geckoId": "electronic-usd",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview"
+    "url": "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {

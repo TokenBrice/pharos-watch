@@ -2,6 +2,7 @@
   "id": "syusd-aegis",
   "name": "Aegis Staked YUSD",
   "symbol": "sYUSD",
+  "oneLiner": "sYUSD is Aegis's staking wrapper of YUSD; share price accrues delta-neutral BTC funding-rate yield with a 7-day cooldown before YUSD can be withdrawn.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -22,6 +23,7 @@
   "pegReferenceId": "yusd-aegis",
   "collateral": "YUSD deposited into Aegis's ERC-4626 staking contract; the wrapper remains backed by YUSD while funding-rate income accrues through the rising exchange rate",
   "pegMechanism": "Deposit YUSD to receive sYUSD; the exchange rate versus YUSD increases as rewards accrue, while unstaking enters Aegis's documented 7-day cooldown before YUSD can be withdrawn",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "coingecko",
   "geckoId": "staked-yusd",
   "links": [

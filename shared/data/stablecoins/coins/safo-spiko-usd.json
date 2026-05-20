@@ -2,6 +2,7 @@
   "id": "safo-spiko-usd",
   "name": "Spiko Amundi Overnight Swap Fund",
   "symbol": "SAFO",
+  "oneLiner": "SAFO is the USD share of the Spiko/Amundi UCITS sub-fund using fully collateralized overnight TRS with tier-1 banks; a NAV-accreting share, not $1-pegged.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,17 @@
   },
   "collateral": "USD share class of the Spiko / Amundi Smart Cash fund using fully collateralized total-return swaps with tier-1 bank counterparties and collateral made of liquid financial instruments / money-market fund exposure.",
   "pegMechanism": "USD-denominated NAV-accreting share class; subscriptions and redemptions are KYC-gated through Spiko fund-transfer rails at the published fund NAV.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "safo",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-dollar",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS SICAV sub-fund"
   },
   "links": [
     {

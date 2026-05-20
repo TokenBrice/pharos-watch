@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Colombian Peso",
   "symbol": "COPm",
+  "oneLiner": "COPm is Mento's oracle-priced Colombian peso stablecoin on Celo, mint and redeem through the Mento reserve backed by a mixed crypto and stablecoin basket.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "OTHER",
@@ -14,11 +15,14 @@
   },
   "collateral": "Mento Reserve collateral mix exposed by the Mento reserve dashboard API, including sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller stablecoin/ETH positions",
   "pegMechanism": "Mento oracle-priced FX stablecoin: users acquire and exit COPm through Mento reserve and FPMM swap routes against reserve assets at oracle-driven rates, with circuit breakers and reserve transparency supporting peg operations",
+  "mechanismArchetype": "cdp",
   "geckoId": "ccop",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -55,48 +59,10 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "sUSDS (Sky/Maker yield-bearing stablecoin)",
-      "pct": 43,
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
       "risk": "low",
-      "coinId": "usds-sky"
-    },
-    {
-      "name": "CELO",
-      "pct": 17,
-      "risk": "high"
-    },
-    {
-      "name": "EURC",
-      "pct": 14,
-      "risk": "low",
-      "coinId": "eurc-circle"
-    },
-    {
-      "name": "USDC",
-      "pct": 11,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    },
-    {
-      "name": "USDT",
-      "pct": 7,
-      "risk": "low",
-      "coinId": "usdt-tether"
-    },
-    {
-      "name": "axlEUROC",
-      "pct": 5,
-      "risk": "medium"
-    },
-    {
-      "name": "stETH",
-      "pct": 2,
-      "risk": "low"
-    },
-    {
-      "name": "AUSD and smaller reserve assets",
-      "pct": 1,
-      "risk": "low"
+      "coinId": "cusd-celo"
     }
   ],
   "liveReservesConfig": {
@@ -123,6 +89,13 @@
       "type": "info",
       "title": "Peg grouped as Other",
       "message": "COP is not yet a first-class Pharos peg-currency enum, so COPm is grouped under OTHER while the DefiLlama price and circulating-supply path admits the asset at runtime."
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "cusd-celo",
+      "type": "collateral",
+      "weight": 1
     }
   ]
 }

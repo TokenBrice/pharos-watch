@@ -1,5 +1,3 @@
-/* eslint-disable security/detect-non-literal-fs-filename -- tests read temporary files and checked-in fixtures only. */
-
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,11 +13,11 @@ import {
   renderDocsIndexMarkdown,
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
-import { writeMarkdownRoute } from "../generate-markdown-exports";
+import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { changelogs } from "../../src/data/changelogs";
 import digests from "../../data/digests.json";
 import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
 
 const FIXTURES = join(__dirname, "fixtures", "markdown");
 

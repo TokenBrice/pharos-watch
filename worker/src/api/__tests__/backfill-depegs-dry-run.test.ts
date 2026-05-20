@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
-import { mockFetch } from "./helpers/mock-fetch";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(async () => ({ kind: "missing", reason: "test", payload: null })),

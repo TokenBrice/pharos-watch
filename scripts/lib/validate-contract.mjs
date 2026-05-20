@@ -4,6 +4,7 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run lint",
   "npm run typecheck",
   "npm run check:agent-doc-sync",
+  "npm run check:attestor-tier-coverage",
   "npm run check:cron-abort-contract",
   "npm run check:cron-connections",
   "npm run check:cron-sync",
@@ -14,11 +15,20 @@ export const VALIDATE_PREBUILD_COMMANDS = [
   "npm run check:env-contract",
   "npm run check:frozen-invariants",
   "npm run check:generated-artifacts",
+  "npm run check:glossary-coverage",
+  "npm run check:one-liner-coverage",
+  "npm run check:mechanism-archetype-coverage",
+  "npm run check:archetype-explainer-coverage",
+  "npm run check:hook-polling-window",
   "npm run check:hotspot-ratchet",
   "npm run check:migrations",
   "npm run check:redemption-backstops",
+  "npm run check:reserve-fixture-freshness",
+  "npm run check:selector-banned-phrases",
   "npm run check:shared-cycles",
+  "npm run check:shared-types-imports",
   "npm run check:sql-safety",
+  "npm run check:stale-flags",
   "npm run check:stablecoin-data",
   "npm run check:supply-helper-usage",
   "npm run check:unused-code",
@@ -35,14 +45,16 @@ export const COMMON_VALIDATE_PREBUILD_COMMANDS = ["npm run validate:prebuild"];
 
 export const PAGES_VALIDATE_COMMANDS = [
   "npm run build",
+  "npm run check:feature-flag-inlining",
   "npm run seo:check",
   "npm run check:phishing-signatures",
   "npm run check:classifier-sensitive-copy",
+  "npm run check:build-size",
+  "npm run check:build-attribution",
+  "npm run check:methodology-pdfs",
 ];
 
-export const COMMON_VALIDATE_POSTBUILD_COMMANDS = ["npm run test:noncritical", "npm run coverage:critical"];
-
-export const NONCRITICAL_TEST_SHARD_COUNT = 3;
+export const NONCRITICAL_TEST_SHARD_COUNT = 4;
 
 export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_SHARD_COUNT) {
   return Array.from({ length: shardCount }, (_value, index) => {
@@ -51,7 +63,16 @@ export function buildNoncriticalTestShardCommands(shardCount = NONCRITICAL_TEST_
   });
 }
 
-export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker", "npm run typecheck:worker-scripts"];
+export const COMMON_VALIDATE_POSTBUILD_COMMANDS = [
+  ...buildNoncriticalTestShardCommands(),
+  "npm run coverage:critical",
+];
+
+export const PAGES_SMOKE_VALIDATE_COMMANDS = ["npm run validate:pages-smoke"];
+
+export const WORKER_VALIDATE_COMMANDS = ["npm run typecheck:worker"];
+
+export const WORKER_SMOKE_VALIDATE_COMMANDS = ["npm run validate:worker-smoke"];
 
 export function buildValidateCommandPlan({ pagesChanged = true, workerChanged = true } = {}) {
   return [

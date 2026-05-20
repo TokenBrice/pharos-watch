@@ -41,7 +41,21 @@ describe("buildCemeteryDatasetJsonLd", () => {
     expect(jsonLd.additionalProperty).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ name: "rowCount", value: expect.any(Number) }),
-        expect.objectContaining({ name: "sourceDataPath", value: "shared/data/dead-stablecoins.json" }),
+        expect.objectContaining({ name: "sourceDataPath", value: "shared/lib/cemetery-merged.ts" }),
+        expect.objectContaining({ name: "sourceDataFile", value: "shared/data/dead-stablecoins.json" }),
+        expect.objectContaining({
+          name: "sourceDataFile",
+          value: "shared/data/stablecoins/coins.generated.json",
+        }),
+      ]),
+    );
+    expect(jsonLd.identifier).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ propertyID: "sourceChecksum" }),
+        expect.objectContaining({ propertyID: "sourceChecksum:shared/data/dead-stablecoins.json" }),
+        expect.objectContaining({
+          propertyID: "sourceChecksum:shared/data/stablecoins/coins.generated.json",
+        }),
       ]),
     );
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");

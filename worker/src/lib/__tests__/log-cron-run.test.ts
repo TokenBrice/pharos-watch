@@ -5,7 +5,7 @@ vi.mock("../alerts", () => ({
 }));
 
 import { logCronRun } from "../cron-logger";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 describe("logCronRun", () => {
   const db = mockD1([

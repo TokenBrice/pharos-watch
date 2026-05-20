@@ -5,6 +5,12 @@ import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS, getFiniteNumber } from "./optional-source-runtime";
+import {
+  ETHERFUSE_CETES_SOURCE_KEY,
+  ETHERFUSE_CETES_SOURCE_LABEL,
+  ETHERFUSE_CETES_SOURCE_TYPE,
+  fetchEtherfuseCetesIssuance,
+} from "./etherfuse-cetes";
 import type { ResolvedYield } from "./types";
 
 interface HashnoteReport {
@@ -122,6 +128,30 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
     console.warn("[yield] BIMA sUSBD source failed:", error);
     return null;
   }
+}
+
+export async function fetchEtherfuseCetesSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  const issuance = await fetchEtherfuseCetesIssuance({
+    signal,
+    timeoutMs: OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS,
+    retries: 0,
+  });
+  if (!issuance) return null;
+
+  return {
+    currentApy: issuance.apyPercent,
+    apyBase: issuance.apyPercent,
+    apyReward: null,
+    sourcePool: issuance.issuanceAddress,
+    sourceTvlUsd: null,
+    dataSource: "protocol-api",
+    exchangeRate: issuance.currentTokenAmount,
+    sourceKey: ETHERFUSE_CETES_SOURCE_KEY,
+    yieldSource: ETHERFUSE_CETES_SOURCE_LABEL,
+    yieldType: ETHERFUSE_CETES_SOURCE_TYPE,
+    sourceObservedAt: issuance.observedAtSec,
+    comparisonAnchorObservedAt: null,
+  };
 }
 
 export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<ResolvedYield | null> {

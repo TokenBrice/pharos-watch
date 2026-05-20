@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type {
   BlacklistEventType,
   BlacklistResponse,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
@@ -18,6 +19,12 @@ const SAMPLE_RESPONSE: ReservoirReservesResponse = {
 };
 
 describe("adaptReservoirReserves", () => {
+  it("declares the timestamp-less balance-sheet API as unverified-only freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.reservoir.validation.allowedFreshnessModes).toEqual([
+      "unverified",
+    ]);
+  });
+
   it("groups live balance-sheet assets into reserve slices", () => {
     const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
@@ -141,7 +148,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve(SAMPLE_RESPONSE)],
         ]),
       } as never,
     );
@@ -157,6 +164,9 @@ describe("adaptReservoirReserves", () => {
       collateralizationRatio: 100 / 95,
       redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
     });
+    expect(result.metadata?.redemption).toMatchObject({
+      freshnessKind: "unverified",
+    });
   });
 
   it("aggregates unknown exposure into one warning instead of one warning per position", async () => {
@@ -171,7 +181,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             assets: [
               ...SAMPLE_RESPONSE.assets,
@@ -207,7 +217,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             totalAssets: "125",
           })],
@@ -235,7 +245,7 @@ describe("adaptReservoirReserves", () => {
       new AbortController().signal,
       {
         requestCache: new Map([
-          ["json-get:https://example.com/reservoir:12000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
+          ["json-get:https://example.com/reservoir:20000:{\"Origin\":\"https://app.reservoir.xyz\",\"Referer\":\"https://app.reservoir.xyz/reserves\",\"Accept-Language\":\"en-US,en;q=0.9\"}", Promise.resolve({
             ...SAMPLE_RESPONSE,
             totalAssets: "100",
             totalLiabilities: "120",

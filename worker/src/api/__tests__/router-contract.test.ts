@@ -4,7 +4,7 @@ import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/api-endpoints";
 import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation";
 import { route, ROUTER_STATIC_PATHS } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => (
   new Response(JSON.stringify({
@@ -46,6 +46,22 @@ describe("router contract: strict frontend paths are routable", () => {
     expect(result).toBeNull();
   });
 
+  it("routes public snapshot date and coin URLs through dynamic descriptors", async () => {
+    const dayResponse = await route(makeRouteCtx({
+      url: new URL("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
+      request: new Request("https://api.pharos.watch/api/snapshots/2026-05-16.json"),
+    }));
+    expect(dayResponse).not.toBeNull();
+    expect(dayResponse!.status).toBe(404);
+
+    const coinResponse = await route(makeRouteCtx({
+      url: new URL("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
+      request: new Request("https://api.pharos.watch/api/snapshot/2026-05-16/stablecoin/usdt-tether"),
+    }));
+    expect(coinResponse).not.toBeNull();
+    expect(coinResponse!.status).toBe(404);
+  });
+
   it("returns a router-level JSON 500 when an unwrapped route handler throws", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.resetModules();
@@ -54,6 +70,7 @@ describe("router contract: strict frontend paths are routable", () => {
       getRouteDependencies: () => [],
       getRouteMatch: () => ({
         dependencies: [],
+        methods: ["GET"],
         handle: async () => {
           throw new Error("boom");
         },
@@ -118,6 +135,9 @@ describe("router contract: strict frontend paths are routable", () => {
 
   it("keeps endpoint registry and router behavior aligned", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS) {
+      if (endpoint.path.includes(":") && !endpoint.probePath) {
+        continue;
+      }
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
         const request = new Request(`https://api.pharos.watch${path}`, {

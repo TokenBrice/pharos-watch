@@ -2,6 +2,7 @@
   "id": "usdp-paxos",
   "name": "Pax Dollar",
   "symbol": "USDP",
+  "oneLiner": "USDP is Paxos's regulated dollar stablecoin, redeemable 1:1 and backed by U.S. Treasury bills, overnight repos, and FDIC-insured cash.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
   "pegMechanism": "Direct 1:1 redemption through Paxos",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "11",
   "detailProvider": "defillama",
   "geckoId": "paxos-standard",
@@ -20,7 +22,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.paxos.com/usdp-transparency",
-    "provider": "KPMG"
+    "provider": "KPMG",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "PCAOB-registered"
   },
   "links": [
     {

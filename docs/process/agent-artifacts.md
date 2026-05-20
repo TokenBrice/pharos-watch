@@ -13,7 +13,6 @@ Historical plans, one-off audits, exploratory research, screenshots, and handoff
 | Material | Destination |
 | --- | --- |
 | Repeatable process guidance | `docs/process/` |
-| Long-lived execution tracker | `docs/trackers/` |
 | Route-specific maintenance guidance | Route doc or a dedicated subdirectory under `docs/` |
 | Operator remediation procedure | `docs/runbooks/` |
 | Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus timeline when applicable |
@@ -24,3 +23,14 @@ Historical plans, one-off audits, exploratory research, screenshots, and handoff
 Before deleting a historical artifact, check whether any verified doc, test, source comment, or user-facing changelog still references it. Migrate only the durable content needed by current maintainers, then update the reference to the new `/docs/` page or remove it if the note was historical context only.
 
 Do not create new committed planning-archive material. Temporary investigation output should stay local, untracked, or in an explicitly ignored scratch location.
+
+## Agent Skills (`.claude/skills/` vs `.codex/skills/`)
+
+Both Claude Code and OpenAI Codex load skills from their own per-tool directory (`.claude/skills/<name>/` and `.codex/skills/<name>/`). Nine skills are duplicated across both surfaces and have historically drifted.
+
+The reconciliation convention:
+
+- **Byte-identical pairs** (currently `annotations-refresh`, `stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`): the `.claude/skills/<name>/SKILL.md` file is a relative symlink to `../../../.codex/skills/<name>/SKILL.md`. Edit the codex copy; both surfaces pick up the change automatically.
+- **Asymmetric pairs** (currently `coingecko-id-verif`, `contract-enrich`, `contract-populate`, `reserve-research`, `resilience-classify`, `stablecoin-info-fetch`): kept as independent files. The claude-side ships a monolithic `SKILL.md` with all mappings, scripts, and references inlined. The codex-side ships a slim `SKILL.md` plus `agents/openai.yaml`, `references/*.md`, and `scripts/*` that resolve via `$CODEX_HOME/...` paths. Cross-symlinking would break runtime path semantics in one direction and strip authoritative inline content in the other. When updating one of these skills, mirror the substantive change in the other; do not assume one side is canonical.
+
+When adding a new skill that needs to live on both surfaces, prefer authoring it codex-style (slim SKILL.md + supporting subdirectories) and symlinking the claude SKILL.md to the codex one. If a Claude agent needs inline content because it cannot resolve external references, keep the two files separate and call out the convention here.

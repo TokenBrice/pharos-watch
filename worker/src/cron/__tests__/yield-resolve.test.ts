@@ -7,7 +7,7 @@
  * with controlled inputs.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 let latestMockDb: MockD1Database | null = null;
@@ -19,7 +19,7 @@ function mockD1(...args: Parameters<typeof createMockD1>): MockD1Database {
 
 // --- Module-level mocks ---
 
-vi.mock("@shared/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
     {
       id: "sdai-maker",
@@ -280,7 +280,7 @@ import { syncYieldData } from "../sync-yield-data";
 import { batchExecute } from "../../lib/db";
 import { getCache, setCache, setCacheIfNewer } from "../../lib/db-cache";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";

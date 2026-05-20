@@ -14,7 +14,7 @@ Detection signals:
 
 ## Quick Diagnostic Checklist
 
-1. **Circuit breaker open?** `/api/status` -> `circuits` -> `telegram_api`. An open breaker skips fan-out entirely.
+1. **Circuit breaker open?** `/api/status` -> `circuits` -> `telegram-api`. An open breaker skips fan-out entirely.
 2. **D1 healthy?** Cross-check with [`db-connectivity.md`](./db-connectivity.md). Preset query/resolution failures degrade preset delivery only; direct and global delivery should continue with `presetFailure`, `presetQueryFailures`, and `presetResolutionFailures` set in dispatch metadata.
 3. **Pending queue draining?** `/api/status` -> `telegramBot.pendingDeliveries`, `pendingDeliveryBacklog`, and `oldestPendingDeliveryAgeSec`. A growing backlog points to a rate-limit storm or expiration risk — see [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md) and [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md).
 4. **Snapshot seeded?** `snapshotSeeded: true` for the last run means no alerts will be sent (24h staleness gate; see [`docs/telegram-alerts.md`](../telegram-alerts.md) section First-Run / Stale-Snapshot Behavior).
@@ -36,13 +36,13 @@ Detection signals:
 
 ## Remediation
 
-1. **Circuit breaker open.** Reset via `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=telegram_api` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
+1. **Circuit breaker open.** Reset via `POST https://ops-api.pharos.watch/api/reset-circuit-breaker?circuit=telegram-api` with Access service-token headers, `X-Pharos-Admin: 1`, and an `Idempotency-Key`.
 2. **Snapshot stale loop.** Confirm the dispatch cron has run successfully at least once after the stale-snapshot reseed. If `snapshotSeeded: true` persists across three runs, inspect the snapshot cache keys (`alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`) for malformed values.
 3. **Single user blocked.** If `consecutive_block_count >= 2`, the user must `/start` again. The flag resets on the next successful send. Confirm they have not blocked the bot in Telegram itself.
 4. **Single user snoozed/quiet-hours.** Advise `/unsnooze` or `/unmutehours`. No operator action.
 5. **Pending queue full / overflow.** Follow [`telegram-rate-limit-storm.md`](./telegram-rate-limit-storm.md).
 6. **No subscribers for the alert type.** Verify `/api/status` -> `telegramBot.alertTypeChats.<type>` is non-zero for the affected alert type.
-7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/register-telegram-webhook.sh` only if reconciliation is also failing.
+7. **Webhook drift.** The 5-minute Telegram lane reconciles the webhook automatically. Force a manual reset with `scripts/maintenance/register-telegram.ts --action webhook` only if reconciliation is also failing.
 8. **Force a single resend.** After the underlying cause is fixed, re-fire a specific alert to one chat via `POST https://ops-api.pharos.watch/api/admin-telegram-resend` with body `{ "chatId": "<id>", "alertType": "dews|depeg|safety|launch", "stablecoinId": "<id>" }`. The endpoint rebuilds a `synthetic_current_state` alert from current data, uses the same formatter and `sendToChat` path as the dispatch cron, and bypasses the pending queue. It is not exact historical replay. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-resend`.
 9. **Announce a maintenance window or recovery to subscribers.** Use `POST https://ops-api.pharos.watch/api/admin-telegram-broadcast` with body `{ "messageHtml": "<b>...</b>", "scope": "all" | "deliverable-watchers" | "global-subscribers", "dryRun": true | false }`. Prefer `deliverable-watchers` for ordinary recovery notices; use `all` only when intentionally targeting every subscriber row. Run `dryRun: true` first to confirm `targetChatCount`, `targetMessageCount`, and `deliveryEstimate`; then follow [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md) before the live call. The endpoint enqueues low-priority `admin_broadcast` rows into `telegram_pending_alerts`, so risk alerts stay ahead of broadcasts during contention. See [`docs/api-reference.md`](../api-reference.md) section `POST /api/admin-telegram-broadcast`.
 

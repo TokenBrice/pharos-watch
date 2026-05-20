@@ -2,6 +2,7 @@
   "id": "usdk-orki",
   "name": "Orki USD",
   "symbol": "USDK",
+  "oneLiner": "USDK is Orki's Liquity v2-style CDP stablecoin on Swellchain, minted against WETH, weETH, rswETH, and swETH; SWELL collateral branch currently shut down.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "WETH, weETH, rswETH, and swETH in overcollateralized Liquity v2-style CDP markets on Swellchain; the configured SWELL branch is currently shut down in live on-chain telemetry",
   "pegMechanism": "Overcollateralized CDP with Liquity v2-style user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
+  "mechanismArchetype": "cdp",
   "llamaId": "265",
   "detailProvider": "defillama",
   "canBeBlacklisted": true,

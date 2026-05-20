@@ -2,6 +2,7 @@
   "id": "usdaf-asymmetry",
   "name": "Asymmetry USDaf",
   "symbol": "USDaf",
+  "oneLiner": "USDaf is Asymmetry's immutable Liquity v2-style CDP stablecoin minted from BTC and savings-stablecoin collateral (ysyBOLD, scrvUSD, sUSDS, sfrxUSD).",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "wBTC, tBTC, sUSDS, sfrxUSD, scrvUSD, and ysyBOLD in immutable overcollateralized CDP markets on Ethereum",
   "pegMechanism": "Overcollateralized CDP with Liquity v2-style redemptions and user-set interest rates; the hard redemption floor is effectively $0.995 because Liquity v2 deployments include a 0.5% fee floor",
+  "mechanismArchetype": "cdp",
   "llamaId": "295",
   "detailProvider": "defillama",
   "geckoId": "asymmetry-usdaf-2",

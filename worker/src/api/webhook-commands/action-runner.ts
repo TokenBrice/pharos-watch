@@ -14,7 +14,7 @@ import {
   resolveTelegramPresetTargets,
   type TelegramPresetId,
 } from "../../lib/telegram-presets";
-import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildPresetSubscriptionSummaryMessage,
   buildPresetUnsubscribeSummaryMessage,

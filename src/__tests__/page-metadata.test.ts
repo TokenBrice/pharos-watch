@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { API_ORIGIN } from "@shared/lib/runtime-origins";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildApiOgImageUrl,
   buildStablecoinDetailDescription,
@@ -31,7 +31,7 @@ describe("page metadata helpers", () => {
     const description = buildStablecoinDetailDescription(preLaunch!);
     const metadata = buildStablecoinDetailMetadata(preLaunch!);
 
-    expect(metadata.title).toBe("Nubank USD Stablecoin (USD-NU) — Pre-Launch Stablecoin Profile");
+    expect(metadata.title).toBe("Nubank USD Stablecoin (USD-NU) — Pre-launch Stablecoin Profile");
     expect(description).toContain("Pre-launch profile");
     expect(description).toContain("before live data begins");
     expect(description).not.toContain("Peg score");

@@ -2,6 +2,7 @@
   "id": "gtusdcp-gauntlet",
   "name": "Gauntlet USDC Prime",
   "symbol": "gtUSDCp",
+  "oneLiner": "gtUSDCp is the Gauntlet-curated MetaMorpho V2 vault for USDC, an ERC-4626 wrapper compounding USDC lending yield across permissioned Morpho markets.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -94,6 +95,5 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       }
     }
-  },
-  "canBeBlacklisted": true
+  }
 }

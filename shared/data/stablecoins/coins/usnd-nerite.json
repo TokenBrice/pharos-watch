@@ -2,6 +2,7 @@
   "id": "usnd-nerite",
   "name": "Nerite USND",
   "symbol": "USND",
+  "oneLiner": "USND was Nerite's Liquity-v2 fork CDP dollar on Arbitrum; supply collapsed after the rsETH hack impaired an approved collateral branch.",
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, possible, or dilutable blacklist exposure; no separate manual override source is attached.",
@@ -30,6 +31,7 @@
   },
   "collateral": "tBTC, WETH, wstETH, rETH, rsETH, weETH, ARB, and COMP in immutable overcollateralized CDP markets on Arbitrum",
   "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; separate Stability Pools absorb liquidations per collateral market",
+  "mechanismArchetype": "cdp",
   "llamaId": "287",
   "detailProvider": "defillama",
   "geckoId": "us-nerite-dollar",

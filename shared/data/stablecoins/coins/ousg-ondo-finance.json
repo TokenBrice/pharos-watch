@@ -2,6 +2,7 @@
   "id": "ousg-ondo-finance",
   "name": "Ondo OUSG",
   "symbol": "OUSG",
+  "oneLiner": "OUSG is Ondo's tokenized U.S. T-Bill fund backed mainly by BlackRock BUIDL; a NAV-accreting share (not $1-pegged) limited to U.S. Qualified Purchasers.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,16 @@
   },
   "collateral": "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
   "pegMechanism": "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "ousg",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "independent-audit",
     "url": "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing",
-    "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)"
+    "provider": "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)",
+    "attestorTier": "niche",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

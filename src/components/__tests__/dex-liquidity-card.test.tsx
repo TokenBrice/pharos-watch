@@ -28,6 +28,7 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: ReactNode }) => <>{children}</>,
   MethodologyCardActions: () => null,
+  MethodologyHint: ({ children }: { children?: ReactNode }) => <>{children ?? null}</>,
 }));
 
 function makeLiquidityData(overrides: Partial<DexLiquidityData> = {}): DexLiquidityData {
@@ -133,7 +134,12 @@ describe("DexLiquidityCard", () => {
   it("renders an explicit unobserved-history state instead of a zero-value chart for unrated assets", () => {
     useDexLiquidityMock.mockReturnValue({
       data: {
-        "usdk-kast": makeLiquidityData(),
+        "usdk-kast": makeLiquidityData({
+          // Coin is observed (has a pool) but unrated (liquidityScore null); the
+          // card still renders and surfaces the unrated/no-direct-market notice.
+          poolCount: 1,
+          totalTvlUsd: 1_000,
+        }),
       },
       isLoading: false,
     });

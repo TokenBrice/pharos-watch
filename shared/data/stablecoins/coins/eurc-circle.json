@@ -2,6 +2,8 @@
   "id": "eurc-circle",
   "name": "EURC",
   "symbol": "EURC",
+  "oneLiner": "EURC is Circle's centralized euro stablecoin, redeemable 1:1 by qualifying customers and backed by cash and short-term assets denominated in euros.",
+  "mechanismArchetype": "fiat-cash",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -19,7 +21,11 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.circle.com/transparency",
-    "provider": "Deloitte"
+    "provider": "Deloitte",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "European Union",
+    "attestorLicense": "EMI (MiCA)"
   },
   "links": [
     {

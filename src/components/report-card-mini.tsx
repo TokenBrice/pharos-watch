@@ -5,7 +5,9 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import type { ScoreBadgeWrapperVariant } from "@/components/score-badge-wrapper";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
+import { getNetColor } from "@shared/lib/format";
 import { ReportCardRadar } from "./radar-chart";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,6 +29,8 @@ interface ReportCardMiniProps {
   animIndex?: number;
   /** Trend direction based on score change from previous period */
   trend?: "up" | "down" | "stable" | null;
+  /** Controls whether the inline methodology version suffix is shown on grade badges. */
+  gradeVersionVariant?: ScoreBadgeWrapperVariant;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +44,7 @@ function TrendIndicator({ trend, score }: { trend?: "up" | "down" | "stable" | n
 
   const isPositive = trend === "up";
   return (
-    <span className={cn("flex items-center gap-0.5 text-[10px] font-medium", isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+    <span className={cn("flex items-center gap-0.5 text-[10px] font-medium", getNetColor(isPositive ? 1 : -1))}>
       {isPositive ? <TrendingUp className="h-3 w-3" aria-hidden="true" /> : <TrendingDown className="h-3 w-3" aria-hidden="true" />}
       {score != null && <span className="tabular-nums">{score}</span>}
     </span>
@@ -61,6 +65,7 @@ export function ReportCardMini({
   coreSettlement,
   animIndex = 0,
   trend,
+  gradeVersionVariant = "suffix",
 }: ReportCardMiniProps) {
   const dimUnaffected = isSimulating && !isSimulated;
   const cardBody = (
@@ -98,6 +103,9 @@ export function ReportCardMini({
               size="md"
               animate
               animationDelayMs={animIndex * 40}
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
+              versionInteractive={false}
             />
             <span className="text-muted-foreground text-sm">&rarr;</span>
             <SafetyGradeBadge
@@ -105,6 +113,9 @@ export function ReportCardMini({
               size="md"
               animate
               animationDelayMs={animIndex * 40 + 80}
+              versionTopic="safetyScore"
+              versionVariant="tooltip-only"
+              versionInteractive={false}
             />
             {originalScore != null && card.overallScore != null && (
               <span className="text-xs font-medium text-red-700 dark:text-red-400">
@@ -120,6 +131,9 @@ export function ReportCardMini({
               size="lg"
               animate
               animationDelayMs={animIndex * 40}
+              versionTopic="safetyScore"
+              versionVariant={gradeVersionVariant}
+              versionInteractive={false}
             />
             {/* Trend indicator */}
             <TrendIndicator trend={trend} score={card.overallScore ?? undefined} />

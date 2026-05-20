@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
 
@@ -146,13 +146,13 @@ export function ComparisonChart({
         {series.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
             {series.map((s) => (
-              <div key={s.id} className="pharos-chart-legend-chip">
-                <span
-                  className="inline-block h-0.5 w-4 rounded-full"
-                  style={{ backgroundColor: s.color }}
-                />
+              <ChartLegendChip
+                key={s.id}
+                markerClassName="inline-block h-0.5 w-4 rounded-full"
+                markerStyle={{ backgroundColor: s.color }}
+              >
                 <span>{s.label}</span>
-              </div>
+              </ChartLegendChip>
             ))}
           </div>
         )}

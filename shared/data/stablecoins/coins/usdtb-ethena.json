@@ -2,6 +2,8 @@
   "id": "usdtb-ethena",
   "name": "Ethena USDtb",
   "symbol": "USDTB",
+  "oneLiner": "USDtb is Ethena's T-Bill-backed stablecoin, holding BlackRock's BUIDL fund as primary reserves; designed as a calmer alternative to USDe.",
+  "mechanismArchetype": "tbill",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -19,7 +21,9 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations",
-    "provider": "Big Four accounting firm via Anchorage Digital Bank"
+    "provider": "Big Four accounting firm via Anchorage Digital Bank",
+    "attestorTier": "big4",
+    "cadence": "daily-nav"
   },
   "links": [
     {

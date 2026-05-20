@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
-import { CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_AMBER, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE, CHART_TEAL } from "@/lib/chart-colors";
 import { PharosChartTooltip } from "@/components/pharos-chart-tooltip";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
@@ -43,9 +43,21 @@ interface YieldScatterPlotProps {
   usesDefaultBenchmarkFrame?: boolean;
   logos?: Record<string, string>;
   onDotClick: (id: string) => void;
+  compact?: boolean;
 }
 
 const SCATTER_Y_VISUAL_PADDING = 0.4;
+
+// Mirrors YIELD_RISK_BUDGET_SPECS thresholds so the risk-tolerance slider
+// acts as the legend for the scatter: each dot's ring tier matches the band
+// that would just barely include it.
+function safetyTierColor(safetyScore: number | null): string {
+  if (safetyScore === null) return "var(--color-border)";
+  if (safetyScore >= 80) return CHART_GREEN;
+  if (safetyScore >= 70) return CHART_TEAL;
+  if (safetyScore >= 50) return CHART_AMBER;
+  return CHART_ORANGE;
+}
 
 interface LogoScatterShapeProps {
   cx?: number;
@@ -66,7 +78,7 @@ function LogoScatterPoint({ cx, cy, payload, emphasized = false, compact = false
   const radius = diameter / 2;
   const haloRadius = radius + (emphasized ? 3 : 2);
   const clipId = `yield-logo-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
-  const ringStroke = emphasized ? CHART_BLUE : "var(--color-border)";
+  const ringStroke = emphasized ? CHART_BLUE : safetyTierColor(payload.x);
 
   return (
     <g transform={`translate(${cx}, ${cy})`}>
@@ -169,8 +181,12 @@ export function YieldScatterPlot({
   usesDefaultBenchmarkFrame = false,
   logos,
   onDotClick,
+  compact = false,
 }: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
+  const compactMarker = compact || isMobile;
+  const hideAxisLabels = compact || isMobile;
+  const hideQuadrantLabels = isMobile;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
     return rankings
@@ -249,13 +265,13 @@ export function YieldScatterPlot({
   );
 
   const renderLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={isMobile} />,
-    [isMobile],
+    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} />,
+    [compactMarker],
   );
 
   const renderActiveLogoMarker = useCallback(
-    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={isMobile} emphasized />,
-    [isMobile],
+    (props: LogoScatterShapeProps) => <LogoScatterPoint {...props} compact={compactMarker} emphasized />,
+    [compactMarker],
   );
   const resolvedBenchmarkLabel = getYieldBenchmarkDisplayLabel({
     benchmarkLabel,
@@ -274,9 +290,13 @@ export function YieldScatterPlot({
   return (
     <div className="space-y-3">
       <div
-        className="h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
+        className={
+          compact
+            ? "h-[420px] overflow-hidden rounded-xl border border-border/70 bg-card/60 p-2"
+            : "h-[600px] overflow-hidden rounded-2xl border-2 border-border/80 bg-card/60 p-2 sm:h-[850px] sm:p-4"
+        }
         role="figure"
-        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""} Click a logo to open its detail page.`}
+        aria-label={`Yield vs safety scatter plot with ${data.length} stablecoins.${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Click a logo to open its detail page.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (
@@ -284,7 +304,11 @@ export function YieldScatterPlot({
               width={width}
               height={height}
               margin={
-                isMobile ? { top: 6, right: 6, bottom: 12, left: 0 } : { top: 10, right: 14, bottom: 16, left: 2 }
+                compact
+                  ? { top: 4, right: 4, bottom: 4, left: 0 }
+                  : isMobile
+                    ? { top: 6, right: 6, bottom: 12, left: 0 }
+                    : { top: 10, right: 14, bottom: 16, left: 2 }
               }
             >
               {/* Quadrant shading */}
@@ -297,7 +321,7 @@ export function YieldScatterPlot({
                   fill={CHART_GREEN}
                   fillOpacity={0.12}
                   label={
-                    isMobile
+                    hideQuadrantLabels
                       ? undefined
                       : {
                           value: "Sweet Spot",
@@ -319,7 +343,7 @@ export function YieldScatterPlot({
                   fill={CHART_RED}
                   fillOpacity={0.12}
                   label={
-                    isMobile
+                    hideQuadrantLabels
                       ? undefined
                       : {
                           value: "Danger Zone",
@@ -341,7 +365,7 @@ export function YieldScatterPlot({
                   fill={CHART_BLUE}
                   fillOpacity={0.12}
                   label={
-                    isMobile
+                    hideQuadrantLabels
                       ? undefined
                       : {
                           value: "Play It Safe",
@@ -363,7 +387,7 @@ export function YieldScatterPlot({
                   fill={CHART_SLATE}
                   fillOpacity={0.07}
                   label={
-                    isMobile
+                    hideQuadrantLabels
                       ? undefined
                       : {
                           value: "Why Bother?",
@@ -386,7 +410,7 @@ export function YieldScatterPlot({
                   stroke={CHART_SLATE}
                   strokeDasharray="4 4"
                   label={
-                    isMobile
+                    hideAxisLabels
                       ? undefined
                       : {
                         value: usesDefaultBenchmarkFrame
@@ -407,7 +431,7 @@ export function YieldScatterPlot({
                 domain={safetyDomain}
                 name="Safety Score"
                 label={
-                  isMobile
+                  hideAxisLabels
                     ? undefined
                     : {
                         value: "Safety Score",
@@ -430,7 +454,7 @@ export function YieldScatterPlot({
                 allowDataOverflow
                 name="APY (%)"
                 label={
-                  isMobile
+                  hideAxisLabels
                     ? undefined
                     : {
                         value: "APY %",
@@ -464,31 +488,33 @@ export function YieldScatterPlot({
           )}
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-          <span className="text-foreground font-medium">Sweet spot</span>
-          {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
-            <span className="hidden md:inline">= above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks</span>
-          ) : showBenchmarkReference ? (
-            <span className="hidden md:inline">= above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
-          ) : (
-            <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
-          )}
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-          <span className="text-foreground font-medium">Danger zone</span>
-          <span className="hidden md:inline">= high APY on low safety</span>
-        </span>
-        {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-            {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
-            {apyAxis.clipThreshold.toFixed(0)}%
+      {compact ? null : (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className="text-foreground font-medium">Sweet spot</span>
+            {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
+              <span className="hidden md:inline">= above the USD frame and right of {SAFETY_SCORE_THRESHOLD}; row tags still show local benchmarks</span>
+            ) : showBenchmarkReference ? (
+              <span className="hidden md:inline">= above {benchmarkRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}</span>
+            ) : (
+              <span className="hidden md:inline">= high safety with yield that clears the local benchmark</span>
+            )}
           </span>
-        ) : null}
-      </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+            <span className="text-foreground font-medium">Danger zone</span>
+            <span className="hidden md:inline">= high APY on low safety</span>
+          </span>
+          {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+              {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
+              {apyAxis.clipThreshold.toFixed(0)}%
+            </span>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

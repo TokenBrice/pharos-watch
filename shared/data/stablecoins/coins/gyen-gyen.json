@@ -2,6 +2,7 @@
   "id": "gyen-gyen",
   "name": "GYEN",
   "symbol": "GYEN",
+  "oneLiner": "GYEN is GMO Trust's NYDFS-chartered JPY stablecoin; multiple 2021 depegs led to a 2026 class-action settlement covering NY and CA holders.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "JPY",
@@ -12,13 +13,18 @@
   },
   "collateral": "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
   "pegMechanism": "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "122",
   "detailProvider": "defillama",
   "geckoId": "gyen",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://stablecoin.z.com/attestation/",
-    "provider": "The Network Firm"
+    "provider": "The Network Firm",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "NYDFS Trust Charter"
   },
   "links": [
     {

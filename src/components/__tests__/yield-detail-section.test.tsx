@@ -10,8 +10,9 @@ import {
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
 
-const { useYieldRankingsMock, replaceParamsMock } = vi.hoisted(() => ({
+const { useYieldRankingsMock, useYieldHistoryMock, replaceParamsMock } = vi.hoisted(() => ({
   useYieldRankingsMock: vi.fn(),
+  useYieldHistoryMock: vi.fn(),
   replaceParamsMock: vi.fn(),
 }));
 
@@ -19,6 +20,7 @@ let sourcesParam = "";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useYieldRankings: useYieldRankingsMock,
+  useYieldHistory: useYieldHistoryMock,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
@@ -66,6 +68,7 @@ vi.mock("@/components/yield-source-link", () => ({
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyLabel: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MethodologyCardActions: () => null,
+  MethodologyHint: () => null,
 }));
 
 function makeRanking(overrides: Partial<YieldRanking> = {}): YieldRanking {
@@ -124,6 +127,13 @@ describe("YieldDetailSection", () => {
   beforeEach(() => {
     sourcesParam = "";
     useYieldRankingsMock.mockReset();
+    useYieldHistoryMock.mockReset();
+    useYieldHistoryMock.mockReturnValue({
+      data: { current: null, history: [], methodology: { version: "v8.14" } },
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
     replaceParamsMock.mockReset();
     replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
       const params = new URLSearchParams(sourcesParam ? `sources=${sourcesParam}` : "");
@@ -181,6 +191,34 @@ describe("YieldDetailSection", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
+  it("renders the deep-link breadcrumb with three named anchor links when ready", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    const nav = screen.getByRole("navigation", { name: "More yield analysis" });
+    const warningLink = screen.getByRole("link", { name: "Warning timeline" });
+    const switchesLink = screen.getByRole("link", { name: "Source switches" });
+    const comparisonLink = screen.getByRole("link", { name: "Source comparison" });
+
+    expect(nav).toBeTruthy();
+    // Next.js Link normalizes /foo/#bar → /foo#bar; the deep-link page is still served at /foo/.
+    expect(warningLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#warning-signals",
+    );
+    expect(switchesLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#source-switches",
+    );
+    expect(comparisonLink.getAttribute("href")).toBe(
+      "/stablecoin/dola-inverse-finance/yield#source-comparison",
+    );
+  });
+
   it("renders source-risk penalty in the PYS breakdown", () => {
     useYieldRankingsMock.mockReturnValue({
       data: makeResponse([
@@ -193,10 +231,10 @@ describe("YieldDetailSection", () => {
       isLoading: false,
     });
 
-    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
 
-    expect(screen.getByText("Source Risk Penalty:")).toBeTruthy();
-    expect(screen.getByText("2.00x")).toBeTruthy();
+    expect(screen.getByText(/source-risk penalty/i)).toBeTruthy();
+    expect(container.textContent ?? "").toContain("2.00×");
   });
 
   it("explains populated source-risk drivers in the detail PYS block", () => {
@@ -236,11 +274,12 @@ describe("YieldDetailSection", () => {
     render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
 
     for (const label of SOURCE_RISK_GOLDEN_UI_DRIVER_LABELS) {
-      expect(screen.getByText(label)).toBeTruthy();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
-    expect(screen.getByText(/Most APY comes from incentives, not base yield/i)).toBeTruthy();
-    expect(screen.getByText(/Venue TVL is small relative to the stablecoin supply/i)).toBeTruthy();
-    expect(screen.getByText(/Selected source changed versus the prior published snapshot/i)).toBeTruthy();
+    // WHY: driver descriptions render as title= tooltips on compact tag chips,
+    // not as visible text — verify the chip carries the description via its title attribute.
+    const rewardChip = screen.getAllByText("reward-heavy")[0] as HTMLElement;
+    expect(rewardChip.getAttribute("title")).toMatch(/Most APY comes from incentives/i);
   });
 
   it("persists selected alternative sources in the URL state and forwards them to the chart", () => {
@@ -295,6 +334,49 @@ describe("YieldDetailSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove Alt Source on chart" }));
     expect(replaceParamsMock).toHaveBeenCalledTimes(2);
     expect(sourcesParam).toBe("");
+  });
+
+  it("drops stale sources URL values before forwarding chart overlays", () => {
+    sourcesParam = "stale-source,alt-source";
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          altSources: [
+            {
+              sourceKey: "alt-source",
+              yieldSource: "Alt Source",
+              yieldSourceUrl: "https://example.com/alt",
+              yieldType: "lending-vault",
+              currentApy: 0.049,
+              apy30d: 0.048,
+              sourceTvlUsd: 750_000,
+              dataSource: "defillama",
+            },
+          ],
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("alt-source");
+  });
+
+  it("falls back to best chart source when all sources URL values are stale", () => {
+    sourcesParam = "stale-source";
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByTestId("yield-history-chart").getAttribute("data-external-source-keys")).toBe("");
   });
 
   it("limits the chart source selection to four alternatives", () => {
@@ -372,5 +454,120 @@ describe("YieldDetailSection", () => {
     }
 
     expect(sourcesParam).toBe("alt-source-1,alt-source-2,alt-source-3,alt-source-4");
+  });
+
+  it("renders the 'Why this APY changed' attribution card with a headline", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText(/Why this APY changed/i)).toBeTruthy();
+    // No history points → insufficient-data path
+    expect(screen.getByText(/Not enough data to attribute/i)).toBeTruthy();
+  });
+
+  it("uses decision-ledger reason codes for source arbitration copy", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          provenance: {
+            sourceKey: "primary-source",
+            sourceObservedAt: 1_700_000_000,
+            sourceAgeSeconds: 60,
+            confidenceTier: "curated",
+            selectionMethod: "confidence-weighted",
+            selectionReason: "legacy freeform selection reason",
+            sourceSwitch: false,
+            previousBestSourceKey: null,
+            usedLegacyHistory: false,
+            usedDefaultSafety: false,
+            benchmarkRecordDate: null,
+            benchmarkIsFallback: false,
+            benchmarkFallbackMode: null,
+            anomalies: [],
+          },
+          decisionLedger: {
+            selectedReasonCode: "curated-over-discovered",
+            sourceSwitch: false,
+            rejectedCount: 1,
+            alternatives: [
+              {
+                sourceKey: "alt-source",
+                yieldSource: "Alt Source",
+                apy30dDelta: 0.01,
+                rejectionReasonCode: "lower-confidence",
+              },
+            ],
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Curated source preferred")).toBeTruthy();
+    expect(screen.getByText("Alternates: Alt Source: lower confidence.")).toBeTruthy();
+    expect(screen.queryByText("legacy freeform selection reason")).toBeNull();
+  });
+
+  it("renders the rank-movement card as 'Stable' when rankChangeAttribution is null", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([makeRanking()]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Movement vs last publication")).toBeTruthy();
+    expect(screen.getByText("Stable — no movement since last publication.")).toBeTruthy();
+  });
+
+  it("renders rank delta and PYS delta when rankChangeAttribution carries movement", () => {
+    useYieldRankingsMock.mockReturnValue({
+      data: makeResponse([
+        makeRanking({
+          rankChangeAttribution: {
+            previousRank: 12,
+            rankDelta: 3,
+            previousPys: 60,
+            pysDelta: 4.5,
+            primaryDriver: "apy",
+            driverContributions: {
+              apy: 3.2,
+              benchmark: 0.8,
+              stablecoinSafety: null,
+              sourceRisk: null,
+              sourceSwitch: null,
+              freshness: null,
+              volatility: null,
+              tvlDepth: null,
+            },
+          },
+        }),
+      ]),
+      meta: null,
+      error: null,
+      isLoading: false,
+    });
+
+    const { container } = render(<YieldDetailSection stablecoinId="dola-inverse-finance" />);
+
+    expect(screen.getByText("Movement vs last publication")).toBeTruthy();
+    // Arrow + signed delta together: "▲ +3"
+    expect(container.textContent ?? "").toMatch(/▲\s*\+3/);
+    expect(container.textContent ?? "").toMatch(/PYS\s+\+4\.50%/);
+    expect(container.textContent ?? "").toMatch(/Previous rank/);
+    expect(container.textContent ?? "").toMatch(/#12/);
+    expect(container.textContent ?? "").toMatch(/#9/);
   });
 });

@@ -11,11 +11,11 @@ import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/api-hooks";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { computeChartYDomain } from "@/lib/chart-utils";
-import { buildTotalMcapChartRows } from "@/lib/total-mcap-chart";
+import { buildTotalMcapChartRows, TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS } from "@/lib/total-mcap-chart";
 import { CHART_SLATE, USDT_GREEN, USDC_BLUE, SKY_YELLOW } from "@/lib/chart-colors";
 
 export function TotalMcapChart() {
@@ -24,10 +24,10 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
-  const { data: usdtHistory } = useSupplyHistory("usdt-tether");
-  const { data: usdcHistory } = useSupplyHistory("usdc-circle");
-  const { data: usdsHistory } = useSupplyHistory("usds-sky");
-  const { data: daiHistory } = useSupplyHistory("dai-makerdao");
+  const { data: usdtHistory } = useSupplyHistory("usdt-tether", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: usdcHistory } = useSupplyHistory("usdc-circle", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: usdsHistory } = useSupplyHistory("usds-sky", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
+  const { data: daiHistory } = useSupplyHistory("dai-makerdao", TOTAL_MCAP_MAJOR_COHORT_HISTORY_DAYS);
   const { animProps, handleAnimationEnd, chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const chartData = useMemo(() => {
@@ -86,12 +86,12 @@ export function TotalMcapChart() {
             aggregate line.
           </p>
         </div>
-        <CardAction className="flex min-w-0 items-center gap-2">
+        <CardAction className="col-start-1 row-start-2 mt-2 flex w-full min-w-0 items-center gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
           <Button
             variant="ghost"
             size="icon-sm"
-            className="shrink-0"
+            className="hidden shrink-0 sm:inline-flex"
             onClick={handlePngExport}
             title="Save chart as PNG"
           >
@@ -103,22 +103,18 @@ export function TotalMcapChart() {
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
             <div className="mb-4 flex flex-wrap gap-2">
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
+              <ChartLegendChip markerStyle={{ backgroundColor: USDT_GREEN }}>
                 USDT{latest ? `: ${formatCurrency(latest.usdt, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: USDC_BLUE }}>
                 USDC{latest ? `: ${formatCurrency(latest.usdc, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: SKY_YELLOW }}>
                 USDS + DAI{latest ? `: ${formatCurrency(latest.sky, 1)}` : ""}
-              </div>
-              <div className="pharos-chart-legend-chip">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHART_SLATE }} />
+              </ChartLegendChip>
+              <ChartLegendChip markerStyle={{ backgroundColor: CHART_SLATE }}>
                 Others{latest ? `: ${formatCurrency(latest.others, 1)}` : ""}
-              </div>
+              </ChartLegendChip>
             </div>
             <div className="pharos-chart-stage">
               <div
@@ -217,7 +213,7 @@ export function TotalMcapChart() {
           </div>
         ) : (
           <div className="pharos-empty-note flex h-[250px] sm:h-[350px] items-center justify-center text-center">
-            No market-cap history is available for the current time window.
+            No market-cap history for this window.
           </div>
         )}
       </CardContent>

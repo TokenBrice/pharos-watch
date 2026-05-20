@@ -2,6 +2,7 @@
   "id": "brz-transfero",
   "name": "Brazilian Digital",
   "symbol": "BRZ",
+  "oneLiner": "BRZ is Transfero's centralized Brazilian real stablecoin, redeemable 1:1 by KYC'd users against BRL cash held at a regulated Brazilian institution.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -12,13 +13,16 @@
   },
   "collateral": "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
   "pegMechanism": "1:1 mint and redemption at Transfero for BRL; KYC verification required; redemption incurs a 1% fee in Brazil",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "249",
   "detailProvider": "defillama",
   "geckoId": "brz",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf",
-    "provider": "Transfero"
+    "provider": "Transfero",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   },
   "launchDate": "2019-07-19",
   "links": [

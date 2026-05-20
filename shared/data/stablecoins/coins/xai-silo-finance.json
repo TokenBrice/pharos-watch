@@ -2,19 +2,21 @@
   "id": "xai-silo-finance",
   "name": "XAI Silo Finance",
   "symbol": "XAI",
+  "oneLiner": "XAI is Silo Finance's overcollateralized dollar stablecoin, minted by borrowing against approved Silo credit-line collateral such as ETH and USDC.",
   "llamaId": "89",
   "detailProvider": "defillama",
   "cmcSlug": "xai-silo-finance",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
-    "governance": "decentralized",
+    "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
   "collateral": "Overcollateralized Silo credit-line collateral, initially ETH and USDC, governed through Silo DAO credit-line parameters",
   "pegMechanism": "Users borrow XAI against approved Silo collateral and repay XAI to close debt; SiloDAO controls mint and burn capacity through credit-line parameters",
+  "mechanismArchetype": "cdp",
   "links": [
     {
       "label": "Website",
@@ -60,9 +62,15 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "Silo ETH and USDC credit-line collateral",
-      "pct": 100,
-      "risk": "medium"
+      "name": "USDC Silo credit-line collateral",
+      "pct": 89.45,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    },
+    {
+      "name": "ETH Silo credit-line collateral",
+      "pct": 10.55,
+      "risk": "very-low"
     }
   ],
   "liveReservesConfig": {
@@ -84,5 +92,12 @@
     "params": {
       "fallbackRpcUrl": "https://eth.llamarpc.com"
     }
-  }
+  },
+  "dependencies": [
+    {
+      "id": "usdc-circle",
+      "type": "collateral",
+      "weight": 0.8945
+    }
+  ]
 }

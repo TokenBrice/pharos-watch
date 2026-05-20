@@ -2,10 +2,12 @@ import {
   getDynamicEndpointDescriptorByKey,
   matchDynamicAdminEndpoint,
   type DynamicAdminEndpointMatch,
+  type EndpointMethod,
 } from "@shared/lib/api-endpoints";
 import { handleStablecoinDetail } from "../api/stablecoin-detail";
 import { handleStablecoinSummary } from "../api/stablecoin-summary";
 import { handleStablecoinReserves } from "../api/stablecoin-reserves";
+import { handleSnapshotCoin, handleSnapshotDay } from "../api/snapshot";
 import { handleOg } from "../api/og";
 import { handleDiscoveryCandidateDismiss } from "../api/admin-actions";
 import { handleApiKeyDeactivateRoute, handleApiKeyRotateRoute, handleApiKeyUpdateRoute } from "../api/api-keys";
@@ -49,6 +51,7 @@ type DynamicAdminEndpointFor<Key extends DynamicAdminEndpointKey> =
   Extract<ExpandedDynamicAdminEndpointMatch, { key: Key }>;
 type DynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey> = {
   dependencies: readonly RouteDependency[];
+  methods: readonly EndpointMethod[];
   handle: (routeCtx: FullRouteContext, dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>) => Promise<Response>;
 };
 type DynamicAdminRouteBindingMap = {
@@ -68,7 +71,7 @@ function defineDynamicRouteFromDescriptor(
   handle: DynamicRouteDefinition["handle"],
 ): DynamicRouteDefinition {
   const descriptor = requireDynamicEndpointDescriptor(key);
-  return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, handle);
+  return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, descriptor.methods, handle);
 }
 
 const DYNAMIC_ROUTE_DEFINITIONS = [
@@ -97,14 +100,39 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     "og-image",
     (routeCtx) => handleOg(routeCtx.db, routeCtx.url.pathname).then((response) => response ?? errorResponse(404, "Unknown OG route")),
   ),
+  defineDynamicRouteFromDescriptor(
+    "snapshot-day",
+    (routeCtx, match) => handleSnapshotDay(routeCtx.db, match[1]),
+  ),
+  defineDynamicRouteFromDescriptor(
+    "snapshot-coin",
+    (routeCtx, match) => {
+      let stablecoinId: string;
+      try {
+        stablecoinId = decodeURIComponent(match[2]);
+      } catch {
+        return Promise.resolve(errorResponse(400, "Malformed stablecoin id"));
+      }
+      // Resolve alias ids so /api/snapshot/<date>/stablecoin/<alias> 404s
+      // consistently with sibling /api/stablecoin/<id> endpoints rather
+      // than misattributing the snapshot row to the wrong canonical id.
+      const resolved = resolveOrReject(stablecoinId);
+      if (resolved instanceof Response) {
+        return Promise.resolve(resolved);
+      }
+      return handleSnapshotCoin(routeCtx.db, match[1], resolved.canonicalId);
+    },
+  ),
 ] as const satisfies readonly DynamicRouteDefinition[];
 
 function defineDynamicAdminRouteBinding<Key extends DynamicAdminEndpointKey>(
   key: Key,
   handle: DynamicAdminRouteBinding<Key>["handle"],
 ): DynamicAdminRouteBinding<Key> {
+  const descriptor = requireDynamicEndpointDescriptor(key);
   return {
-    dependencies: requireDynamicEndpointDescriptor(key).routeDependencies,
+    dependencies: descriptor.routeDependencies,
+    methods: descriptor.methods,
     handle,
   };
 }
@@ -158,9 +186,11 @@ export const DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS = Object.freeze(
 function bindDynamicAdminRouteMatch<Key extends DynamicAdminEndpointKey>(
   dynamicAdminEndpoint: DynamicAdminEndpointFor<Key>,
 ): RouteMatch {
+  // Cast: TS cannot narrow the binding type to the matching Key generic from a string-keyed lookup
   const binding = DYNAMIC_ADMIN_ROUTE_BINDINGS[dynamicAdminEndpoint.key] as unknown as DynamicAdminRouteBinding<Key>;
   return {
     dependencies: binding.dependencies,
+    methods: binding.methods,
     handle: (routeCtx) => binding.handle(routeCtx, dynamicAdminEndpoint),
   };
 }
@@ -176,6 +206,7 @@ export function getDynamicRouteMatch(path: string): RouteMatch | null {
     if (match) {
       return {
         dependencies: definition.dependencies,
+        methods: definition.methods,
         handle: (routeCtx) => definition.handle(routeCtx, match),
       };
     }

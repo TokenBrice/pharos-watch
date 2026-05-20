@@ -2,6 +2,7 @@
   "id": "audm-macropod",
   "name": "Macropod",
   "symbol": "AUDM",
+  "oneLiner": "AUDM is Macropod's centralized Australian dollar stablecoin, redeemable 1:1 by approved clients and backed by AUD cash held at Westpac and Banking Circle.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "AUD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Australian dollar cash held in segregated AUDM Trust reserve accounts at regulated Australian ADIs, currently Westpac Banking Corporation and Australian Settlements Ltd trading as Banking Circle",
   "pegMechanism": "Approved Macropod clients deposit AUD into the reserve to mint AUDM and return AUDM to Macropod for 1:1 AUD redemption by bank transfer, subject to onboarding, KYC/AML, sanctions, and compliance checks",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "334",
   "detailProvider": "defillama",
   "geckoId": "macropod",
@@ -19,7 +21,10 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.macropod.com/transparency/reserves",
-    "provider": "Macropod"
+    "provider": "Macropod",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "attestorJurisdiction": "Australia"
   },
   "links": [
     {

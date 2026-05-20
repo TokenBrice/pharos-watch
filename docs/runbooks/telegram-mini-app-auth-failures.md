@@ -6,16 +6,16 @@
 
 Detection signals:
 
-- `telegram_usage_daily` shows `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline; the `outcome` column distinguishes `stale-auth` from `invalid-signature` and `invalid-auth`.
+- `telegram_usage_daily` shows authenticated `event_type = 'mini_app_session_invalid'` rows climbing relative to the prior day's baseline. The `outcome` column distinguishes `stale-auth`, `rate_limited`, and pre-auth body/schema failures. Invalid signatures and malformed signed auth are intentionally not written to usage analytics because no trusted Telegram user or chat context exists yet.
 - The Mini App pulse strip (`/api/telegram-pulse`) shows `miniAppDeniedToday` rising while `miniAppSessionsToday` is flat or falling.
 - Cloudflare logs for `POST /api/telegram-mini-app/mutate` return `401` with `code = "stale-auth"` across many distinct user IDs in a short window.
-- Wrangler tail shows `validateOrResponse` throwing `TelegramMiniAppAuthError` repeatedly.
+- Wrangler tail shows `POST /api/telegram-mini-app/session` or `/mutate` returning `401` for `stale-auth` or `validation-error` repeatedly.
 
 ## Quick Diagnostic Checklist
 
 1. **Bot token rotation gap?** Cross-check with [`telegram-secret-rotation.md`](./telegram-secret-rotation.md). If `TELEGRAM_BOT_TOKEN` was rotated in the last 24 hours and `TELEGRAM_BOT_TOKEN_PREVIOUS` is unset or wrong, `initData` signed by the prior token will fail validation for the rest of its 24-hour read window. This is the single most common cause of a sudden `mini_app_session_invalid` spike.
 2. **Stale clients?** A flat 5-minute spike across a single coin or alert that just dispatched usually means many users tapped a long-lived deep link whose `auth_date` is older than 5 minutes. Mutations require a fresh launch; reads still work. The Mini App's "relaunch from Telegram" affordance is the intended remedy.
-3. **Invalid signatures?** Check the `outcome = 'invalid-signature'` and `outcome = 'invalid-auth'` rows in `telegram_usage_daily`. These point to malformed launch data, token mismatch outside a rotation overlap, or tampered payloads; no mutation reaches D1 before HMAC validation succeeds.
+3. **Invalid signatures?** Use Worker logs and HTTP response codes, not `telegram_usage_daily`, for invalid-signature / invalid-auth volume. Those failures point to malformed launch data, token mismatch outside a rotation overlap, or tampered payloads; no mutation reaches D1 before HMAC validation succeeds.
 4. **Worker degradation?** Confirm the `dispatch-telegram-alerts` lane is healthy via [`telegram-no-delivery.md`](./telegram-no-delivery.md). A failing Mini App pulse loader can present as auth failures in the UI when the page never receives a fresh state.
 
 ## Operator Commands
@@ -47,10 +47,10 @@ If `TELEGRAM_BOT_TOKEN_PREVIOUS` is missing during a rotation overlap, set it to
 Check the Mini App pulse and Worker cron health:
 
 ```bash
-curl -sS https://api.pharos.watch/api/telegram-pulse | jq '.telegramBot | {miniAppSessionsToday, miniAppMutationsToday, miniAppDeniedToday, miniAppReplayClaimsToday}'
+curl -sS https://pharos.watch/_site-data/telegram-pulse | jq '{miniAppSessionsToday, miniAppMutationsToday, miniAppDeniedToday, miniAppReplayClaimsToday}'
 curl -sS -H "CF-Access-Client-Id: $CF_ID" \
         -H "CF-Access-Client-Secret: $CF_SECRET" \
-        https://api.pharos.watch/api/status | jq '.telegramBot'
+        https://ops-api.pharos.watch/api/status | jq '.telegramBot'
 ```
 
 Tail the Worker for live signal:

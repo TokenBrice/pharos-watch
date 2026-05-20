@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FROZEN_IDS } from "@shared/lib/stablecoins";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   buildComparisonAtAGlanceRows,
   getPrimaryStaticComparisonPageForCoin,

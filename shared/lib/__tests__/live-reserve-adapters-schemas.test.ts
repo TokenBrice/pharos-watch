@@ -1,10 +1,62 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- tests read checked-in stablecoin JSON from the repository root only. */
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ACTIVE_STABLECOINS } from "../stablecoins";
+import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
-import { baseLiveReserveConfigSchema } from "../live-reserve-adapters-schemas";
+import {
+  LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  baseLiveReserveConfigSchema,
+} from "../live-reserve-adapters-schemas";
+
+const LATE_MONTHLY_SOURCE_AGE_IDS = [
+  "audm-mento",
+  "bib01-backed",
+  "brlm-mento",
+  "btcusd-btcfi",
+  "cadm-mento",
+  "ceur-celo",
+  "chfm-mento",
+  "copm-mento",
+  "cusd-celo",
+  "deuro-deuro",
+  "fdusd-first-digital",
+  "gbpm-mento",
+  "ghsm-mento",
+  "iusd-infinifi",
+  "jpym-mento",
+  "kesm-mento",
+  "phpm-mento",
+  "srusd-reservoir",
+  "usdh-native-markets",
+  "usdy-ondo-finance",
+  "uty-xsy",
+  "wsrusd-reservoir",
+  "xsgd-straitsx",
+  "zarm-mento",
+  "zchf-frankencoin",
+] as const;
+
+const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
+
+function readCoinSource(id: string): {
+  liveReservesConfig?: {
+    scoring?: {
+      maxSourceAgeSec?: number;
+    };
+  };
+} {
+  return JSON.parse(readFileSync(join(COIN_SOURCE_DIR, `${id}.json`), "utf8")) as {
+    liveReservesConfig?: {
+      scoring?: {
+        maxSourceAgeSec?: number;
+      };
+    };
+  };
+}
 
 describe("baseLiveReserveConfigSchema", () => {
   it("accepts a non-empty breakerScope", () => {
@@ -43,6 +95,18 @@ describe("baseLiveReserveConfigSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts the late-monthly disclosure source-age policy", () => {
+    const result = baseLiveReserveConfigSchema.safeParse({
+      version: 1,
+      semantics: "attestation-mix",
+      scoring: {
+        maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("LiveReservesConfigSchema URL validation", () => {
@@ -63,6 +127,15 @@ describe("LiveReservesConfigSchema URL validation", () => {
     expect(() => parseLiveReserveAdapterParams("btcfi", {
       handlersUrl: "/api/reserve-handlers",
     })).toThrow(/Invalid URL/);
+  });
+
+  it("accepts deliberate Mento CDP stablecoin params without widening to arbitrary strings", () => {
+    expect(parseLiveReserveAdapterParams("mento", {
+      cdpStablecoin: "XOFm",
+    })).toEqual({ cdpStablecoin: "XOFm" });
+    expect(() => parseLiveReserveAdapterParams("mento", {
+      cdpStablecoin: "NOTm",
+    })).toThrow(/Invalid option/);
   });
 
   it("accepts configured live reserve URLs", () => {
@@ -105,5 +178,37 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("late-monthly disclosure source-age policy", () => {
+  it("keeps reviewed late-monthly source-age overrides tied to the named policy", () => {
+    const failures = LATE_MONTHLY_SOURCE_AGE_IDS.flatMap((id) => {
+      const maxSourceAgeSec = readCoinSource(id).liveReservesConfig?.scoring?.maxSourceAgeSec;
+      return maxSourceAgeSec === LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
+        ? []
+        : [`${id}: expected ${LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC}, got ${String(maxSourceAgeSec)}`];
+    });
+
+    expect(failures).toEqual([]);
+  });
+
+  it("does not leave late-monthly-ish caps outside the named policy value", () => {
+    const adHocCaps = readdirSync(COIN_SOURCE_DIR)
+      .filter((fileName) => fileName.endsWith(".json"))
+      .flatMap((fileName) => {
+        const source = JSON.parse(readFileSync(join(COIN_SOURCE_DIR, fileName), "utf8")) as {
+          liveReservesConfig?: { scoring?: { maxSourceAgeSec?: number } };
+        };
+        const maxSourceAgeSec = source.liveReservesConfig?.scoring?.maxSourceAgeSec;
+        const isLateMonthlyRange = maxSourceAgeSec != null
+          && maxSourceAgeSec >= 3_900_000
+          && maxSourceAgeSec <= 4_100_000;
+        return isLateMonthlyRange && maxSourceAgeSec !== LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC
+          ? [`${fileName}: ${maxSourceAgeSec}`]
+          : [];
+      });
+
+    expect(adHocCaps).toEqual([]);
   });
 });

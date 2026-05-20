@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillMintBurnPrices } from "../backfill-mint-burn-prices";
 
 stubCryptoForAuth();

@@ -1,5 +1,5 @@
 import { computeStressedGrades, GRADE_THRESHOLDS } from "@shared/lib/report-cards";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isKnownCoinId } from "@shared/lib/validate-coin-id";
 import type { ReportCard, ReportCardGrade, ReportCardsResponse } from "@shared/types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";

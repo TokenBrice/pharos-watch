@@ -2,6 +2,7 @@
   "id": "usdr-ring",
   "name": "Ring USD",
   "symbol": "USDR",
+  "oneLiner": "USDR is Ring Protocol's centrally managed synthetic dollar minted against protocol-controlled crypto collateral, with no public redemption route documented.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

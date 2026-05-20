@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
+import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/app/yield/source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "./test-helpers";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 
@@ -83,6 +83,7 @@ describe("buildYieldSourceBoardModel", () => {
       key: "lending-opportunity:protocol-api",
       dataSourceLabel: "Protocol API",
       yieldTypeLabel: "Lending Opp.",
+      laneConfidenceTier: "curated",
       selectedCount: 2,
       alternateCount: 0,
       representedSourceCount: 2,
@@ -90,6 +91,7 @@ describe("buildYieldSourceBoardModel", () => {
     }));
     expect(model.groups.find((group) => group.key === "lending-opportunity:defillama-auto")).toEqual(
       expect.objectContaining({
+        laneConfidenceTier: "discovered",
         selectedCount: 0,
         alternateCount: 1,
         representedSourceCount: 1,
@@ -98,6 +100,7 @@ describe("buildYieldSourceBoardModel", () => {
     );
     expect(model.groups.find((group) => group.key === "lending-vault:defillama")).toEqual(
       expect.objectContaining({
+        laneConfidenceTier: "curated",
         selectedCount: 0,
         alternateCount: 1,
         representedSourceCount: 1,
@@ -159,6 +162,16 @@ describe("buildYieldSourceBoardModel", () => {
     );
 
     expect(model.benchmarkLabels).toEqual([{ label: "USD 3M T-Bill", count: 1 }]);
+  });
+
+  it("infers lane confidence tier from known dataSource values and returns null for unknown", () => {
+    expect(inferLaneConfidenceTier("onchain")).toBe("deterministic");
+    expect(inferLaneConfidenceTier("rate-derived")).toBe("deterministic");
+    expect(inferLaneConfidenceTier("defillama")).toBe("curated");
+    expect(inferLaneConfidenceTier("protocol-api")).toBe("curated");
+    expect(inferLaneConfidenceTier("defillama-auto")).toBe("discovered");
+    expect(inferLaneConfidenceTier("price-derived")).toBe("fallback");
+    expect(inferLaneConfidenceTier("mystery-feed")).toBeNull();
   });
 
   it("returns empty summaries for an empty ranking set", () => {

@@ -2,6 +2,7 @@
   "id": "brla-brla-digital",
   "name": "BRLA Digital",
   "symbol": "BRLA",
+  "oneLiner": "BRLA is Avenia's centralized Brazilian real stablecoin, mint/redeemed 1:1 for BRL and backed by Brazilian government bonds and BRL cash in regulated custody.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "BRL",
@@ -12,13 +13,17 @@
   },
   "collateral": "Brazilian government bonds (titulos publicos) and BRL cash held in regulated custody in Brazil; reserves audited monthly by a third-party firm with attestations published on a transparency page",
   "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "365",
   "detailProvider": "defillama",
   "geckoId": "brla-digital-brla",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a",
-    "provider": "Avenia"
+    "provider": "Avenia",
+    "attestorTier": "self",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Brazil"
   },
   "links": [
     {
@@ -86,5 +91,6 @@
       "pct": 100,
       "risk": "low"
     }
-  ]
+  ],
+  "chainTier": "established-alt-l1"
 }

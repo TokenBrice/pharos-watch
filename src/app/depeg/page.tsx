@@ -4,9 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { ShareButton } from "@/components/share-button";
+import { DepegEventArchive } from "@/app/depeg/depeg-event-archive";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildApiOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -19,7 +21,7 @@ export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
   description: depegDescription,
   canonical: "/depeg/",
-  ogImage: buildApiOgImageUrl("/api/og/depeg"),
+  ogImage: buildApiOgImageUrl(API_PATHS.ogDepeg()),
 });
 
 const FAQ_ITEMS = [
@@ -47,7 +49,7 @@ export default createClientFeaturePage({
     breadcrumbName: "Depeg Tracker",
     path: "/depeg/",
     title: "Depeg Tracker",
-    statusBadge: { status: "mature", version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL },
+    statusBadge: { status: "mature" },
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -55,8 +57,15 @@ export default createClientFeaturePage({
     headerActions: <ShareButton ogPath="/api/og/depeg" />,
     leadParagraphs: [
       "A live incident board for confirmed peg deviations, pending confirmation, and early stress signals.",
-      `DEWS scans 8 sub-signals every 30 minutes across ${ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly — to score pre-price and live-market stress signals. When systemic risk rises, the radar sweeps faster.`,
     ],
+    headerSupplement: (
+      <p className="pharos-lead hidden sm:block">
+        DEWS scans 8 sub-signals every 30 minutes across {ACTIVE_STABLECOIN_COUNT} stablecoins — supply velocity, pool
+        drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and
+        yield anomaly — to score pre-price and live-market stress signals. When systemic risk rises, the radar sweeps
+        faster.
+      </p>
+    ),
   },
   beforeClient: (
     <CalloutBanner
@@ -73,5 +82,10 @@ export default createClientFeaturePage({
       </Link>
     </CalloutBanner>
   ),
-  afterClient: <FaqSection items={FAQ_ITEMS} includeJsonLd />,
+  afterClient: (
+    <>
+      <DepegEventArchive />
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
+    </>
+  ),
 });

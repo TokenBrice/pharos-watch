@@ -1,4 +1,4 @@
-import { isCacheBypassPath } from "@shared/lib/api-endpoints";
+import { isCacheableGetRequest } from "./cache-eligibility";
 
 interface EdgeCacheContext {
   cacheKey: Request;
@@ -8,7 +8,7 @@ interface EdgeCacheContext {
 export function createEdgeCacheContext(request: Request, url: URL): EdgeCacheContext {
   return {
     cacheKey: new Request(request.url, { method: "GET" }),
-    skipCache: request.method !== "GET" || isCacheBypassPath(url.pathname),
+    skipCache: !isCacheableGetRequest(request, url),
   };
 }
 

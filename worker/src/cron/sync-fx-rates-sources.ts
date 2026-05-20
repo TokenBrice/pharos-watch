@@ -40,6 +40,15 @@ export type FrankfurterLoadResult =
   | { ok: false; kind: "unavailable"; statusCode: number | null }
   | { ok: false; kind: "invalid-payload"; issues: string };
 
+function formatSecondaryFxVersion(date: Date): string {
+  return `${date.getUTCFullYear()}.${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
+}
+
+function buildSecondaryFxDatedPackageUrl(now = new Date()): string {
+  const version = formatSecondaryFxVersion(now);
+  return `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${version}/v1/currencies/usd.min.json`;
+}
+
 function rankIsoDate(dateText: string | null | undefined): number {
   if (!dateText) return Number.NEGATIVE_INFINITY;
   const parsed = Date.parse(`${dateText}T00:00:00Z`);
@@ -126,15 +135,18 @@ export async function loadFrankfurterPayload(
 }
 
 export async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Promise<SecondaryCurrencyCandidate | null> {
-  const [primaryCandidate, fallbackCandidate] = await Promise.all([
+  const [primaryCandidate, fallbackCandidate, datedPackageCandidate] = await Promise.all([
     fetchSecondaryCurrencyCandidate("jsdelivr", SECONDARY_FX_PRIMARY_URL, signal),
     fetchSecondaryCurrencyCandidate("pages.dev", SECONDARY_FX_FALLBACK_URL, signal),
+    fetchSecondaryCurrencyCandidate("jsdelivr-versioned", buildSecondaryFxDatedPackageUrl(), signal),
   ]);
 
-  const secondaryCandidate = chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate);
+  const secondaryCandidate = chooseSecondaryCurrencyCandidate(
+    chooseSecondaryCurrencyCandidate(primaryCandidate, fallbackCandidate),
+    datedPackageCandidate,
+  );
   if (
     primaryCandidate &&
-    fallbackCandidate &&
     secondaryCandidate &&
     secondaryCandidate.endpoint !== primaryCandidate.endpoint
   ) {

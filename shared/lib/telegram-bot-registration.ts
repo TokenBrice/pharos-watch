@@ -1,0 +1,44 @@
+export const TELEGRAM_ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"] as const;
+
+// Profile metadata shown on the bot's About page, card preview, and chat
+// header. Kept in shared code so Worker reconciliation and manual recovery
+// scripts use the same reviewed payloads.
+export const TELEGRAM_BOT_NAME = "Pharos Watch";
+export const TELEGRAM_BOT_SHORT_DESCRIPTION =
+  "Track 380+ stablecoins. Tap the menu button for the alert control panel.";
+export const TELEGRAM_BOT_DESCRIPTION =
+  "Pharos Watch pushes alerts when something matters across the Pharos stablecoin universe: DEWS stress bands, depeg events, safety grade changes, and new launches. Subscribe to curated presets like usd-top25, or build a custom watchlist of any tracked coin. Tap the menu button to open the Mini App — your visual control panel for watchlists, quiet hours, and per-coin tuning. Learn more at https://pharos.watch/pharoswatchbot/";
+
+export const TELEGRAM_BOT_COMMANDS = [
+  { command: "start", description: "Get started with Pharos alerts" },
+  { command: "help", description: "Command reference" },
+  { command: "sample", description: "Preview a synthetic alert before subscribing" },
+  { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
+  { command: "brief", description: "Latest Pharos market brief" },
+  { command: "top", description: "Rank current views: depeg, dews, yield, liquidity, chains, safety" },
+  { command: "why", description: "Explain one coin Safety Score (e.g. /why USDC)" },
+  { command: "coverage", description: "Show which Pharos data surfaces cover one coin" },
+  { command: "health", description: "Show delivery diagnostics for this chat" },
+  { command: "list", description: "Show your current subscriptions and settings" },
+  { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
+  { command: "unsubscribe", description: "Remove coin subscriptions" },
+  { command: "presets", description: "Browse preset watchlists like usd-top25 / non-usd-top25" },
+  { command: "set", description: "Tune per-coin or global thresholds (e.g. /set all depeg-step 250)" },
+  { command: "settings", description: "Open the inline settings keyboard (e.g. /settings or /settings USDC)" },
+  { command: "mute", description: "Enable quiet hours (e.g. /mute 22-07; uses your /timezone)" },
+  { command: "timezone", description: "Set chat timezone for quiet hours (e.g. /timezone Europe/Paris)" },
+  { command: "unsnooze", description: "Clear active alert snooze" },
+  { command: "unmutehours", description: "Disable quiet hours" },
+  { command: "cancel", description: "Cancel a pending ticker selection" },
+  { command: "forget", description: "Delete all your subscriber data" },
+] as const;
+
+export const TELEGRAM_BOT_GROUP_COMMANDS = [
+  { command: "subscribe", description: "Subscribe to alerts (e.g. /subscribe usd-top-50 depeg-step 250)" },
+  { command: "unsubscribe", description: "Remove coin subscriptions" },
+  { command: "list", description: "Show your current subscriptions and settings" },
+  { command: "health", description: "Show delivery diagnostics for this chat" },
+  { command: "status", description: "Current peg, DEWS, and safety for one coin (e.g. /status USDC)" },
+  { command: "mute", description: "Enable quiet hours in UTC (e.g. /mute 22-07)" },
+  { command: "help", description: "Command reference" },
+] as const;

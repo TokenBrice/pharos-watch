@@ -11,7 +11,7 @@ import { resolveOrReject } from "../lib/api-utils";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_IDS, FROZEN_IDS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
@@ -22,6 +22,7 @@ import { scoreToGrade } from "@shared/lib/report-cards";
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
 // ---------------------------------------------------------------------------
 
+// Intentional per-isolate cache — WASM init runs once per Worker isolate; module-scope `let` is the documented exception. See docs/worker-infrastructure.md.
 let wasmInitialized = false;
 
 async function ensureWasm(): Promise<void> {
@@ -578,9 +579,20 @@ export async function handleOg(db: D1Database, path: string): Promise<Response |
     return null;
   } catch (err) {
     console.error("[og] Render error:", err);
+    // Render-internal/transient failure (satori throw, resvg WASM crash, missing
+    // font, D1 read failure). Permanent errors (unknown coin, malformed input)
+    // return their own 4xx earlier and never reach this catch. Use 503 + no-store
+    // so the CDN does not pin a failure response, and surface error.name for
+    // diagnostics without leaking the full message.
+    const errorClass = err instanceof Error ? err.name : "UnknownError";
     return new Response("OG image generation failed", {
-      status: 500,
-      headers: { "Content-Type": "text/plain" },
+      status: 503,
+      headers: {
+        "Content-Type": "text/plain",
+        "Retry-After": "60",
+        "Cache-Control": "no-store",
+        "X-Render-Error-Class": errorClass,
+      },
     });
   }
 }

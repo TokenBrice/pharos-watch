@@ -50,7 +50,7 @@ import {
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
 } from "../../lib/constants";
-import { makeAsset } from "../../api/__tests__/helpers/fixtures";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 
 interface PendingRow {

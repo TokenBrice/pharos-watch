@@ -2,4 +2,4 @@
 
 import { createPageError } from "@/components/create-page-error";
 
-export default createPageError("Failed to load status data", "StatusError");
+export default createPageError("Status didn't load.", "StatusError");

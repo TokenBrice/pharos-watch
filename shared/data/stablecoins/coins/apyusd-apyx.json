@@ -2,6 +2,7 @@
   "id": "apyusd-apyx",
   "name": "apyUSD",
   "symbol": "apyUSD",
+  "oneLiner": "apyUSD is the ERC-4626 yield-bearing wrapper of apxUSD, capturing dividends and preferred-equity yield from Apyx's Digital Asset Treasury collateral.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -42,20 +43,18 @@
       "url": "https://github.com/apyx-labs"
     }
   ],
+  "jurisdiction": {
+    "country": "British Virgin Islands"
+  },
   "contracts": [
     {
       "chain": "ethereum",
       "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
       "decimals": 18
-    },
-    {
-      "chain": "base",
-      "address": "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
-      "decimals": 18
     }
   ],
   "chainTier": "ethereum",
-  "deploymentModel": "third-party-bridge",
+  "deploymentModel": "single-chain",
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "wrapper",
@@ -97,5 +96,12 @@
         "expectedAssetAddress": "0x98a878b1cd98131b271883b390f68d2c90674665"
       }
     }
+  },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "provider": "Apyx transparency documentation",
+    "attestorTier": "self",
+    "cadence": "ad-hoc"
   }
 }

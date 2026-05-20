@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
@@ -53,8 +53,24 @@ vi.mock("@/components/stablecoin-detail/hero-card", () => ({
   HeroCard: () => <div data-testid="hero-card" />,
 }));
 
-vi.mock("@/components/stablecoin-detail/notices-and-summary-section", () => ({
-  NoticesAndSummarySection: () => <div data-testid="notices-and-summary" />,
+vi.mock("@/components/stablecoin-detail/overview-section", () => ({
+  OverviewSection: () => null,
+}));
+
+vi.mock("@/components/ai-summary", () => ({
+  AiSummary: () => <div data-testid="ai-summary" />,
+}));
+
+vi.mock("@/components/dews-detail", () => ({
+  DEWSDetail: () => null,
+}));
+
+vi.mock("@/components/coin-notice", () => ({
+  CoinNotices: () => null,
+}));
+
+vi.mock("@/components/tape-for-coin-teaser", () => ({
+  TapeForCoinTeaser: () => null,
 }));
 
 vi.mock("@/components/feedback-modal", () => ({
@@ -63,6 +79,16 @@ vi.mock("@/components/feedback-modal", () => ({
 
 vi.mock("@/components/exploit-notice-banner", () => ({
   ExploitNoticeBanner: () => null,
+}));
+
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
+  RecentBlacklistBanner: () => null,
+}));
+
+vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
+  ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
+    <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
+  ),
 }));
 
 vi.mock("@/components/report-card", () => ({
@@ -137,6 +163,10 @@ function makeFrozenViewModel(coin: StablecoinMeta) {
     reserveFetchError: null,
     supplyError: null,
     staleQueries: [],
+    verdict: {
+      archetype: "frozen-archive",
+      label: "Frozen Archive",
+    },
     handleRetryAll: vi.fn(),
   };
 }
@@ -166,6 +196,23 @@ describe("StablecoinDetailClient (frozen)", () => {
     // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
     // sections render unconditionally for this fixture.
     expect(notes.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("renders the frozen banner before preserved AI prose", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      ...makeFrozenViewModel(coin),
+      summary: {
+        title: "Archived note",
+        text: "Pre-freeze prose.",
+        updatedAt: "2026-04-01",
+      },
+    });
+    render(<StablecoinDetailClient id={coin.id} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+
+    const banner = screen.getByRole("heading", { name: /Sunset by issuer\./ });
+    const summary = screen.getByTestId("ai-summary");
+    expect(banner.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 

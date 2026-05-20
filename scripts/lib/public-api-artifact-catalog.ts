@@ -140,8 +140,15 @@ export const DEX_LIQUIDITY_HISTORY_DAYS_PARAM = {
 export const SUPPLY_HISTORY_DAYS_PARAM = {
   name: "days",
   in: "query",
-  schema: { type: "integer", minimum: 1, maximum: 1825 },
+  schema: { type: "integer", minimum: 1, maximum: 5000 },
   description: "Historical lookback window in days. Defaults to 365.",
+} as const satisfies PublicApiArtifactParameter;
+
+export const NON_USD_SHARE_DAYS_PARAM = {
+  name: "days",
+  in: "query",
+  schema: { type: "integer", minimum: 30, maximum: 5000 },
+  description: "Historical lookback window in days. Defaults to 5000; `0` maps to the default.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
@@ -191,6 +198,14 @@ const STABLECOIN_ID_TOKEN = "__stablecoinId__";
 const stablecoinPathTemplate = (path: string) => path.replace(STABLECOIN_ID_TOKEN, "{stablecoinId}");
 const stablecoinPostmanPath = (path: string, variable = "stablecoinId") =>
   path.replace(STABLECOIN_ID_TOKEN, `{{${variable}}}`);
+
+const SNAPSHOT_DATE_TOKEN = "__snapshotDate__";
+const snapshotPathTemplate = (path: string) =>
+  path.replace(SNAPSHOT_DATE_TOKEN, "{date}").replace(STABLECOIN_ID_TOKEN, "{stablecoinId}");
+const snapshotPostmanPath = (path: string) =>
+  path
+    .replace(SNAPSHOT_DATE_TOKEN, "{{snapshotDate}}")
+    .replace(STABLECOIN_ID_TOKEN, "{{stablecoinId}}");
 
 export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
   {
@@ -497,7 +512,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     key: "blacklist",
     path: API_PATHS.blacklist(),
     summary: "Blacklist events",
-    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name, event type, search, sort, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+    description: "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
     parameters: [
       BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM,
@@ -506,6 +521,12 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         in: "query",
         schema: { type: "string" },
         description: "Optional exact chain display-name filter, for example `Ethereum` or `Tron`. Use response `chainId` fields for programmatic joins.",
+      },
+      {
+        name: "chainId",
+        in: "query",
+        schema: { type: "string" },
+        description: "Optional canonical chain-registry ID filter, for example `ethereum` or `tron`. When both `chain` and `chainId` are supplied, they must identify the same chain.",
       },
       {
         name: "eventType",
@@ -534,8 +555,8 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
       {
         name: "limit",
         in: "query",
-        schema: { type: "integer", minimum: 1, maximum: 1000 },
-        description: "Maximum number of events to return. Defaults to 1000.",
+        schema: { type: "integer", minimum: 0, maximum: 1000 },
+        description: "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
       },
       {
         name: "offset",
@@ -543,18 +564,26 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         schema: { type: "integer", minimum: 0 },
         description: "Pagination offset. Defaults to 0.",
       },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When false, skips the exact total count.",
+      },
     ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
       query: {
         stablecoin: "{{blacklistStablecoinSymbol}}",
         chain: "Ethereum",
+        chainId: "ethereum",
         eventType: "blacklist",
         q: "",
         sortBy: "date",
         sortDirection: "desc",
         limit: "{{limit}}",
         offset: "0",
+        includeTotal: "true",
       },
     },
   },
@@ -630,6 +659,18 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         schema: { type: "integer", minimum: 0 },
         description: "Pagination offset. Defaults to 0.",
       },
+      {
+        name: "cursor",
+        in: "query",
+        schema: { type: "string" },
+        description: "Opaque keyset cursor returned as nextCursor; cannot be combined with a non-zero offset.",
+      },
+      {
+        name: "includeTotal",
+        in: "query",
+        schema: { type: "boolean" },
+        description: "When false, skips the exact total count.",
+      },
     ],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
@@ -642,6 +683,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
         minAmount: "0",
         limit: "{{limit}}",
         offset: "0",
+        includeTotal: "true",
       },
     },
   },
@@ -652,6 +694,18 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     description: "Yield-bearing stablecoin rankings with safety, benchmark-aware context, and optional publication/source-risk metadata fields.",
     tags: ["Yield"],
     responseSchema: "YieldRankingsResponse",
+    postman: {
+      folder: "Flows, blacklist, yield, and chains",
+    },
+  },
+  {
+    key: "yield-adapter-manifest",
+    path: API_PATHS.yieldAdapterManifest(),
+    summary: "Yield adapter manifest",
+    description:
+      "Machine-readable source-list manifest for every yield-bearing asset, including adapter family, exact runtime source key when known, source-key pattern for runtime-resolved or disabled strategies, label, chain/project hints, lifecycle state, and methodology version.",
+    tags: ["Yield"],
+    responseSchema: "YieldAdapterManifestResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },
@@ -712,7 +766,7 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
     summary: "Non-USD share",
     description: "Historical non-USD peg share series for market-structure views.",
     tags: ["Market Structure", "History"],
-    parameters: [DAYS_PARAM],
+    parameters: [NON_USD_SHARE_DAYS_PARAM],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
       query: { days: "{{days}}" },
@@ -786,6 +840,68 @@ export const PUBLIC_API_ARTIFACT_ENDPOINTS = [
       folder: "Historical data",
       order: 6,
       query: { date: "{{digestDate}}" },
+    },
+  },
+  {
+    key: "snapshots-index",
+    path: API_PATHS.snapshotsIndex(),
+    summary: "Public snapshot index",
+    description: "Listing of available daily public snapshots with content hashes and methodology versions.",
+    tags: ["Digest"],
+    postman: {
+      folder: "Historical data",
+      order: 7,
+    },
+  },
+  {
+    key: "snapshot-day",
+    path: snapshotPathTemplate(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
+    summary: "Public snapshot for a single day",
+    description:
+      "Full per-day public dataset snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD; served with public, immutable, max-age=1y cache headers.",
+    tags: ["Digest", "History"],
+    parameters: [
+      {
+        name: "date",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+      },
+    ],
+    postman: {
+      folder: "Historical data",
+      order: 8,
+      path: snapshotPostmanPath(API_PATHS.snapshotDay(SNAPSHOT_DATE_TOKEN)),
+    },
+  },
+  {
+    key: "snapshot-coin",
+    path: snapshotPathTemplate(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
+    summary: "Public snapshot projection for a single coin",
+    description:
+      "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
+    tags: ["Digest", "Stablecoins", "History"],
+    parameters: [
+      {
+        name: "date",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "ISO 8601 date (YYYY-MM-DD) matching a row in the snapshot index.",
+      },
+      {
+        name: "stablecoinId",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "Stablecoin id (lowercase-kebab).",
+      },
+    ],
+    postman: {
+      folder: "Historical data",
+      order: 9,
+      path: snapshotPostmanPath(API_PATHS.snapshotCoin(SNAPSHOT_DATE_TOKEN, STABLECOIN_ID_TOKEN)),
     },
   },
   {

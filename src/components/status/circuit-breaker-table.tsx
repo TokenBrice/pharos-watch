@@ -1,6 +1,7 @@
 import type { CircuitRecord } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { formatTimestampSeconds } from "@/lib/status-dashboard-model";
+import { PublicSignalCard } from "./public-signal-card";
 
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | undefined;
@@ -9,10 +10,9 @@ interface CircuitBreakerTableProps {
 export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {
     return (
-      <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
-        <h3 className="text-base font-semibold tracking-tight text-foreground">Circuit Breakers</h3>
-        <p className="mt-3 text-sm text-muted-foreground">No circuit breakers registered</p>
-      </article>
+      <PublicSignalCard title="Circuit Breakers" contentClassName="mt-3">
+        <p className="text-sm text-muted-foreground">No circuit breakers registered</p>
+      </PublicSignalCard>
     );
   }
 
@@ -57,8 +57,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
   );
 
   return (
-    <article className="rounded-xl border border-border/50 bg-card/60 p-5 dark:bg-card/30">
-      <h3 className="text-base font-semibold tracking-tight text-foreground">Circuit Breakers</h3>
+    <PublicSignalCard title="Circuit Breakers" contentClassName="mt-0">
       <p className="text-sm text-muted-foreground leading-relaxed mb-4">
         Circuit breakers protect data quality by temporarily disabling a data source after repeated failures.
         {" "}<strong className="text-foreground">Closed</strong> means the source is healthy.
@@ -84,6 +83,6 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
           </details>
         )}
       </div>
-    </article>
+    </PublicSignalCard>
   );
 }

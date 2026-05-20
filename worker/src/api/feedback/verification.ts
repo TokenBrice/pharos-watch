@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { VerificationResult } from "./types";

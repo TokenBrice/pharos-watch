@@ -358,6 +358,63 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as whitelisted Professional Investor redemption through the Centrifuge issuer rail; async vault processing can delay settlement.",
     ],
   },
+  "jaaa-janus-henderson-anemoy": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Anemoy materials describe subscriptions and redemptions in stablecoins; public materials reviewed do not publish one fixed JAAA redemption fee",
+    ),
+    docs: [
+      sourceRef("Anemoy JAAA fund", "https://www.anemoy.io/funds/jaaa", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Modeled as whitelisted professional-investor redemption through the Anemoy / Centrifuge fund rail; tokenized CLO-fund NAV processing is slower and more access-limited than on-chain stablecoin liquidity.",
+    ],
+  },
+  "acrdx-anemoy-apollo": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Anemoy / Centrifuge materials describe qualified-investor ACRDX subscriptions and redemptions; public materials reviewed do not publish one fixed ACRDX redemption fee",
+    ),
+    docs: [
+      sourceRef("Anemoy ACRDX launch", "https://www.anemoy.io/news/acrdx-launched", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("RWA.xyz ACRDX profile", "https://app.rwa.xyz/assets/ACRDX", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Centrifuge investor docs", "https://docs.centrifuge.io/user/investor/", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Modeled as qualified-investor NAV redemption through the Anemoy / Centrifuge issuer rail, mirroring the Apollo credit fund template while preserving queued private-credit settlement risk.",
+    ],
+  },
   "ustbl-spiko": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -387,6 +444,134 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
     ],
   },
+  "safo-spiko-usd": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SAFO redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko investor redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    ],
+  },
+  "spkcc-spiko": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed SPKCC redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko investor redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
+        "capacity",
+        "fees",
+        "access",
+      ]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated Spiko cash-and-carry fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    ],
+  },
+  "uktbl-spiko": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed UKTBL redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko investor redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko UK Treasury bills fund", "https://www.spiko.io/spiko-treasury-bills-pound", [
+        "capacity",
+        "fees",
+        "access",
+      ]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    ],
+  },
+  "gbpsafo-spiko": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed GBPSAFO redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko investor redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko pound fund", "https://www.spiko.io/spiko-pound", ["capacity", "fees", "access"]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated Spiko / Amundi GBP fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
+    ],
+  },
   "eutbl-spiko": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
@@ -414,6 +599,122 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ],
     notes: [
       "Modeled as account-gated fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    ],
+  },
+  "eursafo-spiko": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSAFO redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko instant redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko euro fund", "https://www.spiko.io/spiko-euro", ["capacity", "fees", "access"]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated Spiko / Amundi EUR fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    ],
+  },
+  "eurspkcc-spiko": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "days",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Spiko docs describe withdrawal/redemption orders and fund-product terms; public materials reviewed do not publish one fixed EURSPKCC redemption fee",
+    ),
+    docs: [
+      sourceRef(
+        "Spiko deposits and withdrawals",
+        "https://docs.spiko.io/documentation/account_management/deposits_withdrawals",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Spiko instant redemption API",
+        "https://docs.spiko.io/developers/investor_api/reference/redemption-orders-create-instant-redemption-order",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef("Spiko cash and carry fund", "https://www.spiko.io/spiko-cash-and-carry", [
+        "capacity",
+        "fees",
+        "access",
+      ]),
+      sourceRef(
+        "Spiko SICAV prospectus",
+        "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        ["capacity", "fees", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as account-gated Spiko EUR cash-and-carry fund-share redemption at NAV; instant withdrawals are eligibility-limited and standard withdrawals remain bank-rail dependent.",
+    ],
+  },
+  "stac-securitize": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Securitize materials describe STAC subscriptions and redemptions at fund NAV; public materials reviewed do not publish one fixed STAC redemption fee",
+    ),
+    docs: [
+      sourceRef("Securitize STAC", "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(
+        "Securitize STAC launch",
+        "https://securitize.io/learn/press/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-BNY",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as qualified-investor Securitize primary-market redemption at NAV, not as secondary exchange liquidity.",
+    ],
+  },
+  "hlscope-hamilton-lane": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
+    settlementModel: "queued",
+    outputAssetType: "nav",
+    costModel: documentedVariableFee(
+      "Securitize / Hamilton Lane materials describe SCOPE feeder-fund redemption features; public materials reviewed do not publish one fixed HLSCOPE redemption fee",
+    ),
+    docs: [
+      sourceRef("Securitize HLSCOPE", "https://securitize.io/primary-market/hl-scope", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(
+        "Hamilton Lane SCOPE via Securitize",
+        "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize",
+        ["route", "capacity", "access", "settlement"],
+      ),
+    ],
+    notes: [
+      "Modeled as a Securitize client redemption route for qualified Hamilton Lane SCOPE feeder-fund investors, preserving private-credit feeder settlement and access limits.",
     ],
   },
   "bib01-backed": {

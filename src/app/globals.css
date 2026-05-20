@@ -1026,3 +1026,52 @@
     transform: none !important;
   }
 }
+
+/*
+ * Print stylesheet for methodology white-paper PDFs (idea 4.10).
+ * Playwright `page.pdf()` automatically emulates print media, so these rules
+ * apply at PDF-generation time without any URL flag. Hides app chrome
+ * (regime bar, top tape, header, sidebar, footer, mobile dock, scroll-to-top,
+ * feedback button) so the printed page renders only the longform content.
+ */
+@media print {
+  /* Hide top-level chrome (regime bar + tape + sidebar/header/footer wrappers)
+     while preserving the longform content under <main id="main-content">.
+     Regime bar + tape sit as fixed siblings of <main>; the explicit aria-labels
+     below cover the regime bar and the floating utility/feedback/scroll-to-top
+     buttons. */
+  body :is(header, aside, footer),
+  body > a[href="#main-content"],
+  button[aria-label^="Market regime:"],
+  button[aria-label="Scroll to top"],
+  button[aria-label="Send feedback"] {
+    display: none !important;
+  }
+
+  /* Reset background/padding for clean print rendering. */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  #main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Avoid splitting headings across pages. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Respect background colors (badges, tags) for fidelity. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

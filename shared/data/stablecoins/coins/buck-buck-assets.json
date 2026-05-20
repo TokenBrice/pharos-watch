@@ -2,6 +2,7 @@
   "id": "buck-buck-assets",
   "name": "Buck",
   "symbol": "BUCK",
+  "oneLiner": "BUCK was Bridge Building's USDC-redeemable savings stablecoin backed by Strategy Inc. preferred stock (STRC) before its April 2026 wind-down.",
   "status": "frozen",
   "frozenAt": "2026-04-30",
   "obituary": {
@@ -41,7 +42,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://buck.io/transparency",
-    "provider": "The Network Firm"
+    "provider": "The Network Firm",
+    "attestorTier": "niche",
+    "cadence": "monthly",
+    "attestorJurisdiction": "United States"
   },
   "links": [
     {

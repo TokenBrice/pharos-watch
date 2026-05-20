@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { adaptBtcfi } from "../btcfi";
 
 describe("adaptBtcfi", () => {
+  it("declares latest-state API aggregation as not-applicable freshness", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.btcfi.validation.allowedFreshnessModes).toEqual([
+      "not-applicable",
+    ]);
+  });
+
   it("emits per-symbol BTC slices with canonical risk mapping", () => {
     const result = adaptBtcfi(
       [
@@ -23,7 +30,30 @@ describe("adaptBtcfi", () => {
     expect(result.slices.every((s) => s.risk === "medium")).toBe(true);
     expect(result.metadata).toMatchObject({
       handlerCount: 4,
-      freshnessMode: "unverified",
+      freshnessMode: "not-applicable",
+      details: {
+        freshnessSource: "protocol-market-and-handler-apis",
+      },
+    });
+  });
+
+  it("does not promote stable borrow value into redemption telemetry without route evidence", () => {
+    const result = adaptBtcfi(
+      [
+        { token_handler_id: 0, deposit_value: "5000" },
+        { token_handler_id: 1, deposit_value: "0", borrow_value: "7709211.347405107" },
+      ],
+      [
+        { id: 0, symbol: "WBTC", isStable: false },
+        { id: 1, symbol: "BtcUSD", isStable: true },
+      ],
+    );
+
+    // Stable-row debt is not enough to prove current holder redemption capacity or route availability.
+    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.btcfi.redemptionTelemetry).toEqual({
+      capacity: "none",
+      fee: "none",
     });
   });
 
@@ -67,7 +97,7 @@ describe("adaptBtcfi", () => {
     expect(result.metadata).toMatchObject({
       handlerCount: 1,
       unknownExposurePct: 100,
-      freshnessMode: "unverified",
+      freshnessMode: "not-applicable",
     });
     expect(result.warnings).toContainEqual({
       code: "unknown-btc-wrapper",

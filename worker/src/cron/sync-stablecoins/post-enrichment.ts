@@ -6,7 +6,7 @@
  */
 import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import { getPriceCache, type PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";

@@ -10,7 +10,11 @@ import {
 } from "@shared/lib/filter-tags";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { ACTIVE_IDS, TRACKED_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import {
+  CLIENT_ACTIVE_IDS as ACTIVE_IDS,
+  CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
+  CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
+} from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
 
 export type StablecoinTableSortKey =

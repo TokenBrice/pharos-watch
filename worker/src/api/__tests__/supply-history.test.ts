@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeSupplyRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
 import { handleSupplyHistory } from "../supply-history";
 
 describe("handleSupplyHistory", () => {
@@ -49,8 +49,41 @@ describe("handleSupplyHistory", () => {
     const db = mockD1([], { requireMatch: true });
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"));
     expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 1825" });
+    expect(await res.json()).toEqual({ error: "Invalid days: must be between 1 and 5000" });
     expect(db.getHistory()).toEqual([]);
+  });
+
+  it("accepts long history windows for all-time market structure overlays", async () => {
+    const nowSec = 1_765_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const db = mockD1(
+      [
+        {
+          match: "FROM cache",
+          matchBinds: ["snapshot-supply:last-write"],
+          rows: [],
+          first: null,
+        },
+        {
+          match: "FROM supply_history",
+          matchBinds: ["usdt-tether", nowSec - 5000 * 86_400],
+          rows: [row],
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=5000"));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([
+      {
+        date: row.snapshot_date,
+        circulatingUsd: row.circulating_usd,
+        price: row.price,
+      },
+    ]);
+    db.assertAllMatchesUsed();
   });
 
   it("maps snake_case columns to camelCase", async () => {

@@ -5,8 +5,8 @@ import {
   getVariantRelationship,
   getVariants,
   isTrackedVariant,
-  TRACKED_STABLECOINS,
 } from "../index";
+import { TRACKED_STABLECOINS } from "../registry";
 import { getTrackedBlacklistStatus } from "../../tracked-blacklist-status";
 
 describe("stablecoin variants", () => {

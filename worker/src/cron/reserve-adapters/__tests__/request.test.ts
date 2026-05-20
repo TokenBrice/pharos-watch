@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { buildBrowserHeaders, getCachedRequest } from "../request";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  buildBrowserHeaders,
+  fetchJsonPostWithRetry,
+  fetchJsonWithRetry,
+  fetchTextWithRetry,
+  getCachedRequest,
+} from "../request";
 
 describe("buildBrowserHeaders", () => {
   it("returns the canonical Origin/Referer/Accept-Language triple", () => {
@@ -34,5 +40,93 @@ describe("buildBrowserHeaders", () => {
 
     expect(recovered).toBe("ok");
     expect(calls).toBe(2);
+  });
+});
+
+describe("adapter request cache", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("dedupes identical JSON GETs within an adapter context", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    await Promise.all([
+      fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx),
+      fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps same-URL JSON GETs separate when headers differ", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = init?.headers as Record<string, string> | undefined;
+      return new Response(JSON.stringify({ origin: headers?.Origin ?? null }), {
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    const first = await fetchJsonWithRetry<{ origin: string }>(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: { Origin: "https://app-a.example" } },
+    );
+    const second = await fetchJsonWithRetry<{ origin: string }>(
+      "https://issuer.example/reserves",
+      signal,
+      1_000,
+      ctx,
+      { headers: { Origin: "https://app-b.example" } },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.origin).toBe("https://app-a.example");
+    expect(second.origin).toBe("https://app-b.example");
+  });
+
+  it("does not share JSON and text reads for the same URL", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
+      headers: { "content-type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    await fetchJsonWithRetry("https://issuer.example/reserves", signal, 1_000, ctx);
+    const text = await fetchTextWithRetry("https://issuer.example/reserves", signal, 1_000, ctx);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(text).toBe(JSON.stringify({ ok: true }));
+  });
+
+  it("keys JSON POST cache entries by serialized body", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => new Response(
+      JSON.stringify({ body: init?.body ?? null }),
+      { headers: { "content-type": "application/json" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const ctx = { requestCache: new Map<string, Promise<unknown>>() };
+    const signal = new AbortController().signal;
+
+    await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx);
+    await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "usdc" }, signal, 1_000, ctx);
+    await fetchJsonPostWithRetry("https://issuer.example/graphql", { coin: "eurc" }, signal, 1_000, ctx);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

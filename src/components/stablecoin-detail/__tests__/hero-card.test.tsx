@@ -36,6 +36,10 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <span>logo:{name}</span>,
 }));
 
+vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
+  RecentBlacklistBanner: () => null,
+}));
+
 vi.mock("@/components/methodology-hint", () => ({
   MethodologyHint: ({ topic }: { topic: string }) => <span data-testid={`methodology-hint-${topic}`} />,
   MethodologyLabel: ({ children, topic }: { children: React.ReactNode; topic: string }) => (
@@ -229,13 +233,20 @@ const stressSignal: StressSignalEntry = {
   methodologyVersion: "v1",
 };
 
+const verdict = {
+  archetype: "institutional-default",
+  label: "Institutional Default",
+} as const;
+
 function HeroCardUnderTest({
   onOpenFeedback,
+  verdict: testVerdict = verdict,
   ...props
-}: Parameters<typeof buildStablecoinDetailHeroViewModel>[0] & {
+}: Omit<Parameters<typeof buildStablecoinDetailHeroViewModel>[0], "verdict"> & {
+  verdict?: Parameters<typeof buildStablecoinDetailHeroViewModel>[0]["verdict"];
   onOpenFeedback: () => void;
 }) {
-  return <HeroCard model={buildStablecoinDetailHeroViewModel(props)} onOpenFeedback={onOpenFeedback} />;
+  return <HeroCard model={buildStablecoinDetailHeroViewModel({ ...props, verdict: testVerdict })} onOpenFeedback={onOpenFeedback} />;
 }
 
 describe("HeroCard", () => {
@@ -256,11 +267,11 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={3}
         liquidityData={liquidityData}
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
         reportCard={null}
+        verdict={verdict}
         onOpenFeedback={() => {}}
       />,
     );
@@ -324,7 +335,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={3}
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}
@@ -376,7 +386,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={3}
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}
@@ -407,7 +416,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={3}
         liquidityData={liquidityData}
         yieldRanking={{ ...yieldRanking, excessYield: null }}
         stressSignal={stressSignal}
@@ -456,7 +464,6 @@ describe("HeroCard", () => {
         deviationBps={0}
         gaugeDeviationBps={0}
         pegScoreResult={null}
-        recordedDepegEventCount={0}
         liquidityData={liquidityData}
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
@@ -467,7 +474,7 @@ describe("HeroCard", () => {
       />,
     );
 
-    expect(html).toContain("Variant of USDS");
+    expect(html).toContain("Wraps USDS");
   });
 
   it("renders 1Y vs USD for eligible non-USD coins when performance is available", () => {
@@ -511,7 +518,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={3}
         liquidityData={liquidityData}
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
@@ -541,7 +547,6 @@ describe("HeroCard", () => {
         deviationBps={-300}
         gaugeDeviationBps={-300}
         pegScoreResult={{ ...pegScoreResult, activeDepeg: false, depegEventCoverageLimited: true }}
-        recordedDepegEventCount={0}
         liquidityData={liquidityData}
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
@@ -578,7 +583,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={0}
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}
@@ -616,7 +620,6 @@ describe("HeroCard", () => {
         deviationBps={-2}
         gaugeDeviationBps={2}
         pegScoreResult={pegScoreResult}
-        recordedDepegEventCount={0}
         liquidityData={liquidityData}
         yieldRanking={null}
         stressSignal={null}

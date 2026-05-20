@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ENDPOINT_ASSERTIONS } from "../smoke-api.mjs";
+import {
+  assertPathCoverage,
+  CANARY_CONTRACT_SMOKE_PATHS,
+  ENDPOINT_ASSERTIONS,
+  resolveContractSmokePaths,
+  STRICT_CONTRACT_SMOKE_PATHS,
+} from "../maintenance/smoke-api.mjs";
 
 function makeRedemptionBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -161,5 +167,27 @@ describe("smoke-api redemption backstop assertion", () => {
         }),
       }),
     ).toThrow("http(s)");
+  });
+});
+
+describe("smoke-api path scopes", () => {
+  it("keeps canary paths as a strict subset of the full strict path set", () => {
+    const full = new Set(STRICT_CONTRACT_SMOKE_PATHS);
+    expect(CANARY_CONTRACT_SMOKE_PATHS.length).toBeGreaterThan(0);
+    for (const path of CANARY_CONTRACT_SMOKE_PATHS) {
+      expect(full.has(path)).toBe(true);
+    }
+  });
+
+  it("resolves both full and canary scopes with assertion coverage", () => {
+    const full = resolveContractSmokePaths("full");
+    const canary = resolveContractSmokePaths("canary");
+
+    expect(full).toEqual(STRICT_CONTRACT_SMOKE_PATHS);
+    expect(canary).toEqual(CANARY_CONTRACT_SMOKE_PATHS);
+
+    expect(() => assertPathCoverage(full, ENDPOINT_ASSERTIONS)).not.toThrow();
+    expect(() => assertPathCoverage(canary, ENDPOINT_ASSERTIONS)).toThrow("Smoke assertion drift detected");
+    expect(() => assertPathCoverage(canary, ENDPOINT_ASSERTIONS, { allowExtraAssertions: true })).not.toThrow();
   });
 });

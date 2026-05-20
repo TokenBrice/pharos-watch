@@ -2,6 +2,7 @@
   "id": "usdt-tether",
   "name": "Tether",
   "symbol": "USDT",
+  "oneLiner": "USDT (Tether) is the largest dollar stablecoin, mostly backed by short-term U.S. Treasuries with a centralized issuer and quarterly attestations.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -10,8 +11,9 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "U.S. Treasury Bills (~63%), overnight reverse repos (~10%), precious metals / gold (~9%), secured loans (~9%), Bitcoin (~4%), and other investments; quarterly attestations by BDO Italia (Q4 2025 data)",
+  "collateral": "Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.",
   "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "1",
   "detailProvider": "defillama",
   "geckoId": "tether",
@@ -19,7 +21,10 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://tether.to/en/transparency",
-    "provider": "BDO Italia"
+    "provider": "BDO Italia",
+    "attestorTier": "regional",
+    "cadence": "quarterly",
+    "attestorJurisdiction": "Italy"
   },
   "links": [
     {
@@ -234,33 +239,23 @@
   "custodyModel": "institutional-regulated",
   "reserves": [
     {
-      "name": "U.S. Treasury Bills",
-      "pct": 63,
+      "name": "U.S. Treasury bill exposure",
+      "pct": 73.5,
       "risk": "very-low"
     },
     {
-      "name": "Overnight Reverse Repos",
-      "pct": 10,
-      "risk": "very-low"
-    },
-    {
-      "name": "Precious Metals (Gold)",
-      "pct": 9,
-      "risk": "medium"
-    },
-    {
-      "name": "Secured Loans",
-      "pct": 9,
+      "name": "Physical gold",
+      "pct": 10.4,
       "risk": "medium"
     },
     {
       "name": "Bitcoin",
-      "pct": 4,
+      "pct": 3.7,
       "risk": "high"
     },
     {
-      "name": "Other Investments (cash, corporate bonds)",
-      "pct": 5,
+      "name": "Other reserve assets and excess buffer",
+      "pct": 12.4,
       "risk": "medium"
     }
   ],

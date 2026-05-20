@@ -2,25 +2,43 @@
 
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import {
+  Activity,
+  ArrowLeft,
+  Compass,
+  Droplets,
+  History as HistoryIcon,
+  Network,
+  Sparkles,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ReportCardDetail } from "@/components/report-card";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { LazySection } from "@/components/lazy-section";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
+import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
-import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { AiSummary } from "@/components/ai-summary";
+import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
+import { MobileRiskSnapshot } from "@/components/stablecoin-detail/mobile-risk-snapshot";
+import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
+import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
+import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
+import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
+import { CoinNotices } from "@/components/coin-notice";
+import { DEWSDetail } from "@/components/dews-detail";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
-import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
+import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -28,6 +46,7 @@ import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import type { BlacklistStablecoin } from "@shared/types";
+import { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 
 const FeedbackModal = dynamic(
   () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
@@ -42,13 +61,6 @@ const McapChart = dynamic(() => import("@/components/mcap-chart").then((mod) => 
   loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
 });
 
-const PegDeviationChart = dynamic(
-  () => import("@/components/peg-deviation-chart").then((mod) => mod.PegDeviationChart),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
-  },
-);
-
 const DepegHistory = dynamic(() => import("@/components/depeg-history").then((mod) => mod.DepegHistory), {
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
@@ -60,8 +72,22 @@ const FlowsSection = dynamic(
   },
 );
 
+const FlowHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowHistorySection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
 const BlacklistSection = dynamic(
   () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistSection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
+const BlacklistHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/blacklist-section").then((mod) => mod.BlacklistHistorySection),
   {
     loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
   },
@@ -79,13 +105,6 @@ const DexLiquidityCard = dynamic(() => import("@/components/dex-liquidity-card")
   loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
 });
 
-const CollateralUsageSection = dynamic(
-  () => import("@/components/stablecoin-detail/collateral-usage-section").then((mod) => mod.CollateralUsageSection),
-  {
-    loading: () => <DetailSectionSkeleton className="h-[200px] w-full rounded-xl" />,
-  },
-);
-
 const DistributionSection = dynamic(
   () => import("@/components/stablecoin-detail/distribution-section").then((mod) => mod.DistributionSection),
   {
@@ -102,17 +121,12 @@ const SafetyScoreHistorySection = dynamic(
 );
 
 const DETAIL_SECTION_DEFS = {
-  safety: { id: "report-card", label: "Safety" },
-  overview: { id: "overview", label: "Overview" },
-  price: { id: "price", label: "Price" },
-  reserves: { id: "reserves", label: "Reserves" },
-  market: { id: "chart", label: "Market" },
-  yield: { id: "yield", label: "Yield" },
-  liquidity: { id: "liquidity", label: "Liquidity" },
-  flows: { id: "flows", label: "Flows" },
-  blacklist: { id: "blacklist", label: "Blacklist" },
-  history: { id: "history", label: "History" },
-  explore: { id: "explore-next", label: "Explore" },
+  overview: { id: "overview", label: "Risk", icon: Compass },
+  context: { id: "context", label: "Context", icon: Network },
+  liquidity: { id: "liquidity", label: "Liquidity", icon: Droplets },
+  activity: { id: "activity", label: "Activity", icon: Activity },
+  history: { id: "history", label: "History", icon: HistoryIcon },
+  explore: { id: "explore", label: "Explore", icon: Sparkles },
 } as const;
 
 function DetailLoadingShell({
@@ -168,6 +182,7 @@ interface StablecoinDetailClientProps {
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
   staticProfileContent?: ReactNode;
+  exploreNextContent?: ReactNode;
 }
 
 export default function StablecoinDetailClient({
@@ -176,15 +191,13 @@ export default function StablecoinDetailClient({
   staticCoin,
   logoSrc,
   staticProfileContent = null,
+  exploreNextContent = null,
 }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [activeBannerId, setActiveBannerId] = useState<string>("overview");
+  const heroRef = useRef<HTMLDivElement>(null);
   const viewModel = useStablecoinDetailViewModel({ id, summary, logoSrc });
   const hasCollateralUsage = staticCoin.hasCollateralUsage;
-  const { data: depegHistoryData } = useInfiniteDepegEvents({
-    stablecoinId: id,
-    enabled: viewModel.status === "ready" && !viewModel.isNavToken,
-    autoLoadAll: viewModel.status === "ready" && !viewModel.isNavToken,
-  });
 
   if (viewModel.status === "loading") {
     return <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} staticProfileContent={staticProfileContent} />;
@@ -219,6 +232,11 @@ export default function StablecoinDetailClient({
   }
 
   const hasPriceTransparency = !!viewModel.coinData && (viewModel.coinData.price != null || !!viewModel.dexPriceCheck);
+  const hasRedemptionBackstop = Boolean(viewModel.redemptionBackstop);
+  const liquidityDetailGridClass =
+    hasPriceTransparency && hasRedemptionBackstop
+      ? "grid grid-cols-1 gap-6 lg:grid-cols-2"
+      : "grid grid-cols-1 gap-6";
   const frozenNote =
     viewModel.coin.status === "frozen" && viewModel.coin.frozenAt ? (
       <FrozenDataNote frozenAt={viewModel.coin.frozenAt} />
@@ -238,11 +256,11 @@ export default function StablecoinDetailClient({
     deviationBps: viewModel.deviationBps,
     gaugeDeviationBps: viewModel.gaugeDeviationBps,
     pegScoreResult: viewModel.pegScoreResult,
-    recordedDepegEventCount: depegHistoryData?.total ?? null,
     liquidityData: viewModel.liquidityData,
     yieldRanking: viewModel.yieldRanking,
     stressSignal: viewModel.stressSignal,
     reportCard: viewModel.reportCard ?? null,
+    verdict: viewModel.verdict,
     variantParent: viewModel.variantParent,
     variantKind: viewModel.coin.variantKind ?? null,
   });
@@ -256,21 +274,20 @@ export default function StablecoinDetailClient({
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
   const s = DETAIL_SECTION_DEFS;
-  const detailSections = [
-    s.safety,
-    s.overview,
-    // Reserves renders in the left column of OverviewSection and on mobile
-    // stacks above Price, so the pill order tracks that scroll order.
-    ...(viewModel.reserves ? [s.reserves] : []),
-    ...(hasPriceTransparency ? [s.price] : []),
-    s.market,
-    ...(viewModel.hasYieldSection ? [s.yield] : []),
-    s.liquidity,
-    ...(viewModel.hasFlows ? [s.flows] : []),
-    ...(viewModel.hasBlacklist ? [s.blacklist] : []),
-    s.history,
-    s.explore,
-  ];
+  const detailSections = [s.overview, s.context, s.liquidity, s.activity, s.history, s.explore];
+  const overviewNotices = viewModel.coin.notices?.filter((n) => n.type !== "danger") ?? [];
+  const hasReservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null;
+  const reservesPanel = hasReservesPanel ? (
+    <OverviewSection
+      coin={viewModel.coin}
+      reserves={viewModel.reserves}
+      reserveFetchError={viewModel.reserveFetchError}
+    />
+  ) : null;
+  const showPegChart =
+    viewModel.coin.flags.pegCurrency === "USD"
+    && !viewModel.isNavToken
+    && viewModel.supplyHistory.length > 0;
 
   return (
     <div>
@@ -285,7 +302,7 @@ export default function StablecoinDetailClient({
       <StaleDataBanner queries={viewModel.staleQueries} />
 
       {/* ── Identity zone ── */}
-      <div className="space-y-4">
+      <div ref={heroRef} className="space-y-4">
         <HeroCard model={heroModel} onOpenFeedback={() => setFeedbackOpen(true)} />
 
         <ExploitNoticeBanner notices={viewModel.coin.notices} />
@@ -297,102 +314,102 @@ export default function StablecoinDetailClient({
             obituary={viewModel.coin.obituary}
           />
         ) : null}
+
+        {viewModel.summary ? <AiSummary {...viewModel.summary} /> : null}
+
+        <MobileRiskSnapshot reportCard={viewModel.reportCard ?? null} />
       </div>
 
-      {/* ── Navigation zone ── */}
-      <div className="mt-6">
-        <LongformScrollspyNav
-          sections={detailSections}
-          railLabel="Jump to Section"
-          navAriaLabel="Stablecoin detail section navigation"
-          rightSlot={
-            <div className="hidden items-center gap-2 text-xs sm:flex">
-              <Link
-                href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
-                className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
-              </Link>
-              <span className="text-border">|</span>
-              <Link
-                href={
-                  getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
-                  buildLiveCompareUrl([viewModel.coin.id])
-                }
-                className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Compare
-              </Link>
-            </div>
-          }
-          showDepthHint
-        />
-      </div>
+      <MobileStickySummary
+        coin={viewModel.coin}
+        coinData={viewModel.coinData}
+        pegRef={viewModel.pegRef}
+        logoSrc={viewModel.logoSrc}
+        reportCard={viewModel.reportCard ?? null}
+        observeTarget={heroRef}
+      />
 
-      {/* ── Safety zone ── */}
-      <div className="mt-10 space-y-4">
-        <section id="report-card">
-          <p className="pharos-kicker mb-3">Safety Assessment</p>
-          {viewModel.reportCard && (
-            <ReportCardDetail
-              card={viewModel.reportCard}
-              liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
-            />
-          )}
-          <div className="mt-4">
-            <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+      {/* ── Navigation zone ──
+        Intentionally NOT wrapped in a div: position: sticky only sticks
+        within its containing block. A wrapper whose only child is this nav
+        would have zero extra height and the nav would scroll off immediately.
+        Keep this as a direct child of the outer detail container. */}
+      <LongformScrollspyNav
+        sections={detailSections}
+        railLabel="Jump to Section"
+        navAriaLabel="Stablecoin detail section navigation"
+        onActiveChange={setActiveBannerId}
+        className="mt-6"
+        rightSlot={
+          <div className="hidden items-center gap-2 text-xs sm:flex">
+            <Link
+              href={buildGovernanceTaxonomyUrl(viewModel.coin.flags.governance)}
+              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {GOVERNANCE_LABELS[viewModel.coin.flags.governance] ?? viewModel.coin.flags.governance}
+            </Link>
+            <span className="text-border">|</span>
+            <Link
+              href={
+                getPrimaryStaticComparisonPageForCoin(viewModel.coin.id)?.href ??
+                buildLiveCompareUrl([viewModel.coin.id])
+              }
+              className="pharos-focus-ring rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Compare
+            </Link>
           </div>
-        </section>
+        }
+        showDepthHint
+      />
 
+      {/* ── Key Info ── */}
+      <div className="mt-6">
         <section id="info">
           <KeyInfoCard meta={viewModel.coin} />
         </section>
       </div>
 
-      {/* ── Context & details zone ── */}
-      <div className="mt-12 space-y-6">
-        <section id="overview">
-          <NoticesAndSummarySection
-            stablecoinId={viewModel.id}
-            coin={viewModel.coin}
-            summary={viewModel.summary}
-            reserves={viewModel.reserves}
-            reserveFetchError={viewModel.reserveFetchError}
-            redemptionBackstop={viewModel.redemptionBackstop}
-            isNavToken={viewModel.isNavToken}
-            coinData={viewModel.coinData}
-            consensusSources={viewModel.consensusSources}
-            agreeSources={viewModel.agreeSources}
-            dexPriceCheck={viewModel.dexPriceCheck}
-          />
+      {/* ── Overview ── */}
+      <div className="space-y-6">
+        <SectionBanner id="overview" label="Overview" icon={Compass} active={activeBannerId === "overview"} />
+        <section id="report-card">
+          {viewModel.reportCard && (
+            <ReportCardDetail
+              card={viewModel.reportCard}
+              liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
+              updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
+              rightColumn={reservesPanel}
+            />
+          )}
         </section>
-
-        {(variantRelationshipCard || hasCollateralUsage) && (
-          <div
-            className={`grid gap-6 ${variantRelationshipCard && hasCollateralUsage ? "lg:grid-cols-2" : ""}`}
-          >
-            {variantRelationshipCard}
-            {hasCollateralUsage && <CollateralUsageSection stablecoinId={viewModel.id} />}
-          </div>
-        )}
-
-        {viewModel.hasYieldSection && <YieldDetailSection stablecoinId={viewModel.id} />}
+        {overviewNotices.length > 0 ? <CoinNotices notices={overviewNotices} /> : null}
+        {!viewModel.isNavToken ? <DEWSDetail stablecoinId={viewModel.id} /> : null}
       </div>
 
-      {/* ── Market zone ── */}
-      <div className="mt-12 space-y-6">
-        <section id="chart">
-          {frozenNote}
-          <McapChart data={viewModel.supplyHistory} />
-        </section>
-
-        {viewModel.coin.flags.pegCurrency === "USD" && !viewModel.isNavToken ? (
-          <section id="peg-deviation">
+      {/* ── Context ── */}
+      <div className="space-y-6">
+        <SectionBanner id="context" label="Context" icon={Network} active={activeBannerId === "context"} />
+        <ContagionSnapshot
+          stablecoinId={viewModel.id}
+          variantRelationshipCard={variantRelationshipCard}
+          hasCollateralUsage={hasCollateralUsage}
+        />
+        {showPegChart ? (
+          <MarketDataSection
+            stablecoinId={viewModel.id}
+            supplyHistory={viewModel.supplyHistory}
+            pegCurrency={viewModel.coin.flags.pegCurrency}
+            frozenNote={frozenNote}
+          />
+        ) : (
+          <section id="chart">
             {frozenNote}
-            <PegDeviationChart data={viewModel.supplyHistory} pegCurrency={viewModel.coin.flags.pegCurrency} />
+            <LazySection minHeight={420}>
+              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+            </LazySection>
           </section>
-        ) : null}
-
+        )}
         <section id="distribution">
           {frozenNote}
           <SectionErrorBoundary name="distribution">
@@ -401,14 +418,43 @@ export default function StablecoinDetailClient({
         </section>
       </div>
 
-      {/* ── Activity zone ── */}
-      <div className="mt-12 space-y-6">
-        <section id="liquidity">
+      {/* ── Liquidity ── */}
+      <div className="space-y-6">
+        <SectionBanner id="liquidity" label="Liquidity" icon={Droplets} active={activeBannerId === "liquidity"} />
+        <section id="dex-liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
-            <DexLiquidityCard stablecoinId={viewModel.id} />
+            <LazySection minHeight={360}>
+              <DexLiquidityCard stablecoinId={viewModel.id} />
+            </LazySection>
           </SectionErrorBoundary>
         </section>
+
+        {(hasPriceTransparency || hasRedemptionBackstop) && (
+          <div className={liquidityDetailGridClass}>
+            {hasPriceTransparency && viewModel.coinData ? (
+              <section id="price" aria-label="Price transparency">
+                <PriceTransparencyCard
+                  coinData={viewModel.coinData}
+                  consensusSources={viewModel.consensusSources ?? []}
+                  agreeSources={viewModel.agreeSources ?? []}
+                  dexPriceCheck={viewModel.dexPriceCheck}
+                />
+              </section>
+            ) : null}
+            {hasRedemptionBackstop && viewModel.redemptionBackstop ? (
+              <RedemptionBackstopCard entry={viewModel.redemptionBackstop} />
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* ── Activity ── */}
+      <div className="space-y-6">
+        <SectionBanner id="activity" label="Activity" icon={Activity} active={activeBannerId === "activity"} />
+        {viewModel.hasYieldSection ? (
+          <YieldDetailSection stablecoinId={viewModel.id} />
+        ) : null}
 
         {viewModel.hasFlows ? frozenNote : null}
         <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
@@ -423,18 +469,42 @@ export default function StablecoinDetailClient({
         )}
       </div>
 
-      {/* ── History zone ── */}
-      {!viewModel.isNavToken ? (
-        <div className="mt-12">
-          <section id="history">
-            {frozenNote}
+      {/* ── History ── */}
+      <div className="space-y-6">
+        <SectionBanner id="history" label="History" icon={HistoryIcon} active={activeBannerId === "history"} />
+        {frozenNote}
+        <section id="coin-timeline" aria-label="Coin event timeline">
+          <TapeForCoinTeaser coinId={viewModel.id} />
+        </section>
+        <LazySection minHeight={220}>
+          <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+        </LazySection>
+        {!viewModel.isNavToken ? (
+          <LazySection minHeight={360}>
             <DepegHistory
               stablecoinId={viewModel.id}
               earliestTrackingDate={viewModel.earliestTrackingDate}
               hasPriceData={viewModel.coinData.price != null}
               depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
             />
-          </section>
+          </LazySection>
+        ) : null}
+        {viewModel.hasFlows ? <FlowHistorySection stablecoinId={viewModel.id} /> : null}
+        {viewModel.hasBlacklist ? (
+          <SectionErrorBoundary name="blacklist-history">
+            <BlacklistHistorySection
+              stablecoinId={viewModel.id}
+              symbol={viewModel.coin.symbol as BlacklistStablecoin}
+            />
+          </SectionErrorBoundary>
+        ) : null}
+      </div>
+
+      {/* ── Explore ── */}
+      {exploreNextContent ? (
+        <div className="space-y-6">
+          <SectionBanner id="explore" label="Explore" icon={Sparkles} active={activeBannerId === "explore"} />
+          {exploreNextContent}
         </div>
       ) : null}
 

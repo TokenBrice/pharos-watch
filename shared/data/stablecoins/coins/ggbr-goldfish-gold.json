@@ -2,6 +2,7 @@
   "id": "ggbr-goldfish-gold",
   "name": "Goldfish Gold",
   "symbol": "GGBR",
+  "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure rather than on-chain redemption logic.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -25,6 +26,9 @@
       "url": "https://x.com/goldfishggbr"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "ethereum",

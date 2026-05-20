@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
 import { ChainsResponseSchema, type ChainsResponse } from "@shared/types/chains";
 import { useApiQueryWithMeta } from "./use-api-query";
 import { useStablecoins } from "./use-stablecoins";
 import { CRON_15MIN } from "@/lib/cron-intervals";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {

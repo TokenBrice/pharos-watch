@@ -10,7 +10,7 @@ DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both are
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical source:** `shared/lib/depeg-dews-version.ts`
 
-Each API response includes a `methodology` envelope with `version`, `changelogPath`, and `isCurrent` fields.
+Each API response includes the shared `methodology` envelope with `version`, `versionLabel`, `currentVersion`, `currentVersionLabel`, `changelogPath`, `asOf`, and `isCurrent` fields.
 
 ---
 

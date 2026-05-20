@@ -170,6 +170,31 @@ describe("adaptCrvUsd", () => {
       },
     });
   });
+
+  it("does not infer redemption telemetry from LLAMMA inventory alone", () => {
+    const result = adaptCrvUsdOnchain(
+      [
+        {
+          marketId: 0,
+          symbol: "WBTC",
+          collateralAddress: BTC_ASSET,
+          ammAddress: LLAMMA_AMM,
+          collateralUsd: 100,
+          softLiquidatedCrvUsdUsd: 25,
+          minBand: 0,
+          maxBand: 1,
+          bandCount: 2,
+        },
+      ],
+      [],
+    );
+
+    expect(result.metadata).toMatchObject({
+      softLiquidatedCrvUsdUsd: 25,
+      bandReadCount: 2,
+    });
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
 });
 
 describe("fetchCrvUsdReserves", () => {

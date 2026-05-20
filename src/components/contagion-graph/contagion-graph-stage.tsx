@@ -11,12 +11,28 @@ type ContagionGraphModel = ReturnType<typeof useContagionGraphModel>;
 interface ContagionGraphStageProps {
   graph: ContagionGraphModel;
   logos?: Record<string, string>;
+  detailNodePresentation?: boolean;
   nodeTooltipEl: ReactNode;
   edgeTooltipEl: ReactNode;
   overlay?: ReactNode;
 }
 
-export function ContagionGraphStage({ graph, logos, nodeTooltipEl, edgeTooltipEl, overlay }: ContagionGraphStageProps) {
+export function ContagionGraphStage({
+  graph,
+  logos,
+  detailNodePresentation,
+  nodeTooltipEl,
+  edgeTooltipEl,
+  overlay,
+}: ContagionGraphStageProps) {
+  const showTickerLabels = Boolean(detailNodePresentation && graph.visibleNodeIds.size <= 10);
+  const detailNodeScale = detailNodePresentation
+    ? graph.visibleNodeIds.size <= 5
+      ? 3
+      : graph.visibleNodeIds.size <= 10
+        ? 2
+        : 1
+    : 1;
   return (
     <div
       className="relative w-full overflow-hidden rounded-sm border"
@@ -41,6 +57,10 @@ export function ContagionGraphStage({ graph, logos, nodeTooltipEl, edgeTooltipEl
         focusMode={graph.focusMode}
         supernodeState={graph.supernodeState}
         logos={logos}
+        logoZoom={detailNodePresentation && detailNodeScale === 1 ? 1.33 : 1}
+        nodeScale={detailNodeScale}
+        suppressHubLabels={Boolean(detailNodePresentation)}
+        showTickerLabels={showTickerLabels}
         activeHoveredId={graph.activeHoveredId}
         activeHoveredEdge={graph.activeHoveredEdge}
         focusedId={graph.focusedId}

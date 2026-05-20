@@ -2,6 +2,7 @@
   "id": "euri-banking-circle",
   "name": "Eurite",
   "symbol": "EURI",
+  "oneLiner": "EURI is Banking Circle's MiCA-licensed euro stablecoin, issued by a Luxembourg credit institution with fee-free 1:1 redemption against segregated euro reserves.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "EUR",
@@ -12,13 +13,18 @@
   },
   "collateral": "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
   "pegMechanism": "Direct 1:1 redemption at par (fee-free) by Banking Circle S.A.",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "325",
   "detailProvider": "defillama",
   "geckoId": "eurite",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.eurite.com/",
-    "provider": "Ernst & Young"
+    "provider": "Ernst & Young",
+    "attestorTier": "big4",
+    "cadence": "monthly",
+    "attestorJurisdiction": "Luxembourg",
+    "attestorLicense": "Credit Institution (MiCA)"
   },
   "links": [
     {

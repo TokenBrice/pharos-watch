@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento Philippine Peso",
   "symbol": "PHPm",
+  "oneLiner": "PHPm is Mento's Celo-native Philippine Peso stablecoin minted via oracle-priced FX swaps against the Mento Reserve basket of crypto and stablecoins.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "PHP",
@@ -18,7 +19,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time"
   },
   "links": [
     {
@@ -31,7 +34,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.mento.org/mento/use-mento/getting-mento-stables/on-celo"
+      "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
     },
     {
       "label": "PUSO Launch Note",

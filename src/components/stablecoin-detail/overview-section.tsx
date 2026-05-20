@@ -1,32 +1,14 @@
 "use client";
 
-import { AiSummary } from "@/components/ai-summary";
-import { DEWSDetail } from "@/components/dews-detail";
-import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
-import { RedemptionBackstopCard } from "@/components/stablecoin-detail/redemption-backstop-card";
 import { ReserveTreemap } from "@/components/reserve-treemap";
 import { ApiFetchError } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
-import type {
-  PegSummaryCoin,
-  RedemptionBackstopEntry,
-  StablecoinAiSummary,
-  StablecoinMeta,
-  StablecoinData,
-} from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 interface OverviewSectionProps {
-  stablecoinId: string;
   coin: StablecoinMeta;
-  summary: StablecoinAiSummary | null;
   reserves: ReserveResult | null;
   reserveFetchError: unknown | null;
-  redemptionBackstop?: RedemptionBackstopEntry;
-  isNavToken: boolean;
-  coinData?: StablecoinData;
-  consensusSources?: string[];
-  agreeSources?: string[];
-  dexPriceCheck?: PegSummaryCoin["dexPriceCheck"];
 }
 
 function isNetworkFetchError(error: unknown): boolean {
@@ -279,21 +261,10 @@ function buildReserveSyncNotice(
 }
 
 export function OverviewSection({
-  stablecoinId,
   coin,
-  summary,
   reserves,
   reserveFetchError,
-  redemptionBackstop,
-  isNavToken,
-  coinData,
-  consensusSources,
-  agreeSources,
-  dexPriceCheck,
 }: OverviewSectionProps) {
-  const hasLeft = !!(summary || reserves || reserveFetchError || redemptionBackstop);
-  const hasDews = !isNavToken;
-  const hasPriceTransparency = !!coinData && (coinData.price != null || !!dexPriceCheck);
   const isLiveEnabled = !!coin.liveReservesConfig;
   const reserveFetchNotice = reserveFetchError
     ? buildReserveFetchNotice(reserveFetchError, reserves)
@@ -302,94 +273,62 @@ export function OverviewSection({
   const reserveProvenanceNotice = buildReserveProvenanceNotice(reserves);
   const reserveSyncNotice = buildReserveSyncNotice(reserves);
 
-  const hasRightColumn = hasDews || hasPriceTransparency;
-  const hasAnything = hasLeft || hasRightColumn;
-
-  if (!hasAnything) {
+  if (!reserves && !reserveFetchError) {
     return null;
   }
 
-  const rightColumnContent = hasRightColumn ? (
+  return (
     <div className="flex flex-col gap-6">
-      {hasDews && <DEWSDetail stablecoinId={stablecoinId} />}
-      {hasPriceTransparency && coinData && (
-        <section id="price" aria-label="Price transparency">
-          <PriceTransparencyCard
-            coinData={coinData}
-            consensusSources={consensusSources ?? []}
-            agreeSources={agreeSources ?? []}
-            dexPriceCheck={dexPriceCheck}
+      {reserveFetchNotice ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${reserveFetchNotice.toneClass}`}
+        >
+          <p className="font-medium">{reserveFetchNotice.title}</p>
+          <p className="mt-1">{reserveFetchNotice.message}</p>
+        </div>
+      ) : null}
+      {reserves && (
+        <section id="reserves" aria-label="Reserve composition" className="min-w-0">
+          <ReserveTreemap
+            reserves={reserves.reserves}
+            badge={reserves.displayBadge}
           />
+          <div className="mt-1 flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-muted-foreground">
+            {buildReserveFootnote(reserves, isLiveEnabled) ?? (
+              reserves.estimated ? (
+                <span>
+                  Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
+                </span>
+              ) : null
+            )}
+          </div>
+          {reserveCompositionNote ? (
+            <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>
+          ) : null}
+          {reserveProvenanceNotice ? (
+            <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
+              <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>
+              <p className="mt-1">{reserveProvenanceNotice.message}</p>
+            </div>
+          ) : null}
+          {reserveSyncNotice ? (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveSyncNotice.toneClass}`}
+            >
+              <p className="font-medium">{reserveSyncNotice.title}</p>
+              <div className="mt-1 space-y-1">
+                {reserveSyncNotice.rows.map((row) => (
+                  <p key={row}>{row}</p>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
       )}
-    </div>
-  ) : null;
-
-  if (!hasLeft) {
-    return rightColumnContent;
-  }
-
-  return (
-    <div>
-      <div className={`grid grid-cols-1 gap-6 ${hasRightColumn ? "lg:grid-cols-2" : ""}`}>
-          <div className="flex flex-col gap-6">
-            {summary && <AiSummary {...summary} />}
-            {reserveFetchNotice ? (
-              <div
-                role="status"
-                aria-live="polite"
-                className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${reserveFetchNotice.toneClass}`}
-              >
-                <p className="font-medium">{reserveFetchNotice.title}</p>
-                <p className="mt-1">{reserveFetchNotice.message}</p>
-              </div>
-            ) : null}
-            {reserves && (
-              <section id="reserves" aria-label="Reserve composition">
-                <ReserveTreemap
-                  reserves={reserves.reserves}
-                  badge={reserves.displayBadge}
-                />
-                <div className="mt-1 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  {buildReserveFootnote(reserves, isLiveEnabled) ?? (
-                    reserves.estimated ? (
-                      <span>
-                        Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
-                      </span>
-                    ) : null
-                  )}
-                </div>
-                {reserveCompositionNote ? (
-                  <div className="mt-2 text-center text-xs text-muted-foreground">{reserveCompositionNote}</div>
-                ) : null}
-                {reserveProvenanceNotice ? (
-                  <div className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveProvenanceNotice.toneClass}`}>
-                    <p className="font-medium text-foreground">{reserveProvenanceNotice.title}</p>
-                    <p className="mt-1">{reserveProvenanceNotice.message}</p>
-                  </div>
-                ) : null}
-                {reserveSyncNotice ? (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    className={`mt-2 rounded-lg border px-4 py-3 text-sm leading-relaxed ${reserveSyncNotice.toneClass}`}
-                  >
-                    <p className="font-medium">{reserveSyncNotice.title}</p>
-                    <div className="mt-1 space-y-1">
-                      {reserveSyncNotice.rows.map((row) => (
-                        <p key={row}>{row}</p>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </section>
-            )}
-            {redemptionBackstop ? (
-              <RedemptionBackstopCard entry={redemptionBackstop} />
-            ) : null}
-          </div>
-          {rightColumnContent}
-        </div>
     </div>
   );
 }

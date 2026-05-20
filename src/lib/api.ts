@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { API_PATHS } from "@shared/lib/api-endpoints";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { isSiteDataAllowedUiHostname, resolveSiteDataProxyPath } from "@shared/lib/site-data-lane";
 import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
@@ -36,11 +36,13 @@ function resolveSiteDataRequestPath(
   method: string | null | undefined,
   hostname?: string | null,
   envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
+  forceSiteDataProxy: string | undefined = process.env.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY,
 ): string | null {
   if ((envBase ?? "").trim()) {
     return null;
   }
-  if (!hostname || !isSiteDataAllowedUiHostname(hostname)) {
+  const forceProxy = (forceSiteDataProxy ?? "").trim().toLowerCase() === "true";
+  if (!forceProxy && (!hostname || !isSiteDataAllowedUiHostname(hostname))) {
     return null;
   }
   return resolveSiteDataProxyPath(path, method);

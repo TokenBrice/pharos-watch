@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { PieChart, Pie, Cell, Tooltip, Sector } from "recharts";
 import type { PieSectorDataItem } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
+import { MethodologyLabel } from "@/components/methodology-hint";
 import { PharosChartTooltip, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useDexLiquidity } from "@/hooks/api-hooks";
+import { hasMeaningfulDexData } from "@/components/dex-liquidity-card";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatCurrency } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -121,7 +123,7 @@ function DonutCard({
   data,
   total,
 }: {
-  title: string;
+  title: ReactNode;
   subtitle: string;
   ariaLabel: string;
   data: DonutDatum[];
@@ -237,7 +239,9 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
     return (
       <Card className="rounded-xl">
         <CardHeader className="pb-2">
-          <DetailSectionTitle>Supply by Chain</DetailSectionTitle>
+          <DetailSectionTitle>
+            <MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>
+          </DetailSectionTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[250px] rounded-xl" />
@@ -250,7 +254,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title="Supply by Chain"
+      title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
       subtitle="Circulating"
       ariaLabel={`Circulating supply distribution across ${data.length} chains`}
       data={data}
@@ -262,8 +266,10 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   const { data: liquidityMap, isLoading } = useDexLiquidity();
 
+  const liq = liquidityMap?.[stablecoinId];
+  const isEmpty = !isLoading && !hasMeaningfulDexData(liq);
+
   const { data, total } = useMemo(() => {
-    const liq = liquidityMap?.[stablecoinId];
     if (!liq?.protocolTvl) return { data: [], total: 0 };
 
     return buildDonutData(liq.protocolTvl, {
@@ -274,7 +280,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         return path ? { path } : null;
       },
     });
-  }, [liquidityMap, stablecoinId]);
+  }, [liq]);
 
   if (isLoading) {
     return (
@@ -288,6 +294,8 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
       </Card>
     );
   }
+
+  if (isEmpty) return null;
 
   if (data.length === 0) {
     return (

@@ -4,22 +4,24 @@
   "detailProvider": "defillama",
   "name": "Solayer USD",
   "symbol": "sUSD",
+  "oneLiner": "Solayer sUSD is a Solana Token-2022 interest-bearing stablecoin backed by U.S. T-bill exposure and RWA partner products; balances grow via interest extension.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
     "governance": "centralized",
     "yieldBearing": true,
     "rwa": true,
-    "navToken": false
+    "navToken": true
   },
   "collateral": "U.S. Treasury bill exposure and RWA partner products backing a Solana Token-2022 interest-bearing stablecoin",
   "pegMechanism": "Users mint through Solayer workflows and balances grow through Token-2022 interest extension mechanics backed by T-bill yield",
+  "mechanismArchetype": "tbill",
   "geckoId": "solayer-usd",
   "protocolSlug": "solayer-usd",
   "links": [
     {
       "label": "Website",
-      "url": "https://solayer.org/platform/susd"
+      "url": "https://app.solayer.org/?asset=susd"
     },
     {
       "label": "Twitter",
@@ -27,9 +29,12 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd"
+      "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd"
     }
   ],
+  "jurisdiction": {
+    "country": "United States"
+  },
   "contracts": [
     {
       "chain": "solana",
@@ -45,7 +50,10 @@
     "reviewedAt": "2026-05-12"
   },
   "chainTier": "mature-alt-l1",
+  "deploymentModel": "single-chain",
+  "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
+  "governanceQuality": "single-entity",
   "reserves": [
     {
       "name": "U.S. Treasury bill basket / RWA partner product",
@@ -59,7 +67,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "susd-solayer",
     "display": {
-      "url": "https://docs.solayer.org/assets/susd/yield-bearing-stablecoin/what-is-susd",
+      "url": "https://docs.solayer.org/susd/yield-bearing-stablecoin/what-is-susd",
       "label": "Solayer sUSD docs"
     },
     "inputs": {

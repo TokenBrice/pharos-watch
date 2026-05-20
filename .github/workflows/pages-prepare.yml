@@ -16,6 +16,10 @@ on:
     secrets:
       DIGEST_API_KEY:
         required: true
+      DEPEG_EVENTS_API_KEY:
+        required: false
+      PUBLIC_DATASETS_API_KEY:
+        required: false
       SITE_API_SHARED_SECRET:
         required: true
       SMOKE_API_KEY:
@@ -30,7 +34,29 @@ jobs:
     env:
       DIGEST_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
       DIGEST_API_KEY: ${{ secrets.DIGEST_API_KEY }}
+      # Council-13 W3-D — sync confirmed depeg events before next build so
+      # generateStaticParams() produces the full /depeg/<event>/ static set.
+      DEPEG_EVENTS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      DEPEG_EVENTS_API_KEY: ${{ secrets.DEPEG_EVENTS_API_KEY || secrets.DIGEST_API_KEY }}
+      # Council-13 W3-G — feed the daily dataset mirror generator from the
+      # same API surface so /datasets/* and /sheets/* carry real data.
+      PUBLIC_DATASETS_API_URL: ${{ inputs.api_base_url != '' && inputs.api_base_url || vars.SMOKE_API_BASE_URL || vars.API_BASE_URL }}
+      PUBLIC_DATASETS_API_KEY: ${{ secrets.PUBLIC_DATASETS_API_KEY || secrets.DIGEST_API_KEY }}
+      PUBLIC_DATASETS_REQUIRE_API: "1"
       NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      # The local static-export smoke runs on 127.0.0.1, but the production
+      # browser data lane is same-origin /_site-data/*.
+      NEXT_PUBLIC_FORCE_SITE_DATA_PROXY: "true"
+      # Detail-page feature flags. Each is inlined at build time when set to
+      # the literal string required by src/lib/feature-flags.ts. Most flags are
+      # on only when set to "true"; HERO_VERDICT is default-on and must be set
+      # to "false" to roll back. Managed as GitHub repo Variables per
+      # docs/process/pages-env-rollout.md.
+      NEXT_PUBLIC_PHAROS_HERO_VERDICT: ${{ vars.NEXT_PUBLIC_PHAROS_HERO_VERDICT }}
+      NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER: ${{ vars.NEXT_PUBLIC_PHAROS_BLACKLIST_BANNER }}
+      NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS }}
+      NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY: ${{ vars.NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY }}
+      NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS: ${{ vars.NEXT_PUBLIC_PHAROS_CHART_ANNOTATIONS }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -40,12 +66,27 @@ jobs:
         with:
           node-version: 24
           tooling-cache: "true"
+          install-playwright-chromium: "true"
       - name: Fetch digests from the target API environment
-        run: npx tsx scripts/sync-digests.ts --output data/digests.json
+        run: npx tsx scripts/maintenance/sync-digests.ts --output data/digests.json
+      - name: Fetch depeg events from the target API environment
+        run: npx tsx scripts/maintenance/sync-depeg-events.ts --output data/depeg-events.json
+      - name: Generate public dataset mirrors from the target API environment
+        run: npm run generate:public-datasets
       - run: npm run build
+        env:
+          PUBLIC_DATASETS_API_URL: ""
+          PUBLIC_DATASETS_API_KEY: ""
+          PUBLIC_DATASETS_REQUIRE_API: ""
+          SMOKE_API_BASE: ""
+          API_BASE_URL: ""
+      - run: npm run check:feature-flag-inlining
       - run: npm run seo:check
       - run: npm run check:phishing-signatures
       - run: npm run check:classifier-sensitive-copy
+      - run: npm run check:build-size
+      - run: npm run check:build-attribution
+      - run: npm run check:methodology-pdfs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ inputs.artifact_name }}
@@ -73,6 +114,7 @@ jobs:
       - run: npm run test:smoke-ui -- --url http://127.0.0.1:4173 --mode local
         env:
           SMOKE_UI_EXPECT_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+      - run: npm run test:smoke-ui:mobile -- --url http://127.0.0.1:4173
       - name: Dump local export smoke server log
         if: failure()
         run: cat /tmp/pages-smoke-server.log

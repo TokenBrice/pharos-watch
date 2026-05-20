@@ -2,6 +2,7 @@
   "id": "uktbl-spiko",
   "name": "Spiko UK T-Bills Money Market Fund",
   "symbol": "UKTBL",
+  "oneLiner": "UKTBL is Spiko's AMF-authorized GBP money-market fund share token, backed by short-dated UK Treasury bills and gated through Spiko's transfer agent.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
@@ -12,12 +13,17 @@
   },
   "collateral": "GBP-denominated UK Treasury bill money-market exposure administered through Spiko fund rails.",
   "pegMechanism": "GBP-denominated NAV-accreting money-market fund share; primary subscriptions and redemptions are KYC-gated through Spiko at fund NAV.",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "spiko-uk-t-bills-money-market-fund",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.spiko.io/spiko-treasury-bills-pound",
-    "provider": "Spiko fund NAV and holdings disclosures"
+    "provider": "Spiko fund NAV and holdings disclosures",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "France",
+    "attestorLicense": "AMF UCITS Short-Term VNAV MMF"
   },
   "links": [
     {

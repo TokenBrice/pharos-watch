@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { handleRedemptionBackstops } from "../redemption-backstops";
 
 function makeRedemptionRow(overrides: Record<string, unknown> = {}) {

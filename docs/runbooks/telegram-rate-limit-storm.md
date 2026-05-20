@@ -77,7 +77,7 @@ Detection signals:
    The endpoint accepts exactly one query filter: `chat_id` or `older_than_sec`. It refuses unfiltered requests and requests with both filters by design.
 4. **Pause low-priority sends.** Do not run admin broadcasts or broad manual resends while 429 dominates. Risk alerts take priority over recovery notices.
 5. **Investigate root cause.** If 429 is sustained without an obvious driver, check Cloudflare logs for outbound Telegram POSTs and confirm no client is replaying historical events through a non-production dispatcher.
-6. **Last resort: pause the dispatcher.** Open the `telegram_api` circuit breaker via the admin reset-circuit-breaker endpoint (used inverted to skip fan-out) only after coordinating with operators. This stops all alert delivery and also stops pending drain, so it is appropriate only when continued sends are making the incident worse.
+6. **Last resort: pause the dispatcher.** There is no supported admin endpoint for opening the `telegram-api` circuit. Do not use `reset-circuit-breaker` to pause sends; it deletes breaker state and lets the next run probe again. If continued sends are making the incident worse, coordinate an explicit Worker change or emergency config path and document the pause separately because it stops all alert delivery and pending drain.
 
 ## Cross-References
 

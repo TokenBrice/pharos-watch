@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../test-helpers/__shared/mock-d1";
 
 const cronMocks = vi.hoisted(() => ({
   syncStablecoins: vi.fn(async () => ({
@@ -28,6 +28,7 @@ const cronMocks = vi.hoisted(() => ({
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotPsiDaily: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  snapshotPublicDataset: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncUsdsStatus: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -79,6 +80,10 @@ const cronMocks = vi.hoisted(() => ({
   sendAlert: vi.fn(async () => true),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
+  reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
+  reconcileTelegramMenuButton: vi.fn(async () => ({ attempted: false, miniAppUrl: null })),
+  reconcileTelegramProfileRegistration: vi.fn(async () => ({ attempted: false })),
+  reconcileTelegramWebhookRegistration: vi.fn(async () => ({ attempted: false, expectedUrl: null })),
 }));
 
 vi.mock("../cron/sync-stablecoins", () => ({ syncStablecoins: cronMocks.syncStablecoins }));
@@ -98,6 +103,7 @@ vi.mock("../cron/snapshot-safety-grade-history", () => ({
 }));
 vi.mock("../cron/fetch-tbill-rate", () => ({ fetchTbillRate: cronMocks.fetchTbillRate }));
 vi.mock("../cron/snapshot-psi", () => ({ snapshotPsiDaily: cronMocks.snapshotPsiDaily }));
+vi.mock("../cron/snapshot-public-dataset", () => ({ snapshotPublicDataset: cronMocks.snapshotPublicDataset }));
 vi.mock("../cron/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsStatus }));
 vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
 vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
@@ -153,6 +159,17 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
     ...original,
     shouldAttemptFetch: cronMocks.shouldAttemptFetch,
     recordOutcome: cronMocks.recordOutcome,
+  };
+});
+
+vi.mock("../lib/telegram-webhook-registration", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/telegram-webhook-registration")>();
+  return {
+    ...original,
+    reconcileTelegramCommandRegistration: cronMocks.reconcileTelegramCommandRegistration,
+    reconcileTelegramMenuButton: cronMocks.reconcileTelegramMenuButton,
+    reconcileTelegramProfileRegistration: cronMocks.reconcileTelegramProfileRegistration,
+    reconcileTelegramWebhookRegistration: cronMocks.reconcileTelegramWebhookRegistration,
   };
 });
 
@@ -575,6 +592,13 @@ describe("worker.scheduled", () => {
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSafetyGradeHistory).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotPsiDaily).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotPublicDataset).toHaveBeenCalledTimes(1);
+    expect(cronMocks.snapshotSafetyGradeHistory.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.snapshotPsiDaily.mock.invocationCallOrder[0],
+    );
+    expect(cronMocks.snapshotPsiDaily.mock.invocationCallOrder[0]).toBeLessThan(
+      cronMocks.snapshotPublicDataset.mock.invocationCallOrder[0],
+    );
   });
 
   it("contains individual daily 08:05 failures and continues the other jobs", async () => {

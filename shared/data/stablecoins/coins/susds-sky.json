@@ -2,6 +2,8 @@
   "id": "susds-sky",
   "name": "Sky Savings USDS",
   "symbol": "sUSDS",
+  "oneLiner": "sUSDS is the yield-bearing wrapper of Sky's USDS; the exchange rate compounds with the Sky Savings Rate, with USDS-tier CDP risk underneath.",
+  "mechanismArchetype": "cdp",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -29,11 +31,11 @@
     },
     {
       "label": "Docs",
-      "url": "https://developers.sky.money/core-protocol/susds/"
+      "url": "https://developers.skyeco.com/protocol/tokens/susds/"
     },
     {
       "label": "Deployments",
-      "url": "https://developers.sky.money/quick-start/deployments-tracker/"
+      "url": "https://chainlog.skyeco.com/"
     }
   ],
   "contracts": [
@@ -54,7 +56,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://developers.sky.money/core-protocol/susds/"
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
         "label": "Website",
@@ -88,7 +90,7 @@
     "semantics": "single-asset",
     "breakerScope": "susds-sky",
     "display": {
-      "url": "https://developers.sky.money/core-protocol/susds/",
+      "url": "https://developers.skyeco.com/protocol/tokens/susds/",
       "label": "Sky sUSDS"
     },
     "inputs": {

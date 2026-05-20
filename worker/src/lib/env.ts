@@ -49,10 +49,13 @@ export interface Env {
   MINT_BURN_STALE_CRIT_SEC?: string;
   MINT_BURN_ALERT_COOLDOWN_SEC?: string;
   OPENEXCHANGERATES_API_KEY?: string;
+  BANXICO_TOKEN?: string;
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_D1_STATUS_API_TOKEN?: string;
   CLOUDFLARE_D1_DATABASE_ID?: string;
   MAINTENANCE_MODE?: string;
+  REQUEST_SOURCE_ATTRIBUTION_DISABLED?: string;
+  API_KEY_REQUEST_ATTRIBUTION_DISABLED?: string;
 }
 
 export interface WorkerEnvIssue {

@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Mento West African CFA Franc",
   "symbol": "XOFm",
+  "oneLiner": "XOFm is Mento's West African CFA Franc stablecoin, minted CDP-style against USDm collateral and oracle-priced through Mento's stability mechanism.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "XOF",
@@ -14,10 +15,13 @@
   },
   "collateral": "Mento CDP debt backed by USDm collateral, with XOFm minted through Mento's Liquity v2-style CDP system and priced through Mento oracle routes",
   "pegMechanism": "CDP-backed Mento FX stablecoin: borrowers mint XOFm against USDm collateral, while repayment, redemption, oracle-priced swaps, circuit breakers, and Mento governance parameters support the XOF peg",
+  "mechanismArchetype": "cdp",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://reserve.mento.org/",
-    "provider": "Mento Reserve dashboard"
+    "provider": "Mento Reserve dashboard",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

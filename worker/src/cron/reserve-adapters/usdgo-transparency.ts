@@ -5,6 +5,7 @@ import {
   fetchJsonWithRetry,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
+  reserveInfoWarning,
   slicesFromValues,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
@@ -37,6 +38,48 @@ function parseOptionalMillionUsd(value: unknown, label: string): number {
   return parseMillionUsd(value, label);
 }
 
+function normalizePublishedCollateralizationRatio(value: unknown): {
+  ratio: number | null;
+  format: "total-percent" | "excess-percent" | "raw-ratio" | null;
+} {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return { ratio: null, format: null };
+  }
+
+  if (value >= 50) {
+    return { ratio: value / 100, format: "total-percent" };
+  }
+
+  return { ratio: 1 + value / 100, format: "excess-percent" };
+}
+
+function resolvePublishedCollateralizationRatio(
+  value: unknown,
+  derivedRatio: number | null,
+): {
+  ratio: number | null;
+  format: "total-percent" | "excess-percent" | "raw-ratio" | null;
+} {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return { ratio: null, format: null };
+  }
+
+  if (derivedRatio == null) {
+    return normalizePublishedCollateralizationRatio(value);
+  }
+
+  return [
+    { ratio: value / 100, format: "total-percent" as const },
+    { ratio: 1 + value / 100, format: "excess-percent" as const },
+    { ratio: value, format: "raw-ratio" as const },
+  ]
+    .filter((candidate) => candidate.ratio > 0)
+    .sort(
+      (left, right) =>
+        Math.abs(left.ratio - derivedRatio) / left.ratio - Math.abs(right.ratio - derivedRatio) / right.ratio,
+    )[0];
+}
+
 export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): AdapterResult {
   if (!payload.ok || !payload.data) {
     throw new Error("usdgo-transparency returned an invalid response");
@@ -55,18 +98,16 @@ export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): Adapt
     );
   }
 
-  const publishedRatio = typeof payload.data.collateralizationRatio === "number"
-    ? payload.data.collateralizationRatio / 100
-    : null;
   const derivedRatio = supplyUsd > 0 ? totalReserveUsd / supplyUsd : null;
+  const publishedRatio = resolvePublishedCollateralizationRatio(payload.data.collateralizationRatio, derivedRatio);
   if (
-    publishedRatio != null
-    && derivedRatio != null
-    && Math.abs(publishedRatio - derivedRatio) / publishedRatio > 0.02
+    publishedRatio.ratio != null &&
+    derivedRatio != null &&
+    Math.abs(publishedRatio.ratio - derivedRatio) / publishedRatio.ratio > 0.02
   ) {
     throw new Error(
-      `usdgo-transparency collateralization ratio ${publishedRatio.toFixed(6)} `
-      + `does not match derived ratio ${derivedRatio.toFixed(6)}`,
+      `usdgo-transparency collateralization ratio ${publishedRatio.ratio.toFixed(6)} ` +
+        `does not match derived ratio ${derivedRatio.toFixed(6)}`,
     );
   }
 
@@ -106,11 +147,22 @@ export function adaptUsdgoTransparency(payload: UsdgoTransparencyPayload): Adapt
       totalReserveUsd,
       supplyUsd,
       componentTotalUsd,
-      ...(publishedRatio != null ? { publishedCollateralizationRatio: publishedRatio } : {}),
+      ...(publishedRatio.ratio != null ? { publishedCollateralizationRatio: publishedRatio.ratio } : {}),
+      ...(publishedRatio.format != null ? { publishedCollateralizationRatioFormat: publishedRatio.format } : {}),
       ...(derivedRatio != null ? { collateralizationRatio: derivedRatio } : {}),
       sourceProvenance:
         "Public USDGO transparency endpoint. Kept proof-class until field provenance, date freshness, and per-slice risk evidence are methodology-approved.",
     },
+    ...(publishedRatio.format === "excess-percent"
+      ? {
+          warnings: [
+            reserveInfoWarning(
+              "usdgo-collateralization-ratio-excess-percent",
+              "USDGO transparency collateralizationRatio is reported as excess backing percent; normalized against derived reserve/supply ratio.",
+            ),
+          ],
+        }
+      : {}),
   };
 }
 

@@ -1,6 +1,6 @@
 import { API_PATHS } from "./paths";
 
-type EndpointMethod = "GET" | "HEAD" | "POST";
+export type EndpointMethod = "GET" | "HEAD" | "POST";
 export type EndpointProbeGroup = "public" | "admin" | "manual";
 export type EndpointPublicApiAccess = "protected" | "exempt";
 export type EndpointSiteDataAccess = "allowed" | "denied";
@@ -284,8 +284,46 @@ const BASE_ENDPOINT_DEFINITIONS = [
     // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
+    key: "snapshots-index",
+    path: API_PATHS.snapshotsIndex(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    // Keep this out of public probes because valid dates come from /api/snapshots/index.
+    key: "snapshot-day",
+    path: "/api/snapshots/:date.json",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+  },
+  {
+    // Dynamic shape; runtime routing is registered via DYNAMIC_ENDPOINT_DESCRIPTORS.
+    // Keep this out of public probes because valid dates come from /api/snapshots/index.
+    key: "snapshot-coin",
+    path: "/api/snapshot/:date/stablecoin/:id",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+  },
+  {
     key: "yield-rankings",
     path: API_PATHS.yieldRankings(),
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    key: "yield-adapter-manifest",
+    path: API_PATHS.yieldAdapterManifest(),
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,

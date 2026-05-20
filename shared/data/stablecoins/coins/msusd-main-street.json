@@ -2,6 +2,7 @@
   "id": "msusd-main-street",
   "name": "Main Street USD",
   "symbol": "MSUSD",
+  "oneLiner": "msUSD is Main Street's USDC-backed dollar stablecoin minted 1:1 by KYC-verified users; delta-neutral options yield accrues separately via the msY token.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "USDC reserves backing unstaked msUSD 1:1; delta-neutral options-box yield accrues to the separate msY strategy token after users stake msUSD",
   "pegMechanism": "KYC-verified users mint and redeem msUSD 1:1 against USDC through Main Street contracts, while staking msUSD into msY is a separate NAV-appreciating yield path",
+  "mechanismArchetype": "fiat-cash",
   "llamaId": "297",
   "detailProvider": "defillama",
   "geckoId": "main-street-usd",
@@ -34,6 +36,11 @@
     {
       "chain": "ethereum",
       "address": "0x4ba01f22827018b4772cd326c7627fb4956a7c00",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0xe5fb2ed6832def99dde57c0b9d9a56537c89121d",
       "decimals": 18
     }
   ],

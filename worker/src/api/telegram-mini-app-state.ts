@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { listTelegramPresets, type TelegramPresetDefinition } from "../lib/telegram-presets";
 import { loadTelegramChatHealthDiagnostics } from "../lib/telegram-usage-analytics";
 import type { TelegramMiniAppAuthContext } from "../lib/telegram-mini-app-auth";

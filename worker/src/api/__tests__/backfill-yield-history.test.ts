@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../cron/yield-sync/types";
 

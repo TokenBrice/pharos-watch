@@ -83,17 +83,28 @@ function inferErrorClass(error: unknown): BlacklistRecoveryErrorClass {
   return "provider_null";
 }
 
-export async function enrichRowBalances(
-  rows: BlacklistRow[],
-  config: ContractEventConfig,
-  etherscanApiKey: string | null,
-  drpcApiKey: string | null,
-  etherscanLimiter: RateLimitedFetch,
-  runBudget: BlacklistRunBudget,
-  signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  assetPriceUsd?: number | null,
-): Promise<{ attempted: number; succeeded: number; failed: number }> {
+export async function enrichRowBalances(opts: {
+  rows: BlacklistRow[];
+  config: ContractEventConfig;
+  etherscanApiKey: string | null;
+  drpcApiKey: string | null;
+  etherscanLimiter: RateLimitedFetch;
+  runBudget: BlacklistRunBudget;
+  signal?: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  assetPriceUsd?: number | null;
+}): Promise<{ attempted: number; succeeded: number; failed: number }> {
+  const {
+    rows,
+    config,
+    etherscanApiKey,
+    drpcApiKey,
+    etherscanLimiter,
+    runBudget,
+    signal,
+    chainRpcs,
+    assetPriceUsd,
+  } = opts;
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
   for (const row of rows) {
     throwIfAborted(signal);

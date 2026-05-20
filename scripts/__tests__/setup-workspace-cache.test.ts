@@ -16,17 +16,18 @@ function extractStepByNeedle(needle: string): string {
 
 describe("setup-workspace tooling cache", () => {
   it("keeps the cache action pinned while caching generated tooling artifacts", () => {
-    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+    const cacheStep = extractStepByNeedle("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae");
 
-    expect(cacheStep).toContain("# v4.2.4");
+    expect(cacheStep).toContain("# v5.0.5");
     expect(cacheStep).toContain(".next/cache");
     expect(cacheStep).toContain(".cache/eslint");
+    expect(cacheStep).toContain("~/.cache/ms-playwright");
     expect(cacheStep).toContain("*.tsbuildinfo");
     expect(cacheStep).toContain("worker/*.tsbuildinfo");
   });
 
   it("uses a fresh primary key per job run so restored tooling caches can be saved after builds", () => {
-    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+    const cacheStep = extractStepByNeedle("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae");
 
     expect(cacheStep).toContain("${{ github.job }}");
     expect(cacheStep).toContain("${{ github.run_id }}");
@@ -40,7 +41,7 @@ describe("setup-workspace tooling cache", () => {
 
   it("normalizes numeric Node inputs before keying the tooling cache", () => {
     const keyStep = extractStepByNeedle("id: tooling-cache-key");
-    const cacheStep = extractStepByNeedle("actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809");
+    const cacheStep = extractStepByNeedle("actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae");
 
     expect(keyStep).toContain("RAW_NODE_VERSION: ${{ inputs.node-version }}");
     expect(keyStep).toContain('raw_node_version="${RAW_NODE_VERSION}"');
@@ -48,5 +49,12 @@ describe("setup-workspace tooling cache", () => {
     expect(keyStep).toContain('echo "node-key=${node_key}" >> "${GITHUB_OUTPUT}"');
     expect(cacheStep).toContain("${{ steps.tooling-cache-key.outputs.node-key }}");
     expect(cacheStep).not.toContain("inputs.node-version");
+  });
+
+  it("installs Playwright Chromium only when requested", () => {
+    const installStep = extractStepByNeedle("inputs.install-playwright-chromium == 'true'");
+
+    expect(installStep).toContain("inputs.install-playwright-chromium == 'true'");
+    expect(installStep).toContain("npx --no-install playwright install --with-deps chromium");
   });
 });

@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPriceReasonablenessOptions,
   isReasonablePrice,

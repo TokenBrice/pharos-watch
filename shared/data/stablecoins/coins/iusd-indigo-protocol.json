@@ -4,6 +4,7 @@
   "detailProvider": "defillama",
   "name": "Indigo iUSD",
   "symbol": "iUSD",
+  "oneLiner": "iUSD is Indigo Protocol's decentralized synthetic dollar on Cardano, minted against overcollateralized CDP vaults of Cardano-native assets.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -14,6 +15,7 @@
   },
   "collateral": "Cardano collateralized debt positions in Indigo Protocol vaults",
   "pegMechanism": "Synthetic dollar minted against overcollateralized Cardano assets, with liquidations and stability mechanisms governed by Indigo Protocol",
+  "mechanismArchetype": "cdp",
   "geckoId": "iusd",
   "protocolSlug": "indigo-protocol",
   "links": [
@@ -27,7 +29,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://indigo-labs.gitbook.io/indigo-protocol/"
+      "url": "https://docs.indigoprotocol.io/"
     }
   ],
   "contracts": [

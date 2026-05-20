@@ -43,6 +43,7 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 `src/app/portfolio/client.tsx` owns:
 
 - holdings entry and removal
+- mobile holdings entry as stacked holding rows with one add selector, while wider screens keep compact rows
 - preset loading (`CeFi Core`, `Treasury Heavy`, `DeFi Native`, `Barbell Mix`)
 - aggregate portfolio grade and radar chart
 - upstream exposure view (grouped or detailed)

@@ -2,6 +2,7 @@
   "id": "usdpt-western-union",
   "name": "US Dollar Payment Token",
   "symbol": "USDPT",
+  "oneLiner": "USDPT is Western Union's Solana dollar stablecoin issued by Anchorage Digital Bank with U.S. Bank as reserve custodian for B2B agent settlement.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "U.S. dollar reserves held for USDPT, including bank deposits, U.S. Treasury bills, and similar cash equivalents",
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
+  "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
     {
@@ -44,7 +46,7 @@
     }
   ],
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "LAUNCH ANNOUNCED May 4 on Solana — public mint address not yet disclosed by Anchorage Digital Bank / Fireblocks / BusinessWire; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; CoinGecko listing remains preview-only with zero supply (B2B settlement, not exchange-traded yet); PROMOTION CANDIDATE pending verifiable contract address and aggregator runtime data",
+  "launchPhaseDetail": "LAUNCHED May 4, 2026 on Solana for B2B settlement — public mint address not yet disclosed by Anchorage Digital Bank / Fireblocks / BusinessWire; Philippines and Bolivia as first markets; Fireblocks selected as core settlement infrastructure; 'Stable by Western Union' consumer product planned for 40+ markets later in 2026; DAN live with first partner Apr 28, seven more activations expected by end of 2026; Anchorage Digital Bank issuer, U.S. Bank reserve custodian; DefiLlama reports supply but no usable price yet, so Pharos promotion remains pending verifiable contract address and runtime price data",
   "featuredContent": [
     {
       "type": "tweet",
@@ -132,5 +134,6 @@
       "description": "Fireblocks (including Dynamic embedded wallets and TRES financial platform) powers USDPT's custody, settlement, and wallet infrastructure.",
       "sourceUrl": "https://www.prnewswire.com/news-releases/western-union-selects-fireblocks-to-power-its-first-stablecoin-usdpt-302760774.html"
     }
-  ]
+  ],
+  "launchDate": "2026-05-04"
 }

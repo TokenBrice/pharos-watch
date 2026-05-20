@@ -2,6 +2,7 @@
   "id": "usdh-hubble",
   "name": "Hubble USDH",
   "symbol": "USDH",
+  "oneLiner": "USDH is Hubble Protocol's decentralized CDP stablecoin on Solana, minted against SOL, mSOL, BTC, ETH and other whitelisted assets at 150% min collateral ratio.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -12,6 +13,7 @@
   },
   "collateral": "Overcollateralized basket of Solana-native crypto assets (SOL, mSOL, BTC, ETH, and other Hubble-whitelisted tokens) deposited into Hubble Protocol CDP vaults at a minimum 150% collateralization ratio",
   "pegMechanism": "Borrowers mint USDH against overcollateralized Solana crypto vaults and repay or are liquidated under Hubble's CDP rules; Stability Pool absorbs liquidations and distributes collateral to depositors",
+  "mechanismArchetype": "cdp",
   "llamaId": "65",
   "detailProvider": "defillama",
   "geckoId": "usdh",

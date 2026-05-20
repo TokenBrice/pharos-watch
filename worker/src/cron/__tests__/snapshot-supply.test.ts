@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({

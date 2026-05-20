@@ -191,6 +191,9 @@ describe("blacklist-api", () => {
           BlacklistStablecoin,
           Array<{ quarter: string; blacklist: number; unblacklist: number; destroy: number }>
         >,
+        perCoinRecentEventTypes: Object.fromEntries(
+          BLACKLIST_STABLECOINS.map((s) => [s, { freezes: 0, destroys: 0, releases: 0 }]),
+        ) as Record<BlacklistStablecoin, { freezes: number; destroys: number; releases: number }>,
       },
       chart: [],
       chains: [{ id: "ethereum", name: "Ethereum" }],

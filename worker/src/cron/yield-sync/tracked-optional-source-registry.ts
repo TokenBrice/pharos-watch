@@ -4,6 +4,7 @@ import {
   fetchBimaSusbdSource,
   fetchBprotocolLqtyOnlySource,
   fetchCurveScrvusdCurrentRateSource,
+  fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
   fetchZephyrZysSource,
@@ -15,6 +16,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 const LIQUITY_V1_LUSD_ID = "lusd-liquity";
 const SCRVUSD_CURVE_ID = "scrvusd-curve";
 const BIMA_USBD_ID = "usbd-bima";
+const CETES_ETHERFUSE_ID = "cetes-etherfuse";
 const HASHNOTE_USYC_ID = "usyc-hashnote";
 const ONDO_USDY_ID = "usdy-ondo-finance";
 const ZEPHYR_ZYS_ID = "zys-zephyr-protocol";
@@ -91,6 +93,17 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
         "BIMA sUSBD source",
         context.signal,
         (budgetSignal) => fetchBimaSusbdSource(budgetSignal),
+        null,
+      ),
+  },
+  {
+    stablecoinId: CETES_ETHERFUSE_ID,
+    sourceKey: "protocol-api:etherfuse-cetes-current-issuance",
+    run: (context) =>
+      runTimedOptionalSource(
+        "Etherfuse CETES current-issuance source",
+        context.signal,
+        (budgetSignal) => fetchEtherfuseCetesSource(budgetSignal),
         null,
       ),
   },

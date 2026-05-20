@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata } from "./shared";

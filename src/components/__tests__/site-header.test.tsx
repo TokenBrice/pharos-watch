@@ -33,7 +33,7 @@ describe("SiteHeader", () => {
       "Chart your route through the stablecoin market",
     );
     expect(html).toContain(
-      "live peg, safety, liquidity, and dependency signals",
+      "depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals",
     );
   });
 

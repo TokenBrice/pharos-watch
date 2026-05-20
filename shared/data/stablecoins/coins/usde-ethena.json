@@ -2,6 +2,8 @@
   "id": "usde-ethena",
   "name": "Ethena USDe",
   "symbol": "USDe",
+  "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates.",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -19,7 +21,9 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://app.ethena.fi/dashboards/transparency",
-    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk"
+    "provider": "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk",
+    "attestorTier": "niche",
+    "cadence": "real-time"
   },
   "links": [
     {

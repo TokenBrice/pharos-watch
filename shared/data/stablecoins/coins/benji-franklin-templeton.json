@@ -2,6 +2,7 @@
   "id": "benji-franklin-templeton",
   "name": "Franklin OnChain U.S. Government Money Fund",
   "symbol": "BENJI",
+  "oneLiner": "BENJI is the on-chain share token for Franklin Templeton's FOBXX, an SEC-registered U.S. government money market fund with a stable $1.00 NAV.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "USD",
@@ -12,12 +13,17 @@
   },
   "collateral": "U.S. government securities, cash, and repurchase agreements held by the Franklin OnChain U.S. Government Money Fund (FOBXX); '40 Act-registered money market fund custodied by BNY Mellon with Franklin Templeton as transfer agent and Benji as the on-chain share record",
   "pegMechanism": "Single fund, multi-chain BENJI token tracking FOBXX's stable $1.00 NAV; rebasing share count records distributed yield directly on-chain; subscriptions and redemptions are gated to KYC-verified Benji wallets with USD-wire and Benji-to-USDC settlement paths",
+  "mechanismArchetype": "tbill",
   "detailProvider": "coingecko",
   "geckoId": "franklin-templeton-benji",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.franklintempleton.com/investments/options/money-market-funds/products/29380/SINGLCLASS/franklin-on-chain-u-s-government-money-fund/FOBXX",
-    "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)"
+    "provider": "Franklin Templeton (daily fund holdings and NAV factsheet)",
+    "attestorTier": "self",
+    "cadence": "daily-nav",
+    "attestorJurisdiction": "United States",
+    "attestorLicense": "SEC-registered fund (Investment Company Act of 1940)"
   },
   "links": [
     {
@@ -30,7 +36,7 @@
     },
     {
       "label": "Benji App",
-      "url": "https://benji.franklintempleton.com/"
+      "url": "https://digitalassets.franklintempleton.com/benji/"
     }
   ],
   "jurisdiction": {

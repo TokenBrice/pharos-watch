@@ -1,4 +1,4 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import type { StablecoinMeta } from "@shared/types/core";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";

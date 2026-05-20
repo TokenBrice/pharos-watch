@@ -24,10 +24,8 @@ function makeTempRoot(): string {
 function writeJson(rootDir: string, relativePath: string, value: unknown): void {
   const absolutePath = join(rootDir, relativePath);
   // Test helper writes only into per-test temp directories.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   mkdirSync(dirname(absolutePath), { recursive: true });
   // Test helper writes only into per-test temp directories.
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
   writeFileSync(absolutePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 

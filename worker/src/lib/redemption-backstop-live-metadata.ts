@@ -3,7 +3,7 @@ import {
   getAllowedRedemptionCapacityWarningReason,
   isRedemptionFreshnessAllowedByPolicy,
 } from "@shared/lib/redemption-backstop-configs/policies";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   RedemptionCapacityConfidence,
   RedemptionHolderEligibility,
@@ -18,10 +18,12 @@ import {
   RedemptionLiveFreshnessKindSchema,
 } from "@shared/types/redemption";
 import type { LiveReserveWarning } from "@shared/types/live-reserves";
-import type { ReserveSnapshotMetadataRecord } from "./live-reserves-store";
-import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves-store";
-import { SCORING_LIVE_RESERVE_EVIDENCE_CLASSES } from "./live-reserves-store-shared";
-import { hasScoringEligibleLiveReserveFreshness } from "./live-reserves-store-legacy";
+import {
+  hasScoringEligibleLiveReserveFreshness,
+  LIVE_RESERVE_FRESHNESS_SEC,
+  SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
+  type ReserveSnapshotMetadataRecord,
+} from "./live-reserves-store";
 
 export interface RedemptionBackstopLiveMetadata {
   updatedAt: number | null;

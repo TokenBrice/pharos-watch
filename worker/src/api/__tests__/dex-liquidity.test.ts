@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { mockD1 } from "./helpers/mock-d1";
-import { makeDexLiquidityRow } from "./helpers/fixtures";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
 
 describe("handleDexLiquidity", () => {

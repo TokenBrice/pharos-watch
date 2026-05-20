@@ -1,5 +1,6 @@
 import { errorResponse, jsonResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { checkFeedbackRateLimit } from "../../lib/rate-limit";
+import { safeErrorMessage } from "../../lib/safe-error-message";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import {
   FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
@@ -70,7 +71,7 @@ export async function prepareFeedbackSubmission(
       FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
     );
   } catch (error) {
-    console.error("[feedback] rate-limit dependency unavailable:", error);
+    console.error("[feedback] rate-limit dependency unavailable:", safeErrorMessage(error));
     return errorResponse(
       503,
       "Feedback service temporarily unavailable. Please try again.",

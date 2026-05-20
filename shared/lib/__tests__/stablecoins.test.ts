@@ -17,7 +17,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   TRACKED_META_BY_ID,
   TRACKED_STABLECOINS,
-} from "@shared/lib/stablecoins";
+} from "@shared/lib/stablecoins/registry";
 import { getVariants, isTrackedVariant } from "@shared/lib/stablecoins";
 import {
   findStablecoinCatalogInvariantIssues,
@@ -58,8 +58,8 @@ describe("tracked stablecoin metadata", () => {
     expect(nonUsd).toHaveLength(0);
     expect(commodity).toHaveLength(0);
     expect(preLaunch).toHaveLength(0);
-    expect(perCoinGenerated).toHaveLength(391);
-    expect(canonicalOrder).toHaveLength(391);
+    expect(perCoinGenerated).toHaveLength(392);
+    expect(canonicalOrder).toHaveLength(392);
     expect(
       usdMajor.length + usdMinor.length + nonUsd.length + commodity.length + preLaunch.length + perCoinGenerated.length,
     ).toBe(canonicalOrder.length);
@@ -86,13 +86,13 @@ describe("tracked stablecoin metadata", () => {
     const preLaunchCoins = perCoinGenerated.filter((coin) => coin.status === "pre-launch");
 
     expect(legacyShellCoins).toEqual([]);
-    expect(preLaunchCoins).toHaveLength(25);
+    expect(preLaunchCoins).toHaveLength(26);
     expect(preLaunchCoins.every((coin) => coin.status === "pre-launch")).toBe(true);
   });
 
   it("keeps active and pre-launch partitions aligned after the JSON migration", () => {
-    expect(TRACKED_STABLECOINS).toHaveLength(391);
-    expect(ACTIVE_STABLECOINS).toHaveLength(363);
+    expect(TRACKED_STABLECOINS).toHaveLength(392);
+    expect(ACTIVE_STABLECOINS).toHaveLength(362);
     expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
       "usdpt-western-union",
       "roughrider-bnd",
@@ -119,6 +119,7 @@ describe("tracked stablecoin metadata", () => {
       "brl-itau",
       "usd-nubank",
       "krw-imbank",
+      "gynusd-gyndore",
     ]);
   });
 
@@ -311,26 +312,22 @@ describe("tracked stablecoin metadata", () => {
     )).toBe(true);
   });
 
-  it("classifies BOLD yield as a native wrapper over the Liquity Stability Pool", () => {
+  it("keeps BOLD itself as non-yield-bearing metadata", () => {
     const coin = TRACKED_META_BY_ID.get("bold-liquity");
 
     expect(coin).toBeDefined();
-    expect(coin?.yieldConfig).toMatchObject({
-      yieldSource: "Liquity Stability Pool (via Yearn yBOLD)",
-      yieldType: "lending-vault",
-    });
+    expect(coin?.yieldConfig).toBeUndefined();
   });
 
-  it("keeps base USDAI on the curated PYUSD reserve path while sUSDai owns the mixed protocol feed", () => {
+  it("keeps base USDAI on the curated supply path while sUSDai owns the mixed protocol reserve feed", () => {
     const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
     const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");
 
     expect(usdai?.reserves).toEqual([
       {
-        name: "PYUSD (PayPal USD)",
+        name: "USDC / USDT stablecoin reserves (variable mix)",
         pct: 100,
         risk: "low",
-        coinId: "pyusd-paypal",
       },
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({

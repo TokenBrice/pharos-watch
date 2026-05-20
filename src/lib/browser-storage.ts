@@ -47,3 +47,30 @@ export function safeStorageRemoveItem(
     return false;
   }
 }
+
+export function readJsonStorageValue<T>(
+  storage: Storage | null | undefined,
+  key: string,
+  decode: (value: unknown) => T | null,
+  fallback: T,
+  onError?: (error: unknown) => void,
+): T {
+  const raw = safeStorageGetItem(storage, key);
+  if (!raw) return fallback;
+
+  try {
+    const decoded = decode(JSON.parse(raw));
+    return decoded ?? fallback;
+  } catch (error) {
+    onError?.(error);
+    return fallback;
+  }
+}
+
+export function writeJsonStorageValue(
+  storage: Storage | null | undefined,
+  key: string,
+  value: unknown,
+): boolean {
+  return safeStorageSetItem(storage, key, JSON.stringify(value));
+}

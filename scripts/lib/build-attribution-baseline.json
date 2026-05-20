@@ -1,0 +1,60 @@
+{
+  "description": "Aggregate chunk attribution sizes. Refreshed via npm run check:build-attribution:update-baseline.",
+  "groups": [
+    {
+      "key": "(unclassified)",
+      "totalBytes": 4482643,
+      "chunkCount": 148
+    },
+    {
+      "key": "stablecoin-registry-zod",
+      "totalBytes": 2319050,
+      "chunkCount": 2
+    },
+    {
+      "key": "recharts",
+      "totalBytes": 1692012,
+      "chunkCount": 6
+    },
+    {
+      "key": "recharts-component",
+      "totalBytes": 1156067,
+      "chunkCount": 12
+    },
+    {
+      "key": "error-boundary",
+      "totalBytes": 1118531,
+      "chunkCount": 17
+    },
+    {
+      "key": "methodology-version",
+      "totalBytes": 1089087,
+      "chunkCount": 8
+    },
+    {
+      "key": "pre-launch-shell",
+      "totalBytes": 486011,
+      "chunkCount": 2
+    },
+    {
+      "key": "next-framework",
+      "totalBytes": 422095,
+      "chunkCount": 4
+    },
+    {
+      "key": "stablecoin-registry-zod+zod",
+      "totalBytes": 295486,
+      "chunkCount": 1
+    },
+    {
+      "key": "stablecoin-client-registry",
+      "totalBytes": 256012,
+      "chunkCount": 1
+    },
+    {
+      "key": "error-boundary+methodology-version",
+      "totalBytes": 85848,
+      "chunkCount": 1
+    }
+  ]
+}

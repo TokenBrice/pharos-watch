@@ -49,7 +49,6 @@ function executeSqlFile(
   try {
     const sqlFile = join(tmpDir, "statements.sql");
     // Temp SQL file is created under mkdtempSync() and never leaves this function.
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(sqlFile, statements.join("\n"));
     executeWrangler(["d1", "execute", databaseName, `--${options.target}`, "--file", sqlFile, "--json"], options);
   } finally {

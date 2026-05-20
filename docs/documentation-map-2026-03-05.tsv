@@ -10,4 +10,3 @@ worker/migrations/MANIFEST.md	md	D1 migration manifest	current	Repo-adjacent ope
 shared/data/stablecoins/PROVENANCE_NOTES.md	md	Stablecoin registry provenance notes	current	Archival provenance reference; preserved comments still use historical pre-JSON file names and line anchors.
 docs/runbooks/	dir	Operator runbooks	current	Canonical operator runbooks live under `docs/runbooks/`.
 docs/process/	dir	Process docs	current	Recurring agent and maintainer procedures.
-docs/trackers/	dir	Long-lived trackers	current	Open execution trackers and deferred follow-ups that are still actionable.

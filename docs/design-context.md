@@ -2,7 +2,9 @@
 
 ## Users
 
-Crypto-native DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. The core audience is still power-user-leaning, even when onboarding or discovery surfaces get simpler. They value density, precision, and speed-to-insight over softness or consumer-app hand-holding.
+Crypto-native DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. The core audience is power-user-leaning: they value density, precision, and speed-to-insight over softness or consumer-app hand-holding.
+
+Discovery and onboarding surfaces (`/start/`, first-run callouts, `/about/`, `/api/` public landing, `/learn/mechanisms/`) deliberately soften their layout and lead with warmer kicker copy to welcome newcomers, but the data surfaces they hand off to stay practitioner-grade. The drift is in the *funnel*, not in the *product core*.
 
 ## Brand Personality
 
@@ -12,12 +14,24 @@ Crypto-native DeFi participants who actively monitor stablecoin health — check
 
 **Calm by default, urgent when needed.** The steady state is composed and analytical — the user feels informed and in control. When risk signals fire (depeg events, DEWS alerts, PSI band shifts), the interface shifts tone to communicate urgency without panic.
 
+## Surface Tiers
+
+Pharos calibrates density and tone to surface intent across three explicit tiers. Use this table to place new work; do not blend tiers within a single surface.
+
+| Tier | Routes / Surfaces | Density | Tone | Layout signal |
+| --- | --- | --- | --- | --- |
+| **Discovery** | `/start/`, first-run homepage callout, `/about/`, `/api/` public landing, `/learn/mechanisms/`, marketing-adjacent shells | Lowest | Warmer kicker copy permitted; inviting framing (e.g., "Chart your route") | Larger rounded shells, generous whitespace, fewer controls, step explainers, route boards |
+| **Analytics** | Homepage dashboard, `/depeg/`, `/chains/`, `/liquidity/`, `/freezewatch/`, `/yield/`, `/coverage/`, `/alt-pegs/`, `/safety-scores/`, `/upcoming/`, `/digest/` archive | Default | Composed, analytical, factual | `pharos-card-shell`, KPI grids, charts, sortable tables, control pills |
+| **Power-user** | `/stablecoin/[id]/`, `/compare/`, `/screener/`, `/timeline/`, `/portfolio/`, ops admin | Highest | Maximum information per pixel; assumes domain fluency | Dense tables, minimal chrome, hairline dividers, mono-heavy, multi-pane composition |
+
+The gradient runs Discovery → Analytics → Power-user. Drift between adjacent tiers is acceptable when justified by the surface's actual user intent; jumps across tiers (warm copy on `/timeline/`, marketing-style soft chrome on `/screener/`, or dense multi-pane composition inside `/start/`) are not.
+
 ## Aesthetic Direction
 
 - **Theme**: Dark-first financial dashboard (light mode supported)
 - **References**: DeFi-native research products with strong data density and practical crypto analytics, but Pharos should not collapse into looking like another interchangeable dashboard
 - **Brand accent**: Frost-blue `oklch(0.72 0.14 248)` — used sparingly for navigation active states and brand touches
-- **Fonts**: Geist Sans (UI) + Geist Mono (all numbers) — monospace numbers signal precision and trust
+- **Fonts**: Geist Sans (UI) + Geist Mono (all numbers) — monospace numbers signal precision and trust. Three intentional non-Geist carve-outs: Newsreader serif (Daily Digest editorial), Georgia serif (`AiSummary` paragraph on stablecoin detail), Courier New + Geist Mono (Tape / `/timeline/` wire-service stream)
 - **Color use**: Semantic first — color communicates state (health, risk, trend direction), not empty decoration
 - **Design bar**: Avoid generic SaaS sameness; every major surface should feel authored and recognizably Pharos
 
@@ -27,13 +41,15 @@ Crypto-native DeFi participants who actively monitor stablecoin health — check
 - **Corporate fintech**: Sterile, over-polished, feels like a bank app — no personality
 - **Generic SaaS dashboards**: Cookie-cutter admin panels with big empty cards, interchangeable KPI tiles, and safe pastel gradients
 - **Derivative crypto analytics clones**: Anything that feels like a reskinned DefiLlama or generic trading terminal without its own point of view
+- **Consumer-app over-softening**: Discovery surfaces soften their *layout and kicker copy*, not their *data*. Charts, tables, and numbers stay analytical on every tier — no chunky illustrations or onboarding mascots inside data surfaces.
 
 ## Design Principles
 
 1. **Data density over decoration** — every pixel earns its place by communicating information
-2. **Calm authority, not loud urgency** — steady state is composed; risk signals shift the tone
-3. **Precision as personality** — monospace numbers, exact percentages, named bands — trust through specificity
-4. **Semantic color only** — color communicates state (health, risk, trend), never decoration
-5. **Crypto-native, not mass-market** — simplify navigation when needed, but do not sand off the power-user edge
-6. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone
-7. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty
+2. **Calibrate density to surface intent** — Discovery surfaces breathe and lead with warmer kicker copy; Analytics surfaces hold the default; Power-user surfaces compress. Do not apply a single density everywhere.
+3. **Calm authority, not loud urgency** — steady state is composed; risk signals shift the tone
+4. **Precision as personality** — monospace numbers, exact percentages, named bands — trust through specificity
+5. **Semantic color only** — color communicates state (health, risk, trend), never decoration
+6. **Soften the funnel, not the product** — onboarding and discovery can welcome with warmer language and roomier layouts; data surfaces remain crypto-native and practitioner-grade
+7. **Distinctive, not generic** — Pharos should feel authored and memorable, never like a template or a clone. When a page introduces a metaphor, *draw it* (Cemetery, Alt-Peg Atlas, Chains Harbor) — but every shape must encode a data field
+8. **Consistency is polish** — premium feel comes from repeated precision in spacing, shell treatment, controls, and empty/error states, not from adding decorative novelty

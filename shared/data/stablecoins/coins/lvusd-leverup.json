@@ -3,6 +3,7 @@
   "detailProvider": "coingecko",
   "name": "LeverUp USD",
   "symbol": "lvUSD",
+  "oneLiner": "lvUSD is LeverUp's liquidity-layer stablecoin on Monad, minted against USDC and MON inside the perpetuals trading engine rather than a standard reserve.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",

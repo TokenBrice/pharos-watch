@@ -6,56 +6,18 @@ import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
 import { useLogos } from "@/hooks/use-logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
-
-const SEVERITY_DOT_CLASS: Record<TapeEventSeverity, string> = {
-  info: "bg-emerald-500",
-  notice: "bg-sky-500",
-  warning: "bg-amber-500",
-  severe: "bg-orange-500",
-  critical: "bg-red-500",
-};
-
-const SEVERITY_LABEL: Record<TapeEventSeverity, string> = {
-  info: "Info",
-  notice: "Notice",
-  warning: "Warning",
-  severe: "Severe",
-  critical: "Critical",
-};
-
-// Per-class background tint. Hues are picked to be distinct from the severity
-// ramp (emerald/sky/amber/orange/red) so type and severity stay readable
-// independently. Tailwind classes are static strings as required.
-const CLASS_BG: Record<string, string> = {
-  depeg: "bg-rose-500/10",
-  freeze: "bg-cyan-500/10",
-  score: "bg-indigo-500/10",
-  dews: "bg-fuchsia-500/10",
-  psi: "bg-sky-500/10",
-  mint_burn: "bg-orange-500/10",
-  reserve: "bg-emerald-500/10",
-  redemption: "bg-teal-500/10",
-  yield: "bg-lime-500/10",
-  liquidity: "bg-blue-500/10",
-  methodology: "bg-violet-500/10",
-  lifecycle: "bg-amber-500/10",
-  cemetery: "bg-zinc-500/10",
-};
-
-function eventTypeClass(type: string): string {
-  const dot = type.indexOf(".");
-  const cls = dot === -1 ? type : type.slice(0, dot);
-  return CLASS_BG[cls] ?? "";
-}
-
-function formatRelativeTime(tsMs: number): string {
-  const ageSec = Math.max(1, Math.floor((Date.now() - tsMs) / 1000));
-  if (ageSec < 60) return `${ageSec}s ago`;
-  if (ageSec < 3600) return `${Math.round(ageSec / 60)}m ago`;
-  if (ageSec < 86_400) return `${Math.round(ageSec / 3600)}h ago`;
-  return `${Math.round(ageSec / 86_400)}d ago`;
-}
+import {
+  collapseForHomepageStrip,
+  eventClassSlug,
+  type CollapsedTapeEntry,
+} from "@/lib/tape-collapse";
+import { tapeClassChipBg } from "@/lib/tape-class-style";
+import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import {
+  SEVERITY_DOT_CLASS,
+  SEVERITY_LABEL,
+  type TapeEvent,
+} from "@shared/types/tape-event";
 
 function durationFromCount(count: number): string {
   // ~4.5 seconds per item — slow news ticker pace
@@ -64,8 +26,44 @@ function durationFromCount(count: number): string {
 }
 
 interface TapeItemProps {
-  event: TapeEvent;
+  entry: CollapsedTapeEntry;
   logoSrc: string | undefined;
+  logoName: string | null;
+  logos: Record<string, string>;
+}
+
+const STACKED_LOGO_LIMIT = 4;
+
+function StackedCoinLogos({
+  coinIds,
+  logos,
+}: {
+  coinIds: ReadonlyArray<string>;
+  logos: Record<string, string>;
+}) {
+  const visible = coinIds.slice(0, STACKED_LOGO_LIMIT);
+  const overflow = coinIds.length - visible.length;
+  return (
+    <span className="inline-flex items-center" aria-label={`${coinIds.length} coins`}>
+      {visible.map((coinId, idx) => (
+        <span key={coinId} className={idx === 0 ? "" : "-ml-2"}>
+          <StablecoinLogo src={logos[coinId]} name={coinId} size={22} />
+        </span>
+      ))}
+      {overflow > 0 ? (
+        <span className="-ml-2 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-border/60 bg-background/80 px-1 text-[10px] font-semibold tabular-nums text-foreground/80">
+          +{overflow}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function consolidatedDewsTitle(event: TapeEvent): string | null {
+  const prev = event.payload?.prevBand;
+  const next = event.payload?.newBand;
+  if (typeof prev !== "string" || typeof next !== "string") return null;
+  return `DEWS ${prev} → ${next}`;
 }
 
 const EMPTY_EVENTS: ReadonlyArray<TapeEvent> = [];
@@ -76,26 +74,40 @@ const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 md:ml-[var(--pharos-homepage-tape-offset)] md:w-[calc(100%-var(--pharos-homepage-tape-offset))]",
 };
 
-function resolveEventLogoId(event: TapeEvent): string | null {
-  // Wire schema exposes a canonical `coinId`; symbol-only fallback is no
-  // longer needed.
-  return event.coinId ?? null;
+function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
+  if (event.coinId) return event.coinId;
+  // Freeze rows from the blacklist projector ship without `coinId` but carry
+  // the symbol in `payload.stablecoin`. Map to the canonical `<ticker>-<issuer>`
+  // logo key so the strip still renders the issuer's coin logo.
+  const rawSym = event.payload?.stablecoin;
+  if (typeof rawSym !== "string" || rawSym.length === 0) return null;
+  const target = rawSym.toLowerCase();
+  for (const key of Object.keys(logos)) {
+    const dashIdx = key.indexOf("-");
+    if (dashIdx > 0 && key.slice(0, dashIdx) === target) return key;
+  }
+  return null;
 }
 
 function resolveEventHref(event: TapeEvent): string {
-  return event.sourceUrl ?? `/tape/?event=${encodeURIComponent(event.id)}`;
+  return event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
 }
 
-function TapeItem({ event, logoSrc }: TapeItemProps) {
-  const bgClass = eventTypeClass(event.type);
-  const logoName = event.coinId ?? event.title;
+function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
+  const { event, count, coinIds } = entry;
+  const bgClass = tapeClassChipBg(event.type);
+  const consolidated = coinIds && coinIds.length > 1;
+  const title = consolidated ? consolidatedDewsTitle(event) ?? event.title : event.title;
+  const badgeValue = consolidated ? coinIds.length : count;
 
   return (
     <Link
       href={resolveEventHref(event)}
       className={`pharos-focus-ring inline-flex items-center gap-2 rounded-md px-2 py-1 whitespace-nowrap text-sm hover:text-foreground ${bgClass}`}
     >
-      {event.coinId ? (
+      {consolidated ? (
+        <StackedCoinLogos coinIds={coinIds} logos={logos} />
+      ) : logoName ? (
         <StablecoinLogo src={logoSrc} name={logoName} size={22} />
       ) : (
         <span
@@ -103,8 +115,16 @@ function TapeItem({ event, logoSrc }: TapeItemProps) {
           className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
         />
       )}
-      <span className="text-foreground">{event.title}</span>
-      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTime(event.ts)}</span>
+      <span className="text-foreground">{title}</span>
+      {badgeValue > 1 ? (
+        <span
+          aria-label={consolidated ? `${badgeValue} coins` : `${badgeValue} similar events`}
+          className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-foreground/80"
+        >
+          ×{badgeValue}
+        </span>
+      ) : null}
+      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
     </Link>
   );
 }
@@ -112,7 +132,7 @@ function TapeItem({ event, logoSrc }: TapeItemProps) {
 function TapeTerminator() {
   return (
     <Link
-      href="/tape/"
+      href="/timeline/"
       className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground"
     >
       <span>View all events</span>
@@ -122,12 +142,20 @@ function TapeTerminator() {
 }
 
 export function HomepageTape({ placement = "inline" }: { placement?: HomepageTapePlacement }) {
-  const { data, isLoading, error } = useLatestEvents({ limit: 20 });
+  // `severityFloor: "notice"` drops routine info-tier bookkeeping (issuer
+  // freeze.unblocked actions) so the strip stays signal-rich. The collapse
+  // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
+  // into a single cell with a count badge.
+  const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
   const { data: logos } = useLogos();
   const events = data?.events ?? EMPTY_EVENTS;
-  const duplicated = useMemo(() => events.concat(events), [events]);
+  const collapsed = useMemo(
+    () => collapseForHomepageStrip(events.filter((event) => eventClassSlug(event.type) !== "score")),
+    [events],
+  );
+  const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);
 
-  if (error || (!isLoading && events.length === 0)) {
+  if (error || (!isLoading && collapsed.length === 0)) {
     return null;
   }
 
@@ -135,7 +163,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     <section
       aria-label="Recent events tape"
       className={TAPE_SHELL_CLASS[placement]}
-      style={{ ["--pharos-tape-duration" as string]: durationFromCount(events.length) }}
+      style={{ ["--pharos-tape-duration" as string]: durationFromCount(collapsed.length) }}
     >
       <div className="relative flex items-stretch">
         <div className="pointer-events-none sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:flex">
@@ -149,13 +177,18 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
             </div>
           ) : (
             <div className="pharos-tape-track flex w-max items-center gap-2 px-3 py-1.5" aria-live="off">
-              {duplicated.map((event, idx) => (
-                <TapeItem
-                  key={`${event.id}-${idx}`}
-                  event={event}
-                  logoSrc={logos[resolveEventLogoId(event) ?? ""]}
-                />
-              ))}
+              {duplicated.map((entry, idx) => {
+                const logoId = resolveEventLogoId(entry.event, logos);
+                return (
+                  <TapeItem
+                    key={`${entry.key}-${idx}`}
+                    entry={entry}
+                    logoSrc={logoId ? logos[logoId] : undefined}
+                    logoName={logoId}
+                    logos={logos}
+                  />
+                );
+              })}
               <TapeTerminator />
             </div>
           )}
@@ -168,4 +201,3 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     </section>
   );
 }
-

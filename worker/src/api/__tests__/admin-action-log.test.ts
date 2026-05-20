@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handleAdminActionLog } from "../admin-action-log";
-import { mockD1 } from "./helpers/mock-d1";
+import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 function makeDbWith(rows: Array<Record<string, unknown>>) {
   return mockD1([

@@ -1,5 +1,5 @@
 import { derivePegRates } from "@shared/lib/peg-rates";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-utils";
 import { USER_AGENT } from "./constants";
 import { fetchWithRetry } from "./fetch-retry";

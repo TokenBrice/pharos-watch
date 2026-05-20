@@ -1,0 +1,304 @@
+"use client";
+
+import Link from "next/link";
+import {
+  DataTableEmptyRow,
+  DataTableLoadingRows,
+  DataTableShell,
+  type DataTableColumn,
+} from "@/components/data-table-shell";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { StablecoinIdentity } from "@/components/stablecoin-identity";
+import { buildStablecoinUrl } from "@/lib/urls";
+import { formatCompactUsd } from "@shared/lib/format";
+import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
+import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
+import type { DataTableSortControls } from "@/components/data-table-shell";
+import type { ReportCardGrade } from "@shared/types";
+
+const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
+  { id: "name", label: "Name", sortKey: "name", className: "min-w-[160px]" },
+  { id: "supply", label: "Supply", sortKey: "supply", className: "text-right" },
+  {
+    id: "pegScore",
+    label: "Peg Score",
+    sortKey: "pegScore",
+    className: "text-right",
+    title: "Peg Stability Score (0-100): peg-holding consistency over 30 days",
+  },
+  {
+    id: "dewsScore",
+    label: "DEWS",
+    sortKey: "dewsScore",
+    className: "text-right",
+    title: "Depeg Early Warning System stress score (0-100)",
+  },
+  {
+    id: "liquidityScore",
+    label: "Liquidity",
+    sortKey: "liquidityScore",
+    className: "text-right",
+    title: "DEX Liquidity Score (0-100): pool depth, volume, and diversity",
+  },
+  {
+    id: "safetyScore",
+    label: "Grade",
+    sortKey: "safetyScore",
+    className: "text-center",
+    title: `Pharos Safety Grade (${SAFETY_SCORE_VERSION_LABEL})`,
+  },
+  { id: "mechanism", label: "Mechanism", className: "text-left" },
+  { id: "peg", label: "Peg", className: "text-left" },
+] as const;
+
+const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
+  { key: "safetyScore", label: "Grade" },
+  { key: "supply", label: "Supply" },
+  { key: "pegScore", label: "Peg" },
+  { key: "dewsScore", label: "DEWS" },
+  { key: "liquidityScore", label: "Liquidity" },
+];
+
+interface ScreenerTableProps {
+  rows: readonly ScreenerRow[];
+  logos?: Record<string, string>;
+  isLoading: boolean;
+  onClearFilters?: () => void;
+  hasActiveFilters: boolean;
+  sort: DataTableSortControls<ScreenerSortKey>;
+}
+
+export function ScreenerTable({
+  rows,
+  logos,
+  isLoading,
+  onClearFilters,
+  hasActiveFilters,
+  sort,
+}: ScreenerTableProps) {
+  return (
+    <>
+      <div className="space-y-3 md:hidden">
+        <div className="rounded-xl border border-border/70 bg-card/80 px-3 py-3">
+          <p className="pharos-kicker mb-2">Sort Results</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Sort screener results">
+            {MOBILE_SORT_OPTIONS.map((option) => {
+              const active = sort.sortKey === option.key;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => sort.toggleSort(option.key)}
+                  className={`pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-frost-blue/50 bg-frost-blue/12 text-foreground"
+                      : "border-border/60 bg-background/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {option.label}
+                  {active ? (
+                    <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
+                      {sort.sortDirection === "asc" ? "↑" : "↓"}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="pharos-card-shell h-28 animate-pulse rounded-xl bg-muted/20" />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
+        ) : (
+          <div className="space-y-3">
+            {rows.map((row) => <ScreenerMobileCard key={row.id} row={row} logo={logos?.[row.id]} />)}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden md:block">
+        <DataTableShell<ScreenerSortKey>
+          columns={COLUMNS}
+          sort={sort}
+          striped
+        >
+          {isLoading ? (
+            <DataTableLoadingRows columns={COLUMNS} rowCount={8} />
+          ) : rows.length === 0 ? (
+            <DataTableEmptyRow colSpan={COLUMNS.length}>
+              <ScreenerEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} compact />
+            </DataTableEmptyRow>
+          ) : (
+            rows.map((row) => <ScreenerRow key={row.id} row={row} logo={logos?.[row.id]} />)
+          )}
+        </DataTableShell>
+      </div>
+    </>
+  );
+}
+
+function ScoreValue({ value }: { value: number | null }) {
+  return value != null ? (
+    <span className="font-mono tabular-nums text-foreground">{value.toFixed(0)}</span>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  );
+}
+
+function ScreenerEmptyState({
+  hasActiveFilters,
+  onClearFilters,
+  compact = false,
+}: {
+  hasActiveFilters: boolean;
+  onClearFilters?: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? "space-y-2" : "rounded-xl border border-dashed border-border/70 bg-background/35 px-4 py-8 text-center text-sm text-muted-foreground"}>
+      <p>{hasActiveFilters ? "No stablecoins match these filters." : "Loading screener inputs…"}</p>
+      {hasActiveFilters && onClearFilters ? (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="pharos-focus-ring mt-2 inline-flex min-h-11 items-center rounded-full border border-border/60 bg-background/60 px-4 py-2 text-foreground hover:text-foreground/80 md:min-h-0 md:border-0 md:bg-transparent md:px-0 md:py-0 md:underline md:underline-offset-4"
+        >
+          Reset filters and try again.
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) {
+  return (
+    <article className="pharos-card-shell rounded-xl p-4">
+      <div className="flex items-start justify-between gap-3">
+        <Link
+          href={buildStablecoinUrl(row.id)}
+          className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md"
+        >
+          <StablecoinIdentity
+            layout="contents"
+            logoSrc={logo}
+            name={row.name}
+            symbol={row.symbol}
+            logoSize={30}
+            symbolClassName="block font-semibold text-foreground"
+            nameClassName="block truncate text-xs text-muted-foreground"
+          />
+        </Link>
+        <div className="shrink-0 text-right">
+          <p className="pharos-kicker">Supply</p>
+          <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
+            {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : "—"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {row.safetyGrade ? (
+          <SafetyGradeBadge
+            grade={row.safetyGrade as ReportCardGrade}
+            score={row.safetyScore}
+            size="sm"
+          />
+        ) : (
+          <span className="rounded-full border border-border/60 px-2 py-1">Grade —</span>
+        )}
+        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
+          Peg <ScoreValue value={row.pegScore} />
+        </span>
+        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
+          DEWS <ScoreValue value={row.dewsScore} />
+        </span>
+        <span className="rounded-full border border-border/60 bg-background/55 px-2 py-1">
+          Liq <ScoreValue value={row.liquidityScore} />
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+          <p className="text-muted-foreground">Mechanism</p>
+          <p className="mt-0.5 truncate font-medium text-foreground">
+            {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2">
+          <p className="text-muted-foreground">Peg</p>
+          <p className="mt-0.5 font-medium text-foreground">
+            {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ScreenerRow({ row, logo }: { row: ScreenerRow; logo?: string }) {
+  return (
+    <TableRow className="hover:!transform-none">
+      <TableCell className="min-w-[160px]">
+        <Link
+          href={buildStablecoinUrl(row.id)}
+          className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
+        >
+          <StablecoinIdentity
+            layout="contents"
+            logoSrc={logo}
+            name={row.name}
+            symbol={row.symbol}
+            logoSize={24}
+            symbolClassName="block font-semibold text-foreground"
+            nameClassName="block truncate text-xs text-muted-foreground"
+          />
+        </Link>
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.supplyUsd > 0 ? formatCompactUsd(row.supplyUsd) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.pegScore != null ? row.pegScore.toFixed(0) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.dewsScore != null ? row.dewsScore.toFixed(0) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {row.liquidityScore != null ? row.liquidityScore.toFixed(0) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-center">
+        {row.safetyGrade ? (
+          <SafetyGradeBadge
+            grade={row.safetyGrade as ReportCardGrade}
+            score={row.safetyScore}
+            size="sm"
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-left text-muted-foreground">
+        {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
+      </TableCell>
+      <TableCell className="text-left text-muted-foreground">
+        {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+      </TableCell>
+    </TableRow>
+  );
+}

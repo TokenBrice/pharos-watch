@@ -1,39 +1,35 @@
 {
-  "worker/src/cron/sync-stablecoins/supplemental-assets.ts": {
-    "disposition": "deferred",
-    "notes": "Supplemental asset intake still mixes multiple provider families. Defer further splitting until the stablecoin sync surface stabilizes after the current tranche."
-  },
   "worker/src/api/audit-depeg-history.ts": {
     "disposition": "queued-p4",
     "notes": "The audit/repair handler still mixes validation, replay planning, and mutation orchestration. Keep it explicitly owned as a later admin-path hotspot rather than widening this tranche."
   },
-  "worker/src/lib/authoritative-price-sources.ts": {
+  "worker/src/cron/fetch-tbill-rate.ts": {
     "disposition": "queued-p4",
-    "notes": "Authoritative price overrides centralize per-protocol live and historical readers (Cap, infiniFi, ERC-4626 NAV, Idle CDO tranche, tracked-base inheritance). The shared shape — selector + provider record + parent-trust gating — is easier to audit in one file while new vault families are still being added. Split per-protocol providers into separate modules once the catalog stabilizes."
+    "notes": "Surfaced after Yield v8.13 benchmark registry expansion added six new currency fetchers (GBP/JPY/MXN/BRL/AUD/CAD) sharing the cache + retain-stale infrastructure. The next yield-sync cleanup pass should split per-currency adapters from the shared cache + parser plumbing, keeping fetch-tbill-rate.ts as the orchestrator only."
+  },
+  "src/components/tape/event-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes."
+  },
+  "src/app/yield/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after Yield v8.13 added the preset-chip handlers, story-callout derivation, currency-tab integration, and trending filter wiring alongside the existing trust rail + scatter plot. Split story-callout derivation and preset-handler plumbing into focused hooks in the next yield UI cleanup pass."
+  },
+  "shared/lib/selector/engine.ts": {
+    "disposition": "queued-p4",
+    "notes": "Selector engine owns exclusions, scoring, confidence redistribution, evidence selection, lower-ranked assembly, and output shaping for the MVP. Feature remediation kept behavior centralized to preserve deterministic ranking parity; the next selector cleanup should split exclusion/evidence/output phases behind stable engine tests."
+  },
+  "src/app/screener/selector/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Selector client still coordinates wizard history, query hydration, data loading, snapshot fetch/post, and result rendering. This remediation extracted dataset adaptation, but the route shell remains a hotspot; split snapshot lifecycle and wizard orchestration hooks before adding more selector UI modes."
   },
   "src/components/status/cron-metadata-summary.ts": {
     "disposition": "deferred",
     "notes": "Status metadata summarization has grown with the ops dashboard. Defer structural cleanup until the status surface settles after the current parallel work."
   },
-  "src/app/admin/status-dashboard.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Admin status dashboard still centralizes top-fold triage, section composition, and operator controls in one client shell. Keep waived until the dedicated admin-status decomposition lane is scheduled instead of widening the current mixed status/frontend tranche."
-  },
-  "worker/src/cron/daily-digest/prompt.ts": {
-    "disposition": "queued-p4",
-    "notes": "Candidate-led digest prompting intentionally centralizes the editorial contract while the digest rewrite stabilizes. Split prompt policy, rubric text, and safety instructions in a follow-up digest cleanup pass."
-  },
   "worker/src/cron/weekly-recap.ts": {
     "disposition": "queued-p4",
     "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules."
-  },
-  "worker/src/cron/yield-sync/cache.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield cache serialization and cache-key assembly now rank as a generated hotspot candidate after the Telegram alert parser/formatter split retired its waiver. Keep waived until the yield sync cache surface gets a focused cleanup that separates DefiLlama pool-cache shaping, supplemental family cache keys, and payload normalization."
-  },
-  "worker/src/api/telegram-webhook-callbacks.ts": {
-    "disposition": "queued-p4",
-    "notes": "Callback routing now owns setup, settings, status, discovery, watchlist management, snooze, and per-coin alert toggles. Keep it waived after the command dispatcher split; the next Telegram decomposition pass should extract action-specific callback handlers."
   },
   "worker/src/api/telegram-webhook.ts": {
     "disposition": "queued-p4",
@@ -45,11 +41,11 @@
   },
   "worker/src/cron/confirm-pending-depegs.ts": {
     "disposition": "queued-p4",
-    "notes": "Grew during the 2026-04-18 depeg+DEWS hardening wave with pool-status count classification, circuit-breaker guards, offchainSourceLabel tracking, and composite pending-reason parsing. The main confirmPendingDepegs function is now the obvious split candidate — per-row evaluation (primary/native/off-chain/DEX/CEX/pool collection) should extract into buildConfirmationPlan; the decision matrix should extract into evaluatePromotionDecision. Follow-up in the next /simplify pass."
+    "notes": "Phase 2 added the evaluateOffchainConfirmer discriminated union to flatten the 9-level branch tree. Residual height is in the main loop's structural orchestration (primary/native/DEX/CEX/pool collection). Next /simplify pass should extract buildConfirmationPlan and evaluatePromotionDecision."
   },
   "worker/src/cron/blacklist/amount-recovery.ts": {
     "disposition": "queued-p4",
-    "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Keep waived here; split chain fetch, event normalization, and balance reconciliation in a dedicated blacklist cron cleanup."
+    "notes": "Blacklist amount recovery is an existing cron repair surface with chain-specific parsing and persistence branches. Phase 2 converted to options-object signatures; remaining height needs a dedicated blacklist cron cleanup that splits chain fetch, event normalization, and balance reconciliation."
   },
   "src/components/yield-leaderboard-table-row.tsx": {
     "disposition": "queued-p4",
@@ -59,28 +55,28 @@
     "disposition": "queued-p4",
     "notes": "Surfaced after global shell and homepage runtime reductions. The homepage client still coordinates hero state, PSI/digest/table sections, mode controls, and multiple lightweight data views; split section orchestration and interaction state before expanding the homepage surface."
   },
-  "worker/src/lib/redemption-backstop-capacity.ts": {
-    "disposition": "queued-p4",
-    "notes": "Redemption capacity resolution intentionally centralizes supply-full, supply-ratio, fixed-USD, and reserve-sync metadata semantics while v4 current-capacity behavior is still being audited. Split capacity profile construction from per-model resolution once the v4 route coverage expansion settles."
-  },
-  "worker/src/api/telegram-webhook-store.ts": {
-    "disposition": "queued-p4",
-    "notes": "Webhook state storage now covers processed-update claims, setup/disambiguation rows, callback payloads, and cooldown bookkeeping. Keep waived for the growth rollout; split processed-update idempotency and command cooldown storage into focused modules in a follow-up Telegram cleanup."
-  },
-  "worker/src/cron/dews/source-state.ts": {
-    "disposition": "queued-p4",
-    "notes": "DEWS source-state orchestration remains coupled with legacy compatibility and migration-aware fallback paths. Keep this file waived until the next tranche extracts source hydration and legacy bridge responsibilities into narrower helper modules."
-  },
-  "worker/src/api/backfill-depegs.ts": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after adjacent admin cleanup. Backfill depegs still mixes request parsing, historical replay setup, PSI side effects, and mutation orchestration; split planning from execution in a focused depeg admin pass."
-  },
-  "worker/src/lib/dews.ts": {
-    "disposition": "queued-p4",
-    "notes": "Phase 2 DEWS hardening added evidence classification, source-quality scoring, expanded explainability metadata, and compatibility gates in the core scoring module. Keep the logic colocated for the v6.0 rollout; split signal families and evidence policy into focused helpers in the next DEWS cleanup pass."
-  },
   "src/app/pharoswatchbot/app/client.tsx": {
     "disposition": "queued-p4",
-    "notes": "Mini App client now owns tab routing, Telegram bridge affordances, optimistic mutations, snooze/timezone/danger-zone controls, and per-coin quick links. Keep waived for this Mini App controls tranche; split Telegram bridge effects, mutation handlers, and panel components into focused modules before adding more client-side behavior."
+    "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass."
+  },
+  "src/lib/yield-view-model.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
+  },
+  "worker/src/cron/yield-sync/publication.ts": {
+    "disposition": "queued-p4",
+    "notes": "Yield publication now owns source arbitration output shaping, decision evidence persistence, atomic publication metadata, and alternative-source projection for v8 decision ledgers. Keep waived for this rollout; split decision persistence and ranking row projection into narrower modules in the next yield-sync cleanup."
+  },
+  "src/components/yield-history-chart.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Yield history chart coordinates responsive chart sizing, tooltip state, history data shaping, and source-decision overlays for the per-coin yield surface. Keep waived for the v8 rollout; extract chart model preparation and overlay rendering before adding more chart modes."
+  },
+  "src/components/key-info-card.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Surfaced after the May 2026 detail-page additions: mechanism schematic above peg-stability prose, tier-styled attestor badge with legacy fallback, and the matching utility helpers. Split mechanism-diagram renderer + attestor badge + peg-mechanism prose into focused children in a follow-up detail-page cleanup pass."
+  },
+  "src/app/sitemap.ts": {
+    "disposition": "deferred",
+    "notes": "Next.js static-export sitemap concatenates fixed-route, dynamic-route, taxonomy, methodology-changelog, feed, depeg-event, and dataset segments inside a single function so the regex-typed `MetadataRoute.Sitemap` return value is inferable end-to-end. Council-13 (W2-E/W3-D/W3-G) added the feed, depeg-event, and dataset segments. Splitting into helpers is queued for a future sitemap-builder refactor; the current shape is the most idiomatic Next 16 pattern."
   }
 }
