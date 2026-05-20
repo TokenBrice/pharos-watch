@@ -71,7 +71,7 @@ type HomepageTapePlacement = "inline" | "top";
 
 const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
   inline: "pharos-tape-shell relative -mx-3 overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
-  top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 md:ml-[var(--pharos-homepage-tape-offset)] md:w-[calc(100%-var(--pharos-homepage-tape-offset))]",
+  top: "pharos-tape-shell relative z-50 w-full overflow-hidden border-b border-border/70 bg-card/95 shadow-[0_1px_0_oklch(1_0_0_/0.04)] supports-[backdrop-filter]:bg-card/85 lg:ml-[var(--pharos-homepage-tape-offset)] lg:w-[calc(100%-var(--pharos-homepage-tape-offset))]",
 };
 
 function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {

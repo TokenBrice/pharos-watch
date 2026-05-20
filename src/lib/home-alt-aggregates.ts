@@ -1,4 +1,4 @@
-// Client-side aggregates for /home-alt/. Computes hero KPI and mini-card derivations
+// Client-side aggregates for the compact homepage. Computes hero KPI and mini-card derivations
 // directly from existing endpoints — no new worker work.
 
 import { getCirculatingRaw, getPrevDayRaw } from "@shared/lib/supply";

@@ -10,6 +10,7 @@ import {
   SelectorEmblem,
   YieldEmblem,
 } from "@/components/home-alt-callouts/emblems";
+import { cn } from "@/lib/utils";
 
 interface CalloutItem {
   name: string;
@@ -54,11 +55,14 @@ const CALLOUTS: readonly CalloutItem[] = [
 export function HomeAltCalloutStrip(): JSX.Element {
   return (
     <nav aria-label="Pharos products" className="pharos-card-shell overflow-hidden p-0">
-      <ul className="flex snap-x snap-mandatory divide-x divide-border/40 overflow-x-auto sm:overflow-visible">
-        {CALLOUTS.map(({ name, description, href, Emblem }) => (
+      <ul className="flex flex-col divide-y divide-border/40 md:grid md:grid-cols-6 md:divide-y-0 lg:flex lg:flex-row lg:divide-x lg:divide-y-0">
+        {CALLOUTS.map(({ name, description, href, Emblem }, index) => (
           <li
             key={href}
-            className="min-w-[230px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-1"
+            className={cn(
+              index < 3 ? "md:col-span-2" : "md:col-span-3",
+              "lg:flex-1",
+            )}
           >
             <Link
               href={href}
@@ -66,7 +70,7 @@ export function HomeAltCalloutStrip(): JSX.Element {
             >
               <span
                 aria-hidden="true"
-                className="grid h-20 w-20 shrink-0 place-items-center rounded-md border border-border/60 bg-[color-mix(in_oklab,var(--brand-accent)_8%,transparent)] text-[var(--brand-accent)] transition-colors group-hover:border-[var(--brand-accent)]/40 group-hover:bg-[color-mix(in_oklab,var(--brand-accent)_14%,transparent)]"
+                className="grid h-14 w-14 shrink-0 place-items-center rounded-md border border-border/60 bg-[color-mix(in_oklab,var(--brand-accent)_8%,transparent)] text-[var(--brand-accent)] transition-colors group-hover:border-[var(--brand-accent)]/40 group-hover:bg-[color-mix(in_oklab,var(--brand-accent)_14%,transparent)] md:h-16 md:w-16 xl:h-20 xl:w-20"
               >
                 <Emblem />
               </span>

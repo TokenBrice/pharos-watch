@@ -27,5 +27,9 @@ describe("TimelinePage", () => {
     expect(html).toContain("Depegs");
     expect(html).toContain("Freezes");
     expect(html).toContain("Methodology");
+    // Freshness signal: CollectionPage carries datePublished + dateModified.
+    expect(html).toContain("datePublished");
+    expect(html).toContain("2026-05-15T00:00:00Z");
+    expect(html).toContain("dateModified");
   });
 });

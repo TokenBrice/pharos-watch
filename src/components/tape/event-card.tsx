@@ -33,11 +33,22 @@ import {
   SEVERITY_LABEL_INCLUSIVE,
   SEVERITY_TEXT_CLASS,
   type TapeEvent,
+  type TapeEventSeverity,
 } from "@shared/types/tape-event";
 
 // Re-exported for legacy consumers (`class-digest-row`, `timeline/client`).
 // The tape-event source-of-truth lives in `shared/types/tape-event.ts`.
 export const SEVERITY_LABEL = SEVERITY_LABEL_INCLUSIVE;
+
+// Non-color severity glyphs (WCAG 1.4.1) — wire-service / syslog idiom.
+// Rendered in mono with tabular-width so the column aligns across rows.
+const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
+  info: "[I]",
+  notice: "[N]",
+  warning: "[W]",
+  severe: "[!]",
+  critical: "[X]",
+};
 
 function eventClass(type: string): string {
   const dot = type.indexOf(".");
@@ -442,13 +453,15 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
     });
   }, [event.id]);
 
+  const severityGlyph = SEVERITY_GLYPH[event.severity];
+  const typeSlug = event.type.toLowerCase();
   return (
     <Link
       id={domId}
       href={href}
       aria-labelledby={titleId}
       data-event-id={event.id}
-      className={`pharos-focus-ring group block border-b border-border/30 px-3 py-2 font-mono text-xs transition-colors hover:bg-muted/30 ${rowTint}${
+      className={`pharos-focus-ring group block border-b border-border/60 px-3 py-2 font-mono text-xs transition-colors hover:bg-muted/30 ${rowTint}${
         highlighted ? " bg-amber-500/5" : ""
       }`}
     >
@@ -460,6 +473,9 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
         >
           {formatHhMm(event.ts)}
         </time>
+        <span aria-hidden="true" className={`shrink-0 tabular-nums ${severityText}`}>
+          {severityGlyph}
+        </span>
         <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground">
           {event.coinId ? (
             <StablecoinLogo src={logoSrc} name={event.coinId} size={22} />
@@ -469,19 +485,19 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
             </span>
           )}
         </span>
-        <span id={titleId} className="sr-only">{event.title}</span>
+        <span id={titleId} className="sr-only">{event.title} — severity {severityLabel}</span>
         {ticker ? (
-          <span aria-hidden="true" className="max-w-full break-words font-semibold text-foreground sm:shrink-0">{ticker}</span>
-        ) : null}
-        <span className="max-w-full break-all text-muted-foreground sm:shrink-0">{event.type}</span>
-        <span className={`shrink-0 uppercase tracking-wide ${severityText}`} aria-label={`severity ${severityLabel}`}>
-          {severityLabel}
-        </span>
-        {count > 1 ? (
-          <span aria-label={`${count} similar events grouped`} className="shrink-0 tabular-nums text-muted-foreground">
-            ×{count}
+          <span aria-hidden="true" className="max-w-full break-words font-semibold text-foreground sm:shrink-0">
+            {ticker}
+            {count > 1 ? <span className="ml-1 font-normal tabular-nums text-muted-foreground">×{count}</span> : null}
           </span>
+        ) : count > 1 ? (
+          <span aria-hidden="true" className="shrink-0 tabular-nums text-muted-foreground">×{count}</span>
         ) : null}
+        {count > 1 ? (
+          <span className="sr-only">{count} similar events grouped</span>
+        ) : null}
+        <span className="max-w-full break-all lowercase text-muted-foreground/60 sm:shrink-0">{typeSlug}</span>
         {event.chain ? (
           <span className="shrink-0 uppercase tracking-wide text-muted-foreground">[{event.chain}]</span>
         ) : null}
@@ -490,14 +506,14 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
           type="button"
           onClick={handleCopyPermalink}
           aria-label={copied ? "Permalink copied" : "Copy permalink to this event"}
-          className="pharos-focus-ring shrink-0 rounded p-1.5 text-muted-foreground transition-opacity hover:text-foreground sm:p-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+          className="pharos-focus-ring shrink-0 rounded p-1.5 text-muted-foreground opacity-30 transition-opacity hover:text-foreground hover:opacity-100 focus-visible:opacity-100 sm:p-0.5"
         >
           {copied ? <Check className="h-3 w-3" aria-hidden="true" /> : <Link2 className="h-3 w-3" aria-hidden="true" />}
         </button>
         <span className="shrink-0 tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
       </div>
       {summaryLine ? (
-        <p className="mt-0.5 pl-[calc(5ch+2.75rem)] text-muted-foreground/80 line-clamp-2">
+        <p className="mt-0.5 pl-[calc(5ch+2.75rem)] text-muted-foreground/90 line-clamp-2">
           {summaryLine}
         </p>
       ) : null}

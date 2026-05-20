@@ -60,8 +60,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   // Routes explicitly excluded from the sitemap (still reachable, but noindex).
-  // `/home-alt/` ships as a beta alternative homepage with `robots: noindex, follow`
-  // — see `HOME_ALT_PAGE_METADATA` in `src/lib/page-metadata.ts`.
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: `${SITE_URL}/`,

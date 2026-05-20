@@ -19,6 +19,12 @@ export const metadata: Metadata = buildPageMetadata({
 
 const TIMELINE_URL = `${SITE_URL}/timeline/`;
 
+// First-publish date for the /timeline/ route. The day-to-day "edited"
+// timestamp is the build time captured at module load (mirrors the
+// `BUILD_DATE_MODIFIED` pattern in `src/lib/page-metadata.ts`).
+const TIMELINE_DATE_PUBLISHED = "2026-05-15T00:00:00Z";
+const TIMELINE_DATE_MODIFIED = new Date().toISOString();
+
 const collectionJsonLd = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
@@ -27,6 +33,8 @@ const collectionJsonLd = {
   description: TIMELINE_DESCRIPTION,
   url: TIMELINE_URL,
   isPartOf: { "@id": `${SITE_URL}#website` },
+  datePublished: TIMELINE_DATE_PUBLISHED,
+  dateModified: TIMELINE_DATE_MODIFIED,
 };
 
 // Only advertise classes that currently have a projector. Reserved chip slots

@@ -15,13 +15,13 @@ import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-c
 export function HomeAltMiniCardGrid(): React.JSX.Element {
   return (
     <SectionErrorBoundary name="mini-card grid">
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="@container space-y-3">
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
           <PsiBandCard />
           <PegHealthCard />
           <MintBurnCard />
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
           <RecentFreezesCard />
           <ActiveDepegsCard />
           <SupplyMovesCard />

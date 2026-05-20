@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { CHAIN_META } from "@shared/lib/chains";
-import { HomepageClient } from "@/components/homepage-client";
-import { HomepageStartHereCallout } from "@/components/homepage-sections";
-import { KpiBar } from "@/components/kpi-bar";
+import { HomeAltClient } from "@/components/home-alt-client";
 import { SiteHeader } from "@/components/site-header";
 import { safeJsonLd } from "@/lib/json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -86,16 +84,8 @@ export default function HomePage() {
       />
       <div className="space-y-4 sm:space-y-5">
         <SiteHeader total={total} pegCount={ACTIVE_PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
-        <div className="flex flex-col gap-4 sm:gap-5">
-          <div className="empty:hidden">
-            <HomepageStartHereCallout />
-          </div>
-          <div>
-            <KpiBar />
-          </div>
-        </div>
       </div>
-      <HomepageClient />
+      <HomeAltClient />
     </div>
   );
 }

@@ -30,7 +30,7 @@ interface TableToolbarProps {
   eyebrow?: string;
   description?: string | null;
   // When `titleId` is provided, the eyebrow is promoted to a proper h2 title
-  // (used by /home-alt/ to anchor the table region without a separate band).
+  // (used by compact homepage views to anchor the table region without a separate band).
   titleId?: string;
   meta?: string;
 }

@@ -23,16 +23,6 @@ interface BuildPageMetadataInput {
   robots?: Metadata["robots"];
 }
 
-export const HOME_ALT_PAGE_METADATA: BuildPageMetadataInput = {
-  title: "Home (Alt) — Pharos",
-  description: "Experimental DeFiLlama-style alternative homepage for Pharos stablecoin analytics.",
-  canonical: "/home-alt/",
-  robots: {
-    index: false,
-    follow: true,
-  },
-};
-
 const GOVERNANCE_METADATA_PHRASES = {
   centralized: "centralized",
   "centralized-dependent": "CeFi-dependent",

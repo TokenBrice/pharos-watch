@@ -199,7 +199,7 @@ describe("HomepageTape", () => {
     const root = container.querySelector(".pharos-tape-shell");
     expect(root?.className).toContain("w-full");
     expect(root?.className).toContain("border-b");
-    expect(root?.className).toContain("md:ml-[var(--pharos-homepage-tape-offset)]");
+    expect(root?.className).toContain("lg:ml-[var(--pharos-homepage-tape-offset)]");
     expect(root?.className).not.toContain("-mx-3");
   });
 

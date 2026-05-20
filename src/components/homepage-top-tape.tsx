@@ -8,7 +8,7 @@ export function HomepageTopTape() {
   const pathname = usePathname();
   const { expanded } = useSidebar();
 
-  if (pathname !== "/" && pathname !== "/home-alt" && pathname !== "/home-alt/") return null;
+  if (pathname !== "/") return null;
 
   return (
     <div

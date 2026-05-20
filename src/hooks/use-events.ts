@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
@@ -139,15 +140,29 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
     isFetchingNextPage,
   });
 
-  const events: TapeEvent[] = query.data?.pages.flatMap((page) => page.data.events) ?? [];
-  const pages = query.data?.pages ?? [];
-  const nextCursor = pages[pages.length - 1]?.data.nextCursor ?? null;
-  const meta = query.data?.pages[0]?.meta ?? null;
-  const total = query.data?.pages[0]?.data.total ?? null;
+  // All five derived values are computed from `query.data?.pages`, which is a
+  // stable reference across renders within the same TanStack Query cache state.
+  // Memoising on `pages` keeps the flattened `events` array (and the returned
+  // `data` object) referentially stable, so downstream `useMemo` consumers in
+  // `client.tsx` (`visibleEvents`, `openIncidents`, `digestedDays`) don't
+  // invalidate on unrelated re-renders.
+  const pages = query.data?.pages;
+
+  const events = useMemo<TapeEvent[]>(
+    () => pages?.flatMap((page) => page.data.events) ?? [],
+    [pages],
+  );
+  const nextCursor = useMemo(
+    () => pages?.[pages.length - 1]?.data.nextCursor ?? null,
+    [pages],
+  );
+  const meta = useMemo(() => pages?.[0]?.meta ?? null, [pages]);
+  const total = useMemo(() => pages?.[0]?.data.total ?? null, [pages]);
+  const data = useMemo(() => ({ events, nextCursor }), [events, nextCursor]);
 
   return {
     ...query,
-    data: { events, nextCursor },
+    data,
     loadedCount: events.length,
     isFullyLoaded: nextCursor == null,
     meta,

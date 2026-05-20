@@ -1,6 +1,6 @@
 "use client";
 
-// Peg-only filter slice for /home-alt/. Wraps the same URL machinery used by
+// Peg-only filter slice for the compact homepage. Wraps the same URL machinery used by
 // useHomepageFilters so the chip row and the main table stay in sync via ?peg=.
 
 import { useCallback, useMemo } from "react";

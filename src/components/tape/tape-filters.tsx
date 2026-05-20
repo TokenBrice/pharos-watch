@@ -112,6 +112,9 @@ interface TapeFiltersProps {
   setParam: (key: string, value: string) => void;
   /** Optional event source for the coin combo box (omitted in v1 — coin filter is URL-driven only). */
   eventsForCoinDirectory?: TapeEvent[];
+  /** Active coin filter value to render as a chip; cleared via `onClearCoin`. */
+  coin?: string;
+  onClearCoin?: () => void;
 }
 
 // Wire-service chip primitives (see docs/tape-page.md Aesthetic Lock).
@@ -150,7 +153,7 @@ function DebouncedSearchInput({ value, onCommit }: { value: string; onCommit: (v
   );
 }
 
-export function TapeFilters({ state, setParam }: TapeFiltersProps) {
+export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersProps) {
   const onToggleClass = useCallback(
     (slug: string) => {
       const current = new Set(state.type);
@@ -206,7 +209,20 @@ export function TapeFilters({ state, setParam }: TapeFiltersProps) {
   );
 
   return (
-    <div className="space-y-3 border-y border-border/30 px-3 py-3 font-mono text-xs">
+    <div className="sticky top-0 z-0 space-y-3 border-y border-border/60 bg-background/90 px-3 py-3 font-mono text-xs backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      {coin && onClearCoin ? (
+        <div className="flex flex-wrap items-center gap-2 sm:gap-1" aria-label="Active coin filter">
+          <button
+            type="button"
+            onClick={onClearCoin}
+            aria-label={`Clear coin filter ${coin}`}
+            className={`${CHIP_BASE} ${CHIP_ACTIVE}`}
+          >
+            <span>Coin: <span className="font-semibold">{coin}</span></span>
+            <span aria-hidden="true" className="ml-1.5">×</span>
+          </button>
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() => setMobileClassesOpen((v) => !v)}

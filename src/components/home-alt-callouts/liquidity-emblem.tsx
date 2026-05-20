@@ -1,26 +1,29 @@
-// Liquidity — vessel with a curved meniscus. A flask-like silhouette half-filled
-// with a fluid surface that curves up at the walls (the meniscus — a literal
-// liquidity term), plus a faint deeper tide line. Avoids the droplet motif.
+// Liquidity — swimmer in a pool with deck ladder and rippling water surface.
+// Uses currentColor for the body of the icon and var(--card) for the inner
+// cutouts (ladder rungs and a small water notch) so they punch through to the
+// underlying card surface in both light and dark themes. Native viewBox
+// preserved (0 0 1024 1024).
 
 import type { JSX } from "react";
 
 export function LiquidityEmblem(): JSX.Element {
   return (
     <svg
-      viewBox="0 0 24 24"
-      width={36}
-      height={36}
+      viewBox="0 0 1024 1024"
+      width={45}
+      height={45}
       fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M8 3.5 H16" />
-      <path d="M9 3.5 V9 L5.5 17 A3.5 3.5 0 0 0 8.7 21.5 H15.3 A3.5 3.5 0 0 0 18.5 17 L15 9 V3.5" />
-      <path d="M6.6 14.5 C8.5 13.2 10.5 15.2 12 14.5 C13.5 13.8 15.5 13.2 17.4 14.5 L17.4 17 A3 3 0 0 1 14.6 19.5 H9.4 A3 3 0 0 1 6.6 17 Z" fill="currentColor" stroke="none" opacity={0.5} />
-      <path d="M6.6 14.5 C8.5 13.2 10.5 15.2 12 14.5 C13.5 13.8 15.5 13.2 17.4 14.5" />
+      <path
+        d="M451.7 837.9c44.4 0 84.2-20.4 110.2-52.2 17.3-18 17.3-18 34.7 0 26 31.8 65.7 52.2 110.2 52.2 44.4 0 84.2-20.4 110.2-52.2 17.3-18 17.3-18 34.7 0 26 31.8 65.7 52.2 110.2 52.2v-28.1c-43.8 0-83.1-25-102-63.4-10.3-21.1-40.6-21.1-51 0-18.8 38.4-58.2 63.4-102 63.4s-83.1-25-102-63.4c-10.3-21.1-40.6-21.1-51 0-18.8 38.4-58.2 63.4-102 63.4s-83.1-25-102-63.4c-10.3-21.1-40.6-21.1-51 0-18.8 38.4-58.2 63.4-102 63.4-44.8 0-83.7-26-102-63.4-11.3-20.8-39.6-20.8-27.7 7.4 21.9 49.4 71.8 84.1 129.8 84.1 44.4 0 84.2-20.4 110.2-52.2 17.3-18 17.3-18 34.7 0 25.6 31.8 65.3 52.2 109.8 52.2zM597.7 304.1v-56.7c-0.3-15.3-12.7-27.6-28.1-27.6-15.5 0-28.1 12.6-28.1 28.1 0 0 0 28.1-28.1 28.1s-28.1-28.1-28.1-28.1c0-46.5 37.7-84.3 84.3-84.3 46.5 0 84.3 37.7 84.3 84.3v332.5c8.9-8.8 16.5-19.1 22.1-30.7 10.3-21.1 40.6-21.1 51 0 18.8 38.4 58.2 63.4 102 63.4 44.8 0 83.7-26 102-63.4 11.3-20.8 39.6-20.8 27.7 7.4-21.9 49.4-71.8 84.1-129.8 84.1-44.4 0-84.2-20.4-110.2-52.2-17.3-18-17.3-18-34.7 0-26 31.8-65.7 52.2-110.2 52.2-44.4 0-84.2-20.4-110.2-52.2-17.3-18-17.3-18-34.7 0-26 31.8-65.7 52.2-110.2 52.2-44.4 0-84.2-20.4-110.2-52.2-17.3-18-17.3-18-34.7 0-26 31.8-65.7 52.2-110.2 52.2v-28.1c43.8 0 83.1-25 102-63.4 10.3-21.1 40.6-21.1 51 0 18.8 38.4 58.2 63.4 102 63.4 31.7 0 61.1-13.1 82.1-34.9V247.5c-0.3-15.3-12.7-27.6-28.1-27.6-15.5 0-28.1 12.6-28.1 28.1 0 0 0 28.1-28.1 28.1S288.7 248 288.7 248c0-46.5 37.7-84.3 84.3-84.3 46.5 0 84.3 37.7 84.3 84.3v56.2l140.4-0.1z"
+        fill="currentColor"
+      />
+      {/* Ladder rung cutouts + water notch — punch through to the card surface */}
+      <path
+        d="M457.3 360.3h140.4v56.2H457.3zM457.3 472.7h140.4v56.2H457.3zM597.7 610.7V585H499c20.3 17.7 46.7 28.1 75 28.1 8.1 0 16-0.8 23.7-2.4z"
+        fill="var(--card)"
+      />
     </svg>
   );
 }

@@ -24,8 +24,7 @@ import { HomeAltCalloutStrip } from "@/components/home-alt-callout-strip";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
-
-import type { ColumnId } from "@/lib/column-visibility";
+import { ALL_COLUMNS, type ColumnId } from "@/lib/column-visibility";
 
 const DailyDigest = dynamic(
   () => import("@/components/daily-digest").then((mod) => mod.DailyDigest),
@@ -50,16 +49,8 @@ const StablecoinTable = dynamic(
   },
 );
 
-const HOME_ALT_DEFAULT_COLUMNS: readonly ColumnId[] = [
-  "rank",
-  "name",
-  "mcap",
-  "change24h",
-  "change7d",
-  "grade",
-  "stability",
-  "liquidity",
-];
+const HOME_ALT_DEFAULT_COLUMNS: readonly ColumnId[] = ALL_COLUMNS.map((column) => column.id);
+const HOME_ALT_COLUMN_PREFERENCE_NAMESPACE = "pharos-home-alt-table-v2";
 
 export function HomeAltClient() {
   const filters = useHomeAltFilters();
@@ -112,7 +103,7 @@ export function HomeAltClient() {
         <PegBrowseStrip
           pegs={ACTIVE_PEGS}
           pegCoinCount={pegCoinCount}
-          fiatExceptUsdHref="/home-alt/?peg=fiat-non-usd-peg#home-alt-rankings"
+          fiatExceptUsdHref="/?peg=fiat-non-usd-peg#home-alt-rankings"
         />
         <StablecoinTable
           data={stablecoinsData?.peggedAssets}
@@ -124,9 +115,9 @@ export function HomeAltClient() {
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
-          columnPreferenceNamespace="pharos-home-alt-table"
+          columnPreferenceNamespace={HOME_ALT_COLUMN_PREFERENCE_NAMESPACE}
           suppressDesktopHorizontalScroll
-          usePageVerticalScroll
+          showHeaderMethodologyHints={false}
           pinnedStablecoinIds={pinned.pinnedIds}
           onTogglePinnedStablecoin={pinned.togglePinned}
           toolbarEyebrow="Stablecoin Overview"

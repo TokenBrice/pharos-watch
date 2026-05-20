@@ -20,7 +20,8 @@ import {
 } from "@/components/tape/tape-filters";
 import { digestByDay, type DigestedDay } from "@/lib/tape-digest";
 import { timeAgo } from "@shared/lib/format";
-import type { TapeEvent } from "@shared/types/tape-event";
+import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import { SEVERITY_RANK, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
 
 const HIGHLIGHT_DURATION_MS = 2000;
 const DAY_MS = 86_400_000;
@@ -34,9 +35,19 @@ const WINDOW_LABEL: Record<TapeWindowKey, string> = {
   all: "all time",
 };
 
+// Bracketed severity glyphs — mirror the vocabulary Agent A is wiring into
+// `EventCard`. Used by the day-separator MAX [W] enrichment.
+const SEVERITY_GLYPH: Record<TapeEventSeverity, string> = {
+  info: "I",
+  notice: "N",
+  warning: "W",
+  severe: "!",
+  critical: "X",
+};
+
 function EventSkeleton() {
   return (
-    <div className="divide-y divide-border/30 border-y border-border/30" aria-hidden="true">
+    <div className="divide-y divide-border/60 border-y border-border/60" aria-hidden="true">
       {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} className="h-12 w-full rounded-none" />
       ))}
@@ -53,12 +64,14 @@ interface ActiveFilterChip {
 function EmptyState({
   onClearAll,
   activeChips,
+  fallbackLabel,
 }: {
   onClearAll: () => void;
   activeChips: readonly ActiveFilterChip[];
+  fallbackLabel: string;
 }) {
   return (
-    <div className="border-y border-border/30 px-3 py-10 text-center font-mono text-xs text-muted-foreground">
+    <div className="border-y border-border/60 px-3 py-10 text-center font-mono text-xs text-muted-foreground">
       <Radar className="mx-auto mb-3 h-6 w-6 text-muted-foreground" aria-hidden="true" />
       <p className="uppercase tracking-wider text-foreground">No events match these filters.</p>
       {activeChips.length > 0 ? (
@@ -85,7 +98,7 @@ function EmptyState({
         <>
           <p className="mt-1">Try widening the time window or dropping the severity floor.</p>
           <Button variant="outline" size="sm" className="mt-4 font-mono uppercase tracking-wide" onClick={onClearAll}>
-            Widen to all time
+            {fallbackLabel}
           </Button>
         </>
       )}
@@ -110,23 +123,31 @@ function formatDayLabel(dayKey: string, nowMs: number): { primary: string; secon
   const todayKey = utcDayKey(nowMs);
   const yesterdayKey = utcDayKey(nowMs - DAY_MS);
   const date = new Date(`${dayKey}T00:00:00Z`);
-  const absolute = date.toLocaleDateString("en-US", {
+  const absoluteFull = date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
     timeZone: "UTC",
   });
-  if (dayKey === todayKey) return { primary: "Today", secondary: absolute };
-  if (dayKey === yesterdayKey) return { primary: "Yesterday", secondary: absolute };
-  const weekday = date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
-  return { primary: weekday, secondary: absolute };
+  if (dayKey === todayKey) return { primary: "Today", secondary: absoluteFull };
+  if (dayKey === yesterdayKey) return { primary: "Yesterday", secondary: absoluteFull };
+  // For older days, drop the weekday word and the redundant year — the
+  // weekday abbrev + month/day carries enough context for scanning.
+  const weekday = date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }).toUpperCase();
+  const absoluteShort = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return { primary: weekday, secondary: absoluteShort };
 }
 
 // Pair `depeg.opened` events against `depeg.resolved` events with the same
 // `sourceRowId` within the same dataset; an unmatched opened row is treated
 // as currently active. Window-scoped: depegs whose opened/resolved rows fall
 // outside the current view will be missed. Dedupes per-coin to keep the
-// banner glanceable.
+// banner glanceable. Sorted by duration desc (oldest open first) so the
+// longest-running incidents lead.
 function deriveOpenIncidents(events: readonly TapeEvent[]): TapeEvent[] {
   const resolvedSourceRowIds = new Set<string>();
   for (const e of events) {
@@ -142,6 +163,20 @@ function deriveOpenIncidents(events: readonly TapeEvent[]): TapeEvent[] {
     if (coin) seenCoins.add(coin);
     out.push(e);
   }
+  out.sort((a, b) => a.ts - b.ts);
+  return out;
+}
+
+// Per-day count of currently-open incidents whose `opened` row falls on the
+// given UTC day. Mirrors `deriveOpenIncidents` for the full visible window
+// and then buckets by `utcDayKey(event.ts)`.
+function openIncidentsByDay(events: readonly TapeEvent[]): Map<string, number> {
+  const open = deriveOpenIncidents(events);
+  const out = new Map<string, number>();
+  for (const e of open) {
+    const key = utcDayKey(e.ts);
+    out.set(key, (out.get(key) ?? 0) + 1);
+  }
   return out;
 }
 
@@ -153,9 +188,10 @@ interface SummaryBandProps {
   severityLabel: string;
   dataUpdatedAt: number;
   nowMs: number;
+  lastEventTs: number | null;
 }
 
-function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs }: SummaryBandProps) {
+function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, nowMs, lastEventTs }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
   const countNode = showsPartial ? (
     <span className="font-semibold text-foreground">
@@ -191,24 +227,46 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
       </span>,
     );
   }
+  const lastEventNode =
+    lastEventTs != null ? (
+      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        Last event: {formatRelativeTimeMs(lastEventTs, { now: nowMs })}{" "}
+        <span className="text-muted-foreground/70">· {new Date(lastEventTs).toISOString().replace("T", " ").slice(0, 16)} UTC</span>
+      </p>
+    ) : null;
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-      {parts.map((part, i) => (
-        <span key={i} className="contents">
-          {i > 0 ? <span aria-hidden="true">·</span> : null}
-          {part}
-        </span>
-      ))}
-    </p>
+    <div className="space-y-1">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        {parts.map((part, i) => (
+          <span key={i} className="contents">
+            {i > 0 ? <span aria-hidden="true">·</span> : null}
+            {part}
+          </span>
+        ))}
+      </p>
+      {lastEventNode}
+    </div>
   );
 }
 
 interface OpenIncidentsSectionProps {
   incidents: readonly TapeEvent[];
   logos: Record<string, string>;
+  nowMs: number;
 }
 
-function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
+function openIncidentPrefix(event: TapeEvent, nowMs: number): string {
+  const duration = formatRelativeTimeMs(event.ts, { now: nowMs });
+  const abs = event.payload?.absDeviationBps;
+  const dir = event.payload?.direction;
+  if (typeof abs === "number" && (dir === "above" || dir === "below")) {
+    const sign = dir === "below" ? "−" : "+";
+    return `OPEN ${duration} · ${sign}${abs}bps`;
+  }
+  return `OPEN ${duration}`;
+}
+
+function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsSectionProps) {
   return (
     <section aria-labelledby="tape-open-incidents-heading" className="space-y-1">
       <h2
@@ -216,15 +274,22 @@ function OpenIncidentsSection({ incidents, logos }: OpenIncidentsSectionProps) {
         className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-        ⚠ Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
+        Currently open · {incidents.length} {incidents.length === 1 ? "incident" : "incidents"}
       </h2>
       <div className="border-y border-amber-500/30">
         {incidents.map((event) => (
-          <EventCard
-            key={event.id}
-            event={event}
-            logoSrc={event.coinId ? logos[event.coinId] : undefined}
-          />
+          <div key={event.id}>
+            <p
+              className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
+              aria-hidden="true"
+            >
+              {openIncidentPrefix(event, nowMs)}
+            </p>
+            <EventCard
+              event={event}
+              logoSrc={event.coinId ? logos[event.coinId] : undefined}
+            />
+          </div>
         ))}
       </div>
     </section>
@@ -236,11 +301,27 @@ interface DayDigestSectionProps {
   nowMs: number;
   logos: Record<string, string>;
   highlightedId: string | null;
+  openCount: number;
 }
 
-function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigestSectionProps) {
+function maxSeverityForDay(day: DigestedDay): TapeEventSeverity {
+  let maxRank = -1;
+  let maxSev: TapeEventSeverity = "info";
+  for (const cls of day.classes) {
+    const rank = SEVERITY_RANK[cls.maxSeverity];
+    if (rank > maxRank) {
+      maxRank = rank;
+      maxSev = cls.maxSeverity;
+    }
+  }
+  return maxSev;
+}
+
+function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }: DayDigestSectionProps) {
   const { primary, secondary } = formatDayLabel(day.dayKey, nowMs);
   const classCount = day.classes.length;
+  const maxSev = maxSeverityForDay(day);
+  const glyph = SEVERITY_GLYPH[maxSev];
   return (
     <section aria-label={`${primary} ${secondary}`}>
       <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -251,9 +332,10 @@ function DayDigestSection({ day, nowMs, logos, highlightedId }: DayDigestSection
           </h3>
           <span className="max-w-full break-words leading-snug tabular-nums text-muted-foreground sm:shrink-0">
             <span aria-hidden="true" className="hidden sm:inline">· </span>
-            {day.totalCount} {day.totalCount === 1 ? "event" : "events"} · {classCount} {classCount === 1 ? "class" : "classes"}
+            {day.totalCount} EVT · {classCount} CLS · MAX [{glyph}]
+            {openCount > 0 ? ` · ${openCount} OPEN` : ""}
           </span>
-          <span aria-hidden="true" className="w-full border-t border-border/40 sm:flex-1" />
+          <span aria-hidden="true" className="w-full border-t border-border/60 sm:flex-1" />
         </div>
       </div>
       <div>
@@ -319,16 +401,25 @@ export function TimelineClient() {
   const permalinkId = getParam("event", "");
   const [autoLoadEnabled, setAutoLoadEnabled] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  // Sr-only announcer for Load More results. We don't `aria-live` the whole
+  // feed wrapper because every paginated page would re-flood the queue.
+  // Instead, surface a concise summary that only updates when the visible
+  // count actually changes.
+  const [loadAnnouncement, setLoadAnnouncement] = useState("");
+  const prevVisibleCountRef = useRef<number | null>(null);
 
-  const permalinkBuffer = useLatestEvents({
-    limit: 200,
-    enabled: !!permalinkId,
-  });
-
+  // Common case: an internal-link permalink follows from a tracker page and
+  // the event is already in the loaded window. Gate the 200-row buffer on
+  // the miss so we skip the extra round-trip.
   const isInLoadedFeed = useMemo(
     () => (permalinkId ? rawEvents.some((e) => e.id === permalinkId) : false),
     [permalinkId, rawEvents],
   );
+  const permalinkBuffer = useLatestEvents({
+    limit: 200,
+    enabled: !!permalinkId && !isInLoadedFeed,
+  });
+
   const bufferEvent = useMemo(() => {
     if (!permalinkId || isInLoadedFeed) return null;
     return permalinkBuffer.data?.events.find((e) => e.id === permalinkId) ?? null;
@@ -354,7 +445,20 @@ export function TimelineClient() {
           parent = parent.parentElement;
         }
         if (typeof el.scrollIntoView === "function") {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // WCAG 2.3.3 — honor `prefers-reduced-motion` by skipping the
+          // smooth scroll animation when the user has requested less motion.
+          const prefersReducedMotion =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          el.scrollIntoView({
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+            block: "center",
+          });
+        }
+        // WCAG 2.4.3 — move keyboard / AT focus to the permalink target so
+        // screen-reader users land on the row instead of staying at the top.
+        if (typeof (el as HTMLElement).focus === "function") {
+          (el as HTMLElement).focus({ preventScroll: true });
         }
       }
     });
@@ -441,11 +545,48 @@ export function TimelineClient() {
     return chips;
   }, [filters, setParam]);
 
+  // Empty-state fallback prefers the smallest step that widens the view:
+  //   1. If filters are active, clear them.
+  //   2. Else, if severity is above `info`, drop the floor by one tier — most
+  //      empty results at default-7d are severity-filtered noise, not time.
+  //   3. Else (severity already at `info` and nothing else custom), widen the
+  //      window to all time. `alltime` URL token bypasses the "all" sentinel
+  //      in useUrlFilters.
+  const fallbackMode: "clear" | "severity" | "alltime" = hasActiveFilters
+    ? "clear"
+    : filters.severity !== "info"
+    ? "severity"
+    : "alltime";
+  const fallbackLabel =
+    fallbackMode === "clear"
+      ? "Reset all filters"
+      : fallbackMode === "severity"
+      ? "Show info-tier too"
+      : "Widen to all time";
   const emptyStateFallback = useCallback(() => {
-    if (hasActiveFilters) handleClearFilters();
-    // Write the alltime URL token to bypass the "all" sentinel in useUrlFilters.
-    else setParam("window", "alltime");
-  }, [hasActiveFilters, handleClearFilters, setParam]);
+    if (fallbackMode === "clear") {
+      handleClearFilters();
+    } else if (fallbackMode === "severity") {
+      setParam("severity", "info");
+    } else {
+      setParam("window", "alltime");
+    }
+  }, [fallbackMode, handleClearFilters, setParam]);
+
+  const loadedCount = visibleEvents.length;
+  useEffect(() => {
+    const prev = prevVisibleCountRef.current;
+    if (prev != null && loadedCount > prev) {
+      const delta = loadedCount - prev;
+      const ofTotal = total != null ? ` ${loadedCount} of ${total} shown.` : "";
+      setLoadAnnouncement(`Loaded ${delta} more event${delta === 1 ? "" : "s"}.${ofTotal}`);
+    }
+    prevVisibleCountRef.current = loadedCount;
+  }, [loadedCount, total]);
+
+  // `per-day` open-incident counts feed the day-separator `N OPEN` enrichment.
+  const openCountByDay = useMemo(() => openIncidentsByDay(visibleEvents), [visibleEvents]);
+  const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
   return (
     <div className="space-y-6">
@@ -464,23 +605,15 @@ export function TimelineClient() {
         severityLabel={severityLabel}
         dataUpdatedAt={dataUpdatedAt}
         nowMs={nowMs}
+        lastEventTs={lastEventTs}
       />
 
-      {filters.coin ? (
-        <div>
-          <button
-            type="button"
-            onClick={() => setParam("coin", "")}
-            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 border border-border/60 px-3 py-2 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40 sm:min-h-0 sm:px-2 sm:py-0.5"
-            aria-label={`Clear coin filter ${filters.coin}`}
-          >
-            <span>Filtered to <span className="font-semibold">{filters.coin}</span></span>
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-      ) : null}
-
-      <TapeFilters state={filters} setParam={setParam} />
+      <TapeFilters
+        state={filters}
+        setParam={setParam}
+        coin={filters.coin || undefined}
+        onClearCoin={filters.coin ? () => setParam("coin", "") : undefined}
+      />
 
       <StaleDataBanner
         queries={[
@@ -513,7 +646,7 @@ export function TimelineClient() {
             <Link2 className="h-3 w-3" aria-hidden="true" />
             ↗ You followed a link to this event
           </h2>
-          <div className="border-y border-border/40">
+          <div className="border-y border-border/60">
             <EventCard
               event={bufferEvent}
               logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
@@ -525,15 +658,26 @@ export function TimelineClient() {
       ) : null}
 
       {openIncidents.length > 0 ? (
-        <OpenIncidentsSection incidents={openIncidents} logos={logos} />
+        <OpenIncidentsSection incidents={openIncidents} logos={logos} nowMs={nowMs} />
       ) : null}
+
+      {/* Discrete sr-only announcer for paginated loads (T1.4). The feed
+          wrapper below intentionally omits `aria-live` so each Load More
+          doesn't re-narrate the whole event list. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {loadAnnouncement}
+      </div>
 
       {isLoading ? (
         <EventSkeleton />
       ) : visibleEvents.length === 0 ? (
-        <EmptyState onClearAll={emptyStateFallback} activeChips={emptyStateChips} />
+        <EmptyState
+          onClearAll={emptyStateFallback}
+          activeChips={emptyStateChips}
+          fallbackLabel={fallbackLabel}
+        />
       ) : (
-        <div id="tape-feed" className="space-y-4" aria-live="polite">
+        <div id="tape-feed" className="space-y-4">
           {digestedDays.map((day) => (
             <DayDigestSection
               key={day.dayKey}
@@ -541,6 +685,7 @@ export function TimelineClient() {
               nowMs={nowMs}
               logos={logos}
               highlightedId={highlightedId}
+              openCount={openCountByDay.get(day.dayKey) ?? 0}
             />
           ))}
           {hasNextPage ? (

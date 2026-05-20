@@ -85,7 +85,7 @@ const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     id: "name",
     label: "Name",
     sortKey: "name",
-    className: "w-[168px] max-w-[168px] sm:w-[90px] sm:max-w-[90px] xl:w-[150px] xl:max-w-[150px]",
+    className: "w-[168px] max-w-[168px] lg:w-[90px] lg:max-w-[90px] xl:w-[150px] xl:max-w-[150px]",
   },
   { id: "price", label: "Price", sortKey: "price", className: "text-right" },
   {
@@ -149,7 +149,7 @@ interface StablecoinTableProps {
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
   suppressDesktopHorizontalScroll?: boolean;
-  usePageVerticalScroll?: boolean;
+  showHeaderMethodologyHints?: boolean;
   initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
@@ -176,7 +176,7 @@ export function StablecoinTable({
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
   suppressDesktopHorizontalScroll = false,
-  usePageVerticalScroll = false,
+  showHeaderMethodologyHints = true,
   initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
@@ -199,7 +199,7 @@ export function StablecoinTable({
   }, [router]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
-  const isMobileColumns = useIsMobile(640);
+  const isMobileColumns = useIsMobile(1024);
 
   // Density mode
   const [density, setDensity] = useTableDensity();
@@ -207,7 +207,7 @@ export function StablecoinTable({
 
   // Column visibility — mobile gets a reduced default (hiddenMobile columns start off).
   // `initialVisibleColumns`, when provided, seeds the default for first-mount on this route
-  // (e.g., /home-alt/ ships a denser lens than /). Existing localStorage prefs still win on
+  // (e.g., compact homepage views ship a denser lens). Existing localStorage prefs still win on
   // subsequent loads — the prop only seeds the default branch.
   const deviceDefault = useMemo<ColumnId[]>(
     () => {
@@ -314,17 +314,12 @@ export function StablecoinTable({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
-  const renderedRows = usePageVerticalScroll
-    ? displayed.map((_, index) => ({ index }))
-    : virtualItems.map((item) => ({ index: item.index }));
-  const paddingTop = !usePageVerticalScroll && virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = !usePageVerticalScroll && virtualItems.length > 0
-    ? totalHeight - virtualItems[virtualItems.length - 1].end
-    : 0;
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
 
   // Visible range for footer
-  const rangeStart = renderedRows.length > 0 ? renderedRows[0].index + 1 : 0;
-  const rangeEnd = renderedRows.length > 0 ? renderedRows[renderedRows.length - 1].index + 1 : 0;
+  const rangeStart = virtualItems.length > 0 ? virtualItems[0].index + 1 : 0;
+  const rangeEnd = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index + 1 : 0;
 
   const handleCsvExport = useCallback(() => {
     exportStablecoinsCsv(displayed, pegScores, dexLiquidity, reportCards);
@@ -341,10 +336,10 @@ export function StablecoinTable({
             <Skeleton className="h-4 w-28" />
             <div className="flex-1" />
             <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-12 hidden sm:block" />
+            <Skeleton className="h-4 w-12 hidden lg:block" />
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-14" />
-            <Skeleton className="h-4 w-14 hidden sm:block" />
+            <Skeleton className="h-4 w-14 hidden lg:block" />
           </div>
         ))}
       </div>
@@ -377,17 +372,17 @@ export function StablecoinTable({
 
       <div
         ref={scrollRef}
-        className={`scroll-shadow overflow-x-auto px-0 ${usePageVerticalScroll ? "overflow-y-visible pb-0 pr-0" : "max-h-[50vh] overscroll-contain overflow-y-auto pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0"} ${suppressDesktopHorizontalScroll ? "sm:overflow-x-hidden" : ""}`}
+        className={`scroll-shadow max-h-[50vh] overscroll-contain overflow-y-auto overflow-x-auto px-0 pb-[calc(var(--mobile-utility-safe-offset,0px)+0.75rem)] pr-2 sm:max-h-[70vh] sm:pb-2 sm:pr-0 ${suppressDesktopHorizontalScroll ? "lg:overflow-x-hidden" : ""}`}
       >
         <table
-          className={`min-w-[420px] sm:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
+          className={`min-w-[420px] lg:min-w-[820px] w-full table-fixed caption-bottom text-sm pharos-table-striped-indexed pharos-density-${density}`}
           style={isMobileColumns ? { minWidth: mobileTableMinWidthPx } : undefined}
         >
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted">
             <TableRow>
               {showPinnedControls && (
-                <TableHead scope="col" className="w-[44px] text-center sm:w-[26px]">
+                <TableHead scope="col" className="w-[44px] text-center lg:w-[26px]">
                   <span className="sr-only">Starred</span>
                 </TableHead>
               )}
@@ -401,7 +396,7 @@ export function StablecoinTable({
                     label={column.sortLabel ?? (typeof column.label === "string" ? column.label : "")}
                     toggleSort={toggleSort}
                     getAriaSortValue={getAriaSortValue}
-                    adornment={column.headerAdornment}
+                    adornment={showHeaderMethodologyHints ? column.headerAdornment : undefined}
                     className={column.className}
                     title={column.title}
                   />
@@ -419,14 +414,14 @@ export function StablecoinTable({
                 <td style={{ height: paddingTop, padding: 0 }} />
               </tr>
             )}
-            {renderedRows.map((row) => {
-              const coin = displayed[row.index];
+            {virtualItems.map((virtualRow) => {
+              const coin = displayed[virtualRow.index];
               return (
                 <StablecoinVirtualRow
                   key={coin.id}
                   coin={coin}
-                  rank={sortedRankById.get(coin.id) ?? row.index + 1}
-                  isStriped={row.index % 2 === 1}
+                  rank={sortedRankById.get(coin.id) ?? virtualRow.index + 1}
+                  isStriped={virtualRow.index % 2 === 1}
                   densityConfig={virtualDensityConfig}
                   density={density}
                   isVisible={isVisible}

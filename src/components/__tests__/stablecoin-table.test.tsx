@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
+import { ALL_COLUMNS } from "@/lib/column-visibility";
 import type { ReportCard, StablecoinData } from "@shared/types";
 
 const push = vi.fn();
@@ -253,25 +254,37 @@ describe("StablecoinTable", () => {
     expect(scrollContainer?.className).toContain("sm:overflow-x-hidden");
   });
 
-  it("can let the page own vertical scrolling while preserving table horizontal overflow", () => {
+  it("honors all-column route defaults", () => {
     render(
       <StablecoinTable
-        data={[coin, usdc]}
+        data={[coin]}
         isLoading={false}
         activeFilters={[]}
         pegRates={{}}
-        usePageVerticalScroll
+        initialVisibleColumns={ALL_COLUMNS.map((column) => column.id)}
       />,
     );
 
-    const table = screen.getAllByRole("table")[0];
-    const scrollContainer = table?.parentElement;
+    expect(screen.getByText("Flags")).toBeTruthy();
+  });
 
-    expect(scrollContainer?.className).toContain("overflow-x-auto");
-    expect(scrollContainer?.className).toContain("overflow-y-visible");
-    expect(scrollContainer?.className).not.toContain("max-h-[50vh]");
-    expect(screen.getByText("USDT")).toBeTruthy();
-    expect(screen.getByText("USDC")).toBeTruthy();
+  it("can hide header methodology helper buttons", () => {
+    render(
+      <StablecoinTable
+        data={[coin]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        showHeaderMethodologyHints={false}
+      />,
+    );
+
+    expect(screen.getByText("Grade")).toBeTruthy();
+    expect(screen.getByText("Peg Score")).toBeTruthy();
+    expect(screen.getAllByText("Liq").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Explain Safety Score" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Explain Peg Score" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Explain Liquidity Score" })).toBeNull();
   });
 
   it("renders the blacklistable column when enabled", () => {

@@ -83,7 +83,7 @@ export function Header() {
   const mobileLeadItemCount = PRIMARY_NAV_ITEMS.length + priorityBottomNavItems.length;
 
   return (
-    <header className="md:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
+    <header className="lg:hidden sticky top-[3px] z-50 border-b border-border/80 bg-background" style={{ boxShadow: "var(--elevation-rest)" }}>
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="pharos-focus-ring flex min-h-11 min-w-0 items-center gap-2.5 rounded-md py-1 font-semibold">
           <PharosLogo size={32} priority />

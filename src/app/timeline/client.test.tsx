@@ -134,8 +134,10 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
 
     // The unmatched depeg.opened renders in the day feed and in the
-    // Currently-open banner — getAllByText covers both.
-    expect(screen.getAllByText("USDC depeg opened (-1200 bps)").length).toBeGreaterThanOrEqual(1);
+    // Currently-open banner — getAllByText covers both. EventCard appends
+    // ` — severity <Label>` to the sr-only title node, so match on the
+    // title prefix via regex rather than exact text.
+    expect(screen.getAllByText(/USDC depeg opened \(-1200 bps\)/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/USDT \$150\.0M destroyed/)).toBeTruthy();
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
@@ -172,9 +174,11 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    expect(screen.getByText("USDXL depeg peak worsened (−112 bps)")).toBeTruthy();
-    expect(screen.queryByText("USDXL depeg peak worsened (−109 bps)")).toBeNull();
-    expect(screen.queryByText("USDXL depeg peak worsened (−104 bps)")).toBeNull();
+    // Title text is sr-only and now carries a ` — severity Notice+` suffix
+    // from EventCard, so match on the title prefix via regex.
+    expect(screen.getByText(/USDXL depeg peak worsened \(−112 bps\)/)).toBeTruthy();
+    expect(screen.queryByText(/USDXL depeg peak worsened \(−109 bps\)/)).toBeNull();
+    expect(screen.queryByText(/USDXL depeg peak worsened \(−104 bps\)/)).toBeNull();
     expect(screen.getByLabelText("3 similar events grouped")).toBeTruthy();
   });
 
@@ -211,8 +215,9 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
 
     expect(screen.getByText(/Currently open · 1 incident/i)).toBeTruthy();
-    // The unmatched EURS open appears both in the banner and in the day feed.
-    expect(screen.getAllByText("EURS depeg opened (+589 bps)").length).toBeGreaterThanOrEqual(1);
+    // The unmatched EURS open appears both in the banner and in the day
+    // feed. EventCard appends ` — severity <Label>` to the sr-only title.
+    expect(screen.getAllByText(/EURS depeg opened \(\+589 bps\)/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not render the Currently open banner when no depegs are unmatched", () => {

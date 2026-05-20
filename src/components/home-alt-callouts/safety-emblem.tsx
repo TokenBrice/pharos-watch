@@ -1,6 +1,6 @@
-// Safety — heater-shield crest with two inscribed chevron tiers and a crest pip.
-// The silhouette curves inward at the shoulders and tapers to a chape (point),
-// reading more "crest" than generic safety shield.
+// Safety — shield silhouette with an upward chevron inside, reading as "guard
+// + trend up." Uses currentColor so the parent's brand-accent tint flows
+// through; native viewBox preserved (0 0 24 24).
 
 import type { JSX } from "react";
 
@@ -8,19 +8,26 @@ export function SafetyEmblem(): JSX.Element {
   return (
     <svg
       viewBox="0 0 24 24"
-      width={36}
-      height={36}
+      width={45}
+      height={45}
       fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M12 3 L19.5 5.2 C19.5 5.2 19.5 11 19.2 13.4 C18.7 17.4 15.6 20 12 21 C8.4 20 5.3 17.4 4.8 13.4 C4.5 11 4.5 5.2 4.5 5.2 Z" />
-      <circle cx="12" cy="5.6" r="0.9" fill="currentColor" stroke="none" />
-      <path d="M7.5 11.5 L12 13.5 L16.5 11.5" opacity={0.6} />
-      <path d="M8.5 15 L12 16.5 L15.5 15" opacity={0.4} />
+      {/* Upward chevron inside the shield */}
+      <path
+        d="M16 11.55L12.6 9C12.2444 8.73333 11.7556 8.73333 11.4 9L8 11.55M14 14.05L12 12.55L10 14.05"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Shield outline */}
+      <path
+        d="M3 10.4167C3 7.21907 3 5.62028 3.37752 5.08241C3.75503 4.54454 5.25832 4.02996 8.26491 3.00079L8.83772 2.80472C10.405 2.26824 11.1886 2 12 2C12.8114 2 13.595 2.26824 15.1623 2.80472L15.7351 3.00079C18.7417 4.02996 20.245 4.54454 20.6225 5.08241C21 5.62028 21 7.21907 21 10.4167C21 10.8996 21 11.4234 21 11.9914C21 14.4963 20.1632 16.4284 19 17.9041M3.19284 14C4.05026 18.2984 7.57641 20.5129 9.89856 21.5273C10.62 21.8424 10.9807 22 12 22C13.0193 22 13.38 21.8424 14.1014 21.5273C14.6796 21.2747 15.3324 20.9478 16 20.5328"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
