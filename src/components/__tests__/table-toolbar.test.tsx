@@ -23,7 +23,7 @@ describe("TableToolbar", () => {
     const layoutRow = titleBlock?.parentElement;
 
     expect(layoutRow?.classList.contains("xl:flex-row")).toBe(true);
-    expect(layoutRow?.classList.contains("xl:items-start")).toBe(true);
+    expect(layoutRow?.classList.contains("xl:items-baseline")).toBe(true);
     expect(layoutRow?.classList.contains("xl:justify-between")).toBe(true);
     expect(layoutRow?.classList.contains("sm:flex-row")).toBe(false);
 

@@ -24,16 +24,13 @@ function mockStable() {
 }
 
 describe("SiteHeader", () => {
-  it("renders the new route-oriented tagline on tablet+desktop", () => {
+  it("renders the compact surveillance tagline on tablet+desktop", () => {
     mockStable();
     const html = renderToStaticMarkup(
       <SiteHeader total={180} pegCount={19} chainCount={96} />,
     );
     expect(html).toContain(
-      "Chart your route through the stablecoin market",
-    );
-    expect(html).toContain(
-      "depeg alerts, freeze tracking, safety scoring, collateral composition, peg mechanism, liquidity, and dependency signals",
+      "Live depeg, freeze, safety, and liquidity signals across every tracked stablecoin.",
     );
   });
 
@@ -55,7 +52,7 @@ describe("SiteHeader", () => {
     expect(html).toMatch(/class="pharos-card-shell[^"]*md:flex-row/);
     expect(html).toMatch(/class="hidden[^"]*md:block/);
     expect(html).toMatch(/class="ml-auto[^"]*md:hidden/);
-    expect(html).toMatch(/class="hidden[^"]*md:grid/);
+    expect(html).toMatch(/class="hidden[^"]*md:flex/);
   });
 
   it("keeps a single raw h1 across responsive header layouts", () => {
