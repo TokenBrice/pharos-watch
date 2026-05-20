@@ -9,6 +9,10 @@ interface UseAutoLoadInfinitePagesOptions {
   fetchNextPage: () => Promise<unknown>;
   hasNextPage?: boolean;
   isFetchingNextPage: boolean;
+  /** Current loaded page count, used with `maxAutoPages` to cap auto-loading. */
+  pageCount?: number;
+  /** When set, stop auto-loading once `pageCount` reaches this number. */
+  maxAutoPages?: number;
   maxRetries?: number;
 }
 
@@ -19,6 +23,8 @@ export function useAutoLoadInfinitePages({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+  pageCount,
+  maxAutoPages,
   maxRetries = 3,
 }: UseAutoLoadInfinitePagesOptions): void {
   const retryCountRef = useRef(0);
@@ -33,6 +39,9 @@ export function useAutoLoadInfinitePages({
     if (!autoLoadAll || !enabled || hasNextPage !== true || isFetchingNextPage) {
       return;
     }
+    if (maxAutoPages != null && pageCount != null && pageCount >= maxAutoPages) {
+      return;
+    }
     if (error) {
       retryCountRef.current += 1;
       if (retryCountRef.current > maxRetries) return;
@@ -40,5 +49,5 @@ export function useAutoLoadInfinitePages({
       retryCountRef.current = 0;
     }
     void fetchNextPage();
-  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage, maxRetries]);
+  }, [autoLoadAll, enabled, error, fetchNextPage, hasNextPage, isFetchingNextPage, pageCount, maxAutoPages, maxRetries]);
 }

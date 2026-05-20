@@ -1,6 +1,6 @@
 import { collapseByCoinClass, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
+import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
 import { formatCompactUsd } from "@shared/lib/format";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SEVERITY_RANK, type TapeEventSeverity } from "@shared/types/tape-event";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { tapeClassLabel } from "@/lib/tape-class-style";
@@ -27,23 +27,6 @@ export interface DigestedDay {
   classes: DigestedClass[];
 }
 
-function utcDayKey(tsMs: number): string {
-  return new Date(tsMs).toISOString().slice(0, 10);
-}
-
-function tickerFor(event: TapeEvent): string {
-  if (event.coinId) {
-    const symbol = TRACKED_META_BY_ID.get(event.coinId)?.symbol;
-    if (symbol) return symbol;
-  }
-  const payloadSymbol = event.payload?.symbol;
-  if (typeof payloadSymbol === "string" && payloadSymbol.length > 0) return payloadSymbol;
-  // Freeze events carry the stablecoin ticker on `payload.stablecoin`, not `coinId`.
-  const payloadStablecoin = event.payload?.stablecoin;
-  if (typeof payloadStablecoin === "string" && payloadStablecoin.length > 0) return payloadStablecoin;
-  return event.coinId ?? "—";
-}
-
 interface TickerCount {
   ticker: string;
   count: number;
@@ -52,7 +35,7 @@ interface TickerCount {
 function topTickers(events: readonly TapeEvent[], limit = 2): TickerCount[] {
   const counts = new Map<string, number>();
   for (const event of events) {
-    const t = tickerFor(event);
+    const t = deriveTicker(event) ?? event.coinId ?? "—";
     counts.set(t, (counts.get(t) ?? 0) + 1);
   }
   return Array.from(counts.entries())
@@ -245,7 +228,44 @@ function digestEvents(events: readonly TapeEvent[]): DigestedClass[] {
   return out;
 }
 
-export function digestByDay(events: readonly TapeEvent[], nowMs: number): DigestedDay[] {
+/**
+ * Per-page digest result. Identical shape to `DigestedDay` for downstream
+ * consumers, but carries the raw events used to build it so seams across
+ * pages can be re-merged without re-bucketing the entire feed.
+ *
+ * The `events` field is intentionally part of the public type so callers
+ * that hold per-page digests (e.g. memoized per `pages[i]`) can pass them
+ * into `mergeDigestedPages` without re-digesting from raw events.
+ */
+export interface PageDigestedDay extends DigestedDay {
+  /** Raw events for this day from a single page, ts desc. */
+  events: readonly TapeEvent[];
+}
+
+function buildDay(
+  dayKey: string,
+  dayEvents: readonly TapeEvent[],
+  todayKey: string,
+  yesterdayKey: string,
+): PageDigestedDay {
+  return {
+    dayKey,
+    isToday: dayKey === todayKey,
+    isYesterday: dayKey === yesterdayKey,
+    totalCount: dayEvents.length,
+    classes: digestEvents(dayEvents),
+    events: dayEvents,
+  };
+}
+
+/**
+ * Digest a single page of events in isolation.
+ *
+ * Pages are expected to be ts desc; within a page, events are also ts desc.
+ * Output is `PageDigestedDay[]` ordered newest day first. Pure; safe to
+ * memoize on the page event array reference.
+ */
+export function digestPage(events: readonly TapeEvent[], nowMs: number): PageDigestedDay[] {
   const groups = new Map<string, TapeEvent[]>();
   for (const event of events) {
     const key = utcDayKey(event.ts);
@@ -255,19 +275,72 @@ export function digestByDay(events: readonly TapeEvent[], nowMs: number): Digest
   }
   const todayKey = utcDayKey(nowMs);
   const yesterdayKey = utcDayKey(nowMs - DAY_MS);
-  const out: DigestedDay[] = [];
+  const out: PageDigestedDay[] = [];
   for (const [dayKey, dayEvents] of groups.entries()) {
-    const isToday = dayKey === todayKey;
-    const isYesterday = dayKey === yesterdayKey;
-    out.push({
-      dayKey,
-      isToday,
-      isYesterday,
-      totalCount: dayEvents.length,
-      classes: digestEvents(dayEvents),
-    });
+    out.push(buildDay(dayKey, dayEvents, todayKey, yesterdayKey));
   }
-  // Order days newest first by key (ISO date strings sort lexically).
   out.sort((a, b) => b.dayKey.localeCompare(a.dayKey));
   return out;
+}
+
+/**
+ * Merge per-page digests at day seams.
+ *
+ * A seam occurs when adjacent pages share a `dayKey`. Each per-page digest
+ * carries the raw events for its days, so seams are resolved by
+ * concatenating the event arrays and re-running the class-level digest on
+ * the merged set. Days that appear in only one page pass through with no
+ * re-work.
+ *
+ * Pages are expected newest first; days within each page newest first.
+ * The returned array is `DigestedDay[]` (without `events`) sorted newest
+ * day first.
+ */
+export function mergeDigestedPages(
+  perPage: readonly (readonly PageDigestedDay[])[],
+): DigestedDay[] {
+  // First pass: track per-day source pages so we know which days have a seam
+  // and which can pass through their pre-digested classes untouched.
+  const sourcesByDay = new Map<string, PageDigestedDay[]>();
+  for (const page of perPage) {
+    for (const day of page) {
+      const sources = sourcesByDay.get(day.dayKey);
+      if (sources) sources.push(day);
+      else sourcesByDay.set(day.dayKey, [day]);
+    }
+  }
+
+  const out: DigestedDay[] = [];
+  for (const [dayKey, sources] of sourcesByDay.entries()) {
+    if (sources.length === 1) {
+      const only = sources[0];
+      out.push({
+        dayKey,
+        isToday: only.isToday,
+        isYesterday: only.isYesterday,
+        totalCount: only.totalCount,
+        classes: only.classes,
+      });
+      continue;
+    }
+    const merged: TapeEvent[] = [];
+    for (const src of sources) merged.push(...src.events);
+    out.push({
+      dayKey,
+      isToday: sources[0].isToday,
+      isYesterday: sources[0].isYesterday,
+      totalCount: merged.length,
+      classes: digestEvents(merged),
+    });
+  }
+  out.sort((a, b) => b.dayKey.localeCompare(a.dayKey));
+  return out;
+}
+
+/**
+ * Backward-compatible single-pass digest. Equivalent to
+ * `mergeDigestedPages([digestPage(events, nowMs)])`.
+ */
+export function digestByDay(events: readonly TapeEvent[], nowMs: number): DigestedDay[] {
+  return mergeDigestedPages([digestPage(events, nowMs)]);
 }

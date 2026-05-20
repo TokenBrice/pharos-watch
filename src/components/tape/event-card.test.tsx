@@ -196,9 +196,10 @@ describe("EventCard enrichment", () => {
     });
     render(<EventCard event={event} />);
     expect(screen.getByText("$840K")).toBeTruthy();
-    // Title contains "unfrozen"; the body badge also says "unfrozen" — so we
-    // expect at least two matches.
-    expect(screen.getAllByText(/unfrozen/).length).toBeGreaterThan(1);
+    // Body badge says "unfrozen"; the sr-only row label uses the humanized
+    // type slug ("freeze unblocked"), so we assert both signals separately.
+    expect(screen.getByText(/^unfrozen$/)).toBeTruthy();
+    expect(screen.getByText(/freeze unblocked/)).toBeTruthy();
   });
 
   it("freeze.unblocked with zero amount renders no body badge", () => {

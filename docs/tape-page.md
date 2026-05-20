@@ -40,16 +40,17 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 
 `/timeline/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/tape/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
 
-1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the linked-event band, or the empty state. The whole stream is a flat typographic surface.
+1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the pinned linked-event block, or the empty state. The whole stream is a flat typographic surface.
 2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
 3. **Geist Mono is the dominant typeface** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
 4. **Severity is communicated by text color**, not by card border or background fill. The `severityToAccent` `border-l-[3px]` rail is intentionally dropped from `EventCard`.
-5. **Time prefix on every row** — `HH:MM` in mono `tabular-nums` at the start of each event line, syslog-style.
+5. **Time prefix on every row** — desktop/tablet rows show `HH:MM` in mono `tabular-nums`; mobile rows show compact relative tokens (`5s`, `3m`, `2h`, `4d`) while the absolute time remains in the `<time>` metadata and hover title.
 6. **Structured row layout** — `time | logo | ticker | event.type slug | severity | count | chain | spacer | age`. The event title is redundant with these fields for coin events and is replaced by the structured form; the event summary becomes the second line.
 7. **Day separator** — full-width mono rule with the date inline (`─── TODAY · MAY 15, 2026 ─────────────`), not a thin underline header.
 8. **Currently-open band** — mono uppercase eyebrow (`⚠ CURRENTLY OPEN · N INCIDENTS`) over hairline-divided rows; no rounded shell.
-9. **Linked-event band** — mono uppercase eyebrow (`↗ YOU FOLLOWED A LINK TO THIS EVENT`) over a single event row; no shell.
-10. **Filter row is a flat wire-control surface** — it uses hairline `border-y` dividers and shared control primitives, but it does not use `pharos-card-shell`.
+9. **Pinned linked-event block** — mono uppercase label (`PINNED · Linked from URL`) inside the feed above day groups; no shell.
+10. **Activity histogram strip** — a mono Unicode block strip above the stale-data banner summarizes event density by bucket; glyph height encodes count and text color encodes max severity.
+11. **Filter row is a flat wire-control surface** — it uses hairline `border-y` dividers and shared control primitives, but it does not use `pharos-card-shell`.
 
 ---
 
@@ -114,13 +115,16 @@ Reserved classes (`reserve`, `redemption`, `liquidity`) are listed in `TAPE_CLAS
 ## Behavior
 
 - **Severity-floor default:** the page opens at `notice+`. Lower-priority chip ("All") drops the floor.
-- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N events · M classes`) so users can decide whether to scan a day before scrolling.
-- **Digest grouping:** within each day, events are partitioned by class (`digestByDay` in `src/lib/tape-digest.ts`). Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
+- **Activity histogram:** visible result sets render a mono block histogram above the data-status notices. Bucket width follows the active window (`24h` hourly, `7d` six-hourly, `30d`/`90d` daily, `alltime` capped at 180 daily cells). The strip is read-only and exposed as a single `role="img"` summary.
+- **Day grouping:** events are bucketed by UTC day; today and yesterday get `Today` / `Yesterday` primary labels. The day separator carries a per-day counter (`N events · M classes`) so users can decide whether to scan a day before scrolling. Quiet days with `≤ 3` events render as a collapsed day-level `<details>` summary listing class/ticker tokens before the underlying class groups.
+- **Digest grouping:** within each day, events are partitioned by class (`digestByDay` in `src/lib/tape-digest.ts`). Classes with `≥ 3` events render as a collapsible `<details>` recap row carrying a class background tint, count, top tickers, and class-specific aggregate stats (`worst N bps`, `$X frozen`, `N upgrades · M downgrades`, `max <severity>`). Classes with `< 3` events render inline unless the whole day is using the quiet-day wrapper. The recap line stays visible when closed; clicking reveals the underlying `EventCard` rows. Severity above the notice floor is communicated via the colored `max <severity>` chip in the recap and via the per-event severity text in the open state.
+- **Page-seam merging:** `digestPage(...)` digests each infinite-query page independently and `mergeDigestedPages(...)` re-merges adjacent pages that share a UTC day, preserving day grouping across pagination seams.
 - **Collapse-by-coin-class:** within an expanded digest, consecutive events of the same `(coin, class)` further collapse into a single card with a count badge via `collapseByCoinClass(...)`.
 - **Per-class tints:** every `EventCard` and digest recap row carries a class background tint (`bg-{rose|cyan|indigo|…}-500/[0.08]` for rows; `/10` for marquee chips). The tint scheme is `src/lib/tape-class-style.ts` and is shared with `src/components/homepage-tape.tsx`. Class is signaled by hue; severity stays text-color (Aesthetic Lock).
 - **Open incidents banner:** active `depeg.opened` events whose `sourceRowId` has not yet been seen as `depeg.resolved` in the visible window render in a separate amber band above the day groups. Deduped per coin.
-- **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered above the day stream. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
+- **`?event=<id>` permalink:** if the linked event isn't in the current filter window, a 200-row latest buffer (`useLatestEvents({ limit: 200 })`) is queried in parallel and the event is rendered as a pinned block inside `#tape-feed`, above the day groups. Resolved permalinks scroll into view and pulse-highlight for `HIGHLIGHT_DURATION_MS` (2000 ms).
 - **Infinite scroll:** the first `Load more` click flips a sentinel `IntersectionObserver` on, after which subsequent pages auto-load.
+- **End-of-feed footer:** when the cursor is exhausted, the page prints a mono terminal footer (`END OF TAPE · N EVT · WINDOW ... · CURSOR: NULL · LAST FILE: ...`) instead of a generic sentence.
 - **Empty state:** if filters return nothing, the CTA resets filters or widens the window to `alltime` (whichever applies).
 - **Stale data banner + retry:** standard `StaleDataBanner` and `QueryErrorNotice` wrap the feed.
 
@@ -156,7 +160,7 @@ Update this doc when any of these contracts change:
 - the projector roster in `TAPE_PROJECTOR_JOBS`
 - the `tape_events` schema, the event-id format, or the cursor encoding
 - the `GET /api/events` query params, freshness budget, or pagination cap
-- the `?event=` permalink resolution path (buffer size, scroll behavior)
+- the histogram, quiet-day collapse, infinite-scroll digestion, or `?event=` permalink resolution path (buffer size, scroll behavior)
 - the JSON-LD shape emitted by `src/app/timeline/page.tsx`
 
 If a new projector class ships, also update:
@@ -178,7 +182,7 @@ If you find yourself wrapping event rows in `pharos-card-shell`, rounding corner
 
 Specifically:
 
-- The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, the linked-event band, and the empty state is by design, not an oversight.
+- The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, the pinned linked-event block, and the empty state is by design, not an oversight.
 - Geist Mono as the dominant stream typeface is a third deliberate carve-out alongside Digest (Newsreader + Courier) and the detail-page `AiSummary` (Georgia).
 - Severity-as-text-color (no left rail, no fill) is part of the wire-service identity. Restoring the `border-l-[3px]` rail regresses the design.
 

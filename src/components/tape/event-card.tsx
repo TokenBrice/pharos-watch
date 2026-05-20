@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   Activity,
   ArrowLeftRight,
@@ -28,9 +28,9 @@ import {
   deviationColorClass,
 } from "@/lib/severity-colors";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
+import { deriveTicker, formatAbsoluteDate } from "@/lib/tape-derive";
 import { formatCompactUsd } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
-import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   SEVERITY_LABEL_INCLUSIVE,
   SEVERITY_TEXT_CLASS,
@@ -86,33 +86,24 @@ function formatHhMm(tsMs: number): string {
   return new Date(tsMs).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function formatAbsoluteDate(tsMs: number): string {
-  return new Date(tsMs).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+function humanizeEventType(type: string): string {
+  const base = type.split(":")[0];
+  return base.replace(/[._]/g, " ");
 }
 
-function deriveTicker(event: TapeEvent): string | null {
-  if (event.coinId) {
-    const symbol = TRACKED_META_BY_ID.get(event.coinId)?.symbol;
-    if (symbol) return symbol;
-  }
-  const payloadSymbol = event.payload?.symbol;
-  if (typeof payloadSymbol === "string" && payloadSymbol.length > 0) return payloadSymbol;
-  // freeze.* projector writes the issuer symbol to `payload.stablecoin` and leaves coinId null.
-  const payloadStablecoin = (event.payload as { stablecoin?: unknown } | undefined)?.stablecoin;
-  if (typeof payloadStablecoin === "string" && payloadStablecoin.length > 0) return payloadStablecoin;
-  return null;
+function firstSentence(summary: string): string {
+  const trimmed = summary.trim();
+  if (trimmed.length === 0) return "";
+  const match = trimmed.match(/^[^.!?]+[.!?]/);
+  const sentence = match ? match[0] : trimmed;
+  return sentence.length > 160 ? `${sentence.slice(0, 157)}…` : sentence;
 }
 
-// Resolve a canonical coin id for rendering the stablecoin logo. Falls back
-// to `payload.stablecoin` (freeze.* projector) and `payload.symbol` via the
-// unambiguous symbol → id map.
+// Resolve a canonical coin id for rendering the stablecoin logo. Freeze
+// events leave `coinId` null but carry the issuer symbol on `payload.stablecoin`.
 function deriveCoinId(event: TapeEvent): string | null {
   if (event.coinId) return event.coinId;
-  const payload = event.payload as { stablecoin?: unknown; symbol?: unknown } | undefined;
-  const candidate =
-    (typeof payload?.stablecoin === "string" ? payload.stablecoin : null) ??
-    (typeof payload?.symbol === "string" ? payload.symbol : null);
-  return coinIdBySymbol(candidate);
+  return coinIdBySymbol(deriveTicker(event));
 }
 
 // ---------------------------------------------------------------------------
@@ -446,7 +437,7 @@ interface EventCardProps {
   count?: number;
 }
 
-export function EventCard({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
+function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }: EventCardProps) {
   const severityLabel = SEVERITY_LABEL[event.severity];
   const severityText = SEVERITY_TEXT_CLASS[event.severity];
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
@@ -474,6 +465,17 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
 
   const severityGlyph = SEVERITY_GLYPH[event.severity];
   const typeSlug = event.type.toLowerCase();
+  const absoluteHhMm = formatHhMm(event.ts);
+  const relativeShort = formatRelativeTimeMs(event.ts, { withSuffix: false });
+  const summarySentence = event.summary ? firstSentence(event.summary) : "";
+  const ariaParts = [
+    ticker,
+    humanizeEventType(event.type),
+    `severity ${severityLabel}`,
+    event.chain ? `on ${event.chain}` : null,
+    summarySentence,
+  ].filter((part): part is string => typeof part === "string" && part.length > 0);
+  const ariaLabel = ariaParts.join(" — ");
   return (
     <Link
       id={domId}
@@ -490,7 +492,9 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
           title={formatAbsoluteDate(event.ts)}
           className="shrink-0 tabular-nums text-muted-foreground"
         >
-          {formatHhMm(event.ts)}
+          <span className="sr-only">{absoluteHhMm}</span>
+          <span aria-hidden="true" className="hidden sm:inline">{absoluteHhMm}</span>
+          <span aria-hidden="true" className="sm:hidden">{relativeShort}</span>
         </time>
         <span aria-hidden="true" className={`shrink-0 tabular-nums ${severityText}`}>
           {severityGlyph}
@@ -504,7 +508,7 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
             </span>
           )}
         </span>
-        <span id={titleId} className="sr-only">{event.title} — severity {severityLabel}</span>
+        <span id={titleId} className="sr-only">{ariaLabel}</span>
         {ticker ? (
           <span aria-hidden="true" className="max-w-full break-words font-semibold text-foreground sm:shrink-0">
             {ticker}
@@ -542,3 +546,8 @@ export function EventCard({ event, logoSrc, highlighted = false, domId, count = 
     </Link>
   );
 }
+
+// `useEvents` (T1.1) memoizes the event reference, so default shallow equality
+// is correct for all props here: `event` is referentially stable, the rest are
+// primitives.
+export const EventCard = memo(EventCardImpl);

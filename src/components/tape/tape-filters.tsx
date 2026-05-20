@@ -215,7 +215,7 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
           <button
             type="button"
             onClick={onClearCoin}
-            aria-label={`Clear coin filter ${coin}`}
+            aria-label={`Clear filter: Coin ${coin}`}
             className={`${CHIP_BASE} ${CHIP_ACTIVE}`}
           >
             <span>Coin: <span className="font-semibold">{coin}</span></span>

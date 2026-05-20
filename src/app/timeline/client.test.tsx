@@ -6,6 +6,7 @@ import type { TapeEvent } from "@shared/types/tape-event";
 
 type UseEventsResult = {
   data: { events: TapeEvent[]; nextCursor: string | null };
+  pages: Array<{ data: { events: TapeEvent[]; nextCursor: string | null; total: number | null }; meta: null }> | undefined;
   isLoading: boolean;
   error: Error | null;
   meta: null;
@@ -82,8 +83,11 @@ function makeTapeEvent(overrides: Partial<TapeEvent> = {}): TapeEvent {
 }
 
 function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {}) {
+  const nextCursor = overrides.data?.nextCursor ?? null;
+  const total = overrides.total ?? events.length;
   useEventsMock.mockReturnValue({
-    data: { events, nextCursor: null },
+    data: { events, nextCursor },
+    pages: [{ data: { events, nextCursor, total }, meta: null }],
     isLoading: false,
     error: null,
     meta: null,
@@ -92,7 +96,7 @@ function mockEvents(events: TapeEvent[], overrides: Partial<UseEventsResult> = {
     fetchNextPage: vi.fn().mockResolvedValue(undefined),
     hasNextPage: false,
     isFetchingNextPage: false,
-    total: events.length,
+    total,
     ...overrides,
   });
 }
@@ -133,12 +137,12 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    // The unmatched depeg.opened renders in the day feed and in the
-    // Currently-open banner — getAllByText covers both. EventCard appends
-    // ` — severity <Label>` to the sr-only title node, so match on the
-    // title prefix via regex rather than exact text.
-    expect(screen.getAllByText(/USDC depeg opened \(-1200 bps\)/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/USDT \$150\.0M destroyed/)).toBeTruthy();
+    // Coin rows use the structured wire format visually and expose a concise
+    // accessible name instead of repeating the full event title.
+    expect(screen.getAllByRole("link", { name: /USDC.*depeg opened.*severity Severe/i }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("link", { name: /USDT.*freeze funds destroyed.*severity Critical/i })).toBeTruthy();
+    expect(screen.getAllByText("depeg.opened").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("freeze.funds.destroyed")).toBeTruthy();
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href") ?? "");
     expect(hrefs.some((h) => h.startsWith("/stablecoin/usdc-circle"))).toBe(true);
     expect(hrefs.some((h) => h.startsWith("/freezewatch"))).toBe(true);
@@ -174,11 +178,10 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    // Title text is sr-only and now carries a ` — severity Notice+` suffix
-    // from EventCard, so match on the title prefix via regex.
-    expect(screen.getByText(/USDXL depeg peak worsened \(−112 bps\)/)).toBeTruthy();
-    expect(screen.queryByText(/USDXL depeg peak worsened \(−109 bps\)/)).toBeNull();
-    expect(screen.queryByText(/USDXL depeg peak worsened \(−104 bps\)/)).toBeNull();
+    expect(document.querySelector("[data-event-id='evt-3']")).not.toBeNull();
+    expect(document.querySelector("[data-event-id='evt-2']")).toBeNull();
+    expect(document.querySelector("[data-event-id='evt-1']")).toBeNull();
+    expect(screen.getByText("depeg.peak_worsened")).toBeTruthy();
     expect(screen.getByText("3 similar events grouped")).toBeTruthy();
   });
 
@@ -215,9 +218,8 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
 
     expect(screen.getByText(/Currently open · 1 incident/i)).toBeTruthy();
-    // The unmatched EURS open appears both in the banner and in the day
-    // feed. EventCard appends ` — severity <Label>` to the sr-only title.
-    expect(screen.getAllByText(/EURS depeg opened \(\+589 bps\)/).length).toBeGreaterThanOrEqual(1);
+    // The unmatched EURS open appears both in the banner and in the day feed.
+    expect(screen.getAllByRole("link", { name: /EURS.*depeg opened.*severity Warning/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not render the Currently open banner when no depegs are unmatched", () => {
@@ -303,10 +305,115 @@ describe("TimelineClient", () => {
     // chip and as the digest-row class label — assert both occur.
     expect(screen.getAllByText(/^Freezes$/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/5 events/).length).toBeGreaterThanOrEqual(1);
-    // Row titles still exist in the DOM (collapsed inside <details>, not removed).
-    expect(screen.getByText(/USDT freeze 0/)).toBeTruthy();
+    // The collapsed class still keeps the leading grouped row in the DOM.
+    expect(document.querySelector("[data-event-id='evt-freeze-0']")).not.toBeNull();
+    expect(document.querySelector("[data-event-id='evt-freeze-1']")).toBeNull();
+    expect(screen.getByText("5 similar events grouped")).toBeTruthy();
     // The collapsed <details> wrapper is in the document.
     const details = document.querySelector("details");
     expect(details).not.toBeNull();
+  });
+
+  it("renders the status-line footer with EVT count, window, severity floor, cursor and last file", () => {
+    mockEvents([
+      makeTapeEvent({ id: "evt-1", title: "Event one" }),
+      makeTapeEvent({ id: "evt-2", title: "Event two", coinId: "usdt-tether" }),
+    ]);
+
+    render(<TimelineClient />);
+
+    const footer = screen.getByText(/END OF TAPE/);
+    const footerText = footer.textContent ?? "";
+    expect(footerText).toMatch(/END OF TAPE/);
+    expect(footerText).toMatch(/2 EVT/);
+    expect(footerText).toMatch(/WINDOW 7D/);
+    expect(footerText).toMatch(/NOTICE\+/);
+    expect(footerText).toMatch(/CURSOR: NULL/);
+    expect(footerText).toMatch(/LAST FILE:/);
+  });
+
+  it("renders the [OPEN] textual prefix inside the Currently open region", () => {
+    const now = Date.now();
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-open-still",
+        ts: now - 60_000,
+        type: "depeg.opened",
+        title: "EURS depeg opened (+589 bps)",
+        coinId: "eurs-stasis",
+        sourceRowId: "200",
+      }),
+    ]);
+
+    const { container } = render(<TimelineClient />);
+
+    const region = container.querySelector("[aria-labelledby='tape-open-incidents-heading']");
+    expect(region).not.toBeNull();
+    expect(region?.getAttribute("role")).toBe("region");
+    expect(screen.getAllByText(/\[OPEN\]/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("collapses quiet days (<=3 events) into a single <details> row", () => {
+    const yesterday = Date.now() - 86_400_000;
+    mockEvents([
+      makeTapeEvent({
+        id: "evt-1",
+        ts: yesterday,
+        type: "psi.shifted_up",
+        coinId: "usdt-tether",
+        title: "PSI band up",
+      }),
+      makeTapeEvent({
+        id: "evt-2",
+        ts: yesterday - 60_000,
+        type: "score.upgraded",
+        coinId: "dai-makerdao",
+        title: "DAI upgraded",
+      }),
+    ]);
+
+    render(<TimelineClient />);
+
+    // The day section is wrapped in a <details> with a summary listing the
+    // class slugs and tickers.
+    const summary = document.querySelector("details > summary");
+    expect(summary).not.toBeNull();
+    const summaryText = summary?.textContent ?? "";
+    expect(summaryText.toLowerCase()).toContain("psi");
+    expect(summaryText.toLowerCase()).toContain("score");
+  });
+
+  it("renders linked-event as a PINNED inline row instead of a separate section", () => {
+    const pinned: TapeEvent = makeTapeEvent({
+      id: "evt-pinned",
+      title: "Linked event title",
+      summary: "Linked summary",
+    });
+    useLatestEventsMock.mockReturnValue({
+      data: { events: [pinned], nextCursor: null, total: 1, totalExact: true },
+      isLoading: false,
+      error: null,
+      meta: null,
+    });
+    mockEvents([makeTapeEvent({ id: "evt-other", title: "Other event" })]);
+    // Force the permalink lookup branch by setting ?event= in the URL.
+    window.history.replaceState(null, "", `/timeline?event=${encodeURIComponent("evt-pinned")}`);
+
+    render(<TimelineClient />);
+
+    expect(screen.queryByText(/You followed a link/i)).toBeNull();
+    expect(screen.getAllByText(/PINNED/).length).toBeGreaterThanOrEqual(1);
+    window.history.replaceState(null, "", "/timeline");
+  });
+
+  it("labels empty-state clear-filter chips with a 'Clear filter:' aria-label", () => {
+    mockEvents([]);
+    window.history.replaceState(null, "", "/timeline?window=24h");
+
+    render(<TimelineClient />);
+
+    const button = screen.getByRole("button", { name: /Clear filter:/i });
+    expect(button).toBeTruthy();
+    window.history.replaceState(null, "", "/timeline");
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Radar, AlertTriangle, Link2, Loader2 } from "lucide-react";
+import { Radar, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
@@ -18,10 +18,16 @@ import {
   TAPE_DEFAULT_SEVERITY,
   type TapeWindowKey,
 } from "@/components/tape/tape-filters";
-import { digestByDay, type DigestedDay } from "@/lib/tape-digest";
+import { digestPage, mergeDigestedPages, type DigestedDay } from "@/lib/tape-digest";
+import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
+import { eventClassSlug } from "@/lib/tape-collapse";
 import { timeAgo } from "@shared/lib/format";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
-import { SEVERITY_RANK, type TapeEvent, type TapeEventSeverity } from "@shared/types/tape-event";
+import {
+  SEVERITY_LABEL as SEVERITY_LABEL_BARE,
+  type TapeEvent,
+  type TapeEventSeverity,
+} from "@shared/types/tape-event";
 
 const HIGHLIGHT_DURATION_MS = 2000;
 const DAY_MS = 86_400_000;
@@ -33,6 +39,15 @@ const WINDOW_LABEL: Record<TapeWindowKey, string> = {
   "30d": "last 30 days",
   "90d": "last 90 days",
   all: "all time",
+};
+
+// Compact uppercase form used in the status-line footer.
+const WINDOW_SHORT: Record<TapeWindowKey, string> = {
+  "24h": "24H",
+  "7d": "7D",
+  "30d": "30D",
+  "90d": "90D",
+  all: "ALL",
 };
 
 function EventSkeleton() {
@@ -73,6 +88,7 @@ function EmptyState({
                 key={chip.key}
                 type="button"
                 onClick={chip.onClear}
+                aria-label={`Clear filter: ${chip.label}`}
                 className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-none border border-border/60 px-3 py-2 font-mono text-xs uppercase tracking-wide text-foreground hover:bg-accent/40 sm:min-h-0 sm:px-2 sm:py-0.5"
               >
                 <span>{chip.label}</span>
@@ -98,15 +114,6 @@ function EmptyState({
 
 function eventDomId(eventId: string): string {
   return `tape-event-card-${eventId}`;
-}
-
-function passesPegFilter(event: TapeEvent, peg: string): boolean {
-  if (peg === "all" || !peg) return true;
-  return event.pegCurrency === peg;
-}
-
-function utcDayKey(tsMs: number): string {
-  return new Date(tsMs).toISOString().slice(0, 10);
 }
 
 function formatDayLabel(dayKey: string, nowMs: number): { primary: string; secondary: string } {
@@ -157,13 +164,9 @@ function deriveOpenIncidents(events: readonly TapeEvent[]): TapeEvent[] {
   return out;
 }
 
-// Per-day count of currently-open incidents whose `opened` row falls on the
-// given UTC day. Mirrors `deriveOpenIncidents` for the full visible window
-// and then buckets by `utcDayKey(event.ts)`.
-function openIncidentsByDay(events: readonly TapeEvent[]): Map<string, number> {
-  const open = deriveOpenIncidents(events);
+function bucketByDay(events: readonly TapeEvent[]): Map<string, number> {
   const out = new Map<string, number>();
-  for (const e of open) {
+  for (const e of events) {
     const key = utcDayKey(e.ts);
     out.set(key, (out.get(key) ?? 0) + 1);
   }
@@ -208,9 +211,11 @@ function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severity
     parts.push(
       <span key="updated" className="inline-flex items-center gap-1.5">
         {isFresh ? (
-          <span className="relative inline-flex h-1.5 w-1.5" aria-hidden="true">
-            <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          <span
+            aria-hidden="true"
+            className="font-mono leading-none text-emerald-600 motion-safe:animate-pulse motion-reduce:animate-none dark:text-emerald-400"
+          >
+            ▌
           </span>
         ) : null}
         <span>Updated {timeAgo(Math.floor(dataUpdatedAt / 1000))}</span>
@@ -258,7 +263,11 @@ function openIncidentPrefix(event: TapeEvent, nowMs: number): string {
 
 function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsSectionProps) {
   return (
-    <section aria-labelledby="tape-open-incidents-heading" className="space-y-1">
+    <section
+      role="region"
+      aria-labelledby="tape-open-incidents-heading"
+      className="space-y-1"
+    >
       <h2
         id="tape-open-incidents-heading"
         className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
@@ -269,10 +278,9 @@ function OpenIncidentsSection({ incidents, logos, nowMs }: OpenIncidentsSectionP
       <div className="border-y border-amber-500/30">
         {incidents.map((event) => (
           <div key={event.id}>
-            <p
-              className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
-              aria-hidden="true"
-            >
+            <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              <span className="font-semibold">[OPEN]</span>
+              {" · "}
               {openIncidentPrefix(event, nowMs)}
             </p>
             <EventCard
@@ -294,24 +302,25 @@ interface DayDigestSectionProps {
   openCount: number;
 }
 
-function maxSeverityForDay(day: DigestedDay): TapeEventSeverity {
-  let maxRank = -1;
-  let maxSev: TapeEventSeverity = "info";
+function quietDayEventTokens(day: DigestedDay): string[] {
+  const out: string[] = [];
   for (const cls of day.classes) {
-    const rank = SEVERITY_RANK[cls.maxSeverity];
-    if (rank > maxRank) {
-      maxRank = rank;
-      maxSev = cls.maxSeverity;
+    for (const entry of cls.collapsed) {
+      const ticker = deriveTicker(entry.event);
+      const slug = eventClassSlug(entry.event.type);
+      out.push(ticker ? `${slug} ${ticker}` : slug);
     }
   }
-  return maxSev;
+  return out;
 }
 
 function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }: DayDigestSectionProps) {
   const { primary, secondary } = formatDayLabel(day.dayKey, nowMs);
   const classCount = day.classes.length;
-  const maxSev = maxSeverityForDay(day);
+  const maxSev: TapeEventSeverity = day.classes[0]?.maxSeverity ?? "info";
   const glyph = SEVERITY_GLYPH[maxSev];
+  const isQuiet = day.totalCount <= 3;
+  const quietTokens = isQuiet ? quietDayEventTokens(day) : [];
   return (
     <section aria-label={`${primary} ${secondary}`}>
       <div className="sticky top-0 z-10 -mx-1 bg-background/90 px-1 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -328,17 +337,49 @@ function DayDigestSection({ day, nowMs, logos, highlightedId, openCount }: DayDi
           <span aria-hidden="true" className="w-full border-t border-border/60 sm:flex-1" />
         </div>
       </div>
-      <div>
-        {day.classes.map((digest) => (
-          <ClassDigestRow
-            key={`${day.dayKey}-${digest.classSlug}`}
-            digest={digest}
-            logos={logos}
-            highlightedId={highlightedId}
-            eventDomId={eventDomId}
-          />
-        ))}
-      </div>
+      {isQuiet ? (
+        <details className="group border-b border-border/30">
+          <summary
+            className="pharos-focus-ring flex cursor-pointer list-none items-center gap-x-2.5 gap-y-1 px-3 py-2 font-mono text-xs text-muted-foreground transition-colors hover:bg-muted/30 flex-wrap"
+          >
+            <span aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-90">▸</span>
+            <span className="shrink-0 uppercase tracking-wide tabular-nums text-foreground">
+              {primary} · {secondary}
+            </span>
+            <span className="shrink-0 uppercase tracking-wide tabular-nums">
+              · {day.totalCount} EVT
+            </span>
+            {quietTokens.length > 0 ? (
+              <span className="min-w-0 flex-[1_1_12rem] break-words lowercase">
+                · {quietTokens.join(" · ")}
+              </span>
+            ) : null}
+          </summary>
+          <div className="border-t border-border/20">
+            {day.classes.map((digest) => (
+              <ClassDigestRow
+                key={`${day.dayKey}-${digest.classSlug}`}
+                digest={digest}
+                logos={logos}
+                highlightedId={highlightedId}
+                eventDomId={eventDomId}
+              />
+            ))}
+          </div>
+        </details>
+      ) : (
+        <div>
+          {day.classes.map((digest) => (
+            <ClassDigestRow
+              key={`${day.dayKey}-${digest.classSlug}`}
+              digest={digest}
+              logos={logos}
+              highlightedId={highlightedId}
+              eventDomId={eventDomId}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -349,10 +390,10 @@ export function TimelineClient() {
   const { data: logos } = useLogos();
   const [nowMs] = useState(() => Date.now());
 
-  const since = useMemo(
-    () => tapeWindowSince(filters.window),
-    [filters.window],
-  );
+  // Pass `nowMs` (frozen at mount) so the queryKey stays stable across
+  // renders — otherwise `tapeWindowSince` calls Date.now() each render and
+  // the infinite query restarts every tick.
+  const since = tapeWindowSince(filters.window, nowMs);
 
   const events = useEvents(
     {
@@ -369,6 +410,7 @@ export function TimelineClient() {
 
   const {
     data: { events: rawEvents, nextCursor },
+    pages,
     isLoading,
     error,
     refetch,
@@ -380,13 +422,19 @@ export function TimelineClient() {
     total,
   } = events;
 
-  const visibleEvents = useMemo(
-    () => rawEvents.filter((event) => passesPegFilter(event, filters.peg)),
-    [rawEvents, filters.peg],
-  );
-
+  // Peg is filtered server-side (`pegCurrency` SQL clause in /api/events);
+  // no client-side re-filter is needed.
+  const visibleEvents = rawEvents;
   const openIncidents = useMemo(() => deriveOpenIncidents(visibleEvents), [visibleEvents]);
-  const digestedDays = useMemo(() => digestByDay(visibleEvents, nowMs), [visibleEvents, nowMs]);
+
+  // Per-page digestion + seam reducer. Each TanStack Query page reference is
+  // stable across renders (see use-events.ts), so memoising on `pages` keeps
+  // Load More O(page-size + seam) instead of O(total).
+  const perPageDigests = useMemo(
+    () => (pages ? pages.map((page) => digestPage(page.data.events, nowMs)) : []),
+    [pages, nowMs],
+  );
+  const digestedDays = useMemo(() => mergeDigestedPages(perPageDigests), [perPageDigests]);
 
   const permalinkId = getParam("event", "");
   const [autoLoadEnabled, setAutoLoadEnabled] = useState(false);
@@ -421,9 +469,9 @@ export function TimelineClient() {
       return undefined;
     }
     if (typeof window === "undefined") return undefined;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHighlightedId(permalinkId);
+    let timeoutId: number | undefined;
     const rafId = window.requestAnimationFrame(() => {
+      setHighlightedId(permalinkId);
       // Expand any <details> ancestor of the target so the row is visible.
       const el = document.getElementById(eventDomId(permalinkId));
       if (el) {
@@ -451,13 +499,15 @@ export function TimelineClient() {
           (el as HTMLElement).focus({ preventScroll: true });
         }
       }
+      timeoutId = window.setTimeout(() => {
+        setHighlightedId((current) => (current === permalinkId ? null : current));
+      }, HIGHLIGHT_DURATION_MS);
     });
-    const timeoutId = window.setTimeout(() => {
-      setHighlightedId((current) => (current === permalinkId ? null : current));
-    }, HIGHLIGHT_DURATION_MS);
     return () => {
       window.cancelAnimationFrame(rafId);
-      window.clearTimeout(timeoutId);
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [permalinkResolved, permalinkId]);
 
@@ -533,35 +583,16 @@ export function TimelineClient() {
       chips.push({ key: "q", label: `Search: "${filters.q}"`, onClear: () => setParam("q", "") });
     }
     return chips;
-  }, [filters, setParam]);
+  }, [filters.window, filters.severity, filters.chain, filters.peg, filters.type, filters.coin, filters.q, setParam]);
 
   // Empty-state fallback prefers the smallest step that widens the view:
-  //   1. If filters are active, clear them.
-  //   2. Else, if severity is above `info`, drop the floor by one tier — most
-  //      empty results at default-7d are severity-filtered noise, not time.
-  //   3. Else (severity already at `info` and nothing else custom), widen the
-  //      window to all time. `alltime` URL token bypasses the "all" sentinel
-  //      in useUrlFilters.
-  const fallbackMode: "clear" | "severity" | "alltime" = hasActiveFilters
-    ? "clear"
+  // clear active filters → drop severity floor → widen window. `alltime` URL
+  // token bypasses the "all" sentinel in useUrlFilters.
+  const fallback: { label: string; apply: () => void } = hasActiveFilters
+    ? { label: "Reset all filters", apply: handleClearFilters }
     : filters.severity !== "info"
-    ? "severity"
-    : "alltime";
-  const fallbackLabel =
-    fallbackMode === "clear"
-      ? "Reset all filters"
-      : fallbackMode === "severity"
-      ? "Show info-tier too"
-      : "Widen to all time";
-  const emptyStateFallback = useCallback(() => {
-    if (fallbackMode === "clear") {
-      handleClearFilters();
-    } else if (fallbackMode === "severity") {
-      setParam("severity", "info");
-    } else {
-      setParam("window", "alltime");
-    }
-  }, [fallbackMode, handleClearFilters, setParam]);
+    ? { label: "Show info-tier too", apply: () => setParam("severity", "info") }
+    : { label: "Widen to all time", apply: () => setParam("window", "alltime") };
 
   const loadedCount = visibleEvents.length;
   useEffect(() => {
@@ -575,7 +606,7 @@ export function TimelineClient() {
   }, [loadedCount, total]);
 
   // `per-day` open-incident counts feed the day-separator `N OPEN` enrichment.
-  const openCountByDay = useMemo(() => openIncidentsByDay(visibleEvents), [visibleEvents]);
+  const openCountByDay = useMemo(() => bucketByDay(openIncidents), [openIncidents]);
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
   return (
@@ -630,23 +661,6 @@ export function TimelineClient() {
         </div>
       ) : null}
 
-      {bufferEvent ? (
-        <section aria-labelledby="tape-linked-event-heading" className="space-y-1">
-          <h2 id="tape-linked-event-heading" className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-foreground/70">
-            <Link2 className="h-3 w-3" aria-hidden="true" />
-            ↗ You followed a link to this event
-          </h2>
-          <div className="border-y border-border/60">
-            <EventCard
-              event={bufferEvent}
-              logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
-              highlighted={highlightedId === bufferEvent.id}
-              domId={eventDomId(bufferEvent.id)}
-            />
-          </div>
-        </section>
-      ) : null}
-
       {openIncidents.length > 0 ? (
         <OpenIncidentsSection incidents={openIncidents} logos={logos} nowMs={nowMs} />
       ) : null}
@@ -662,12 +676,28 @@ export function TimelineClient() {
         <EventSkeleton />
       ) : visibleEvents.length === 0 ? (
         <EmptyState
-          onClearAll={emptyStateFallback}
+          onClearAll={fallback.apply}
           activeChips={emptyStateChips}
-          fallbackLabel={fallbackLabel}
+          fallbackLabel={fallback.label}
         />
       ) : (
         <div id="tape-feed" className="space-y-4">
+          {bufferEvent ? (
+            <div className="border-y border-border/60 bg-amber-500/5">
+              <p className="px-3 pt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                <span aria-hidden="true">► </span>
+                <span className="font-semibold text-foreground">PINNED</span>
+                <span aria-hidden="true"> · </span>
+                <span>Linked from URL</span>
+              </p>
+              <EventCard
+                event={bufferEvent}
+                logoSrc={bufferEvent.coinId ? logos[bufferEvent.coinId] : undefined}
+                highlighted={highlightedId === bufferEvent.id}
+                domId={eventDomId(bufferEvent.id)}
+              />
+            </div>
+          ) : null}
           {digestedDays.map((day) => (
             <DayDigestSection
               key={day.dayKey}
@@ -695,7 +725,21 @@ export function TimelineClient() {
               <div ref={sentinelRef} aria-hidden="true" />
             </div>
           ) : nextCursor == null && rawEvents.length > 0 ? (
-            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">─── End of timeline ───</p>
+            <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground">
+              ───── END OF TAPE
+              {" · "}
+              {(total ?? rawEvents.length).toLocaleString()} EVT
+              {" · WINDOW "}
+              {WINDOW_SHORT[filters.window]}
+              {" · "}
+              {SEVERITY_LABEL_BARE[filters.severity].toUpperCase()}
+              {filters.severity === "critical" ? "" : "+"}
+              {" · CURSOR: NULL · LAST FILE: "}
+              {lastEventTs != null
+                ? new Date(lastEventTs).toISOString().replace(".000Z", "Z")
+                : new Date(dataUpdatedAt).toISOString().replace(".000Z", "Z")}
+              {" ─────"}
+            </p>
           ) : null}
         </div>
       )}

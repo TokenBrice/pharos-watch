@@ -122,10 +122,13 @@ export interface UseEventsOptions {
   enabled?: boolean;
   /** If true, automatically fetches every page after the first manual click. */
   autoLoadAll?: boolean;
+  /** Cap auto-loading at this many pages. Implies `autoLoadAll: true`. */
+  maxAutoPages?: number;
 }
 
 export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOptions = {}) {
-  const { enabled = true, autoLoadAll = false } = options;
+  const { enabled = true, autoLoadAll = false, maxAutoPages } = options;
+  const effectiveAutoLoadAll = autoLoadAll || maxAutoPages != null;
   const query = useInfiniteQuery({
     ...eventsInfiniteQueryOptions(filter),
     enabled,
@@ -133,11 +136,13 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
   const { error, fetchNextPage, hasNextPage, isFetchingNextPage } = query;
   useAutoLoadInfinitePages({
     enabled,
-    autoLoadAll,
+    autoLoadAll: effectiveAutoLoadAll,
     error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    pageCount: query.data?.pages.length,
+    maxAutoPages,
   });
 
   // All five derived values are computed from `query.data?.pages`, which is a
@@ -163,6 +168,7 @@ export function useEvents(filter: UseEventsFilter = {}, options: UseEventsOption
   return {
     ...query,
     data,
+    pages,
     loadedCount: events.length,
     isFullyLoaded: nextCursor == null,
     meta,

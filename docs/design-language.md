@@ -170,11 +170,11 @@ This pairing creates a "broadsheet newspaper" aesthetic that signals both author
 
 ### Tape (Special)
 
-The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthetic** that diverges from the standard `pharos-card-shell` analytics surface. Where Digest is the broadsheet, Timeline is the syslog: Geist Mono everywhere, hairline dividers in place of card chrome, severity expressed as text color, per-class background tints (hue signals class, text-color signals severity), and a `HH:MM` time prefix at the start of every row.
+The `/timeline/` event stream uses a deliberate **wire-service / terminal aesthetic** that diverges from the standard `pharos-card-shell` analytics surface. Where Digest is the broadsheet, Timeline is the syslog: Geist Mono everywhere, hairline dividers in place of card chrome, severity expressed as text color, per-class background tints (hue signals class, text-color signals severity), and row time prefixes that use `HH:MM` on larger screens and compact relative tokens on mobile.
 
 This is a third intentional non-Geist-Sans treatment alongside the Digest dual-font system (Newsreader serif + Courier italic) and the stablecoin-detail `AiSummary` Georgia paragraph. Tape is distinct from both: it leans on Geist Mono as the primary typeface across the stream, not serif for editorial gravitas.
 
-The absence of `pharos-card-shell` on event rows, day groups, the currently-open / linked-event bands, and the filter row is **intentional, not an oversight**. The filter row is a flat wire-control surface with hairline `border-y` dividers and shared control primitives, not a card shell.
+The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, pinned linked-event block, and the filter row is **intentional, not an oversight**. The filter row is a flat wire-control surface with hairline `border-y` dividers and shared control primitives, not a card shell.
 
 The canonical contract — rules, structured row layout, day-separator format, and the Aesthetic Lock against harmonization — lives in [tape-page.md](./tape-page.md) under `## Visual Identity` and `## Aesthetic Lock`. Update both docs together when the wire-service treatment changes.
 
