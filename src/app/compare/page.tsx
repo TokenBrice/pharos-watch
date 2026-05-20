@@ -24,7 +24,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Compare",
     path: "/compare/",
     title: "Compare Stablecoins",
-    statusBadge: { status: "mature" },
     leadParagraphs: [
       "Build a live peer set, then read peg behavior, liquidity, safety scores, and structural differences without bouncing between detail pages.",
     ],

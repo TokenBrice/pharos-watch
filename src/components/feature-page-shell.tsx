@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BreadcrumbJsonLd, type BreadcrumbItem } from "@/components/breadcrumb-json-ld";
-import { FeatureStatusBadge, type FeatureStatus } from "@/components/feature-status-badge";
 import { cn } from "@/lib/utils";
 
 export interface FeaturePageShellProps {
@@ -11,10 +10,6 @@ export interface FeaturePageShellProps {
   variant?: "standard" | "longform" | "auth-gated";
   containerClassName?: string;
   breadcrumbLabel?: string;
-  statusBadge?: {
-    status: FeatureStatus;
-    version?: string;
-  };
   methodology?: {
     version: string;
     changelogPath: string;
@@ -34,7 +29,6 @@ export function FeaturePageShell({
   variant = "standard",
   containerClassName,
   breadcrumbLabel,
-  statusBadge,
   methodology,
   headerActions,
   leadParagraphs = [],
@@ -74,7 +68,6 @@ export function FeaturePageShell({
         <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-3">
           <div className="flex min-w-0 max-w-4xl flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="pharos-page-title">{title}</h1>
-            {statusBadge && <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />}
           </div>
           {headerActions}
         </div>

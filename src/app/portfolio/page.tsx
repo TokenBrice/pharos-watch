@@ -24,7 +24,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Portfolio",
     path: "/portfolio/",
     title: "Portfolio",
-    statusBadge: { status: "beta" },
     leadParagraphs: ["Track your stablecoin holdings and assess your personal risk exposure."],
   },
 });

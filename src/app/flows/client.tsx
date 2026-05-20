@@ -27,9 +27,6 @@ const FLOWS_SHELL_PROPS = {
   breadcrumbName: "Mint/Burn Flows",
   path: "/flows/",
   title: "Mint/Burn Flows",
-  statusBadge: {
-    status: "mature" as const,
-  },
   methodology: {
     version: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
     changelogPath: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,

@@ -18,7 +18,7 @@ The Picker flips the Screener relationship: instead of filtering the full univer
 - **Editorial templates:** `shared/lib/selector/what-to-watch-templates.ts`, `shared/lib/selector/why-keys.ts` (engine agent; banned-phrase lint applies)
 - **Entry callout:** `src/components/selector/selector-callout.tsx`, rendered from `src/app/screener/client.tsx`
 
-The route shell is intentionally `noindex,follow`, marks the route as beta, and uses canonical `/screener/picker/`. It is omitted from the sitemap.
+The route shell is intentionally `noindex,follow` and uses canonical `/screener/picker/`. It is omitted from the sitemap.
 
 ---
 

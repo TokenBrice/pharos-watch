@@ -74,7 +74,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Dependency Map",
     path: "/dependency-map/",
     title: "Dependency Map",
-    statusBadge: { status: "experimental" },
     leadParagraphs: [
       "See hidden systemic risk: the live graph of who backs whom.",
     ],

@@ -72,7 +72,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Yield Intelligence",
     path: "/yield/",
     title: "Yield Intelligence",
-    statusBadge: { status: "beta" },
     methodology: {
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,

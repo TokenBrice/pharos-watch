@@ -96,7 +96,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Screener",
     path: "/screener/",
     title: "Pharos Screener",
-    statusBadge: { status: "beta" },
     leadParagraphs: [
       "Filter the tracked stablecoin universe by Safety Grade, safety dimensions, DEWS, supply, type, mechanism, peg, and lifecycle. Every filter lives in the URL, so sharing the link shares the view.",
     ],

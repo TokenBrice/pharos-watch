@@ -92,9 +92,6 @@ export default function FreezeWatchClient() {
       breadcrumbName="FreezeWatch"
       path="/freezewatch/"
       title="FreezeWatch"
-      statusBadge={{
-        status: "mature",
-      }}
       methodology={{
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,

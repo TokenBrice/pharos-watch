@@ -49,7 +49,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Depeg Tracker",
     path: "/depeg/",
     title: "Depeg Tracker",
-    statusBadge: { status: "mature" },
     methodology: {
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,

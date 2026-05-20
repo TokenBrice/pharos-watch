@@ -31,7 +31,6 @@ The leaderboard is public and indexable. The profile routes are statically gener
 `src/app/chains/page.tsx` renders a `FeaturePageShell` with:
 
 - breadcrumb + canonical path `/chains/`
-- status badge `mature`
 - methodology pill wired from `CHAIN_HEALTH_METHODOLOGY_VERSION` and `CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH`
 - lead copy describing chain ranking by stablecoin supply and health
 - `CollectionPage` + `ItemList` JSON-LD over every crawlable `/chains/[chain]/` profile route, with each item typed as `WebPage`

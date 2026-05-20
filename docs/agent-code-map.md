@@ -335,7 +335,7 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 - `shared/lib/classification/mechanism-archetypes.ts` - MECHANISM_ARCHETYPE_CTA_NOUNS, MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS, getMechanismArchetypeCtaNoun, getMechanismArchetypeLabel, getMechanismArchetypeOneLiner
 - `shared/lib/classification/pegs.ts` - PEG_FILTER_OPTIONS, PEG_FILTER_TAG_LABELS, PEG_LABELS, PEG_LABELS_SHORT, PEG_METADATA, PegCurrencyFilterTag
 - `shared/lib/classification/resolve-mechanism-archetype.ts` - resolveMechanismArchetype
-- `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel, FEATURE_STATUS_CONFIG, FeatureStatus
+- `shared/lib/classification/risk.ts` - CONFIDENCE_LEVEL_COLORS, CRON_STATUS_COLORS, DATA_HEALTH_COLORS, DewsRiskLevel
 - `shared/lib/cloudflare-access-jwt.ts` - JwtVerifyOptions, _resetJwksCache, normalizeTeamDomain, verifyAccessJwt
 - `shared/lib/commodity-median.ts` - CommodityMedianSource, CommodityPeg, CommodityPricePoint, buildCommodityPeerMedianSeries
 - `shared/lib/cron-jobs.ts` - CRON_CONNECTION_BUDGET, CRON_CONNECTION_BUDGET_ENTRIES, CRON_GROUPS, CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES

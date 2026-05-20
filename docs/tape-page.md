@@ -30,7 +30,7 @@ Primary audience:
 - **Client helpers:** `src/lib/tape-collapse.ts`, `src/lib/severity-colors.ts`
 - **Primary dataset:** D1 table `tape_events` via `GET /api/events`
 
-The page renders through `FeaturePageShell` with `breadcrumbName="Timeline"`, `path="/timeline/"`, title `Timeline`, a `beta` status badge, and the lead paragraph authored in `src/app/timeline/page.tsx`.
+The page renders through `FeaturePageShell` with `breadcrumbName="Timeline"`, `path="/timeline/"`, title `Timeline`, and the lead paragraph authored in `src/app/timeline/page.tsx`.
 
 Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, and the default shared page-metadata helper path. The OG image falls back to the static `/og-card.png`; a dynamic `/api/og/timeline` generator is reserved but not yet shipped.
 

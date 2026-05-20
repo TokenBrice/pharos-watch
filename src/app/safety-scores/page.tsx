@@ -58,7 +58,6 @@ export default createClientFeaturePage({
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",
     title: "Safety Scores",
-    statusBadge: { status: "mature" },
     methodology: {
       version: SAFETY_SCORE_VERSION_LABEL,
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,

@@ -29,7 +29,6 @@ export default createClientFeaturePage({
     path: "/screener/picker/",
     title: "Stablecoin Picker",
     variant: "longform",
-    statusBadge: { status: "beta" },
     leadParagraphs: [LEAD_PARAGRAPH],
     breadcrumbItems: [
       { name: "Home", url: "/" },
