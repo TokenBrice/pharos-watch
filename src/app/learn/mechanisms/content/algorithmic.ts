@@ -19,7 +19,7 @@ export const content: ArchetypeContent = {
       body: "An AMO (Algorithmic Market Operations module) is an autonomous on-chain agent that issues or retires stablecoin to nudge the price back to peg. Above $1 it lets anyone mint at $1 and sell higher; below $1 it lets anyone buy on market and redeem for $1 of governance token. The arbitrage is supposed to close the gap. There are no reserves to draw down — every defense action expands or contracts the governance-token float.",
     },
     {
-      title: "USDX minted",
+      title: "Stablecoin minted (no 1:1 backing)",
       body: "Peg stability now depends on governance-token liquidity, market confidence, and arbitrageur willingness. In calm markets the loop closes. In a panic the governance token sells off, the burn-to-mint arbitrage stops being profitable (the freshly minted governance token is worth less than the stablecoin being redeemed), and the peg breaks reflexively. The DEWS supply-velocity signal frequently surfaces this contraction first.",
     },
   ],
@@ -44,7 +44,7 @@ export const content: ArchetypeContent = {
   representativeCoins: [
     {
       coinId: "usdd-tron-dao-reserve",
-      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Classified `algorithmic` on Pharos because the system has historically traded below peg and retains Dilutable mint authority; the mechanism today is closer to a CDP-plus-PSM hybrid.",
+      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified `algorithmic` on Pharos because of the system's depeg history and the retained Dilutable mint authority.",
     },
     {
       coinId: "fpi-frax",
@@ -101,6 +101,127 @@ export const content: ArchetypeContent = {
     {
       href: "/learn/mechanisms/cdp/",
       label: "Sibling explainer: CDPs, the closest live design family",
+    },
+  ],
+  decommissioned: [
+    {
+      name: "NuBits",
+      date: "2018-03",
+      obituary:
+        "One of the first stablecoins ever created (2014), NuBits held its peg for two years before holders dumped it to chase Bitcoin gains. A pioneering cautionary tale about algorithmic pegs backed by volatile assets.",
+      coinId: "usnbt-nubits-2018-03",
+    },
+    {
+      name: "Empty Set Dollar",
+      date: "2021-01",
+      obituary:
+        "Pioneered the \"seigniorage shares\" model in DeFi. When ESD traded below $1, users could buy coupons (burning ESD) for future redemption at a profit. The mechanism worked during expansion but collapsed when confidence evaporated — coupons expired worthless, and ESD fell to $0.01.",
+      coinId: "esd-empty-set-dollar-2021-01",
+    },
+    {
+      name: "Dynamic Set Dollar",
+      date: "2021-01",
+      obituary:
+        "A fork of ESD with faster epoch cycles (2 hours vs 8 hours), designed to stabilize more quickly. Instead, the shorter cycles amplified volatility. DSD spiked to $3 during expansion then collapsed to $0.24 in the same month.",
+      coinId: "dsd-dynamic-set-dollar-2021-01",
+    },
+    {
+      name: "Basis Cash",
+      date: "2021-01",
+      obituary:
+        "An anonymous fork of the Basis design, BAC lost its peg within weeks of launch. Later revealed to be co-founded by Do Kwon under a pseudonym — who learned nothing before building the even more catastrophic TerraUSD.",
+      coinId: "bac-basis-cash-2021-01",
+    },
+    {
+      name: "IRON",
+      date: "2021-06",
+      obituary:
+        "Dubbed crypto's \"first large-scale bank run.\" IRON was partially collateralized (75% USDC, 25% TITAN). When whales dumped TITAN at its peak, a flawed redemption mechanism sent TITAN from $65 to zero in hours, dragging IRON down with it.",
+      coinId: "iron-iron-2021-06",
+    },
+    {
+      name: "Cashio Dollar",
+      date: "2022-03",
+      obituary:
+        "Solana-native algorithmic dollar killed by an infinite-mint exploit: an attacker forged a fake collateral account, minted 2B CASH, and drained ~$48M of USDC and UST from the protocol within hours.",
+      coinId: "cash-cashio-dollar-2022-03",
+    },
+    {
+      name: "Neutrino USD",
+      date: "2022-04",
+      obituary:
+        "Waves-chain algorithmic dollar backed by WAVES via a Terra-style mint/burn loop. Lost its peg after a reflexive crash in WAVES price and never recovered; the loop ran in reverse and never closed back.",
+      coinId: "usdn-neutrino-usd-2022-04",
+    },
+    {
+      name: "Beanstalk v1",
+      date: "2022-04",
+      obituary:
+        "Credit-based algorithmic stablecoin governed by on-chain seigniorage. Killed by an $182M flash-loan governance attack that passed a malicious proposal in one block and drained the protocol's reserves.",
+      coinId: "bean-beanstalk-v1-2022-04",
+    },
+    {
+      name: "TerraUSD",
+      date: "2022-05",
+      obituary:
+        "The canonical algorithmic-stablecoin failure. UST went from $1 to ~$0.10 across May 9–13, 2022; LUNA went from above $80 to fractions of a cent in the same window; ~$40B of combined market value evaporated. The mechanism worked as designed under normal conditions and as critics had predicted under coordinated stress.",
+      coinId: "ust-terrausd-2022-05",
+    },
+    {
+      name: "TerraKRW",
+      date: "2022-05",
+      obituary:
+        "Terra's KRW-pegged sibling, swept away in the same death spiral as UST. Inherited every assumption of the LUNA-burn loop and broke at the same moment.",
+      coinId: "krt-terrakrw-2022-05",
+    },
+    {
+      name: "DEI",
+      date: "2022-05",
+      obituary:
+        "Deus Finance's fractional algorithmic dollar, partly backed by USDC and partly by the protocol's DEUS governance token. Collapsed alongside UST in May 2022 when the algorithmic portion of backing lost confidence.",
+      coinId: "dei-dei-2022-05",
+    },
+    {
+      name: "Fantom USD",
+      date: "2022-06",
+      obituary:
+        "Fantom-native algorithmic dollar chained to the FTM price. The peg unwound as FTM lost the majority of its market cap during the 2022 bear market; the protocol never restored convertibility.",
+      coinId: "fusd-fantom-usd-2022-06",
+    },
+    {
+      name: "SpiceUSD",
+      date: "2022-09",
+      obituary:
+        "SpiceTrade's algorithmic dollar. Lost its peg and faded out of trading without a single catastrophic event — a slow attrition under thin liquidity rather than a UST-style breakdown.",
+      coinId: "usds-spiceusd-2022-09",
+    },
+    {
+      name: "USN",
+      date: "2022-10",
+      obituary:
+        "Near Protocol's algorithmic dollar. A double-mint bug left the protocol roughly $40M short of its claimed backing; the Near Foundation eventually wound USN down rather than recapitalize.",
+      coinId: "usn-usn-2022-10",
+    },
+    {
+      name: "Acala USD",
+      date: "2023-07",
+      obituary:
+        "Polkadot's flagship algorithmic dollar, killed in August 2022 by a misconfigured iBTC/aUSD liquidity pool that minted 1.28B aUSD out of thin air. The chain forked to burn most of the minted supply; aUSD never regained credibility and was officially decommissioned in 2023.",
+      coinId: "ausd-acala-usd-2023-07",
+    },
+    {
+      name: "Bean (v2)",
+      date: "2024-05",
+      obituary:
+        "Beanstalk's relaunched credit-based stablecoin. The second planting failed for the same structural reason as the first: protocol-issued credit cannot defend a $1 peg without an exogenous reserve.",
+      coinId: "bean-bean-2024-05",
+    },
+    {
+      name: "Pinto",
+      date: "2025-10",
+      obituary:
+        "A direct Beanstalk fork on Base, launched November 2024. Lost its peg in 2025 after the same supply/credit feedback loop drifted negative and refused to close. Same algorithm, same end.",
+      coinId: "pinto-pinto-2025-10",
     },
   ],
   visuals: ARCHETYPE_VISUALS.algorithmic,

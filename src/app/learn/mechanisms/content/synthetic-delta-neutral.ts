@@ -19,7 +19,7 @@ export const content: ArchetypeContent = {
       body: "For the volatile portion of the book, the protocol opens a short perpetual position on a CEX (Binance, Bybit, OKX) equal in notional to the spot. Long spot + short perp is approximately constant in dollar terms regardless of where price moves. Funding flows between the two sides every funding interval; when funding is positive, the short side collects.",
     },
     {
-      title: "USDX minted",
+      title: "Stablecoin minted (funding-rate yield)",
       body: "The protocol mints stablecoin against the combined position. Yield is distributed through a staking wrapper (sUSDe, sUSDf) or a NAV-accruing variant. Unstaked holders do not receive yield by default — the wrapper is the yield-bearing claim, and Pharos tracks the wrapper as a separate coin with its own peg reference.",
     },
   ],
@@ -77,7 +77,7 @@ export const content: ArchetypeContent = {
     "DEWS on /depeg — synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
     "Live Reserve panel on /stablecoin/usde-ethena/ and equivalents — shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
     "Resilience score → Custody Model = cex on the report card. By design, not a flaw; the report card scores cex custody as zero on the institutional-custody scale.",
-    "Redemption Backstop cooldown and holderEligibility — most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces settlementDelaySec and holderEligibility = verified-customer.",
+    "Redemption Backstop cooldown and holder eligibility — most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces the settlement delay and the verified-customer holder eligibility tier.",
     "Mint/Burn Bank Run Gauge on /flows — a sustained burn surge against zero mints during a market-down move is the on-chain footprint of an active redemption queue against the delta-neutral book.",
     "Wrapper peg reference — sUSDe inherits its peg reference from USDe, so a severe downside depeg on the parent propagates as output-asset impairment on the wrapper's Redemption Backstop card.",
   ],
@@ -102,6 +102,40 @@ export const content: ArchetypeContent = {
       href: "/learn/mechanisms/cdp/",
       label: "CDP — crypto-collateralized designs that liquidate instead of hedge",
     },
+    {
+      href: "/cemetery/",
+      label: "Cemetery — historical synthetic delta-neutral failures",
+    },
   ],
   visuals: ARCHETYPE_VISUALS["synthetic-delta-neutral"],
+  decommissioned: [
+    {
+      name: "UXD Stablecoin",
+      date: "2024-08",
+      obituary:
+        "Solana-native delta-neutral dollar that survived the Mango Markets exploit but never attracted users. The team admitted the model \"isn't exciting enough for DeFi users\" and the DAO voted to sunset. Mechanism-correct, market-irrelevant.",
+      coinId: "uxd-uxd-stablecoin-2024-08",
+    },
+    {
+      name: "Elixir deUSD",
+      date: "2025-11",
+      obituary:
+        "Synthetic dollar that lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss — Stream held roughly 65% of deUSD's collateral. The delta-neutral book itself worked; the choice of counterparty did not.",
+      coinId: "deusd-elixir-deusd-2025-11",
+    },
+    {
+      name: "Stream Finance xUSD",
+      date: "2025-11",
+      obituary:
+        "Yield-bearing synthetic dollar that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged from $1 to $0.26, freezing ~$160M in user deposits, and the same loss propagated to deUSD and Stables Labs USDX. A single off-chain counterparty took three coins down at once.",
+      coinId: "xusd-stream-finance-xusd-2025-11",
+    },
+    {
+      name: "Stables Labs USDX",
+      date: "2025-11",
+      obituary:
+        "Synthetic USD backed by delta-neutral positions across exchanges. A Balancer V2 security flaw drained $1M; contagion from Stream Finance's $93M loss accelerated a full collapse to $0.35. Founder Flex Yang's wallet was later linked to addresses draining liquidity; the Discord was shut down.",
+      coinId: "usdx-stables-labs-usdx-2025-11",
+    },
+  ],
 };

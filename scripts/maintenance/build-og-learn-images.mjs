@@ -14,7 +14,7 @@ const SNAP_PATH = resolve(
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
 mkdirSync(OUT_DIR, { recursive: true });
 
-const SLUGS = ["fiat-cash", "tbill", "cdp", "synthetic-delta-neutral", "algorithmic"];
+const SLUGS = ["fiat-cash", "tbill", "cdp", "synthetic-delta-neutral", "algorithmic", "rwa-credit-fund"];
 
 const TITLES = {
   "fiat-cash": "Fiat-Backed Stablecoins, Explained",
@@ -22,6 +22,7 @@ const TITLES = {
   cdp: "CDP Stablecoins, Explained",
   "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
   algorithmic: "Algorithmic Stablecoins, Explained",
+  "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
 };
 
 // Dark-mode token substitutions. var() doesn't resolve in standalone SVG;

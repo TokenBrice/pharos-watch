@@ -18,7 +18,7 @@ describe("MechanismExplainersHub", () => {
 
     expect(html).toMatch(/<h1\b/);
 
-    expect(MECHANISM_ARCHETYPE_VALUES).toHaveLength(5);
+    expect(MECHANISM_ARCHETYPE_VALUES).toHaveLength(6);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       expect(html).toContain(`href="/learn/mechanisms/${archetype}/"`);
       expect(html).toContain(MECHANISM_ARCHETYPE_LABELS[archetype]);

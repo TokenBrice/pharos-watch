@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
-import { BACKING_BADGE_STYLES, PEG_LABELS_SHORT } from "@shared/lib/classification";
-import { API_ORIGIN } from "@shared/lib/runtime-origins";
+import {
+  BACKING_BADGE_STYLES,
+  PEG_LABELS_SHORT,
+  getMechanismArchetypeLabel,
+  getMechanismArchetypeOneLiner,
+  getMechanismExplainerPath,
+} from "@shared/lib/classification";
+import { API_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { BackingType, StablecoinMeta } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import type { BackingType, MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildStablecoinUrl } from "@/lib/urls";
 
@@ -15,6 +22,16 @@ interface BuildPageMetadataInput {
   ogHeight?: number;
   robots?: Metadata["robots"];
 }
+
+export const HOME_ALT_PAGE_METADATA: BuildPageMetadataInput = {
+  title: "Home (Alt) — Pharos",
+  description: "Experimental DeFiLlama-style alternative homepage for Pharos stablecoin analytics.",
+  canonical: "/home-alt/",
+  robots: {
+    index: false,
+    follow: true,
+  },
+};
 
 const GOVERNANCE_METADATA_PHRASES = {
   centralized: "centralized",
@@ -222,5 +239,76 @@ export function buildPageMetadata({
       images: [resolvedImage],
     },
     robots,
+  };
+}
+// ---------------------------------------------------------------------------
+// JSON-LD helpers for the mechanism explainer hub and per-archetype pages.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a `DefinedTermSet` document describing the six tracked mechanism
+ * archetypes. Emitted on the `/learn/mechanisms/` hub so search engines see
+ * the page as a glossary of mechanism designs.
+ */
+export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
+  const hubUrl = `${SITE_ORIGIN}/learn/mechanisms/`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "DefinedTermSet",
+    "@id": hubUrl,
+    name: "Stablecoin Mechanism Archetypes",
+    description:
+      "Six mechanism archetypes covering every stablecoin design Pharos tracks.",
+    url: hubUrl,
+    hasDefinedTerm: MECHANISM_ARCHETYPE_VALUES.map(
+      (archetype: MechanismArchetype) => ({
+        "@type": "DefinedTerm",
+        "@id": `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
+        name: getMechanismArchetypeLabel(archetype),
+        termCode: archetype,
+        description: getMechanismArchetypeOneLiner(archetype),
+        inDefinedTermSet: hubUrl,
+        url: `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`,
+      }),
+    ),
+  };
+}
+
+// First-publish date for the mechanism explainer cluster. Used as the
+// `datePublished` anchor for per-archetype Article JSON-LD; the day-to-day
+// "edited" timestamp is the build time captured at module load.
+const MECHANISM_EXPLAINER_DATE_PUBLISHED = "2024-01-01T00:00:00Z";
+const BUILD_DATE_MODIFIED = new Date().toISOString();
+
+/**
+ * Build an `Article` JSON-LD document for a per-archetype explainer page.
+ */
+export function buildArchetypeArticleJsonLd(
+  archetype: MechanismArchetype,
+): Record<string, unknown> {
+  const url = `${SITE_ORIGIN}${getMechanismExplainerPath(archetype)}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": url,
+    headline: `${getMechanismArchetypeLabel(archetype)} stablecoins, explained`,
+    description: getMechanismArchetypeOneLiner(archetype),
+    url,
+    mainEntityOfPage: url,
+    author: { "@type": "Organization", name: "Pharos" },
+    publisher: {
+      "@type": "Organization",
+      name: "Pharos",
+      url: SITE_ORIGIN,
+    },
+    inLanguage: "en",
+    isPartOf: `${SITE_ORIGIN}/learn/mechanisms/`,
+    about: {
+      "@type": "DefinedTerm",
+      name: getMechanismArchetypeLabel(archetype),
+      termCode: archetype,
+    },
+    datePublished: MECHANISM_EXPLAINER_DATE_PUBLISHED,
+    dateModified: BUILD_DATE_MODIFIED,
   };
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   DEWS_SIGNAL_DESCRIPTIONS,
   DEWS_SIGNAL_LABELS,
@@ -298,7 +299,15 @@ function DewsTechnicalDetails() {
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Edge Cases</h3>
         <ul className="list-disc list-inside space-y-1">
-          <li>NAV tokens are excluded entirely (price appreciates, not pegged)</li>
+          <li>
+            <Link
+              href="/learn/mechanisms/tbill/"
+              className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+            >
+              NAV tokens
+            </Link>
+            {" "}are excluded entirely (price appreciates, not pegged)
+          </li>
           <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
           <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
           <li>Missing DEX data stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>

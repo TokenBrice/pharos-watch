@@ -4,6 +4,7 @@ import { content as tbill } from "./tbill";
 import { content as cdp } from "./cdp";
 import { content as syntheticDeltaNeutral } from "./synthetic-delta-neutral";
 import { content as algorithmic } from "./algorithmic";
+import { content as rwaCreditFund } from "./rwa-credit-fund";
 import type { ArchetypeContent } from "./types";
 
 export const ARCHETYPE_CONTENT: Record<MechanismArchetype, ArchetypeContent> = {
@@ -12,6 +13,7 @@ export const ARCHETYPE_CONTENT: Record<MechanismArchetype, ArchetypeContent> = {
   cdp,
   "synthetic-delta-neutral": syntheticDeltaNeutral,
   algorithmic,
+  "rwa-credit-fund": rwaCreditFund,
 };
 
-export type { ArchetypeContent } from "./types";
+export type { ArchetypeContent, ArchetypeDecommissioned } from "./types";

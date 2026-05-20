@@ -37,6 +37,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoins by Peg, Backing, Governance & Infrastructure",
   description: `Browse ${TOTAL} active stablecoins sorted by peg currency, collateral backing, governance model, and shared infrastructure.`,
   canonical: "/stablecoins/",
+  ogImage: `${SITE_URL}/og-stablecoins.png`,
 });
 
 export default function StablecoinsHubPage() {
@@ -50,7 +51,16 @@ export default function StablecoinsHubPage() {
       ]}
       title="Stablecoin Taxonomies"
       leadParagraphs={[
-        `Four ways to browse the ${TOTAL} active stablecoins Pharos tracks: peg currency, backing type, governance model, and shared infrastructure.`,
+        <>
+          {`Four ways to browse the ${TOTAL} active stablecoins Pharos tracks: peg currency, backing type, governance model, and shared infrastructure. For the design-family view (how each coin keeps its peg), see the `}
+          <Link
+            href="/learn/mechanisms/"
+            className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+          >
+            mechanism explainer
+          </Link>
+          {"."}
+        </>,
       ]}
       preface={
         <script

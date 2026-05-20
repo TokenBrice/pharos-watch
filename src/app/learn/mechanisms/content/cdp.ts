@@ -19,7 +19,7 @@ export const content: ArchetypeContent = {
       body: "The user mints stablecoin against the collateral up to the protocol's debt ceiling. Most systems also operate a PSM that swaps an upstream stablecoin (typically USDC) for the new stablecoin at 1:1. That second path tightens the peg in calm markets and imports upstream-stablecoin risk in stressed markets.",
     },
     {
-      title: "USDX minted",
+      title: "Stablecoin minted (or position liquidated)",
       body: "If collateral breaches the minimum ratio, the vault is liquidated — auctioned (Maker), absorbed by a Stability Pool — the on-chain pool that buys the seized collateral at a discount using deposited stablecoin (Liquity, BOLD) — or soft-arbitraged by an internal AMM (LLAMMA for crvUSD, which continuously rebalances collateral across price bands rather than liquidating at a single threshold). On-chain redemption also lets holders swap the stablecoin for $1 of collateral from the riskiest vault, functioning as a hard price floor.",
     },
   ],
@@ -87,7 +87,7 @@ export const content: ArchetypeContent = {
     "Redemption Backstop route family. CDPs usually show `collateral-redeem` or `psm-swap`. Liquity-style forks expose `liquity-v1` and `liquity-v2-branches` live adapters with on-chain capacity.",
     "Dependency Risk via PSMs. DAI ↔ USDC, GHO ↔ USDC/USDT, USDS ↔ USDC are tracked as `mechanism` dependencies — the upstream stablecoin's grade ceilings the CDP's.",
     "Governance Quality tier. `immutable-code` (LUSD, BOLD) sits at the top; `dao-governance` (DAI, USDS, GHO, crvUSD) drops a band; `multisig` drops further.",
-    "Live Reserve view. Systems with `liveReservesConfig` (Maker, Liquity v1/v2, GHO, crvUSD) show the 4-hourly vault and PSM composition instead of a quarterly snapshot.",
+    "Live Reserve view. Systems with live-reserve telemetry (Maker, Liquity v1/v2, GHO, crvUSD) show the 4-hourly vault and PSM composition instead of a quarterly snapshot.",
   ],
   crossLinks: [
     {
@@ -110,6 +110,61 @@ export const content: ArchetypeContent = {
       href: "/learn/mechanisms/synthetic-delta-neutral/",
       label: "Synthetic delta-neutral explainer",
     },
+    {
+      href: "/cemetery/",
+      label: "Cemetery — historical CDP failures",
+    },
   ],
   visuals: ARCHETYPE_VISUALS.cdp,
+  decommissioned: [
+    {
+      name: "Kava USDX",
+      date: "2022-06",
+      obituary:
+        "Cosmos-native multi-collateral CDP — mint USDX against BTC, XRP, BNB, or KAVA. Peaked at $176M before UST's implosion exposed the design flaw: USDX had on-boarded UST as collateral. The peg cracked to $0.55 and never healed. The textbook example of collateral on-boarding rewriting solvency overnight.",
+      coinId: "usdx-kava-usdx-2022-06",
+    },
+    {
+      name: "Raft R",
+      date: "2023-11",
+      obituary:
+        "CDP minting R against wstETH and rETH collateral. A smart-contract exploit drained $3.3M in ETH — the hacker netted only ~$1.6M due to a slippage error of their own. Raft halted minting, offered a 42% recovery plan, and was abandoned. Code surface, not collateral, was the failure point.",
+      coinId: "r-raft-r-2023-11",
+    },
+    {
+      name: "Prisma mkUSD",
+      date: "2024-11",
+      obituary:
+        "LST-backed CDP that took an $11.6M exploit in March 2024 and never recovered confidence. Governance approved PIP-46 to decommission the protocol — debt ceiling to zero and a PSM-style wind-down. A controlled funeral, but a funeral.",
+      coinId: "mkusd-prisma-mkusd-2024-11",
+    },
+    {
+      name: "Legacy BOLD",
+      date: "2025-02",
+      obituary:
+        "The first casualty of Liquity v2's own immutability principle. A Stability Pool vulnerability surfaced weeks after launch. The contracts could not be patched, so the team redeployed everything from scratch. Immutable code is a feature until the bug appears.",
+      coinId: "l-bold-legacy-bold-2025-02",
+    },
+    {
+      name: "JPEG'd PUSD",
+      date: "2024-06",
+      obituary:
+        "CDP that minted against NFT collateral. Declined alongside the NFT market itself; the protocol token stopped trading and the project was effectively abandoned. Collateral concentration in an illiquid asset class did exactly what the risk surface predicted.",
+      coinId: "pusd-jpeg-d-pusd-2024-06",
+    },
+    {
+      name: "US Permissionless Dollar",
+      date: "2025-12",
+      obituary:
+        "Over-collateralized stETH CDP exploited via a \"Clandestine Proxy In the Middle of Proxy\" attack in December 2025, allowing the attacker to mint ~98M fraudulent USPD and drain ~237 stETH. Legitimate supply never exceeded $500K; the proxy admin surface was where the design failed, not the collateral.",
+      coinId: "uspd-us-permissionless-dollar-2025-12",
+    },
+    {
+      name: "YU (Yala)",
+      date: "2025-11",
+      obituary:
+        "BTC-backed CDP that survived its first death — a September 2025 mint-authorization exploit produced 120M unauthorized YU and the team injected $5.5M to claw back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed to $0.44. The mint surface was patched; the bank-run surface was not.",
+      coinId: "yu-yu-2025-11",
+    },
+  ],
 };

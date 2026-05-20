@@ -2,9 +2,9 @@ import { ARCHETYPE_VISUALS, type ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "tbill",
-  headline: "Tokenized T-Bill funds with daily NAV",
+  headline: "Hold short-duration Treasuries, accrue NAV daily",
   subtitle:
-    "Regulated funds hold short-duration Treasuries; the token is a fund share that accretes NAV instead of trading exactly at $1.",
+    "Regulated money-market and government-securities funds; the token is a fund share that accretes NAV instead of trading exactly at $1.",
   lead: [
     "T-Bill / RWA fund tokens are the on-chain wrapper around a regulated short-duration government-securities fund. Subscriptions come in as USD or a permitted stablecoin; the fund deploys into U.S. T-Bills, overnight repos, and cash; the token represents a fund share whose net asset value (NAV) rises every day by roughly the prevailing risk-free rate. Most of these tokens are explicitly not pegged to $1.00 — they are NAV-accruing fund shares with a daily price published by the fund administrator.",
     "Closer to a tokenized Treasury bond ETF than to a checking account. Yield is real, but redemptions run through a transfer agent (the fund's registrar of record), holdership is whitelisted, and secondary-market liquidity is thinner than in fiat-cash stablecoins.",
@@ -19,7 +19,7 @@ export const content: ArchetypeContent = {
       body: "The fund deploys cash into short-duration U.S. T-Bills, overnight reverse-repos, and a small cash buffer. The administrator publishes a daily NAV; the on-chain token records the holder list and accretes yield.",
     },
     {
-      title: "USDX units",
+      title: "NAV-accruing token units",
       body: "The token is minted or rebased pro-rata. BENJI rebases share count daily so per-token value stays near $1.00; BUIDL accrues by minting new units; USDY and OUSG appreciate by per-token price. Redemption is bank-wire or stablecoin-out, settled at NAV.",
     },
   ],
@@ -30,7 +30,7 @@ export const content: ArchetypeContent = {
     },
     {
       headline: "Redemption gating and transfer restrictions",
-      body: "These are securities, not cash. Transfers are restricted to whitelisted addresses; primary-market redemption can be paused, queued, or settled T+N. In a stressed market this matters more than the underlying asset risk.",
+      body: "These are securities, not cash. Transfers are restricted to whitelisted addresses; primary-market redemption can be paused, queued, or settled T+N. In a stressed market this matters more than the underlying asset risk. On 16 September 2008, the Reserve Primary Fund — the original U.S. money market fund — broke the buck after its $785M of Lehman Brothers commercial paper became unsalable; institutional redemptions surged, the SEC suspended further withdrawals, and the fund was liquidated over the following year. Today's tokenized money-market funds carry the same redemption-gate surface; a daily-NAV ticker does not change that.",
     },
     {
       headline: "Custodian and fund-administrator failure",
@@ -70,7 +70,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "NAV-accreting fund shares",
-      body: "BUIDL, USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these with `navToken` and shows \"NAV\" instead of bps on peg-deviation tables — price drift is signal, not depeg.",
+      body: "BUIDL, USDY, OUSG, and USYC let per-unit price drift up over time. Pharos flags these as NAV tokens and shows \"NAV\" instead of bps on peg-deviation tables — price drift is signal, not depeg.",
     },
     {
       title: "Hybrid yield-bearing stablecoins",
@@ -78,12 +78,12 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "NAV-tag treatment on the peg table — `navToken: true` coins show \"NAV\" rather than bps in the peg-deviation column.",
-    "Reserve composition on `/stablecoin/[id]/` — these should be majority `very-low` risk (Treasuries, repos, cash). Anything else is unusual.",
-    "Redemption Backstop route family — most NAV tokens show `offchain-issuer` with bank-wire settlement; watch `settlementDelaySec`, `dailyLimitUsd`, `minRedeemUsd`, and `holderEligibility`.",
-    "Yield Score (PYS) on `/yield` — PYS rewards consistent Treasury-derived yield over reward-heavy or single-source-dependent venues.",
-    "`navToken` exclusion from DEWS — DEWS skips NAV tokens; the closest equivalent stress signal is the Redemption Backstop snapshot and issuer reserve cadence.",
-    "Proof-of-Reserves attestor tier and cadence on the detail page — `big4` with daily NAV is the gold standard for tokenized funds; `niche` is acceptable but slower to respond.",
+    "NAV-tag treatment on the peg table — coins flagged as NAV tokens show \"NAV\" rather than bps in the peg-deviation column, because per-token price is supposed to drift.",
+    "Reserve composition on the detail page — these should be majority very-low-risk (Treasuries, repos, cash). Anything else is unusual.",
+    "Redemption Backstop route family — most NAV tokens show off-chain issuer routing with bank-wire settlement; watch the settlement delay, daily redemption cap, minimum redeem size, and holder eligibility tier.",
+    "Yield Score (PYS) on /yield — PYS rewards consistent Treasury-derived yield over reward-heavy or single-source-dependent venues.",
+    "DEWS exclusion for NAV tokens — DEWS skips fund-share tokens; the closest equivalent stress signal is the Redemption Backstop snapshot and issuer reserve cadence.",
+    "Proof-of-Reserves attestor tier and cadence on the detail page — Big 4 with daily NAV is the gold standard for tokenized funds; niche attestors are acceptable but slower to respond.",
   ],
   crossLinks: [
     {
@@ -103,6 +103,33 @@ export const content: ArchetypeContent = {
       href: "/learn/mechanisms/fiat-cash/",
       label: "Sibling explainer: cash-backed stablecoins",
     },
+    {
+      href: "/cemetery/",
+      label: "Cemetery — historical tokenized T-Bill fund wind-downs",
+    },
   ],
   visuals: ARCHETYPE_VISUALS.tbill,
+  decommissioned: [
+    {
+      name: "Mountain Protocol USDM",
+      date: "2025-08",
+      obituary:
+        "Regulated, yield-bearing T-bill stablecoin licensed in Bermuda, S&P-assessed, deployed across eight chains. Peaked at $157M before the yield-bearing market commoditized. When Anchorage Digital came shopping in May 2025, the team took the exit — minting off, yield zeroed, residual tokens dumped into a Uniswap pool for whoever was left.",
+      coinId: "usdm-mountain-protocol-usdm-2025-08",
+    },
+    {
+      name: "Lift Dollar",
+      date: "2025-12",
+      obituary:
+        "Paxos's ADGM-regulated yield-bearing dollar — daily rebase from T-bill reserves, peaked at $128.7M on Ethereum. Wound down to consolidate around USDG and the Global Dollar Network. Minting ceased October 2025; rebasing stopped December; balances auto-converted to USDG. A clean regulated exit, not a failure of the design.",
+      coinId: "usdl-lift-dollar-2025-12",
+    },
+    {
+      name: "Verified USD",
+      date: "2024-12",
+      obituary:
+        "Omnichain stablecoin backed by tokenized T-bills via Matrixport's STBT. The Verified USD Foundation ceased support on December 31, 2024 and began removing tokens from circulation. The fund-wrapper layer never gained traction independent of larger T-bill issuers.",
+      coinId: "usdv-verified-usd-2024-12",
+    },
+  ],
 };

@@ -8,37 +8,40 @@ import {
   getMechanismArchetypeOneLiner,
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  countActiveByArchetype,
+  getCoinsByLifecycleStatus,
+} from "@shared/lib/stablecoins/by-mechanism";
+import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { MechanismJsonLd } from "@/lib/mechanism-json-ld";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { MechanismComparisonMatrix } from "./comparison-matrix";
+import { ARCHETYPE_CONTENT } from "./content";
 import { ExplainerPageShell } from "./explainer-page-shell";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mechanism Explainers",
   description:
-    "Five plain-English explainers covering every stablecoin mechanism Pharos tracks: fiat-backed, tokenized Treasuries, CDP, delta-neutral, and algorithmic designs.",
+    "Six plain-English explainers covering every stablecoin mechanism Pharos tracks: fiat-backed, tokenized Treasuries, CDP, delta-neutral, algorithmic, and tokenized credit fund designs.",
   canonical: "/learn/mechanisms/",
+  ogImage: `${SITE_URL}/og-learn-mechanisms.png`,
 });
-
-function countActiveByArchetype(): Record<MechanismArchetype, number> {
-  const counts: Record<MechanismArchetype, number> = {
-    "fiat-cash": 0,
-    tbill: 0,
-    cdp: 0,
-    "synthetic-delta-neutral": 0,
-    algorithmic: 0,
-  };
-  for (const coin of ACTIVE_STABLECOINS) {
-    const archetype = coin.mechanismArchetype;
-    if (archetype && archetype in counts) {
-      counts[archetype as MechanismArchetype] += 1;
-    }
-  }
-  return counts;
-}
 
 export default function MechanismExplainersHub() {
   const counts = countActiveByArchetype();
+  const preLaunchCounts: Record<MechanismArchetype, number> = Object.fromEntries(
+    MECHANISM_ARCHETYPE_VALUES.map((a) => [
+      a,
+      getCoinsByLifecycleStatus(a, "pre-launch").length,
+    ]),
+  ) as Record<MechanismArchetype, number>;
+  const frozenCounts: Record<MechanismArchetype, number> = Object.fromEntries(
+    MECHANISM_ARCHETYPE_VALUES.map((a) => [
+      a,
+      getCoinsByLifecycleStatus(a, "frozen").length,
+    ]),
+  ) as Record<MechanismArchetype, number>;
 
   return (
     <ExplainerPageShell
@@ -47,13 +50,25 @@ export default function MechanismExplainersHub() {
         { name: "Learn", url: "/learn/mechanisms/" },
       ]}
       breadcrumbLabel="Learn"
-      title="Five ways a stablecoin holds its peg"
-      subtitle="The mechanism a coin uses determines how it survives stress. These five explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals are most informative when it does."
+      title="Six ways a stablecoin holds its peg"
+      subtitle="The mechanism a coin uses determines how it survives stress. These six explainers map each design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
     >
+      <MechanismJsonLd />
+      <MechanismComparisonMatrix />
       <ol className="divide-y divide-border/60">
         {MECHANISM_ARCHETYPE_VALUES.map(
           (archetype: MechanismArchetype, index: number) => {
             const count = counts[archetype];
+            const preLaunch = preLaunchCounts[archetype];
+            const frozen = frozenCounts[archetype];
+            const dead = ARCHETYPE_CONTENT[archetype]?.decommissioned?.length ?? 0;
+            const countParts: string[] = [
+              count === 1 ? "1 tracked" : `${count} tracked`,
+            ];
+            if (preLaunch > 0) countParts.push(`+${preLaunch} upcoming`);
+            if (frozen > 0) countParts.push(`+${frozen} frozen`);
+            if (dead > 0) countParts.push(`+${dead} dead`);
+            const indexLabel = String(index + 1).padStart(2, "0");
             return (
               <li key={archetype}>
                 <Link
@@ -61,19 +76,17 @@ export default function MechanismExplainersHub() {
                   className="pharos-focus-ring group grid gap-6 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-12 lg:py-10"
                 >
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-baseline gap-3 text-muted-foreground">
-                      <span className="font-mono text-xs font-semibold tabular-nums tracking-[0.18em]">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
-                        {count === 1 ? "1 tracked" : `${count} tracked`}
-                      </span>
-                    </div>
                     <h2 className="text-[clamp(1.75rem,2.6vw,2.5rem)] font-extrabold leading-[1.02] tracking-[-0.025em] text-foreground transition-colors group-hover:text-frost-blue">
+                      <span className="mr-3 font-mono text-[0.5em] font-semibold tabular-nums tracking-[0.12em] text-muted-foreground align-baseline">
+                        {indexLabel}.
+                      </span>
                       {getMechanismArchetypeLabel(archetype)}
                     </h2>
                     <p className="text-[15px] leading-relaxed text-muted-foreground">
                       {getMechanismArchetypeOneLiner(archetype)}
+                    </p>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {countParts.join(" · ")}
                     </p>
                     <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-frost-blue opacity-80 transition-opacity group-hover:opacity-100">
                       Read the explainer

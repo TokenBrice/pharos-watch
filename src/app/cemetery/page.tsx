@@ -87,6 +87,15 @@ export default function CemeteryPage() {
           <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>
         <p className="text-sm text-muted-foreground">
+          Read the explainer:{" "}
+          <Link
+            href="/learn/mechanisms/algorithmic/"
+            className="pharos-focus-ring text-foreground underline-offset-4 hover:underline"
+          >
+            how algorithmic stablecoin designs fail &rarr;
+          </Link>
+        </p>
+        <p className="text-sm text-muted-foreground">
           Download the citation-ready dataset as{" "}
           <a className="pharos-focus-ring text-foreground underline-offset-4 hover:underline" href="/datasets/stablecoin-cemetery.json">
             JSON

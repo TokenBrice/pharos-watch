@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CollateralQualityMethodologyCopy } from "../core-sections-fragments";
 
 export function SafetyScoresDimensionDetails() {
@@ -125,7 +126,14 @@ export function SafetyScoresDimensionDetails() {
           (e.g., syrupUSDC &rarr; USDC) are capped at <code className="text-xs">upstream &minus; 3</code>.
           Tracked parent-linked variants keep the same wrapper edge but use family-specific ceilings:
           savings &minus;3, strategy-vault &minus;5, risk-absorption &minus;5, bond-maturity &minus;8. Mechanism dependencies
-          (e.g., DAI &rarr; USDC via PSM) are essential to the peg &mdash; score is capped at the
+          (e.g., DAI &rarr; USDC via{" "}
+          <Link
+            href="/learn/mechanisms/cdp/"
+            className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            PSM
+          </Link>
+          ) are essential to the peg &mdash; score is capped at the
           upstream&apos;s score. Collateral dependencies use the blended formula with no ceiling.
         </p>
         <p className="text-xs">

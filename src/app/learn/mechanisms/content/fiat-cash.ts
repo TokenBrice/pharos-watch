@@ -103,6 +103,61 @@ export const content: ArchetypeContent = {
       href: "/learn/mechanisms/tbill/",
       label: "Sibling explainer: tokenized T-Bill funds",
     },
+    {
+      href: "/cemetery/",
+      label: "Cemetery — historical fiat-cash failures",
+    },
   ],
   visuals: ARCHETYPE_VISUALS["fiat-cash"],
+  decommissioned: [
+    {
+      name: "Binance USD",
+      date: "2023-02",
+      obituary:
+        "The third-largest stablecoin at $23.5B at its peak. The NYDFS ordered issuer Paxos to stop minting, while the SEC signaled intent to sue. Reserves were intact; the regulator simply revoked the issuer's authority. Binance auto-converted remaining balances to FDUSD in December 2023.",
+      coinId: "busd-binance-usd-2023-02",
+    },
+    {
+      name: "HUSD",
+      date: "2022-10",
+      obituary:
+        "Huobi-affiliated fiat-cash dollar. After Justin Sun acquired Huobi and replaced it with USDD, HUSD was delisted with no redemption path and traded down to $0.28. The peg held only as long as the custody relationship did.",
+      coinId: "husd-husd-2022-10",
+    },
+    {
+      name: "USDK",
+      date: "2023-06",
+      obituary:
+        "Looked clean on paper: regulated U.S. trust company, ERC-20, audited. Its custodian Prime Trust was secretly gambling client funds and collapsed into receivership $82M short of customer fiat. The textbook fiat-cash custodian-failure mode — the on-chain token only ever represented the off-chain claim.",
+      coinId: "usdk-usdk-2023-06",
+    },
+    {
+      name: "Euro Tether",
+      date: "2024-11",
+      obituary:
+        "Tether's euro stablecoin, retired by the issuer once MiCA made EU stablecoin issuance untenable. Holders given a one-year redemption window. A regulatory wind-down without a depeg.",
+      coinId: "eurt-euro-tether-2024-11",
+    },
+    {
+      name: "EUROe",
+      date: "2025-05",
+      obituary:
+        "One of the first MiCA-compliant euro stablecoins from Membrane Finance — FIN-FSA regulated, KPMG-audited, ring-fenced euro reserves. Never broke $2M in circulation. Acquired by Paxos in January 2025 and wound down two months later to make room for USDG in Europe.",
+      coinId: "euroe-euroe-2025-05",
+    },
+    {
+      name: "Tether CNH",
+      date: "2026-02",
+      obituary:
+        "Tether's offshore-yuan experiment, sunset after years of negligible adoption. Tether stopped issuance and put the token on a one-year redemption clock, citing low demand and operational burden. Holders can redeem until February 2027; the decision itself was the death certificate.",
+      coinId: "cnht-tether-cnh-2026-02",
+    },
+    {
+      name: "Palm USD",
+      date: "2026-01",
+      obituary:
+        "Shariah-compliant fiat-cash dollar pegged to Gulf currencies, marketed alongside a $2.8B purchase agreement. Actual circulating supply briefly touched $26M before collapsing to $81K. The promised reserves stayed perpetually \"unreleased\"; the demand never appeared.",
+      coinId: "pusd-palm-usd-2026-01",
+    },
+  ],
 };

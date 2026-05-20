@@ -7,6 +7,7 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
 import { ARCHETYPE_CONTENT } from "../content";
 import { ArchetypeExplainerBody } from "../explainer-shell";
 import { ExplainerPageShell } from "../explainer-page-shell";
@@ -19,6 +20,7 @@ const TITLE_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   cdp: "CDP Stablecoins, Explained",
   "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
   algorithmic: "Algorithmic Stablecoins, Explained",
+  "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
 };
 
 const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
@@ -32,6 +34,8 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
     "Delta-neutral stablecoins hold spot crypto and short perp futures so funding-rate yield holds the peg. Read how the structure works and the risks it carries.",
   algorithmic:
     "Algorithmic stablecoins use supply controls or reflexive incentives instead of full reserves. Read why the design keeps failing and what's still being attempted.",
+  "rwa-credit-fund":
+    "Tokenized credit fund stablecoins wrap regulated private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
 };
 
 export function generateStaticParams() {
@@ -82,6 +86,7 @@ export default async function ArchetypeExplainerPage({
       subtitle={content.subtitle}
       leadParagraphs={content.lead}
     >
+      <ArchetypeArticleJsonLd archetype={slug} />
       <ArchetypeExplainerBody content={content} />
     </ExplainerPageShell>
   );

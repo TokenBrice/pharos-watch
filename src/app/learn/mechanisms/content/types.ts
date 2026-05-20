@@ -25,6 +25,15 @@ export interface ArchetypeCrossLink {
   readonly label: string;
 }
 
+export interface ArchetypeDecommissionedEntry {
+  readonly name: string;
+  readonly date: string;
+  readonly obituary: string;
+  readonly coinId?: string;
+}
+
+export type ArchetypeDecommissioned = ReadonlyArray<ArchetypeDecommissionedEntry>;
+
 export interface ArchetypeVisuals {
   readonly kickerClass: string;
 }
@@ -41,6 +50,7 @@ export interface ArchetypeContent {
   readonly whatToWatch: readonly string[];
   readonly crossLinks: readonly ArchetypeCrossLink[];
   readonly visuals: ArchetypeVisuals;
+  readonly decommissioned?: ArchetypeDecommissioned;
 }
 
 export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
@@ -49,4 +59,5 @@ export const ARCHETYPE_VISUALS: Record<MechanismArchetype, ArchetypeVisuals> = {
   cdp: { kickerClass: "text-cyan-700 dark:text-cyan-400" },
   "synthetic-delta-neutral": { kickerClass: "text-teal-700 dark:text-teal-400" },
   algorithmic: { kickerClass: "text-rose-700 dark:text-rose-400" },
+  "rwa-credit-fund": { kickerClass: "text-amber-700 dark:text-amber-400" },
 };

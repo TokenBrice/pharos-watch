@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   MethodologyFacts,
   MethodologySectionShell,
@@ -22,7 +23,14 @@ export function InfrastructureMethodologySection() {
       <p>
         <span className="text-foreground">Liquity v1</span> and{" "}
         <span className="text-foreground">Liquity v2</span> are <em>code lineages</em> &mdash; coins that fork
-        the original Liquity CDP implementation (v1) or its newer BOLD-style design (v2). Forks share source
+        the original Liquity{" "}
+        <Link
+          href="/learn/mechanisms/cdp/"
+          className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          CDP
+        </Link>
+        {" "}implementation (v1) or its newer BOLD-style design (v2). Forks share source
         code but operate independently with their own reserves, governance, and Stability Pools. A vulnerability
         in the upstream Liquity codebase potentially affects every fork in that branch, even though the forks
         have no operational relationship.

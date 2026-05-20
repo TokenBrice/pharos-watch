@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -268,6 +269,23 @@ export function YieldIntelligenceMethodologySection() {
                     framework has enough data for them, including NAV-aware report-card coverage. The default safety baseline
                     of 40 (NR) is only a missing-safety fallback, so a NAV token&apos;s PYS can still reflect a full safety
                     assessment when report-card hydration succeeds.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    See the mechanism explainers for{" "}
+                    <Link
+                      href="/learn/mechanisms/tbill/"
+                      className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      tokenized Treasury (T-bill) designs
+                    </Link>
+                    {" "}and{" "}
+                    <Link
+                      href="/learn/mechanisms/rwa-credit-fund/"
+                      className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      tokenized credit funds
+                    </Link>
+                    .
                   </p>
                 </div>
                 {/* Limitations */}

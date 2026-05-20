@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { MechanismArchetype } from "@shared/types";
+import {
+  getActiveByArchetype,
+  getCoinsByLifecycleStatus,
+  nestVariants,
+} from "@shared/lib/stablecoins/by-mechanism";
+import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
-import type { ArchetypeContent } from "./content";
+import type { ArchetypeContent, ArchetypeDecommissioned } from "./content";
 
 export function ArchetypeExplainerBody({
   content,
@@ -19,20 +24,30 @@ export function ArchetypeExplainerBody({
         steps={content.howItWorks}
         kickerClass={content.visuals.kickerClass}
       />
+      <RepresentativeCoins
+        coins={content.representativeCoins}
+        kickerClass={content.visuals.kickerClass}
+      />
+      {content.decommissioned && content.decommissioned.length > 0 ? (
+        <Decommissioned
+          items={content.decommissioned}
+          kickerClass={content.visuals.kickerClass}
+        />
+      ) : null}
       <RiskProfile
         items={content.riskProfile}
+        kickerClass={content.visuals.kickerClass}
+      />
+      <Variations
+        items={content.variations}
         kickerClass={content.visuals.kickerClass}
       />
       <WhatToWatch
         bullets={content.whatToWatch}
         kickerClass={content.visuals.kickerClass}
       />
-      <RepresentativeCoins
-        coins={content.representativeCoins}
-        kickerClass={content.visuals.kickerClass}
-      />
-      <Variations
-        items={content.variations}
+      <TrackedCoinList
+        archetype={content.archetype}
         kickerClass={content.visuals.kickerClass}
       />
       <CrossLinksFooter
@@ -254,6 +269,187 @@ function Variations({
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+function Decommissioned({
+  items,
+  kickerClass,
+}: {
+  items: ArchetypeDecommissioned;
+  kickerClass: string;
+}) {
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>Decommissioned</SectionKicker>
+        <SectionHeading>Designs that broke and stayed broken</SectionHeading>
+      </div>
+      <ul className="divide-y divide-border/40">
+        {items.map((item) => (
+          <li
+            key={`${item.name}-${item.date}`}
+            className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,14ch)_minmax(0,8ch)_minmax(0,1fr)] sm:gap-8 sm:py-5"
+          >
+            <span className="text-base font-semibold tracking-tight text-foreground">
+              {item.name}
+            </span>
+            <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+              {item.date}
+            </span>
+            <p className="text-[15px] leading-relaxed text-muted-foreground">
+              {item.obituary}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="pt-2 text-[15px] text-muted-foreground">
+        Full obituaries, peak market caps, and post-mortems in the{" "}
+        <Link
+          href="/cemetery/"
+          className="pharos-focus-ring font-medium text-foreground underline-offset-4 hover:text-frost-blue hover:underline"
+        >
+          stablecoin cemetery
+        </Link>
+        .
+      </p>
+    </section>
+  );
+}
+
+function TrackedCoinRow({
+  coin,
+  indented = false,
+}: {
+  coin: StablecoinMeta;
+  indented?: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={buildStablecoinUrl(coin.id)}
+        className={cn(
+          "pharos-focus-ring group grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,14ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-6",
+          indented && "sm:pl-6",
+        )}
+      >
+        <div className="flex items-baseline gap-2">
+          {indented ? (
+            <span
+              aria-hidden="true"
+              className="font-mono text-xs text-muted-foreground"
+            >
+              ↳
+            </span>
+          ) : null}
+          <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
+            {coin.symbol}
+          </span>
+        </div>
+        <span className="text-sm text-muted-foreground">{coin.name}</span>
+        <ArrowUpRight
+          className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-frost-blue sm:block"
+          aria-hidden="true"
+        />
+      </Link>
+    </li>
+  );
+}
+
+function TrackedCoinList({
+  archetype,
+  kickerClass,
+}: {
+  archetype: MechanismArchetype;
+  kickerClass: string;
+}) {
+  // No build-time supply map for the explainer pages; canonical registry order
+  // is roughly supply-descending and matches what the screener defaults to
+  // before the runtime supply query lands.
+  const coins = getActiveByArchetype(archetype);
+  const preLaunchCount = getCoinsByLifecycleStatus(archetype, "pre-launch")
+    .length;
+  const frozenCount = getCoinsByLifecycleStatus(archetype, "frozen").length;
+  const { parents, childrenByParentId } = nestVariants(coins);
+  const screenerHref = `/screener/?mechanisms=${archetype}`;
+
+  if (parents.length === 0 && preLaunchCount === 0 && frozenCount === 0) {
+    return null;
+  }
+
+  const lifecycleFooterParts: React.ReactNode[] = [];
+  if (preLaunchCount > 0) {
+    lifecycleFooterParts.push(
+      <Link
+        key="pre-launch"
+        href={`/screener/?mechanisms=${archetype}&lifecycle=pre-launch`}
+        className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+      >
+        +{preLaunchCount} upcoming
+      </Link>,
+    );
+  }
+  if (frozenCount > 0) {
+    lifecycleFooterParts.push(
+      <Link
+        key="frozen"
+        href={`/screener/?mechanisms=${archetype}&lifecycle=frozen`}
+        className="pharos-focus-ring underline-offset-4 hover:text-frost-blue hover:underline"
+      >
+        +{frozenCount} frozen
+      </Link>,
+    );
+  }
+
+  return (
+    <section className="space-y-6">
+      <div className="space-y-2">
+        <SectionKicker className={kickerClass}>Tracked universe</SectionKicker>
+        <SectionHeading>
+          {parents.length === 1
+            ? "1 tracked stablecoin in this archetype"
+            : `${coins.length} tracked stablecoins in this archetype`}
+        </SectionHeading>
+      </div>
+      {parents.length > 0 ? (
+        <ul className="divide-y divide-border/40">
+          {parents.map((parent) => {
+            const children = childrenByParentId[parent.id] ?? [];
+            return (
+              <li key={parent.id}>
+                <ul className="divide-y divide-border/40">
+                  <TrackedCoinRow coin={parent} />
+                  {children.map((child) => (
+                    <TrackedCoinRow key={child.id} coin={child} indented />
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      <div className="space-y-1.5 pt-2 text-[15px]">
+        <p>
+          <Link
+            href={screenerHref}
+            className="pharos-focus-ring inline-flex items-center gap-1 font-medium text-frost-blue underline-offset-4 hover:underline"
+          >
+            See all in the screener
+            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </p>
+        {lifecycleFooterParts.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {lifecycleFooterParts.map((part, i) => (
+              <span key={i}>
+                {i > 0 ? <span aria-hidden="true"> · </span> : null}
+                {part}
+              </span>
+            ))}
+          </p>
+        ) : null}
+      </div>
     </section>
   );
 }
