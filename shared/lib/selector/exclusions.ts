@@ -76,6 +76,17 @@ export function treasuryPegScoreFloor(tol: SelectorDepegTolerance): number {
   }
 }
 
+export function yieldPegScoreFloor(tol: SelectorDepegTolerance): number {
+  switch (tol) {
+    case "zero":
+      return 65;
+    case "tight":
+      return 55;
+    case "moderate":
+      return 45;
+  }
+}
+
 const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D", "C-", "C"]);
 const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D"]);
 
@@ -206,23 +217,14 @@ function yieldExclusions(row: MergedRow, input: SelectorInput): ExclusionRecord 
   if (row.warningSignals.includes("thin-tvl")) {
     return fail(row.id, "yield-warning-thin-tvl");
   }
-  // Peg thresholds scale with the user's stated depeg tolerance so the
-  // "moderate" branch is genuinely permissive (the strict branch gets the
-  // strict floor, the relaxed branch gets the relaxed floor — otherwise the
-  // form's tolerance answer is decorative).
-  const pegStabilityFloor =
-    input.depegTolerance === "zero"
-      ? 65
-      : input.depegTolerance === "tight"
-        ? 55
-        : 45;
-  if (row.pegStabilityScore != null && row.pegStabilityScore < pegStabilityFloor) {
-    return fail(row.id, "peg-stability-floor");
-  }
-  const depegEventCountCeiling =
-    input.depegTolerance === "zero" ? 3 : input.depegTolerance === "tight" ? 4 : 6;
-  if (row.depegEventCount >= depegEventCountCeiling) {
-    return fail(row.id, "depeg-event-count");
+  const pegScoreFloor = yieldPegScoreFloor(input.depegTolerance);
+  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
+    return fail(
+      row.id,
+      "peg-score-floor",
+      "hard",
+      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
+    );
   }
   return null;
 }
@@ -384,7 +386,7 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
     "yield-warning-unstable",
     "yield-warning-thin-tvl",
     "high-venue-on-c-tier",
-    "peg-stability-floor",
+    "peg-score-floor",
   ],
   trading: [
     "liquidity-floor",

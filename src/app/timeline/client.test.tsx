@@ -179,7 +179,7 @@ describe("TimelineClient", () => {
     expect(screen.getByText(/USDXL depeg peak worsened \(−112 bps\)/)).toBeTruthy();
     expect(screen.queryByText(/USDXL depeg peak worsened \(−109 bps\)/)).toBeNull();
     expect(screen.queryByText(/USDXL depeg peak worsened \(−104 bps\)/)).toBeNull();
-    expect(screen.getByLabelText("3 similar events grouped")).toBeTruthy();
+    expect(screen.getByText("3 similar events grouped")).toBeTruthy();
   });
 
   it("renders the Currently open banner for unmatched depeg.opened events", () => {
@@ -304,7 +304,7 @@ describe("TimelineClient", () => {
     expect(screen.getAllByText(/^Freezes$/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/5 events/).length).toBeGreaterThanOrEqual(1);
     // Row titles still exist in the DOM (collapsed inside <details>, not removed).
-    expect(screen.getByText("USDT freeze 0")).toBeTruthy();
+    expect(screen.getByText(/USDT freeze 0/)).toBeTruthy();
     // The collapsed <details> wrapper is in the document.
     const details = document.querySelector("details");
     expect(details).not.toBeNull();

@@ -251,7 +251,7 @@ describe("StablecoinTable", () => {
     const scrollContainer = table?.parentElement;
 
     expect(scrollContainer?.className).toContain("overflow-x-auto");
-    expect(scrollContainer?.className).toContain("sm:overflow-x-hidden");
+    expect(scrollContainer?.className).toContain("lg:overflow-x-hidden");
   });
 
   it("honors all-column route defaults", () => {

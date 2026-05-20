@@ -101,7 +101,7 @@ export function selectLowerRanked(
           "yield-warning-unstable",
           "yield-warning-thin-tvl",
           "yield-source-recently-switched",
-          "peg-stability-floor",
+          "peg-score-floor",
         ]
       : profileDefining;
 
