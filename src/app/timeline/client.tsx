@@ -627,35 +627,34 @@ export function TimelineClient() {
   const openCountByDay = useMemo(() => bucketByDay(openIncidents), [openIncidents]);
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
 
-  // Phosphor mode is opt-in, dark-mode-only. Persisted in localStorage but
-  // applied only after mount and only while the site is in dark theme — the
-  // green-on-black palette is illegible against a light background.
+  // Phosphor mode is opt-in, dark-mode-only. Persisted in localStorage and
+  // applied only while the site is in dark mode — the green-on-black palette is
+  // illegible against a light background.
   const { mounted: themeMounted, isDark } = useThemeToggle();
-  const [phosphor, setPhosphor] = useState(false);
+  const phosphorStorageKey = "pharos:timeline-phosphor";
+  const [phosphorStorageVersion, setPhosphorStorageVersion] = useState(0);
+
+  const persistedPhosphor =
+    typeof window !== "undefined" && window.localStorage.getItem(phosphorStorageKey) === "1";
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    setPhosphor(window.localStorage.getItem("pharos:timeline-phosphor") === "1");
-  }, []);
-  // Auto-disable phosphor when the user switches to light mode so the stored
-  // preference doesn't surprise them on their next dark-mode visit.
-  useEffect(() => {
-    if (themeMounted && !isDark && phosphor) {
-      setPhosphor(false);
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("pharos:timeline-phosphor");
-      }
-    }
-  }, [themeMounted, isDark, phosphor]);
+    if (typeof window === "undefined" || !themeMounted || isDark) return;
+    window.localStorage.removeItem(phosphorStorageKey);
+  }, [themeMounted, isDark, phosphorStorageVersion]);
+
   const togglePhosphor = useCallback(() => {
-    setPhosphor((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("pharos:timeline-phosphor", next ? "1" : "0");
+    const next = !persistedPhosphor;
+    if (typeof window !== "undefined") {
+      if (next) {
+        window.localStorage.setItem(phosphorStorageKey, "1");
+      } else {
+        window.localStorage.removeItem(phosphorStorageKey);
       }
-      return next;
-    });
-  }, []);
-  const phosphorActive = phosphor && isDark;
+      setPhosphorStorageVersion((value) => value + 1);
+    }
+  }, [persistedPhosphor, phosphorStorageKey]);
+
+  const phosphorActive = persistedPhosphor && isDark;
   const phosphorToggleVisible = themeMounted && isDark;
 
   return (

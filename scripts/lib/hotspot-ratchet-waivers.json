@@ -59,6 +59,10 @@
     "disposition": "queued-p4",
     "notes": "Phase 4 Wave 3 extracted useTelegramBridge + 5 small components + the unified error formatter (-238 LOC). Remaining height needs the deferred priorities: hoist StatusPanel/WatchlistPanel/CoinCard and carve out useMiniAppMutations. Next Mini App pass."
   },
+  "src/app/timeline/client.tsx": {
+    "disposition": "queued-p4",
+    "notes": "Timeline client combines URL filters, pagination, feed hydration, summary-band controls, and tape render plumbing in one shell. A follow-up refactor should split control orchestration from data orchestration before adding another feature tranche."
+  },
   "src/lib/yield-view-model.ts": {
     "disposition": "queued-p4",
     "notes": "Yield view model assembly grew with score breakdown, source-risk projection, and warning aggregation. Surfaced after global LOC budget tightening; split score derivation vs. row shaping in a follow-up yield UI pass."
