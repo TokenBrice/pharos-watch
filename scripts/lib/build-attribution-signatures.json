@@ -10,7 +10,7 @@
   { "name": "html-to-image", "marker": "html-to-image" },
   { "name": "d3-force", "marker": "forceSimulation" },
   { "name": "newsreader-font", "marker": "Newsreader" },
-  { "name": "pre-launch-shell", "marker": "DRIFT_STATUS_BADGE" },
+  { "name": "pre-launch-shell", "marker": "Pre-launch Universe" },
   { "name": "methodology-version", "marker": "createMethodologyVersion" },
   { "name": "error-boundary", "marker": "retryCount<3" }
 ]
