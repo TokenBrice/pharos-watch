@@ -109,7 +109,11 @@ export function HomeAltClient() {
         aria-labelledby="home-alt-rankings"
         className="mt-8 space-y-4 sm:mt-10"
       >
-        <PegBrowseStrip pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
+        <PegBrowseStrip
+          pegs={ACTIVE_PEGS}
+          pegCoinCount={pegCoinCount}
+          fiatExceptUsdHref="/home-alt/?peg=fiat-non-usd-peg#home-alt-rankings"
+        />
         <StablecoinTable
           data={stablecoinsData?.peggedAssets}
           isLoading={isLoading}
@@ -120,6 +124,7 @@ export function HomeAltClient() {
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}
           initialVisibleColumns={HOME_ALT_DEFAULT_COLUMNS}
+          columnPreferenceNamespace="pharos-home-alt-table"
           pinnedStablecoinIds={pinned.pinnedIds}
           onTogglePinnedStablecoin={pinned.togglePinned}
           toolbarEyebrow="Stablecoin Overview"

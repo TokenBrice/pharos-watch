@@ -147,6 +147,7 @@ interface StablecoinTableProps {
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
   initialVisibleColumns?: readonly ColumnId[];
+  columnPreferenceNamespace?: string;
   initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
@@ -171,6 +172,7 @@ export function StablecoinTable({
   dexLiquidity,
   reportCards,
   initialVisibleColumns,
+  columnPreferenceNamespace = "pharos-table",
   initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
@@ -212,7 +214,9 @@ export function StablecoinTable({
     },
     [initialVisibleColumns, isMobileColumns],
   );
-  const columnPreferenceKey = isMobileColumns ? "pharos-table-columns-mobile" : "pharos-table-columns";
+  const columnPreferenceKey = isMobileColumns
+    ? `${columnPreferenceNamespace}-columns-mobile`
+    : `${columnPreferenceNamespace}-columns`;
   const [visibleColumns, setVisibleColumns, resetColumns] = usePreference<ColumnId[]>(
     columnPreferenceKey,
     deviceDefault,

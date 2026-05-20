@@ -53,6 +53,7 @@ function buildPegChip(
 function buildCollapsedFiatPreview(
   pegs: typeof ACTIVE_PEGS,
   countFn: (peg: (typeof ACTIVE_PEGS)[number]) => number,
+  fiatExceptUsdHref: string,
 ): PegBrowseChip[] {
   const preview = COLLAPSED_FIAT_PREVIEW_ORDER.flatMap((peg) => (
     pegs.includes(peg) ? [buildPegChip(peg, countFn)].filter((chip): chip is PegBrowseChip => chip !== null) : []
@@ -65,7 +66,7 @@ function buildCollapsedFiatPreview(
   if (fiatExceptUsdCount > 0) {
     preview.push({
       key: "fiat-except-usd",
-      href: "/?peg=fiat-non-usd-peg#filter-bar",
+      href: fiatExceptUsdHref,
       label: "Fiat Except USD",
       count: fiatExceptUsdCount,
     });
@@ -77,15 +78,17 @@ function buildCollapsedFiatPreview(
 export function PegBrowseStrip({
   pegs,
   pegCoinCount: countFn,
+  fiatExceptUsdHref = "/?peg=fiat-non-usd-peg#filter-bar",
 }: {
   pegs: typeof ACTIVE_PEGS;
   pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;
+  fiatExceptUsdHref?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const groups = useMemo(() => groupPegs(pegs), [pegs]);
   const fiatPreview = useMemo(
-    () => buildCollapsedFiatPreview(groups.find((group) => group.label === "Fiat")?.pegs ?? [], countFn),
-    [countFn, groups],
+    () => buildCollapsedFiatPreview(groups.find((group) => group.label === "Fiat")?.pegs ?? [], countFn, fiatExceptUsdHref),
+    [countFn, fiatExceptUsdHref, groups],
   );
 
   // Collapsed: selected fiat previews + an aggregate non-USD fiat lens.

@@ -83,7 +83,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
           </div>
           <ul className="mt-auto flex flex-col divide-y divide-border/40 font-mono text-xs">
             {rows.map((row) => (
-              <DepegRow key={row.symbol} row={row} logoSrc={logoMap[row.id]} />
+              <DepegRow key={row.id} row={row} logoSrc={logoMap[row.id]} />
             ))}
           </ul>
         </>
