@@ -37,6 +37,18 @@ export interface StartHereGoal {
   tone: "frost" | "emerald" | "amber" | "violet";
 }
 
+export interface StartHereScore {
+  name: string;
+  fullName: string;
+  question: string;
+  inputs: string;
+  cadence: string;
+  methodologyHref: string;
+  surfacedOn: string;
+  surfacedHref: string;
+  icon: LucideIcon;
+}
+
 export interface StartHereGlossaryItem {
   term: string;
   meaning: string;
@@ -81,24 +93,24 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
     tone: "frost",
   },
   {
-    title: "Research one stablecoin",
+    title: "Check the coin I already hold",
     description:
-      "Use the directory to find any tracked stablecoin, then open its detail page for safety grades, liquidity, and risk breakdown.",
-    mobileDescription: "Open the directory, then jump to any coin's detail, safety, and liquidity.",
+      "Search for the stablecoin in your wallet — USDC, USDT, DAI, USDe, PYUSD — and open its detail page for the safety grade, what backs it, and whether it's under stress right now.",
+    mobileDescription: "Search USDC, USDT, DAI, USDe or another coin and open its safety, backing, and stress detail.",
     href: "/stablecoins/usd/",
-    cta: "Browse the directory",
-    destinations: ["Directory", "Detail page", "Safety + Liquidity"],
+    cta: "Search the directory",
+    destinations: ["Directory", "Safety grade", "Live reserves"],
     icon: Search,
     tone: "frost",
   },
   {
-    title: "Compare several coins",
+    title: "Stress-test my portfolio",
     description:
-      "Build a shortlist side by side and stress-test it with the portfolio view before making allocation decisions.",
-    mobileDescription: "Build a shortlist side by side, then stress-test it in portfolio view.",
-    href: "/compare/",
-    cta: "Open compare",
-    destinations: ["Compare", "Portfolio", "Safety Scores"],
+      "Add your stablecoin mix to the portfolio view to see a blended risk grade, hidden shared-backing exposure, and how the basket holds up if one issuer fails.",
+    mobileDescription: "Blend your stablecoins, see shared-backing exposure, and stress-test an issuer failure.",
+    href: "/portfolio/",
+    cta: "Open portfolio",
+    destinations: ["Portfolio", "Dependency Map", "Contagion test"],
     icon: ArrowLeftRight,
     tone: "emerald",
   },
@@ -126,6 +138,70 @@ export const START_HERE_GOALS: readonly StartHereGoal[] = [
   },
 ] as const;
 
+// ── Proprietary scores (the actual differentiation) ──────────────────
+
+export const START_HERE_SCORES: readonly StartHereScore[] = [
+  {
+    name: "PSI",
+    fullName: "Pharos Stability Index",
+    question: "Is the stablecoin market under stress right now?",
+    inputs: "Active-depeg severity, market-cap breadth, DEWS stress breadth, 7-day market-cap trend.",
+    cadence: "Refreshes every 30 minutes.",
+    methodologyHref: "/methodology/#stability-index-methodology",
+    surfacedOn: "Open the Stability Index",
+    surfacedHref: "/stability-index/",
+    icon: Compass,
+  },
+  {
+    name: "DEWS",
+    fullName: "Depeg Early Warning System",
+    question: "Which coins are quietly building toward a depeg?",
+    inputs:
+      "Eight 0–100 sub-signals: supply contraction, pool stress, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, yield anomalies.",
+    cadence: "Refreshes every 30 minutes. Bands: CALM, WATCH, ALERT, WARNING, DANGER.",
+    methodologyHref: "/methodology/#pegscore-dews-methodology",
+    surfacedOn: "Open the Depeg Tracker",
+    surfacedHref: "/depeg/",
+    icon: ShieldAlert,
+  },
+  {
+    name: "Safety Score",
+    fullName: "Composite risk grade (A+ to F)",
+    question: "How risky is this stablecoin overall?",
+    inputs:
+      "Weighted composite: Liquidity/Exit (30%), Resilience (20%), Decentralization (15%), Dependency Risk (25%), multiplied by a peg-stability factor.",
+    cadence: "Recomputed continuously from live inputs; bands A+ (87+) through F (0–39).",
+    methodologyHref: "/methodology/#safety-scores-methodology",
+    surfacedOn: "Open the Safety Scores leaderboard",
+    surfacedHref: "/safety-scores/",
+    icon: FlaskConical,
+  },
+  {
+    name: "PYS",
+    fullName: "Pharos Yield Score",
+    question: "Which yield opportunities survive risk adjustment?",
+    inputs:
+      "Raw APY weighted against the underlying stablecoin's Safety Score, source freshness, benchmark context, and APY consistency.",
+    cadence: "Recomputed when source yields refresh; ranks update live.",
+    methodologyHref: "/methodology/#yield-intelligence-methodology",
+    surfacedOn: "Open Yield Intelligence",
+    surfacedHref: "/yield/",
+    icon: TrendingUp,
+  },
+  {
+    name: "Chain Health Score",
+    fullName: "Per-chain 0–100 composite",
+    question: "Which chains carry the safest stablecoin mix?",
+    inputs:
+      "Stablecoin quality, chain environment, dominance concentration, peg stability across hosted assets, backing diversity.",
+    cadence: "Recomputed with each chain-snapshot lane.",
+    methodologyHref: "/methodology/#chain-health-score",
+    surfacedOn: "Open Stables per Chain",
+    surfacedHref: "/chains/",
+    icon: Layers,
+  },
+] as const;
+
 // ── Glossary (foundational terms first, then Pharos-specific) ────────
 
 export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
@@ -146,12 +222,13 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "DEWS",
-    meaning: "Early warning system. Detects stress building in a stablecoin before a visible depeg event occurs.",
+    meaning:
+      "Depeg Early Warning System. Per-coin 0–100 stress score from eight weighted sub-signals (supply contraction, pool stress, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, yield anomalies). Refreshes every 30 minutes; bands are CALM, WATCH, ALERT, WARNING, DANGER. Formula and bands in /methodology/.",
   },
   {
     term: "Safety Score",
     meaning:
-      "The composite risk grade rendered as a letter (A+ to F). Blends peg stability, liquidity, resilience, decentralization, dependency, live reserves, and redemption-backstop quality into one view. Surfaced on every detail page and the Safety Scores leaderboard.",
+      "Composite risk grade rendered A+ to F. Weighted average of four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), Dependency Risk (25%) — multiplied by a peg-stability factor. Weights, thresholds, and grade bands documented in /methodology/. Surfaces on every detail page and the Safety Scores leaderboard.",
   },
   {
     term: "Report Card",
@@ -161,12 +238,12 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   {
     term: "Liquidity grade",
     meaning:
-      "How easily you can trade in or out of a stablecoin on-chain. Rendered as a letter grade (A+ to F) on directories and detail pages, with a 0–100 underlying score.",
+      "How easily you can exit a stablecoin on-chain. Letter grade (A+ to F) backed by a 0–100 score that blends TVL depth (30%), 24h volume (20%), pool quality (20%), durability (20%), and pair diversity (10%). Inputs read from Curve, Balancer, Uniswap V3, Aerodrome, Velodrome, and other tracked venues.",
   },
   {
     term: "Chain Health Score",
     meaning:
-      "0–100 composite per chain, rolling stablecoin supply, dominance concentration, and infrastructure signals into one barometer. The lede on /chains/.",
+      "0–100 composite per chain combining stablecoin quality, chain environment, dominance concentration, peg stability across hosted assets, and backing diversity. The lede on /chains/.",
   },
   {
     term: "Dependency risk",
@@ -175,12 +252,13 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   },
   {
     term: "PYS",
-    meaning: "Pharos Yield Score. Adjusts raw yield for source risk, asset safety, benchmark context, and yield consistency.",
+    meaning:
+      "Pharos Yield Score. Risk-adjusted yield ranking that weights raw APY against the underlying stablecoin's Safety Score, source freshness, benchmark context, and APY consistency. Surfaces on the yield page and on every coin detail page that has live opportunities.",
   },
   {
     term: "PSI",
     meaning:
-      "Pharos Stability Index. The market-wide stress barometer for the whole stablecoin system. Updates every 30 minutes; also referenced as 'Stability Index' across the app.",
+      "Pharos Stability Index. 0–100 ecosystem health score combining active-depeg severity, market-cap breadth, DEWS stress breadth, and 7-day market-cap trend. Refreshes every 30 minutes. Also surfaces as 'Stability Index' across the app.",
   },
   {
     term: "Frozen",
@@ -249,7 +327,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Safety Scores",
         description:
-          "Risk grades across all tracked stablecoins, blending live reserve feeds, transitive dependency scoring, and redemption-backstop quality into letter grades.",
+          "A+ to F grades across every tracked stablecoin from a weighted composite of liquidity, resilience, decentralization, dependency risk, and peg stability — with live reserve feeds and redemption-backstop quality folded in.",
         href: "/safety-scores/",
         icon: FlaskConical,
       },
@@ -267,7 +345,8 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Dependency Map",
-        description: "Visual map of which stablecoins depend on other stablecoins or shared backing.",
+        description:
+          "Live transitive dependency graph showing which stablecoins inherit risk from others and from shared backing. Pair with the contagion stress test to project grades if a single coin fails.",
         href: "/dependency-map/",
         icon: Network,
       },
@@ -298,13 +377,15 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       },
       {
         title: "Mint/Burn Flows",
-        description: "Tracks when issuers create or destroy supply, and the market pressure that follows.",
+        description:
+          "Issuance-chain mint and burn monitoring with the Bank Run Gauge: a market-cap-weighted −100/+100 pressure signal against each coin's trailing 30-day baseline.",
         href: "/flows/",
         icon: ArrowUpDown,
       },
       {
         title: "FreezeWatch",
-        description: "Issuer intervention and freeze events across supported chains.",
+        description:
+          "Live issuer intervention ledger — freeze, unfreeze, pause, block, wipe — across supported contracts and chains, with on-chain proof links and chain-specific amount provenance where available.",
         href: "/freezewatch/",
         icon: ShieldBan,
       },
@@ -348,7 +429,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Cemetery",
         description:
-          "Failure patterns from dead, discontinued, and frozen stablecoins. Frozen entries link back to their preserved detail page.",
+          "Retrospective ledger of dead, discontinued, and frozen stablecoins — algorithmic failures, rug pulls, regulatory shutdowns, quiet abandonments. The validation track for the methodology, not a museum.",
         href: "/cemetery/",
         icon: Skull,
       },
