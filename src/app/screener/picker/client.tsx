@@ -55,7 +55,12 @@ import { SelectorMobileForm } from "@/components/selector/selector-mobile-form";
 import { SelectorResultSummary } from "@/components/selector/selector-result-summary";
 import { SelectorShortlistCard } from "@/components/selector/selector-shortlist-card";
 import { SelectorLowerRankedRow } from "@/components/selector/selector-lower-ranked-row";
-import { SelectorEmptyState, type SelectorClosestSurvivor, type SelectorRelaxableConstraint } from "@/components/selector/selector-empty-state";
+import {
+  SelectorEmptyState,
+  readableFailingDimension,
+  type SelectorClosestSurvivor,
+  type SelectorRelaxableConstraint,
+} from "@/components/selector/selector-empty-state";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
 
 // ---------------------------------------------------------------------------
@@ -124,9 +129,21 @@ const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly SelectorOption<
     { value: "all", label: "All of the above" },
   ],
   treasury: [
-    { value: "custody", label: "Pure custody, no DeFi" },
-    { value: "some", label: "Some DeFi later, opportunistic" },
-    { value: "active", label: "Active DeFi treasury management" },
+    {
+      value: "custody",
+      label: "Regulated custody",
+      sublabel: "Prefer issuer or custodian rails; avoid DeFi exposure.",
+    },
+    {
+      value: "some",
+      label: "Mixed rails",
+      sublabel: "Custody first, with optional on-chain movement later.",
+    },
+    {
+      value: "active",
+      label: "DeFi-native / on-chain",
+      sublabel: "Require on-chain custody and decentralized posture.",
+    },
   ],
 };
 
@@ -145,7 +162,7 @@ const PROFILE_LABEL: Record<SelectorProfile, string> = {
 const LEGEND_BY_PROFILE_Q4: Record<SelectorProfile, string> = {
   yield: "Where will you put it to work?",
   trading: "Where will you trade?",
-  treasury: "How will you use the position?",
+  treasury: "What custody or rail setup do you prefer?",
 };
 
 const TRADING_SHARE_STALENESS_LIMIT_SECONDS: Record<string, number> = {
@@ -159,7 +176,7 @@ const QUESTION_HELPER_COPY: Record<2 | 3 | 4 | 5 | 6, string> = {
   2: "Narrows the universe to stablecoins that target this reference asset.",
   3: "Longer horizons put more weight on resilience, dependency risk, and history.",
   4: "Tighter tolerance applies stricter peg and stress-signal thresholds before ranking.",
-  5: "Venue scope changes how much composability and source exposure the Picker permits.",
+  5: "Rail preference changes how much custody, composability, and source exposure the Picker permits.",
   6: "Faster exits increase the importance of liquidity, DEWS, and redemption pathways.",
 };
 
@@ -555,7 +572,7 @@ function ResultPane({
   if (selectorResult.status === "loading" || selectorResult.status === "snapshot-loading") {
     return (
       <div className="space-y-4" aria-busy="true" aria-live="polite">
-        <p className="sr-only">Selector result is loading.</p>
+        <p className="sr-only">Picker result is loading.</p>
         <Skeleton className="h-32 w-full rounded-2xl" />
         <Skeleton className="h-40 w-full rounded-2xl" />
         <Skeleton className="h-40 w-full rounded-2xl" />
@@ -597,6 +614,7 @@ function ResultPane({
   const effectiveInput = input ?? output.input;
   const screenerHandoff = buildScreenerHandoff(output);
   const screenerHandoffHref = screenerHandoff.url;
+  const compareShortlistHref = buildCompareShortlistHref(output);
   const compareWatchoutsHref = buildCompareWithWatchoutsHref(output, state);
   const liveComparisonOutput =
     selectorResult.status === "snapshot-found" ? selectorResult.liveOutput : null;
@@ -679,9 +697,14 @@ function ResultPane({
         />
       ) : null}
 
-      {output.lowerRanked.length > 0 ? (
-        <CompareWatchoutsAction href={compareWatchoutsHref} />
-      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <CompareShortlistAction href={compareShortlistHref} />
+        {output.lowerRanked.length > 0 ? (
+          <CompareWatchoutsAction href={compareWatchoutsHref} />
+        ) : null}
+      </div>
+
+      <NearMissesDisclosure survivors={buildClosestSurvivorsFromOutput(output)} />
 
       {/* Mobile quick-scroll jump button */}
       {isMobile ? (
@@ -754,7 +777,7 @@ function ResultPane({
 
       <footer className="space-y-2 border-t border-border/55 pt-4 text-xs leading-relaxed text-muted-foreground">
         <p>
-          Selector output uses {summarizeMethodologyVersions(output.methodologyVersions)} against
+          Picker output uses {summarizeMethodologyVersions(output.methodologyVersions)} against
           dataset snapshot <code>{output.datasetHash}</code>. Not personalized financial advice. Does
           not account for jurisdiction, tax, counterparty agreements, or operational constraints not
           captured by the form. <em>Historical readings; future behaviour may differ.</em>
@@ -788,7 +811,7 @@ function stepLegend(state: { step: number | "result" }): string {
     case 4:
       return "How tight does the peg need to hold?";
     case 5:
-      return "Where will you put it to work?";
+      return "What custody or rail setup do you prefer?";
     case 6:
       return "If something goes wrong, how fast do you need to be out?";
     default:
@@ -830,6 +853,12 @@ function buildCompareWithWatchoutsHref(
     ...output.lowerRanked.map((entry) => entry.id),
   ];
   return buildCompareHref(output, state, ids);
+}
+
+function buildCompareShortlistHref(output: SelectorOutput): string {
+  const params = new URLSearchParams();
+  params.set("coins", output.recommended.map((rec) => rec.id).join(","));
+  return `/compare/?${params.toString()}`;
 }
 
 function buildCompareHref(
@@ -895,6 +924,10 @@ function buildRelaxableConstraintsFromOutput(output: SelectorOutput): SelectorRe
 
 function summarizeMethodologyVersions(versions: SelectorOutput["methodologyVersions"]): string {
   return `safety ${versions.safetyScore}, peg/DEWS ${versions.pegScoreAndDews}, yield ${versions.yieldIntelligence}, bluechip ${versions.bluechipAlignment}, exclusions ${versions.exclusionFilters}`;
+}
+
+function formatScore(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
 }
 
 function readableScreenerFilterChips(filters: Record<string, unknown>): Array<{ label: string; value: string }> {
@@ -979,8 +1012,19 @@ function SessionRestorePanel({
 function SessionRecoveredBanner() {
   return (
     <div role="status" className="rounded-lg border border-frost-blue/35 bg-frost-blue/[0.06] px-4 py-3 text-sm text-foreground">
-      Restored from this tab&apos;s previous live Selector result.
+      Restored from this tab&apos;s previous live Picker result.
     </div>
+  );
+}
+
+function CompareShortlistAction({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      className="pharos-focus-ring inline-flex min-h-10 items-center justify-center rounded-full border border-foreground/60 bg-foreground px-3 text-sm font-medium text-background hover:bg-foreground/90"
+    >
+      Compare these
+    </a>
   );
 }
 
@@ -992,6 +1036,37 @@ function CompareWatchoutsAction({ href }: { href: string }) {
     >
       Compare shortlist vs watch-outs
     </a>
+  );
+}
+
+function NearMissesDisclosure({
+  survivors,
+}: {
+  survivors: readonly SelectorClosestSurvivor[];
+}) {
+  if (survivors.length === 0) return null;
+  return (
+    <details className="rounded-lg border border-border/55 bg-card/35 px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-medium text-foreground">
+        Near misses / why not shown
+      </summary>
+      <ul className="mt-2 space-y-1.5 leading-relaxed">
+        {survivors.map((survivor) => (
+          <li key={survivor.id} className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{survivor.symbol}</span>
+            <span>
+              {" "}missed on {readableFailingDimension(survivor.failingDimension)}:{" "}
+              {survivor.liveReading}
+            </span>
+            {survivor.hypotheticalScore != null ? (
+              <span className="text-foreground">
+                {" "}Hypothetical score {formatScore(survivor.hypotheticalScore)}.
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -1243,7 +1318,11 @@ function answerChipsFor(
     { key: "peg", label: "Peg", value: PEG_METADATA[input.pegCurrency]?.filterLabel ?? input.pegCurrency },
     { key: "horizon", label: "Horizon", value: labelForOption(HORIZON_OPTIONS, input.horizon) },
     { key: "depeg", label: "Peg tolerance", value: labelForOption(DEPEG_OPTIONS, input.depegTolerance) },
-    { key: "venue", label: "Venue", value: venueLabelFor(input, state) },
+    {
+      key: "venue",
+      label: input.profile === "treasury" ? "Rail" : "Venue",
+      value: venueLabelFor(input, state),
+    },
   ];
   if (!shouldSkipExitStep(input.profile, input.horizon, input.depegTolerance)) {
     chips.push({ key: "exit", label: "Exit", value: labelForOption(EXIT_OPTIONS, input.exitSpeed) });

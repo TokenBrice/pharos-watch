@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { cn } from "@/lib/utils";
 import type {
+  SelectorComponent,
   SelectorInput,
   SelectorProfile,
   SelectorRecommendation,
@@ -235,6 +236,8 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
         </ul>
       </div>
 
+      <ScoreBreakdown components={rec.components} />
+
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-foreground">
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
@@ -317,6 +320,82 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       </div>
     </li>
   );
+}
+
+function ScoreBreakdown({ components }: { components: readonly SelectorComponent[] }) {
+  if (components.length === 0) return null;
+  const sorted = [...components].sort((a, b) => b.contribution - a.contribution);
+  return (
+    <details className="mt-3 rounded-lg border border-border/50 bg-background/35 px-3 py-2 text-xs">
+      <summary className="cursor-pointer font-medium text-foreground">
+        Score breakdown
+      </summary>
+      <p className="mt-2 leading-relaxed text-muted-foreground">
+        Weights shown are effective per-coin weights after missing-data redistribution.
+      </p>
+      <dl className="mt-2 grid gap-2">
+        {sorted.map((component) => (
+          <div
+            key={component.key}
+            className="grid gap-1 rounded-md border border-border/45 bg-card/45 px-2.5 py-2 sm:grid-cols-[minmax(9rem,1fr)_auto]"
+          >
+            <dt className="font-medium text-foreground">
+              {readableComponentKey(component.key)}
+            </dt>
+            <dd className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground sm:justify-end">
+              <span>Weight {formatComponentNumber(component.weight)}%</span>
+              <span>Normalized {formatNullableComponentNumber(component.normalizedValue)}</span>
+              <span className="font-medium text-foreground">
+                {formatContribution(component.contribution)} pts
+              </span>
+              {component.rawValue == null || component.redistributed ? (
+                <span className="rounded-full border border-amber-500/35 bg-amber-500/[0.07] px-1.5 text-amber-800 dark:text-amber-200">
+                  {component.rawValue == null ? "Missing signal" : "Redistributed"}
+                  {component.redistributed && component.rawValue == null ? "; redistributed" : ""}
+                </span>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
+function formatNullableComponentNumber(value: number | null): string {
+  return value == null ? "n/a" : formatComponentNumber(value);
+}
+
+function formatComponentNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function formatContribution(value: number): string {
+  const formatted = formatComponentNumber(value);
+  return value > 0 ? `+${formatted}` : formatted;
+}
+
+function readableComponentKey(key: string): string {
+  const labels: Record<string, string> = {
+    safetyOverall: "Safety Score",
+    resilience: "Resilience",
+    dependencyRisk: "Dependency risk",
+    pegStabilityHistory: "Peg history",
+    pegStabilityLive: "Live peg stability",
+    pegScoreNow: "Current peg score",
+    decentralization: "Decentralization",
+    dewsInverted: "DEWS stress",
+    bluechip: "Blue-chip alignment",
+    supplyLog: "Market depth",
+    pharosYieldScore: "Pharos Yield Score",
+    excessApy: "Net yield",
+    yieldVariance: "Yield variance",
+    sourceRiskInverted: "Source risk",
+    effectiveExit: "Effective exit",
+    liquidity: "Liquidity",
+    liquidityDiversification: "Liquidity diversification",
+  };
+  return labels[key] ?? "Profile score input";
 }
 
 function readableLowestSubDimension(key: string): string {

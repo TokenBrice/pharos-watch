@@ -97,6 +97,38 @@ describe("SelectorShortlistCard", () => {
     expect(screen.getByText("Resilience score 91 of 100")).toBeTruthy();
   });
 
+  it("renders an expandable effective score breakdown", () => {
+    render(
+      <SelectorShortlistCard
+        rank={1}
+        recommendation={{
+          ...baseRecommendation,
+          components: [
+            ...baseRecommendation.components,
+            {
+              key: "dewsInverted",
+              weight: 0,
+              rawValue: null,
+              normalizedValue: null,
+              contribution: 0,
+              redistributed: true,
+            },
+          ],
+        }}
+        profile="treasury"
+        pegCurrency="USD"
+        isMobile={false}
+      />,
+    );
+
+    expect(screen.getByText(/Score breakdown/i)).toBeTruthy();
+    expect(screen.getByText(/effective per-coin weights/i)).toBeTruthy();
+    expect(screen.getByText(/Weight 20%/i)).toBeTruthy();
+    expect(screen.getByText(/Normalized 91/i)).toBeTruthy();
+    expect(screen.getByText(/\+18.2 pts/i)).toBeTruthy();
+    expect(screen.getByText(/Missing signal; redistributed/i)).toBeTruthy();
+  });
+
   it("discloses yield rail risk and freshness", () => {
     render(
       <SelectorShortlistCard

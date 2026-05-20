@@ -60,7 +60,7 @@ The pure engine still filters by `input.pegCurrency`, so tests can pass an all-p
 | `lowConfidence` | Result-level quality flag shown prominently when normal confidence is not met. |
 | `usedRelaxedFallback` / `relaxedReasons` | Marks entries produced by relaxing constraints so users can distinguish clean fits from fallback fills. |
 | `exclusionSummary` | Aggregated counts/reasons for hard exclusions and coverage-thin rows. |
-| `closestSurvivors` | Engine-owned near-miss rows used by empty/thin states; frontend placeholders are not authoritative. |
+| `closestSurvivors` | Engine-owned near-miss rows used by empty/thin states and the non-empty "Near misses / why not shown" disclosure; frontend placeholders are not authoritative. |
 | `relaxableConstraints` | Engine-owned relax actions that correspond to actual blockers. |
 | `rankRobustness` / tie metadata | Near-tie or concentration labels when score deltas are narrow or issuer/protocol concentration rules affect the shortlist. |
 
@@ -128,14 +128,16 @@ Cross-link: `docs/privacy-page.md` describes the storage policy and the content-
 
 The frontend agent owns `src/app/screener/picker/` and `src/components/selector/`. The integration owns only the callout *integration site* (`src/app/screener/client.tsx`), the snapshot endpoint, and the OG images. Per the plan:
 
-- Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, venue, and exit speed. Desktop single-select questions use a consistent select-then-Next rhythm; radio selection alone does not advance to result.
+- Q1–Q6 wizard with per-step `history.pushState`; browser back walks the wizard backwards. Q1 is profile, Q2 is peg, Q3–Q6 are horizon, depeg tolerance, rail/venue, and exit speed. Desktop single-select questions use a consistent select-then-Next rhythm; radio selection alone does not advance to result. Treasury Q5 labels are "Regulated custody", "Mixed rails", and "DeFi-native / on-chain"; regulated custody maps to `custodyOk="regulated-only"`, mixed rails leaves custody unconstrained, and DeFi-native maps to `custodyOk="onchain-only"` plus `decentralization="required"`.
 - Mobile branching is CSS-only except for the callout slim/full variant and the mobile single-form, both gated behind `useHydrated() && useIsMobile(640)`.
 - Mobile answer controls update answers only; the sticky "See my shortlist" CTA is the only mobile result commit and stays disabled until required answers are complete. The CTA area shows an answered-count/progress cue.
-- Result page renders the ranked shortlist, lower-ranked/watch-out rows, peg-aware answer chips, priority chips, evidence chips, the mandatory "What to watch" line per shortlist entry, and readable Screener handoff filter chips.
+- Result page renders the ranked shortlist, lower-ranked/watch-out rows, peg-aware answer chips, priority chips, evidence chips, compact expandable score breakdowns, the mandatory "What to watch" line per shortlist entry, and readable Screener handoff filter chips.
+- Non-empty result pages include a "Near misses / why not shown" disclosure backed by `closestSurvivors`, with readable blocker labels, live readings, and hypothetical scores.
+- Treasury depeg tolerance hard-gates active/current depegs plus the current `PegScore` floor (`zero` 80, `tight` 70, `moderate` 60). Historical event count and peg-stability history can affect score, confidence, and watch text, but are not the hard depeg pass/fail criterion.
 - Empty states use engine-owned `exclusionSummary`, `closestSurvivors`, and `relaxableConstraints` to distinguish strict constraints, sparse coverage, missing Yield rails, and no-clean-fit relaxed fallback.
 - Result summary renders distinct banners for `lowConfidence`, sparse coverage, uneven coverage, `usedRelaxedFallback`, stale Trading share blockers, and methodology/version drift.
 - `[Copy share link]` uses POST-then-copy: POST the engine output, copy `/screener/picker/?sid={sid}` on `200`, leave the button disabled with a notice on failure. Active Trading share copy is blocked when relevant `perInputStaleness` exceeds the configured freshness ceiling; Treasury and Yield are not blocked by Trading-only staleness. Disabled/error reasons are associated with the button and announced through status/alert regions.
-- Result actions include Adjust answers, Verify in Screener, Copy share link, and optional Compare shortlist vs watch-outs. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
+- Result actions include Adjust answers, Verify in Screener, Copy share link, an always-visible Compare these action for the top shortlist (`/compare/?coins=<ids>`), and optional Compare shortlist vs watch-outs. Portfolio handoff can join the rail once its URL/local-state model is reviewed.
 - Loading states set `aria-busy` and include screen-reader loading text. Result generation/snapshot load moves focus to the result summary heading, full-card option labels expose `focus-within` styling, skipped-coin disclosures are explicit controls, and mobile shortlist jumps move focus like skip links.
 - Mobile/narrow-width QA must cover long coin names, long hashes/version strings, multi-line relax buttons, and chip wrapping so text does not overlap at common mobile widths or 200 percent zoom.
 - `aria-live="polite"` announcements on step transitions; programmatic focus to the new `<legend>`.
@@ -168,11 +170,11 @@ When changing Picker behavior, update this doc alongside:
 1. **Snapshot endpoint contract** (POST/GET, failure modes, canonicalization rules) → `functions/selector-snapshot/[[path]].ts`, `functions/__tests__/selector-snapshot.test.ts`, `docs/api-reference.md` Pages Function endpoints section.
 2. **localStorage keys or schema** → `src/components/selector/selector-callout.tsx` (frontend), `docs/privacy-page.md`.
 3. **Banned-phrase policy** → `scripts/ci/check-selector-banned-phrases.mjs`. Wire any new banned phrase into `BANNED_PATTERNS`; document the replacement in `agents/screener-selector/03-editorial.md` §8.
-4. **Weight, exclusion, or deterministic behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint.
+4. **Weight, exclusion, or deterministic behavior changes** → bump `engineVersion` via `shared/lib/selector/version.ts`, update editorial worked examples, and rerun selector engine tests plus banned-phrase lint. The current picker remediation is `selector-v1.5`.
 5. **OG content** → replace `public/og-selector-*.png` and re-verify the marketing copy is calibrated against the banned-phrase list before commit.
 6. **Methodology page** → `/methodology/selector/` ships within 30 days post-MVP (design §9.1 item 7; project-tracker post-ship task).
 
-The Picker engine is deterministic and client-only. It does not call the Worker. The only HTTP surface it adds is the snapshot store, which is Pages-only. Because the current Picker remediation also touches shared runtime selector code, the deploy classifier result for this change set is `pages=yes`, `worker=yes`.
+The Picker engine is deterministic and client-only. It does not call the Worker. The only HTTP surface it adds is the snapshot store, which is Pages-only. Picker UI and selector-engine changes are Pages-impacting; they do not require a Worker deploy unless Worker-imported shared contracts or Worker endpoints change.
 
 ---
 

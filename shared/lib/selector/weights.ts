@@ -118,6 +118,13 @@ function venueIncludes(input: SelectorInput, value: string): boolean {
   return input.venuePreferences?.includes(value as never) ?? false;
 }
 
+function treasuryActiveDeFiIntent(input: SelectorInput): boolean {
+  return (
+    input.profile === "treasury" &&
+    (input.composability === "high" || venueIncludes(input, "active"))
+  );
+}
+
 /**
  * Apply deterministic answer-conditioned overlays to the base profile vector.
  * The base `WEIGHT_VECTORS` remain the published R2 tables; this helper is
@@ -141,7 +148,8 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
 
   if (input.exitSpeed === "1h") {
     if (input.profile === "treasury") {
-      shiftWeight(vector, "liquidity", 4, ["bluechip", "decentralization"]);
+      shiftWeight(vector, "liquidity", 3, ["bluechip", "safetyOverall"]);
+      shiftWeight(vector, "effectiveExit", 3, ["resilience", "dependencyRisk"]);
     } else if (input.profile === "yield") {
       shiftWeight(vector, "liquidity", 3, ["excessApy", "pharosYieldScore"]);
       shiftWeight(vector, "sourceRiskInverted", 2, ["pharosYieldScore"]);
@@ -157,13 +165,17 @@ export function getWeightVectorForInput(input: SelectorInput): WeightVector {
   }
 
   if (input.composability === "high") {
-    if (input.profile === "treasury") {
-      shiftWeight(vector, "liquidity", 2, ["bluechip", "dewsInverted"]);
-    } else if (input.profile === "yield") {
+    if (input.profile === "yield") {
       shiftWeight(vector, "liquidity", 2, ["safetyOverall"]);
-    } else {
+    } else if (input.profile === "trading") {
       shiftWeight(vector, "liquidityDiversification", 2, ["safetyOverall", "supplyLog"]);
     }
+  }
+
+  if (treasuryActiveDeFiIntent(input)) {
+    shiftWeight(vector, "decentralization", 8, ["bluechip", "safetyOverall"]);
+    shiftWeight(vector, "liquidity", 6, ["safetyOverall", "resilience"]);
+    shiftWeight(vector, "effectiveExit", 6, ["dependencyRisk", "resilience"]);
   }
 
   if (input.profile === "yield") {

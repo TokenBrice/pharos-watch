@@ -392,8 +392,8 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
     venuePreferences: state.venue,
     minApy: null,
     yieldNativeOnly: false,
-    decentralization: "any",
-    custodyOk: "any",
+    decentralization: decentralizationFromVenue(state.profile, state.venue),
+    custodyOk: custodyOkFromVenue(state.profile, state.venue),
   };
 }
 
@@ -411,6 +411,23 @@ export function composabilityFromVenue(
   }
   // Yield + Trading: any single rail = moderate; 2+ = high
   return venue.length >= 2 ? "high" : "moderate";
+}
+
+function decentralizationFromVenue(
+  profile: SelectorProfile,
+  venue: readonly SelectorVenue[],
+): SelectorInput["decentralization"] {
+  if (profile === "treasury" && venue.includes("active")) return "required";
+  return "any";
+}
+
+function custodyOkFromVenue(
+  profile: SelectorProfile,
+  venue: readonly SelectorVenue[],
+): SelectorInput["custodyOk"] {
+  if (profile === "treasury" && venue.includes("custody")) return "regulated-only";
+  if (profile === "treasury" && venue.includes("active")) return "onchain-only";
+  return "any";
 }
 
 // ---------------------------------------------------------------------------

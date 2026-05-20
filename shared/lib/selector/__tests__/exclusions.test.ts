@@ -5,6 +5,7 @@ import {
   applyInputDrivenExclusions,
   evaluateExclusions,
   hasRequiredSignals,
+  treasuryPegScoreFloor,
   tradingDewsCeiling,
 } from "../exclusions";
 import type { MergedRow, SelectorInput } from "../types";
@@ -94,6 +95,12 @@ describe("threshold helpers", () => {
     expect(tradingDewsCeiling("24h")).toBe(45);
     expect(tradingDewsCeiling("any")).toBe(55);
   });
+
+  it("treasuryPegScoreFloor scales with depeg tolerance", () => {
+    expect(treasuryPegScoreFloor("zero")).toBe(80);
+    expect(treasuryPegScoreFloor("tight")).toBe(70);
+    expect(treasuryPegScoreFloor("moderate")).toBe(60);
+  });
 });
 
 describe("universal exclusions", () => {
@@ -179,10 +186,70 @@ describe("treasury exclusions", () => {
     expect(evaluateExclusions(makeRow({ dewsScore: 55 }), input)).toBeNull();
   });
 
-  it("depeg-event-count: 2 excluded", () => {
-    expect(evaluateExclusions(makeRow({ depegEventCount: 2 }), input)).toEqual(
-      expect.objectContaining({ reason: "depeg-event-count" }),
-    );
+  it("historical depeg count does not exclude DeFi rows when PegScore passes", () => {
+    expect(
+      evaluateExclusions(
+        makeRow({
+          id: "bold-liquity-like",
+          symbol: "BOLD",
+          governance: "decentralized",
+          custodyModel: "onchain",
+          canBeBlacklisted: false,
+          depegEventCount: 4,
+          pegStabilityScore: 82,
+          pegScore: 93,
+          safetyDecentralizationScore: 88,
+        }),
+        makeInput({ profile: "treasury", depegTolerance: "zero" }),
+      ),
+    ).toBeNull();
+    expect(
+      evaluateExclusions(
+        makeRow({
+          id: "lusd-liquity-like",
+          symbol: "LUSD",
+          governance: "decentralized",
+          custodyModel: "onchain",
+          canBeBlacklisted: false,
+          depegEventCount: 565,
+          pegStabilityScore: 76,
+          pegScore: 76,
+          safetyDecentralizationScore: 90,
+        }),
+        makeInput({ profile: "treasury", depegTolerance: "tight" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("historical depeg count is not a hard Treasury gate when peg data is missing", () => {
+    expect(evaluateExclusions(makeRow({ depegEventCount: 2, pegScore: null }), input)).toBeNull();
+  });
+
+  it("weak PegScore fails Treasury by tolerance", () => {
+    expect(
+      evaluateExclusions(
+        makeRow({ pegStabilityScore: 40, pegScore: 95, depegEventCount: 2 }),
+        input,
+      ),
+    ).toBeNull();
+    expect(
+      evaluateExclusions(
+        makeRow({ pegStabilityScore: 85, pegScore: 69, depegEventCount: 2 }),
+        input,
+      ),
+    ).toEqual(expect.objectContaining({ reason: "peg-score-floor" }));
+    expect(
+      evaluateExclusions(
+        makeRow({ pegStabilityScore: 61, pegScore: 59 }),
+        makeInput({ profile: "treasury", depegTolerance: "moderate" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "peg-score-floor" }));
+    expect(
+      evaluateExclusions(
+        makeRow({ pegStabilityScore: 61, pegScore: 60 }),
+        makeInput({ profile: "treasury", depegTolerance: "moderate" }),
+      ),
+    ).toBeNull();
   });
 
   it("bluechip-d-or-f: D excluded, null passes", () => {
@@ -357,6 +424,48 @@ describe("input-driven exclusions", () => {
         makeInput({ custodyOk: "onchain-only" }),
       ),
     ).toEqual(expect.objectContaining({ reason: "custody-onchain-only-violation" }));
+  });
+
+  it("custody=onchain-only requires known on-chain custody", () => {
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "onchain" }),
+        makeInput({ custodyOk: "onchain-only" }),
+      ),
+    ).toBeNull();
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: null }),
+        makeInput({ custodyOk: "onchain-only" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "custody-onchain-only-violation" }));
+  });
+
+  it("custody=regulated-only allows regulated custody and excludes on-chain custody", () => {
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "institutional-regulated" }),
+        makeInput({ custodyOk: "regulated-only" }),
+      ),
+    ).toBeNull();
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "institutional-top" }),
+        makeInput({ custodyOk: "regulated-only" }),
+      ),
+    ).toBeNull();
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: "onchain" }),
+        makeInput({ custodyOk: "regulated-only" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "custody-regulated-only-violation" }));
+    expect(
+      applyInputDrivenExclusions(
+        makeRow({ custodyModel: null }),
+        makeInput({ custodyOk: "regulated-only" }),
+      ),
+    ).toEqual(expect.objectContaining({ reason: "custody-regulated-only-violation" }));
   });
 
   it("yieldNativeOnly + lending deployment excluded", () => {

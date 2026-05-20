@@ -84,4 +84,39 @@ describe("weights", () => {
     assertWeightsSumTo100("yield", vector);
     expect(vector.liquidity).toBeGreaterThan(WEIGHT_VECTORS.yield.liquidity ?? 0);
   });
+
+  it("Treasury active DeFi intent materially shifts toward decentralization, liquidity, and exit", () => {
+    const activeByComposability = getWeightVectorForInput(makeInput({
+      profile: "treasury",
+      composability: "high",
+    }));
+    const activeByVenue = getWeightVectorForInput(makeInput({
+      profile: "treasury",
+      composability: "moderate",
+      venuePreferences: ["active"],
+    }));
+
+    assertWeightsSumTo100("treasury", activeByComposability);
+    expect(activeByVenue).toEqual(activeByComposability);
+    expect(activeByComposability.decentralization).toBeGreaterThan(
+      WEIGHT_VECTORS.treasury.decentralization ?? 0,
+    );
+    expect(activeByComposability.liquidity).toBeGreaterThanOrEqual(6);
+    expect(activeByComposability.effectiveExit).toBeGreaterThanOrEqual(6);
+    expect(activeByComposability.bluechip).toBe(0);
+    expect(activeByComposability.safetyOverall).toBeLessThan(
+      WEIGHT_VECTORS.treasury.safetyOverall ?? 0,
+    );
+  });
+
+  it("Treasury 1h exit emphasis does not reduce decentralization", () => {
+    const vector = getWeightVectorForInput(makeInput({
+      profile: "treasury",
+      exitSpeed: "1h",
+    }));
+    assertWeightsSumTo100("treasury", vector);
+    expect(vector.decentralization).toBe(WEIGHT_VECTORS.treasury.decentralization);
+    expect(vector.liquidity).toBeGreaterThan(0);
+    expect(vector.effectiveExit).toBeGreaterThan(0);
+  });
 });

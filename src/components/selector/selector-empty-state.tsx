@@ -10,6 +10,7 @@ export interface SelectorClosestSurvivor {
   symbol: string;
   failingDimension: string;
   liveReading: string;
+  hypotheticalScore?: number | null;
 }
 
 export interface SelectorRelaxableConstraint {
@@ -117,7 +118,7 @@ export function SelectorEmptyState({
   );
 }
 
-function readableFailingDimension(value: string): string {
+export function readableFailingDimension(value: string): string {
   const labels: Record<string, string> = {
     "below-supply-floor": "supply floor",
     "active-depeg": "active depeg",
@@ -127,6 +128,7 @@ function readableFailingDimension(value: string): string {
     "dews-ceiling": "DEWS stress",
     "depeg-event-count": "depeg history",
     "bluechip-d-or-f": "blue-chip alignment",
+    "peg-score-floor": "PegScore",
     "peg-stability-floor": "peg stability",
     "pys-null": "yield coverage",
     "apy-below-floor": "yield floor",
@@ -141,10 +143,11 @@ function readableFailingDimension(value: string): string {
     "peg-currency-mismatch": "peg currency",
     "yield-native-only-violation": "native yield",
     "decentralization-required-violation": "decentralization",
+    "custody-regulated-only-violation": "custody model",
     "custody-onchain-only-violation": "custody model",
     "howey-uncertain": "regulatory uncertainty",
     "template-coverage-gap": "template coverage",
     "coverage-too-thin": "coverage",
   };
-  return labels[value] ?? value.replace(/-/g, " ");
+  return labels[value] ?? "profile fit";
 }

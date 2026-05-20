@@ -51,7 +51,7 @@ import type {
 } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { getWeightVectorForInput } from "./weights";
-import { getTemplate } from "./what-to-watch-templates";
+import { renderWatchText } from "./what-to-watch-templates";
 import { whyKeysByProfile, WHY_KEYS_SET } from "./why-keys";
 
 export const ENGINE_VERSION = SELECTOR_VERSION;
@@ -350,6 +350,9 @@ function scoreRow(
   if (row.isRecentListing) {
     confidence -= 10;
     confidenceReasons.add("recent-listing");
+  }
+  if (profile === "treasury" && row.depegEventCount >= 2) {
+    confidence -= Math.min(12, row.depegEventCount * 3);
   }
   if (profile === "yield" && row.sourceSwitch) {
     confidence -= 8;
@@ -792,6 +795,14 @@ function relaxedFallbackReason(
   const exclusion = evaluateExclusions(row, input);
   if (exclusion == null) return null;
   if (RELAXED_FALLBACK_BLOCKED_REASONS.has(exclusion.reason)) return null;
+  if (
+    input.profile === "treasury" &&
+    (exclusion.reason === "depeg-event-count" ||
+      exclusion.reason === "peg-score-floor" ||
+      exclusion.reason === "peg-stability-floor")
+  ) {
+    return null;
+  }
   return exclusion.reason;
 }
 
@@ -901,6 +912,11 @@ function buildRecommendation(
     return null;
   }
   const safetyGrade: ReportCardGrade = entry.row.safetyGrade ?? "NR";
+  const contextKeys = Array.from(new Set([...lowest.contextKeys, ...contextKeysFor(entry.row)]));
+  const lowestWithContext = {
+    ...lowest,
+    contextKeys,
+  };
   const base = {
     id: entry.row.id,
     symbol: entry.row.symbol,
@@ -912,12 +928,8 @@ function buildRecommendation(
     components: entry.components,
     whyKeys: pickWhyKeys(entry.row, profile, input),
     whyText: buildWhyText(entry, profile),
-    watchText: getTemplate(lowest.key, profile)?.oneLineExplanation,
-    lowestSubDimension: {
-      ...lowest,
-      // Merge engine-derived context keys with the helper's defaults.
-      contextKeys: Array.from(new Set([...lowest.contextKeys, ...contextKeysFor(entry.row)])),
-    },
+    watchText: renderWatchText(lowestWithContext, profile, entry.row),
+    lowestSubDimension: lowestWithContext,
     chainHints: buildChainHints(entry.row, profile),
     rankRobustness,
     relaxedReason: entry.relaxedReason,
@@ -993,10 +1005,21 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
         : "active depeg flag";
     case "depeg-event-count":
       return `${row.depegEventCount} depeg events`;
+    case "peg-score-floor":
+      return row.pegScore != null
+        ? `PegScore ${Math.round(row.pegScore)}`
+        : "missing PegScore";
     case "peg-stability-floor":
-      return row.pegStabilityScore != null
-        ? `peg history ${Math.round(row.pegStabilityScore)}`
-        : "missing peg history";
+      if (row.pegStabilityScore != null && row.pegScore != null) {
+        return `peg history ${Math.round(row.pegStabilityScore)}, PegScore ${Math.round(row.pegScore)}`;
+      }
+      if (row.pegStabilityScore != null) {
+        return `peg history ${Math.round(row.pegStabilityScore)}`;
+      }
+      if (row.pegScore != null) {
+        return `PegScore ${Math.round(row.pegScore)}`;
+      }
+      return "missing peg-quality data";
     case "dews-ceiling":
       return row.dewsScore != null ? `DEWS ${Math.round(row.dewsScore)}` : "missing DEWS";
     case "safety-resilience-floor":
@@ -1020,6 +1043,14 @@ function liveReadingFor(reason: ExclusionReason, row: MergedRow): string {
     case "yield-warning-unstable":
     case "yield-warning-thin-tvl":
       return row.warningSignals.length > 0 ? row.warningSignals.join(", ") : "yield warning";
+    case "custody-regulated-only-violation":
+      return row.custodyModel != null
+        ? `custody model ${row.custodyModel}`
+        : "custody model unavailable";
+    case "custody-onchain-only-violation":
+      return row.custodyModel != null
+        ? `custody model ${row.custodyModel}`
+        : "custody model unavailable";
     case "coverage-too-thin":
       return "required signals missing";
     default:
@@ -1073,6 +1104,7 @@ function buildRelaxableConstraints(
   const depegReason = hasExcludedReason(excluded, [
     "active-depeg",
     "depeg-event-count",
+    "peg-score-floor",
     "peg-stability-floor",
   ]);
   if (input.depegTolerance === "zero" || input.depegTolerance === "tight" || depegReason) {

@@ -65,6 +65,17 @@ export function tradingDewsCeiling(exitSpeed: SelectorExitSpeed): number {
   }
 }
 
+export function treasuryPegScoreFloor(tol: SelectorDepegTolerance): number {
+  switch (tol) {
+    case "zero":
+      return 80;
+    case "tight":
+      return 70;
+    case "moderate":
+      return 60;
+  }
+}
+
 const TREASURY_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D", "C-", "C"]);
 const YIELD_TRADING_GRADE_REJECT: ReadonlySet<string> = new Set(["F", "D"]);
 
@@ -131,7 +142,7 @@ export function applyProfileExclusions(
 ): ExclusionRecord | null {
   switch (profile) {
     case "treasury":
-      return treasuryExclusions(row);
+      return treasuryExclusions(row, input);
     case "yield":
       return yieldExclusions(row, input);
     case "trading":
@@ -139,7 +150,7 @@ export function applyProfileExclusions(
   }
 }
 
-function treasuryExclusions(row: MergedRow): ExclusionRecord | null {
+function treasuryExclusions(row: MergedRow, input: SelectorInput): ExclusionRecord | null {
   if (row.safetyGrade != null && TREASURY_GRADE_REJECT.has(row.safetyGrade)) {
     return fail(row.id, "safety-grade-floor");
   }
@@ -152,8 +163,14 @@ function treasuryExclusions(row: MergedRow): ExclusionRecord | null {
   if (row.dewsScore != null && row.dewsScore > 60) {
     return fail(row.id, "dews-ceiling");
   }
-  if (row.depegEventCount >= 2) {
-    return fail(row.id, "depeg-event-count");
+  const pegScoreFloor = treasuryPegScoreFloor(input.depegTolerance);
+  if (row.pegScore != null && row.pegScore < pegScoreFloor) {
+    return fail(
+      row.id,
+      "peg-score-floor",
+      "hard",
+      `PegScore ${Math.round(row.pegScore)} below ${pegScoreFloor}`,
+    );
   }
   if (row.bluechipGrade === "D" || row.bluechipGrade === "F") {
     return fail(row.id, "bluechip-d-or-f");
@@ -240,7 +257,7 @@ function tradingExclusions(row: MergedRow, input: SelectorInput): ExclusionRecor
 }
 
 /**
- * Input-driven exclusions (decentralization=required, custody=onchain-only,
+ * Input-driven exclusions (decentralization=required, custody rail preference,
  * yield-native-only). Returns the first matching record or `null`.
  */
 export function applyInputDrivenExclusions(
@@ -259,15 +276,16 @@ export function applyInputDrivenExclusions(
       return fail(row.id, "decentralization-required-violation");
     }
   }
-  if (input.custodyOk === "onchain-only" && row.custodyModel != null) {
-    const blocked = new Set([
-      "institutional-top",
-      "institutional-regulated",
-      "institutional-unregulated",
-      "institutional-sanctioned",
-      "cex",
-    ]);
-    if (blocked.has(row.custodyModel)) {
+  if (input.custodyOk === "regulated-only") {
+    if (
+      row.custodyModel !== "institutional-top" &&
+      row.custodyModel !== "institutional-regulated"
+    ) {
+      return fail(row.id, "custody-regulated-only-violation");
+    }
+  }
+  if (input.custodyOk === "onchain-only") {
+    if (row.custodyModel !== "onchain") {
       return fail(row.id, "custody-onchain-only-violation");
     }
   }
@@ -357,6 +375,7 @@ export const PROFILE_DEFINING_EXCLUSIONS: Record<
     "safety-dependency-risk-floor",
     "dews-ceiling",
     "depeg-event-count",
+    "peg-score-floor",
     "bluechip-d-or-f",
   ],
   yield: [

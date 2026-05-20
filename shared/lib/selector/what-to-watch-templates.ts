@@ -11,7 +11,13 @@
  *
  * Binding: `agents/selector-implementation-plan.md` §2.5 + §10 (Milestone 10).
  */
-import type { LowestSubDimensionKey, SelectorLowerRanked, SelectorProfile } from "./types";
+import type {
+  LowestSubDimension,
+  LowestSubDimensionKey,
+  MergedRow,
+  SelectorLowerRanked,
+  SelectorProfile,
+} from "./types";
 
 export interface WhatToWatchTemplate {
   /** Free-form prose ≤80 chars after substitution. */
@@ -154,14 +160,132 @@ export function getTemplate(
   return TEMPLATES[profile][key] ?? null;
 }
 
+function roundedBps(value: number): number {
+  return Math.round(Math.abs(value));
+}
+
+function hasFreezeControls(row: MergedRow): boolean {
+  return (
+    row.canBeBlacklisted === true ||
+    row.canBeBlacklisted === "dilutable" ||
+    row.canBeBlacklisted === "inherited" ||
+    row.canBeBlacklisted === "possible"
+  );
+}
+
+function custodyWatchText(row: MergedRow): string | null {
+  if (row.custodyModel === "cex") {
+    return "Custody routes through an exchange rail; settlement exposure is concentrated.";
+  }
+  if (
+    row.custodyModel === "institutional-top" ||
+    row.custodyModel === "institutional-regulated" ||
+    row.custodyModel === "institutional-unregulated" ||
+    row.custodyModel === "institutional-sanctioned"
+  ) {
+    return "Custody depends on one institutional rail; counterparty exposure is concentrated.";
+  }
+  return null;
+}
+
+function sourceRiskWatchText(row: MergedRow): string | null {
+  if (
+    row.venueRiskTier === "high" ||
+    (row.sourceRiskScore != null && row.sourceRiskScore >= 60)
+  ) {
+    return "Yield route carries elevated source risk; check venue depth before sizing.";
+  }
+  return null;
+}
+
+function thinTvlWatchText(row: MergedRow): string | null {
+  if (
+    row.warningSignals.includes("thin-tvl") ||
+    (row.effectiveTvlUsd != null && row.effectiveTvlUsd < 25_000_000)
+  ) {
+    return "Yield venue depth is thin; size the route against source TVL.";
+  }
+  return null;
+}
+
+export function renderWatchText(
+  lowest: LowestSubDimension,
+  profile: SelectorProfile,
+  row: MergedRow,
+): string | undefined {
+  if (lowest.key === "pegStability" && row.currentDeviationBps != null) {
+    const deviation = roundedBps(row.currentDeviationBps);
+    if (deviation >= 25) {
+      return `Current peg is ${deviation} bps off; compare against the tolerance setting.`;
+    }
+  }
+
+  if (lowest.key === "activeDepegHistory" && row.depegEventCount > 0) {
+    return `Depeg log shows ${row.depegEventCount} events; keep PegScore and peg history in view.`;
+  }
+
+  if (lowest.key === "governanceOverride" && hasFreezeControls(row)) {
+    return "Freeze or supply controls exist; review issuer permissions before routing.";
+  }
+
+  if (lowest.key === "custodyModel") {
+    const text = custodyWatchText(row);
+    if (text != null) return text;
+  }
+
+  if (lowest.key === "sourceRisk") {
+    const text = sourceRiskWatchText(row);
+    if (text != null) return text;
+  }
+
+  if (lowest.key === "liquidity") {
+    const text = thinTvlWatchText(row);
+    if (text != null) return text;
+  }
+
+  if (
+    lowest.key === "decentralization" &&
+    (row.governance === "centralized" || row.governance === "centralized-dependent")
+  ) {
+    return "Governance is centralized; admin decisions can change transfer rules.";
+  }
+
+  if (row.isRecentListing) {
+    return "Recent listing; compare fresh readings before sizing.";
+  }
+
+  if (row.currentDeviationBps != null && roundedBps(row.currentDeviationBps) >= 50) {
+    return `Current peg is ${roundedBps(row.currentDeviationBps)} bps off; compare against the tolerance setting.`;
+  }
+
+  if (row.depegEventCount >= 2) {
+    return `Depeg log shows ${row.depegEventCount} events; keep PegScore and peg history in view.`;
+  }
+
+  if (hasFreezeControls(row)) {
+    return "Freeze or supply controls exist; review issuer permissions before routing.";
+  }
+
+  const sourceRiskText = sourceRiskWatchText(row);
+  if (sourceRiskText != null) return sourceRiskText;
+
+  const thinTvlText = thinTvlWatchText(row);
+  if (thinTvlText != null) return thinTvlText;
+
+  return getTemplate(lowest.key, profile)?.oneLineExplanation;
+}
+
 const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
   "active-depeg": "the current peg-deviation gate",
-  "depeg-event-count": "the depeg-history gate",
+  "depeg-event-count": "depeg history with incomplete peg-quality coverage",
+  "peg-score-floor": "the PegScore floor",
   "peg-stability-floor": "the peg-stability floor",
   "safety-resilience-floor": "the resilience floor",
   "safety-dependency-risk-floor": "the dependency-risk floor",
   "dews-ceiling": "the stress-signal ceiling",
   "bluechip-d-or-f": "the third-party bluechip floor",
+  "custody-regulated-only-violation": "the regulated-custody rail",
+  "custody-onchain-only-violation": "the on-chain custody rail",
   "high-venue-on-c-tier": "the venue-risk gate",
   "yield-warning-unstable": "the APY-stability warning gate",
   "yield-warning-thin-tvl": "the source-depth warning gate",

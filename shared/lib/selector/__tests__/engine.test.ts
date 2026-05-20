@@ -130,6 +130,71 @@ describe("runSelector — Treasury happy path", () => {
       expect(rec.recommendedSource).toBeNull();
     }
   });
+
+  it("keeps high-quality DeFi rows with depeg history eligible while surfacing context", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const row: MergedRow = {
+      ...base!,
+      id: "bold-liquity-like",
+      symbol: "BOLD",
+      name: "BOLD-like DeFi Stable",
+      protocolSlug: "liquity-like",
+      variantOf: null,
+      governance: "decentralized",
+      canBeBlacklisted: false,
+      custodyModel: "onchain",
+      depegEventCount: 4,
+      pegStabilityScore: 90,
+      pegScore: 95,
+      safetyScore: 92,
+      safetyResilienceScore: 91,
+      safetyDependencyRiskScore: 90,
+      safetyDecentralizationScore: 92,
+      safetyLiquidityScore: 88,
+      collateralQuality: 89,
+    };
+
+    const out = runSelector(
+      makeInput({ profile: "treasury", depegTolerance: "zero" }),
+      { rows: new Map([[row.id, row]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended.map((rec) => rec.id)).toEqual([row.id]);
+    expect(out.exclusionSummary.map((item) => item.reason)).not.toContain("depeg-event-count");
+    expect(out.recommended[0]?.confidence).toBeLessThan(100);
+    expect(out.recommended[0]?.lowestSubDimension.contextKeys).toContain("depeg-history");
+    expect(out.recommended[0]?.watchText).toContain("4 events");
+  });
+
+  it("keeps weak Treasury PegScore rows hard-excluded", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const row: MergedRow = {
+      ...base!,
+      id: "weak-peg-treasury",
+      symbol: "WPEG",
+      name: "Weak Peg Treasury",
+      protocolSlug: "weak-peg",
+      variantOf: null,
+      depegEventCount: 3,
+      pegStabilityScore: 95,
+      pegScore: 65,
+    };
+
+    const out = runSelector(
+      makeInput({ profile: "treasury", depegTolerance: "tight" }),
+      { rows: new Map([[row.id, row]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended).toEqual([]);
+    expect(out.exclusionSummary).toEqual([
+      expect.objectContaining({ reason: "peg-score-floor", count: 1 }),
+    ]);
+    expect(out.usedRelaxedFallback).toBe(false);
+  });
 });
 
 describe("runSelector — Yield happy path", () => {

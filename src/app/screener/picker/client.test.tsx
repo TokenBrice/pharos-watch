@@ -92,7 +92,7 @@ function mockSelectorOutput(overrides: {
     usedRelaxedFallback: false,
     relaxedReasons: [],
     exclusionSummary: [],
-    closestSurvivors: [],
+    closestSurvivors: overrides.closestSurvivors ?? [],
     relaxableConstraints: [],
     timestamp: 1_700_000_000_000,
     engineVersion: "selector-v1.2",
@@ -302,6 +302,34 @@ describe("SelectorClient — state machine", () => {
     expect((await screen.findAllByText(/Shortlist/i)).length).toBeGreaterThan(0);
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText(/Treasury profile result/i)).toBeTruthy();
+    const compare = screen.getByRole("link", { name: /Compare these/i });
+    expect(compare.getAttribute("href")).toBe("/compare/?coins=usdc-usd-coin");
+  });
+
+  it("shows near misses even when a shortlist is present", async () => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+      mockSelectorOutput({
+        input,
+        closestSurvivors: [
+          {
+            id: "near",
+            symbol: "NEAR",
+            failingDimension: "liquidity-floor",
+            liveReading: "Liquidity 42",
+            reason: "liquidity-floor",
+            hypotheticalScore: 74.5,
+          },
+        ],
+      }));
+
+    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+    render(<SelectorClient />);
+
+    expect(await screen.findByText(/Near misses \/ why not shown/i)).toBeTruthy();
+    expect(screen.getByText(/NEAR/)).toBeTruthy();
+    expect(screen.getByText(/missed on liquidity/i)).toBeTruthy();
+    expect(screen.getByText(/Hypothetical score 74.5/i)).toBeTruthy();
   });
 
   it("does not render a duplicate compare link inside the shortlist section", async () => {
@@ -368,9 +396,10 @@ describe("SelectorClient — state machine", () => {
       .toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: /Next/i }));
-    expect(await screen.findByText(/How will you use the position/i)).toBeTruthy();
+    expect((await screen.findAllByText(/What custody or rail setup do you prefer/i)).length)
+      .toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByLabelText(/Pure custody/i));
+    fireEvent.click(screen.getByLabelText(/Regulated custody/i));
     expect(window.location.search).toContain("step=5");
     expect(screen.queryByText(/how fast do you need to be out/i)).toBeNull();
 
@@ -527,6 +556,36 @@ describe("selector-state input adapter", () => {
       venue: ["dex"],
       exitSpeed: "24h",
     })?.venuePreferences).toEqual(["dex"]);
+  });
+
+  it("maps Treasury DeFi-native rail preference to stronger selector intent", () => {
+    const input = toSelectorInput({
+      ...SELECTOR_STATE_DEFAULTS,
+      profile: "treasury",
+      pegCurrency: "USD",
+      horizon: "1to6m",
+      depegTolerance: "tight",
+      venue: ["active"],
+      exitSpeed: "any",
+    });
+
+    expect(input?.custodyOk).toBe("onchain-only");
+    expect(input?.decentralization).toBe("required");
+  });
+
+  it("maps Treasury regulated custody rail preference to regulated custody intent", () => {
+    const input = toSelectorInput({
+      ...SELECTOR_STATE_DEFAULTS,
+      profile: "treasury",
+      pegCurrency: "USD",
+      horizon: "1to6m",
+      depegTolerance: "tight",
+      venue: ["custody"],
+      exitSpeed: "any",
+    });
+
+    expect(input?.custodyOk).toBe("regulated-only");
+    expect(input?.decentralization).toBe("any");
   });
 });
 
