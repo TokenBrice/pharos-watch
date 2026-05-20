@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Download } from "lucide-react";
-import { CitationBlock } from "@/components/citation-block";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import type { MethodologyChangelogEntry } from "@/components/methodology-version-card";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import {
   buildMethodologyChangelogMetadata,
@@ -33,7 +31,7 @@ interface MethodologyChangelogRouteConfig<T extends MethodologyChangelogSourceEn
   selectImpact?: (entry: T) => readonly string[];
   sections?: readonly { id: string; label: string }[];
   renderContent?: () => ReactNode;
-  /** URN identity for the citation block at page bottom. */
+  /** URN/PDF identity for the changelog route. */
   citation: {
     /** Methodology slug used as the URN id (e.g. "safety-score", "dews"). */
     id: string;
@@ -71,26 +69,15 @@ export function createMethodologyChangelogRoute<T extends MethodologyChangelogSo
   const pdfHref = `/methodology/pdf/${pdfKey}-${config.citation.versionLabel}.pdf`;
 
   const citationFooter = (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-        <span className="pharos-kicker text-foreground/80">White paper</span>
-        <a
-          href={pdfHref}
-          className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground hover:underline hover:underline-offset-4"
-        >
-          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          Download {config.title} {config.citation.versionLabel} (PDF)
-        </a>
-      </div>
-
-      <CitationBlock
-        entityClass="methodology"
-        id={config.citation.id}
-        qualifier={config.citation.versionLabel}
-        title={config.title}
-        url={`${SITE_URL}${config.path}`}
-        version={config.citation.versionLabel}
-      />
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-border/60 bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+      <span className="pharos-kicker text-foreground/80">White paper</span>
+      <a
+        href={pdfHref}
+        className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground hover:underline hover:underline-offset-4"
+      >
+        <Download className="h-3.5 w-3.5" aria-hidden="true" />
+        Download {config.title} {config.citation.versionLabel} (PDF)
+      </a>
     </div>
   );
 

@@ -24,7 +24,7 @@ The route shell is owned directly by `src/app/about/page.tsx`.
 - `headerSupplement` renders `AboutReferenceModule` immediately below the title/lead with reference cards derived from `NAV_GROUPS.info` excluding `/about`: `/funding/`, `/methodology/`, `/learn/mechanisms/`, `/coverage/`, `/api/`, and `/changelog/`
 - the shell's `preface` injects FAQ JSON-LD describing why Pharos exists, what it tracks, how it classifies coins, and where the data comes from
 - the same FAQ items render visibly near the bottom of the page, before the disclaimer, so the `FAQPage` JSON-LD matches user-visible Q&A content
-- public trust subroutes live under `/about/`: `/about/principles/` states the editorial/product principles and `/about/editorial/` states the AI editorial policy. Both render citation blocks with deterministic Pharos citation metadata.
+- public trust subroutes live under `/about/`: `/about/principles/` states the editorial/product principles and `/about/editorial/` states the AI editorial policy.
 
 ## Section Contract
 

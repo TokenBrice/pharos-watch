@@ -37,7 +37,7 @@ The colon `:` is the only structural separator. Reader tooling can split `urn.sp
 | `depeg-report` | A per-event depeg report (post-mortem) | `urn:pharos:depeg-report:usdc-2023-03` |
 | `page` | A first-class editorial or policy page | `urn:pharos:page:principles` |
 
-Adding a new entity class is an explicit, deliberate event recorded here. The `page` class was added in 2026-05 to carry citations on the About / Principles / Editorial AI policy surfaces. Existing classes remain stable; do not rename, remove, or repurpose any entry once it has shipped.
+Adding a new entity class is an explicit, deliberate event recorded here. The `page` class was added in 2026-05 for About / Principles / Editorial AI policy identifiers. Existing classes remain stable; do not rename, remove, or repurpose any entry once it has shipped.
 
 ---
 
@@ -52,9 +52,9 @@ Pages with permanently immutable URLs (digests, depeg events, cemetery entries) 
 
 ## Display rules
 
-1. Render the URN as a `<code>` element with a copy affordance.
-2. **Do not** render the URN as a clickable link in v1. There is no resolver yet (`https://pharos.watch/r/<urn>` is deferred).
-3. The full citation block (BibTeX, APA 7, Chicago, plain) is provided by `<CitationBlock>` in `src/components/citation-block.tsx`.
+1. **Do not** render a sitewide "Cite this page" block on public pages.
+2. When a specialized artifact must expose a URN, render it as a `<code>` element with a copy affordance.
+3. **Do not** render the URN as a clickable link in v1. There is no resolver yet (`https://pharos.watch/r/<urn>` is deferred).
 
 ---
 
@@ -82,7 +82,7 @@ The pattern already exists for contract addresses in `src/lib/stablecoin-detail-
 
 ## Accessed-date pinning
 
-The "accessed" date in any rendered citation must come from `src/generated/sitemap-dates.json` (the build's freeze date), not from `new Date()` in the browser. This keeps the same date across HTML, RSS feeds, and any future PDF artifact for the same build. The `<CitationBlock>` component handles this automatically.
+The "accessed" date in any generated citation artifact must come from deterministic build metadata, not from `new Date()` in the browser. This keeps dates stable across HTML, RSS feeds, and any future PDF artifact for the same build.
 
 ---
 
@@ -90,5 +90,4 @@ The "accessed" date in any rendered citation must come from `src/generated/sitem
 
 - `shared/lib/citation/urn.ts` — formatter + parser.
 - `shared/lib/citation/formats.ts` — BibTeX, APA 7, Chicago, plain renderers.
-- `src/components/citation-block.tsx` — UI component.
 - `agents/council13/research/05-citation-seo.md` — original research with rationale.

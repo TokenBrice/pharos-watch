@@ -1,5 +1,5 @@
 /**
- * Citation format renderers for the Pharos `<CitationBlock>` component.
+ * Citation format renderers for Pharos citation artifacts.
  *
  * BibTeX, APA 7, Chicago author-date, and a plain URL+URN line.
  *
