@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -12,6 +11,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { YIELD_SECTION_CONTENT } from "../methodology-content";
+import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 export function YieldIntelligenceMethodologySection() {
   return (
           <MethodologySectionShell
@@ -40,12 +40,7 @@ export function YieldIntelligenceMethodologySection() {
                 profit-unlock stream instead of a trailing exchange-rate delta; pre-launch assets remain manifest-visible
                 as intentional gaps but cannot publish into the live leaderboard before launch.
               </p>
-              <p className="text-xs text-muted-foreground">
-                See also:{" "}
-                <a href="#safety-scores-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Safety Scores</a>
-                {" · "}
-                <a href="#liquidity-methodology" className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors">Liquidity Score</a>
-              </p>
+              <YieldMethodologyRelatedLinks />
               <MethodologyFacts
                 facts={[
                   { label: "Update cadence", value: "1h publish / 4h supplemental" },
@@ -270,23 +265,7 @@ export function YieldIntelligenceMethodologySection() {
                     of 40 (NR) is only a missing-safety fallback, so a NAV token&apos;s PYS can still reflect a full safety
                     assessment when report-card hydration succeeds.
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    See the mechanism explainers for{" "}
-                    <Link
-                      href="/learn/mechanisms/tbill/"
-                      className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
-                    >
-                      tokenized Treasury (T-bill) designs
-                    </Link>
-                    {" "}and{" "}
-                    <Link
-                      href="/learn/mechanisms/rwa-credit-fund/"
-                      className="text-foreground/70 underline underline-offset-2 hover:text-foreground transition-colors"
-                    >
-                      tokenized credit funds
-                    </Link>
-                    .
-                  </p>
+                  <YieldNavTokenMechanismLinks />
                 </div>
                 {/* Limitations */}
                 <div className="space-y-2">

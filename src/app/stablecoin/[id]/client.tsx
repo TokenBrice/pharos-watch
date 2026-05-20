@@ -40,7 +40,8 @@ import { DEWSDetail } from "@/components/dews-detail";
 import { ExploitNoticeBanner } from "@/components/exploit-notice-banner";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import { useStablecoinDetailViewModel, type StablecoinDetailSummary } from "@/hooks/use-stablecoin-detail-view-model";
-import { GOVERNANCE_LABELS } from "@shared/lib/classification";
+import { GOVERNANCE_LABELS, resolveMechanismArchetype } from "@shared/lib/classification";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
@@ -288,6 +289,12 @@ export default function StablecoinDetailClient({
     viewModel.coin.flags.pegCurrency === "USD"
     && !viewModel.isNavToken
     && viewModel.supplyHistory.length > 0;
+  const resolvedMechanismArchetype = resolveMechanismArchetype(viewModel.coin, TRACKED_META_BY_ID);
+  const archetypeOverride = viewModel.coin.archetypeOverride === true;
+  const isWrapperVariant = viewModel.isVariant && !archetypeOverride;
+  const parentArchetype = isWrapperVariant && viewModel.variantParent
+    ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
+    : null;
 
   return (
     <div>
@@ -368,11 +375,11 @@ export default function StablecoinDetailClient({
         <section id="info">
           <KeyInfoCard
             meta={viewModel.coin}
-            resolvedMechanismArchetype={viewModel.resolvedMechanismArchetype}
-            isWrapper={viewModel.isVariant && !viewModel.archetypeOverride}
-            parentSymbol={viewModel.parentSymbol}
-            parentArchetype={viewModel.parentArchetype}
-            variantKind={viewModel.variantKindResolved}
+            resolvedMechanismArchetype={resolvedMechanismArchetype}
+            isWrapper={isWrapperVariant}
+            parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
+            parentArchetype={parentArchetype}
+            variantKind={viewModel.coin.variantKind ?? null}
           />
         </section>
       </div>

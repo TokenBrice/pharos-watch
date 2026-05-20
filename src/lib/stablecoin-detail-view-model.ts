@@ -40,9 +40,8 @@ import {
 import type { ApiMeta } from "@/lib/api";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
-import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
+import { isThreatBand } from "@shared/lib/classification";
 import { deriveStablecoinVerdict, type StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
-import type { MechanismArchetype } from "@shared/types";
 import { getVariantParent, getVariantRelationship, getVariants } from "@shared/lib/stablecoins";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
@@ -369,16 +368,6 @@ interface StablecoinDetailReadyViewModel extends BaseViewModel {
   supplyError: unknown | null;
   staleQueries: StablecoinDetailStaleQuery[];
   verdict: StablecoinVerdict;
-  /** Effective archetype resolved via variant inheritance. Use this instead of coin.mechanismArchetype. */
-  resolvedMechanismArchetype: MechanismArchetype | null;
-  /** archetypeOverride flag from the coin JSON — true when the variant's archetype intentionally differs from its parent. */
-  archetypeOverride: boolean;
-  /** Symbol of the parent coin (only set when isVariant && !archetypeOverride). */
-  parentSymbol: string | null;
-  /** Resolved archetype of the parent coin (only set when isVariant && !archetypeOverride). */
-  parentArchetype: MechanismArchetype | null;
-  /** Variant kind of this coin (e.g. "savings-passthrough", only set when isVariant). */
-  variantKindResolved: VariantKind | null;
 }
 
 export interface HeroTertiaryMetricViewModel {
@@ -739,12 +728,6 @@ export function buildStablecoinDetailViewModel({
   const variantParent = getVariantParent(id);
   const childVariants = getVariants(id);
   const reserves = supplemental.reserves.live ?? getReserves(coin);
-  const resolvedMechanismArchetype = resolveMechanismArchetype(coin, TRACKED_META_BY_ID);
-  const archetypeOverride = coin.archetypeOverride === true;
-  const isWrapperVariant = variantParent !== null && !archetypeOverride;
-  const parentSymbol = isWrapperVariant ? variantParent.symbol : null;
-  const parentArchetype = isWrapperVariant ? resolveMechanismArchetype(variantParent, TRACKED_META_BY_ID) : null;
-  const variantKindResolved = coin.variantKind ?? null;
   const stressBand = featureAvailability.stressSignal && isThreatBand(featureAvailability.stressSignal.band)
     ? featureAvailability.stressSignal.band
     : null;
@@ -753,7 +736,7 @@ export function buildStablecoinDetailViewModel({
     reportCardGrade: reportCard?.overallGrade ?? null,
     pegScore: pegPrice.pegScoreResult?.pegScore ?? null,
     dewsBand: stressBand,
-    mechanismArchetype: resolvedMechanismArchetype ?? undefined,
+    mechanismArchetype: coin.mechanismArchetype,
     governance: coin.flags.governance,
     yieldBearing: coin.flags.yieldBearing ?? false,
     activeDepeg: pegPrice.pegScoreResult?.activeDepeg === true,
@@ -802,10 +785,5 @@ export function buildStablecoinDetailViewModel({
     supplyError: supplyHistory.error,
     staleQueries: buildStaleQueryInputs(queries),
     verdict,
-    resolvedMechanismArchetype,
-    archetypeOverride,
-    parentSymbol,
-    parentArchetype,
-    variantKindResolved,
   };
 }
