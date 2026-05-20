@@ -6,11 +6,20 @@ import {
   getCoinsByLifecycleStatus,
   nestVariants,
 } from "@shared/lib/stablecoins/by-mechanism";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
+import { logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 import type { ArchetypeContent, ArchetypeDecommissioned } from "./content";
+
+const DEAD_LOGO_BY_ID = new Map(
+  DEAD_STABLECOINS.map((d) => [
+    d.id,
+    d.logo ? `/logos/cemetery/${d.logo}` : null,
+  ]),
+);
 
 export function ArchetypeExplainerBody({
   content,
@@ -211,19 +220,33 @@ function RepresentativeCoins({
         {coins.map((coin) => {
           const meta = TRACKED_META_BY_ID.get(coin.coinId);
           if (!meta) return null;
+          const logoSrc = logosById[coin.coinId];
           return (
             <li key={coin.coinId}>
               <Link
                 href={buildStablecoinUrl(coin.coinId)}
                 className="pharos-focus-ring group grid gap-3 py-5 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
-                    {meta.symbol}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {meta.name}
-                  </span>
+                <div className="flex items-start gap-2.5">
+                  {logoSrc ? (
+                    <img
+                      src={logoSrc}
+                      alt=""
+                      aria-hidden="true"
+                      width={20}
+                      height={20}
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded-full"
+                      loading="lazy"
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex flex-col gap-0.5">
+                    <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
+                      {meta.symbol}
+                    </span>
+                    <span className="text-xs leading-snug text-muted-foreground">
+                      {meta.name}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-[15px] leading-relaxed text-muted-foreground">
                   {coin.note}
@@ -287,22 +310,36 @@ function Decommissioned({
         <SectionHeading>Designs that broke and stayed broken</SectionHeading>
       </div>
       <ul className="divide-y divide-border/40">
-        {items.map((item) => (
-          <li
-            key={`${item.name}-${item.date}`}
-            className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,14ch)_minmax(0,8ch)_minmax(0,1fr)] sm:gap-8 sm:py-5"
-          >
-            <span className="text-base font-semibold tracking-tight text-foreground">
-              {item.name}
-            </span>
-            <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
-              {item.date}
-            </span>
-            <p className="text-[15px] leading-relaxed text-muted-foreground">
-              {item.obituary}
-            </p>
-          </li>
-        ))}
+        {items.map((item) => {
+          const logoSrc = item.coinId ? DEAD_LOGO_BY_ID.get(item.coinId) : null;
+          return (
+            <li
+              key={`${item.name}-${item.date}`}
+              className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,14ch)_minmax(0,8ch)_minmax(0,1fr)] sm:gap-8 sm:py-5"
+            >
+              <span className="flex items-center gap-2.5 text-base font-semibold tracking-tight text-foreground">
+                {logoSrc ? (
+                  <img
+                    src={logoSrc}
+                    alt=""
+                    aria-hidden="true"
+                    width={20}
+                    height={20}
+                    className="h-5 w-5 shrink-0 rounded-full opacity-70 grayscale"
+                    loading="lazy"
+                  />
+                ) : null}
+                <span className="min-w-0 leading-tight">{item.name}</span>
+              </span>
+              <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+                {item.date}
+              </span>
+              <p className="text-[15px] leading-relaxed text-muted-foreground">
+                {item.obituary}
+              </p>
+            </li>
+          );
+        })}
       </ul>
       <p className="pt-2 text-[15px] text-muted-foreground">
         Full obituaries, peak market caps, and post-mortems in the{" "}
