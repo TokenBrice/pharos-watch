@@ -5,6 +5,24 @@
  */
 
 .exit-route-instrument {
+  --route-stage-top: oklch(0.985 0.006 248);
+  --route-stage-bottom: oklch(0.948 0.014 248);
+  --route-grid: oklch(0.46 0.024 248 / 0.20);
+  --route-frame: oklch(0.74 0.018 248);
+  --route-channel-edge: oklch(0.93 0.022 222 / 0.86);
+  --route-channel-throat: oklch(0.87 0.034 226 / 0.94);
+  --route-rail: oklch(0.46 0.024 248 / 0.46);
+  --route-throat-panel: oklch(0.992 0.008 248 / 0.92);
+  --route-throat-marker: oklch(0.52 0.14 178);
+  --route-flow-marker: oklch(0.52 0.14 178 / 0.38);
+  --route-lane-highlight: oklch(1 0 0 / 0.62);
+  --route-chip-bg: oklch(0.992 0.006 248 / 0.96);
+  --route-hero: oklch(0.20 0.024 248);
+  --route-caption: oklch(0.42 0.022 248);
+  --route-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark .exit-route-instrument {
   --route-stage-top: oklch(0.15 0.018 248);
   --route-stage-bottom: oklch(0.08 0.012 248);
   --route-grid: oklch(0.58 0.024 248 / 0.16);
@@ -19,7 +37,6 @@
   --route-chip-bg: oklch(0.06 0.012 248 / 0.94);
   --route-hero: oklch(0.96 0.006 248);
   --route-caption: oklch(0.70 0.018 248);
-  --route-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .exit-route-instrument {
@@ -114,13 +131,20 @@
   grid-template-columns: repeat(3, minmax(0, auto)) minmax(12rem, 1fr);
   gap: 10px 14px;
   align-items: center;
-  border-top: 1px solid oklch(1 0 0 / 0.08);
+  border-top: 1px solid hsl(var(--border) / 0.6);
   background:
-    linear-gradient(90deg, oklch(0.78 0.14 178 / 0.09), transparent 52%),
-    oklch(0.05 0.012 248 / 0.46);
+    linear-gradient(90deg, oklch(0.52 0.14 178 / 0.10), transparent 52%),
+    oklch(0.97 0.012 248 / 0.78);
   padding: 10px 12px;
   min-width: 0;
   max-width: 100%;
+}
+
+.dark .exit-route-selection-panel {
+  border-top-color: oklch(1 0 0 / 0.08);
+  background:
+    linear-gradient(90deg, oklch(0.78 0.14 178 / 0.09), transparent 52%),
+    oklch(0.05 0.012 248 / 0.46);
 }
 
 .exit-route-fallback-list {

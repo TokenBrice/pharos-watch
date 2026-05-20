@@ -102,6 +102,15 @@
   --score-amber: var(--p-amber-300);
   --score-red:   var(--p-red-500);
 
+  /* ── Mechanism Archetype Accents ──────────────────────────────── */
+  /* Used by the mechanism-diagram step numbers and ribbons. */
+  --mechanism-fiat-cash:               oklch(0.67 0.17 252);
+  --mechanism-tbill:                   oklch(0.65 0.21 295);
+  --mechanism-cdp:                     oklch(0.75 0.13 212);
+  --mechanism-synthetic-delta-neutral: oklch(0.68 0.13 182);
+  --mechanism-algorithmic:             oklch(0.7  0.18 15);
+  --mechanism-rwa-credit-fund:         oklch(0.7  0.15 50);
+
   /* ── Interactive States ───────────────────────────────────────── */
   --interactive-hover:   oklch(0.95 0.005 260);
   --interactive-active:  oklch(0.91 0.005 260);
@@ -194,6 +203,15 @@
 
   /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
   --severity-severe:   var(--p-red-400);
+
+  /* ── Mechanism Archetype Accents (Dark) ────────────────────────
+     Same hues, lifted lightness/chroma for legibility on dark bg. */
+  --mechanism-fiat-cash:               oklch(0.74 0.16 252);
+  --mechanism-tbill:                   oklch(0.74 0.18 295);
+  --mechanism-cdp:                     oklch(0.80 0.12 212);
+  --mechanism-synthetic-delta-neutral: oklch(0.76 0.12 182);
+  --mechanism-algorithmic:             oklch(0.76 0.16 15);
+  --mechanism-rwa-credit-fund:         oklch(0.78 0.14 50);
 
   /* ── Featured Surfaces (Dark) ─────────────────────────────────── */
   --surface-featured-gradient: radial-gradient(120% 150% at 0% 0%, rgba(34,211,238,0.12), transparent 48%), linear-gradient(145deg, rgba(8,15,28,0.96), rgba(4,19,40,0.96) 55%, rgba(3,9,21,0.98));

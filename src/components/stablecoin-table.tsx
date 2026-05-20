@@ -146,10 +146,16 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
+  initialVisibleColumns?: readonly ColumnId[];
+  initialSort?: { key: StablecoinTableSortKey; direction: "asc" | "desc" };
   pinnedStablecoinIds?: readonly string[];
   onTogglePinnedStablecoin?: (stablecoinId: string) => void;
   onClearSearch?: () => void;
   onClearFilters?: () => void;
+  toolbarEyebrow?: string;
+  toolbarDescription?: string | null;
+  toolbarTitleId?: string;
+  toolbarMeta?: string;
 }
 
 export function StablecoinTable({
@@ -164,14 +170,20 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  initialVisibleColumns,
+  initialSort,
   pinnedStablecoinIds = EMPTY_PINNED_STABLECOIN_IDS,
   onTogglePinnedStablecoin,
   onClearSearch,
   onClearFilters,
+  toolbarEyebrow,
+  toolbarDescription,
+  toolbarTitleId,
+  toolbarMeta,
 }: StablecoinTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue } = useSort<StablecoinTableSortKey>(
-    "mcap",
-    "desc",
+    initialSort?.key ?? "mcap",
+    initialSort?.direction ?? "desc",
   );
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
@@ -187,10 +199,18 @@ export function StablecoinTable({
   const [density, setDensity] = useTableDensity();
   const densityConfig = DENSITY_CONFIGS[density];
 
-  // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
-  const deviceDefault = useMemo(
-    () => (isMobileColumns ? MOBILE_DEFAULT_COLUMNS : DEFAULT_VISIBLE_COLUMNS),
-    [isMobileColumns],
+  // Column visibility — mobile gets a reduced default (hiddenMobile columns start off).
+  // `initialVisibleColumns`, when provided, seeds the default for first-mount on this route
+  // (e.g., /home-alt/ ships a denser lens than /). Existing localStorage prefs still win on
+  // subsequent loads — the prop only seeds the default branch.
+  const deviceDefault = useMemo<ColumnId[]>(
+    () => {
+      if (initialVisibleColumns && initialVisibleColumns.length > 0) {
+        return [...initialVisibleColumns];
+      }
+      return isMobileColumns ? [...MOBILE_DEFAULT_COLUMNS] : [...DEFAULT_VISIBLE_COLUMNS];
+    },
+    [initialVisibleColumns, isMobileColumns],
   );
   const columnPreferenceKey = isMobileColumns ? "pharos-table-columns-mobile" : "pharos-table-columns";
   const [visibleColumns, setVisibleColumns, resetColumns] = usePreference<ColumnId[]>(
@@ -330,6 +350,10 @@ export function StablecoinTable({
         onExport={handleCsvExport}
         exportDisabled={displayed.length === 0}
         additionalActions={toolbarActions}
+        eyebrow={toolbarEyebrow}
+        description={toolbarDescription}
+        titleId={toolbarTitleId}
+        meta={toolbarMeta}
       />
       {filterPanel}
 

@@ -25,7 +25,18 @@ interface TableToolbarProps {
 
   // Additional actions
   additionalActions?: React.ReactNode;
+
+  // Copy overrides — callers can swap the eyebrow or hide the description
+  eyebrow?: string;
+  description?: string | null;
+  // When `titleId` is provided, the eyebrow is promoted to a proper h2 title
+  // (used by /home-alt/ to anchor the table region without a separate band).
+  titleId?: string;
+  meta?: string;
 }
+
+const DEFAULT_TOOLBAR_DESCRIPTION =
+  "Tune density, hide noise, and export the current lens without leaving the table.";
 
 export function TableToolbar({
   density,
@@ -37,13 +48,33 @@ export function TableToolbar({
   onExport,
   exportDisabled,
   additionalActions,
+  eyebrow = "Table Controls",
+  description = DEFAULT_TOOLBAR_DESCRIPTION,
+  titleId,
+  meta,
 }: TableToolbarProps) {
   return (
     <div className="pharos-table-toolbar">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-baseline xl:justify-between">
         <div className="min-w-0 space-y-1 xl:flex-1">
-          <p className="pharos-kicker">Table Controls</p>
-          <p className="pharos-meta hidden sm:block">Tune density, hide noise, and export the current lens without leaving the table.</p>
+          {titleId ? (
+            <h2
+              id={titleId}
+              className="font-mono text-base font-semibold uppercase tracking-tight text-foreground sm:text-lg"
+            >
+              {eyebrow}
+              {meta ? (
+                <span className="ml-3 align-middle font-mono text-xs tabular-nums text-muted-foreground">
+                  · {meta}
+                </span>
+              ) : null}
+            </h2>
+          ) : (
+            <p className="pharos-kicker">{eyebrow}</p>
+          )}
+          {description ? (
+            <p className="pharos-meta hidden sm:block">{description}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {additionalActions}
