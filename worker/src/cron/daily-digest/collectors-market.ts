@@ -1,4 +1,5 @@
 import type { DigestInputData } from "@shared/types/digest";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   ACTIVE_DEPEG_PROMPT_LIMIT,
@@ -66,6 +67,9 @@ export async function collectActiveDepegs(
     const rows = activeDepegs.results ?? [];
 
     const withImpact = rows.flatMap((row) => {
+      if (FROZEN_IDS.has(row.stablecoin_id)) {
+        return [];
+      }
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id) ?? 0;
       const ageHours = Math.max(0, Math.round((ctx.nowSec - row.started_at) / SECONDS.ONE_HOUR));
       const asset = ctx.stablecoinAssetById.get(row.stablecoin_id);

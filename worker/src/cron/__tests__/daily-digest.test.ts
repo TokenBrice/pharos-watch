@@ -102,7 +102,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
   ]),
   TRACKED_IDS: ids,
   ACTIVE_IDS: ids,
-  FROZEN_IDS: new Set<string>(),
+  FROZEN_IDS: new Set<string>(["usr-resolv"]),
   FROZEN_META_BY_ID: new Map<string, never>(),
   };
 });
@@ -1577,6 +1577,47 @@ describe("collectActiveDepegs", () => {
       currentPriceUsd: 0.99,
       peakPriceUsd: 0.443,
     });
+  });
+
+  it("filters frozen coins out of digest active depeg candidates", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM depeg_events WHERE ended_at IS NULL",
+        rows: [
+          {
+            stablecoin_id: "usr-resolv",
+            symbol: "USR",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -9025,
+            peak_price: 0.0975,
+            peg_reference: 1,
+            started_at: nowSec - 3600,
+          },
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            peg_type: "peggedUSD",
+            direction: "below",
+            peak_deviation_bps: -100,
+            peak_price: 0.99,
+            peg_reference: 1,
+            started_at: nowSec - 3600,
+          },
+        ],
+      },
+    ]);
+
+    const result = await collectActiveDepegs(makeCollectorCtx(db));
+
+    expect(result.value.activeDepegCount).toBe(1);
+    expect(result.value.topDepegs).toHaveLength(1);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+    });
+    expect(result.value.topDepegs.some((depeg) => depeg.stablecoinId === "usr-resolv")).toBe(false);
   });
 
   it("does not keep an active depeg candidate when fresh cache price recovered", async () => {
