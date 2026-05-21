@@ -205,6 +205,7 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs",
       "node scripts/build-data/build-client-registry.mjs",
       "node scripts/maintenance/generate-api-reference.mjs",
+      "node scripts/maintenance/build-og-editorial.mjs",
     ];
     const expectedCheckCommands = [
       "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
@@ -217,6 +218,7 @@ describe("validate-ci parity", () => {
       "node scripts/maintenance/generate-stablecoin-frozen-registry.mjs --check",
       "node scripts/build-data/build-client-registry.mjs --check",
       "node scripts/maintenance/generate-api-reference.mjs --check",
+      "node scripts/maintenance/build-og-editorial.mjs --check",
     ];
 
     expect(GENERATED_ARTIFACT_REGISTRY.map((artifact) => artifact.id)).toEqual([
@@ -230,6 +232,7 @@ describe("validate-ci parity", () => {
       "stablecoin-frozen-registry",
       "stablecoin-client-registry",
       "api-reference",
+      "og-editorial",
     ]);
     expect(buildGeneratedArtifactCommands()).toEqual(expectedCommands);
     expect(buildGeneratedArtifactCommands({ check: true })).toEqual(expectedCheckCommands);
