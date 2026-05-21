@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "pegCurrency": "USD",
     "governance": "centralized-dependent",
-    "yieldBearing": true,
+    "yieldBearing": false,
     "rwa": false,
     "navToken": false
   },
@@ -120,10 +120,6 @@
       "coinId": "usds-sky"
     }
   ],
-  "yieldConfig": {
-    "yieldSource": "dTRINITY dStake (sdUSD)",
-    "yieldType": "lending-vault"
-  },
   "notices": [
     {
       "type": "danger",

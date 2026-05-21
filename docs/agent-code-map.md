@@ -358,9 +358,9 @@ Use this as a compact discovery aid. It lists source entrypoints and top-level e
 
 ## Stablecoin data
 
-- `shared/data/stablecoins/canonical-order.json` - 392 entries
-- `shared/data/stablecoins/coins.client.generated.json` - 392 entries
-- `shared/data/stablecoins/coins.generated.json` - 392 entries
+- `shared/data/stablecoins/canonical-order.json` - 393 entries
+- `shared/data/stablecoins/coins.client.generated.json` - 393 entries
+- `shared/data/stablecoins/coins.generated.json` - 393 entries
 - `shared/data/stablecoins/coins/a7a5-old-vector.json` - 19 keys
 - `shared/data/stablecoins/coins/aa-falconx-mev-capital.json` - 23 keys
 - `shared/data/stablecoins/coins/acrdx-anemoy-apollo.json` - 25 keys

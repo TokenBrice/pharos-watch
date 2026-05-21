@@ -101,14 +101,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "f(x) Protocol Savings (fxSAVE)",
     yieldType: "lending-vault",
   },
-  // dUSD -> sdUSD (dTRINITY dStake ERC-4626 vault)
-  "dusd-dtrinity": {
-    variantSymbol: "sdUSD",
-    variantAddress: "0x4aCBcFa29fb085097c5f31783403EF7A7930F6Fe",
-    variantChain: "ethereum",
-    yieldSource: "dTRINITY dStake (sdUSD)",
-    yieldType: "lending-vault",
-  },
   // ftUSD -> sftUSD (Flying Tulip EpochRewardsVault — delta-neutral carry yield)
   "ftusd-flying-tulip": {
     variantSymbol: "sftUSD",

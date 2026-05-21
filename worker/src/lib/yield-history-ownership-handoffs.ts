@@ -23,6 +23,12 @@ export const YIELD_HISTORY_OWNERSHIP_HANDOFFS: Record<string, string[]> = {
     "5fd328af-4203-471b-bd16-1705c726d926",
     "onchain:crvusd-curve:scrvusd-current-rate",
   ],
+  "dusd-dtrinity": [
+    "defillama-weighted:dtrinity-sdusd",
+    "78049985-79a8-4343-8618-3c27d41d5054",
+    "f42cf641-393d-4671-895a-3c85cf7b1a57",
+    "664664bb-31e0-4e65-808d-6dc82bdb05bb",
+  ],
 };
 
 function getSuppressedYieldHistorySourceKeys(stablecoinId: string): string[] {

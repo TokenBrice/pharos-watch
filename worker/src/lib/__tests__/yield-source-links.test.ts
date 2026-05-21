@@ -46,11 +46,11 @@ describe("resolveYieldSourceUrl", () => {
   it("falls back to an app link from stablecoin metadata when present", () => {
     expect(
       resolveYieldSourceUrl({
-        stablecoinId: "dusd-dtrinity",
+        stablecoinId: "sdusd-dtrinity",
         sourceKey: "pool-dstake",
         yieldSource: "dTRINITY dStake (sdUSD)",
       }),
-    ).toBe("https://app.dtrinity.org/mint/dusd/");
+    ).toBe("https://app.dtrinity.org/");
   });
 
   it("falls back to the stablecoin website when no deeper source link is curated", () => {

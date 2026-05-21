@@ -1246,7 +1246,7 @@
       "backing": "crypto-backed",
       "pegCurrency": "USD",
       "governance": "centralized-dependent",
-      "yieldBearing": true,
+      "yieldBearing": false,
       "rwa": false,
       "navToken": false
     },
@@ -4137,6 +4137,24 @@
     "geckoId": "savings-dai",
     "variantOf": "dai-makerdao",
     "variantKind": "savings-passthrough"
+  },
+  {
+    "id": "sdusd-dtrinity",
+    "name": "dTRINITY Staked dUSD",
+    "symbol": "sdUSD",
+    "oneLiner": "sdUSD is dTRINITY's yield-bearing dUSD vault receipt; staked dUSD is supplied into dLEND and the share price accrues lending yield.",
+    "flags": {
+      "backing": "crypto-backed",
+      "pegCurrency": "USD",
+      "governance": "centralized-dependent",
+      "yieldBearing": true,
+      "rwa": false,
+      "navToken": true
+    },
+    "pegMechanism": "Stake dUSD to mint sdUSD vault receipts and unstake back into dUSD when dLEND liquidity is available; dSTAKE charges no staking fee, unstaking can incur up to 10 bps retained by the vault, and NAV appreciates as dLEND supply APY accrues.",
+    "geckoId": "dtrinity-staked-dusd",
+    "variantOf": "dusd-dtrinity",
+    "variantKind": "strategy-vault"
   },
   {
     "id": "sfrxusd-frax",

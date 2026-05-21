@@ -129,7 +129,7 @@ describe("yield config registry", () => {
       .map((entry) => entry.stablecoinId)
       .sort();
 
-    expect(quarantined).toEqual(["dusd-dtrinity", "reusd-re-protocol", "scrvusd-curve"]);
+    expect(quarantined).toEqual(["reusd-re-protocol", "scrvusd-curve"]);
   });
 
   it("moves tracked savings-wrapper runtime ownership from the parent ids to the child ids", () => {

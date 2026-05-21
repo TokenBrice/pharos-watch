@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 362 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 363 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -294,6 +294,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [StablR USD (USDR)](https://pharos.watch/stablecoin/usdr-stablr/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [USDU Finance (USDU)](https://pharos.watch/stablecoin/usdu-usdu-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [dTRINITY dUSD (dUSD)](https://pharos.watch/stablecoin/dusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [dTRINITY Staked dUSD (sdUSD)](https://pharos.watch/stablecoin/sdusd-dtrinity/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Alto DUSD (DUSD)](https://pharos.watch/stablecoin/dusd-alto/): decentralized stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Superstate USTB (USTB)](https://pharos.watch/stablecoin/ustb-superstate/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Ondo OUSG (OUSG)](https://pharos.watch/stablecoin/ousg-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.

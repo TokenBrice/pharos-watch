@@ -1519,6 +1519,16 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
+  "sdusd-dtrinity": {
+    "title": "The dUSD Lender Receipt",
+    "text": "sdUSD is dTRINITY's yield-bearing wrapper for dUSD deposits in dLEND, so the token is best read as liquid dUSD lender exposure rather than a separate reserve asset. The wrapper is chain-isolated like dUSD itself: Ethereum sdUSD and Fraxtal sdUSD use separate deployments and are not fungible across chains. Yield comes from dLEND supply APY and accrues through the vault's NAV, while exits depend on available dUSD liquidity in dLEND or secondary-market depth. The important dependency is direct: sdUSD inherits dUSD reserve, peg, exploit, and dLEND bad-debt risk, with an extra strategy-vault layer on top. Pharos therefore treats sdUSD as a tracked {{term:yield-bearing}}yield-bearing{{/term}} NAV variant of dUSD.",
+    "updatedAt": "2026-05-21",
+    "authoredBy": "ai",
+    "model": "gpt-5",
+    "reviewedBy": "@TokenBrice",
+    "reviewedAt": "2026-05-21",
+    "factsAsOf": "2026-05-21"
+  },
   "thbill-theo": {
     "title": "Wrapping the Wrappers",
     "text": "a three-entity, two-wrapper path from token to bond, backed by Standard Chartered Libeara's ULTRA fund managed by Wellington. Theo's thBILL is 100% backed by tULTRA, which wraps Standard Chartered Libeara's ULTRA fund, which holds actual U.S. {{term:treasury}}Treasury{{/term}} bills as a tokenized {{term:money-market-fund}}money-market fund{{/term}} managed by Wellington Management -- three entities and two wrappers between your token and a government bond. The Panama-incorporated structure with single-entity governance and no published proof of reserves contrasts sharply with the Ankura-{{term:attestation}}attestation{{/term}}-backed mTBILL and E&Y-audited USTB it competes against, though Standard Chartered's {{term:custody}}custody{{/term}} and Wellington's management provide institutional ballast at the bottom of the stack. The {{term:rwa}}RWA{{/term}} collateral quality and institutional-regulated custody classification acknowledge what's actually holding the assets, even if the wrapper depth adds layers of operational risk that the T-bill label might obscure. Deployed across four chains with KYC-gated minting and T+4 settlement on underlying collateral, thBILL has found its niche among institutional investors who want T-bill exposure without caring too much about how many wrappers sit between them and the bonds.",

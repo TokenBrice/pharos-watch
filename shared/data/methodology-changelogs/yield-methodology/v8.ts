@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.17",
+    title: "sdUSD Direct Yield Ownership",
+    date: "2026-05-21",
+    effectiveAt: 1779364800,
+    summary:
+      "dTRINITY sdUSD is now tracked as its own yield-bearing NAV variant of dUSD, so sdUSD owns the dStake yield row instead of publishing through the dUSD parent.",
+    impact: [
+      "`sdusd-dtrinity` is admitted as a CoinGecko-backed active NAV variant with `variantOf: dusd-dtrinity` and a 100% wrapper dependency on dUSD",
+      "`dusd-dtrinity` is no longer statically marked yield-bearing and no longer resolves sdUSD through `YIELD_VARIANT_MAP`",
+      "The existing Ethereum/Fraxtal dStake weighted DeFiLlama pool group now publishes under `sdusd-dtrinity` with the same `defillama-weighted:dtrinity-sdusd` source key",
+      "Parent-side dUSD sdUSD history is suppressed through the ownership-handoff cleanup path so wrapper APY history does not remain attached to the base stablecoin",
+      "PYS scoring math, source-risk penalties, and confidence arbitration are unchanged; the bump records source ownership and tracked-universe routing",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.16",
     title: "NAV Metadata Fixes + cgUSD/USDN Rate Proxies",
     date: "2026-05-19",

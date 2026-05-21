@@ -6,11 +6,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.16`
+- **Current methodology version:** `v8.17`
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/yield-methodology-version.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+Yield v8.17 tracks `sdusd-dtrinity` as the first-class dTRINITY dStake yield wrapper. The existing Ethereum/Fraxtal weighted sdUSD DeFiLlama source now publishes under `sdusd-dtrinity`, while `dusd-dtrinity` stops owning wrapper yield metadata and parent-side sdUSD history is suppressed by the ownership-handoff cleanup path.
 
 Yield v8.16 fixes `fpi-frax`, `silk-shade-protocol`, and `isc-international-stable-currency` NAV-token metadata so they route through NAV-appreciation coverage, and adds rate-derived proxy coverage for `cgusd-cygnus-finance` and `usdn-noble`.
 
@@ -32,7 +34,7 @@ Rankings provenance now carries source-native freshness for derived sources:
 - curated auto-discovery now includes Felix and Sovryn exact lending venues plus a Loopscale tGBP exact pool pin when those rows pass the normal APY, TVL, and Safety Score gates
 - `sourceObservedAt` / `sourceAgeSeconds` reflect the actual latest observation backing the ranking, not just the cron run time
 - `comparisonAnchorObservedAt` / `comparisonAnchorAgeSeconds` are included when APY is derived from a prior anchor, such as price-derived and on-chain exchange-rate calculations
-- dTRINITY dUSD now publishes sdUSD yield from a curated TVL-weighted DeFiLlama pool group across the Ethereum and Fraxtal dStake vaults, with a new source key so Ethereum-only history is not treated as equivalent
+- dTRINITY sdUSD now owns its curated TVL-weighted DeFiLlama pool group across the Ethereum and Fraxtal dStake vaults; dUSD no longer publishes wrapper yield as parent-owned metadata
 - `sUSDe`, `sUSDS`, `sDAI`, `sfrxUSD`, `scrvUSD`, and `savUSD` now own the wrapper APY rows that used to publish through `USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, and `avUSD`
 - Solayer `sUSD` now has rate-derived Treasury fallback coverage through the yield manifest, while newly added reward-bearing account or restricted strategy assets stay out of runtime yield until a reliable APY source is wired
 - `cgusd-cygnus-finance` and `usdn-noble` now have rate-derived proxy coverage through the yield manifest
@@ -119,7 +121,7 @@ Currently configured for 12 generic vaults (all use selector `0x07a2d13a` — `c
 | `ustb-superstate` | USTB | ERC-4626 (6 decimals) | Ethereum |
 | `thbill-theo` | thBILL | ERC-4626 (6 decimals) | Ethereum |
 
-`scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `dusd-dtrinity` and `reusd-re-protocol` are also quarantined from the generic reader for now because their current `convertToAssets(1e18)` probes do not return a usable value, so they continue to rely on non-deterministic source paths until protocol-specific deterministic adapters are added.
+`scrvusd-curve` is intentionally quarantined from this generic Tier 1 reader because its trailing 7-day `convertToAssets(1e18)` delta understated Curve's current scrvUSD savings APY. It uses the scrvUSD special-case estimator below instead. `reusd-re-protocol` is also quarantined from the generic reader for now because its current `convertToAssets(1e18)` probe does not return a usable value, so it continues to rely on non-deterministic source paths until a protocol-specific deterministic adapter is added.
 
 **APY formula:**
 
@@ -189,7 +191,7 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 
 **Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Resolution first tries underlying-token address matches and only uses chain-scoped `.includes()` symbol fallback when the remaining candidate set is unambiguous. Symbols shorter than 4 characters are excluded from `.includes()` matching to prevent false positives (e.g., "USD" matching everything). Filters for `exposure === "single"` and `stablecoin === true`. Ambiguous fallback candidates are dropped instead of guessed.
 
-**Exact weighted pool groups:** `YIELD_WEIGHTED_POOL_GROUPS` can collapse multiple exact DeFiLlama pool UUIDs into one TVL-weighted APY row when Pharos tracks one protocol asset but the yield wrapper is deployed as chain-isolated, non-fungible vaults. This is currently used for `dusd-dtrinity`, where Ethereum and Fraxtal sdUSD dStake pools publish under one synthetic DeFiLlama source key.
+**Exact weighted pool groups:** `YIELD_WEIGHTED_POOL_GROUPS` can collapse multiple exact DeFiLlama pool UUIDs into one TVL-weighted APY row when Pharos tracks one protocol asset but the yield wrapper is deployed as chain-isolated, non-fungible vaults. This is currently used for `sdusd-dtrinity`, where Ethereum and Fraxtal sdUSD dStake pools publish under one synthetic DeFiLlama source key.
 
 **Exact-pool overrides:** `EXPLICIT_YIELD_SOURCE_POOL_MAP` can publish curated non-stablecoin venues when the pool UUID, project, chain, and symbol all match and the usual APY / TVL quality gates still pass. This is currently used for `xaut-tether` via Yo Protocol. These overrides stay outside generic gold/silver auto-discovery, which prevents basket venues such as Multipli's mixed-RWA pools from being treated as single-asset commodity yield sources. On 2026-05-13, XAUT gained a second curated venue on Lista Lending (BSC) alongside the existing Yo Protocol pin, and PAXG was added as a non-yield-bearing exact-pool entry on Hydration (Polkadot).
 
@@ -212,7 +214,6 @@ This keeps wrapper pools like `fxSAVE` and `msY` eligible even when DeFiLlama ma
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
 | Noon USN (230)        | sUSN    | Noon savings                |
 | Parallel USDp         | sUSDp   | Parallel savings wrapper    |
-| dUSD (dTRINITY)       | sdUSD   | dTRINITY dStake vault       |
 | Flying Tulip ftUSD    | sftUSD  | Flying Tulip staking        |
 | Hermetica USDh        | sUSDh   | Hermetica staking wrapper   |
 | Saturn USDat          | sUSDat  | Saturn staking vault        |
@@ -762,8 +763,8 @@ Cache-backed rankings written by `sync-yield-data`, with `safetyScore`, `safetyG
     "status": "published"
   },
   "methodology": {
-    "version": "8.16",
-    "currentVersion": "8.16",
+    "version": "8.17",
+    "currentVersion": "8.17",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1772000000, "ageSeconds": 42, "status": "fresh" }

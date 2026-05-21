@@ -152,7 +152,6 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
  * from the generic ERC-4626 reader until they have protocol-specific adapters:
  * - scrvusd-curve: uses a dedicated scrvUSD profit-unlock current-rate reader;
  *   generic 7-day convertToAssets deltas understate Curve's current savings APY
- * - dusd-dtrinity: current convertToAssets probe reverts
  * - reusd-re-protocol: current convertToAssets probe returns empty data
  */
 const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifecycleReason> = {
@@ -160,11 +159,6 @@ const QUARANTINED_DETERMINISTIC_ADAPTERS_TYPED: Record<string, YieldAdapterLifec
     code: "wrapper-not-yet-supported",
     since: "2026-04-11",
     note: "generic 7-day convertToAssets delta understates Curve's scrvUSD current profit-unlock APY; uses dedicated current-rate reader",
-  },
-  "dusd-dtrinity": {
-    code: "convert-to-assets-reverts",
-    since: "2026-03-10",
-    note: "generic convertToAssets probe reverts; requires protocol-specific deterministic reader",
   },
   "reusd-re-protocol": {
     code: "convert-to-assets-empty",

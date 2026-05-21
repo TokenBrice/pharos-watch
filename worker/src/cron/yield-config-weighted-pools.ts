@@ -14,7 +14,7 @@ export interface WeightedYieldPoolGroupConfig {
  * deployed as chain-isolated, non-fungible vaults.
  */
 export const YIELD_WEIGHTED_POOL_GROUPS: Record<string, WeightedYieldPoolGroupConfig> = {
-  "dusd-dtrinity": {
+  "sdusd-dtrinity": {
     sourceKey: "defillama-weighted:dtrinity-sdusd",
     yieldSource: "dTRINITY dStake (sdUSD)",
     yieldType: "lending-vault",
